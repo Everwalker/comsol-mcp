@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "status": "PASS_SCOPED_SOFTWARE",
+  "native_setup": "NOT_RUN_AT_SOFTWARE_CHECKPOINT",
+  "native_scientific_acceptance": "NOT_RUN",
+  "selected_solution_producer_and_field_mapping": "UNVERIFIED",
+  "base_commit": "a365420814b9159230364ad953ee13e8db9cc9be",
+  "candidate_sha256": "fba50c54310f731e6d5b85b408b0de6b79689d4ea37c080c8e27bc6a666daae0",
+  "source_closure_sha256": "3f667adbe59fafd1104848b61d5b7cd583dbdc94fb61a34864d2a017b1617a6e",
+  "overlay": {
+    "tests/test_run_native_w23_full3d_setup.py": {
+      "bytes": 26946,
+      "sha256": "fb70f723e429652e39c43309cb5bb2c984e9ab6a48acaef9f880c2c83331dc0e"
+    },
+    "tools/java/NativeW23Full3DFixture.java": {
+      "bytes": 74113,
+      "sha256": "639d03e6a42b5541d1a364ca0765cf506fd4647d01241558080c2536074a4463"
+    },
+    "tools/run_native_w23_full3d_setup.py": {
+      "bytes": 104932,
+      "sha256": "8aacfbd63dab1987a4f71dc626f43c413dfd84875767f3ce9276c8a524501f0d"
+    }
+  },
+  "verification": {
+    "isolated_tests": {
+      "tests": 39,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "published_files_verified": 99,
+    "candidate_files_verified": 102,
+    "runner_and_daemon": "Python -S, archive first, explicit site-packages without .pth processing",
+    "negative_controls": [
+      "editable hooks",
+      "late imported project module outside archive",
+      "namespace escape",
+      "wrong control home",
+      "endpoint identity mismatch"
+    ],
+    "real_no_comsol_smoke": {
+      "operation": "session.inspect",
+      "expected_result": "PROJECT_NOT_FOUND",
+      "exact_owned_endpoint": true,
+      "child_exit_reap_listener_absent": true
+    }
+  },
+  "raw_evidence": {
+    "receipt_path": "/private/tmp/comsol-mcp-w23-full3d-candidate-hardening-20260928c/setup_candidate_receipt.json",
+    "receipt_file_sha256": "bc4c6e21646efe108aa278945fb80ce32091834e8828032d3c5e16c15ef9cd36",
+    "receipt_canonical_body_sha256": "2d1abce894fd2e1d0cf2ce55a54d8f559e46ffa1c81fbc2c42f9d75f06b504b1",
+    "junit_sha256": "c9e7fe50dda005406a029761edb060fe3b2309b280a73c087ddd37d55addf88e",
+    "smoke_receipt_sha256": "1500e063bbcc91e03a506536849da940694a9cd1323c2cd18c734d6666647b12"
+  },
+  "rebuild": {
+    "source": "Checkout the checkpoint commit. Run tools/run_native_w23_full3d_setup.py export-archive with --base-commit a365420814b9159230364ad953ee13e8db9cc9be and a new --destination. The three committed overlay files are applied by the exporter.",
+    "test": "From that archive use Python 3.12 -B -S, append explicit dependency site-packages (do not process .pth), then pytest tests/test_run_native_w23_full3d_setup.py. Real loopback smoke requires loopback bind access.",
+    "prepare": "Use the runner prepare command with a new evidence directory, matching COMSOL 6.4 installation and JDK11. Native execution requires review of the newly generated exact candidate digest."
+  },
+  "next_action": "Run only reviewed frozen setup candidate after fresh scoped inventory; 1 server/1 Worker/0 GUI/0 solver calls, 1800 seconds including 120 cleanup reserve. Then continue actual BMA producer/field mapping and original W23 optics/convergence scope."
+}

@@ -224,9 +224,9 @@ public final class NativeW23Full3DFixture {
         result.put("pml", propertyReadback(pml, new String[]{"ScalingType", "stretchingType", "typicalWavelength"}));
         result.put("study_steps", List.of(
                 Map.of("tag", "bmaInput3d", "type", bmaInput.getType(), "port", bmaInput.getString("PortName"),
-                       "modeFreq", bmaInput.getString("modeFreq")),
+                       "modeFreq", bmaInput.getString("modeFreq"), "neigs", bmaInput.getInt("neigs")),
                 Map.of("tag", "bmaOutput3d", "type", bmaOutput.getType(), "port", bmaOutput.getString("PortName"),
-                       "modeFreq", bmaOutput.getString("modeFreq")),
+                       "modeFreq", bmaOutput.getString("modeFreq"), "neigs", bmaOutput.getInt("neigs")),
                 Map.of("tag", "freq3d", "type", frequency.getType(), "plist", frequency.getString("plist"))));
         result.put("fields_expected", Arrays.asList(VECTOR_FIELDS));
         result.put("vector_field_contract", "3-D ElectromagneticWaves interface; full vector by space dimension; native variable/readback still required");
@@ -449,6 +449,7 @@ public final class NativeW23Full3DFixture {
             for (String property : new String[]{"PortName", "modeFreq", "plist"}) {
                 if (feature.hasProperty(property)) row.put(property, feature.getString(property));
             }
+            if (feature.hasProperty("neigs")) row.put("neigs", feature.getInt("neigs"));
             studySteps.add(row);
         }
         List<Map<String, Object>> solverSequences = new ArrayList<>();

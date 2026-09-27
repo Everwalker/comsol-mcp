@@ -4,13 +4,13 @@ Updated 2026-09-27 UTC. **Overall PARTIAL; execution continues through W26.** Th
 
 ## Current stage
 
-**F04 daemon shutdown: PASS for scoped software and real harmless children; full lifecycle PARTIAL.** Shutdown closes admission under the shared lock, waits admitted requests and rechecks connect before Worker birth. It retires exact owned Workers, drains accepted tasks and rechecks retirement before closing the store. UNKNOWN, unresolved jobs and unproven ownership are preserved; shared servers are not stopped.
+**W23 setup isolation: PASS for scoped software; W23 overall PARTIAL.** The setup runner and owned control daemon use Python `-S`, the frozen archive, and explicit dependency paths without editable hooks. Every loaded project module and namespace is checked; public dispatch binds the exact owned control home, PID, birth and listener.
 
-**Actually executed:** isolated published `a365420` plus two-file overlay, **80 PASS / 0 FAIL / 0 ERROR / 0 SKIP**. A barrier negative proves a queued connect creates no Worker after close begins. Two real task-created Python children verify immediate retirement and retirement after a busy task reaches SUCCEEDED, using exact Popen/birth and confirmed exit/reap. Main review verified candidate/JUnit/manifest/child hashes and88 unchanged runtime files. [Compact evidence and replay](docs/full_project_execution/project_session/DAEMON_CLOSE_CHECKPOINT.json).
+**Actually executed:** isolated published `a365420` plus three-file overlay, **39 PASS / 0 FAIL / 0 ERROR / 0 SKIP**, including a real no-COMSOL loopback daemon test and import-escape negative controls. Main review verified all 102 source files, 99 unchanged published files, JUnit and three smoke evidence hashes. Java fixture compilation also passed. [Compact evidence and replay](docs/full_project_execution/w23_overlap/SETUP_ISOLATION_CHECKPOINT.json).
 
-**Native COMSOL NOT_RUN.** These are injected Worker fixtures with real local child processes, not COMSOL shutdown acceptance. Owned Server start/stop, full recovery, platform and scientific acceptance remain open.
+**Native setup/science NOT_RUN at this software checkpoint.** The bounded setup candidate is approved for execution after fresh process inventory: 1 Server, 1 Worker, no GUI, no solver calls, 1800 seconds including cleanup. This is not selected-solution producer, field mapping or scientific acceptance.
 
-W23 and W24 continue native setup candidates from isolated published source. Their software baselines remain [W23 provenance117 tests](docs/full_project_execution/w23_overlap/PORT_PROVENANCE_CHECKPOINT.json) and [W24 sensitivity96 tests plus Java compile](docs/full_project_execution/w24/SENSITIVITY_SOFTWARE_CHECKPOINT.json).
+F04 owned start/stop and W24 setup campaign implementation continue. The previous [daemon shutdown checkpoint](docs/full_project_execution/project_session/DAEMON_CLOSE_CHECKPOINT.json) remains scoped software acceptance (80 PASS), with native COMSOL lifecycle acceptance open.
 
 ## Latest accepted software baseline
 
@@ -37,4 +37,4 @@ Earlier source checkpoints and failures remain in the existing state and linked 
 
 Continue the three Luna Max work streams: implement remaining session lifecycle routes; implement W23 actual mode provenance; implement W24 sensitivity variants and complete science orchestration. Publish each accepted software stage immediately. Then freeze isolated managed native candidates, execute their reviewed scope, complete all remaining W01–W26 work, and run a fresh independent overall review with repair/retest until accepted.
 
-The latest focused replay is in [DAEMON_CLOSE_CHECKPOINT.json](docs/full_project_execution/project_session/DAEMON_CLOSE_CHECKPOINT.json). Recover from the GitHub checkout and existing state; raw local paths are supporting artifacts, not prerequisite hidden source. Usage interruption was resolved and three replacement executors resumed without restarting native jobs. Last previously verified GitHub sync: `a365420814b9159230364ad953ee13e8db9cc9be`; current-stage synchronization is recorded only after post-push fetch and HEAD/origin-main equality verification.
+The latest focused replay is in [SETUP_ISOLATION_CHECKPOINT.json](docs/full_project_execution/w23_overlap/SETUP_ISOLATION_CHECKPOINT.json). Recover from the GitHub checkout and existing state; raw local paths are supporting artifacts, not prerequisite hidden source. Usage interruption was resolved and three replacement executors resumed without restarting native jobs. Last previously verified GitHub sync: `3f921e2f4d13ce062bb6983989c81dc359d5e315`; current-stage synchronization is recorded only after post-push fetch and HEAD/origin-main equality verification.

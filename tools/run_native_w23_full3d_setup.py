@@ -1,0 +1,1831 @@
+#!/usr/bin/env python3
+"""Prepare and execute the reviewed W23 full-3D managed setup-only candidate.
+
+``prepare`` performs source/runtime inventory and offline Java compilation; it
+never starts COMSOL. ``execute`` refuses to start any process unless the exact
+candidate digest was separately reviewed and supplied on the command line.
+The native stage configures the owned one-receiver/two-eigensolution fixture,
+reads metadata, saves an MPH, and retires only the exact managed Worker before
+stopping the task-owned loopback server. No Study.run or solver operation is
+submitted by this module.
+"""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+import subprocess
+import sys
+import tarfile
+import time
+import traceback
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Callable, Mapping
+from uuid import uuid4
+
+
+REPO = Path(__file__).resolve().parents[1]
+INSTALL_ROOT = Path("/Applications/COMSOL64/Multiphysics")
+JAVA11 = Path("/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home")
+FIXTURE = REPO / "tools/java/NativeW23Full3DFixture.java"
+EVIDENCE_PREFIX = "/private/tmp/comsol-mcp-w23-full3d-"
+MAX_WALL_S = 1800
+CLEANUP_RESERVE_S = 120
+TERMINAL_JOB_STATES = {"SUCCEEDED", "FAILED", "EXPIRED", "LOST", "CANCELLED"}
+EXPECTED_PYTHON = Path("/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python")
+EXPLICIT_SITE_PACKAGES = (EXPECTED_PYTHON.parent.parent / "lib" /
+                          f"python{sys.version_info.major}.{sys.version_info.minor}" / "site-packages")
+
+# Hash the whole Python package plus its action schemas. The final two files
+# are this reviewed candidate's overlay; the Java fixture and old server helper
+# are frozen implementation inputs. WIP elsewhere in the repo is irrelevant.
+OVERLAY_PATHS = {
+    "tools/run_native_w23_full3d_setup.py",
+    "tests/test_run_native_w23_full3d_setup.py",
+    "tools/java/NativeW23Full3DFixture.java",
+}
+EXTRA_CLOSURE_PATHS = {
+    "tools/run_native_resume_smoke.py",
+    "tools/w23_full3d.py",
+    "tools/w23_full3d_science.py",
+    "tools/java/NativeW23Full3DFixture.java",
+    "docs/comsol_mcp_design_v1/02_ACTION_CATALOG.json",
+}
+
+SETUP_BUDGET = {
+    "schema_version": 1,
+    "max_server_processes": 1,
+    "max_managed_workers": 1,
+    "max_gui_processes": 0,
+    "wall_clock_seconds_from_server_birth_including_cleanup": MAX_WALL_S,
+    "reserved_cleanup_seconds": CLEANUP_RESERVE_S,
+    "study_run_calls": 0,
+    "solver_calls": 0,
+    "route_wait_caps_seconds": {
+        "session.connect": 120,
+        "model_create": 120,
+        "fixture_build": 540,
+        "baseline_apply": 540,
+        "solution_inventory": 90,
+        "model_save": 90,
+        "session.disconnect.retire_worker": 90,
+    },
+    "unknown_policy": "preserve exact owned process handles and evidence; never replay or force-stop an unknown Worker/session",
+}
+
+NATIVE_READBACK_API_EVIDENCE = {
+    "api": "com.comsol.model.PropFeature.getInt(String)",
+    "purpose": "read back BMA neigs as an integer property",
+    "manual": "COMSOL 6.4 PropFeature",
+    "document_path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/api/com/comsol/model/PropFeature.html",
+    "chunk_id": 23017,
+    "source_sha256": "befb8cc1c0e3df1ce74d2fa2cd1377e73d378e5c26170558e9f40dc255cc3bc3",
+}
+
+PLANNED_ROUTE_ALLOWLIST = [
+    "project.create",
+    "session.connect",
+    "session.inspect",
+    "model_create",
+    "operation_call:code.execute_java:build",
+    "operation_call:code.execute_java:apply_case(baseline)",
+    "operation_call:code.execute_java:solution_inventory",
+    "operation_call:code.execute_java:save",
+    "job.list",
+    "session.disconnect(retire_worker=true)",
+    "session.inspect",
+]
+
+
+class CandidateError(RuntimeError):
+    pass
+
+
+class CleanupRefused(RuntimeError):
+    """Fail-closed cleanup stopped at the first missing proof."""
+
+    def __init__(self, stage: str, message: str, completed: list[str]):
+        super().__init__(f"cleanup refused at {stage}: {message}")
+        self.stage = stage
+        self.completed = list(completed)
+
+
+def _json_hash(value: Any) -> str:
+    payload = json.dumps(value, sort_keys=True, separators=(",", ":"),
+                         ensure_ascii=False, allow_nan=False).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
+def _sha256_bytes(payload: bytes) -> str:
+    return hashlib.sha256(payload).hexdigest()
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def _identity_name(value: Any) -> str:
+    module = getattr(value, "__module__", type(value).__module__)
+    name = getattr(value, "__qualname__", getattr(value, "__name__", type(value).__qualname__))
+    return f"{module}.{name}"
+
+
+def _editable_fallback_surfaces(*, sys_path: list[str] | None = None,
+                                path_hooks: list[Any] | None = None,
+                                meta_path: list[Any] | None = None) -> list[str]:
+    paths = list(sys.path if sys_path is None else sys_path)
+    hooks = list(sys.path_hooks if path_hooks is None else path_hooks)
+    finders = list(sys.meta_path if meta_path is None else meta_path)
+    return [item for item in [*(str(value) for value in paths),
+                              *(_identity_name(value) for value in hooks),
+                              *(_identity_name(value) for value in finders)]
+            if "editable" in item.lower()]
+
+
+def _assert_no_editable_fallback(*, sys_path: list[str] | None = None,
+                                 path_hooks: list[Any] | None = None,
+                                 meta_path: list[Any] | None = None) -> list[str]:
+    surfaces = _editable_fallback_surfaces(sys_path=sys_path, path_hooks=path_hooks,
+                                           meta_path=meta_path)
+    if surfaces:
+        raise CandidateError("editable Python finder/path hook is present; run the candidate with -S")
+    return surfaces
+
+
+def _configure_archive_python(repo: Path) -> dict[str, Any]:
+    """Bind project imports to the archive without executing venv .pth files."""
+    if not getattr(sys.flags, "no_site", False) or "site" in sys.modules:
+        raise CandidateError("isolated candidate Python must start with -S; site/.pth processing is forbidden")
+    if sys.version_info[:2] != (3, 12):
+        raise CandidateError(f"isolated candidate Python must be 3.12, observed {sys.version.split()[0]}")
+    root = repo.resolve(strict=True)
+    runner_path = Path(__file__).resolve(strict=True)
+    if not runner_path.is_relative_to(root):
+        raise CandidateError("candidate runner itself is not loaded from the isolated archive")
+    site_packages = EXPLICIT_SITE_PACKAGES.resolve(strict=True)
+    if not site_packages.is_dir():
+        raise CandidateError("the exact venv site-packages directory is unavailable")
+    _assert_no_editable_fallback()
+    normalized = []
+    for entry in sys.path:
+        resolved = str(Path(entry or Path.cwd()).resolve())
+        if resolved != str(root):
+            normalized.append(entry)
+    sys.path[:] = [str(root), *normalized]
+    if str(site_packages) not in sys.path:
+        # Add the explicit venv package directory directly. Under -S, this
+        # does not execute .pth files or install their path hooks.
+        sys.path.append(str(site_packages))
+    for entry in sys.path:
+        search_root = Path(entry or Path.cwd()).resolve()
+        if search_root != root and (search_root / "comsol_mcp").exists():
+            raise CandidateError(f"another comsol_mcp package path is visible outside the archive: {search_root}")
+    _assert_no_editable_fallback()
+    sys.dont_write_bytecode = True
+    return {"site_processing_disabled": True,
+            "python_no_site_flag": bool(sys.flags.no_site),
+            "runner_path": str(runner_path),
+            "explicit_site_packages": str(site_packages),
+            "archive_root_precedence": str(root),
+            "bytecode_writes_disabled": sys.dont_write_bytecode,
+            "path_hooks": [_identity_name(item) for item in sys.path_hooks],
+            "meta_path_finders": [_identity_name(item) for item in sys.meta_path]}
+
+
+def _git(repo: Path, *args: str) -> str:
+    result = subprocess.run(["git", *args], cwd=repo, text=True,
+                            capture_output=True, check=False, timeout=20)
+    if result.returncode != 0:
+        raise CandidateError(f"git {' '.join(args)} failed: {result.stderr.strip()}")
+    return result.stdout.strip()
+
+
+def _closure_paths(repo: Path) -> list[str]:
+    paths = {path.relative_to(repo).as_posix()
+             for path in (repo / "comsol_mcp").rglob("*.py")
+             if path.is_file() and not path.name.startswith(".")}
+    paths.update(path.relative_to(repo).as_posix()
+                 for path in (repo / "comsol_mcp").rglob("*.java")
+                 if path.is_file() and not path.name.startswith("."))
+    paths.update(path.relative_to(repo).as_posix()
+                 for path in (repo / "comsol_mcp/data/g2").glob("*.json")
+                 if path.is_file() and not path.name.startswith("."))
+    paths.update(EXTRA_CLOSURE_PATHS)
+    paths.update(OVERLAY_PATHS)
+    missing = sorted(relative for relative in paths if not (repo / relative).is_file())
+    if missing:
+        raise CandidateError("W23 managed setup source closure is incomplete: " + ", ".join(missing))
+    return sorted(paths)
+
+
+def _tracked_closure_paths(repo: Path, base_commit: str) -> list[str]:
+    tracked = set(_git(repo, "ls-tree", "-r", "--name-only", base_commit).splitlines())
+    paths = {relative for relative in tracked
+             if (relative.startswith("comsol_mcp/") and
+                 (relative.endswith(".py") or relative.endswith(".java") or
+                  (relative.startswith("comsol_mcp/data/g2/") and relative.endswith(".json"))))}
+    paths.update(relative for relative in EXTRA_CLOSURE_PATHS - OVERLAY_PATHS
+                 if relative in tracked)
+    required = EXTRA_CLOSURE_PATHS - OVERLAY_PATHS
+    missing = sorted(required - tracked)
+    if missing:
+        raise CandidateError("published base is missing required closure files: " + ", ".join(missing))
+    return sorted(paths)
+
+
+def export_published_archive(*, repo: Path, destination: Path, base_commit: str) -> dict[str, Any]:
+    """Export only the registered runtime/source closure plus this candidate.
+
+    `git archive` is read-only and writes no checkout metadata. The requested
+    base must remain reachable from the published origin/main; later published
+    runtime changes and unrelated W24/runtime WIP remain outside this archive.
+    """
+    if not str(destination).startswith(EVIDENCE_PREFIX) or destination.exists():
+        raise CandidateError(f"archive destination must be new below {EVIDENCE_PREFIX}*")
+    head = _git(repo, "rev-parse", "HEAD")
+    remote = _git(repo, "rev-parse", "origin/main")
+    resolved_base = _git(repo, "rev-parse", f"{base_commit}^{{commit}}")
+    if resolved_base != base_commit:
+        raise CandidateError("archive base must be the exact immutable commit SHA")
+    ancestry = subprocess.run(["git", "merge-base", "--is-ancestor", base_commit, "origin/main"],
+                              cwd=repo, capture_output=True, text=True, check=False, timeout=20)
+    if ancestry.returncode != 0:
+        raise CandidateError("archive base must be reachable from the published origin/main")
+    tracked_paths = _tracked_closure_paths(repo, base_commit)
+    destination.mkdir(parents=True, exist_ok=False)
+    archive = subprocess.run(["git", "archive", "--format=tar", base_commit, "--", *tracked_paths],
+        cwd=repo, capture_output=True, check=False, timeout=90)
+    if archive.returncode != 0:
+        raise CandidateError("git archive failed: " + archive.stderr.decode("utf-8", "replace")[:3000])
+    with tarfile.open(fileobj=__import__("io").BytesIO(archive.stdout), mode="r:") as tar:
+        members = tar.getmembers()
+        for member in members:
+            if member.name.startswith("/") or ".." in Path(member.name).parts:
+                raise CandidateError("published source archive contains an unsafe path")
+        tar.extractall(destination, members=members, filter="data")
+    base_files = {}
+    for relative in tracked_paths:
+        path = destination / relative
+        if not path.is_file() or path.is_symlink():
+            raise CandidateError(f"published archive omitted a regular source file: {relative}")
+        base_files[relative] = {"bytes": path.stat().st_size, "sha256": _sha256_file(path)}
+    manifest = {"schema_version": 1, "status": "EXACT_GIT_ARCHIVE_SOURCE_ONLY",
+                "base_commit": base_commit, "published_origin_main_at_export": remote,
+                "checkout_head_at_export": head, "source_files": base_files,
+                "source_closure_sha256": _json_hash(base_files)}
+    manifest["manifest_sha256"] = _json_hash(manifest)
+    _write_json(destination / ".w23_published_archive_manifest.json", manifest)
+    for relative in sorted(OVERLAY_PATHS):
+        source = repo / relative
+        if not source.is_file() or source.is_symlink():
+            raise CandidateError(f"candidate overlay is missing or unsafe: {relative}")
+        target = destination / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with target.open("xb") as stream:
+            stream.write(source.read_bytes())
+    return {"archive_dir": str(destination.resolve()), "base_commit": base_commit,
+            "source_files": len(base_files), "source_closure_sha256": manifest["source_closure_sha256"],
+            "archive_manifest_sha256": manifest["manifest_sha256"],
+            "overlay_files": sorted(OVERLAY_PATHS)}
+
+
+def _source_inventory(repo: Path, base_commit: str) -> dict[str, Any]:
+    paths = _closure_paths(repo)
+    archive_manifest_path = repo / ".w23_published_archive_manifest.json"
+    isolated_archive = archive_manifest_path.is_file()
+    if isolated_archive:
+        manifest = json.loads(archive_manifest_path.read_text(encoding="utf-8"))
+        if manifest.get("status") != "EXACT_GIT_ARCHIVE_SOURCE_ONLY" or manifest.get("base_commit") != base_commit:
+            raise CandidateError("isolated source archive manifest does not bind the requested published commit")
+        manifest_body = {key: value for key, value in manifest.items() if key != "manifest_sha256"}
+        if manifest.get("manifest_sha256") != _json_hash(manifest_body):
+            raise CandidateError("isolated source archive manifest digest is invalid")
+        base_files = manifest.get("source_files")
+        if not isinstance(base_files, Mapping):
+            raise CandidateError("isolated source archive manifest omitted source file hashes")
+        if manifest.get("source_closure_sha256") != _json_hash(base_files):
+            raise CandidateError("isolated source archive closure digest is invalid")
+        expected_base = set(paths) - OVERLAY_PATHS
+        if set(base_files) != expected_base:
+            raise CandidateError("isolated source archive does not contain the exact expected published closure")
+        head, remote = base_commit, base_commit
+        archive_manifest_sha256 = manifest["manifest_sha256"]
+    else:
+        head = _git(repo, "rev-parse", "HEAD")
+        remote = _git(repo, "rev-parse", "origin/main")
+        if head != base_commit or remote != base_commit:
+            raise CandidateError("candidate base must be the exact published HEAD==origin/main commit")
+        changed = set(_git(repo, "diff", "--name-only", base_commit, "--", *paths).splitlines())
+        forbidden = sorted(changed - OVERLAY_PATHS)
+        if forbidden:
+            raise CandidateError("published runtime/catalog source differs from requested base: " + ", ".join(forbidden))
+        untracked_rows = _git(repo, "ls-files", "--others", "--exclude-standard", "--", *paths).splitlines()
+        untracked = set(untracked_rows)
+        if untracked - OVERLAY_PATHS:
+            raise CandidateError("unexpected untracked files are inside the candidate closure: "
+                                 + ", ".join(sorted(untracked - OVERLAY_PATHS)))
+        archive_manifest_sha256 = None
+    files: dict[str, dict[str, Any]] = {}
+    for relative in paths:
+        path = repo / relative
+        payload = path.read_bytes()
+        is_overlay = relative in OVERLAY_PATHS
+        base_blob = None
+        if is_overlay:
+            if not isolated_archive and relative not in changed | untracked:
+                # An already-published copy of this candidate remains valid.
+                base_blob = _git(repo, "rev-parse", f"{base_commit}:{relative}")
+        elif isolated_archive:
+            expected = base_files[relative]
+            if len(payload) != expected.get("bytes") or _sha256_bytes(payload) != expected.get("sha256"):
+                raise CandidateError(f"isolated archive source differs from its base manifest: {relative}")
+            base_blob = expected["sha256"]
+        else:
+            base_blob = _git(repo, "rev-parse", f"{base_commit}:{relative}")
+            local_blob = _git(repo, "hash-object", relative)
+            if local_blob != base_blob:
+                raise CandidateError(f"candidate source differs from published base: {relative}")
+        files[relative] = {
+            "bytes": len(payload), "sha256": _sha256_bytes(payload),
+            "base_blob": base_blob, "candidate_overlay": is_overlay,
+        }
+    return {"base_commit": base_commit, "head": head, "origin_main": remote,
+            "checkout_kind": "git_archive" if isolated_archive else "repo_worktree",
+            "archive_manifest_sha256": archive_manifest_sha256,
+            "source_files": files, "source_closure_sha256": _json_hash(files)}
+
+
+def _compile_fixture(repo: Path, install_root: Path, jdk_home: Path, out_dir: Path) -> dict[str, Any]:
+    if out_dir.exists():
+        raise CandidateError(f"offline compile directory must be new: {out_dir}")
+    if not EXPECTED_PYTHON.is_file() or Path(sys.executable).resolve() != EXPECTED_PYTHON.resolve():
+        raise CandidateError(f"run with the exact Python 3.12 executable: {EXPECTED_PYTHON}")
+    if sys.version_info[:2] != (3, 12):
+        raise CandidateError(f"expected Python 3.12, observed {sys.version.split()[0]}")
+    if not (jdk_home / "bin/javac").is_file() or not (jdk_home / "bin/javap").is_file():
+        raise CandidateError("frozen external JDK 11 javac/javap are unavailable")
+    if str(repo) not in sys.path:
+        sys.path.insert(0, str(repo))
+    from comsol_mcp._java_worker import JavaWorkerPaths
+
+    paths = JavaWorkerPaths(install_root, jdk_home, project_root=repo)
+    classpath, manifest_sha, jar_count, jar_fingerprint = paths.classpath()
+    javac, javap = jdk_home / "bin/javac", jdk_home / "bin/javap"
+    out_dir.mkdir(parents=True, exist_ok=False)
+    command = [str(javac), "-encoding", "UTF-8", "-classpath", classpath,
+               "-d", str(out_dir), str(FIXTURE)]
+    compiled = subprocess.run(command, cwd=repo, capture_output=True, text=True,
+                               timeout=90, check=False)
+    (out_dir.parent / "javac.stdout.txt").write_text(compiled.stdout, encoding="utf-8")
+    (out_dir.parent / "javac.stderr.txt").write_text(compiled.stderr, encoding="utf-8")
+    if compiled.returncode != 0:
+        raise CandidateError("offline Java fixture compilation failed; no native process was started")
+    classes = {path.relative_to(out_dir).as_posix(): {
+        "bytes": path.stat().st_size, "sha256": _sha256_file(path)}
+        for path in sorted(out_dir.rglob("*.class"))}
+    if not classes:
+        raise CandidateError("offline Java compile produced no .class files")
+    classpath_with_classes = classpath + os.pathsep + str(out_dir)
+    javap_result = subprocess.run(
+        [str(javap), "-classpath", classpath_with_classes, "NativeW23Full3DFixture"],
+        cwd=repo, capture_output=True, text=True, timeout=20, check=False)
+    (out_dir.parent / "javap.stdout.txt").write_text(javap_result.stdout, encoding="utf-8")
+    (out_dir.parent / "javap.stderr.txt").write_text(javap_result.stderr, encoding="utf-8")
+    if javap_result.returncode != 0:
+        raise CandidateError("offline javap inspection failed; no native process was started")
+    javac_version = subprocess.run([str(javac), "-version"], capture_output=True,
+                                   text=True, timeout=10, check=False)
+    return {
+        "source_sha256": _sha256_file(FIXTURE), "javac_command": command,
+        "javac_version": (javac_version.stdout + javac_version.stderr).strip(),
+        "javac_returncode": compiled.returncode, "javap_returncode": javap_result.returncode,
+        "classpath_manifest_sha256": manifest_sha, "classpath_jar_count": jar_count,
+        "classpath_jar_content_fingerprint_sha256": jar_fingerprint,
+        "compiled_classes": classes,
+        "compiler_log_sha256": {
+            name: _sha256_file(out_dir.parent / name)
+            for name in ("javac.stdout.txt", "javac.stderr.txt", "javap.stdout.txt", "javap.stderr.txt")
+        },
+    }
+
+
+def prepare_candidate(*, repo: Path, evidence: Path, base_commit: str,
+                      install_root: Path = INSTALL_ROOT, jdk_home: Path = JAVA11) -> dict[str, Any]:
+    if not str(evidence).startswith(EVIDENCE_PREFIX) or evidence.exists():
+        raise CandidateError(f"--evidence must be a new unique directory below {EVIDENCE_PREFIX}*")
+    if Path.cwd().resolve(strict=True) != repo.resolve(strict=True):
+        raise CandidateError("offline candidate preparation must run with cwd equal to the isolated archive root")
+    if not (repo / ".w23_published_archive_manifest.json").is_file():
+        raise CandidateError("offline candidate preparation requires the exact published git-archive directory")
+    python_isolation = _configure_archive_python(repo)
+    source_before = _source_inventory(repo, base_commit)
+    if source_before.get("checkout_kind") != "git_archive":
+        raise CandidateError("candidate source is not an isolated published git archive")
+    evidence.mkdir(parents=True, exist_ok=False)
+    compile_receipt = _compile_fixture(repo, install_root, jdk_home,
+                                       evidence / "offline_compile/classes")
+    import_audit = _archive_import_audit(repo)
+    source_after = _source_inventory(repo, base_commit)
+    if source_before != source_after:
+        raise CandidateError("candidate source closure changed during offline compilation")
+    from comsol_mcp._java_worker import JavaWorkerPaths
+    paths = JavaWorkerPaths(install_root, jdk_home, project_root=repo)
+    runtime_fingerprint = {
+        "install_root": str(install_root.resolve(strict=True)),
+        "comsol_version": paths.comsol_version_info(),
+        "jdk_home": str(jdk_home.resolve(strict=True)),
+        "jdk_version": paths.jdk_version_info(),
+        "python_invocation_path": str(EXPECTED_PYTHON),
+        "python_executable": str(Path(sys.executable).resolve()),
+        "python_version": sys.version.split()[0],
+    }
+    body = {
+        "schema_version": 1, "status": "PREPARED_SETUP_ONLY_NOT_NATIVE",
+        "created_at_utc": datetime.now(timezone.utc).isoformat(),
+        "source": source_after, "runtime": runtime_fingerprint,
+        "compile": compile_receipt, "budget": SETUP_BUDGET,
+        "native_readback_api_evidence": NATIVE_READBACK_API_EVIDENCE,
+        "python_isolation": python_isolation,
+        "runtime_import_audit": import_audit,
+        "routes": PLANNED_ROUTE_ALLOWLIST,
+        "scientific_status": "NOT_RUN",
+        "mode_producer_lineage": "UNVERIFIED",
+        "numeric_port_mode_field_mapping": "UNVERIFIED",
+        "fixture_contract": {
+            "receiver_numeric_port": "portOut3d", "receiver_port_name": "2",
+            "receiver_port_mode_number": 1,
+            "bma_output_step": "bmaOutput3d", "bma_output_neigs": 2,
+            "basis_ordinals": [1, 2],
+            "basis_ordinal_is_not_port_mode_number": True,
+            "study_run_calls": 0, "solver_calls": 0,
+        },
+        "evidence_dir": str(evidence.resolve()),
+    }
+    freeze = {**body, "candidate_sha256": _json_hash(body)}
+    _write_json(evidence / "candidate_freeze.json", freeze)
+    return freeze
+
+
+def verify_candidate(*, repo: Path, evidence: Path, reviewed_sha256: str) -> dict[str, Any]:
+    freeze_path = evidence / "candidate_freeze.json"
+    if not freeze_path.is_file() or freeze_path.is_symlink():
+        raise CandidateError("candidate freeze is missing or unsafe")
+    freeze = json.loads(freeze_path.read_text(encoding="utf-8"))
+    digest = freeze.get("candidate_sha256")
+    body = {key: value for key, value in freeze.items() if key != "candidate_sha256"}
+    if digest != _json_hash(body) or reviewed_sha256 != digest:
+        raise CandidateError("the separately reviewed candidate SHA-256 does not match the frozen candidate")
+    base_commit = freeze.get("source", {}).get("base_commit")
+    current_source = _source_inventory(repo, base_commit)
+    if current_source != freeze.get("source"):
+        raise CandidateError("current published source/overlay closure differs from the reviewed candidate")
+    if freeze.get("budget") != SETUP_BUDGET or freeze.get("routes") != PLANNED_ROUTE_ALLOWLIST:
+        raise CandidateError("candidate budget or route allowlist differs from the reviewed freeze")
+    return freeze
+
+
+def build_disconnect_request(*, project_id: str, session_id: str,
+                             request_id: str, idempotency_key: str) -> dict[str, Any]:
+    if any(not isinstance(item, str) or not item.strip() for item in
+           (project_id, session_id, request_id, idempotency_key)):
+        raise CandidateError("exact project/session and request identities are required for retirement")
+    return {"operation": "session.disconnect",
+            "arguments": {"retire_worker": True},
+            "execution": {"project_id": project_id, "session_id": session_id,
+                          "request_id": request_id, "idempotency_key": idempotency_key,
+                          "rpc_timeout_s": 30.0, "execution_timeout_s": 90.0,
+                          "queue_timeout_s": 30.0}}
+
+
+def validate_retirement_response(response: Mapping[str, Any], *, project_id: str,
+                                 session_id: str, worker_instance_id: str,
+                                 connected_epoch: int,
+                                 detached_epoch: int | None = None) -> dict[str, Any]:
+    data = response.get("data") if isinstance(response, Mapping) else None
+    proof = data.get("worker_retirement") if isinstance(data, Mapping) else None
+    if (response.get("success") is not True or not isinstance(data, Mapping)
+            or data.get("project_id") != project_id or data.get("session_id") != session_id
+            or data.get("state") != "DISCONNECTED" or data.get("client_state") != "RETIRED"
+            or data.get("server_stopped") is not False or not isinstance(proof, Mapping)):
+        raise CleanupRefused("worker_retirement", "disconnect did not report a successful Worker-only retirement", [])
+    identity = proof.get("process_identity")
+    pid = identity.get("pid") if isinstance(identity, Mapping) else None
+    birth = identity.get("start_epoch_ms") if isinstance(identity, Mapping) else None
+    observed_epoch = proof.get("worker_epoch")
+    if (proof.get("status") != "RETIRED"
+            or proof.get("worker_instance_id") != worker_instance_id
+            or type(observed_epoch) is not int or observed_epoch <= connected_epoch
+            or (detached_epoch is not None and observed_epoch != detached_epoch)
+            or type(pid) is not int or pid <= 1 or type(birth) is not int or birth <= 0
+            or proof.get("exact_popen_handle") is not True
+            or proof.get("birth_identity_matched_before_close") is not True
+            or proof.get("child_exit_confirmed") is not True
+            or proof.get("child_reaped") is not True
+            or proof.get("admission_fence") != "RETIRED"
+            or proof.get("disconnect_rpc_dispatched") is not True
+            or proof.get("worker_close_started") is not True):
+        raise CleanupRefused("worker_retirement", "retirement proof does not bind the expected exact Worker and child", [])
+    return dict(proof)
+
+
+def validate_native_mode_configuration(readback: Mapping[str, Any], *, inventory: bool = False) -> dict[str, Any]:
+    """Validate only native configuration readback, never mode-solution identity.
+
+    The fixture has one Numeric receiver (Port 2, configured PortModeNumber 1)
+    and a BMA output step requesting two eigensolutions. This does not establish
+    which later SolutionInfo indices were produced by that step or what field
+    values map to those indices.
+    """
+    if inventory:
+        port_rows = None
+        step_rows = readback.get("study_steps_in_configured_order")
+    else:
+        port_rows = readback.get("ports")
+        step_rows = readback.get("study_steps")
+
+    if port_rows is not None:
+        if not isinstance(port_rows, list):
+            raise CandidateError("native fixture readback omitted the Numeric Port inventory")
+        tags = [row.get("tag") for row in port_rows if isinstance(row, Mapping)]
+        if len(tags) != len(port_rows) or sorted(tags) != ["portIn3d", "portOut3d"]:
+            raise CandidateError("native fixture readback does not contain exactly input Port 1 and receiver Port 2")
+        for tag, port_name in (("portIn3d", "1"), ("portOut3d", "2")):
+            row = next(item for item in port_rows if item.get("tag") == tag)
+            feature = row.get("properties")
+            requested = feature.get("requested_properties") if isinstance(feature, Mapping) else None
+            if not isinstance(requested, Mapping):
+                raise CandidateError(f"native {tag} property readback is missing")
+            for key, expected in (("PortType", "Numeric"), ("PortName", port_name),
+                                  ("PortModeNumber", "1")):
+                prop = requested.get(key)
+                if (not isinstance(prop, Mapping) or prop.get("has_property_exact") is not True
+                        or prop.get("readback_error") is not None
+                        or prop.get("string_readback") != expected):
+                    raise CandidateError(f"native {tag}.{key} readback differs from the frozen Port configuration")
+
+    if not isinstance(step_rows, list):
+        raise CandidateError("native fixture readback omitted the study-step inventory")
+    if inventory:
+        tags = [row.get("tag") for row in step_rows if isinstance(row, Mapping)]
+        if len(tags) != len(step_rows) or sorted(tags) != ["bmaInput3d", "bmaOutput3d", "freq3d"]:
+            raise CandidateError("native solution inventory does not contain the exact configured study steps")
+    matches = [row for row in step_rows
+               if isinstance(row, Mapping) and row.get("tag") == "bmaOutput3d"]
+    if len(matches) != 1:
+        raise CandidateError("native readback must contain exactly one bmaOutput3d step")
+    output = matches[0]
+    port_name = output.get("PortName") if inventory else output.get("port")
+    neigs = output.get("neigs")
+    feature_type = output.get("feature_type", output.get("type"))
+    if (feature_type != "BoundaryModeAnalysis" or port_name != "2"
+            or output.get("modeFreq") != "f0" or type(neigs) is not int or neigs != 2):
+        raise CandidateError("native bmaOutput3d PortName/modeFreq/neigs readback differs from the frozen two-eigensolution request")
+    return {
+        "status": "NATIVE_CONFIGURATION_PROPERTIES_READ_BACK",
+        "receiver_numeric_port": {"feature_tag": "portOut3d", "port_name": "2",
+                                   "port_mode_number": 1},
+        "bma_output_step": {"feature_tag": "bmaOutput3d", "port_name": "2",
+                             "mode_frequency": "f0", "requested_eigensolutions": 2},
+        "basis_ordinals": [1, 2],
+        "basis_ordinal_is_not_port_mode_number": True,
+        "producer_step_binding": "UNVERIFIED",
+        "numeric_port_mode_field_mapping": "UNVERIFIED",
+    }
+
+
+def _validate_disconnected_inspect(response: Mapping[str, Any], *, project_id: str,
+                                   session_id: str, worker_instance_id: str,
+                                   worker_epoch: int) -> None:
+    data = response.get("data") if isinstance(response, Mapping) else None
+    lifecycle = data.get("lifecycle") if isinstance(data, Mapping) else None
+    if (response.get("success") is not True or not isinstance(data, Mapping)
+            or data.get("project_id") != project_id or data.get("runtime_live") is not False
+            or not isinstance(lifecycle, Mapping)
+            or lifecycle.get("session_id") != session_id
+            or lifecycle.get("state") != "DISCONNECTED"
+            or lifecycle.get("client_state") != "RETIRED"
+            or lifecycle.get("worker_instance_id") != worker_instance_id
+            or lifecycle.get("worker_epoch") != worker_epoch
+            or data.get("worker_binding") is not None):
+        raise CleanupRefused("session_inspect", "public readback does not prove this exact retired session", [])
+
+
+def orchestrate_cleanup(*, worker_state: str, project_id: str | None,
+                        session_id: str | None, worker_instance_id: str | None,
+                        connected_epoch: int | None, detached_epoch: int | None,
+                        all_project_jobs_terminal: bool,
+                        disconnect: Callable[[], Mapping[str, Any]] | None,
+                        inspect: Callable[[], Mapping[str, Any]] | None,
+                        stop_server: Callable[[], Mapping[str, Any]],
+                        stop_control: Callable[[], Mapping[str, Any]]) -> list[str]:
+    """Order exact Worker retirement, server stop, then control child reap.
+
+    Every callback is a narrow injected adapter. UNKNOWN or failed evidence
+    stops the sequence, leaving all later process handles untouched.
+    """
+    completed: list[str] = []
+    if worker_state == "UNKNOWN":
+        raise CleanupRefused("worker_state", "session/Worker outcome is UNKNOWN; preserve every process", completed)
+    if worker_state == "CONNECTED":
+        if (not all_project_jobs_terminal or not all((project_id, session_id, worker_instance_id,
+                                                       connected_epoch is not None))
+                or disconnect is None or inspect is None):
+            raise CleanupRefused("pre_retirement", "missing terminal ledger or exact session identity", completed)
+        try:
+            retired = disconnect()
+        except BaseException as exc:
+            raise CleanupRefused("worker_retirement", f"disconnect outcome unknown ({type(exc).__name__})", completed) from exc
+        proof = validate_retirement_response(
+            retired, project_id=str(project_id), session_id=str(session_id),
+            worker_instance_id=str(worker_instance_id), connected_epoch=int(connected_epoch),
+            detached_epoch=detached_epoch)
+        completed.append("exact_managed_worker_retired")
+        try:
+            observed = inspect()
+        except BaseException as exc:
+            raise CleanupRefused("session_inspect", f"retired session readback unavailable ({type(exc).__name__})", completed) from exc
+        _validate_disconnected_inspect(
+            observed, project_id=str(project_id), session_id=str(session_id),
+            worker_instance_id=str(worker_instance_id), worker_epoch=proof["worker_epoch"])
+        completed.append("public_disconnected_inspect_verified")
+    elif worker_state != "NEVER_DISPATCHED":
+        raise CleanupRefused("worker_state", f"unsupported Worker state {worker_state!r}", completed)
+    if not all_project_jobs_terminal:
+        raise CleanupRefused("job_ledger", "project contains nonterminal/unknown jobs", completed)
+    try:
+        server_result = stop_server()
+    except BaseException as exc:
+        raise CleanupRefused("server_stop", f"owned server cleanup failed ({type(exc).__name__})", completed) from exc
+    if not _exact_child_stopped(server_result):
+        raise CleanupRefused("server_stop", "exact server Popen/birth/listener/reap evidence is incomplete", completed)
+    completed.append("exact_task_server_stopped_and_reaped")
+    try:
+        control_result = stop_control()
+    except BaseException as exc:
+        raise CleanupRefused("control_stop", f"owned control-daemon cleanup failed ({type(exc).__name__})", completed) from exc
+    if not _exact_child_stopped(control_result):
+        raise CleanupRefused("control_stop", "exact control Popen/birth/listener/reap evidence is incomplete", completed)
+    completed.append("exact_control_daemon_stopped_and_reaped")
+    return completed
+
+
+def _exact_child_stopped(result: Any) -> bool:
+    if not isinstance(result, Mapping):
+        return False
+    if result.get("status") == "NOT_STARTED":
+        return result.get("child_started") is False
+    return (result.get("status") == "STOPPED_AND_REAPED"
+            and type(result.get("pid")) is int and result["pid"] > 1
+            and type(result.get("start_epoch_ms")) is int and result["start_epoch_ms"] > 0
+            and result.get("child_exit_confirmed") is True
+            and result.get("child_reaped") is True
+            and result.get("listener_absent") is True)
+
+
+def _write_json(path: Path, value: Any) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(path.name + ".tmp")
+    temporary.write_text(json.dumps(value, indent=2, ensure_ascii=False,
+                                    allow_nan=False) + "\n", encoding="utf-8")
+    os.replace(temporary, path)
+
+
+def _new_ids(label: str) -> tuple[str, str]:
+    token = uuid4().hex
+    return f"w23f3d-{label}-{token}", f"w23f3d-idem-{label}-{token}"
+
+
+class PublicDispatchAdapter:
+    """Call only the production `_control_client.dispatch` HTTP transport."""
+
+    def __init__(self, evidence: Path, *, expected_control_home: Path, archive_root: Path):
+        self.evidence = evidence
+        self.requests_path = evidence / "public_dispatches.jsonl"
+        self.expected_control_home = expected_control_home.resolve()
+        self.archive_root = archive_root.resolve()
+        self.owned_endpoint: dict[str, Any] | None = None
+        self.owned_process_identity: dict[str, Any] | None = None
+
+    def bind_owned_control(self, endpoint: Mapping[str, Any],
+                           process_identity: Mapping[str, Any]) -> None:
+        if (type(endpoint.get("pid")) is not int
+                or type(endpoint.get("port")) is not int
+                or type(endpoint.get("process_start_epoch_ms")) is not int
+                or process_identity.get("pid") != endpoint.get("pid")
+                or process_identity.get("start_epoch_ms") != endpoint.get("process_start_epoch_ms")):
+            raise CandidateError("owned control endpoint does not bind its exact Popen birth identity")
+        self.owned_endpoint = dict(endpoint)
+        self.owned_process_identity = {"pid": process_identity["pid"],
+                                       "start_epoch_ms": process_identity["start_epoch_ms"]}
+
+    def _verify_owned_control_route(self) -> None:
+        if self.owned_endpoint is None or self.owned_process_identity is None:
+            raise CandidateError("public dispatch has no bound task-owned control daemon")
+        from comsol_mcp._control_client import control_home
+
+        observed_home = control_home().resolve(strict=True)
+        if observed_home != self.expected_control_home:
+            raise CandidateError("public control_home differs from this candidate's owned daemon home")
+        endpoint_path = observed_home / "control.json"
+        if not endpoint_path.is_file() or endpoint_path.is_symlink():
+            raise CandidateError("public control endpoint file is missing or unsafe")
+        endpoint = json.loads(endpoint_path.read_text(encoding="utf-8"))
+        for key in ("pid", "port", "process_start_epoch_ms", "token"):
+            if endpoint.get(key) != self.owned_endpoint.get(key):
+                raise CandidateError("public control endpoint no longer matches the exact task-owned daemon")
+        if _process_identity(endpoint["pid"]) != self.owned_process_identity:
+            raise CandidateError("public control daemon birth no longer matches the exact Popen")
+        listeners = _lsof_listeners(endpoint["port"])
+        if (len(listeners) != 1 or listeners[0]["pid"] != endpoint["pid"]
+                or listeners[0]["endpoint"] != f"127.0.0.1:{endpoint['port']}"):
+            raise CandidateError("public dispatch endpoint is not the uniquely owned loopback listener")
+        _audit_loaded_project_modules(self.archive_root)
+        _assert_no_editable_fallback()
+
+    def dispatch(self, request: Mapping[str, Any]) -> dict[str, Any]:
+        if not isinstance(request, Mapping):
+            raise CandidateError("public route request must be a mapping")
+        operation = request.get("operation")
+        arguments, execution = request.get("arguments", {}), request.get("execution", {})
+        if not isinstance(operation, str) or not isinstance(arguments, dict) or not isinstance(execution, dict):
+            raise CandidateError("public route request has invalid operation/arguments/execution")
+        if operation in {"study.run", "solve", "solver.run", "model.solve"}:
+            raise CandidateError("setup-only route guard rejected a solve operation")
+        self._verify_owned_control_route()
+        from comsol_mcp._control_client import dispatch
+        response = dispatch(operation, arguments, execution)
+        self._verify_owned_control_route()
+        row = {"operation": operation, "arguments": arguments, "execution": execution,
+               "response": response, "at_utc": datetime.now(timezone.utc).isoformat()}
+        with self.requests_path.open("a", encoding="utf-8") as stream:
+            stream.write(json.dumps(row, ensure_ascii=False, allow_nan=False) + "\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        return response
+
+
+def _require_route_ok(result: Mapping[str, Any], label: str) -> dict[str, Any]:
+    response = result.get("response")
+    if result.get("outcome") != "SUCCEEDED" or not isinstance(response, Mapping):
+        raise CandidateError(f"managed route {label} did not complete with an observed success")
+    return dict(response)
+
+
+def _public_connect_request(*, project_id: str, runtime_id: str, port: int) -> dict[str, Any]:
+    request_id, key = _new_ids("session-connect")
+    return {"operation": "session.connect",
+            "arguments": {"runtime_id": runtime_id,
+                          "endpoint": {"host": "127.0.0.1", "port": port}},
+            "execution": {"project_id": project_id, "request_id": request_id,
+                          "idempotency_key": key, "rpc_timeout_s": 30.0,
+                          "execution_timeout_s": 120.0, "queue_timeout_s": 30.0}}
+
+
+def _session_identity(response: Mapping[str, Any], *, project_id: str,
+                     expected_port: int) -> dict[str, Any]:
+    data = response.get("data")
+    if not isinstance(data, Mapping) or response.get("success") is not True:
+        raise CandidateError("public session.connect did not return a proven connection")
+    endpoint = data.get("endpoint")
+    peer = data.get("observed_peer")
+    session_id, server_id = data.get("session_id"), data.get("server_instance_id")
+    worker_id, worker_epoch = data.get("worker_instance_id"), data.get("worker_epoch")
+    if (data.get("project_id") != project_id
+            or endpoint not in (f"127.0.0.1:{expected_port}",
+                         {"host": "127.0.0.1", "port": expected_port})
+            or not isinstance(peer, Mapping)
+            or peer.get("address") != "127.0.0.1" or peer.get("port") != expected_port
+            or not all(isinstance(value, str) and value for value in (session_id, server_id, worker_id))
+            or type(worker_epoch) is not int or worker_epoch < 1):
+        raise CandidateError("session.connect identity/endpoint/peer readback does not match the task-owned server")
+    version = data.get("remote_engine_version")
+    build = data.get("remote_engine_build")
+    if not isinstance(version, str) or "6.4" not in version or not isinstance(build, str) or "293" not in build:
+        raise CandidateError("public session.connect engine version/build differs from frozen COMSOL 6.4.0.293")
+    return {"project_id": data.get("project_id"), "session_id": session_id,
+            "server_instance_id": server_id, "worker_instance_id": worker_id,
+            "worker_epoch": worker_epoch, "endpoint": endpoint,
+            "observed_peer": dict(peer), "remote_engine_version": version,
+            "remote_engine_build": build}
+
+
+def _managed_model_request(project_id: str, session: Mapping[str, Any]) -> dict[str, Any]:
+    from tools.w23_full3d_science import build_full3d_model_create_request
+    request_id, key = _new_ids("model-create")
+    return build_full3d_model_create_request(
+        project_id=project_id, session_id=str(session["session_id"]),
+        name="w23-full3d-setup-only", request_id=request_id, idempotency_key=key)
+
+
+def _job_ledger_terminal(dispatcher: PublicDispatchAdapter, project_id: str) -> dict[str, Any]:
+    response = dispatcher.dispatch({"operation": "job.list",
+        "arguments": {"project_id": project_id, "limit": 1000}, "execution": {}})
+    if response.get("success") is not True:
+        raise CandidateError("public job.list could not verify the project operation ledger")
+    data = response.get("data")
+    jobs = data.get("jobs") if isinstance(data, Mapping) else None
+    if not isinstance(jobs, list):
+        raise CandidateError("public job.list omitted its jobs array")
+    nonterminal = [job for job in jobs if not isinstance(job, Mapping)
+                   or job.get("status") not in TERMINAL_JOB_STATES]
+    return {"jobs": jobs, "count": len(jobs), "nonterminal": nonterminal,
+            "all_terminal": not nonterminal}
+
+
+def _process_identity(pid: int) -> dict[str, Any] | None:
+    from comsol_mcp._platform_process import process_identity
+    value = process_identity(pid)
+    if not isinstance(value, Mapping):
+        return None
+    birth = value.get("start_epoch_ms")
+    if value.get("alive") is not True or type(birth) is not int or birth <= 0:
+        return None
+    return {"pid": pid, "start_epoch_ms": birth}
+
+
+def _lsof_listeners(port: int) -> list[dict[str, Any]]:
+    result = subprocess.run(["/usr/sbin/lsof", "-nP", "-iTCP:" + str(port), "-sTCP:LISTEN"],
+                            capture_output=True, text=True, timeout=10, check=False)
+    if result.returncode not in (0, 1) or result.stderr.strip():
+        raise CandidateError("lsof cannot verify task-owned listener state")
+    rows = []
+    for line in result.stdout.splitlines():
+        if not line.strip() or line.lstrip().startswith("COMMAND"):
+            continue
+        fields = line.split()
+        if len(fields) < 2 or not fields[1].isdigit():
+            raise CandidateError("lsof returned an unparsable listener row")
+        try:
+            endpoint = fields[fields.index("TCP") + 1]
+        except (ValueError, IndexError):
+            raise CandidateError("lsof listener row omitted its TCP endpoint")
+        rows.append({"pid": int(fields[1]), "endpoint": endpoint, "line": line})
+    return rows
+
+
+def _lsof_process_listeners(pid: int) -> list[dict[str, Any]]:
+    result = subprocess.run(["/usr/sbin/lsof", "-nP", "-a", "-p", str(pid),
+                             "-iTCP", "-sTCP:LISTEN"],
+                            capture_output=True, text=True, timeout=10, check=False)
+    if result.returncode not in (0, 1) or result.stderr.strip():
+        raise CandidateError("lsof cannot verify the exact task Popen listener")
+    rows = []
+    for line in result.stdout.splitlines():
+        if not line.strip() or line.lstrip().startswith("COMMAND"):
+            continue
+        fields = line.split()
+        try:
+            row_pid = int(fields[1])
+            endpoint = fields[fields.index("TCP") + 1]
+        except (ValueError, IndexError):
+            raise CandidateError("lsof process-listener row is malformed")
+        rows.append({"pid": row_pid, "endpoint": endpoint, "line": line})
+    return rows
+
+
+def _stop_owned_process(proc: subprocess.Popen[Any], expected: Mapping[str, Any], *, port: int,
+                        timeout_s: float = 8.0) -> dict[str, Any]:
+    pid = proc.pid
+    if type(pid) is not int or pid <= 1:
+        raise CandidateError("exact owned Popen is missing before verified cleanup")
+    return_code = proc.poll()
+    expected_identity = {"pid": expected.get("pid"),
+                         "start_epoch_ms": expected.get("start_epoch_ms")}
+    if (expected_identity["pid"] != pid
+            or type(expected_identity["start_epoch_ms"]) is not int
+            or expected_identity["start_epoch_ms"] <= 0):
+        raise CandidateError("expected birth identity does not bind the exact task-owned Popen")
+    if return_code is not None:
+        # poll() on the exact Popen reaps its child. A spontaneously exited
+        # owned server needs no signal; still require its formerly bound port
+        # to be listener-free before declaring teardown verified.
+        after = _lsof_listeners(port)
+        if after:
+            raise CandidateError("exited exact child left a listener on its owned port")
+        return {"status": "STOPPED_AND_REAPED", "pid": pid,
+                "start_epoch_ms": expected_identity["start_epoch_ms"],
+                "child_exit_confirmed": True, "child_reaped": True,
+                "listener_absent": True, "spontaneous_exit": True,
+                "return_code": return_code}
+    observed = _process_identity(pid)
+    if observed != expected_identity:
+        raise CandidateError("process birth identity no longer matches exact Popen before stop")
+    listeners = _lsof_listeners(port)
+    if len(listeners) != 1 or listeners[0]["pid"] != pid or listeners[0]["endpoint"] != f"127.0.0.1:{port}":
+        raise CandidateError("listener port lacks one exact 127.0.0.1 endpoint owned by this Popen")
+    proc.terminate()
+    try:
+        proc.wait(timeout=timeout_s)
+    except subprocess.TimeoutExpired:
+        # This is the same task-owned Popen and matching birth, checked above.
+        proc.kill()
+        proc.wait(timeout=3.0)
+    if proc.poll() is None:
+        raise CandidateError("exact task-owned child remains live after terminate/kill and wait")
+    after = _lsof_listeners(port)
+    if after:
+        raise CandidateError("listener port was not proven absent after exact child exit")
+    return {"status": "STOPPED_AND_REAPED", "pid": pid,
+            "start_epoch_ms": expected["start_epoch_ms"],
+            "child_exit_confirmed": proc.poll() is not None,
+            "child_reaped": True, "listener_absent": True,
+            "return_code": proc.returncode}
+
+
+def _owned_process_receipt(name: str, proc: Any, identity: Mapping[str, Any] | None,
+                           endpoint: Mapping[str, Any] | None,
+                           cleanup: Mapping[str, Any] | None) -> dict[str, Any]:
+    if proc is None:
+        return {"resource": name, "status": "NOT_STARTED", "exact_popen_handle": False,
+                "child_exit_confirmed": False, "child_reaped": False,
+                "endpoint": None, "cleanup_result": dict(cleanup) if isinstance(cleanup, Mapping) else None}
+    pid = getattr(proc, "pid", None)
+    return_code = proc.poll()
+    birth = identity.get("start_epoch_ms") if isinstance(identity, Mapping) else None
+    identity_pid = identity.get("pid") if isinstance(identity, Mapping) else None
+    identity_bound = (type(pid) is int and pid > 1 and identity_pid == pid
+                      and type(birth) is int and birth > 0)
+    sanitized_endpoint = None
+    if isinstance(endpoint, Mapping):
+        sanitized_endpoint = {key: endpoint[key] for key in
+                              ("status", "host", "pid", "port", "endpoint",
+                               "process_start_epoch_ms") if key in endpoint}
+    if return_code is None:
+        status = "LIVE_EXACT_IDENTITY_BOUND" if identity_bound else "LIVE_IDENTITY_UNVERIFIED"
+    else:
+        status = "EXITED_REAPED_EXACT_IDENTITY_BOUND" if identity_bound else "EXITED_REAPED_IDENTITY_UNVERIFIED"
+    return {"resource": name, "status": status, "exact_popen_handle": True,
+            "pid": pid,
+            "process_identity": ({"pid": pid, "start_epoch_ms": birth}
+                                 if identity_bound else None),
+            "birth_identity_bound_to_popen_pid": identity_bound,
+            "endpoint": sanitized_endpoint,
+            "child_exit_confirmed": return_code is not None,
+            "child_reaped": return_code is not None,
+            "return_code": return_code,
+            "cleanup_result": dict(cleanup) if isinstance(cleanup, Mapping) else None}
+
+
+def _resource_ownership_receipt(*, server_proc: Any, server_identity: Mapping[str, Any] | None,
+                                server_listener: Mapping[str, Any] | None,
+                                control_proc: Any, control_identity: Mapping[str, Any] | None,
+                                control_endpoint: Mapping[str, Any] | None,
+                                worker_state: str, session: Mapping[str, Any] | None,
+                                retirement_proof: Mapping[str, Any] | None,
+                                process_cleanup: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "server": _owned_process_receipt("task_owned_comsol_server", server_proc,
+            server_identity, server_listener, process_cleanup.get("server")),
+        "control_daemon": _owned_process_receipt("task_owned_public_control_daemon", control_proc,
+            control_identity, control_endpoint, process_cleanup.get("control_daemon")),
+        "managed_worker": {
+            "status": worker_state,
+            "project_id": session.get("project_id") if isinstance(session, Mapping) else None,
+            "session_id": session.get("session_id") if isinstance(session, Mapping) else None,
+            "worker_instance_id": session.get("worker_instance_id") if isinstance(session, Mapping) else None,
+            "connected_worker_epoch": session.get("worker_epoch") if isinstance(session, Mapping) else None,
+            "retirement_proof": dict(retirement_proof) if isinstance(retirement_proof, Mapping) else None,
+        },
+    }
+
+
+def _await_control_endpoint(home: Path, proc: subprocess.Popen[Any], expected_identity: Mapping[str, Any],
+                            timeout_s: float = 20.0) -> dict[str, Any]:
+    endpoint_path = home / "control.json"
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        if proc.poll() is not None:
+            raise CandidateError(f"task-owned control daemon exited {proc.returncode} before readiness")
+        if endpoint_path.is_file() and not endpoint_path.is_symlink():
+            endpoint = json.loads(endpoint_path.read_text(encoding="utf-8"))
+            if (endpoint.get("pid") != proc.pid
+                    or endpoint.get("process_start_epoch_ms") != expected_identity.get("start_epoch_ms")
+                    or type(endpoint.get("port")) is not int or not 1 <= endpoint["port"] <= 65535):
+                raise CandidateError("control endpoint does not bind the exact owned daemon birth identity")
+            rows = _lsof_listeners(endpoint["port"])
+            if (len(rows) != 1 or rows[0]["pid"] != proc.pid
+                    or rows[0]["endpoint"] != f"127.0.0.1:{endpoint['port']}"):
+                raise CandidateError("control listener is not uniquely owned by the task Popen")
+            return endpoint
+        time.sleep(0.1)
+    raise TimeoutError("task-owned public control daemon did not publish its exact endpoint")
+
+
+def _start_control_daemon(work: Path, evidence: Path, server: Any, env: Mapping[str, str],
+                          on_owned_child: Callable[[Any, Any, Any, Any], None]):
+    home = Path(env["COMSOL_SERVER_MCP_HOME"]) / "control-private"
+    archive_root = Path(__file__).resolve().parents[1]
+    if not getattr(sys.flags, "no_site", False):
+        raise CandidateError("the setup runner must remain under -S before starting its public daemon")
+    if Path(sys.executable).resolve(strict=True) != EXPECTED_PYTHON.resolve(strict=True):
+        raise CandidateError("public control daemon must be launched from the exact reviewed Python 3.12")
+    expected_pythonpath = os.pathsep.join((str(archive_root.resolve()),
+                                           str(EXPLICIT_SITE_PACKAGES.resolve(strict=True))))
+    if env.get("PYTHONPATH") != expected_pythonpath:
+        raise CandidateError("control daemon PYTHONPATH must contain only the archive and explicit venv site-packages")
+    if env.get("PYTHONHOME") or env.get("PYTHONSTARTUP"):
+        raise CandidateError("control daemon environment must not override Python home or startup hooks")
+    if home.exists():
+        if home.is_symlink() or not home.is_dir() or any(home.iterdir()):
+            raise CandidateError("owned control home exists but is not a new empty private directory")
+    else:
+        home.mkdir(parents=True, exist_ok=False)
+    manifest_path = archive_root / ".w23_published_archive_manifest.json"
+    if not manifest_path.is_file() or manifest_path.is_symlink():
+        raise CandidateError("control daemon source root lacks the exact published archive manifest")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    base_commit = manifest.get("base_commit")
+    if not isinstance(base_commit, str) or not base_commit:
+        raise CandidateError("control daemon source manifest omitted its published base commit")
+    source_binding = _source_inventory(archive_root, base_commit)
+    daemon_module = source_binding.get("source_files", {}).get("comsol_mcp/_control_daemon.py")
+    if not isinstance(daemon_module, Mapping):
+        raise CandidateError("control daemon source hash is absent from the frozen archive closure")
+    log_path = evidence / "control-daemon.log"
+    stream = log_path.open("ab", buffering=0)
+    command = [str(EXPECTED_PYTHON), "-S", "-m", "comsol_mcp._control_daemon", "--home", str(home)]
+    daemon_env = dict(env)
+    daemon_env.pop("PYTHONHOME", None)
+    daemon_env.pop("PYTHONSTARTUP", None)
+    daemon_env["PYTHONDONTWRITEBYTECODE"] = "1"
+    _write_json(evidence / "control_daemon_launch.json", {
+        "status": "Popen_NOT_YET_CONFIRMED",
+        "command": command,
+        "cwd": str(archive_root.resolve(strict=True)),
+        "archive_base_commit": base_commit,
+        "archive_manifest_sha256": manifest.get("manifest_sha256"),
+        "archive_source_closure_sha256": source_binding["source_closure_sha256"],
+        "archive_source_file_count": len(source_binding["source_files"]),
+        "control_daemon_source_sha256": daemon_module["sha256"],
+        "explicit_pythonpath": daemon_env["PYTHONPATH"],
+        "explicit_site_packages": str(EXPLICIT_SITE_PACKAGES.resolve(strict=True)),
+        "python_no_site_switch": "-S" in command,
+        "pythonhome_override_absent": "PYTHONHOME" not in daemon_env,
+        "pythonstartup_hook_absent": "PYTHONSTARTUP" not in daemon_env,
+        "bytecode_writes_disabled": daemon_env["PYTHONDONTWRITEBYTECODE"] == "1",
+        "runner_path_hooks": [_identity_name(item) for item in sys.path_hooks],
+        "runner_meta_path_finders": [_identity_name(item) for item in sys.meta_path],
+        "editable_fallback_surfaces": _assert_no_editable_fallback(),
+    })
+    proc = subprocess.Popen(command, cwd=str(archive_root), env=daemon_env, stdin=subprocess.DEVNULL,
+                            stdout=stream, stderr=subprocess.STDOUT, text=True,
+                            start_new_session=True)
+    on_owned_child(proc, None, None, stream)
+    identity = _process_identity(proc.pid)
+    if identity is None:
+        raise CandidateError("task-owned public control daemon birth identity is unavailable")
+    on_owned_child(proc, identity, None, stream)
+    endpoint = _await_control_endpoint(home, proc, identity)
+    on_owned_child(proc, identity, endpoint, stream)
+    _write_json(evidence / "control_daemon_launch.json", {
+        "status": "Popen_BIRTH_ENDPOINT_BOUND",
+        "command": command,
+        "cwd": str(archive_root.resolve(strict=True)),
+        "archive_base_commit": base_commit,
+        "archive_manifest_sha256": manifest.get("manifest_sha256"),
+        "archive_source_closure_sha256": source_binding["source_closure_sha256"],
+        "archive_source_file_count": len(source_binding["source_files"]),
+        "control_daemon_source_sha256": daemon_module["sha256"],
+        "explicit_pythonpath": daemon_env["PYTHONPATH"],
+        "explicit_site_packages": str(EXPLICIT_SITE_PACKAGES.resolve(strict=True)),
+        "python_no_site_switch": "-S" in command,
+        "pythonhome_override_absent": "PYTHONHOME" not in daemon_env,
+        "pythonstartup_hook_absent": "PYTHONSTARTUP" not in daemon_env,
+        "bytecode_writes_disabled": daemon_env["PYTHONDONTWRITEBYTECODE"] == "1",
+        "popen_pid": proc.pid,
+        "birth_identity": identity,
+        "endpoint": {key: value for key, value in endpoint.items() if key != "token"},
+        "runner_path_hooks": [_identity_name(item) for item in sys.path_hooks],
+        "runner_meta_path_finders": [_identity_name(item) for item in sys.meta_path],
+        "editable_fallback_surfaces": _assert_no_editable_fallback(),
+    })
+    return proc, identity, endpoint, stream
+
+
+def _connect_inspect(dispatcher: PublicDispatchAdapter, project_id: str,
+                     session: Mapping[str, Any]) -> dict[str, Any]:
+    request_id, key = _new_ids("session-inspect-connected")
+    response = dispatcher.dispatch({"operation": "session.inspect",
+        "arguments": {"session_id": session["session_id"]},
+        "execution": {"project_id": project_id, "request_id": request_id,
+                      "idempotency_key": key, "rpc_timeout_s": 20.0}})
+    data = response.get("data")
+    lifecycle = data.get("lifecycle") if isinstance(data, Mapping) else None
+    binding = data.get("worker_binding") if isinstance(data, Mapping) else None
+    if (response.get("success") is not True or not isinstance(lifecycle, Mapping)
+            or not isinstance(binding, Mapping) or data.get("runtime_live") is not True
+            or lifecycle.get("state") != "CONNECTED"
+            or lifecycle.get("worker_instance_id") != session["worker_instance_id"]
+            or lifecycle.get("worker_epoch") != session["worker_epoch"]
+            or binding.get("worker_instance_id") != session["worker_instance_id"]
+            or binding.get("worker_epoch") != session["worker_epoch"]):
+        raise CandidateError("public session.inspect does not prove the connected Worker identity")
+    return dict(response)
+
+
+def _import_published_runtime_closure(repo: Path) -> dict[str, str]:
+    """Import runtime modules only after archive root wins sys.path priority."""
+    import importlib
+
+    root = repo.resolve(strict=True)
+    _assert_no_editable_fallback()
+    if str(root) in sys.path:
+        sys.path.remove(str(root))
+    sys.path.insert(0, str(root))
+    names = [
+        "comsol_mcp._control_client", "comsol_mcp._control_daemon",
+        "comsol_mcp._execution_contract", "comsol_mcp._operation_store",
+        "comsol_mcp._managed_backend", "comsol_mcp._project_authority",
+        "comsol_mcp._session_context", "comsol_mcp._session_lifecycle",
+        "comsol_mcp._runtime_installation", "comsol_mcp._java_worker",
+        "comsol_mcp._g2_isolation", "comsol_mcp._platform_process",
+        "comsol_mcp._g2_registry", "tools.run_native_resume_smoke",
+        "tools.w23_full3d", "tools.w23_full3d_science",
+    ]
+    origins: dict[str, str] = {}
+    for name in names:
+        module = importlib.import_module(name)
+        origin = getattr(module, "__file__", None)
+        if not isinstance(origin, str):
+            raise CandidateError(f"runtime module has no file-backed source origin: {name}")
+        resolved = Path(origin).resolve(strict=True)
+        try:
+            resolved.relative_to(root)
+        except ValueError as exc:
+            raise CandidateError(f"runtime module escaped the reviewed archive: {name} -> {resolved}") from exc
+        origins[name] = str(resolved)
+    return origins
+
+
+def _audit_loaded_project_modules(repo: Path,
+                                  modules: Mapping[str, Any] | None = None) -> dict[str, str]:
+    """Audit every loaded project namespace module and its full search path."""
+    root = repo.resolve(strict=True)
+    table = sys.modules if modules is None else modules
+    selected: dict[str, str] = {}
+    for name, module in table.items():
+        if name.split(".", 1)[0] not in {"comsol_mcp", "tools"}:
+            continue
+        origin = getattr(module, "__file__", None)
+        if not isinstance(origin, str):
+            spec = getattr(module, "__spec__", None)
+            origin = getattr(spec, "origin", None) if spec is not None else None
+        package_path = getattr(module, "__path__", None)
+        if package_path is not None:
+            paths = [Path(item).resolve(strict=True) for item in package_path]
+            if not paths:
+                raise CandidateError(f"loaded project package has an empty search path: {name}")
+            for package_root in paths:
+                try:
+                    package_root.relative_to(root)
+                except ValueError as exc:
+                    raise CandidateError(f"loaded project package search path escaped the archive: {name} -> {package_root}") from exc
+            if name in {"comsol_mcp", "tools"}:
+                expected = (root / name).resolve(strict=True)
+                if paths != [expected]:
+                    raise CandidateError(f"loaded project namespace has an unexpected search path: {name}")
+        if isinstance(origin, str) and origin not in {"built-in", "frozen", "namespace"}:
+            resolved = Path(origin).resolve(strict=True)
+            try:
+                resolved.relative_to(root)
+            except ValueError as exc:
+                raise CandidateError(f"loaded project module escaped the archive: {name} -> {resolved}") from exc
+            selected[name] = str(resolved)
+        elif package_path is not None and origin in {None, "namespace"}:
+            selected[name] = "namespace:" + ",".join(str(item) for item in paths)
+        else:
+            raise CandidateError(f"loaded project module lacks a file-backed archive origin: {name}")
+    return selected
+
+
+def _archive_import_audit(repo: Path) -> dict[str, Any]:
+    import importlib
+
+    root = repo.resolve(strict=True)
+    _assert_no_editable_fallback()
+    origins = _import_published_runtime_closure(root)
+    package = importlib.import_module("comsol_mcp")
+    package_paths = [str(Path(item).resolve(strict=True)) for item in package.__path__]
+    expected_package_path = str((root / "comsol_mcp").resolve(strict=True))
+    if package_paths != [expected_package_path]:
+        raise CandidateError("COMSOL MCP package search path is not confined to the isolated archive")
+    module_origins = _audit_loaded_project_modules(root)
+    if any(not origin.startswith("namespace:") and not Path(origin).is_relative_to(root)
+           for origin in module_origins.values()):
+        raise CandidateError("loaded project module escaped the isolated archive")
+    tools_module = importlib.import_module("tools")
+    tools_paths = [str(Path(item).resolve(strict=True)) for item in tools_module.__path__]
+    expected_tools_path = str((root / "tools").resolve(strict=True))
+    if tools_paths != [expected_tools_path]:
+        raise CandidateError("W23 tools namespace search path is not confined to the isolated archive")
+    _assert_no_editable_fallback()
+    editable_fallback_surfaces = _assert_no_editable_fallback()
+    editable_path_hook = any("editable" in _identity_name(item).lower() for item in sys.path_hooks)
+    return {"cwd": str(Path.cwd().resolve(strict=True)),
+            "python_sys_path": [str(Path(item or Path.cwd()).resolve()) for item in sys.path],
+            "site_processing_disabled": bool(getattr(sys.flags, "no_site", False)),
+            "python_no_site_flag": bool(getattr(sys.flags, "no_site", False)),
+            "site_module_loaded": "site" in sys.modules,
+            "bytecode_writes_disabled": bool(sys.dont_write_bytecode),
+            "sys_path_hooks": [_identity_name(item) for item in sys.path_hooks],
+            "meta_path_finders": [_identity_name(item) for item in sys.meta_path],
+            "explicit_site_packages": str(EXPLICIT_SITE_PACKAGES.resolve(strict=True)),
+            "comsol_mcp_package_paths": package_paths,
+            "tools_package_paths": tools_paths,
+            "module_origins": module_origins,
+            "preselected_runtime_module_origins": origins,
+            "all_audited_imports_from_archive": True,
+            "editable_fallback_surfaces": editable_fallback_surfaces,
+            "editable_fallback_used": bool(editable_fallback_surfaces),
+            "editable_path_hook_loaded": editable_path_hook}
+
+
+def _stop_server_adapter(server: Any, expected_identity: Mapping[str, Any], port: int) -> dict[str, Any]:
+    if server.proc is None:
+        return {"status": "STOPPED_AND_REAPED", "pid": expected_identity["pid"],
+                "start_epoch_ms": expected_identity["start_epoch_ms"],
+                "child_exit_confirmed": True, "child_reaped": True,
+                "listener_absent": True, "not_started": True}
+    return _stop_owned_process(server.proc, expected_identity, port=port)
+
+
+def execute_candidate(*, repo: Path, evidence: Path, reviewed_sha256: str,
+                      install_root: Path = INSTALL_ROOT, jdk_home: Path = JAVA11) -> dict[str, Any]:
+    python_isolation = _configure_archive_python(repo)
+    freeze = verify_candidate(repo=repo, evidence=evidence, reviewed_sha256=reviewed_sha256)
+    if freeze.get("source", {}).get("checkout_kind") != "git_archive":
+        raise CandidateError("native setup may execute only from the frozen source-only git archive")
+    if Path.cwd().resolve(strict=True) != repo.resolve(strict=True):
+        raise CandidateError("native setup cwd must be the exact frozen git archive root")
+    if sys.platform != "darwin":
+        raise CandidateError("this native setup candidate is frozen for Darwin only")
+    if freeze["runtime"]["install_root"] != str(install_root.resolve(strict=True)):
+        raise CandidateError("COMSOL install root differs from the reviewed candidate")
+    if freeze["runtime"]["jdk_home"] != str(jdk_home.resolve(strict=True)):
+        raise CandidateError("external JDK 11 path differs from the reviewed candidate")
+    if Path(sys.executable).resolve() != EXPECTED_PYTHON.resolve():
+        raise CandidateError(f"use exact Python executable {EXPECTED_PYTHON}")
+    if (freeze.get("python_isolation", {}).get("site_processing_disabled") is not True
+            or freeze.get("python_isolation", {}).get("explicit_site_packages")
+               != python_isolation.get("explicit_site_packages")):
+        raise CandidateError("runtime Python no-site/explicit-dependency policy differs from the frozen candidate")
+    if install_root.resolve(strict=True) != INSTALL_ROOT.resolve(strict=True):
+        raise CandidateError("NativeLoopbackServer is frozen to the exact reviewed COMSOL install root")
+    if jdk_home.resolve(strict=True) != JAVA11.resolve(strict=True):
+        raise CandidateError("NativeLoopbackServer is frozen to the exact reviewed external JDK 11 root")
+    # Recheck the offline compile closure before a server process is born.
+    if str(REPO) in sys.path:
+        sys.path.remove(str(REPO))
+    sys.path.insert(0, str(REPO))
+    from comsol_mcp._java_worker import JavaWorkerPaths
+    exact_paths = JavaWorkerPaths(install_root, jdk_home, project_root=repo)
+    _classpath, manifest_sha, jar_count, jar_fingerprint = exact_paths.classpath()
+    compile_receipt = freeze.get("compile", {})
+    if (manifest_sha != compile_receipt.get("classpath_manifest_sha256")
+            or jar_count != compile_receipt.get("classpath_jar_count")
+            or jar_fingerprint != compile_receipt.get("classpath_jar_content_fingerprint_sha256")
+            or exact_paths.comsol_version_info() != freeze["runtime"].get("comsol_version")
+            or exact_paths.jdk_version_info() != freeze["runtime"].get("jdk_version")):
+        raise CandidateError("current COMSOL/JDK classpath or version differs from offline candidate evidence")
+    run_dir = evidence / "native-setup-run"
+    if run_dir.exists():
+        raise CandidateError("native run evidence directory already exists")
+    run_dir.mkdir(parents=True, exist_ok=False)
+    work = Path("/private/tmp") / ("comsol-mcp-w23-full3d-work-" + uuid4().hex)
+    if work.exists():
+        raise CandidateError("unique private work directory unexpectedly exists")
+    work.mkdir(parents=True, exist_ok=False)
+    events_path = run_dir / "events.jsonl"
+    process_cleanup: dict[str, Mapping[str, Any]] = {}
+
+    def event(name: str, **payload: Any) -> None:
+        row = {"at_utc": datetime.now(timezone.utc).isoformat(), "event": name, **payload}
+        with events_path.open("a", encoding="utf-8") as stream:
+            stream.write(json.dumps(row, ensure_ascii=False, allow_nan=False, default=str) + "\n")
+            stream.flush(); os.fsync(stream.fileno())
+
+    def stop_server() -> Mapping[str, Any]:
+        if server is None or server.proc is None:
+            result = {"status": "NOT_STARTED", "child_started": False}
+            process_cleanup["server"] = result
+            return result
+        exact_identity = server_identity
+        exact_port = server_port
+        if exact_identity is None and isinstance(server.process_identity, Mapping):
+            birth = server.process_identity.get("start_epoch_ms")
+            if type(birth) is int and birth > 0:
+                exact_identity = {"pid": server.proc.pid, "start_epoch_ms": birth}
+        if exact_port is None and type(server.port) is int:
+            exact_port = server.port
+        try:
+            if exact_identity is None or exact_port is None:
+                raise CandidateError("server Popen exists without exact birth/port proof")
+            result = _stop_server_adapter(server, exact_identity, exact_port)
+            process_cleanup["server"] = result
+            return result
+        except BaseException as exc:
+            process_cleanup["server"] = {"status": "STOP_REFUSED", "error_type": type(exc).__name__,
+                                          "error": str(exc)}
+            raise
+
+    def stop_control() -> Mapping[str, Any]:
+        nonlocal daemon_endpoint
+        if daemon_proc is None:
+            result = {"status": "NOT_STARTED", "child_started": False}
+            process_cleanup["control_daemon"] = result
+            return result
+        try:
+            if daemon_identity is None:
+                raise CandidateError("exact task-owned control Popen birth is unavailable")
+            endpoint = daemon_endpoint
+            if endpoint is None:
+                if daemon_proc.poll() is None:
+                    rows = _lsof_process_listeners(daemon_proc.pid)
+                    if (len(rows) != 1 or rows[0]["pid"] != daemon_proc.pid
+                            or not rows[0]["endpoint"].startswith("127.0.0.1:")):
+                        raise CandidateError("control endpoint readback absent and exact Popen has no unique loopback listener")
+                    port_text = rows[0]["endpoint"].rsplit(":", 1)[-1]
+                    if not port_text.isdigit() or not 1 <= int(port_text) <= 65535:
+                        raise CandidateError("control Popen listener has an invalid loopback port")
+                    endpoint = {"status": "DISCOVERED_FROM_EXACT_POPEN_LISTENER",
+                                "pid": daemon_proc.pid, "port": int(port_text)}
+                    daemon_endpoint = endpoint
+                else:
+                    # An exited exact task Popen needs no signal. poll() has
+                    # reaped it; check the same PID has no surviving listener.
+                    rows = _lsof_process_listeners(daemon_proc.pid)
+                    if rows:
+                        raise CandidateError("control Popen exited but a listener remains on its process identity")
+                    result = {"status": "STOPPED_AND_REAPED", "pid": daemon_proc.pid,
+                              "start_epoch_ms": daemon_identity["start_epoch_ms"],
+                              "child_exit_confirmed": True, "child_reaped": True,
+                              "listener_absent": True, "spontaneous_exit": True,
+                              "return_code": daemon_proc.returncode}
+                    process_cleanup["control_daemon"] = result
+                    return result
+            result = _stop_owned_process(daemon_proc, daemon_identity, port=endpoint["port"])
+            process_cleanup["control_daemon"] = result
+            return result
+        except BaseException as exc:
+            process_cleanup["control_daemon"] = {"status": "STOP_REFUSED", "error_type": type(exc).__name__,
+                                                 "error": str(exc)}
+            raise
+
+    result: dict[str, Any] = {
+        "schema_version": 1, "status": "RUNNING_SETUP_ONLY", "evidence_dir": str(run_dir),
+        "work_dir": str(work), "candidate_sha256": reviewed_sha256,
+        "native_scientific_result": "NOT_RUN", "study_run_calls": 0, "solver_calls": 0,
+        "mode_producer_lineage": "UNVERIFIED", "numeric_port_mode_field_mapping": "UNVERIFIED",
+        "started_at_utc": datetime.now(timezone.utc).isoformat(),
+        "runtime_module_origins": {},
+    }
+    server = None
+    server_identity: dict[str, Any] | None = None
+    server_port: int | None = None
+    server_listener: dict[str, Any] | None = None
+    server_birth_mono: float | None = None
+    daemon_proc = None
+    daemon_identity: dict[str, Any] | None = None
+    daemon_endpoint: dict[str, Any] | None = None
+    daemon_log = None
+    dispatcher: PublicDispatchAdapter | None = None
+    project: dict[str, Any] | None = None
+    session: dict[str, Any] | None = None
+    worker_state = "NEVER_DISPATCHED"
+    ambiguous = False
+    route_outcomes: list[dict[str, Any]] = []
+    cleanup: list[str] = []
+    worker_retirement_proof: dict[str, Any] | None = None
+
+    try:
+        env = dict(os.environ)
+        env.update({
+            "COMSOL_ROOT": str(install_root), "COMSOL_JAVA_HOME": str(jdk_home),
+            "JAVA_HOME": str(jdk_home), "COMSOL_PREFS_DIR": str(work / "runtime" / "prefs"),
+            "COMSOL_PROJECT_ROOT": str(work / "project"),
+            "COMSOL_SERVER_MCP_HOME": str(work / "mcp-home"),
+            "COMSOL_MCP_TRUSTED_CODE": "1",
+            "COMSOL_MCP_ISOLATION_RECEIPT": str(work / "isolation_receipt.json"),
+            "COMSOL_SERVER_VERSION": "6.4.0.293",
+            "PYTHONPATH": os.pathsep.join((str(repo.resolve()),
+                                            str(EXPLICIT_SITE_PACKAGES.resolve(strict=True)))),
+        })
+        # Importing _server freezes COMSOL_SERVER_MCP_HOME. Bind env first,
+        # then import the published closure; never dispatch through a stale home.
+        os.environ.update(env)
+        origins = _import_published_runtime_closure(repo)
+        import_audit = _archive_import_audit(repo)
+        result["runtime_module_origins"] = origins
+        result["runtime_import_audit"] = import_audit
+
+        from comsol_mcp._control_client import control_home
+        expected_control_home = (Path(env["COMSOL_SERVER_MCP_HOME"]) / "control-private").resolve()
+        actual_control_home = control_home().resolve(strict=True)
+        if actual_control_home != expected_control_home:
+            raise CandidateError("first public control_home is not the exact task-owned daemon home")
+
+        from tools.run_native_resume_smoke import NativeLoopbackServer
+        from tools.w23_full3d import (
+            bind_case_matrix, build_full3d_case_dispatch, build_full3d_fixture_dispatch,
+            canonical_full3d_recipe, verify_recipe,
+        )
+        from tools.w23_full3d_science import (
+            _check_full3d_fixture_readback, _java_action_readback,
+            _updated_full3d_model_state, bind_full3d_model_create_response,
+            bind_full3d_project_create_response, build_full3d_project_create_request,
+            build_full3d_save_dispatch, build_full3d_solution_inventory_dispatch,
+            dispatch_public_managed_route, stage_full3d_fixture_source,
+        )
+        from comsol_mcp._runtime_installation import runtime_id_for_root
+
+        dispatcher = PublicDispatchAdapter(run_dir,
+            expected_control_home=expected_control_home, archive_root=repo)
+        server = NativeLoopbackServer(work, run_dir, event_log=events_path)
+        shadow = server.prepare_shadow()
+        event("private_shadow_prepared", receipt=shadow)
+        def capture_daemon_child(proc: Any, identity: Any, endpoint: Any, stream: Any) -> None:
+            nonlocal daemon_proc, daemon_identity, daemon_endpoint, daemon_log
+            daemon_proc, daemon_identity, daemon_endpoint, daemon_log = proc, identity, endpoint, stream
+
+        daemon_proc, daemon_identity, daemon_endpoint, daemon_log = _start_control_daemon(
+            work, run_dir, server, env, capture_daemon_child)
+        dispatcher.bind_owned_control(daemon_endpoint, daemon_identity)
+        event("public_control_daemon_ready", pid=daemon_proc.pid,
+              process_identity=daemon_identity, endpoint={k: v for k, v in daemon_endpoint.items() if k != "token"})
+
+        project_id_request, project_key = _new_ids("project-create")
+        project_req = build_full3d_project_create_request(
+            label="W23 full-3D setup-only candidate", request_id=project_id_request,
+            idempotency_key=project_key)
+        project_result = dispatch_public_managed_route(
+            dispatcher, project_req, label="project.create", timeout_s=30)
+        project_response = _require_route_ok(project_result, "project.create")
+        project = bind_full3d_project_create_response(
+            project_response, authorized_container=str(server.project))
+        result["project"] = project
+        route_outcomes.append({"route": "project.create", "outcome": "SUCCEEDED",
+                               "job_id": project_result.get("job_id")})
+
+        listener = server.start_and_verify_listener()
+        server_listener = listener
+        if server.proc is None or type(server.port) is not int or not isinstance(server.process_identity, Mapping):
+            raise CandidateError("task-owned server helper omitted Popen/port/birth proof")
+        server_port = server.port
+        server_identity = {"pid": server.proc.pid,
+                           "start_epoch_ms": server.process_identity.get("start_epoch_ms")}
+        if type(server_identity["start_epoch_ms"]) is not int or server_identity["start_epoch_ms"] <= 0:
+            raise CandidateError("server process birth timestamp is unavailable")
+        # Map exact OS birth epoch to monotonic time so startup/listener wait is
+        # charged to the same 1,800-second budget.
+        server_birth_mono = time.monotonic() - max(0.0, time.time() - server_identity["start_epoch_ms"] / 1000.0)
+        event("task_owned_server_listener_ready", listener=listener,
+              budget_birth_epoch_ms=server_identity["start_epoch_ms"])
+
+        def route(request: Mapping[str, Any], label: str, cap: int) -> dict[str, Any]:
+            assert dispatcher is not None and server_birth_mono is not None
+            remaining = MAX_WALL_S - (time.monotonic() - server_birth_mono)
+            allowed = min(float(cap), remaining - CLEANUP_RESERVE_S)
+            if allowed <= 0:
+                raise CandidateError("setup budget has reached the protected cleanup reserve")
+            bounded_request = {**dict(request),
+                "arguments": dict(request.get("arguments", {})),
+                "execution": dict(request.get("execution", {}))}
+            bounded_execution = bounded_request["execution"]
+            bounded_execution.update({
+                "execution_timeout_s": allowed,
+                "queue_timeout_s": min(60.0, allowed),
+                "rpc_timeout_s": min(30.0, allowed),
+            })
+            observed = dispatch_public_managed_route(
+                dispatcher, bounded_request, label=label, timeout_s=allowed, poll_interval_s=0.2)
+            route_outcomes.append({"route": label, "outcome": observed.get("outcome"),
+                                   "job_id": observed.get("job_id")})
+            if observed.get("outcome") == "UNKNOWN":
+                nonlocal ambiguous
+                ambiguous = True
+            return observed
+
+        connect_request = _public_connect_request(
+            project_id=project["project_id"],
+            runtime_id=runtime_id_for_root(install_root), port=server_port)
+        worker_state = "UNKNOWN"  # Set before the one-shot birth request.
+        connect_result = route(connect_request, "session.connect", 120)
+        connect_response = _require_route_ok(connect_result, "session.connect")
+        session = _session_identity(connect_response, project_id=project["project_id"],
+                                    expected_port=server_port)
+        worker_state = "CONNECTED"
+        result["session"] = session
+        event("public_managed_session_connected", identity=session)
+        inspect_connected = _connect_inspect(dispatcher, project["project_id"], session)
+        result["connected_session_inspect"] = inspect_connected
+
+        model_create_request = _managed_model_request(project["project_id"], session)
+        created = route(model_create_request, "model_create", 120)
+        create_response = _require_route_ok(created, "model_create")
+        model = bind_full3d_model_create_response(
+            create_response, project_id=project["project_id"], session=session)
+        recipe = canonical_full3d_recipe()
+        recipe_check = verify_recipe(recipe)
+        fixture_sha = _sha256_file(FIXTURE)
+        staged = stage_full3d_fixture_source(FIXTURE,
+            project_workspace=project["workspace"], expected_sha256=fixture_sha)
+
+        request_id, key = _new_ids("fixture-build")
+        build_request = build_full3d_fixture_dispatch(
+            recipe, source_artifact=staged["source_artifact"],
+            project_id=project["project_id"], model_ref=model["model_ref"],
+            model_tag=model["model_tag"], revision=model["revision"],
+            request_id=request_id, idempotency_key=key)
+        built = route(build_request, "fixture_build", 540)
+        build_response = _require_route_ok(built, "fixture build")
+        model = _updated_full3d_model_state(build_response, prior_model=model)
+        build_readback = _java_action_readback(build_response, "full3d_fixture_build")
+        _check_full3d_fixture_readback(build_readback,
+            recipe_sha256=recipe_check["recipe_sha256"], project_id=project["project_id"], model=model)
+        configuration_readback = validate_native_mode_configuration(build_readback)
+
+        plan = bind_case_matrix(recipe, project_id=project["project_id"],
+            model_ref=model["model_ref"], model_tag=model["model_tag"],
+            revision=model["revision"], experiment_id="w23-full3d-setup-only")
+        baseline_rows = [case for case in plan["cases"] if case.get("factor") == "baseline"]
+        if len(baseline_rows) != 1:
+            raise CandidateError("full-3D immutable plan must contain exactly one baseline case")
+        request_id, key = _new_ids("baseline-apply")
+        apply_request = build_full3d_case_dispatch(
+            plan, baseline_rows[0], source_artifact=staged["source_artifact"],
+            request_id=request_id, idempotency_key=key)
+        applied = route(apply_request, "baseline_apply", 540)
+        apply_response = _require_route_ok(applied, "baseline case apply")
+        model = _updated_full3d_model_state(apply_response, prior_model=model)
+        apply_readback = _java_action_readback(apply_response, "full3d_baseline_apply")
+        _check_full3d_fixture_readback(apply_readback,
+            recipe_sha256=recipe_check["recipe_sha256"], project_id=project["project_id"],
+            model=model, case=baseline_rows[0])
+        if (build_readback.get("study_or_solver_invoked") is not False
+                or apply_readback.get("study_or_solver_invoked") is not False):
+            raise CandidateError("fixture builder reported a Study/solver invocation")
+
+        request_id, key = _new_ids("solution-inventory")
+        inventory_request = build_full3d_solution_inventory_dispatch(
+            source_artifact=staged["source_artifact"], project_id=project["project_id"],
+            model_ref=model["model_ref"], model_tag=model["model_tag"],
+            revision=model["revision"], request_id=request_id, idempotency_key=key)
+        inventory_result = route(inventory_request, "solution_inventory", 90)
+        inventory_response = _require_route_ok(inventory_result, "solution inventory")
+        inventory = _java_action_readback(inventory_response, "full3d_solution_inventory")
+        if inventory.get("model_tag") != model["model_tag"]:
+            raise CandidateError("solution inventory does not bind the current managed model")
+        inventory_configuration = validate_native_mode_configuration(inventory, inventory=True)
+
+        mph_path = Path(project["workspace"]) / "w23_full3d_setup_only.mph"
+        request_id, key = _new_ids("model-save")
+        save_request = build_full3d_save_dispatch(
+            source_artifact=staged["source_artifact"], path=str(mph_path),
+            project_id=project["project_id"], model_ref=model["model_ref"],
+            model_tag=model["model_tag"], revision=model["revision"],
+            request_id=request_id, idempotency_key=key)
+        saved = route(save_request, "model_save", 90)
+        save_response = _require_route_ok(saved, "model save")
+        save_readback = _java_action_readback(save_response, "full3d_model_save")
+        resolved_workspace = Path(project["workspace"]).resolve(strict=True)
+        resolved_mph = mph_path.resolve(strict=True)
+        if (resolved_mph.parent != resolved_workspace or not resolved_mph.is_file()
+                or resolved_mph.stat().st_size <= 0):
+            raise CandidateError("saved MPH is not a nonempty file in the authoritative project workspace")
+        saved_artifact = {"path": str(resolved_mph), "bytes": resolved_mph.stat().st_size,
+                          "sha256": _sha256_file(resolved_mph), "readback": save_readback}
+        result.update({"status": "SETUP_COMPLETE_NATIVE_SOLVE_NOT_RUN",
+            "model": model, "staged_fixture": staged,
+            "recipe_sha256": recipe_check["recipe_sha256"],
+            "build_readback": build_readback, "baseline_readback": apply_readback,
+            "configuration_readback": configuration_readback,
+            "inventory_configuration_readback": inventory_configuration,
+            "solution_inventory": inventory, "saved_mph": saved_artifact,
+            "study_run_calls": 0, "solver_calls": 0,
+            "native_scientific_result": "NOT_RUN",
+            "mode_producer_lineage": "UNVERIFIED",
+            "numeric_port_mode_field_mapping": "UNVERIFIED"})
+
+        ledger = _job_ledger_terminal(dispatcher, project["project_id"])
+        result["pre_retirement_job_ledger"] = {
+            "count": ledger["count"], "all_terminal": ledger["all_terminal"],
+            "statuses": [job.get("status") for job in ledger["jobs"] if isinstance(job, Mapping)]}
+        if not ledger["all_terminal"]:
+            raise CandidateError("public job ledger contains active or UNKNOWN project work; cleanup is held")
+        request_id, key = _new_ids("worker-retirement")
+        retirement_req = build_disconnect_request(
+            project_id=project["project_id"], session_id=session["session_id"],
+            request_id=request_id, idempotency_key=key)
+        detached_epoch: int | None = None
+
+        def disconnect() -> Mapping[str, Any]:
+            nonlocal detached_epoch, ambiguous, worker_state, worker_retirement_proof
+            observed = dispatch_public_managed_route(
+                dispatcher, retirement_req, label="session.disconnect.retire_worker",
+                timeout_s=90, poll_interval_s=0.2)
+            if observed.get("outcome") == "UNKNOWN":
+                ambiguous = True
+            response = _require_route_ok(observed, "session.disconnect.retire_worker")
+            data = response.get("data")
+            if not isinstance(data, Mapping):
+                raise CleanupRefused("worker_retirement", "disconnect response lacks lifecycle readback", [])
+            proof = validate_retirement_response(response,
+                project_id=project["project_id"], session_id=session["session_id"],
+                worker_instance_id=session["worker_instance_id"],
+                connected_epoch=session["worker_epoch"])
+            detached_epoch = proof["worker_epoch"]
+            worker_retirement_proof = proof
+            # Prevent exception recovery from issuing another retirement if a
+            # later inspect or exact server cleanup fails.
+            worker_state = "RETIRED"
+            return response
+
+        def inspect() -> Mapping[str, Any]:
+            request_id2, key2 = _new_ids("session-inspect-retired")
+            return dispatcher.dispatch({"operation": "session.inspect",
+                "arguments": {"session_id": session["session_id"]},
+                "execution": {"project_id": project["project_id"],
+                              "request_id": request_id2, "idempotency_key": key2,
+                              "rpc_timeout_s": 20.0}})
+
+        cleanup = orchestrate_cleanup(worker_state="CONNECTED",
+            project_id=project["project_id"], session_id=session["session_id"],
+            worker_instance_id=session["worker_instance_id"],
+            connected_epoch=session["worker_epoch"], detached_epoch=detached_epoch,
+            all_project_jobs_terminal=ledger["all_terminal"], disconnect=disconnect,
+            inspect=inspect, stop_server=stop_server, stop_control=stop_control)
+        result["cleanup"] = cleanup
+        worker_state = "RETIRED"
+        result["status"] = "SETUP_COMPLETE_CLEANUP_VERIFIED_SOLVE_NOT_RUN"
+        return result
+    except BaseException as exc:
+        result["status"] = "UNKNOWN_PRESERVE_OWNED_RESOURCES" if ambiguous or worker_state == "UNKNOWN" else "SETUP_FAILED"
+        result["error"] = {"type": type(exc).__name__, "message": str(exc)}
+        result["route_outcomes"] = route_outcomes
+        result["cleanup"] = cleanup
+        if worker_state == "CONNECTED" and not ambiguous and project and session and dispatcher:
+            try:
+                ledger = _job_ledger_terminal(dispatcher, project["project_id"])
+                if ledger["all_terminal"]:
+                    request_id, key = _new_ids("failure-cleanup-retirement")
+                    req = build_disconnect_request(project_id=project["project_id"],
+                        session_id=session["session_id"], request_id=request_id, idempotency_key=key)
+                    detached_epoch: int | None = None
+
+                    def disconnect_failure() -> Mapping[str, Any]:
+                        nonlocal detached_epoch, worker_state
+                        outcome = dispatch_public_managed_route(dispatcher, req,
+                            label="failure_cleanup_retirement", timeout_s=90, poll_interval_s=0.2)
+                        if outcome.get("outcome") == "UNKNOWN":
+                            raise CleanupRefused("worker_retirement", "disconnect outcome is UNKNOWN", cleanup)
+                        response = _require_route_ok(outcome, "failure cleanup retirement")
+                        proof = validate_retirement_response(response,
+                            project_id=project["project_id"], session_id=session["session_id"],
+                            worker_instance_id=session["worker_instance_id"],
+                            connected_epoch=session["worker_epoch"])
+                        detached_epoch = proof["worker_epoch"]
+                        worker_state = "RETIRED"
+                        return response
+
+                    def inspect_failure() -> Mapping[str, Any]:
+                        rid, idem = _new_ids("failure-cleanup-inspect")
+                        return dispatcher.dispatch({"operation": "session.inspect",
+                            "arguments": {"session_id": session["session_id"]},
+                            "execution": {"project_id": project["project_id"],
+                                          "request_id": rid, "idempotency_key": idem}})
+
+                    cleanup = orchestrate_cleanup(worker_state="CONNECTED",
+                        project_id=project["project_id"], session_id=session["session_id"],
+                        worker_instance_id=session["worker_instance_id"],
+                        connected_epoch=session["worker_epoch"], detached_epoch=detached_epoch,
+                        all_project_jobs_terminal=True, disconnect=disconnect_failure,
+                        inspect=inspect_failure,
+                        stop_server=stop_server, stop_control=stop_control)
+                    result["cleanup"] = cleanup
+                    result["status"] = "SETUP_FAILED_CLEANUP_VERIFIED"
+            except BaseException as cleanup_exc:
+                result["cleanup_error"] = {"type": type(cleanup_exc).__name__,
+                                            "message": str(cleanup_exc),
+                                            "completed": getattr(cleanup_exc, "completed", [])}
+                result["status"] = "UNKNOWN_PRESERVE_OWNED_RESOURCES"
+        elif worker_state == "NEVER_DISPATCHED":
+            try:
+                ledger_ok = True
+                ledger_summary = None
+                if project is not None and dispatcher is not None:
+                    ledger = _job_ledger_terminal(dispatcher, project["project_id"])
+                    ledger_ok = ledger["all_terminal"]
+                    ledger_summary = {"count": ledger["count"],
+                                      "all_terminal": ledger["all_terminal"]}
+                if ledger_ok:
+                    cleanup = orchestrate_cleanup(worker_state="NEVER_DISPATCHED",
+                        project_id=project["project_id"] if project else None,
+                        session_id=None, worker_instance_id=None, connected_epoch=None,
+                        detached_epoch=None, all_project_jobs_terminal=True,
+                        disconnect=None, inspect=None,
+                        stop_server=stop_server, stop_control=stop_control)
+                    result["cleanup"] = cleanup
+                    result["prebirth_cleanup_job_ledger"] = ledger_summary
+                    result["status"] = "SETUP_FAILED_CLEANUP_VERIFIED"
+            except BaseException as cleanup_exc:
+                result["cleanup_error"] = {"type": type(cleanup_exc).__name__,
+                                            "message": str(cleanup_exc),
+                                            "completed": getattr(cleanup_exc, "completed", [])}
+                result["status"] = "UNKNOWN_PRESERVE_OWNED_RESOURCES"
+        return result
+    finally:
+        result["finished_at_utc"] = datetime.now(timezone.utc).isoformat()
+        if server_birth_mono is not None:
+            result["elapsed_from_server_birth_s"] = time.monotonic() - server_birth_mono
+        result["route_outcomes"] = route_outcomes
+        result["study_run_calls"] = 0
+        result["solver_calls"] = 0
+        result["native_scientific_result"] = "NOT_RUN"
+        result["mode_producer_lineage"] = "UNVERIFIED"
+        result["numeric_port_mode_field_mapping"] = "UNVERIFIED"
+        if server is not None and server.proc is not None:
+            if server_identity is None and isinstance(server.process_identity, Mapping):
+                process_birth = server.process_identity.get("start_epoch_ms")
+                if type(process_birth) is int and process_birth > 0:
+                    server_identity = {"pid": server.proc.pid, "start_epoch_ms": process_birth}
+            if server_port is None and type(server.port) is int:
+                server_port = server.port
+        result["resource_ownership"] = _resource_ownership_receipt(
+            server_proc=server.proc if server is not None else None,
+            server_identity=server_identity,
+            server_listener=server_listener,
+            control_proc=daemon_proc, control_identity=daemon_identity,
+            control_endpoint=daemon_endpoint,
+            worker_state=worker_state, session=session,
+            retirement_proof=worker_retirement_proof,
+            process_cleanup=process_cleanup)
+        _write_json(run_dir / "setup_result.json", result)
+        event("candidate_finished", status=result["status"],
+              elapsed_from_server_birth_s=result.get("elapsed_from_server_birth_s"),
+              cleanup=result.get("cleanup"), error=result.get("error"),
+              cleanup_error=result.get("cleanup_error"))
+        if daemon_log is not None:
+            try:
+                daemon_log.close()
+            except Exception:
+                pass
+
+
+def _parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__)
+    sub = parser.add_subparsers(dest="command", required=True)
+    archive = sub.add_parser("export-archive", help="export the exact published source closure and this overlay")
+    archive.add_argument("--destination", required=True, type=Path)
+    archive.add_argument("--base-commit", required=True)
+    prepare = sub.add_parser("prepare", help="offline source audit and Java compile only")
+    prepare.add_argument("--evidence", required=True, type=Path)
+    prepare.add_argument("--base-commit", required=True)
+    prepare.add_argument("--comsol-root", type=Path, default=INSTALL_ROOT)
+    prepare.add_argument("--jdk11", type=Path, default=JAVA11)
+    execute = sub.add_parser("execute", help="run only the separately reviewed setup-only candidate")
+    execute.add_argument("--evidence", required=True, type=Path)
+    execute.add_argument("--reviewed-candidate-sha256", required=True)
+    execute.add_argument("--comsol-root", type=Path, default=INSTALL_ROOT)
+    execute.add_argument("--jdk11", type=Path, default=JAVA11)
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = _parser().parse_args(argv)
+    try:
+        if args.command == "export-archive":
+            exported = export_published_archive(repo=REPO, destination=args.destination,
+                                                base_commit=args.base_commit)
+            print(json.dumps(exported, indent=2, ensure_ascii=False))
+            return 0
+        if args.command == "prepare":
+            candidate = prepare_candidate(repo=REPO, evidence=args.evidence,
+                base_commit=args.base_commit, install_root=args.comsol_root, jdk_home=args.jdk11)
+            print(json.dumps({"status": candidate["status"],
+                              "candidate_sha256": candidate["candidate_sha256"],
+                              "evidence_dir": candidate["evidence_dir"],
+                              "source_closure_sha256": candidate["source"]["source_closure_sha256"],
+                              "compiled_classes": candidate["compile"]["compiled_classes"]},
+                             indent=2, ensure_ascii=False))
+            return 0
+        result = execute_candidate(repo=REPO, evidence=args.evidence,
+            reviewed_sha256=args.reviewed_candidate_sha256,
+            install_root=args.comsol_root, jdk_home=args.jdk11)
+        print(json.dumps(result, indent=2, ensure_ascii=False, default=str))
+        return 0 if result.get("status") in {"SETUP_COMPLETE_CLEANUP_VERIFIED_SOLVE_NOT_RUN",
+                                               "SETUP_FAILED_CLEANUP_VERIFIED"} else 1
+    except Exception as exc:
+        print(json.dumps({"status": "PREPARE_OR_GATE_FAILED", "type": type(exc).__name__,
+                          "message": str(exc)}, indent=2, ensure_ascii=False))
+        return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
