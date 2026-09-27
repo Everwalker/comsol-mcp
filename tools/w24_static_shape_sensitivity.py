@@ -21,6 +21,9 @@ BASELINE_HMAX_M = BASELINE_EPSILON_M / 2.0
 BASELINE_HMIN_M = BASELINE_EPSILON_M / 4.0
 BASELINE_MAX_STEP_OVER_TC = 0.10
 BASELINE_CAPILLARY_TIME_S = 1.0 / 60.0
+COMMON_CAPTURE_GRID_MAX_SPACING_M = 6e-6 / 4.0
+SENSITIVITY_CAPTURE_PROTOCOL = "W24SHAP1/v2-common-grid"
+SENSITIVITY_CASE_ORDER = ("flat", "step")
 
 
 @dataclass(frozen=True)
@@ -39,9 +42,14 @@ class StaticShapeSensitivityConfiguration:
     def maximum_step_s(self) -> float:
         return self.maximum_step_over_capillary_time * BASELINE_CAPILLARY_TIME_S
 
+    @property
+    def common_capture_grid_maximum_spacing_m(self) -> float:
+        return COMMON_CAPTURE_GRID_MAX_SPACING_M
+
     def as_record(self) -> dict[str, Any]:
         row = asdict(self)
         row["maximum_step_s"] = self.maximum_step_s
+        row["common_capture_grid_maximum_spacing_m"] = COMMON_CAPTURE_GRID_MAX_SPACING_M
         row["case_ids"] = ["flat", "step"]
         row["study_run_count"] = 2
         row["phase_initialization_included"] = True
@@ -81,12 +89,69 @@ def sensitivity_configurations() -> tuple[StaticShapeSensitivityConfiguration, .
         mesh_hmin_m=hmin,
         maximum_step_over_capillary_time=max_step,
         capture_spacing_limit_m=epsilon / 4.0,
-        capture_grid_protocol=("W24SHAP1/v1-baseline" if identifier == "baseline"
-                               else "W24SHAP1/v2-variable-grid-required"),
+        capture_grid_protocol=SENSITIVITY_CAPTURE_PROTOCOL,
         interpretation=interpretation,
     ) for identifier, factor, epsilon, hmax, hmin, max_step, interpretation in definitions)
     validate_sensitivity_configurations(rows)
     return rows
+
+
+def sensitivity_submission_slots() -> tuple[dict[str, Any], ...]:
+    """Return the exact frozen configuration-major flat/step order for 14 slots."""
+    slots: list[dict[str, Any]] = []
+    for configuration in sensitivity_configurations():
+        for case_id in SENSITIVITY_CASE_ORDER:
+            slots.append({
+                "submission_index": len(slots) + 1,
+                "configuration_id": configuration.configuration_id,
+                "case_id": case_id,
+                "phase_initialization_included": True,
+                "study_run_calls": 1,
+                "capture_grid_protocol": configuration.capture_grid_protocol,
+            })
+    return tuple(slots)
+
+
+def sensitivity_capture_resource_estimate() -> dict[str, Any]:
+    """Exact W24SHAP1/v2 bytes for the preregistered grid and all 14 histories."""
+    time_count = 41
+    radial_count = math.ceil(R_BOX_M / COMMON_CAPTURE_GRID_MAX_SPACING_M)
+    radial_spacing = R_BOX_M / radial_count
+    mesa_columns = sum(
+        1 for index in range(radial_count)
+        if (index + 0.5) * radial_spacing < R_MESA_M)
+    flat_profile_points = radial_count * (math.ceil(H_BOX_M / COMMON_CAPTURE_GRID_MAX_SPACING_M) + 1)
+    step_profile_points = (
+        mesa_columns * (math.ceil((H_BOX_M - H_MESA_M) / COMMON_CAPTURE_GRID_MAX_SPACING_M) + 1) +
+        (radial_count - mesa_columns) * (math.ceil(H_BOX_M / COMMON_CAPTURE_GRID_MAX_SPACING_M) + 1))
+    flat_wall_points = math.ceil(R_BOX_M / COMMON_CAPTURE_GRID_MAX_SPACING_M) + 1
+    step_wall_points = (
+        math.ceil(R_MESA_M / COMMON_CAPTURE_GRID_MAX_SPACING_M) + 1 +
+        math.ceil(H_MESA_M / COMMON_CAPTURE_GRID_MAX_SPACING_M) +
+        math.ceil((R_BOX_M - R_MESA_M) / COMMON_CAPTURE_GRID_MAX_SPACING_M))
+
+    def binary_size(profile_points: int, wall_points: int) -> int:
+        doubles = (3 * time_count + 2 * radial_count + profile_points +
+                   time_count * profile_points + 3 * wall_points + time_count * wall_points)
+        return 28 + 4 * radial_count + 8 * doubles
+
+    flat_bytes = binary_size(flat_profile_points, flat_wall_points)
+    step_bytes = binary_size(step_profile_points, step_wall_points)
+    return {
+        "schema": "W24SHAP1_V2_CAPTURE_RESOURCE_ESTIMATE_V1",
+        "time_count_per_history": time_count,
+        "histories": 14,
+        "radial_count": radial_count,
+        "mesa_floor_columns_in_step_history": mesa_columns,
+        "flat": {"profile_points_per_time": flat_profile_points,
+                 "wall_points": flat_wall_points, "exact_binary_bytes": flat_bytes},
+        "step": {"profile_points_per_time": step_profile_points,
+                 "wall_points": step_wall_points, "exact_binary_bytes": step_bytes},
+        "maximum_single_history_bytes": max(flat_bytes, step_bytes),
+        "total_raw_capture_bytes": 7 * (flat_bytes + step_bytes),
+        "per_history_hard_limit_bytes": 1024 * 1024 * 1024,
+        "all_requested_times_and_double_precision_retained": True,
+    }
 
 
 def validate_sensitivity_configurations(
@@ -105,7 +170,7 @@ def validate_sensitivity_configurations(
     if (baseline.factor != "baseline" or baseline.epsilon_m != BASELINE_EPSILON_M or
             baseline.mesh_hmax_m != BASELINE_HMAX_M or baseline.mesh_hmin_m != BASELINE_HMIN_M or
             baseline.maximum_step_over_capillary_time != BASELINE_MAX_STEP_OVER_TC or
-            baseline.capture_grid_protocol != "W24SHAP1/v1-baseline"):
+            baseline.capture_grid_protocol != SENSITIVITY_CAPTURE_PROTOCOL):
         raise ValueError("baseline configuration differs from the reviewed native fixture contract")
     for row in configurations:
         numbers = (row.epsilon_m, row.mesh_hmax_m, row.mesh_hmin_m,
@@ -115,8 +180,10 @@ def validate_sensitivity_configurations(
             raise ValueError(f"configuration {row.configuration_id} has nonpositive or nonfinite controls")
         if abs(row.capture_spacing_limit_m - row.epsilon_m / 4.0) > 1e-15:
             raise ValueError(f"configuration {row.configuration_id} capture spacing is not eps/4")
-        if row.configuration_id != "baseline" and row.capture_grid_protocol != "W24SHAP1/v2-variable-grid-required":
-            raise ValueError(f"configuration {row.configuration_id} cannot use the baseline-only raw grid protocol")
+        if row.common_capture_grid_maximum_spacing_m > row.capture_spacing_limit_m * (1.0 + 1e-12):
+            raise ValueError(f"configuration {row.configuration_id} common grid exceeds its epsilon/4 capture limit")
+        if row.capture_grid_protocol != SENSITIVITY_CAPTURE_PROTOCOL:
+            raise ValueError(f"configuration {row.configuration_id} requires the common-grid W24SHAP1/v2 protocol")
     for identifier, ratio in (("mesh_ratio_1_3", 1.0 / 3.0), ("mesh_ratio_1_1", 1.0)):
         row = by_id[identifier]
         if (row.epsilon_m != BASELINE_EPSILON_M or
@@ -143,6 +210,7 @@ def build_sensitivity_campaign_plan() -> dict[str, Any]:
     """Create a non-authorizing 14-run matrix and its capture prerequisites."""
     configs = sensitivity_configurations()
     rows = [row.as_record() for row in configs]
+    slots = sensitivity_submission_slots()
     return {
         "schema": "W24_STATIC_SHAPE_SENSITIVITY_PLAN_V1",
         "status": "PLAN_ONLY_NOT_AUTHORIZED_OR_EXECUTED",
@@ -150,11 +218,18 @@ def build_sensitivity_campaign_plan() -> dict[str, Any]:
         "configurations": rows,
         "shape_cases_per_configuration": ["flat", "step"],
         "planned_study_run_submissions": len(rows) * 2,
+        "ordered_submission_slots": list(slots),
+        "capture_resource_estimate": sensitivity_capture_resource_estimate(),
         "study_run_scope": "one Study.run per case; each run includes PhaseInitialization then transient stdShape; PhaseInitialization is charged as part of that submission",
         "configuration_order": [row.configuration_id for row in configs],
         "capture_contract": {
-            "baseline": "existing W24SHAP1/v1 analysis accepts only the read-back 8 um baseline",
-            "variants": "must implement and review W24SHAP1/v2 variable cell-centered grid; spacing <= eps/4 on each radial, vertical, and substrate segment; preserve Rbox/Hbox extents and step corners",
+            "protocol": SENSITIVITY_CAPTURE_PROTOCOL,
+            "baseline": "the baseline is recaptured under v2; existing v1 captures remain backward-compatible but cannot enter this sensitivity comparison",
+            "common_grid": {
+                "maximum_spacing_m": COMMON_CAPTURE_GRID_MAX_SPACING_M,
+                "grid_definition": "fixed cell-centered radial grid shared by all seven configurations; per-column vertical and substrate segment grids are exact-endpoint ceil partitions; every actual segment is no larger than the strictest 6 um epsilon/4 limit",
+                "preserved_extents": ["0 <= r < Rbox", "each substrate floor <= z <= Hbox", "all step corners are explicit samples"],
+            },
             "native_result": "retain all accepted times and raw phase field; no interpolation to compare histories",
         },
         "per_case_gates_before_sensitivity_comparison": [
@@ -180,10 +255,9 @@ def build_sensitivity_campaign_plan() -> dict[str, Any]:
 
 def require_capture_protocol(configuration: StaticShapeSensitivityConfiguration,
                              observed_protocol: str) -> None:
-    """Refuse baseline decoder reuse for any nonbaseline sensitivity variant."""
+    """Require the common-coordinate v2 capture for every sensitivity row."""
     if observed_protocol != configuration.capture_grid_protocol:
         raise ValueError(
             f"{configuration.configuration_id} requires {configuration.capture_grid_protocol}; "
             f"observed {observed_protocol!r}"
         )
-

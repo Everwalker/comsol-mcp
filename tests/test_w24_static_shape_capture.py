@@ -14,15 +14,19 @@ from tools.w24_static_shape_capture import (
     MAGIC,
     RawStaticShapeHistory,
     StaticShapeCaptureError,
+    VARIABLE_GRID_FORMAT_VERSION,
+    _grid_definition_digest,
+    _validate_common_v2_profile_grid,
     _validate_profile_grid,
     _validate_wall_geometry,
     analyze_native_capture,
     decode_native_history,
 )
+from tools.w24_static_shape_sensitivity import COMMON_CAPTURE_GRID_MAX_SPACING_M
 from tools.w24_static_shape_metrics import extract_upper_interface_profile
 
 
-def _history_bytes(*, times=(0.0, 1.0), z_columns=((0.0, 0.5, 1.0), (0.0, 0.5, 1.0)), profile_values=None,
+def _history_bytes(*, version=1, times=(0.0, 1.0), z_columns=((0.0, 0.5, 1.0), (0.0, 0.5, 1.0)), profile_values=None,
                    wall_arclength=(0.0, 1.0, 2.0), wall_z=(0.0, 0.0, 0.0),
                    volume=(2.0, 2.0), speed=(0.0, 0.0)) -> bytes:
     radial = (0.25, 0.75)
@@ -31,7 +35,7 @@ def _history_bytes(*, times=(0.0, 1.0), z_columns=((0.0, 0.5, 1.0), (0.0, 0.5, 1
         profile_values = tuple(float(i) for i in range(len(times) * profile_point_count))
     wall_r = (0.0, 1.0, 2.0)
     wall_point_count = len(wall_r)
-    parts = [HEADER.pack(MAGIC, 1, len(times), len(radial), profile_point_count, wall_point_count)]
+    parts = [HEADER.pack(MAGIC, version, len(times), len(radial), profile_point_count, wall_point_count)]
 
     def put_doubles(values):
         parts.extend(struct.pack(">d", float(value)) for value in values)
@@ -70,6 +74,68 @@ def test_decoder_preserves_native_time_order_columns_and_contact_path(tmp_path):
         "arclength_m": 2.0, "r_m": 2.0, "z_m": 0.0, "phi": 1.0}
     assert list(history.phase1_volume_m3) == [2.0, 2.0]
     assert list(history.maximum_speed_m_s) == [0.0, 0.0]
+
+
+def test_decoder_accepts_v2_binary_layout_and_keeps_version_identity(tmp_path):
+    payload = _history_bytes(version=VARIABLE_GRID_FORMAT_VERSION)
+    path, sha = _write_history(tmp_path, payload)
+    history = decode_native_history(path, expected_sha256=sha, expected_size_bytes=len(payload))
+    assert history.format_version == VARIABLE_GRID_FORMAT_VERSION
+    assert history.radial_count == 2
+
+
+def _common_v2_grid_raw(case_id: str) -> RawStaticShapeHistory:
+    limit = COMMON_CAPTURE_GRID_MAX_SPACING_M
+    r_box, h_box, r_mesa, h_mesa = 1.25e-3, 0.75e-3, 300e-6, 40e-6
+    radial_count = math.ceil(r_box / limit)
+    radial_step = r_box / radial_count
+    radii = array.array("d", ((index + 0.5) * radial_step for index in range(radial_count)))
+    floors = array.array("d", (h_mesa if case_id == "step" and radius < r_mesa else 0.0
+                                for radius in radii))
+    z_columns = []
+    offsets = []
+    total = 0
+    for floor in floors:
+        intervals = math.ceil((h_box - floor) / limit)
+        step = (h_box - floor) / intervals
+        column = array.array("d", (h_box if level == intervals else floor + level * step
+                                    for level in range(intervals + 1)))
+        offsets.append(total)
+        z_columns.append(column)
+        total += len(column)
+    return RawStaticShapeHistory(
+        path=Path("/tmp/common-grid.w24bin"), sha256="0" * 64, size_bytes=1,
+        times_s=array.array("d", [0.0, 1.0]), radii_m=radii, floors_m=floors,
+        z_columns_m=tuple(z_columns), profile_offsets=tuple(offsets),
+        profile_phi=array.array("d", [0.0]) * (2 * total),
+        wall_arclength_m=array.array("d", [0.0, 1.0]),
+        wall_r_m=array.array("d", [0.0, 1.0]), wall_z_m=array.array("d", [0.0, 0.0]),
+        wall_phi=array.array("d", [0.0, 0.0]),
+        phase1_volume_m3=array.array("d", [1.0, 1.0]),
+        maximum_speed_m_s=array.array("d", [0.0, 0.0]),
+        format_version=VARIABLE_GRID_FORMAT_VERSION)
+
+
+@pytest.mark.parametrize("case_id", ["flat", "step"])
+def test_common_v2_grid_uses_same_radial_coordinates_and_valid_exact_floor_partition(case_id):
+    raw = _common_v2_grid_raw(case_id)
+    _validate_common_v2_profile_grid(raw, case_id, {
+        "Rbox": 1.25e-3, "Hbox": 0.75e-3, "Rmesa": 300e-6, "hMesa": 40e-6,
+    })
+    assert raw.radial_count == 834
+    assert raw.radii_m[-1] < 1.25e-3
+    same_case_variant = _common_v2_grid_raw(case_id)
+    assert _grid_definition_digest(raw, True) == _grid_definition_digest(same_case_variant, True)
+    assert max(right - left for left, right in zip(raw.radii_m, raw.radii_m[1:])) <= 1.5e-6
+
+
+def test_common_v2_grid_rejects_radius_drift_and_step_floor_mismatch():
+    raw = _common_v2_grid_raw("step")
+    raw.radii_m[11] += 0.2e-6
+    with pytest.raises(StaticShapeCaptureError, match="profile column"):
+        _validate_common_v2_profile_grid(raw, "step", {
+            "Rbox": 1.25e-3, "Hbox": 0.75e-3, "Rmesa": 300e-6, "hMesa": 40e-6,
+        })
 
 
 @pytest.mark.parametrize("raw_bytes,expected_error", [

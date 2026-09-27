@@ -1,0 +1,242 @@
+{
+  "schema_version": 1,
+  "stage": "W24 common-grid fourteen-slot sensitivity software",
+  "at_utc": "2026-09-27T15:14:41.113331+00:00",
+  "status": "PASS_SCOPED_SOFTWARE",
+  "overall_w24": "PARTIAL",
+  "base_commit": "f95468c08881a68c983a4f7b94b53e813c59c242",
+  "source_manifest": [
+    {
+      "path": "docs/full_project_execution/w24/W24_STATIC_SHAPE_IMPLEMENTATION_DRAFT.md",
+      "sha256": "65a3ec36780a7497d9ac89b1f8759f642dcb24a69183033108e819dd46e6a604",
+      "size_bytes": 13306
+    },
+    {
+      "path": "tests/test_run_native_w24_static_shape_science.py",
+      "sha256": "642530797f9bf7c0b1e228e276ae8e1f730d4ab73dac174f1c4bf641e0ebec9b",
+      "size_bytes": 73028
+    },
+    {
+      "path": "tests/test_w24_static_shape_capture.py",
+      "sha256": "a49957f5bf038994022fb82d24b28c41956c955c34577f035a9a260907d0bd78",
+      "size_bytes": 19845
+    },
+    {
+      "path": "tests/test_w24_static_shape_managed.py",
+      "sha256": "4b5adb2e05d84ce2c6009fe98da6f4f6524a04efdb7d05d5becc915d1f2672bf",
+      "size_bytes": 29372
+    },
+    {
+      "path": "tests/test_w24_static_shape_pair_comparison.py",
+      "sha256": "bc30676eea669bfb6e57029df37aaf936f04aab8ab3a0fdfb489af40acf97a12",
+      "size_bytes": 9074
+    },
+    {
+      "path": "tests/test_w24_static_shape_sensitivity.py",
+      "sha256": "008ab3451a03f25847ba8ac89e979376d50536e96b608eb7830f7e7780dc166f",
+      "size_bytes": 3473
+    },
+    {
+      "path": "tests/test_w24_static_shape_sensitivity_comparison.py",
+      "sha256": "8ebfc62705230bd2c58d51c4445e03a8c192f1d97d1819ee54ef4e4ffeac3eb1",
+      "size_bytes": 7190
+    },
+    {
+      "path": "tools/java/W24StaticShapeFixture.java",
+      "sha256": "0d585fc74526ccfed32b76ddad0f9e6e7943677f675499248e675fbf7defc421",
+      "size_bytes": 45466
+    },
+    {
+      "path": "tools/java/W24StaticShapeHistoryCapture.java",
+      "sha256": "5a94a97c34b10bf5befa9d8babf3042794b7e0f156fe0b99a4c261993b9afc1f",
+      "size_bytes": 52823
+    },
+    {
+      "path": "tools/java/W24StaticShapeReadback.java",
+      "sha256": "212e9e63d6e5f70baeff4aa895d145bed9f1da69a18ffc5f03abb796cf2f29a5",
+      "size_bytes": 25257
+    },
+    {
+      "path": "tools/java/W24StaticShapeSensitivityStudyRun.java",
+      "sha256": "fdac977b241b6180cd8a467f4d2859b42f764abd72942e03b59a50854ff9109e",
+      "size_bytes": 25260
+    },
+    {
+      "path": "tools/run_native_w24_static_shape_setup.py",
+      "sha256": "dead12771dcd923167e7b4b436fff5253274a0fe581256fa9465e76c4d8db2cc",
+      "size_bytes": 38123
+    },
+    {
+      "path": "tools/run_native_w24_static_shape_sensitivity_science.py",
+      "sha256": "be91642238c39fc28e6a97d0b61f70d19bc79aa441bdf447d1d8ebed1635cbfb",
+      "size_bytes": 50006
+    },
+    {
+      "path": "tools/w24_static_shape_capture.py",
+      "sha256": "b860e54d5ccd8420e7974e152ef767bf11b1a96b16c07eccce79f94b80295385",
+      "size_bytes": 49194
+    },
+    {
+      "path": "tools/w24_static_shape_pair_comparison.py",
+      "sha256": "6a70e9de8d75e67faf784e644de4448e1ad79e415b97907761db660e29b9c414",
+      "size_bytes": 26811
+    },
+    {
+      "path": "tools/w24_static_shape_sensitivity.py",
+      "sha256": "2720a6a815d7fd7212266340f784614114ffef584e2d4e44d7d745cd642bfd24",
+      "size_bytes": 14025
+    },
+    {
+      "path": "tools/w24_static_shape_sensitivity_comparison.py",
+      "sha256": "c0986b55719c8d407b420dc095773eb51c3bb3933dd99ab715c60a5c25b4e37d",
+      "size_bytes": 16252
+    }
+  ],
+  "capabilities": [
+    "Seven exact configuration variants, flat and step per variant; deterministic fourteen-slot admission and no retries.",
+    "W24SHAP1 v2 uses common native coordinates with maximum1.5um spacing and41 times; baseline recaptured on v2, no Python resampling.",
+    "Each capture is persisted before immediate stability and available baseline comparison gates; failures stop later dispatch.",
+    "Preserves existing wet-support, pointwise height, contact-line and volume acceptance thresholds."
+  ],
+  "validation": {
+    "counts": {
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "tests": 96
+    },
+    "early_stop_negatives": {
+      "actual_test_assertions": "all three tests assert Worker invocation, Study.run invocation, durable OperationStore row count and exact ledger prefix; fail capture/raw bytes remain referenced by final receipt",
+      "count": 3,
+      "expected_dispatch_counts": {
+        "baseline_unstable": 1,
+        "variant_comparison_exception": 3,
+        "variant_comparison_fail": 3
+      },
+      "required_cases_in_junit": [
+        "test_real_control_daemon_campaign_stops_and_preserves_first_failed_capture[baseline_unstable-1-expected_slots0]",
+        "test_real_control_daemon_campaign_stops_and_preserves_first_failed_capture[variant_compare_fail-3-expected_slots1]",
+        "test_real_control_daemon_campaign_stops_and_preserves_first_failed_capture[variant_compare_error-3-expected_slots2]"
+      ]
+    },
+    "main_verified": {
+      "candidate_files": 17,
+      "unchanged_runtime_files": 89,
+      "project_imports_in_archive": 57,
+      "compiled_output_hashes": 10
+    },
+    "java_compile": {
+      "class_outputs": [
+        {
+          "path": "classes/W24StaticShapeFixture$Configuration.class",
+          "sha256": "0f53a305a2604f81168050d15b1d33f19a1b91e5433d0a510624ca7f0cde75cf",
+          "size_bytes": 573
+        },
+        {
+          "path": "classes/W24StaticShapeFixture.class",
+          "sha256": "073d05b6ba6148d6d5a119cc5d5b652552159da67f5bfaa742668958612df230",
+          "size_bytes": 37715
+        },
+        {
+          "path": "classes/W24StaticShapeHistoryCapture$Configuration.class",
+          "sha256": "ce1fe1625d75266b91f26810535eeab3982d3b9b166c263683b0b6f54b5b6c02",
+          "size_bytes": 607
+        },
+        {
+          "path": "classes/W24StaticShapeHistoryCapture$NumericalCapture.class",
+          "sha256": "5c7de98c3b4fa7bee674d9db820e173fc080032828d8a971aaff5a2d7b714607",
+          "size_bytes": 622
+        },
+        {
+          "path": "classes/W24StaticShapeHistoryCapture.class",
+          "sha256": "cfeec1649d87c798e0145ec26e2b722746b4614d5f3c2a31f69ee42dd973ae1f",
+          "size_bytes": 42658
+        },
+        {
+          "path": "classes/W24StaticShapeReadback$Configuration.class",
+          "sha256": "1d899d4ed272eeb16440c90bc738a26b03301652a29334475f32d99fd1d1cfbd",
+          "size_bytes": 637
+        },
+        {
+          "path": "classes/W24StaticShapeReadback.class",
+          "sha256": "8fc3bd4ed6b9cd79ce480edc8fd599bb6bc32427214432452c164ec3887d3106",
+          "size_bytes": 22704
+        },
+        {
+          "path": "classes/W24StaticShapeSensitivityStudyRun$Configuration.class",
+          "sha256": "76604a42c4e46a64a311c0b62e1cb64e10f006c3140707554f610e1d3e2d9f96",
+          "size_bytes": 622
+        },
+        {
+          "path": "classes/W24StaticShapeSensitivityStudyRun.class",
+          "sha256": "32c0233eacb32c491c3e1f55ffda91bd4eef09b860565c1e79f283bcde8c59d4",
+          "size_bytes": 22884
+        },
+        {
+          "path": "classes/W24StaticShapeStudyRun.class",
+          "sha256": "a691ad944c8a1b33eb698790eb2b31905156d1b6995e7b39cf9dae6e55a8f687",
+          "size_bytes": 16831
+        }
+      ],
+      "classpath": "/Applications/COMSOL64/Multiphysics/plugins/*:/Applications/COMSOL64/Multiphysics/apiplugins/*",
+      "compiler": "javac 11.0.31",
+      "exit_code": 0,
+      "source_set": [
+        "tools/java/W24StaticShapeFixture.java",
+        "tools/java/W24StaticShapeReadback.java",
+        "tools/java/W24StaticShapeHistoryCapture.java",
+        "tools/java/W24StaticShapeStudyRun.java",
+        "tools/java/W24StaticShapeSensitivityStudyRun.java"
+      ]
+    },
+    "receipt": {
+      "path": "docs/full_project_execution/w24/evidence/static_shape_sensitivity_f95468c_replay_20260927/sensitivity_replay_receipt.json",
+      "sha256": "26eaf69ca4eb3599197aa13e8f71556aba868fa551d3890eff37861503d45e05"
+    },
+    "junit": {
+      "path": "docs/full_project_execution/w24/evidence/static_shape_sensitivity_f95468c_replay_20260927/focused.junit.xml",
+      "sha256": "6ba4184f0323afa7895c4f5ebe31ed7a8c123861dfe99d61a879ea2f44b04ad2"
+    },
+    "archive": {
+      "path": "/private/tmp/w24-sensitivity-f95468c-replay-20260927/published.tar",
+      "sha256": "480100d41c970fda61193d3e7b1f1091671fdacd5dbd18a143b086b26a1831b5",
+      "size_bytes": 12165120
+    }
+  },
+  "candidate_resource_estimate": {
+    "all_requested_times_and_double_precision_retained": true,
+    "flat": {
+      "exact_binary_bytes": 140703836,
+      "profile_points_per_time": 417834,
+      "wall_points": 835
+    },
+    "histories": 14,
+    "maximum_single_history_bytes": 140703836,
+    "mesa_floor_columns_in_step_history": 200,
+    "per_history_hard_limit_bytes": 1073741824,
+    "radial_count": 834,
+    "schema": "W24SHAP1_V2_CAPTURE_RESOURCE_ESTIMATE_V1",
+    "step": {
+      "exact_binary_bytes": 138966140,
+      "profile_points_per_time": 412634,
+      "wall_points": 862
+    },
+    "time_count_per_history": 41,
+    "total_raw_capture_bytes": 1957689832
+  },
+  "native_execution": "NOT_RUN",
+  "study_run_submissions": 0,
+  "scientific_acceptance": "NOT_ESTABLISHED",
+  "limitations": [
+    "CPU/memory limits and exact Worker identity must be bound in a fresh native candidate.",
+    "No14-model native setup or real sensitivity solves have executed.",
+    "Earlier93-test candidate was rejected for deferred stop checks; current96-test replay includes immediate-stop corrections.",
+    "Full UV/gel/reference/viscoelastic validation and independent overall review remain open."
+  ],
+  "replay": {
+    "test_command": "python -m pytest -q tests/test_w24_static_shape_managed.py tests/test_w24_static_shape_capture.py tests/test_w24_static_shape_metrics.py tests/test_run_native_w24_static_shape_science.py tests/test_w24_static_shape_pair_comparison.py tests/test_w24_static_shape_sensitivity.py tests/test_w24_static_shape_sensitivity_comparison.py",
+    "java_command": "javac -cp '/Applications/COMSOL64/Multiphysics/plugins/*:/Applications/COMSOL64/Multiphysics/apiplugins/*' -d /tmp/w24-classes tools/java/W24StaticShapeFixture.java tools/java/W24StaticShapeReadback.java tools/java/W24StaticShapeHistoryCapture.java tools/java/W24StaticShapeStudyRun.java tools/java/W24StaticShapeSensitivityStudyRun.java",
+    "requirements": "Fresh Git checkout, Python3.12 test dependencies; JDK11 and licensed local COMSOL6.4 JARs for compile. No raw evidence directories needed for software tests."
+  },
+  "next_action": "Freeze actual public-session setup identity/resource budget and exact cleanup; run managed native setup then sensitivity, continue full W24 science and original W01-W26."
+}

@@ -39,7 +39,6 @@ public final class W24StaticShapeFixture {
     private static final double Z_STEP_TOP = H_FLAT + square(R_MESA / R_DROP) * H_MESA;
     private static final double R_BOX = 1.25e-3;
     private static final double H_BOX = 0.75e-3;
-    private static final double EPSILON = 8e-6;
     private static final double CHI = 50.0;
     private static final double RHO_GLUE = 1200.0;
     private static final double MU_GLUE = 1.0;
@@ -61,15 +60,17 @@ public final class W24StaticShapeFixture {
         if (!("flat".equals(caseId) || "step".equals(caseId))) {
             throw new IllegalArgumentException("case_id must be exactly flat or step");
         }
-        return build(parent, caseId);
+        String configurationId = String.valueOf(args.getOrDefault("configuration_id", "baseline"));
+        return build(parent, caseId, configuration(configurationId));
     }
 
-    private static Map<String, Object> build(Model parent, String caseId) {
+    private static Map<String, Object> build(Model parent, String caseId, Configuration configuration) {
         Set<String> priorModelTags = new HashSet<>(Arrays.asList(ModelUtil.tags()));
-        Model created = ModelUtil.createUnique("w24shape_" + caseId);
+        Model created = ModelUtil.createUnique("w24shape_" + configuration.id + "_" + caseId);
         String modelTag = null;
         for (String candidate : ModelUtil.tags()) {
-            if (!priorModelTags.contains(candidate) && candidate.startsWith("w24shape_" + caseId)) {
+            if (!priorModelTags.contains(candidate) &&
+                candidate.startsWith("w24shape_" + configuration.id + "_" + caseId)) {
                 if (modelTag != null) {
                     throw new IllegalStateException("COMSOL created multiple static-shape models");
                 }
@@ -83,7 +84,7 @@ public final class W24StaticShapeFixture {
         boolean complete = false;
         try {
             Model model = created;
-            addParameters(model);
+            addParameters(model, configuration);
             model.component().create(COMPONENT);
             GeomSequence geom = model.component(COMPONENT).geom().create(GEOMETRY, 2);
             geom.lengthUnit("m");
@@ -120,8 +121,8 @@ public final class W24StaticShapeFixture {
             Map<String, Object> physicsReadback = addPhysics(model, caseId, glueDomainIds,
                 gasDomainIds, wetSelections);
             addShapeMetricDefinitions(model);
-            Map<String, Object> meshReadback = addMesh(model);
-            Map<String, Object> studyReadback = addUnsolvedStudy(model);
+            Map<String, Object> meshReadback = addMesh(model, configuration);
+            Map<String, Object> studyReadback = addUnsolvedStudy(model, configuration);
 
             double flatVolume = Math.PI * square(R_DROP) * H_FLAT;
             double actualInitialVolume = caseId.equals("flat")
@@ -135,6 +136,7 @@ public final class W24StaticShapeFixture {
             result.put("status", "BUILT_NOT_SOLVED");
             result.put("native_acceptance", "NOT_RUN");
             result.put("case_id", caseId);
+            result.put("configuration_id", configuration.id);
             result.put("model_tag", modelTag);
             result.put("source_parent_model_tag", parent.tag());
             result.put("geometry_dimension", geom.getSDim());
@@ -168,7 +170,7 @@ public final class W24StaticShapeFixture {
         }
     }
 
-    private static void addParameters(Model model) {
+    private static void addParameters(Model model, Configuration configuration) {
         model.param().set("Rdrop", meters(R_DROP));
         model.param().set("hFlat", meters(H_FLAT));
         model.param().set("Rmesa", meters(R_MESA));
@@ -182,7 +184,7 @@ public final class W24StaticShapeFixture {
         model.param().set("muGas", number(MU_GAS) + "[Pa*s]");
         model.param().set("sigma0", number(SIGMA) + "[N/m]");
         model.param().set("thetaSubstrate", "pi/3[rad]");
-        model.param().set("epsPF", meters(EPSILON));
+        model.param().set("epsPF", meters(configuration.epsilonM));
         model.param().set("chiPF", number(CHI));
         model.param().set("lambdaPF", "3*sigma0*epsPF/(2*sqrt(2))");
         model.param().set("tCapillary", "muGlue*Rdrop/sigma0");
@@ -611,23 +613,32 @@ public final class W24StaticShapeFixture {
             "maxspeed(sqrt(spf.u^2+spf.w^2))");
     }
 
-    private static Map<String, Object> addMesh(Model model) {
+    private static Map<String, Object> addMesh(Model model, Configuration configuration) {
         MeshSequence mesh = model.component(COMPONENT).mesh().create("mesh1", GEOMETRY);
         mesh.feature("size").set("custom", "on");
-        mesh.feature("size").set("hmax", EPSILON / 2.0);
-        mesh.feature("size").set("hmin", EPSILON / 4.0);
+        mesh.feature("size").set("hmax", configuration.meshHmaxM);
+        mesh.feature("size").set("hmin", configuration.meshHminM);
         mesh.run();
+        double hmax = mesh.feature("size").getDouble("hmax");
+        double hmin = mesh.feature("size").getDouble("hmin");
+        if (!Double.isFinite(hmax) || !Double.isFinite(hmin) ||
+            Math.abs(hmax - configuration.meshHmaxM) > Math.max(1e-15, configuration.meshHmaxM * 1e-12) ||
+            Math.abs(hmin - configuration.meshHminM) > Math.max(1e-15, configuration.meshHminM * 1e-12) ||
+            !"on".equalsIgnoreCase(mesh.feature("size").getString("custom"))) {
+            throw new IllegalStateException("native sensitivity mesh size readback differs from the frozen configuration");
+        }
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("mesh_tag", "mesh1");
-        result.put("hmax_m", EPSILON / 2.0);
-        result.put("hmin_m", EPSILON / 4.0);
-        result.put("interface_width_m", EPSILON);
+        result.put("custom", true);
+        result.put("hmax_m", hmax);
+        result.put("hmin_m", hmin);
+        result.put("interface_width_m", configuration.epsilonM);
         result.put("mesh_built", true);
         result.put("mesh_acceptance", "NOT_EVALUATED_AGAINST_SENSITIVITY_MATRIX");
         return result;
     }
 
-    private static Map<String, Object> addUnsolvedStudy(Model model) {
+    private static Map<String, Object> addUnsolvedStudy(Model model, Configuration configuration) {
         Study study = model.study().create("stdShape");
         study.create("phasei", "PhaseInitialization");
         study.create("time", "Transient");
@@ -649,8 +660,10 @@ public final class W24StaticShapeFixture {
             throw new IllegalStateException("static-shape solver sequence is not attached to stdShape");
         }
         SolverFeature solverTime = findUniqueTimeFeature(sequence);
-        configureTimeSolver(solverTime, 0.10 * (MU_GLUE * R_DROP / SIGMA));
-        if (Math.abs(solverTime.getDouble("maxstepbdf") - 0.10 * MU_GLUE * R_DROP / SIGMA) > 1e-14 ||
+        configureTimeSolver(solverTime, configuration.maximumStepS);
+        if (!Double.isFinite(solverTime.getDouble("maxstepbdf")) ||
+            Math.abs(solverTime.getDouble("maxstepbdf") - configuration.maximumStepS) >
+                Math.max(1e-15, configuration.maximumStepS * 1e-12) ||
             !"const".equals(solverTime.getString("maxstepconstraintbdf")) ||
             !"strict".equals(solverTime.getString("tstepsbdf")) ||
             !"tsteps".equals(solverTime.getString("tout")) ||
@@ -659,6 +672,7 @@ public final class W24StaticShapeFixture {
         }
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("study_tag", "stdShape");
+        result.put("configuration_id", configuration.id);
         result.put("study_step_order", Arrays.asList("phasei", "time"));
         result.put("phase_initialization_step_type", study.feature("phasei").getType());
         result.put("time_step_type", study.feature("time").getType());
@@ -675,6 +689,50 @@ public final class W24StaticShapeFixture {
         result.put("study_run_calls", 0);
         result.put("phase_initialization_executed", false);
         return result;
+    }
+
+    private static Configuration configuration(String id) {
+        switch (id) {
+            case "baseline":
+                return new Configuration(id, 8e-6, 4e-6, 2e-6, 0.10 * (MU_GLUE * R_DROP / SIGMA));
+            case "mesh_ratio_1_3":
+                return new Configuration(id, 8e-6, 8e-6 / 3.0, 2e-6,
+                    0.10 * (MU_GLUE * R_DROP / SIGMA));
+            case "mesh_ratio_1_1":
+                return new Configuration(id, 8e-6, 8e-6, 2e-6,
+                    0.10 * (MU_GLUE * R_DROP / SIGMA));
+            case "epsilon_6um":
+                return new Configuration(id, 6e-6, 3e-6, 1.5e-6,
+                    0.10 * (MU_GLUE * R_DROP / SIGMA));
+            case "epsilon_10um":
+                return new Configuration(id, 10e-6, 5e-6, 2.5e-6,
+                    0.10 * (MU_GLUE * R_DROP / SIGMA));
+            case "step_0_05Tc":
+                return new Configuration(id, 8e-6, 4e-6, 2e-6,
+                    0.05 * (MU_GLUE * R_DROP / SIGMA));
+            case "step_0_20Tc":
+                return new Configuration(id, 8e-6, 4e-6, 2e-6,
+                    0.20 * (MU_GLUE * R_DROP / SIGMA));
+            default:
+                throw new IllegalArgumentException("configuration_id must be one of the seven preregistered W24 ids");
+        }
+    }
+
+    private static final class Configuration {
+        final String id;
+        final double epsilonM;
+        final double meshHmaxM;
+        final double meshHminM;
+        final double maximumStepS;
+
+        Configuration(String id, double epsilonM, double meshHmaxM, double meshHminM,
+                      double maximumStepS) {
+            this.id = id;
+            this.epsilonM = epsilonM;
+            this.meshHmaxM = meshHmaxM;
+            this.meshHminM = meshHminM;
+            this.maximumStepS = maximumStepS;
+        }
     }
 
     private static void configureTimeSolver(SolverFeature time, double maxStep) {

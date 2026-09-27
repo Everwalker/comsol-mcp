@@ -23,6 +23,7 @@ from tools.run_native_w24_cure_science import (
     _model_ref_matches_worker_epoch,
     _project_path,
 )
+from tools.w24_static_shape_sensitivity import sensitivity_configurations
 
 
 REPO = Path(__file__).resolve().parents[1]
@@ -352,8 +353,15 @@ class StaticShapeManagedRunner:
                          "model_binding": current.as_record()}
 
     @staticmethod
-    def _validate_shape_readback(result: Mapping[str, Any], expected_case: str) -> dict[str, Any]:
-        if result.get("status") != "STATIC_SHAPE_NATIVE_CONFIGURATION_READBACK" or result.get("case_id") != expected_case:
+    def _validate_shape_readback(result: Mapping[str, Any], expected_case: str,
+                                 expected_configuration_id: str = "baseline") -> dict[str, Any]:
+        configuration = next((row for row in sensitivity_configurations()
+                              if row.configuration_id == expected_configuration_id), None)
+        if configuration is None:
+            raise CampaignError("setup readback requested an unregistered sensitivity configuration")
+        if (result.get("status") != "STATIC_SHAPE_NATIVE_CONFIGURATION_READBACK" or
+                result.get("case_id") != expected_case or
+                result.get("configuration_id") != expected_configuration_id):
             raise CampaignError("native readback did not identify the requested static-shape model")
         if (result.get("native_acceptance") != "NOT_RUN" or
             result.get("geometry_dimension") != 2 or result.get("geometry_axisymmetric") is not True or
@@ -416,7 +424,7 @@ class StaticShapeManagedRunner:
         expected_parameters = {
             "rhoGlue": (1200.0, "kg/m^3"), "muGlue": (1.0, "Pa*s"),
             "rhoGas": (1.2, "kg/m^3"), "muGas": (0.018, "Pa*s"),
-            "sigma0": (0.03, "N/m"), "epsPF": (8e-6, "m"), "Rdrop": (500e-6, "m"),
+            "sigma0": (0.03, "N/m"), "epsPF": (configuration.epsilon_m, "m"), "Rdrop": (500e-6, "m"),
         }
         if not isinstance(parameter_rows, Mapping):
             raise CampaignError("native static-shape readback omitted evaluated SI parameters and units")
@@ -428,6 +436,26 @@ class StaticShapeManagedRunner:
                 not math.isfinite(float(value)) or
                 abs(float(value) - expected_value) > max(1e-14, abs(expected_value) * 1e-12)):
                 raise CampaignError(f"native static-shape baseline parameter {name} differs from its frozen SI value")
+        actual_configuration = result.get("configuration_readback")
+        mesh = actual_configuration.get("mesh") if isinstance(actual_configuration, Mapping) else None
+        maximum_step = actual_configuration.get("maximum_step_s") if isinstance(actual_configuration, Mapping) else None
+        if (not isinstance(actual_configuration, Mapping) or
+                actual_configuration.get("configuration_id") != expected_configuration_id or
+                not isinstance(mesh, Mapping) or mesh.get("custom") is not True or
+                mesh.get("mesh_tag") != "mesh1"):
+            raise CampaignError("native static-shape readback omitted actual configuration, mesh, or maximum-step data")
+        for field, expected in (("hmax_m", configuration.mesh_hmax_m),
+                                ("hmin_m", configuration.mesh_hmin_m)):
+            value = mesh.get(field)
+            if (isinstance(value, bool) or not isinstance(value, (int, float)) or
+                    not math.isfinite(float(value)) or
+                    abs(float(value) - expected) > max(1e-15, abs(expected) * 1e-12)):
+                raise CampaignError(f"native mesh {field} differs from the frozen {expected_configuration_id} setting")
+        if (isinstance(maximum_step, bool) or not isinstance(maximum_step, (int, float)) or
+                not math.isfinite(float(maximum_step)) or
+                abs(float(maximum_step) - configuration.maximum_step_s) >
+                max(1e-15, abs(configuration.maximum_step_s) * 1e-12)):
+            raise CampaignError("native solver maximum step differs from the preregistered configuration")
         if result.get("study_run_calls_this_action") != 0:
             raise CampaignError("static-shape readback unexpectedly invoked study.run")
         StaticShapeManagedRunner._validate_no_stored_solution_data(
@@ -456,20 +484,27 @@ class StaticShapeManagedRunner:
             seen.add(tag)
         return dict(value)
 
-    def build_save_reopen(self, case_id: str) -> dict[str, Any]:
+    def build_save_reopen(self, case_id: str,
+                          configuration_id: str = "baseline") -> dict[str, Any]:
         if case_id not in STATIC_SHAPE_CASES:
             raise CampaignError("case_id must be exactly flat or step")
+        if configuration_id not in {row.configuration_id for row in sensitivity_configurations()}:
+            raise CampaignError("configuration_id must be one of the seven preregistered sensitivity configurations")
         before_study_runs = self._study_run_ledger()
         if before_study_runs:
             raise CampaignError("registered project already contains a study.run submission; setup-only route refuses it")
-        target = self.workspace / "outputs" / f"static_shape_{case_id}.mph"
+        filename = (f"static_shape_{case_id}.mph" if configuration_id == "baseline" else
+                    f"static_shape_{configuration_id}_{case_id}.mph")
+        target = self.workspace / "outputs" / filename
         target = _project_path(self.workspace, target, must_exist=False)
 
         parent = self.parent_binding
         parent, build_response, build = self._java_action(
             parent, source_role="fixture", entrypoint="W24StaticShapeFixture#run",
-            arguments={"action": "build", "case_id": case_id})
+            arguments={"action": "build", "case_id": case_id,
+                       "configuration_id": configuration_id})
         if (build.get("status") != "BUILT_NOT_SOLVED" or build.get("case_id") != case_id or
+            build.get("configuration_id") != configuration_id or
             build.get("study_run_calls") != 0 or build.get("phase_initialization_executed") is not False or
             build.get("native_acceptance") != "NOT_RUN"):
             raise CampaignError("static-shape Java builder did not return the exact unsolved/no-solve status")
@@ -481,8 +516,8 @@ class StaticShapeManagedRunner:
         binding, identity = self._inspect(binding)
         binding, readback_response, native_readback = self._java_action(
             binding, source_role="readback", entrypoint="W24StaticShapeReadback#run",
-            arguments={"action": "readback"})
-        native_readback = self._validate_shape_readback(native_readback, case_id)
+            arguments={"action": "readback", "expected_configuration_id": configuration_id})
+        native_readback = self._validate_shape_readback(native_readback, case_id, configuration_id)
 
         binding, save_response, save = self._java_action(
             binding, source_role="readback", entrypoint="W24StaticShapeReadback#run",
@@ -515,8 +550,8 @@ class StaticShapeManagedRunner:
         reopened_readback_binding = loaded.as_record()
         loaded, reopened_response, reopened_raw = self._java_action(
             loaded, source_role="readback", entrypoint="W24StaticShapeReadback#run",
-            arguments={"action": "readback"})
-        reopened = self._validate_shape_readback(reopened_raw, case_id)
+            arguments={"action": "readback", "expected_configuration_id": configuration_id})
+        reopened = self._validate_shape_readback(reopened_raw, case_id, configuration_id)
         comparable_before = {key: value for key, value in native_readback.items() if key != "model_tag"}
         comparable_after = {key: value for key, value in reopened.items() if key != "model_tag"}
         if comparable_before != comparable_after:
@@ -526,12 +561,14 @@ class StaticShapeManagedRunner:
             raise CampaignError("static-shape setup unexpectedly submitted Study.run; preserve the campaign as failed")
 
         result = {
-            "schema": "W24_STATIC_SHAPE_MANAGED_SETUP_V1",
+            "schema": ("W24_STATIC_SHAPE_MANAGED_SETUP_V1" if configuration_id == "baseline"
+                       else "W24_STATIC_SHAPE_MANAGED_SETUP_V2"),
             "status": "MANAGED_BUILD_SAVE_REOPEN_READBACK_COMPLETE",
             "native_acceptance": "NOT_RUN",
             "project_id": self.project_id,
             "project_workspace": str(self.workspace),
             "case_id": case_id,
+            "configuration_id": configuration_id,
             "source_sha256": {
                 "fixture": _sha256(self.source_paths["fixture"]),
                 "readback": _sha256(self.source_paths["readback"]),

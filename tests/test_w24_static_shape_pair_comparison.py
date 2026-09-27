@@ -63,6 +63,7 @@ def _analysis(path: Path, case: str, binding: dict[str, Any], *, stable="STABLE_
         "native_acceptance": "NOT_ESTABLISHED_CAPTURE_ONLY",
         "scientific_acceptance": "NOT_ESTABLISHED_SENSITIVITY_AND_INDEPENDENT_REVIEW_REQUIRED",
         "case_id": case,
+        "configuration_id": "baseline",
         "model_tag": binding["model_tag"],
         "managed_binding": binding,
         "shape_history_gate": {"status": stable},

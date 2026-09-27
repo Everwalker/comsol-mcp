@@ -14,7 +14,15 @@ from typing import Any
 
 from tools.w24_static_shape_capture import (
     StaticShapeCaptureError,
+    VARIABLE_GRID_FORMAT_VERSION,
+    _coordinate_digest,
+    _grid_definition_digest,
     decode_native_history,
+)
+from tools.w24_static_shape_sensitivity import (
+    COMMON_CAPTURE_GRID_MAX_SPACING_M,
+    SENSITIVITY_CAPTURE_PROTOCOL,
+    sensitivity_configurations,
 )
 from tools.w24_static_shape_metrics import (
     ShapeMetricsError,
@@ -35,6 +43,7 @@ def compare_flat_step_captures(
     *,
     expected_project_id: str | None = None,
     expected_workspace: Path | None = None,
+    configuration_id: str | None = None,
 ) -> dict[str, Any]:
     """Return final observables and a descriptive comparison for two captures.
 
@@ -45,16 +54,17 @@ def compare_flat_step_captures(
     """
     flat_raw, flat_identity = _load_case_capture(
         flat_capture, expected_case="flat", expected_project_id=expected_project_id,
-        expected_workspace=expected_workspace)
+        expected_workspace=expected_workspace, expected_configuration_id=configuration_id)
     step_raw, step_identity = _load_case_capture(
         step_capture, expected_case="step", expected_project_id=expected_project_id,
-        expected_workspace=expected_workspace)
+        expected_workspace=expected_workspace, expected_configuration_id=configuration_id)
     if flat_identity["model_tag"] == step_identity["model_tag"]:
         raise StaticShapeCaptureError("flat and step captures must identify distinct COMSOL model tags")
     if (flat_identity["project_id"] != step_identity["project_id"] or
             flat_identity["session_id"] != step_identity["session_id"] or
             flat_identity["server_instance_id"] != step_identity["server_instance_id"] or
-            flat_identity["generation"] != step_identity["generation"]):
+            flat_identity["generation"] != step_identity["generation"] or
+            flat_identity["configuration_id"] != step_identity["configuration_id"]):
         raise StaticShapeCaptureError("flat and step captures must be bound to one project and Worker epoch")
     if (not math.isfinite(float(flat_raw.times_s[-1])) or
             not math.isfinite(float(step_raw.times_s[-1])) or
@@ -133,7 +143,9 @@ def compare_flat_step_captures(
         "per_case": per_case,
         "flat_step_description": comparison,
         "comparison_contract": {
-            "radial_grid": "identical fixed cell-centered coordinates over 0 <= r < Rbox; exact match required",
+            "radial_grid": ("identical v2 common cell-centered coordinates over 0 <= r < Rbox; exact match required"
+                            if configuration_id else
+                            "identical v1 fixed cell-centered coordinates over 0 <= r < Rbox; exact match required"),
             "interface_support": "report common wet indices descriptively; no minimum common-support pass gate",
             "contact_line": "report each arclength separately and compare physical r,z coordinates",
             "volume": "report final relative difference separately",
@@ -144,8 +156,12 @@ def compare_flat_step_captures(
 
 def _load_case_capture(capture: Mapping[str, Any], *, expected_case: str,
                        expected_project_id: str | None,
-                       expected_workspace: Path | None):
-    if not isinstance(capture, Mapping) or capture.get("schema") != "W24_STATIC_SHAPE_NATIVE_CAPTURE_ANALYSIS_V1":
+                       expected_workspace: Path | None,
+                       expected_configuration_id: str | None = None):
+    expected_schema = ("W24_STATIC_SHAPE_NATIVE_CAPTURE_ANALYSIS_V2"
+                       if expected_configuration_id is not None else
+                       "W24_STATIC_SHAPE_NATIVE_CAPTURE_ANALYSIS_V1")
+    if not isinstance(capture, Mapping) or capture.get("schema") != expected_schema:
         raise StaticShapeCaptureError(f"{expected_case} capture has an unsupported analysis schema")
     if (capture.get("status") != "NATIVE_CAPTURE_DECODED" or
             capture.get("native_acceptance") != "NOT_ESTABLISHED_CAPTURE_ONLY" or
@@ -176,21 +192,35 @@ def _load_case_capture(capture: Mapping[str, Any], *, expected_case: str,
         raise StaticShapeCaptureError(f"{expected_case} capture is bound to a different registered project")
     if gate.get("status") not in {"STABLE_WINDOW_PASS", "FAIL"}:
         raise StaticShapeCaptureError(f"{expected_case} capture has an unknown stable-window status")
-    # W24SHAP1/v1 captures are baseline-only: the decoder and fixed native
-    # sample grid were verified for epsilon=8 um. Sensitivity variants must
-    # use a separately versioned variable-grid capture contract.
     parameters = capture.get("parameters_and_units")
     epsilon = parameters.get("epsPF") if isinstance(parameters, Mapping) else None
     grid_protocol = capture.get("capture_grid_protocol")
     if (not isinstance(epsilon, Mapping) or epsilon.get("unit") != "m" or
             not _finite_number(epsilon.get("value_si")) or
-            abs(float(epsilon["value_si"]) - 8e-6) > 1e-15 or
             not isinstance(grid_protocol, Mapping) or
-            grid_protocol.get("schema") != "W24SHAP1/v1" or
             not _finite_number(grid_protocol.get("epsilon_m")) or
-            abs(float(grid_protocol["epsilon_m"]) - float(epsilon["value_si"])) > 1e-15 or
-            abs(float(grid_protocol.get("maximum_spacing_m", float("nan"))) - 2e-6) > 1e-15):
-        raise StaticShapeCaptureError("W24SHAP1/v1 flat-step comparison only accepts the verified 8 um baseline capture")
+            abs(float(grid_protocol["epsilon_m"]) - float(epsilon["value_si"])) > 1e-15):
+        raise StaticShapeCaptureError(f"{expected_case} capture has malformed epsilon/grid metadata")
+    if expected_configuration_id is None:
+        if (capture.get("configuration_id") != "baseline" or
+                abs(float(epsilon["value_si"]) - 8e-6) > 1e-15 or
+                grid_protocol.get("schema") != "W24SHAP1/v1" or
+                not _finite_number(grid_protocol.get("maximum_spacing_m")) or
+                abs(float(grid_protocol["maximum_spacing_m"]) - 2e-6) > 1e-15):
+            raise StaticShapeCaptureError("W24SHAP1/v1 flat-step comparison only accepts the verified 8 um baseline capture")
+        expected_grid_sha = None
+    else:
+        configuration = next((row for row in sensitivity_configurations()
+                              if row.configuration_id == expected_configuration_id), None)
+        if (configuration is None or capture.get("configuration_id") != expected_configuration_id or
+                abs(float(epsilon["value_si"]) - configuration.epsilon_m) > 1e-15 or
+                grid_protocol.get("schema") != SENSITIVITY_CAPTURE_PROTOCOL or
+                not _finite_number(grid_protocol.get("maximum_spacing_m")) or
+                abs(float(grid_protocol["maximum_spacing_m"]) - COMMON_CAPTURE_GRID_MAX_SPACING_M) > 1e-15):
+            raise StaticShapeCaptureError(f"{expected_case} sensitivity capture is not bound to the reviewed common W24SHAP1/v2 grid")
+        expected_grid_sha = grid_protocol.get("grid_definition_sha256")
+        if not isinstance(expected_grid_sha, str) or len(expected_grid_sha) != 64:
+            raise StaticShapeCaptureError("sensitivity capture omitted its exact common-grid definition hash")
     raw_path = raw_record.get("path")
     if not isinstance(raw_path, str) or not Path(raw_path).is_absolute():
         raise StaticShapeCaptureError(f"{expected_case} raw-history path must be absolute")
@@ -213,11 +243,18 @@ def _load_case_capture(capture: Mapping[str, Any], *, expected_case: str,
             raw.profile_point_count != raw_record.get("profile_point_count") or
             raw.wall_point_count != raw_record.get("wall_point_count")):
         raise StaticShapeCaptureError(f"{expected_case} raw dimensions differ from the analysis receipt")
+    if expected_configuration_id is not None:
+        if raw.format_version != VARIABLE_GRID_FORMAT_VERSION:
+            raise StaticShapeCaptureError("sensitivity pair must use the W24SHAP1/v2 binary layout")
+        if (grid_protocol.get("radial_coordinates_sha256") != _coordinate_digest(raw.radii_m) or
+                expected_grid_sha != _grid_definition_digest(raw, True)):
+            raise StaticShapeCaptureError("sensitivity raw grid coordinates differ from the declared common-grid hashes")
     return raw, {
         "model_tag": model_tag, "stable_window_status": gate["status"],
         "project_id": project_id, "session_id": session_id,
         "server_instance_id": model_ref["server_instance_id"],
         "generation": model_ref["generation"],
+        "configuration_id": expected_configuration_id or "baseline",
         "maximum_contact_spacing_m": float(epsilon["value_si"]) / 4.0,
         "raw_capture": dict(raw_record),
     }

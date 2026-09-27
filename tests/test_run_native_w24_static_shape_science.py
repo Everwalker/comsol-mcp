@@ -21,18 +21,23 @@ from comsol_mcp._control_daemon import ControlDaemon
 from comsol_mcp._execution_contract import SessionLedger
 from comsol_mcp._execution_service import ExecutionService
 from tools import run_native_w24_static_shape_science as science
+from tools import run_native_w24_static_shape_sensitivity_science as sensitivity_science
+from tools.w24_static_shape_sensitivity import sensitivity_configurations
 
 
 def _sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def _shape_readback(case: str, model_tag: str) -> dict[str, Any]:
+def _shape_readback(case: str, model_tag: str, configuration_id: str = "baseline") -> dict[str, Any]:
+    configuration = next(row for row in sensitivity_configurations()
+                          if row.configuration_id == configuration_id)
     wetting = ({"sel_wet_flat_base": [10]} if case == "flat" else {
         "sel_wet_mesa_top": [10], "sel_wet_mesa_side": [11], "sel_wet_lower_base": [12]})
     return {
         "status": "STATIC_SHAPE_NATIVE_CONFIGURATION_READBACK", "native_acceptance": "NOT_RUN",
-        "case_id": case, "model_tag": model_tag, "geometry_dimension": 2,
+        "case_id": case, "configuration_id": configuration_id,
+        "model_tag": model_tag, "geometry_dimension": 2,
         "geometry_axisymmetric": True, "geometry_domain_count": 2,
         "glue_domain_ids": [1], "gas_domain_ids": [2], "multiphase_domain_ids": [1, 2],
         "substrate_wetting_selections": wetting,
@@ -54,8 +59,15 @@ def _shape_readback(case: str, model_tag: str) -> dict[str, Any]:
             "rhoGas": {"value_si": 1.2, "unit": "kg/m^3"},
             "muGas": {"value_si": 0.018, "unit": "Pa*s"},
             "sigma0": {"value_si": 0.03, "unit": "N/m"},
-            "epsPF": {"value_si": 8e-6, "unit": "m"},
+            "epsPF": {"value_si": configuration.epsilon_m, "unit": "m"},
             "Rdrop": {"value_si": 500e-6, "unit": "m"},
+        },
+        "configuration_readback": {
+            "configuration_id": configuration_id,
+            "mesh": {"mesh_tag": "mesh1", "custom": True,
+                     "hmax_m": configuration.mesh_hmax_m,
+                     "hmin_m": configuration.mesh_hmin_m},
+            "maximum_step_s": configuration.maximum_step_s,
         },
         "solution_state_readback": {
             "status": "NO_STORED_SOLUTION_DATA",
@@ -82,6 +94,7 @@ def _write_setup_receipt(path: Path, runner, case: str, binding: ManagedModelBin
         "reopened_configuration_readback_binding": original_readback,
         "reopened_model_binding": binding.as_record(),
         "reopened_model_identity": {"model_binding": original_readback},
+        "configuration_id": "baseline",
         "reopened_configuration_readback": _shape_readback(case, binding.model_tag),
         "readback_comparison": {"matches": True, "interpolation_used": False},
         "project_artifact": {"path": str(artifact_path), "size_bytes": artifact_path.stat().st_size,
@@ -514,6 +527,42 @@ class _ProductionRouteWorker:
         with self.state["lock"]:
             self.state["calls"] += 1
         self.state["entered"].set()
+        if arguments.get("sensitivity_campaign") is True:
+            action = arguments
+            ledger = Path(action["ledger_path"])
+            row = {
+                "event": "study_run_submitted",
+                "submission_index": action["submission_index"],
+                "configuration_id": action["configuration_id"],
+                "case_id": action["case_id"],
+                "study_tag": "stdShape",
+                "model_tag": model_tag,
+                "slot_idempotency_key": action["slot_idempotency_key"],
+                "approval_sha256": action["approval_sha256"],
+                "campaign_id": action["campaign_id"],
+            }
+            with ledger.open("a", encoding="utf-8") as stream:
+                stream.write(json.dumps(row, separators=(",", ":")) + "\n")
+                stream.flush()
+            save_path = Path(action["save_path"])
+            save_path.write_bytes(f"synthetic solved artifact: {model_tag}".encode())
+            with self.state["lock"]:
+                self.state["study_run_calls"] = self.state.get("study_run_calls", 0) + 1
+            native_result = {
+                "status": "NATIVE_STUDY_RUN_RETURNED",
+                "configuration_id": action["configuration_id"],
+                "case_id": action["case_id"],
+                "model_tag": model_tag,
+                "submission_index": action["submission_index"],
+                "ordered_slots_sha256": action["slot_history_sha256"],
+                "study_run_calls_from_this_action": 1,
+                "phase_initialization_included": True,
+                "save_path": str(save_path),
+                "size_bytes": save_path.stat().st_size,
+                "sha256": _sha(save_path),
+            }
+            return {"ok": True, "status": "SUCCEEDED",
+                    "result": {"executed": True, "readback": native_result}}
         release = self.state.get("release")
         if release is not None and not release.wait(timeout=10):
             raise TimeoutError("test Worker stub hold was not released")
@@ -734,6 +783,507 @@ def test_independent_control_daemon_store_connections_claim_once_and_unknown_ree
         daemon.close()
 
 
+def _invoke_production_sensitivity_solve(daemon, project_id, binding, workspace, journal,
+                                         *, call_id, configuration_id="baseline", case_id="flat"):
+    slot_key, request_id = sensitivity_science.sensitivity_slot_identity(
+        project_id, binding, configuration_id, case_id)
+    source_name = sensitivity_science.STUDY_RUN_SOURCE.name
+    return science._dispatch_solve_slot(
+        _ProductionRouteRunner(daemon, project_id, journal.parent), binding,
+        arguments={
+            "source_artifact": source_name,
+            "entrypoint": "W24StaticShapeSensitivityStudyRun#run",
+            "arguments": {
+                "action": "run", "sensitivity_campaign": True,
+                "configuration_id": configuration_id, "case_id": case_id,
+                "expected_model_tag": binding.model_tag,
+                "submission_index": 1, "workspace_path": str(workspace),
+                "ledger_path": str(workspace / "outputs" / "static_shape_sensitivity_study_runs.jsonl"),
+                "save_path": str(workspace / "outputs" / f"static_shape_{configuration_id}_{case_id}_solved.mph"),
+                "slot_idempotency_key": slot_key, "approval_sha256": "a" * 64,
+                "campaign_id": "test-campaign-0001",
+                "ordered_slots": [{
+                    "submission_index": 1, "configuration_id": configuration_id,
+                    "case_id": case_id, "model_tag": binding.model_tag,
+                    "slot_idempotency_key": slot_key,
+                }],
+                "slot_history_sha256": "b" * 64,
+            },
+            "mode": "trusted",
+        },
+        idempotency_key=slot_key, request_id=request_id,
+        timeout_s=5.0, call_id=call_id, journal=journal)
+
+
+def test_independent_control_daemon_sensitivity_callers_claim_one_stable_slot_and_unknown_never_replays(
+        tmp_path, monkeypatch):
+    release = threading.Event()
+    worker_state = {"lock": threading.Lock(), "calls": 0, "entered": threading.Event(),
+                    "release": release, "raise_after_dispatch": True}
+    daemons, _services, bindings, project_id, workspace, _source_copy = _real_control_daemon_pair(
+        tmp_path, monkeypatch, worker_state)
+    binding_record = bindings[0]
+    binding = ManagedModelBinding(project_id, binding_record["session_id"], binding_record, 0)
+    sensitivity_source = workspace / sensitivity_science.STUDY_RUN_SOURCE.name
+    sensitivity_source.write_bytes(sensitivity_science.STUDY_RUN_SOURCE.read_bytes())
+    slot_key, request_id = sensitivity_science.sensitivity_slot_identity(
+        project_id, binding, "baseline", "flat")
+    assert (slot_key, request_id) == sensitivity_science.sensitivity_slot_identity(
+        project_id, binding, "baseline", "flat")
+    changed_revision = ManagedModelBinding(project_id, binding.session_id,
+                                           binding.model_ref, binding.revision + 1)
+    changed_key, _ = sensitivity_science.sensitivity_slot_identity(
+        project_id, changed_revision, "baseline", "flat")
+    assert changed_key != slot_key  # caller must remain pinned to the approval's original binding
+
+    journal_a = workspace / "evidence" / "sensitivity-caller-a.jsonl"
+    journal_b = workspace / "evidence" / "sensitivity-caller-b.jsonl"
+    pool = ThreadPoolExecutor(max_workers=2)
+    first = pool.submit(
+        _invoke_production_sensitivity_solve, daemons[0], project_id, binding, workspace, journal_a,
+        call_id="sensitivity-caller-a")
+    try:
+        assert worker_state["entered"].wait(timeout=5), "first sensitivity request never reached the Worker stub"
+        second_key, second_request = sensitivity_science.sensitivity_slot_identity(
+            project_id, binding, "baseline", "flat")
+        assert (second_key, second_request) == (slot_key, request_id)
+        with pytest.raises(CampaignError, match="no observed terminal result"):
+            _invoke_production_sensitivity_solve(
+                daemons[1], project_id, binding, workspace, journal_b,
+                call_id="sensitivity-caller-b")
+        assert worker_state["calls"] == 1
+    finally:
+        release.set()
+    with pytest.raises(CampaignError, match="no observed terminal result"):
+        first.result(timeout=10)
+
+    with pytest.raises(CampaignError, match="no observed terminal result"):
+        _invoke_production_sensitivity_solve(
+            daemons[1], project_id, binding, workspace, journal_b,
+            call_id="sensitivity-caller-b-unknown-reentry")
+    assert worker_state["calls"] == 1
+    assert daemons[0].store.db.execute(
+        "SELECT COUNT(*) FROM operations WHERE idempotency_key=?", (slot_key,)).fetchone()[0] == 1
+    assert daemons[0].store.db.execute(
+        "SELECT status FROM operations WHERE idempotency_key=?", (slot_key,)).fetchone()[0] == "UNKNOWN"
+    assert changed_key != daemons[0].store.db.execute(
+        "SELECT idempotency_key FROM operations WHERE idempotency_key=?", (slot_key,)).fetchone()[0]
+    pool.shutdown(wait=True)
+    for daemon in daemons:
+        daemon.close()
+
+
+def _sensitivity_bindings_and_approval(tmp_path: Path):
+    plan = sensitivity_science.build_sensitivity_campaign_plan()
+    workspace = tmp_path / "registered-project"
+    workspace.mkdir()
+    project_id = "sensitivity-project-1"
+    bindings = {}
+    for slot in sensitivity_science.sensitivity_submission_slots():
+        key = sensitivity_science.sensitivity_binding_key(
+            slot["configuration_id"], slot["case_id"])
+        tag = "model-" + key.replace(":", "-")
+        ref = {"model_tag": tag, "session_id": "session-sens-1",
+               "server_instance_id": "worker-sens-1", "generation": 4}
+        bindings[key] = ManagedModelBinding(project_id, "session-sens-1", ref, 11)
+    slots, records = sensitivity_science._ordered_slot_records(project_id, bindings)
+    source_hashes = {key: (chr(ord("a") + index) * 64) for index, key in enumerate(
+        ("study_run", "history_capture", "science_executor", "setup_fixture", "setup_readback"))}
+    receipt_hashes = {key: ("e" * 64) for key in sensitivity_science.CAPTURE_KEY_ORDER}
+    estimate = sensitivity_science.sensitivity_capture_resource_estimate()
+    payload = {
+        "schema": sensitivity_science.APPROVAL_SCHEMA, "status": "APPROVED",
+        "campaign_id": "sensitivity-campaign-0001", "project_id": project_id,
+        "project_workspace": str(workspace),
+        "operation_store_path": str(workspace / "control" / "operations.sqlite3"),
+        "configuration_order": plan["configuration_order"],
+        "case_order": ["flat", "step"], "study_run_submissions": 14,
+        "phase_initialization_steps_per_submission": 1,
+        "capture_grid_protocol": sensitivity_science.SENSITIVITY_CAPTURE_PROTOCOL,
+        "comparison_limits": plan["comparison_limits_after_each_case_passes"],
+        "source_sha256": source_hashes,
+        "setup_receipt_sha256": receipt_hashes,
+        "model_bindings": records,
+        "ordered_slots": slots,
+        "resource_limits": {
+            "maximum_study_run_submissions": 14, "maximum_capture_files": 14,
+            "maximum_single_capture_bytes": estimate["maximum_single_history_bytes"],
+            "maximum_total_raw_capture_bytes": estimate["total_raw_capture_bytes"],
+            "maximum_total_project_output_bytes": 10 * 1024 * 1024 * 1024,
+            "maximum_single_solved_mph_bytes": 1024 * 1024 * 1024,
+            "maximum_campaign_wall_time_s": 3000,
+        },
+    }
+    approval_path = workspace / "sensitivity_approval.json"
+    approval_path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
+    return (approval_path, hashlib.sha256(approval_path.read_bytes()).hexdigest(),
+            source_hashes, receipt_hashes, project_id, workspace,
+            workspace / "control" / "operations.sqlite3", bindings, slots, payload)
+
+
+class _ProductionSensitivitySetupReader:
+    @staticmethod
+    def _java_action_readback(response, label):
+        assert response["success"] is True, label
+        return dict(response["data"]["readback"]["readback"])
+
+    @staticmethod
+    def _worker_request_terminal(response):
+        data = response.get("data") if isinstance(response, dict) else None
+        worker = data.get("worker") if isinstance(data, dict) else None
+        return isinstance(worker, dict) and worker.get("status") in {"SUCCEEDED", "FAILED"}
+
+
+class _ProductionSensitivityCampaignRunner:
+    """Campaign-shaped test runner; solve dispatch remains production ControlDaemon."""
+
+    def __init__(self, daemon, project_id, workspace, bindings):
+        self.daemon = daemon
+        self.project_id = project_id
+        self.workspace = workspace
+        self.evidence_dir = workspace / "evidence"
+        self.setup_runner = _ProductionSensitivitySetupReader()
+        self.timeout_s = 120.0
+        self.source_paths = {}
+        self.response_dir = self.evidence_dir / "sensitivity_responses"
+        self.response_dir.mkdir(parents=True, exist_ok=True)
+        for role, source in (("fixture", sensitivity_science.SETUP_FIXTURE_SOURCE),
+                             ("readback", sensitivity_science.SETUP_READBACK_SOURCE)):
+            copied = workspace / source.name
+            copied.write_bytes(source.read_bytes())
+            self.source_paths[role] = copied
+        self.bindings = bindings
+
+    def _verify_persisted_binding(self, binding):
+        persisted = self.daemon.backend.model_project_binding(binding.model_ref)
+        assert persisted == {"attribution": "PROJECT_BOUND", "project_id": self.project_id}
+        return persisted
+
+    def _inspect(self, binding):
+        response = self.daemon.dispatch({
+            "operation": "operation_call",
+            "arguments": {"operation_id": "model.inspect", "arguments": {"detail": "summary"}},
+            "execution": {
+                "project_id": self.project_id, "session_id": binding.session_id,
+                "model_ref": dict(binding.model_ref), "expected_revision": binding.revision,
+                "idempotency_key": f"campaign-preflight-{binding.model_tag}",
+                "request_id": f"campaign-preflight-{binding.model_tag}",
+                "rpc_timeout_s": self.timeout_s, "queue_timeout_s": 30.0,
+                "execution_timeout_s": None,
+            },
+        })
+        assert response["success"] is True
+        return binding, {"data": dict(response["data"]), "response": response}
+
+    def _updated_binding(self, prior, response):
+        execution = response.get("execution")
+        assert isinstance(execution, Mapping)
+        return ManagedModelBinding(
+            self.project_id, prior.session_id, dict(execution["model_ref"]), execution["revision"])
+
+    def _record_response(self, call_id, response):
+        (self.response_dir / f"{call_id}.json").write_text(
+            json.dumps(response, sort_keys=True), encoding="utf-8")
+
+
+def _real_sensitivity_campaign_fixture(tmp_path, monkeypatch):
+    worker_state = {"lock": threading.Lock(), "calls": 0, "entered": threading.Event()}
+    daemons, services, _initial_refs, project_id, workspace, _unused = _real_control_daemon_pair(
+        tmp_path, monkeypatch, worker_state)
+    daemon, service = daemons[0], services[0]
+    from comsol_mcp import _model_ops
+    monkeypatch.setattr(_model_ops, "_model_tree_data", lambda _model: {
+        "components": ["comp1"], "component_details": [], "parameters": [],
+        "studies": ["stdShape"], "solutions": ["sol1"], "datasets": [], "results": [],
+    })
+    (workspace / "outputs").mkdir(exist_ok=True)
+    (workspace / "evidence").mkdir(exist_ok=True)
+    bindings = {}
+    receipt_paths = {}
+    receipt_hashes = {}
+    setup_dir = workspace / "evidence" / "sensitivity_setup_receipts"
+    setup_dir.mkdir()
+    for planned in sensitivity_science.sensitivity_submission_slots():
+        configuration_id, case_id = planned["configuration_id"], planned["case_id"]
+        key = sensitivity_science.sensitivity_binding_key(configuration_id, case_id)
+        model_tag = "sensitivity-" + key.replace(":", "-")
+        metadata = service.bind_model(model_tag)
+        model_ref = metadata["execution"]["model_ref"]
+        ref_object = service.ledger._models[model_tag].ref
+        # These fixtures represent models after their already-recorded setup
+        # writes. Seed only the synthetic ledger revision; keep engine counters
+        # equal so the subsequent real production inspect route stays clean.
+        service.ledger._state_for(ref_object).revision = 1
+        assert service.ledger.revision(ref_object) == 1
+        daemon.backend._bind_model_project(model_ref, project_id)
+        daemon.backend.persist()
+        binding = ManagedModelBinding(project_id, model_ref["session_id"], model_ref, 1)
+        bindings[key] = binding
+
+        original_readback_binding = binding.as_record()
+        original_readback_binding["revision"] -= 1
+        artifact_path = workspace / "outputs" / f"setup_{configuration_id}_{case_id}.mph"
+        artifact_path.write_bytes(f"synthetic unsolved setup artifact {key}".encode())
+        receipt = {
+            "schema": ("W24_STATIC_SHAPE_MANAGED_SETUP_V1" if configuration_id == "baseline"
+                       else "W24_STATIC_SHAPE_MANAGED_SETUP_V2"),
+            "status": "MANAGED_BUILD_SAVE_REOPEN_READBACK_COMPLETE",
+            "native_acceptance": "NOT_RUN", "project_id": project_id,
+            "project_workspace": str(workspace.resolve()),
+            "configuration_id": configuration_id, "case_id": case_id,
+            "source_sha256": {
+                "fixture": _sha(sensitivity_science.SETUP_FIXTURE_SOURCE),
+                "readback": _sha(sensitivity_science.SETUP_READBACK_SOURCE),
+            },
+            "reopened_configuration_readback_binding": original_readback_binding,
+            "reopened_model_binding": binding.as_record(),
+            "reopened_model_identity": {"model_binding": original_readback_binding},
+            "reopened_configuration_readback": _shape_readback(case_id, model_tag, configuration_id),
+            "readback_comparison": {"matches": True, "interpolation_used": False},
+            "project_artifact": {"path": str(artifact_path), "size_bytes": artifact_path.stat().st_size,
+                                 "sha256": _sha(artifact_path)},
+            "study_run_submissions": [], "study_run_submission_count": 0,
+            "phase_initialization_executed": False,
+        }
+        receipt_path = setup_dir / f"{configuration_id}_{case_id}.json"
+        receipt_path.write_text(json.dumps(receipt, sort_keys=True), encoding="utf-8")
+        receipt_paths[key] = receipt_path
+        receipt_hashes[key] = _sha(receipt_path)
+
+    runner = _ProductionSensitivityCampaignRunner(daemon, project_id, workspace, bindings)
+    source_hashes = {
+        "study_run": _sha(sensitivity_science.STUDY_RUN_SOURCE),
+        "history_capture": _sha(sensitivity_science.CAPTURE_SOURCE),
+        "science_executor": _sha(sensitivity_science.SCIENCE_EXECUTOR_SOURCE),
+        "setup_fixture": _sha(sensitivity_science.SETUP_FIXTURE_SOURCE),
+        "setup_readback": _sha(sensitivity_science.SETUP_READBACK_SOURCE),
+    }
+    slots, binding_records = sensitivity_science._ordered_slot_records(project_id, bindings)
+    plan = sensitivity_science.build_sensitivity_campaign_plan()
+    estimate = sensitivity_science.sensitivity_capture_resource_estimate()
+    approval = {
+        "schema": sensitivity_science.APPROVAL_SCHEMA, "status": "APPROVED",
+        "campaign_id": "w24-stop-test-0001", "project_id": project_id,
+        "project_workspace": str(workspace.resolve()),
+        "operation_store_path": str(daemon.store.path.resolve()),
+        "configuration_order": plan["configuration_order"], "case_order": ["flat", "step"],
+        "study_run_submissions": 14, "phase_initialization_steps_per_submission": 1,
+        "capture_grid_protocol": sensitivity_science.SENSITIVITY_CAPTURE_PROTOCOL,
+        "comparison_limits": plan["comparison_limits_after_each_case_passes"],
+        "source_sha256": source_hashes, "setup_receipt_sha256": receipt_hashes,
+        "model_bindings": binding_records, "ordered_slots": slots,
+        "resource_limits": {
+            "maximum_study_run_submissions": 14, "maximum_capture_files": 14,
+            "maximum_single_capture_bytes": estimate["maximum_single_history_bytes"],
+            "maximum_total_raw_capture_bytes": estimate["total_raw_capture_bytes"],
+            "maximum_total_project_output_bytes": 10 * 1024 * 1024 * 1024,
+            "maximum_single_solved_mph_bytes": 1024 * 1024 * 1024,
+            "maximum_campaign_wall_time_s": 3000,
+        },
+    }
+    approval_path = workspace / "sensitivity_approval.json"
+    approval_path.write_text(json.dumps(approval, sort_keys=True), encoding="utf-8")
+    return (runner, worker_state, bindings, receipt_paths, approval_path,
+            _sha(approval_path), source_hashes, daemon, services, daemons)
+
+
+def _synthetic_v2_sensitivity_analysis(runner, binding, *, case_id, configuration_id, gate_status):
+    raw_path = runner.workspace / "outputs" / f"capture_{configuration_id}_{case_id}.w24bin"
+    raw_path.write_bytes(b"synthetic v2 capture receipt payload")
+    return {
+        "schema": "W24_STATIC_SHAPE_NATIVE_CAPTURE_ANALYSIS_V2",
+        "status": "NATIVE_CAPTURE_DECODED",
+        "native_acceptance": "NOT_ESTABLISHED_CAPTURE_ONLY",
+        "scientific_acceptance": "NOT_ESTABLISHED_SENSITIVITY_AND_INDEPENDENT_REVIEW_REQUIRED",
+        "case_id": case_id, "configuration_id": configuration_id,
+        "model_tag": binding.model_tag, "managed_binding": binding.as_record(),
+        "capture_sha256": _sha(raw_path),
+        "capture_grid_protocol": {"schema": sensitivity_science.SENSITIVITY_CAPTURE_PROTOCOL},
+        "shape_history_gate": {"status": gate_status},
+        "raw_capture": {"path": str(raw_path), "sha256": _sha(raw_path),
+                        "size_bytes": raw_path.stat().st_size},
+    }
+
+
+@pytest.mark.parametrize(
+    "stop_case,expected_worker_calls,expected_slots",
+    [("baseline_unstable", 1, ["baseline:flat"]),
+     ("variant_compare_fail", 3, ["baseline:flat", "baseline:step", "mesh_ratio_1_3:flat"]),
+     ("variant_compare_error", 3, ["baseline:flat", "baseline:step", "mesh_ratio_1_3:flat"])],
+)
+def test_real_control_daemon_campaign_stops_and_preserves_first_failed_capture(
+        tmp_path, monkeypatch, stop_case, expected_worker_calls, expected_slots):
+    worker_state = None
+    daemons = []
+    (runner, worker_state, bindings, receipt_paths, approval_path, approval_sha,
+     source_hashes, daemon, _services, daemons) = _real_sensitivity_campaign_fixture(tmp_path, monkeypatch)
+    capture_calls = []
+
+    def capture(_runner, binding, *, case_id, configuration_id, expected_capture_source_sha256):
+        capture_calls.append(f"{configuration_id}:{case_id}")
+        gate = ("FAIL" if stop_case == "baseline_unstable" and
+                configuration_id == "baseline" and case_id == "flat" else "STABLE_WINDOW_PASS")
+        return binding, _synthetic_v2_sensitivity_analysis(
+            runner, binding, case_id=case_id,
+            configuration_id=configuration_id, gate_status=gate)
+
+    monkeypatch.setattr(sensitivity_science, "capture_static_shape_history", capture)
+    if stop_case == "variant_compare_fail":
+        monkeypatch.setattr(sensitivity_science, "compare_sensitivity_case_variant",
+                            lambda *_args, **_kwargs: {"status": "FAIL", "controlled": True})
+    elif stop_case == "variant_compare_error":
+        def fail_comparison(*_args, **_kwargs):
+            raise RuntimeError("synthetic immediate-comparison failure")
+        monkeypatch.setattr(sensitivity_science, "compare_sensitivity_case_variant", fail_comparison)
+
+    try:
+        result = sensitivity_science.execute_sensitivity_campaign(
+            runner, bindings, setup_receipt_paths=receipt_paths,
+            approval_path=approval_path, expected_approval_sha256=approval_sha,
+            expected_study_run_source_sha256=source_hashes["study_run"],
+            expected_capture_source_sha256=source_hashes["history_capture"],
+            expected_science_executor_sha256=source_hashes["science_executor"],
+            expected_setup_fixture_source_sha256=source_hashes["setup_fixture"],
+            expected_setup_readback_source_sha256=source_hashes["setup_readback"],
+            birth_budget=BirthBudget(time.time(), budget_s=3600.0, cleanup_reserve_s=90.0),
+            solve_ledger_path=runner.workspace / "outputs" /
+            "static_shape_sensitivity_study_runs.jsonl")
+        assert result["status"] == "FAIL_OR_INCOMPLETE_NO_RETRY"
+        assert result["actual_study_run_submissions"] == expected_worker_calls
+        assert worker_state["calls"] == expected_worker_calls
+        assert worker_state["study_run_calls"] == expected_worker_calls
+        assert capture_calls == expected_slots
+        ledger_rows = sensitivity_science._read_sensitivity_ledger(
+            runner.workspace / "outputs" / "static_shape_sensitivity_study_runs.jsonl",
+            result["ordered_slots"], approval_sha, "w24-stop-test-0001")
+        assert [f"{row['configuration_id']}:{row['case_id']}" for row in ledger_rows] == expected_slots
+        assert len({row["slot_idempotency_key"] for row in ledger_rows}) == expected_worker_calls
+        durable_rows = daemon.store.db.execute(
+            "SELECT idempotency_key, status FROM operations WHERE idempotency_key LIKE 'w24-static-shape-slot-%'"
+        ).fetchall()
+        assert len(durable_rows) == expected_worker_calls
+        assert {row["status"] for row in durable_rows} == {"SUCCEEDED"}
+        saved_receipt = json.loads((runner.evidence_dir / "static_shape_sensitivity_campaign_receipt.json").read_text())
+        failed_key = expected_slots[-1]
+        assert failed_key in saved_receipt["cases"]
+        assert saved_receipt["cases"][failed_key]["capture"]["raw_capture"]["size_bytes"] > 0
+        assert (runner.workspace / "outputs" /
+                f"capture_{failed_key.replace(':', '_')}.w24bin").is_file()
+        if stop_case == "variant_compare_fail":
+            assert saved_receipt["incremental_baseline_variant_comparisons"][failed_key]["status"] == "FAIL"
+        elif stop_case == "variant_compare_error":
+            assert saved_receipt["incremental_baseline_variant_comparisons"][failed_key]["status"] == "COMPARISON_ERROR"
+            assert "synthetic immediate-comparison failure" in saved_receipt[
+                "incremental_baseline_variant_comparisons"][failed_key]["error"]
+    finally:
+        for close_daemon in daemons:
+            close_daemon.close()
+
+
+def test_sensitivity_approval_pins_all_original_bindings_receipts_sources_and_wall_budget(tmp_path):
+    (path, digest, sources, receipts, project_id, workspace, store_path,
+     bindings, slots, payload) = _sensitivity_bindings_and_approval(tmp_path)
+    accepted = sensitivity_science.validate_sensitivity_approval(
+        path, expected_approval_sha256=digest, expected_source_sha256=sources,
+        expected_setup_receipt_sha256=receipts, expected_project_id=project_id,
+        expected_workspace=workspace, expected_operation_store_path=store_path,
+        expected_bindings=bindings, expected_slots=slots)
+    assert accepted["resource_limits"]["maximum_campaign_wall_time_s"] == 3000
+    assert len(accepted["ordered_slots"]) == 14
+
+    changed = dict(bindings)
+    original = changed["baseline:flat"]
+    changed["baseline:flat"] = ManagedModelBinding(
+        project_id, original.session_id, original.model_ref, original.revision + 1)
+    changed_slots, _ = sensitivity_science._ordered_slot_records(project_id, changed)
+    with pytest.raises(CampaignError, match="ModelRefs and revisions"):
+        sensitivity_science.validate_sensitivity_approval(
+            path, expected_approval_sha256=digest, expected_source_sha256=sources,
+            expected_setup_receipt_sha256=receipts, expected_project_id=project_id,
+            expected_workspace=workspace, expected_operation_store_path=store_path,
+            expected_bindings=changed, expected_slots=changed_slots)
+
+    mutated_receipts = dict(receipts)
+    mutated_receipts["baseline:flat"] = "f" * 64
+    with pytest.raises(CampaignError, match="setup receipts"):
+        sensitivity_science.validate_sensitivity_approval(
+            path, expected_approval_sha256=digest, expected_source_sha256=sources,
+            expected_setup_receipt_sha256=mutated_receipts, expected_project_id=project_id,
+            expected_workspace=workspace, expected_operation_store_path=store_path,
+            expected_bindings=bindings, expected_slots=slots)
+
+    payload["resource_limits"].pop("maximum_campaign_wall_time_s")
+    path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
+    with pytest.raises(CampaignError, match="wall-time resource ceiling"):
+        sensitivity_science.validate_sensitivity_approval(
+            path, expected_approval_sha256=hashlib.sha256(path.read_bytes()).hexdigest(),
+            expected_source_sha256=sources, expected_setup_receipt_sha256=receipts,
+            expected_project_id=project_id, expected_workspace=workspace,
+            expected_operation_store_path=store_path, expected_bindings=bindings,
+            expected_slots=slots)
+
+
+def test_sensitivity_executor_rejects_changed_setup_receipt_before_any_worker_dispatch(
+        tmp_path, monkeypatch):
+    (path, _digest, _sources, _receipts, project_id, workspace, store_path,
+     bindings, slots, payload) = _sensitivity_bindings_and_approval(tmp_path)
+    live_sources = {
+        "study_run": _sha(sensitivity_science.STUDY_RUN_SOURCE),
+        "history_capture": _sha(sensitivity_science.CAPTURE_SOURCE),
+        "science_executor": _sha(sensitivity_science.SCIENCE_EXECUTOR_SOURCE),
+        "setup_fixture": _sha(sensitivity_science.SETUP_FIXTURE_SOURCE),
+        "setup_readback": _sha(sensitivity_science.SETUP_READBACK_SOURCE),
+    }
+    payload["source_sha256"] = live_sources
+    path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
+    approved_digest = hashlib.sha256(path.read_bytes()).hexdigest()
+
+    source_paths = {}
+    for role, source in (("fixture", sensitivity_science.SETUP_FIXTURE_SOURCE),
+                         ("readback", sensitivity_science.SETUP_READBACK_SOURCE)):
+        copied = workspace / source.name
+        copied.write_bytes(source.read_bytes())
+        source_paths[role] = copied
+    setup_paths = {}
+    (workspace / "outputs").mkdir(exist_ok=True)
+    for key in sensitivity_science.CAPTURE_KEY_ORDER:
+        receipt_path = workspace / "evidence" / f"{key.replace(':', '_')}_setup.json"
+        receipt_path.parent.mkdir(parents=True, exist_ok=True)
+        receipt_path.write_text("synthetic original setup receipt", encoding="utf-8")
+        setup_paths[key] = receipt_path
+    # The approved receipt SHA values intentionally remain from the earlier bytes.
+    # The executor must reject this binding mismatch before calling a daemon or Worker.
+
+    store_path.parent.mkdir(parents=True, exist_ok=True)
+    store = OperationStore(store_path)
+    runner = SimpleNamespace(
+        project_id=project_id, workspace=workspace,
+        daemon=SimpleNamespace(store=store), evidence_dir=workspace / "evidence",
+        source_paths=source_paths, timeout_s=120.0,
+        setup_runner=_FakeSetupReader(),
+        _verify_persisted_binding=lambda _binding: pytest.fail("preflight must fail before binding dispatch"),
+        _inspect=lambda _binding: pytest.fail("preflight must fail before managed inspection"),
+    )
+    try:
+        with pytest.raises(CampaignError, match="setup receipts"):
+            sensitivity_science.execute_sensitivity_campaign(
+                runner, bindings,
+                setup_receipt_paths=setup_paths,
+                approval_path=path,
+                expected_approval_sha256=approved_digest,
+                expected_study_run_source_sha256=live_sources["study_run"],
+                expected_capture_source_sha256=live_sources["history_capture"],
+                expected_science_executor_sha256=live_sources["science_executor"],
+                expected_setup_fixture_source_sha256=live_sources["setup_fixture"],
+                expected_setup_readback_source_sha256=live_sources["setup_readback"],
+                birth_budget=BirthBudget(time.time(), budget_s=3600.0, cleanup_reserve_s=90.0),
+                solve_ledger_path=workspace / "outputs" / "static_shape_sensitivity_study_runs.jsonl",
+            )
+        assert store.db.execute("SELECT COUNT(*) FROM operations").fetchone()[0] == 0
+    finally:
+        store.close()
+
+
 def _synthetic_analysis(runner: _FakeRunner, case: str, binding: ManagedModelBinding):
     path = runner.workspace / "outputs" / f"{case}.w24bin"
     raw = _raw_history()
@@ -744,7 +1294,7 @@ def _synthetic_analysis(runner: _FakeRunner, case: str, binding: ManagedModelBin
         "status": "NATIVE_CAPTURE_DECODED",
         "native_acceptance": "NOT_ESTABLISHED_CAPTURE_ONLY",
         "scientific_acceptance": "NOT_ESTABLISHED_SENSITIVITY_AND_INDEPENDENT_REVIEW_REQUIRED",
-        "model_tag": binding.model_tag, "case_id": case,
+        "model_tag": binding.model_tag, "case_id": case, "configuration_id": "baseline",
         "managed_binding": record,
         "shape_history_gate": {"status": "STABLE_WINDOW_PASS"},
         "parameters_and_units": {"epsPF": {"value_si": 8e-6, "unit": "m"}},

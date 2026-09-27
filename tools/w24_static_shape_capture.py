@@ -30,10 +30,17 @@ from tools.w24_static_shape_metrics import (
     extract_upper_interface_profile,
     validate_stored_time_grid,
 )
+from tools.w24_static_shape_sensitivity import (
+    COMMON_CAPTURE_GRID_MAX_SPACING_M,
+    SENSITIVITY_CAPTURE_PROTOCOL,
+    sensitivity_configurations,
+)
 
 
 MAGIC = b"W24SHAP1"
-FORMAT_VERSION = 1
+FORMAT_VERSION = 1  # stable alias for the original baseline-only fixture builders
+VARIABLE_GRID_FORMAT_VERSION = 2
+SUPPORTED_FORMAT_VERSIONS = frozenset({FORMAT_VERSION, VARIABLE_GRID_FORMAT_VERSION})
 HEADER = struct.Struct(">8siiiii")
 MAX_CAPTURE_BYTES = 1024 * 1024 * 1024
 MAX_TIMES = 200_000
@@ -68,6 +75,7 @@ class RawStaticShapeHistory:
     wall_phi: array.array
     phase1_volume_m3: array.array
     maximum_speed_m_s: array.array
+    format_version: int = 1
 
     @property
     def time_count(self) -> int:
@@ -151,7 +159,7 @@ def decode_native_history(
         with canonical.open("rb") as stream:
             raw_header = _read_exact(stream, HEADER.size)
             magic, version, time_count, radial_count, profile_point_count, wall_point_count = HEADER.unpack(raw_header)
-            if magic != MAGIC or version != FORMAT_VERSION:
+            if magic != MAGIC or version not in SUPPORTED_FORMAT_VERSIONS:
                 raise StaticShapeCaptureError("raw artifact has an unsupported W24 binary signature/version")
             if not (2 <= time_count <= MAX_TIMES and
                     2 <= radial_count <= MAX_RADIAL_COLUMNS and
@@ -232,7 +240,8 @@ def decode_native_history(
         z_columns_m=tuple(z_columns), profile_offsets=tuple(offsets),
         profile_phi=profile_values, wall_arclength_m=wall_arclength,
         wall_r_m=wall_r, wall_z_m=wall_z, wall_phi=wall_values,
-        phase1_volume_m3=volumes, maximum_speed_m_s=speeds)
+        phase1_volume_m3=volumes, maximum_speed_m_s=speeds,
+        format_version=version)
 
 
 def analyze_native_capture(
@@ -240,27 +249,42 @@ def analyze_native_capture(
     raw: RawStaticShapeHistory,
     *,
     expected_case_id: str,
+    expected_configuration_id: str | None = None,
 ) -> dict[str, Any]:
     """Bind raw columns/metrics to their native case metadata and evaluate gates."""
     if not isinstance(capture_result, Mapping):
         raise StaticShapeCaptureError("native capture result must be a mapping")
-    if (capture_result.get("schema") != "W24_NATIVE_STATIC_SHAPE_RAW_HISTORY_V1" or
+    sensitivity_capture = expected_configuration_id is not None
+    expected_schema = ("W24_NATIVE_STATIC_SHAPE_RAW_HISTORY_V2" if sensitivity_capture
+                       else "W24_NATIVE_STATIC_SHAPE_RAW_HISTORY_V1")
+    expected_layout = ("W24SHAP1/v2 big-endian doubles; shared common-grid coordinates in the native manifest"
+                       if sensitivity_capture else
+                       "W24SHAP1/v1 big-endian doubles; see decoder contract")
+    if (capture_result.get("schema") != expected_schema or
             capture_result.get("status") != "NATIVE_RAW_STATIC_SHAPE_HISTORY_CAPTURED" or
             capture_result.get("native_acceptance") != "NOT_ESTABLISHED_CAPTURE_ONLY" or
             capture_result.get("native_study_run_calls_this_action") != 0):
         raise StaticShapeCaptureError("native capture status/schema is incomplete or makes an invalid acceptance claim")
     if capture_result.get("case_id") != expected_case_id or expected_case_id not in {"flat", "step"}:
         raise StaticShapeCaptureError("raw native capture case identity does not match the requested case")
+    if ((sensitivity_capture and (
+            expected_configuration_id not in {row.configuration_id for row in sensitivity_configurations()} or
+            capture_result.get("configuration_id") != expected_configuration_id or
+            raw.format_version != VARIABLE_GRID_FORMAT_VERSION)) or
+            (not sensitivity_capture and raw.format_version != 1)):
+        raise StaticShapeCaptureError("raw native capture protocol/configuration differs from the requested campaign")
     model_tag = capture_result.get("model_tag")
     if not isinstance(model_tag, str) or not model_tag:
         raise StaticShapeCaptureError("native capture omitted the actual model tag")
     artifact = capture_result.get("binary_artifact")
     if (not isinstance(artifact, Mapping) or artifact.get("path") != str(raw.path) or
             artifact.get("sha256") != raw.sha256 or artifact.get("size_bytes") != raw.size_bytes or
-            artifact.get("layout") != "W24SHAP1/v1 big-endian doubles; see decoder contract"):
+            artifact.get("layout") != expected_layout):
         raise StaticShapeCaptureError("decoded artifact does not match the native capture receipt")
 
-    parameters = _validate_capture_parameters(capture_result)
+    parameters = _validate_capture_parameters(
+        capture_result,
+        expected_configuration_id=expected_configuration_id)
     flat_volume = math.pi * parameters["Rdrop"] ** 2 * parameters["hFlat"]
     expected_volume = (flat_volume if expected_case_id == "flat" else
                        math.pi * (parameters["Rdrop"] ** 2 * parameters["zStepTop"] -
@@ -314,14 +338,38 @@ def analyze_native_capture(
                              entity_ids=all_domains)
 
     profile_meta = capture_result["profile_field"]
-    if (profile_meta.get("radial_support") != "cell-centered fixed samples within 0 <= r < Rbox" or
+    expected_radial_support = ("cell-centered shared grid within 0 <= r < Rbox" if sensitivity_capture
+                               else "cell-centered fixed samples within 0 <= r < Rbox")
+    if (profile_meta.get("radial_support") != expected_radial_support or
             profile_meta.get("radial_support_upper_exclusive_m") != parameters["Rbox"] or
             profile_meta.get("radial_point_count") != raw.radial_count or
             profile_meta.get("profile_point_count") != raw.profile_point_count or
             profile_meta.get("shape") != [1, raw.time_count, raw.profile_point_count] or
             raw.radii_m[-1] >= parameters["Rbox"]):
         raise StaticShapeCaptureError("native profile does not use the required fixed radial support 0 <= r < Rbox")
-    _validate_profile_grid(raw, expected_case_id, parameters)
+    if sensitivity_capture:
+        _validate_common_v2_profile_grid(raw, expected_case_id, parameters)
+        radial_sha = _coordinate_digest(raw.radii_m)
+        grid_sha = _grid_definition_digest(raw, True)
+        grid = capture_result.get("capture_grid")
+        actual_spacing = grid.get("maximum_actual_spacing_m") if isinstance(grid, Mapping) else None
+        if (raw.format_version != VARIABLE_GRID_FORMAT_VERSION or not isinstance(grid, Mapping) or
+                grid.get("schema") != SENSITIVITY_CAPTURE_PROTOCOL or
+                grid.get("maximum_spacing_m") != COMMON_CAPTURE_GRID_MAX_SPACING_M or
+                not _finite_number(actual_spacing) or
+                float(actual_spacing) <= 0.0 or
+                float(actual_spacing) > COMMON_CAPTURE_GRID_MAX_SPACING_M * (1.0 + 1e-12) or
+                grid.get("radial_coordinates_sha256") != radial_sha or
+                grid.get("grid_definition_sha256") != grid_sha or
+                grid.get("radial_columns") != raw.radial_count or
+                grid.get("profile_points") != raw.profile_point_count or
+                grid.get("wall_points") != raw.wall_point_count or
+                profile_meta.get("maximum_spacing_m") != COMMON_CAPTURE_GRID_MAX_SPACING_M or
+                profile_meta.get("radial_coordinates_sha256") != radial_sha or
+                profile_meta.get("grid_definition_sha256") != grid_sha):
+            raise StaticShapeCaptureError("W24SHAP1/v2 native common-grid manifest/hash/spacing is invalid")
+    else:
+        _validate_profile_grid(raw, expected_case_id, parameters)
     substrate_meta = capture_result["substrate_field"]
     if (substrate_meta.get("entity_ids") != union_wet or
             substrate_meta.get("entity_dimension") != 1 or
@@ -336,7 +384,9 @@ def analyze_native_capture(
             capture_result["maximum_speed"].get("shape") != [1, raw.time_count]):
         raise StaticShapeCaptureError("native volume/speed result shape or axisymmetric measure is invalid")
 
-    _validate_wall_geometry(raw, expected_case_id, parameters)
+    _validate_wall_geometry(
+        raw, expected_case_id, parameters,
+        maximum_spacing_m=(COMMON_CAPTURE_GRID_MAX_SPACING_M if sensitivity_capture else None))
     requested_times = capture_result.get("requested_times_s")
     stored_metadata_times = capture_result.get("stored_times_s")
     if not isinstance(requested_times, list) or not isinstance(stored_metadata_times, list):
@@ -359,7 +409,8 @@ def analyze_native_capture(
             profile = extract_upper_interface_profile(raw.profile_columns_at(time_index))
             contact = extract_substrate_contact_line(
                 raw.substrate_samples_at(time_index),
-                maximum_sample_spacing_m=parameters["epsPF"] / 4.0)
+                maximum_sample_spacing_m=(COMMON_CAPTURE_GRID_MAX_SPACING_M if sensitivity_capture
+                                          else parameters["epsPF"] / 4.0))
             samples.append({
                 "time_s": float(time_s),
                 "phase1_volume_m3": float(raw.phase1_volume_m3[time_index]),
@@ -389,12 +440,14 @@ def analyze_native_capture(
                           "failure_scope": "registered history gate evaluation"}
 
     return {
-        "schema": "W24_STATIC_SHAPE_NATIVE_CAPTURE_ANALYSIS_V1",
+        "schema": ("W24_STATIC_SHAPE_NATIVE_CAPTURE_ANALYSIS_V2" if sensitivity_capture
+                   else "W24_STATIC_SHAPE_NATIVE_CAPTURE_ANALYSIS_V1"),
         "status": "NATIVE_CAPTURE_DECODED",
         "native_acceptance": "NOT_ESTABLISHED_CAPTURE_ONLY",
         "scientific_acceptance": "NOT_ESTABLISHED_SENSITIVITY_AND_INDEPENDENT_REVIEW_REQUIRED",
         "model_tag": model_tag,
         "case_id": expected_case_id,
+        "configuration_id": expected_configuration_id or "baseline",
         "raw_capture": {"path": str(raw.path), "sha256": raw.sha256,
                         "size_bytes": raw.size_bytes, "stored_time_count": raw.time_count,
                         "radial_count": raw.radial_count,
@@ -410,11 +463,18 @@ def analyze_native_capture(
                   "unit": str(capture_result["parameters_and_units"][name]["unit"])}
             for name in parameters
         },
+        "configuration_readback": (dict(capture_result["configuration_readback"])
+                                   if sensitivity_capture else None),
         "capture_grid_protocol": {
-            "schema": "W24SHAP1/v1",
+            "schema": (SENSITIVITY_CAPTURE_PROTOCOL if sensitivity_capture else "W24SHAP1/v1"),
             "epsilon_m": parameters["epsPF"],
-            "maximum_spacing_m": parameters["epsPF"] / 4.0,
-            "grid_policy": "baseline-only fixed spacing; sensitivity variants require a versioned variable-grid decoder",
+            "maximum_spacing_m": (COMMON_CAPTURE_GRID_MAX_SPACING_M if sensitivity_capture
+                                   else parameters["epsPF"] / 4.0),
+            "grid_policy": ("shared fixed radial coordinates and exact-endpoint ceil-partitioned per-floor vertical/substrate segments; no post-capture interpolation"
+                            if sensitivity_capture else
+                            "baseline-only fixed spacing; sensitivity variants require a versioned variable-grid decoder"),
+            "radial_coordinates_sha256": _coordinate_digest(raw.radii_m),
+            "grid_definition_sha256": _grid_definition_digest(raw, sensitivity_capture),
         },
         "analytic_initial_glue_volume_m3": capture_result.get("analytic_initial_glue_volume_m3"),
         "paired_flat_analytic_volume_m3": capture_result.get("paired_flat_analytic_volume_m3"),
@@ -434,6 +494,7 @@ def capture_static_shape_history(
     *,
     case_id: str,
     expected_capture_source_sha256: str,
+    configuration_id: str | None = None,
 ) -> tuple[Any, dict[str, Any]]:
     """Dispatch the read-only capture through an already-registered managed runner.
 
@@ -444,6 +505,9 @@ def capture_static_shape_history(
     """
     if case_id not in {"flat", "step"}:
         raise StaticShapeCaptureError("case_id must be exactly flat or step")
+    if configuration_id is not None and configuration_id not in {
+            row.configuration_id for row in sensitivity_configurations()}:
+        raise StaticShapeCaptureError("configuration_id is not one of the seven preregistered sensitivity variants")
     if not _is_sha256(expected_capture_source_sha256):
         raise StaticShapeCaptureError("an exact frozen capture-source SHA-256 is required")
     source = CAPTURE_SOURCE
@@ -458,7 +522,7 @@ def capture_static_shape_history(
         raise StaticShapeCaptureError("registered outputs directory is missing or aliased")
     copied_source = _copy_project_source(workspace, source, expected_capture_source_sha256)
     capture_id = uuid4().hex
-    output_path = outputs / f"static_shape_history_{case_id}_{capture_id}.w24bin"
+    output_path = outputs / f"static_shape_history_{configuration_id or 'baseline'}_{case_id}_{capture_id}.w24bin"
     if output_path.exists() or output_path.is_symlink():
         raise StaticShapeCaptureError("unique native history output path already exists")
 
@@ -468,6 +532,7 @@ def capture_static_shape_history(
             "source_artifact": copied_source.name,
             "entrypoint": "W24StaticShapeHistoryCapture#run",
             "arguments": {"action": "capture", "case_id": case_id,
+                          **({"configuration_id": configuration_id} if configuration_id else {}),
                           "workspace_path": str(workspace), "path": str(output_path)},
             "mode": "trusted",
         },
@@ -486,7 +551,9 @@ def capture_static_shape_history(
     raw = decode_native_history(
         raw_path, expected_sha256=str(artifact.get("sha256", "")),
         expected_size_bytes=artifact.get("size_bytes"))
-    analysis = analyze_native_capture(native_result, raw, expected_case_id=case_id)
+    analysis = analyze_native_capture(
+        native_result, raw, expected_case_id=case_id,
+        expected_configuration_id=configuration_id)
     analysis["managed_binding"] = updated_binding.as_record()
     analysis["source_copy"] = {"path": str(copied_source),
                                "sha256": expected_capture_source_sha256}
@@ -513,7 +580,9 @@ def _copy_project_source(workspace: Path, source: Path, expected_sha256: str) ->
     return destination
 
 
-def _validate_capture_parameters(receipt: Mapping[str, Any]) -> dict[str, float]:
+def _validate_capture_parameters(
+    receipt: Mapping[str, Any], *, expected_configuration_id: str | None = None,
+) -> dict[str, float]:
     raw = receipt.get("parameters_and_units")
     if not isinstance(raw, Mapping):
         raise StaticShapeCaptureError("native capture omitted parameter value/unit readbacks")
@@ -525,6 +594,13 @@ def _validate_capture_parameters(receipt: Mapping[str, Any]) -> dict[str, float]
         "muGlue": (1.0, "Pa*s"), "rhoGas": (1.2, "kg/m^3"),
         "muGas": (0.018, "Pa*s"), "sigma0": (0.03, "N/m"),
     }
+    configuration = None
+    if expected_configuration_id is not None:
+        configuration = next((row for row in sensitivity_configurations()
+                              if row.configuration_id == expected_configuration_id), None)
+        if configuration is None:
+            raise StaticShapeCaptureError("requested sensitivity configuration is not preregistered")
+        required["epsPF"] = (configuration.epsilon_m, "m")
     values: dict[str, float] = {}
     for name, (expected, unit) in required.items():
         row = raw.get(name)
@@ -538,6 +614,28 @@ def _validate_capture_parameters(receipt: Mapping[str, Any]) -> dict[str, float]
     expected_step = values["hFlat"] + (values["Rmesa"] / values["Rdrop"]) ** 2 * values["hMesa"]
     if abs(values["zStepTop"] - expected_step) > 1e-14:
         raise StaticShapeCaptureError("native step top does not preserve the equal-volume geometry formula")
+    if configuration is not None:
+        config_readback = receipt.get("configuration_readback")
+        mesh = config_readback.get("mesh") if isinstance(config_readback, Mapping) else None
+        if (not isinstance(config_readback, Mapping) or
+                config_readback.get("configuration_id") != expected_configuration_id or
+                config_readback.get("maximum_step_s") is None or not isinstance(mesh, Mapping) or
+                mesh.get("custom") is not True):
+            raise StaticShapeCaptureError("native capture omitted actual sensitivity mesh/time-step readbacks")
+        expected_mesh = (configuration.mesh_hmax_m, configuration.mesh_hmin_m)
+        actual_mesh = (mesh.get("hmax_m"), mesh.get("hmin_m"))
+        if any(isinstance(value, bool) or not isinstance(value, (int, float)) or
+               not math.isfinite(float(value)) for value in actual_mesh):
+            raise StaticShapeCaptureError("native sensitivity mesh controls are nonfinite or malformed")
+        if any(abs(float(actual) - expected) > max(1e-15, abs(expected) * 1e-12)
+               for actual, expected in zip(actual_mesh, expected_mesh)):
+            raise StaticShapeCaptureError("native sensitivity mesh hmax/hmin differs from preregistered ratios")
+        maximum_step = config_readback.get("maximum_step_s")
+        expected_step = configuration.maximum_step_s
+        if (isinstance(maximum_step, bool) or not isinstance(maximum_step, (int, float)) or
+                not math.isfinite(float(maximum_step)) or
+                abs(float(maximum_step) - expected_step) > max(1e-15, abs(expected_step) * 1e-12)):
+            raise StaticShapeCaptureError("native sensitivity maximum solver step differs from the preregistered value")
     return values
 
 
@@ -561,10 +659,11 @@ def _validate_native_feature(value: Any, *, role: str, expression: str, unit: st
 
 
 def _validate_wall_geometry(raw: RawStaticShapeHistory, case_id: str,
-                            parameters: Mapping[str, float]) -> None:
+                            parameters: Mapping[str, float], *,
+                            maximum_spacing_m: float | None = None) -> None:
     r = raw.wall_r_m
     z = raw.wall_z_m
-    spacing = parameters["epsPF"] / 4.0
+    spacing = parameters["epsPF"] / 4.0 if maximum_spacing_m is None else maximum_spacing_m
     for i in range(1, len(r)):
         if math.hypot(r[i] - r[i - 1], z[i] - z[i - 1]) > spacing * (1.0 + 1e-12):
             raise StaticShapeCaptureError("native wall sample spacing exceeds the frozen epsilon/4 resolution")
@@ -612,6 +711,59 @@ def _validate_profile_grid(raw: RawStaticShapeHistory, case_id: str,
             expected_z = expected_floor + level * spacing
             if abs(z_value - expected_z) > 1e-12:
                 raise StaticShapeCaptureError(f"native profile column {column} has a noncanonical z sample")
+
+
+def _validate_common_v2_profile_grid(raw: RawStaticShapeHistory, case_id: str,
+                                     parameters: Mapping[str, float]) -> None:
+    spacing_limit = COMMON_CAPTURE_GRID_MAX_SPACING_M
+    intervals = math.ceil(parameters["Rbox"] / spacing_limit)
+    radial_spacing = parameters["Rbox"] / intervals
+    if raw.radial_count != intervals:
+        raise StaticShapeCaptureError("W24SHAP1/v2 radial count differs from the common seven-configuration grid")
+    for column, radius in enumerate(raw.radii_m):
+        expected_radius = (column + 0.5) * radial_spacing
+        expected_floor = (parameters["hMesa"] if case_id == "step" and
+                          expected_radius < parameters["Rmesa"] else 0.0)
+        vertical_intervals = math.ceil((parameters["Hbox"] - expected_floor) / spacing_limit)
+        vertical_spacing = (parameters["Hbox"] - expected_floor) / vertical_intervals
+        z_values = raw.z_columns_m[column]
+        if (abs(float(radius) - expected_radius) > 1e-12 or
+                abs(float(raw.floors_m[column]) - expected_floor) > 1e-12 or
+                len(z_values) != vertical_intervals + 1 or radial_spacing > spacing_limit * (1 + 1e-12) or
+                vertical_spacing > spacing_limit * (1 + 1e-12)):
+            raise StaticShapeCaptureError(f"W24SHAP1/v2 profile column {column} differs from the common ceil-partition grid")
+        for level, z_value in enumerate(z_values):
+            expected_z = expected_floor + level * vertical_spacing
+            if abs(float(z_value) - expected_z) > 1e-12:
+                raise StaticShapeCaptureError(f"W24SHAP1/v2 profile column {column} has a noncanonical z sample")
+
+    if radial_spacing <= 0.0 or radial_spacing > spacing_limit * (1 + 1e-12):
+        raise StaticShapeCaptureError("W24SHAP1/v2 radial spacing exceeds the common maximum")
+    if case_id == "step":
+        mesa_inside = [i for i, value in enumerate(raw.radii_m)
+                       if float(value) < parameters["Rmesa"]]
+        mesa_outside = [i for i, value in enumerate(raw.radii_m)
+                        if float(value) >= parameters["Rmesa"]]
+        if not mesa_inside or not mesa_outside or not all(
+                abs(float(raw.floors_m[i]) - parameters["hMesa"]) <= 1e-12 for i in mesa_inside) or not all(
+                abs(float(raw.floors_m[i]) - 0.0) <= 1e-12 for i in mesa_outside):
+            raise StaticShapeCaptureError("W24SHAP1/v2 vertical floors do not follow the stepped substrate at cell centers")
+
+
+def _coordinate_digest(values: Any) -> str:
+    payload = b"".join(struct.pack(">d", float(value)) for value in values)
+    return hashlib.sha256(payload).hexdigest()
+
+
+def _grid_definition_digest(raw: RawStaticShapeHistory, common_grid: bool) -> str:
+    digest = hashlib.sha256()
+    digest.update((SENSITIVITY_CAPTURE_PROTOCOL if common_grid else "W24SHAP1/v1").encode("ascii"))
+    for values in (raw.radii_m, raw.floors_m, *raw.z_columns_m,
+                   raw.wall_r_m, raw.wall_z_m):
+        digest.update(struct.pack(">I", len(values)))
+        for value in values:
+            digest.update(struct.pack(">d", float(value)))
+    return digest.hexdigest()
 
 
 def _expected_binary_size(time_count: int, radial_count: int, profile_count: int,
@@ -689,6 +841,11 @@ def _check_index(index: int, length: int, label: str) -> None:
 
 def _is_sha256(value: Any) -> bool:
     return isinstance(value, str) and len(value) == 64 and all(ch in "0123456789abcdef" for ch in value)
+
+
+def _finite_number(value: Any) -> bool:
+    return (not isinstance(value, bool) and isinstance(value, (int, float)) and
+            math.isfinite(float(value)))
 
 
 def _sha256_file(path: Path) -> str:

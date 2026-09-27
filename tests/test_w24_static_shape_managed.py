@@ -14,6 +14,7 @@ from tools.run_native_w24_static_shape_setup import (
     StaticShapeManagedRunner,
     prepare_project_sources,
 )
+from tools.w24_static_shape_sensitivity import sensitivity_configurations
 
 
 PROJECT_ID = "project-w24-shape-test"
@@ -26,7 +27,9 @@ def _model_ref(tag: str) -> dict[str, Any]:
             "server_instance_id": SERVER_INSTANCE, "generation": 1}
 
 
-def _readback(tag: str, case_id: str) -> dict[str, Any]:
+def _readback(tag: str, case_id: str, configuration_id: str = "baseline") -> dict[str, Any]:
+    configuration = next(row for row in sensitivity_configurations()
+                          if row.configuration_id == configuration_id)
     wetting = ({"sel_wet_flat_base": [10]} if case_id == "flat" else {
         "sel_wet_mesa_top": [10], "sel_wet_mesa_side": [11], "sel_wet_lower_base": [12]})
     return {
@@ -34,6 +37,7 @@ def _readback(tag: str, case_id: str) -> dict[str, Any]:
         "native_acceptance": "NOT_RUN",
         "model_tag": tag,
         "case_id": case_id,
+        "configuration_id": configuration_id,
         "geometry_dimension": 2,
         "geometry_axisymmetric": True,
         "geometry_domain_count": 2,
@@ -77,7 +81,14 @@ def _readback(tag: str, case_id: str) -> dict[str, Any]:
         "bdf_output_time_policy": "strict",
         "output_mode": "tsteps",
         "stored_time_steps_policy": 1,
-        "maximum_step_s": 1.0 / 600.0,
+        "maximum_step_s": configuration.maximum_step_s,
+        "configuration_readback": {
+            "configuration_id": configuration_id,
+            "mesh": {"mesh_tag": "mesh1", "custom": True,
+                     "hmax_m": configuration.mesh_hmax_m,
+                     "hmin_m": configuration.mesh_hmin_m},
+            "maximum_step_s": configuration.maximum_step_s,
+        },
         "axis_boundary_ids": [1],
         "parameter_values_and_units": {
             "rhoGlue": {"value_si": 1200.0, "unit": "kg/m^3"},
@@ -85,7 +96,7 @@ def _readback(tag: str, case_id: str) -> dict[str, Any]:
             "rhoGas": {"value_si": 1.2, "unit": "kg/m^3"},
             "muGas": {"value_si": 0.018, "unit": "Pa*s"},
             "sigma0": {"value_si": 0.03, "unit": "N/m"},
-            "epsPF": {"value_si": 8e-6, "unit": "m"},
+            "epsPF": {"value_si": configuration.epsilon_m, "unit": "m"},
             "Rdrop": {"value_si": 500e-6, "unit": "m"},
         },
         "mesh_tags": ["mesh1"],
@@ -216,7 +227,8 @@ class FakeDaemon:
                 return self._worker_response(False, status, ref, execution, {})
             case_id = action_args["case_id"]
             nested = {"status": "BUILT_NOT_SOLVED", "native_acceptance": "NOT_RUN",
-                      "case_id": case_id, "model_tag": self._shape_tag,
+                      "case_id": case_id, "configuration_id": action_args.get("configuration_id", "baseline"),
+                      "model_tag": self._shape_tag,
                       "study_run_calls": 0, "phase_initialization_executed": False}
             return self._java_response(nested, ref, execution, revision)
         assert entrypoint == "W24StaticShapeReadback#run"
@@ -225,11 +237,12 @@ class FakeDaemon:
             case_id = self._current_case
             self._readback_count += 1
             nested = _readback(self._loaded_tag if ref["model_tag"] == self._loaded_tag else self._shape_tag,
-                               case_id)
+                               case_id, action_args.get("expected_configuration_id", "baseline"))
             nested["solution_state_readback"]["solver_sequences"][0]["degrees_of_freedom"] = self.solution_state_size[0]
             nested["solution_state_readback"]["solver_sequences"][0]["stored_solution_count"] = self.solution_state_size[1]
             if self.mutate_reopen and self._readback_count > 1:
                 nested["maximum_step_s"] *= 2
+                nested["configuration_readback"]["maximum_step_s"] *= 2
             return self._java_response(nested, ref, execution, revision)
         assert action == "save"
         path = Path(action_args["path"])
@@ -336,6 +349,21 @@ def test_managed_step_shape_uses_all_three_named_wetting_surfaces(tmp_path):
     assert len(result["pre_save_configuration_readback"]["wetted_wall_features"]) == 3
 
 
+def test_variant_setup_binds_actual_epsilon_mesh_and_solver_step_readbacks(tmp_path):
+    runner, _, workspace = _setup(tmp_path)
+    result = runner.build_save_reopen("flat", "epsilon_6um")
+
+    assert result["schema"] == "W24_STATIC_SHAPE_MANAGED_SETUP_V2"
+    assert result["configuration_id"] == "epsilon_6um"
+    readback = result["reopened_configuration_readback"]
+    assert readback["configuration_id"] == "epsilon_6um"
+    assert readback["parameter_values_and_units"]["epsPF"]["value_si"] == 6e-6
+    assert readback["configuration_readback"]["mesh"]["hmax_m"] == 3e-6
+    assert readback["configuration_readback"]["mesh"]["hmin_m"] == 1.5e-6
+    assert readback["configuration_readback"]["maximum_step_s"] == pytest.approx(1 / 600)
+    assert Path(result["project_artifact"]["path"]).is_relative_to(workspace)
+
+
 def test_project_create_identity_must_match_before_any_worker_dispatch(tmp_path):
     workspace = tmp_path / "registered-project"
     workspace.mkdir()
@@ -436,7 +464,7 @@ def test_solution_state_readback_rejects_inconsistent_or_negative_sizes(size):
 def test_reopened_native_configuration_must_match_the_saved_model(tmp_path):
     runner, daemon, _ = _setup(tmp_path)
     daemon.mutate_reopen = True
-    with pytest.raises(CampaignError, match="changed after managed save/reopen"):
+    with pytest.raises(CampaignError, match="maximum step differs|changed after managed save/reopen"):
         runner.build_save_reopen("flat")
     assert [operation for operation, _ in daemon.calls].count("model_load") == 1
 

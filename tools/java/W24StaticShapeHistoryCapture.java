@@ -41,7 +41,9 @@ public final class W24StaticShapeHistoryCapture {
     private static final String COMPONENT = "comp1";
     private static final String GEOMETRY = "geom1";
     private static final byte[] MAGIC = new byte[]{'W', '2', '4', 'S', 'H', 'A', 'P', '1'};
-    private static final int BINARY_VERSION = 1;
+    private static final int LEGACY_BINARY_VERSION = 1;
+    private static final int BINARY_VERSION = 2;
+    private static final double COMMON_GRID_MAX_SPACING_M = 1.5e-6;
     private static final double TIME_TOLERANCE_S = 1e-12;
     private static final long MAX_HISTORY_BYTES = 1024L * 1024L * 1024L;
 
@@ -79,6 +81,10 @@ public final class W24StaticShapeHistoryCapture {
         int boundaryCount = geometry.getNBoundaries();
         String caseId = identifyCase(model);
         if (!requestedCase.equals(caseId)) throw new IllegalArgumentException("requested case differs from native fixture selections");
+        boolean sensitivityCapture = args.containsKey("configuration_id");
+        String configurationId = sensitivityCapture
+            ? token(args.get("configuration_id"), "configuration_id") : "baseline";
+        Configuration configuration = configuration(configurationId);
         int[] glueIds = model.component(COMPONENT).selection("sel_glue_domain").entities(2);
         int[] gasIds = model.component(COMPONENT).selection("sel_gas_domain").entities(2);
         if (glueIds.length != 1 || gasIds.length != 1 || glueIds[0] == gasIds[0]) {
@@ -105,7 +111,7 @@ public final class W24StaticShapeHistoryCapture {
         double hFlat = parameter(model, parameters, "hFlat", 100e-6, "m");
         double rBox = parameter(model, parameters, "Rbox", 1.25e-3, "m");
         double hBox = parameter(model, parameters, "Hbox", 0.75e-3, "m");
-        double epsilon = parameter(model, parameters, "epsPF", 8e-6, "m");
+        double epsilon = parameter(model, parameters, "epsPF", configuration.epsilonM, "m");
         double rMesa = parameter(model, parameters, "Rmesa", 300e-6, "m");
         double hMesa = parameter(model, parameters, "hMesa", 40e-6, "m");
         double zStepTop = parameter(model, parameters, "zStepTop", 114.4e-6, "m");
@@ -115,7 +121,7 @@ public final class W24StaticShapeHistoryCapture {
         parameter(model, parameters, "rhoGas", 1.2, "kg/m^3");
         parameter(model, parameters, "muGas", 0.018, "Pa*s");
         parameter(model, parameters, "sigma0", 0.03, "N/m");
-        if (Math.abs(epsilon / 4.0 - 2e-6) > 1e-15 || rDrop <= 0.0 || rDrop >= rBox ||
+        if (rDrop <= 0.0 || rDrop >= rBox ||
             hFlat <= 0.0 || hBox <= zStepTop || hBox <= hMesa || rMesa <= 0.0 || rMesa >= rDrop ||
             Math.abs(zStepTop - (hFlat + square(rMesa / rDrop) * hMesa)) > 1e-14) {
             throw new IllegalStateException("native geometry/phase-field parameters differ from the reviewed baseline");
@@ -151,6 +157,26 @@ public final class W24StaticShapeHistoryCapture {
             !"tsteps".equals(timeSolver.getString("tout")) || timeSolver.getInt("tstepsstore") != 1) {
             throw new IllegalStateException("native solver output was not configured to store strict requested times");
         }
+        double maximumStep = timeSolver.getDouble("maxstepbdf");
+        com.comsol.model.MeshSequence mesh = model.component(COMPONENT).mesh("mesh1");
+        double meshHmax = mesh.feature("size").getDouble("hmax");
+        double meshHmin = mesh.feature("size").getDouble("hmin");
+        String meshCustom = mesh.feature("size").getString("custom");
+        if (!Double.isFinite(maximumStep) || !Double.isFinite(meshHmax) || !Double.isFinite(meshHmin) ||
+            Math.abs(maximumStep - configuration.maximumStepS) > Math.max(1e-15, configuration.maximumStepS * 1e-12) ||
+            Math.abs(meshHmax - configuration.meshHmaxM) > Math.max(1e-15, configuration.meshHmaxM * 1e-12) ||
+            Math.abs(meshHmin - configuration.meshHminM) > Math.max(1e-15, configuration.meshHminM * 1e-12) ||
+            !("on".equalsIgnoreCase(meshCustom) || "true".equalsIgnoreCase(meshCustom) || "1".equals(meshCustom))) {
+            throw new IllegalStateException("native mesh or solver maximum-step values differ from the preregistered sensitivity config");
+        }
+        Map<String, Object> configurationReadback = new LinkedHashMap<>();
+        configurationReadback.put("configuration_id", configurationId);
+        configurationReadback.put("maximum_step_s", maximumStep);
+        configurationReadback.put("maximum_step_over_capillary_time", maximumStep / capillaryTime);
+        configurationReadback.put("mesh", Map.of("mesh_tag", "mesh1", "custom", true,
+            "hmax_m", meshHmax, "hmin_m", meshHmin,
+            "hmax_over_epsilon", meshHmax / epsilon,
+            "hmin_over_epsilon", meshHmin / epsilon));
         double[] storedTimes = sequence.getPVals();
         if (storedTimes == null || storedTimes.length != solutionSize[1]) {
             throw new IllegalStateException("native stored-time vector does not cover every stored solution number");
@@ -158,8 +184,11 @@ public final class W24StaticShapeHistoryCapture {
         double[] requestedTimes = requestedTimes(capillaryTime);
         requireRequestedTimes(storedTimes, requestedTimes);
 
-        double spacing = epsilon / 4.0;
-        int radialIntervals = exactIntervals(rBox, spacing, "Rbox");
+        double spacingLimit = sensitivityCapture ? COMMON_GRID_MAX_SPACING_M : epsilon / 4.0;
+        int radialIntervals = sensitivityCapture
+            ? ceilIntervals(rBox, spacingLimit, "Rbox")
+            : exactIntervals(rBox, spacingLimit, "Rbox");
+        double radialSpacing = rBox / radialIntervals;
         double[] radii = new double[radialIntervals];
         double[] floors = new double[radialIntervals];
         int[] profileCounts = new int[radialIntervals];
@@ -167,15 +196,20 @@ public final class W24StaticShapeHistoryCapture {
         double[][] zColumns = new double[radialIntervals][];
         int totalProfilePoints = 0;
         for (int column = 0; column < radialIntervals; column++) {
-            double radius = (column + 0.5) * spacing;
+            double radius = (column + 0.5) * radialSpacing;
             double floor = "step".equals(caseId) && radius < rMesa ? hMesa : 0.0;
-            int intervals = exactIntervals(hBox - floor, spacing, "Hbox-floor");
+            int intervals = sensitivityCapture
+                ? ceilIntervals(hBox - floor, spacingLimit, "Hbox-floor")
+                : exactIntervals(hBox - floor, spacingLimit, "Hbox-floor");
+            double verticalSpacing = (hBox - floor) / intervals;
             radii[column] = radius;
             floors[column] = floor;
             profileCounts[column] = intervals + 1;
             profileOffsets[column] = totalProfilePoints;
             zColumns[column] = new double[intervals + 1];
-            for (int level = 0; level <= intervals; level++) zColumns[column][level] = floor + level * spacing;
+            for (int level = 0; level <= intervals; level++) {
+                zColumns[column][level] = level == intervals ? hBox : floor + level * verticalSpacing;
+            }
             totalProfilePoints += intervals + 1;
         }
         double[][] profileCoordinates = new double[2][totalProfilePoints];
@@ -186,7 +220,12 @@ public final class W24StaticShapeHistoryCapture {
                 profileCoordinates[1][point] = zColumns[column][level];
             }
         }
-        double[][] wallCoordinates = substrateCoordinates(caseId, rBox, rMesa, hMesa, spacing);
+        double[][] wallCoordinates = substrateCoordinates(caseId, rBox, rMesa, hMesa, spacingLimit,
+            sensitivityCapture);
+        double maximumActualSpacing = maximumGridSpacing(radii, zColumns, wallCoordinates);
+        if (sensitivityCapture && maximumActualSpacing > spacingLimit * (1.0 + 1e-12)) {
+            throw new IllegalStateException("native W24SHAP1/v2 grid exceeds its shared spacing contract");
+        }
         long expectedBytes = expectedBinarySize(storedTimes.length, radialIntervals,
             totalProfilePoints, wallCoordinates[0].length, zColumns);
         if (expectedBytes > MAX_HISTORY_BYTES) {
@@ -216,7 +255,8 @@ public final class W24StaticShapeHistoryCapture {
                 "MaxVolume", "maximum_speed", "sqrt(spf.u^2+spf.w^2)", "m/s", 2,
                 allDomainIds, null, null, storedTimes.length);
 
-            writeBinary(output, storedTimes, radii, floors, zColumns, profile.values,
+            writeBinary(output, sensitivityCapture ? BINARY_VERSION : LEGACY_BINARY_VERSION,
+                storedTimes, radii, floors, zColumns, profile.values,
                 wallCoordinates, wallArclengths(wallCoordinates), wall.values, volume.values, speed.values,
                 totalProfilePoints, wallCoordinates[0].length);
             if (!Files.isRegularFile(output, LinkOption.NOFOLLOW_LINKS) || Files.isSymbolicLink(output) ||
@@ -224,12 +264,15 @@ public final class W24StaticShapeHistoryCapture {
                 throw new IllegalStateException("raw native history artifact failed project-path/regular-file verification");
             }
 
-            result.put("schema", "W24_NATIVE_STATIC_SHAPE_RAW_HISTORY_V1");
+            result.put("schema", sensitivityCapture ? "W24_NATIVE_STATIC_SHAPE_RAW_HISTORY_V2"
+                                                     : "W24_NATIVE_STATIC_SHAPE_RAW_HISTORY_V1");
             result.put("status", "NATIVE_RAW_STATIC_SHAPE_HISTORY_CAPTURED");
             result.put("native_acceptance", "NOT_ESTABLISHED_CAPTURE_ONLY");
             result.put("native_study_run_calls_this_action", 0);
             result.put("model_tag", model.tag());
             result.put("case_id", caseId);
+            result.put("configuration_id", configurationId);
+            if (sensitivityCapture) result.put("configuration_readback", configurationReadback);
             result.put("geometry", geometryReadback(geometry, boundaryCount, glueIds, gasIds,
                 allDomainIds, axisIds, wetSelections));
             result.put("parameters_and_units", parameters);
@@ -254,20 +297,34 @@ public final class W24StaticShapeHistoryCapture {
             profileMetadata.put("shape", Arrays.asList(1, storedTimes.length, totalProfilePoints));
             profileMetadata.put("radial_point_count", radialIntervals);
             profileMetadata.put("profile_point_count", totalProfilePoints);
-            profileMetadata.put("radial_support", "cell-centered fixed samples within 0 <= r < Rbox");
+            profileMetadata.put("radial_support", sensitivityCapture
+                ? "cell-centered shared grid within 0 <= r < Rbox"
+                : "cell-centered fixed samples within 0 <= r < Rbox");
             profileMetadata.put("radial_support_upper_exclusive_m", rBox);
             profileMetadata.put("first_radius_m", radii[0]);
             profileMetadata.put("last_radius_m", radii[radii.length - 1]);
-            profileMetadata.put("sample_spacing_m", spacing);
+            profileMetadata.put("sample_spacing_m", radialSpacing);
+            if (sensitivityCapture) {
+                profileMetadata.put("maximum_spacing_m", spacingLimit);
+                profileMetadata.put("radial_coordinates_sha256", sha256Doubles(radii));
+                profileMetadata.put("grid_definition_sha256", gridDefinitionSha256(
+                    radii, floors, zColumns, wallCoordinates, true));
+            }
             profileMetadata.put("floor_source", "fixture substrate geometry and exact case parameters");
             profileMetadata.put("feature_readback", profile.readback);
             result.put("profile_field", profileMetadata);
-            result.put("substrate_field", Map.of(
-                "expression", "pf.phipf", "unit", "1", "coordinates", "r,z in m",
-                "shape", Arrays.asList(1, storedTimes.length, wallCoordinates[0].length),
-                "sample_spacing_m", spacing, "path_order", "flat r=0..Rbox; step mesa-top then mesa-side then lower-base",
-                "entity_dimension", 1, "entity_ids", boxed(wettedBoundaryIds),
-                "feature_readback", wall.readback));
+            Map<String, Object> substrateMetadata = new LinkedHashMap<>();
+            substrateMetadata.put("expression", "pf.phipf");
+            substrateMetadata.put("unit", "1");
+            substrateMetadata.put("coordinates", "r,z in m");
+            substrateMetadata.put("shape", Arrays.asList(1, storedTimes.length, wallCoordinates[0].length));
+            substrateMetadata.put("sample_spacing_m", maximumSegmentSpacing(wallCoordinates));
+            substrateMetadata.put("path_order", "flat r=0..Rbox; step mesa-top then mesa-side then lower-base");
+            substrateMetadata.put("entity_dimension", 1);
+            substrateMetadata.put("entity_ids", boxed(wettedBoundaryIds));
+            substrateMetadata.put("feature_readback", wall.readback);
+            if (sensitivityCapture) substrateMetadata.put("maximum_spacing_m", spacingLimit);
+            result.put("substrate_field", substrateMetadata);
             result.put("phase1_volume", Map.of(
                 "expression", "(1-pf.phipf)/2", "unit", "m^3", "dimension", 2,
                 "shape", Arrays.asList(1, storedTimes.length),
@@ -278,7 +335,21 @@ public final class W24StaticShapeHistoryCapture {
                 "shape", Arrays.asList(1, storedTimes.length),
                 "entity_ids", boxed(allDomainIds), "feature_readback", speed.readback));
             result.put("binary_artifact", Map.of("path", output.toString(), "size_bytes", Files.size(output),
-                "sha256", sha256(output), "layout", "W24SHAP1/v1 big-endian doubles; see decoder contract"));
+                "sha256", sha256(output), "layout", sensitivityCapture
+                    ? "W24SHAP1/v2 big-endian doubles; shared common-grid coordinates in the native manifest"
+                    : "W24SHAP1/v1 big-endian doubles; see decoder contract"));
+            if (sensitivityCapture) {
+                result.put("capture_grid", Map.of(
+                    "schema", "W24SHAP1/v2-common-grid",
+                    "maximum_spacing_m", spacingLimit,
+                    "maximum_actual_spacing_m", maximumActualSpacing,
+                    "radial_coordinates_sha256", sha256Doubles(radii),
+                    "grid_definition_sha256", gridDefinitionSha256(radii, floors, zColumns,
+                        wallCoordinates, true),
+                    "radial_columns", radialIntervals,
+                    "profile_points", totalProfilePoints,
+                    "wall_points", wallCoordinates[0].length));
+            }
             result.put("cleanup", Map.of("temporary_numerical_tags_removed", Collections.emptyList(),
                 "temporary_dataset_removed", false, "status", "PENDING_FINALLY"));
         } finally {
@@ -493,26 +564,35 @@ public final class W24StaticShapeHistoryCapture {
     }
 
     private static double[][] substrateCoordinates(String caseId, double rBox, double rMesa,
-                                                    double hMesa, double spacing) {
+                                                    double hMesa, double spacingLimit,
+                                                    boolean variableGrid) {
         List<Double> r = new ArrayList<>();
         List<Double> z = new ArrayList<>();
         if ("flat".equals(caseId)) {
-            int intervals = exactIntervals(rBox, spacing, "Rbox wall");
+            int intervals = variableGrid ? ceilIntervals(rBox, spacingLimit, "Rbox wall")
+                                         : exactIntervals(rBox, spacingLimit, "Rbox wall");
+            double step = rBox / intervals;
             for (int index = 0; index <= intervals; index++) {
-                r.add(index * spacing); z.add(0.0);
+                r.add(index == intervals ? rBox : index * step); z.add(0.0);
             }
         } else {
-            int topIntervals = exactIntervals(rMesa, spacing, "Rmesa wall");
-            int sideIntervals = exactIntervals(hMesa, spacing, "hMesa wall");
-            int endIntervals = exactIntervals(rBox - rMesa, spacing, "lower substrate wall");
+            int topIntervals = variableGrid ? ceilIntervals(rMesa, spacingLimit, "Rmesa wall")
+                                            : exactIntervals(rMesa, spacingLimit, "Rmesa wall");
+            int sideIntervals = variableGrid ? ceilIntervals(hMesa, spacingLimit, "hMesa wall")
+                                             : exactIntervals(hMesa, spacingLimit, "hMesa wall");
+            int endIntervals = variableGrid ? ceilIntervals(rBox - rMesa, spacingLimit, "lower substrate wall")
+                                            : exactIntervals(rBox - rMesa, spacingLimit, "lower substrate wall");
+            double topStep = rMesa / topIntervals;
+            double sideStep = hMesa / sideIntervals;
+            double endStep = (rBox - rMesa) / endIntervals;
             for (int index = 0; index <= topIntervals; index++) {
-                r.add(index * spacing); z.add(hMesa);
+                r.add(index == topIntervals ? rMesa : index * topStep); z.add(hMesa);
             }
             for (int index = 1; index <= sideIntervals; index++) {
-                r.add(rMesa); z.add(hMesa - index * spacing);
+                r.add(rMesa); z.add(index == sideIntervals ? 0.0 : hMesa - index * sideStep);
             }
             for (int index = 1; index <= endIntervals; index++) {
-                r.add(rMesa + index * spacing); z.add(0.0);
+                r.add(index == endIntervals ? rBox : rMesa + index * endStep); z.add(0.0);
             }
         }
         double[][] out = new double[2][r.size()];
@@ -523,7 +603,7 @@ public final class W24StaticShapeHistoryCapture {
         return out;
     }
 
-    private static void writeBinary(Path output, double[] times, double[] radii, double[] floors,
+    private static void writeBinary(Path output, int binaryVersion, double[] times, double[] radii, double[] floors,
             double[][] zColumns, double[][] profileByTime, double[][] wallCoordinates,
             double[] wallArclengths, double[][] wallByTime, double[][] volume, double[][] speed,
             int profilePointCount, int wallPointCount) throws IOException {
@@ -531,7 +611,7 @@ public final class W24StaticShapeHistoryCapture {
                 StandardOpenOption.WRITE);
              DataOutputStream out = new DataOutputStream(new BufferedOutputStream(Channels.newOutputStream(channel)))) {
             out.write(MAGIC);
-            out.writeInt(BINARY_VERSION);
+            out.writeInt(binaryVersion);
             out.writeInt(times.length);
             out.writeInt(radii.length);
             out.writeInt(profilePointCount);
@@ -636,6 +716,114 @@ public final class W24StaticShapeHistoryCapture {
             throw new IllegalStateException(label + " is not covered by the frozen exact profile spacing");
         }
         return (int) rounded;
+    }
+
+    private static int ceilIntervals(double length, double spacingLimit, String label) {
+        if (!Double.isFinite(length) || !Double.isFinite(spacingLimit) || length <= 0.0 || spacingLimit <= 0.0) {
+            throw new IllegalArgumentException(label + " length/spacing limit must be positive and finite");
+        }
+        double ratio = length / spacingLimit;
+        if (!Double.isFinite(ratio) || ratio > 10_000_000.0) {
+            throw new IllegalArgumentException(label + " would exceed the bounded common-grid resolution");
+        }
+        int intervals = (int) Math.ceil(ratio);
+        double actual = length / intervals;
+        if (intervals < 2 || !Double.isFinite(actual) || actual > spacingLimit * (1.0 + 1e-12)) {
+            throw new IllegalStateException(label + " ceil partition exceeds its exact-endpoint spacing bound");
+        }
+        return intervals;
+    }
+
+    private static double maximumGridSpacing(double[] radii, double[][] zColumns,
+                                             double[][] wallCoordinates) {
+        double maximum = 0.0;
+        for (int index = 1; index < radii.length; index++) {
+            maximum = Math.max(maximum, radii[index] - radii[index - 1]);
+        }
+        for (double[] values : zColumns) {
+            for (int index = 1; index < values.length; index++) {
+                maximum = Math.max(maximum, values[index] - values[index - 1]);
+            }
+        }
+        return Math.max(maximum, maximumSegmentSpacing(wallCoordinates));
+    }
+
+    private static double maximumSegmentSpacing(double[][] coordinates) {
+        double maximum = 0.0;
+        for (int index = 1; index < coordinates[0].length; index++) {
+            maximum = Math.max(maximum, Math.hypot(
+                coordinates[0][index] - coordinates[0][index - 1],
+                coordinates[1][index] - coordinates[1][index - 1]));
+        }
+        return maximum;
+    }
+
+    private static String sha256Doubles(double[] values) {
+        MessageDigest digest = newDigest();
+        for (double value : values) digest.update(java.nio.ByteBuffer.allocate(8).putDouble(value).array());
+        return hex(digest.digest());
+    }
+
+    private static String gridDefinitionSha256(double[] radii, double[] floors, double[][] zColumns,
+                                               double[][] wallCoordinates, boolean commonGrid) {
+        MessageDigest digest = newDigest();
+        digest.update((commonGrid ? "W24SHAP1/v2-common-grid" : "W24SHAP1/v1")
+            .getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+        updateVector(digest, radii);
+        updateVector(digest, floors);
+        for (double[] column : zColumns) updateVector(digest, column);
+        updateVector(digest, wallCoordinates[0]);
+        updateVector(digest, wallCoordinates[1]);
+        return hex(digest.digest());
+    }
+
+    private static void updateVector(MessageDigest digest, double[] values) {
+        digest.update(java.nio.ByteBuffer.allocate(4).putInt(values.length).array());
+        for (double value : values) digest.update(java.nio.ByteBuffer.allocate(8).putDouble(value).array());
+    }
+
+    private static MessageDigest newDigest() {
+        try {
+            return MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException impossible) {
+            throw new IllegalStateException("JVM lacks SHA-256", impossible);
+        }
+    }
+
+    private static String hex(byte[] bytes) {
+        StringBuilder result = new StringBuilder(bytes.length * 2);
+        for (byte value : bytes) result.append(String.format("%02x", value & 0xff));
+        return result.toString();
+    }
+
+    private static Configuration configuration(String id) {
+        switch (id) {
+            case "baseline": return new Configuration(id, 8e-6, 4e-6, 2e-6, 0.10);
+            case "mesh_ratio_1_3": return new Configuration(id, 8e-6, 8e-6 / 3.0, 2e-6, 0.10);
+            case "mesh_ratio_1_1": return new Configuration(id, 8e-6, 8e-6, 2e-6, 0.10);
+            case "epsilon_6um": return new Configuration(id, 6e-6, 3e-6, 1.5e-6, 0.10);
+            case "epsilon_10um": return new Configuration(id, 10e-6, 5e-6, 2.5e-6, 0.10);
+            case "step_0_05Tc": return new Configuration(id, 8e-6, 4e-6, 2e-6, 0.05);
+            case "step_0_20Tc": return new Configuration(id, 8e-6, 4e-6, 2e-6, 0.20);
+            default: throw new IllegalArgumentException("configuration_id is not one of the seven preregistered variants");
+        }
+    }
+
+    private static final class Configuration {
+        final String id;
+        final double epsilonM;
+        final double meshHmaxM;
+        final double meshHminM;
+        final double maximumStepS;
+
+        Configuration(String id, double epsilonM, double meshHmaxM, double meshHminM,
+                      double maximumStepOverTc) {
+            this.id = id;
+            this.epsilonM = epsilonM;
+            this.meshHmaxM = meshHmaxM;
+            this.meshHminM = meshHminM;
+            this.maximumStepS = maximumStepOverTc * (1.0 / 60.0);
+        }
     }
 
     private static double parameter(Model model, Map<String, Map<String, Object>> output,

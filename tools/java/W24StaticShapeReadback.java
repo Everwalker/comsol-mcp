@@ -28,17 +28,21 @@ import java.util.Set;
 public final class W24StaticShapeReadback {
     private static final String COMPONENT = "comp1";
     private static final String GEOMETRY = "geom1";
+    private static final double CAPILLARY_TIME_S = 1.0 / 60.0;
 
     private W24StaticShapeReadback() { }
 
     public static Object run(Model model, Map<String, Object> args) throws IOException {
         String action = String.valueOf(args.getOrDefault("action", "readback"));
-        if ("readback".equals(action)) return readback(model);
+        if ("readback".equals(action)) return readback(model, args);
         if ("save".equals(action)) return saveUnsolved(model, args);
         throw new IllegalArgumentException("action must be exactly readback or save");
     }
 
-    private static Map<String, Object> readback(Model model) {
+    private static Map<String, Object> readback(Model model, Map<String, Object> args) {
+        String expectedConfigurationId = String.valueOf(
+            args.getOrDefault("expected_configuration_id", "baseline"));
+        Configuration configuration = configuration(expectedConfigurationId);
         GeomSequence geom = model.component(COMPONENT).geom(GEOMETRY);
         int[] glueIds = model.component(COMPONENT).selection("sel_glue_domain").entities(2);
         int[] gasIds = model.component(COMPONENT).selection("sel_gas_domain").entities(2);
@@ -146,7 +150,7 @@ public final class W24StaticShapeReadback {
         parameterReadback.put("rhoGas", parameter(model, "rhoGas", 1.2, "kg/m^3"));
         parameterReadback.put("muGas", parameter(model, "muGas", 0.018, "Pa*s"));
         parameterReadback.put("sigma0", parameter(model, "sigma0", 0.03, "N/m"));
-        parameterReadback.put("epsPF", parameter(model, "epsPF", 8e-6, "m"));
+        parameterReadback.put("epsPF", parameter(model, "epsPF", configuration.epsilonM, "m"));
         parameterReadback.put("Rdrop", parameter(model, "Rdrop", 500e-6, "m"));
 
         Study study = model.study("stdShape");
@@ -167,11 +171,14 @@ public final class W24StaticShapeReadback {
         int storedSteps = timeSolver.getInt("tstepsstore");
         double maxStep = timeSolver.getDouble("maxstepbdf");
         if (!"strict".equals(bdfOutput) || !"tsteps".equals(outputMode) || storedSteps != 1 ||
-            !Double.isFinite(maxStep) || maxStep <= 0.0) {
+            !Double.isFinite(maxStep) || maxStep <= 0.0 ||
+            Math.abs(maxStep - configuration.maximumStepS) >
+                Math.max(1e-15, configuration.maximumStepS * 1e-12)) {
             throw new IllegalStateException("saved shape solver output/max-step settings differ from the configured study");
         }
         String[] meshTags = model.component(COMPONENT).mesh().tags();
         if (!contains(meshTags, "mesh1")) throw new IllegalStateException("saved static-shape mesh1 is absent");
+        Map<String, Object> meshReadback = readMesh(model, configuration);
 
         MultiphysicsCoupling coupling = model.component(COMPONENT).multiphysics("tpf1");
         String surfaceTensionEnabled = coupling.getString("IncludeSurfaceTension");
@@ -192,6 +199,7 @@ public final class W24StaticShapeReadback {
         result.put("native_acceptance", "NOT_RUN");
         result.put("model_tag", model.tag());
         result.put("case_id", caseId);
+        result.put("configuration_id", configuration.id);
         result.put("geometry_dimension", geom.getSDim());
         result.put("geometry_axisymmetric", geom.isAxisymmetric());
         result.put("geometry_domain_count", geom.getNDomains());
@@ -206,6 +214,11 @@ public final class W24StaticShapeReadback {
         result.put("axis_boundary_ids", boxed(axisIds));
         result.put("wetted_wall_features", wallFeatures);
         result.put("parameter_values_and_units", parameterReadback);
+        result.put("configuration_readback", Map.of(
+            "configuration_id", configuration.id,
+            "mesh", meshReadback,
+            "maximum_step_s", maxStep,
+            "maximum_step_over_capillary_time", maxStep / CAPILLARY_TIME_S));
         result.put("glue_density_expression", glue.propertyGroup("def").getString("density"));
         result.put("gas_density_expression", gas.propertyGroup("def").getString("density"));
         result.put("glue_viscosity_expression", glue.propertyGroup("def").getString("dynamicviscosity"));
@@ -240,6 +253,59 @@ public final class W24StaticShapeReadback {
         result.put("solution_state_readback", solutionState);
         result.put("study_run_calls_this_action", 0);
         return result;
+    }
+
+    private static Map<String, Object> readMesh(Model model, Configuration expected) {
+        com.comsol.model.MeshSequence mesh = model.component(COMPONENT).mesh("mesh1");
+        double hmax = mesh.feature("size").getDouble("hmax");
+        double hmin = mesh.feature("size").getDouble("hmin");
+        String custom = mesh.feature("size").getString("custom");
+        if (!Double.isFinite(hmax) || !Double.isFinite(hmin) ||
+            Math.abs(hmax - expected.meshHmaxM) > Math.max(1e-15, expected.meshHmaxM * 1e-12) ||
+            Math.abs(hmin - expected.meshHminM) > Math.max(1e-15, expected.meshHminM * 1e-12) ||
+            !("on".equalsIgnoreCase(custom) || "true".equalsIgnoreCase(custom) || "1".equals(custom))) {
+            throw new IllegalStateException("saved mesh hmax/hmin/custom readback differs from the preregistered configuration");
+        }
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("mesh_tag", "mesh1");
+        result.put("custom", true);
+        result.put("hmax_m", hmax);
+        result.put("hmin_m", hmin);
+        result.put("hmax_over_epsilon", hmax / expected.epsilonM);
+        result.put("hmin_over_epsilon", hmin / expected.epsilonM);
+        return result;
+    }
+
+    private static Configuration configuration(String id) {
+        switch (id) {
+            case "baseline": return new Configuration(id, 8e-6, 4e-6, 2e-6, 0.10);
+            case "mesh_ratio_1_3": return new Configuration(id, 8e-6, 8e-6 / 3.0, 2e-6, 0.10);
+            case "mesh_ratio_1_1": return new Configuration(id, 8e-6, 8e-6, 2e-6, 0.10);
+            case "epsilon_6um": return new Configuration(id, 6e-6, 3e-6, 1.5e-6, 0.10);
+            case "epsilon_10um": return new Configuration(id, 10e-6, 5e-6, 2.5e-6, 0.10);
+            case "step_0_05Tc": return new Configuration(id, 8e-6, 4e-6, 2e-6, 0.05);
+            case "step_0_20Tc": return new Configuration(id, 8e-6, 4e-6, 2e-6, 0.20);
+            default: throw new IllegalArgumentException("expected_configuration_id is not a preregistered W24 configuration");
+        }
+    }
+
+    private static final class Configuration {
+        final String id;
+        final double epsilonM;
+        final double meshHmaxM;
+        final double meshHminM;
+        final double maximumStepOverTc;
+        final double maximumStepS;
+
+        Configuration(String id, double epsilonM, double meshHmaxM, double meshHminM,
+                      double maximumStepOverTc) {
+            this.id = id;
+            this.epsilonM = epsilonM;
+            this.meshHmaxM = meshHmaxM;
+            this.meshHminM = meshHminM;
+            this.maximumStepOverTc = maximumStepOverTc;
+            this.maximumStepS = maximumStepOverTc * CAPILLARY_TIME_S;
+        }
     }
 
     private static Map<String, Object> saveUnsolved(Model model, Map<String, Object> args) throws IOException {
