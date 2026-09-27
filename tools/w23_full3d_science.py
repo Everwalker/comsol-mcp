@@ -49,6 +49,8 @@ _PLANE_IDS = {"input": "input_port", "output": "receiver_port"}
 _POWER_UNIT = "W"
 _MODEL_REF_KEYS = {"schema_version", "session_id", "server_instance_id", "model_tag", "generation"}
 _TAG = re.compile(r"^[A-Za-z][A-Za-z0-9_]{0,62}$")
+_BMA_PROBE_STUDY = "std3dBmaOutputProbe"
+_BMA_PROBE_STEP = "bmaOutputProbe"
 # Frozen software comparison policy.  Values were selected before any W23
 # native run; they are not inferred or widened from observed native results.
 # The absolute cross tolerance is dimensionless after normalization by the
@@ -371,6 +373,396 @@ def build_full3d_solution_inventory_dispatch(
         "mode": "trusted", "arguments": {"phase": "solution_inventory"},
     }, binding=binding, dispatch_scope=(
         "managed native readback of std3d step bindings, generated solver tree and datasets; no solve"))
+
+
+def build_full3d_bma_probe_prepare_dispatch(
+    *, source_artifact: str, project_id: str, model_ref: Mapping[str, Any], model_tag: str,
+    revision: int, request_id: str, idempotency_key: str,
+) -> dict[str, Any]:
+    """Create/read back an isolated one-step output-Port BMA solver sequence; no compute."""
+    if not isinstance(source_artifact, str) or not source_artifact.strip():
+        _fail("registered managed Java source artifact id is required")
+    binding = _managed_route_binding(
+        project_id=project_id, model_ref=model_ref, model_tag=model_tag, revision=revision,
+        request_id=request_id, idempotency_key=idempotency_key)
+    java_args = {"phase": "prepare_bma_output_probe",
+        "managed_identity": {key: binding[key] for key in
+                             ("project_id", "model_ref", "model_tag", "expected_revision")}}
+    request = _operation_call("code.execute_java", {
+        "source_artifact": source_artifact,
+        "entrypoint": "NativeW23Full3DFixture#run",
+        "mode": "trusted", "arguments": java_args,
+    }, binding=binding, dispatch_scope=(
+        "create an isolated study containing only receiver Port 2 BMA(neigs=2,f0), generate and read back its full solver tree; no solver run"))
+    request["native_result"] = "NOT_RUN"
+    request["study_or_solver_invoked"] = False
+    return request
+
+
+def build_full3d_bma_probe_run_dispatch(
+    *, source_artifact: str, solver_sequence_tag: str,
+    project_id: str, model_ref: Mapping[str, Any], model_tag: str,
+    revision: int, request_id: str, idempotency_key: str,
+) -> dict[str, Any]:
+    """Submit one full SolverSequence.runAll on the exact prepared BMA-only study."""
+    if not isinstance(source_artifact, str) or not source_artifact.strip():
+        _fail("registered managed Java source artifact id is required")
+    if not isinstance(solver_sequence_tag, str) or not _TAG.fullmatch(solver_sequence_tag):
+        _fail("an exact native prepared solver-sequence tag is required")
+    binding = _managed_route_binding(
+        project_id=project_id, model_ref=model_ref, model_tag=model_tag, revision=revision,
+        request_id=request_id, idempotency_key=idempotency_key)
+    java_args = {"phase": "run_bma_output_probe", "study_tag": _BMA_PROBE_STUDY,
+        "solver_sequence_tag": solver_sequence_tag,
+        "managed_identity": {key: binding[key] for key in
+                             ("project_id", "model_ref", "model_tag", "expected_revision")}}
+    request = _operation_call("code.execute_java", {
+        "source_artifact": source_artifact,
+        "entrypoint": "NativeW23Full3DFixture#run",
+        "mode": "trusted", "arguments": java_args,
+    }, binding=binding, dispatch_scope=(
+        "one full SolverSequence.runAll for the exact solver sequence attached to the isolated single-output-Port-BMA study; no frequency/input-BMA step"))
+    request["native_result"] = "NOT_RUN"
+    request["study_or_solver_invoked"] = False
+    request["planned_solver_calls"] = 1
+    request["planned_study_run_calls"] = 0
+    return request
+
+
+def validate_full3d_bma_probe_preparation(
+    readback: Mapping[str, Any], *, project_id: str, model_tag: str,
+    model_ref: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Admit only an isolated, exact Port-2 BMA sequence; preparation is not a solve."""
+    if (not isinstance(readback, Mapping)
+            or readback.get("fixture_id") != "w23_full3d_fiber_ball_lens_vector_pml_v1"
+            or readback.get("status") != "BMA_OUTPUT_PROBE_CONFIGURED_NOT_SOLVED"
+            or readback.get("native_result") != "COMSOL_NATIVE_BMA_PROBE_CONFIGURATION_READBACK"
+            or readback.get("study_or_solver_invoked") is not False
+            or readback.get("producer_status") != "PREPARED_ONLY_NOT_PRODUCER_EVIDENCE"
+            or readback.get("field_mapping_status") != "UNVERIFIED"):
+        _fail("BMA probe preparation is missing its exact native no-solve status")
+    identity = readback.get("managed_identity")
+    if (not isinstance(identity, Mapping) or identity.get("project_id") != project_id
+            or identity.get("model_tag") != model_tag or identity.get("model_ref") != dict(model_ref)):
+        _fail("BMA probe preparation does not bind the authoritative project and ModelRef")
+
+    port = readback.get("receiver_port")
+    boundary_ids = port.get("boundary_ids") if isinstance(port, Mapping) else None
+    if (not isinstance(port, Mapping) or port.get("feature_tag") != "portOut3d"
+            or port.get("feature_type") != "Port" or port.get("port_type") != "Numeric"
+            or port.get("port_name") != "2"
+            or port.get("port_mode_number_readback") != "1"
+            or port.get("selection_tag") != "sel3dOutputPort"
+            or type(port.get("entity_dimension")) is not int or port.get("entity_dimension") != 2
+            or not isinstance(boundary_ids, list) or not boundary_ids
+            or any(type(item) is not int or item < 1 for item in boundary_ids)
+            or len(set(boundary_ids)) != len(boundary_ids)):
+        _fail("actual Numeric Port 2 configuration or boundary selection readback is incomplete")
+
+    original_steps = readback.get("original_std3d_steps")
+    expected_original = [
+        {"tag": "bmaInput3d", "feature_type": "BoundaryModeAnalysis",
+         "PortName": "1", "modeFreq": "f0", "neigs": 2},
+        {"tag": "bmaOutput3d", "feature_type": "BoundaryModeAnalysis",
+         "PortName": "2", "modeFreq": "f0", "neigs": 2},
+        {"tag": "freq3d", "feature_type": "Frequency", "plist": "f0"},
+    ]
+    if original_steps != expected_original:
+        _fail("the original std3d input-BMA/output-BMA/frequency baseline changed")
+
+    probe = readback.get("probe_study")
+    study_tag = probe.get("study_tag") if isinstance(probe, Mapping) else None
+    study_steps = probe.get("study_steps") if isinstance(probe, Mapping) else None
+    expected_probe_steps = [{"tag": "bmaOutputProbe", "feature_type": "BoundaryModeAnalysis",
+                             "PortName": "2", "modeFreq": "f0", "neigs": 2}]
+    if study_tag != "std3dBmaOutputProbe" or study_steps != expected_probe_steps:
+        _fail("probe parent study must contain exactly one output Port 2 BMA step")
+
+    sequence = readback.get("solver_sequence")
+    solver_tag = sequence.get("tag") if isinstance(sequence, Mapping) else None
+    tree = sequence.get("solver_tree_features") if isinstance(sequence, Mapping) else None
+    bindings = sequence.get("study_step_bindings_in_solver_tree_order") if isinstance(sequence, Mapping) else None
+    if (not isinstance(solver_tag, str) or not _TAG.fullmatch(solver_tag)
+            or not isinstance(sequence, Mapping) or sequence.get("parent_study") != study_tag
+            or not isinstance(tree, list) or not tree
+            or not isinstance(bindings, list) or len(bindings) != 1):
+        _fail("generated BMA solver sequence or its actual feature inventory is missing")
+    paths: set[str] = set()
+    for row in tree:
+        if (not isinstance(row, Mapping) or not isinstance(row.get("path"), str)
+                or not row.get("path") or not isinstance(row.get("feature_type"), str)
+                or not row.get("feature_type") or row["path"] in paths):
+            _fail("generated BMA solver feature list is malformed or duplicated")
+        paths.add(row["path"])
+    binding = bindings[0]
+    if (not isinstance(binding, Mapping) or binding.get("study") != study_tag
+            or binding.get("studystep") != "bmaOutputProbe"
+            or binding.get("feature_type") != "StudyStep"
+            or binding.get("path") not in paths):
+        _fail("generated solver sequence is missing the exact output-BMA StudyStep binding")
+    feature_types = {row.get("feature_type") for row in tree if isinstance(row, Mapping)}
+    if not {"Variables", "Eigenvalue", "StoreSolution"} <= feature_types:
+        _fail("generated BMA solver tree lacks the Variables/Eigenvalue/StoreSolution computation path")
+
+    before = readback.get("pre_solve_solution_state")
+    if (not isinstance(before, Mapping) or type(before.get("is_valid")) is not bool
+            or before.get("solver_sequence_is_empty") is not True
+            or before.get("outer_solnums") != [] or before.get("solution_pairs") != []
+            or before.get("pair_count") != 0):
+        _fail("new isolated solver sequence does not have a proven empty pre-solve solution state")
+    return {"status": "ISOLATED_BMA_SEQUENCE_PREPARED_NOT_SOLVED",
+            "native_result": "PREPARATION_ONLY_NOT_PRODUCER_EVIDENCE",
+            "producer_status": "UNVERIFIED_UNTIL_EXACT_SEQUENCE_RUN_AND_SOLUTION_READBACK",
+            "field_mapping_status": "UNVERIFIED",
+            "project_id": project_id, "model_tag": model_tag,
+            "model_ref": dict(model_ref), "receiver_port": dict(port),
+            "probe_study": dict(probe), "solver_sequence": dict(sequence),
+            "pre_solve_solution_state": dict(before)}
+
+
+def validate_full3d_bma_probe_run_readback(
+    readback: Mapping[str, Any], *, preparation: Mapping[str, Any],
+    project_id: str, model_tag: str, model_ref: Mapping[str, Any],
+    run_request: Mapping[str, Any], route_result: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Verify exact isolated-sequence run plus two distinct native solution tuples."""
+    if (not isinstance(readback, Mapping)
+            or readback.get("fixture_id") != "w23_full3d_fiber_ball_lens_vector_pml_v1"
+            or readback.get("status") != "BMA_OUTPUT_PROBE_SOLVER_SEQUENCE_RETURNED_TWO_SOLUTION_ROWS"
+            or readback.get("native_result") != "COMSOL_NATIVE_BMA_PRODUCER_RUN_READBACK"
+            or readback.get("study_or_solver_invoked") is not True
+            or readback.get("solver_calls") != 1 or readback.get("study_run_calls") != 0
+            or readback.get("producer_status") != "CONTROLLED_SINGLE_STEP_BMA_PRODUCER_VERIFIED"
+            or readback.get("field_mapping_status") != "UNVERIFIED"
+            or readback.get("basis_ordinal_mapping") != "UNVERIFIED_NATIVE_FIELD_MAPPING_REQUIRED"):
+        _fail("BMA probe response does not prove one completed exact-sequence solve and native readback")
+    identity = readback.get("managed_identity")
+    if (not isinstance(identity, Mapping) or identity.get("project_id") != project_id
+            or identity.get("model_tag") != model_tag or identity.get("model_ref") != dict(model_ref)):
+        _fail("BMA producer response does not bind the authoritative project and ModelRef")
+    if (preparation.get("status") != "ISOLATED_BMA_SEQUENCE_PREPARED_NOT_SOLVED"
+            or preparation.get("native_result") != "PREPARATION_ONLY_NOT_PRODUCER_EVIDENCE"
+            or preparation.get("project_id") != project_id or preparation.get("model_tag") != model_tag
+            or preparation.get("model_ref") != dict(model_ref)):
+        _fail("a validated isolated BMA preparation receipt is required before producer admission")
+    expected_probe = preparation.get("probe_study")
+    expected_sequence = preparation.get("solver_sequence")
+    if (not isinstance(expected_probe, Mapping) or not isinstance(expected_sequence, Mapping)
+            or not isinstance(expected_sequence.get("tag"), str)
+            or not expected_sequence.get("tag")):
+        _fail("validated preparation receipt omitted the exact BMA study/solver identity")
+    if not isinstance(run_request, Mapping):
+        _fail("original managed BMA run request is missing")
+    request_execution = run_request.get("execution") if isinstance(run_request, Mapping) else None
+    operation = run_request.get("arguments") if isinstance(run_request, Mapping) else None
+    java_arguments = operation.get("arguments") if isinstance(operation, Mapping) else None
+    native_arguments = java_arguments.get("arguments") if isinstance(java_arguments, Mapping) else None
+    native_identity = native_arguments.get("managed_identity") if isinstance(native_arguments, Mapping) else None
+    if (run_request.get("operation") != "operation_call"
+            or not isinstance(request_execution, Mapping)
+            or request_execution.get("project_id") != project_id
+            or request_execution.get("session_id") != model_ref.get("session_id")
+            or request_execution.get("model_ref") != dict(model_ref)
+            or request_execution.get("expected_revision") != identity.get("expected_revision")
+            or not isinstance(request_execution.get("request_id"), str)
+            or not request_execution.get("request_id")
+            or not isinstance(request_execution.get("idempotency_key"), str)
+            or not request_execution.get("idempotency_key")
+            or not isinstance(operation, Mapping)
+            or operation.get("operation_id") != "code.execute_java"
+            or not isinstance(java_arguments, Mapping)
+            or java_arguments.get("entrypoint") != "NativeW23Full3DFixture#run"
+            or java_arguments.get("mode") != "trusted"
+            or not isinstance(java_arguments.get("source_artifact"), str)
+            or not java_arguments.get("source_artifact")
+            or not isinstance(native_arguments, Mapping)
+            or native_arguments.get("phase") != "run_bma_output_probe"
+            or native_arguments.get("study_tag") != "std3dBmaOutputProbe"
+            or native_arguments.get("solver_sequence_tag") != expected_sequence.get("tag")
+            or native_identity != {"project_id": project_id, "model_ref": dict(model_ref),
+                                   "model_tag": model_tag,
+                                   "expected_revision": request_execution.get("expected_revision")}
+            or run_request.get("native_result") != "NOT_RUN"
+            or run_request.get("study_or_solver_invoked") is not False
+            or run_request.get("planned_solver_calls") != 1
+            or run_request.get("planned_study_run_calls") != 0):
+        _fail("original managed run request is missing or differs from the exact BMA sequence/model revision")
+    if (not isinstance(route_result, Mapping)
+            or route_result.get("outcome") != "SUCCEEDED"
+            or route_result.get("retry_forbidden") is not True
+            or not isinstance(route_result.get("job_id"), str)
+            or not route_result.get("job_id")):
+        _fail("managed BMA run lacks a terminal, non-replayed public job identity")
+    job_id = route_result["job_id"]
+    submitted_request = route_result.get("submitted_request")
+    submitted_execution = submitted_request.get("execution") if isinstance(submitted_request, Mapping) else None
+    if not isinstance(submitted_request, Mapping) or not isinstance(submitted_execution, Mapping):
+        _fail("managed BMA run omitted the exact bounded request sent through public dispatch")
+    timeout_names = ("execution_timeout_s", "queue_timeout_s", "rpc_timeout_s")
+    timeouts = {name: submitted_execution.get(name) for name in timeout_names}
+    if (submitted_request.get("operation") != run_request.get("operation")
+            or submitted_request.get("arguments") != run_request.get("arguments")
+            or any(submitted_execution.get(name) != request_execution.get(name)
+                   for name in ("project_id", "session_id", "model_ref", "expected_revision",
+                                "request_id", "idempotency_key"))
+            or set(submitted_execution) != set(request_execution) | set(timeout_names)
+            or any(isinstance(value, bool) or not isinstance(value, (int, float))
+                   or not math.isfinite(float(value)) or value <= 0.0
+                   for value in timeouts.values())
+            or timeouts["execution_timeout_s"] > 600.0
+            or timeouts["queue_timeout_s"] != min(60.0, timeouts["execution_timeout_s"])
+            or timeouts["rpc_timeout_s"] != min(30.0, timeouts["execution_timeout_s"])):
+        _fail("bounded public request changed the frozen BMA request or its admitted timeouts")
+    expected_execution = {**dict(request_execution), **timeouts}
+    if dict(submitted_request) != {**dict(run_request), "execution": expected_execution}:
+        _fail("actual public BMA request differs from the frozen logical request and bounded timeout envelope")
+    try:
+        from comsol_mcp._execution_contract import canonical_request_hash
+
+        nested_operation = operation.get("operation_id")
+        nested_arguments = operation.get("arguments")
+        if nested_operation != "code.execute_java" or not isinstance(nested_arguments, Mapping):
+            _fail("original public request does not contain the exact code.execute_java arguments")
+        expected_request_hash = canonical_request_hash(
+            nested_operation, nested_arguments, request_execution["model_ref"],
+            request_execution["expected_revision"],
+            project_id=request_execution["project_id"],
+            session_id=request_execution["session_id"],
+            queue_timeout_s=timeouts["queue_timeout_s"],
+            execution_timeout_s=timeouts["execution_timeout_s"],
+            no_progress_warning_s=submitted_execution.get("no_progress_warning_s"),
+        )
+    except (KeyError, TypeError, ValueError, RuntimeError) as exc:
+        raise Full3DScienceError("canonical managed BMA request hash could not be recomputed") from exc
+    if not isinstance(expected_request_hash, str) or re.fullmatch(r"[0-9a-f]{64}", expected_request_hash) is None:
+        _fail("canonical managed BMA request hash is malformed")
+    dispatch_response = route_result.get("dispatch_response")
+    dispatch_waits = route_result.get("job_wait_responses")
+    operation_response = route_result.get("response")
+    initial_execution = dispatch_response.get("execution") if isinstance(dispatch_response, Mapping) else None
+    if (not isinstance(dispatch_response, Mapping)
+            or _managed_job_id(dispatch_response) != job_id
+            or not isinstance(initial_execution, Mapping)
+            or initial_execution.get("request_id") != request_execution["request_id"]
+            or initial_execution.get("idempotency_key") != request_execution["idempotency_key"]
+            or not isinstance(initial_execution.get("operation_id"), str)
+            or not initial_execution.get("operation_id")
+            or initial_execution.get("job_id") != job_id
+            or initial_execution.get("request_hash") != expected_request_hash
+            or not isinstance(dispatch_waits, list) or not dispatch_waits
+            or not isinstance(operation_response, Mapping)
+            or operation_response.get("success") is not True):
+        _fail("managed BMA dispatch/job ledger does not preserve the exact submitted request and job")
+    terminal_wait = dispatch_waits[-1]
+    terminal_job = terminal_wait.get("data") if isinstance(terminal_wait, Mapping) else None
+    stored_operation = terminal_job.get("operation") if isinstance(terminal_job, Mapping) else None
+    terminal_result_execution = operation_response.get("execution") if isinstance(operation_response, Mapping) else None
+    if not isinstance(stored_operation, Mapping):
+        _fail("public terminal job omitted its authoritative stored operation identity")
+    expected_operation_id = initial_execution["operation_id"]
+    identity_fields = {
+        "request_id": request_execution["request_id"],
+        "idempotency_key": request_execution["idempotency_key"],
+        "operation_id": expected_operation_id,
+        "job_id": job_id,
+        "request_hash": expected_request_hash,
+    }
+    if (not isinstance(terminal_result_execution, Mapping)
+            or any(terminal_result_execution.get(name) != value
+                   for name, value in identity_fields.items())
+            or any(stored_operation.get(name) != value for name, value in identity_fields.items()
+                   if name != "job_id")):
+        _fail("terminal public result or stored operation is not bound to the original request identity")
+    if (not isinstance(terminal_wait, Mapping) or terminal_wait.get("success") is not True
+            or not isinstance(terminal_job, Mapping) or terminal_job.get("job_id") != job_id
+            or terminal_job.get("operation_id") != expected_operation_id
+            or terminal_job.get("status") != "SUCCEEDED"
+            or terminal_job.get("result") != dict(operation_response)):
+        _fail("public job.wait result is not the exact terminal managed BMA response")
+    response_data = operation_response.get("data")
+    worker = response_data.get("worker") if isinstance(response_data, Mapping) else None
+    wrapper = response_data.get("readback") if isinstance(response_data, Mapping) else None
+    worker_result = worker.get("result") if isinstance(worker, Mapping) else None
+    response_execution = terminal_result_execution
+    response_revision = response_execution.get("revision") if isinstance(response_execution, Mapping) else None
+    if (not isinstance(worker, Mapping) or worker.get("ok") is not True
+            or worker.get("status") != "SUCCEEDED"
+            or not isinstance(worker_result, Mapping) or worker_result.get("readback") != dict(readback)
+            or not isinstance(wrapper, Mapping) or wrapper.get("executed") is not True
+            or wrapper.get("readback") != dict(readback)
+            or not isinstance(response_execution, Mapping)
+            or response_execution.get("model_ref") != dict(model_ref)
+            or type(response_revision) is not int
+            or response_revision != request_execution.get("expected_revision") + 1):
+        _fail("terminal public job response is not bound to the exact Worker readback and one legal managed revision transition")
+    invocation = readback.get("invocation")
+    if (readback.get("probe_study") != expected_probe
+            or readback.get("solver_sequence") != expected_sequence
+            or not isinstance(invocation, Mapping)
+            or invocation.get("method") != "SolverSequence.runAll"
+            or invocation.get("solver_sequence_tag") != expected_sequence.get("tag")
+            or invocation.get("parent_study_tag") != "std3dBmaOutputProbe"
+            or invocation.get("parent_study_step_tag") != "bmaOutputProbe"
+            or invocation.get("method_returned") is not True):
+        _fail("solver invocation/readback no longer matches the exact prepared one-step BMA sequence")
+    before = readback.get("pre_solve_solution_state")
+    if before != preparation.get("pre_solve_solution_state") or before.get("solution_pairs") != []:
+        _fail("producer solve did not begin from the exact empty prepared sequence")
+
+    post = readback.get("post_solve_solution_state")
+    outers = post.get("outer_solnums") if isinstance(post, Mapping) else None
+    pairs = post.get("solution_pairs") if isinstance(post, Mapping) else None
+    if (not isinstance(post, Mapping) or post.get("is_valid") is not True
+            or post.get("solver_sequence_is_empty") is not False
+            or not isinstance(outers, list) or len(outers) != 1
+            or any(type(item) is not int or item < 1 for item in outers)
+            or len(set(outers)) != len(outers)
+            or not isinstance(pairs, list) or len(pairs) != 2
+            or post.get("pair_count") != 2):
+        _fail("producer run returned an empty, invalid, or non-two-solution SolutionInfo axis")
+    sequence_tag = expected_sequence.get("tag")
+    seen: set[tuple[int, int]] = set()
+    seen_inner: set[int] = set()
+    seen_outer: set[int] = set()
+    checked_pairs: list[dict[str, Any]] = []
+    for pair in pairs:
+        if not isinstance(pair, Mapping):
+            _fail("producer SolutionInfo pair is malformed")
+        outer, inner, solnum = pair.get("outer_index"), pair.get("inner_index"), pair.get("solnum")
+        if (type(outer) is not int or outer < 1 or outer not in outers
+                or type(inner) is not int or inner < 1
+                or type(solnum) is not int or solnum != inner
+                or pair.get("solver_sequence_tag") != sequence_tag
+                or (outer, inner) in seen or inner in seen_inner):
+            _fail("producer SolutionInfo pairs are duplicated or do not map to the exact BMA sequence")
+        seen.add((outer, inner))
+        seen_inner.add(inner)
+        seen_outer.add(outer)
+        checked_pairs.append({"outer_index": outer, "inner_index": inner,
+                              "solnum": solnum, "solver_sequence_tag": sequence_tag})
+    if seen_outer != set(outers):
+        _fail("producer SolutionInfo rows do not cover the complete outer-solution axis")
+    return {"status": "VERIFIED_CONTROLLED_SINGLE_BMA_PRODUCER",
+            "native_result": "COMSOL_NATIVE_BMA_PRODUCER_RUN_READBACK",
+            "producer_step_binding": "VERIFIED_BY_ISOLATED_ONE_STEP_STUDY_AND_EXACT_SEQUENCE_RUNALL",
+            "producer_study_tag": "std3dBmaOutputProbe",
+            "producer_step_tag": "bmaOutputProbe",
+            "solver_sequence_tag": sequence_tag,
+            "eigensolution_row_count": 2,
+            "eigensolution_solution_pairs": checked_pairs,
+            "managed_operation_id": "code.execute_java",
+            "managed_request_id": request_execution["request_id"],
+            "managed_idempotency_key": request_execution["idempotency_key"],
+            "managed_request_hash": expected_request_hash,
+            "managed_operation_instance_id": expected_operation_id,
+            "managed_job_id": job_id,
+            "managed_model_revision_before": request_execution["expected_revision"],
+            "managed_model_revision_after": response_revision,
+            "basis_ordinal_assignment": "UNVERIFIED_NATIVE_FIELD_MAPPING_REQUIRED",
+            "numeric_port_mode_field_mapping": "UNVERIFIED",
+            "project_id": project_id, "model_tag": model_tag,
+            "model_ref": dict(model_ref)}
 
 
 def build_full3d_dataset_list_dispatch(
@@ -1396,6 +1788,8 @@ __all__ = [
     "circular_port_quadrature", "rectangular_port_quadrature", "compare_native_mode_overlap",
     "independent_mode_overlap_integrals", "validate_native_field_readback",
     "build_full3d_study_run_dispatch", "build_full3d_solution_inventory_dispatch",
+    "build_full3d_bma_probe_prepare_dispatch", "build_full3d_bma_probe_run_dispatch",
+    "validate_full3d_bma_probe_preparation", "validate_full3d_bma_probe_run_readback",
     "build_full3d_dataset_list_dispatch", "build_full3d_dataset_indices_dispatch",
     "build_full3d_save_dispatch", "build_full3d_model_load_request",
     "build_full3d_mode_overlap_definition", "build_full3d_mode_overlap_dispatch",

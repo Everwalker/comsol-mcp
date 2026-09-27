@@ -87,6 +87,27 @@ def test_full3d_java_builder_has_rotation_and_local_section_readback_but_no_stud
     assert 'model.sol().run' not in java
 
 
+def test_bma_producer_probe_uses_one_isolated_output_bma_study_and_full_sequence_run():
+    java = (Path(__file__).resolve().parents[1] / "tools/java/NativeW23Full3DFixture.java").read_text(encoding="utf-8")
+    prepare = java[java.index("private static Map<String, Object> prepareBmaOutputProbe"):
+                   java.index("private static Map<String, Object> runBmaOutputProbe")]
+    run = java[java.index("private static Map<String, Object> runBmaOutputProbe"):
+               java.index("private static Map<String, Object> readManagedIdentity")]
+    assert 'study().create(BMA_PROBE_STUDY)' in prepare
+    assert 'feature().create(BMA_PROBE_STEP, "BoundaryModeAnalysis")' in prepare
+    assert 'configureBma(bma, "2")' in prepare
+    assert 'createAutoSequences("sol")' in prepare
+    assert 'solverSequenceReadback(sequence, BMA_PROBE_STUDY)' in prepare
+    assert 'solutionState(sequence, sequenceTags[0])' in prepare
+    assert '"Variables", "Eigenvalue", "StoreSolution"' in java
+    assert "sequence.runAll();" in run
+    assert 'BMA_OUTPUT_PROBE_SOLVER_SEQUENCE_RETURNED_TWO_SOLUTION_ROWS' in run
+    assert 'study_tag", BMA_PROBE_STUDY' in run
+    assert 'post_solve_solution_state' in run
+    assert 'field_mapping_status", "UNVERIFIED"' in run
+    assert 'basis_ordinal_mapping", "UNVERIFIED_NATIVE_FIELD_MAPPING_REQUIRED"' in run
+
+
 def _managed_binding():
     return {
         "project_id": "project-w23",

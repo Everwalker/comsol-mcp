@@ -1,0 +1,154 @@
+{
+  "schema_version": 1,
+  "stage": "W23 isolated single-BMA producer software",
+  "status": "PASS_SCOPED_SOFTWARE",
+  "w23_overall": "PARTIAL",
+  "at_utc": "2026-09-27T18:37:01.013286+00:00",
+  "candidate": {
+    "archive_root": "/private/tmp/comsol-mcp-w23-full3d-bma-probe-candidate-20260928e",
+    "evidence_dir": "/private/tmp/comsol-mcp-w23-full3d-bma-probe-software-evidence-20260928e",
+    "base_commit": "3a7622fd4f27b6f27441de9d3b368254038baa8a",
+    "published_origin_main_at_export": "7c91f8ccb38660f962bfd8c45704eab49fea3200",
+    "checkout_head_at_export": "7c91f8ccb38660f962bfd8c45704eab49fea3200",
+    "published_archive_source_file_count": 99,
+    "candidate_source_file_count": 105,
+    "overlay_file_count": 6,
+    "overlay_files": {
+      "tests/test_run_native_w23_full3d_setup.py": {
+        "bytes": 43664,
+        "sha256": "0af2dcc80ecff5f26db0c18bf54f5e6ced9ba2f49b2566dd9ff981082e5510ca",
+        "shared_repo_sha256": "0af2dcc80ecff5f26db0c18bf54f5e6ced9ba2f49b2566dd9ff981082e5510ca"
+      },
+      "tests/test_w23_full3d.py": {
+        "bytes": 16194,
+        "sha256": "15eff8f2324e449c99e714aa4340a0eeb8f0d8c2ee06c26b38741e00663751ef",
+        "shared_repo_sha256": "15eff8f2324e449c99e714aa4340a0eeb8f0d8c2ee06c26b38741e00663751ef"
+      },
+      "tests/test_w23_full3d_science.py": {
+        "bytes": 49525,
+        "sha256": "61d4268d4490b9bebfe54e49c78b8ff23c055b77dfc6abf8742de24b691d82d7",
+        "shared_repo_sha256": "61d4268d4490b9bebfe54e49c78b8ff23c055b77dfc6abf8742de24b691d82d7"
+      },
+      "tools/java/NativeW23Full3DFixture.java": {
+        "bytes": 92757,
+        "sha256": "f2e84df7958c00969a351e7efaa42764c1e539d975bcf1134d83e5be56871b25",
+        "shared_repo_sha256": "f2e84df7958c00969a351e7efaa42764c1e539d975bcf1134d83e5be56871b25"
+      },
+      "tools/run_native_w23_full3d_setup.py": {
+        "bytes": 124796,
+        "sha256": "8396cefc45217a473dfb713ba09d4ef8cbb3ff5074c626ecae1cf279e8d95b1a",
+        "shared_repo_sha256": "8396cefc45217a473dfb713ba09d4ef8cbb3ff5074c626ecae1cf279e8d95b1a"
+      },
+      "tools/w23_full3d_science.py": {
+        "bytes": 109953,
+        "sha256": "d994aa499f191fa44450dfc3247fd5a80c1bd4a8071841389ca732adb0c77d45",
+        "shared_repo_sha256": "d994aa499f191fa44450dfc3247fd5a80c1bd4a8071841389ca732adb0c77d45"
+      }
+    },
+    "candidate_sha256": "791b4450d6f2bb6bf8c72f82c8e8b5a9216ebbe99152af748f5b1b09063278ed",
+    "candidate_freeze_file_sha256": "17168eafce5c228ddeec8838a74f5fcceebf5b16dd44ba0364a857f974761805",
+    "source_closure_sha256": "2244390167a7e6fe04b75671538cd06d65ddc5ddb268f57012f43eaa8bbb41d5",
+    "archive_manifest_declared_sha256": "d45c1cce9e901a5b144f09e8f4f98540352b1547eb02584134be01533be6fe4c",
+    "archive_manifest_file_sha256": "7f05a2ee12c78e802136a2a8c0492b532a86ee35e02a73bdb89bf728998b4839"
+  },
+  "capabilities": [
+    "Dedicated receiver Port2 BMA(neigs2,f0) study leaves original std3d intact; read generated full sequence and require Variables/Eigenvalue/StoreSolution.",
+    "Full sequence runAll profile accepts only exact before/after solution identity with two distinct inner indices; configuration alone cannot prove producer.",
+    "Bind logical request, actual bounded envelope and canonical hash to dispatch/result and durable operation/job identities; successful write revision must be expected+1.",
+    "Preserve observed solver counts and UNKNOWN through cleanup; BMA failed execution returns nonzero even if cleanup succeeded."
+  ],
+  "validation": {
+    "software_test": {
+      "command": "PYTHONPATH=/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/lib/python3.12/site-packages /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -B -S -m pytest -q tests/test_w23_full3d_science.py tests/test_w23_full3d.py tests/test_run_native_w23_full3d_setup.py --junitxml=/private/tmp/comsol-mcp-w23-full3d-bma-probe-software-evidence-20260928e/bma_probe_software_junit.xml",
+      "cwd": "/private/tmp/comsol-mcp-w23-full3d-bma-probe-candidate-20260928e",
+      "exit_code": 0,
+      "counts": {
+        "tests": 134,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "junit_path": "/private/tmp/comsol-mcp-w23-full3d-bma-probe-software-evidence-20260928e/bma_probe_software_junit.xml",
+      "junit_sha256": "77ab24c8cbbeda39531f031170f04c1bab54a5ef526c9386d1f6ef067d364969",
+      "python_executable": "/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python",
+      "python_flags": [
+        "-B",
+        "-S"
+      ],
+      "loopback_test_escalation": "test-owned subprocess/control-daemon only; no COMSOL/native execution"
+    },
+    "main_verified": "6 overlays,99 published source bytes,105 candidate files,receipt/freeze/JUnit and2 compiled-class hashes",
+    "java_compile": {
+      "source_sha256": "f2e84df7958c00969a351e7efaa42764c1e539d975bcf1134d83e5be56871b25",
+      "javac_version": "javac 11.0.31",
+      "javac_returncode": 0,
+      "javap_returncode": 0,
+      "compiled_classes": {
+        "NativeW23Full3DFixture$PortFrame.class": {
+          "bytes": 596,
+          "sha256": "56aff203fddcadbf23ee6b1293c8aa2195d6b0abecf4c091b4e76a28bc1a0028"
+        },
+        "NativeW23Full3DFixture.class": {
+          "bytes": 67226,
+          "sha256": "42df347bec614fdf2cda13fe9af8a0636b60dc26247b331d335f25f41bbc8316"
+        }
+      }
+    },
+    "root_reproducer_retest": {
+      "path": "/private/tmp/w23_bma_root_request_binding_retest.json",
+      "sha256": "2404500431e63f9d551be4f99fd7065df891fe6d4fcf817919e665bb0ddfa788",
+      "result": "previous foreign request/key acceptance now rejected; synthetic positive still accepted"
+    },
+    "receipt": {
+      "path": "/private/tmp/comsol-mcp-w23-full3d-bma-probe-software-evidence-20260928e/request_binding_candidate_receipt.json",
+      "sha256": "04fe1e2558d19e705cacce8baf4f5dba8d224688d4cd4c3fef64e735b2ad2cc3"
+    }
+  },
+  "prior_rejected_candidate": {
+    "sha256": "a1ddaea3f659551f93e12c5e499b050f4558c9d0f9358a0c32d4ffb3645e0735",
+    "finding": "root independently reproduced foreign request/key accepted as verified producer",
+    "reproducer": "/private/tmp/w23_bma_root_request_binding_reproducer.json",
+    "preserved_receipt_sha256": "16075ed317b7988609ef548651435699fa9ece0ba3e8f1da4f3b103aa449f5f6"
+  },
+  "native_execution": "NOT_RUN",
+  "field_to_basis_mapping": "UNVERIFIED",
+  "full3d_overlap_science": "NOT_RUN",
+  "proposed_native_budget": {
+    "schema_version": 1,
+    "max_server_processes": 1,
+    "max_managed_workers": 1,
+    "max_gui_processes": 0,
+    "wall_clock_seconds_from_server_birth_including_cleanup": 2700,
+    "reserved_cleanup_seconds": 120,
+    "study_run_calls": 0,
+    "solver_calls": 1,
+    "route_wait_caps_seconds": {
+      "session.connect": 120,
+      "model_create": 120,
+      "fixture_build": 540,
+      "baseline_apply": 540,
+      "solution_inventory": 90,
+      "model_save": 90,
+      "session.disconnect.retire_worker": 90,
+      "bma_probe_prepare": 90,
+      "bma_probe_solver_sequence_runAll": 600
+    },
+    "unknown_policy": "preserve exact owned process handles and evidence; never replay or force-stop an unknown Worker/session",
+    "profile": "w23_single_receiver_bma_output_probe_v1",
+    "unallocated_margin_seconds": 300
+  },
+  "budget_authorization": "PREPARATION_ONLY; not native launch/solve authorization",
+  "limitations": [
+    "134 tests include synthetic protocol validation and test-owned loopback helper/control-daemon; no COMSOL computation.",
+    "COMSOL API compilation does not establish generated solver tree or eigensolution behavior.",
+    "Retained prior W23 resources pending user cleanup authorization; no automatic retry or relaunch.",
+    "Full optical convergence/tolerance, field mapping and final independent overall review remain required."
+  ],
+  "replay": {
+    "source": "git archive 3a7622fd4f27b6f27441de9d3b368254038baa8a then overlay only6 candidate paths from this checkpoint commit; use runner export/prepare commands for archive manifest",
+    "python": "Python3.12 -B -S; explicit project dependency site-packages; no editable fallback",
+    "test_command": "PYTHONPATH=/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/lib/python3.12/site-packages /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -B -S -m pytest -q tests/test_w23_full3d_science.py tests/test_w23_full3d.py tests/test_run_native_w23_full3d_setup.py --junitxml=/private/tmp/comsol-mcp-w23-full3d-bma-probe-software-evidence-20260928e/bma_probe_software_junit.xml",
+    "entrypoint": "tools/run_native_w23_full3d_setup.py prepare --profile bma_probe; execute only after separate native review"
+  },
+  "next_action": "Implement paired native field/eigensolution mapping probe and negative controls; review bounded native candidate after retained-resource reconciliation. Continue original W01-W26."
+}

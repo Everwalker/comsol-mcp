@@ -14,6 +14,8 @@ from tools.w23_full3d_science import (
     bind_full3d_project_create_response,
     build_full3d_dataset_indices_dispatch,
     build_full3d_dataset_list_dispatch,
+    build_full3d_bma_probe_prepare_dispatch,
+    build_full3d_bma_probe_run_dispatch,
     build_full3d_model_create_request,
     build_full3d_model_load_request,
     build_full3d_mode_overlap_definition,
@@ -33,6 +35,8 @@ from tools.w23_full3d_science import (
     resolve_full3d_native_sources,
     rectangular_port_quadrature,
     validate_native_field_readback,
+    validate_full3d_bma_probe_preparation,
+    validate_full3d_bma_probe_run_readback,
 )
 from tools.w23_full3d import canonical_full3d_recipe
 
@@ -382,6 +386,349 @@ def test_full3d_managed_routes_keep_project_session_model_revision_and_no_caller
         request_id="load-1", idempotency_key="load-idem-1")
     assert load["execution"] == {"project_id": "project-1", "session_id": "session-1",
                                   "request_id": "load-1", "idempotency_key": "load-idem-1"}
+
+
+def _bma_probe_prepared_readback():
+    return {
+        "fixture_id": "w23_full3d_fiber_ball_lens_vector_pml_v1",
+        "managed_identity": {"project_id": "project-1", "model_tag": "M1",
+                             "model_ref": dict(MODEL_REF), "expected_revision": 8},
+        "status": "BMA_OUTPUT_PROBE_CONFIGURED_NOT_SOLVED",
+        "native_result": "COMSOL_NATIVE_BMA_PROBE_CONFIGURATION_READBACK",
+        "study_or_solver_invoked": False,
+        "producer_status": "PREPARED_ONLY_NOT_PRODUCER_EVIDENCE",
+        "field_mapping_status": "UNVERIFIED",
+        "receiver_port": {"feature_tag": "portOut3d", "feature_type": "Port",
+            "port_type": "Numeric", "port_name": "2", "port_mode_number_readback": "1",
+            "selection_tag": "sel3dOutputPort", "entity_dimension": 2,
+            "boundary_ids": [17]},
+        "original_std3d_steps": [
+            {"tag": "bmaInput3d", "feature_type": "BoundaryModeAnalysis",
+             "PortName": "1", "modeFreq": "f0", "neigs": 2},
+            {"tag": "bmaOutput3d", "feature_type": "BoundaryModeAnalysis",
+             "PortName": "2", "modeFreq": "f0", "neigs": 2},
+            {"tag": "freq3d", "feature_type": "Frequency", "plist": "f0"}],
+        "probe_study": {"study_tag": "std3dBmaOutputProbe", "study_steps": [
+            {"tag": "bmaOutputProbe", "feature_type": "BoundaryModeAnalysis",
+             "PortName": "2", "modeFreq": "f0", "neigs": 2}]},
+        "solver_sequence": {"tag": "sol3dBmaProbe", "feature_type": "SolverSequence",
+            "parent_study": "std3dBmaOutputProbe",
+            "solver_tree_features": [
+                {"path": "st1", "feature_type": "StudyStep"},
+                {"path": "st1/v1", "feature_type": "Variables"},
+                {"path": "st1/e1", "feature_type": "Eigenvalue"},
+                {"path": "st1/d1", "feature_type": "StoreSolution"}],
+            "study_step_bindings_in_solver_tree_order": [
+                {"path": "st1", "feature_type": "StudyStep",
+                 "study": "std3dBmaOutputProbe", "studystep": "bmaOutputProbe"}]},
+        "pre_solve_solution_state": {"is_valid": False, "solver_sequence_is_empty": True, "outer_solnums": [],
+                                      "solution_pairs": [], "pair_count": 0},
+    }
+
+
+def _validated_bma_probe_preparation():
+    return validate_full3d_bma_probe_preparation(
+        _bma_probe_prepared_readback(), project_id="project-1", model_tag="M1",
+        model_ref=MODEL_REF)
+
+
+def _bma_probe_run_readback(preparation):
+    pairs = [
+        {"outer_index": 1, "inner_index": 1, "solnum": 1,
+         "solver_sequence_tag": "sol3dBmaProbe"},
+        {"outer_index": 1, "inner_index": 2, "solnum": 2,
+         "solver_sequence_tag": "sol3dBmaProbe"},
+    ]
+    return {
+        "fixture_id": "w23_full3d_fiber_ball_lens_vector_pml_v1",
+        "managed_identity": {"project_id": "project-1", "model_tag": "M1",
+                             "model_ref": dict(MODEL_REF), "expected_revision": 9},
+        "status": "BMA_OUTPUT_PROBE_SOLVER_SEQUENCE_RETURNED_TWO_SOLUTION_ROWS",
+        "native_result": "COMSOL_NATIVE_BMA_PRODUCER_RUN_READBACK",
+        "study_or_solver_invoked": True, "solver_calls": 1, "study_run_calls": 0,
+        "producer_status": "CONTROLLED_SINGLE_STEP_BMA_PRODUCER_VERIFIED",
+        "field_mapping_status": "UNVERIFIED",
+        "invocation": {"method": "SolverSequence.runAll",
+            "solver_sequence_tag": "sol3dBmaProbe",
+            "parent_study_tag": "std3dBmaOutputProbe",
+            "parent_study_step_tag": "bmaOutputProbe", "method_returned": True},
+        "probe_study": copy.deepcopy(preparation["probe_study"]),
+        "solver_sequence": copy.deepcopy(preparation["solver_sequence"]),
+        "pre_solve_solution_state": copy.deepcopy(preparation["pre_solve_solution_state"]),
+        "post_solve_solution_state": {"is_valid": True, "solver_sequence_is_empty": False, "outer_solnums": [1],
+            "solution_pairs": pairs, "pair_count": 2},
+        "basis_ordinal_mapping": "UNVERIFIED_NATIVE_FIELD_MAPPING_REQUIRED",
+    }
+
+
+def _bma_probe_run_request(preparation):
+    return build_full3d_bma_probe_run_dispatch(
+        source_artifact="fixture-source",
+        solver_sequence_tag=preparation["solver_sequence"]["tag"],
+        project_id="project-1", model_ref=MODEL_REF, model_tag="M1", revision=9,
+        request_id="bma-run-request", idempotency_key="bma-run-idempotency")
+
+
+def _bma_probe_public_route_result(readback, request):
+    from comsol_mcp._execution_contract import canonical_request_hash
+
+    submitted_request = copy.deepcopy(request)
+    submitted_execution = {**submitted_request["execution"],
+        "execution_timeout_s": 600.0, "queue_timeout_s": 60.0, "rpc_timeout_s": 30.0}
+    submitted_request["execution"] = submitted_execution
+    nested = submitted_request["arguments"]
+    request_hash = canonical_request_hash(
+        nested["operation_id"], nested["arguments"], submitted_execution["model_ref"],
+        submitted_execution["expected_revision"],
+        project_id=submitted_execution["project_id"],
+        session_id=submitted_execution["session_id"],
+        queue_timeout_s=submitted_execution["queue_timeout_s"],
+        execution_timeout_s=submitted_execution["execution_timeout_s"],
+        no_progress_warning_s=None)
+    operation_response = {
+        "success": True,
+        "execution": {"session_id": "session-1", "model_ref": dict(MODEL_REF),
+            "revision": 10, "dirty": False, "server_ownership": "mcp_managed",
+            "model_ownership": "mcp_owned", "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+            "request_id": "bma-run-request",
+            "idempotency_key": "bma-run-idempotency", "operation_id": "op-bma-run",
+            "request_hash": request_hash, "job_id": "job-bma-run"},
+        "error": None,
+        "data": {
+            "worker": {"ok": True, "status": "SUCCEEDED",
+                       "result": {"readback": copy.deepcopy(readback)}},
+            "readback": {"executed": True, "readback": copy.deepcopy(readback)},
+        },
+    }
+    job_id = "job-bma-run"
+    return {
+        "outcome": "SUCCEEDED", "retry_forbidden": True, "job_id": job_id,
+        "submitted_request": submitted_request,
+        "dispatch_response": {"success": True, "data": {"job_id": job_id, "status": "QUEUED"},
+            "execution": {"request_id": "bma-run-request",
+                "idempotency_key": "bma-run-idempotency", "operation_id": "op-bma-run",
+                "request_hash": request_hash, "job_id": job_id}},
+        "job_wait_responses": [{"success": True, "data": {
+            "job_id": job_id, "operation_id": "op-bma-run", "status": "SUCCEEDED",
+            "metadata": {"operation": "operation_call", "arguments": {}, "execution": {}},
+            "effective_timeouts": {"queue_timeout_s": 60.0, "execution_timeout_s": 600.0,
+                                   "rpc_timeout_s": 30.0, "no_progress_warning_s": None},
+            "result": operation_response, "operation": {
+                "operation_id": "op-bma-run", "request_id": "bma-run-request",
+                "idempotency_key": "bma-run-idempotency", "request_hash": request_hash,
+                "operation": "operation_call", "status": "SUCCEEDED",
+                "metadata": {"operation": "operation_call", "arguments": {}, "execution": {}},
+                "effective_timeouts": {"queue_timeout_s": 60.0, "execution_timeout_s": 600.0,
+                                       "rpc_timeout_s": 30.0, "no_progress_warning_s": None}}}}],
+        "response": operation_response,
+    }
+
+
+def test_single_step_bma_probe_dispatches_are_separately_revision_bound():
+    binding = {"project_id": "project-1", "model_ref": MODEL_REF,
+               "model_tag": "M1", "revision": 8}
+    prepare = build_full3d_bma_probe_prepare_dispatch(
+        source_artifact="fixture-source", **binding,
+        request_id="bma-prepare", idempotency_key="bma-prepare-key")
+    assert prepare["operation"] == "operation_call"
+    assert prepare["execution"]["expected_revision"] == 8
+    assert prepare["arguments"]["arguments"]["arguments"]["phase"] == "prepare_bma_output_probe"
+    assert prepare["study_or_solver_invoked"] is False
+    assert prepare["native_result"] == "NOT_RUN"
+
+    run = build_full3d_bma_probe_run_dispatch(
+        source_artifact="fixture-source", solver_sequence_tag="sol3dBmaProbe",
+        **{**binding, "revision": 9}, request_id="bma-run",
+        idempotency_key="bma-run-key")
+    java_args = run["arguments"]["arguments"]["arguments"]
+    assert java_args["phase"] == "run_bma_output_probe"
+    assert java_args["study_tag"] == "std3dBmaOutputProbe"
+    assert java_args["solver_sequence_tag"] == "sol3dBmaProbe"
+    assert run["execution"]["expected_revision"] == 9
+    assert run["study_or_solver_invoked"] is False
+    assert run["planned_solver_calls"] == 1
+    assert run["native_result"] == "NOT_RUN"
+
+
+def test_isolated_bma_prepare_and_run_verifies_producer_only_after_solution_readback():
+    preparation = _validated_bma_probe_preparation()
+    readback = _bma_probe_run_readback(preparation)
+    request = _bma_probe_run_request(preparation)
+    route_result = _bma_probe_public_route_result(readback, request)
+    assert preparation["status"] == "ISOLATED_BMA_SEQUENCE_PREPARED_NOT_SOLVED"
+    assert preparation["producer_status"].startswith("UNVERIFIED")
+    result = validate_full3d_bma_probe_run_readback(
+        readback, preparation=preparation, project_id="project-1", model_tag="M1",
+        model_ref=MODEL_REF, run_request=request, route_result=route_result)
+    assert result["producer_step_binding"].startswith("VERIFIED_BY_ISOLATED_ONE_STEP")
+    assert result["eigensolution_row_count"] == 2
+    assert result["managed_request_id"] == "bma-run-request"
+    assert result["managed_idempotency_key"] == "bma-run-idempotency"
+    assert result["managed_job_id"] == "job-bma-run"
+    assert [row["inner_index"] for row in result["eigensolution_solution_pairs"]] == [1, 2]
+    assert result["numeric_port_mode_field_mapping"] == "UNVERIFIED"
+    assert result["basis_ordinal_assignment"] == "UNVERIFIED_NATIVE_FIELD_MAPPING_REQUIRED"
+
+
+@pytest.mark.parametrize("mutation", [
+    "missing_step_binding", "duplicate_step_binding", "foreign_step_binding",
+    "missing_probe_study_step", "duplicate_probe_study_step", "foreign_probe_study_step",
+    "empty_solver_tree", "configuration_only_tree", "missing_variables",
+    "missing_eigenvalue", "missing_store_solution", "solution_present_before_run",
+])
+def test_bma_probe_preparation_fails_closed_on_incomplete_or_ambiguous_evidence(mutation):
+    readback = _bma_probe_prepared_readback()
+    if mutation == "missing_step_binding":
+        readback["solver_sequence"]["study_step_bindings_in_solver_tree_order"] = []
+    elif mutation == "duplicate_step_binding":
+        readback["solver_sequence"]["study_step_bindings_in_solver_tree_order"].append(
+            copy.deepcopy(readback["solver_sequence"]["study_step_bindings_in_solver_tree_order"][0]))
+    elif mutation == "foreign_step_binding":
+        readback["solver_sequence"]["study_step_bindings_in_solver_tree_order"][0]["study"] = "std3d"
+    elif mutation == "missing_probe_study_step":
+        readback["probe_study"]["study_steps"] = []
+    elif mutation == "duplicate_probe_study_step":
+        readback["probe_study"]["study_steps"].append(
+            copy.deepcopy(readback["probe_study"]["study_steps"][0]))
+    elif mutation == "foreign_probe_study_step":
+        readback["probe_study"]["study_steps"][0]["PortName"] = "1"
+    elif mutation == "empty_solver_tree":
+        readback["solver_sequence"]["solver_tree_features"] = []
+    elif mutation == "configuration_only_tree":
+        readback["solver_sequence"]["solver_tree_features"] = [
+            {"path": "st1", "feature_type": "StudyStep"}]
+    elif mutation.startswith("missing_") and mutation in {
+            "missing_variables", "missing_eigenvalue", "missing_store_solution"}:
+        feature_type = {"missing_variables": "Variables", "missing_eigenvalue": "Eigenvalue",
+                        "missing_store_solution": "StoreSolution"}[mutation]
+        readback["solver_sequence"]["solver_tree_features"] = [
+            row for row in readback["solver_sequence"]["solver_tree_features"]
+            if row["feature_type"] != feature_type]
+    else:
+        readback["pre_solve_solution_state"] = {"is_valid": True, "solver_sequence_is_empty": False,
+            "outer_solnums": [1], "solution_pairs": [{"outer_index": 1,
+            "inner_index": 1, "solnum": 1, "solver_sequence_tag": "sol3dBmaProbe"}],
+            "pair_count": 1}
+    with pytest.raises(Full3DScienceError):
+        validate_full3d_bma_probe_preparation(
+            readback, project_id="project-1", model_tag="M1", model_ref=MODEL_REF)
+
+
+@pytest.mark.parametrize("mutation", [
+    "configuration_only", "empty_solution", "duplicate_pair", "foreign_sequence",
+    "repeated_inner_across_outer", "multiple_outer_axis",
+    "tree_changed_after_prepare", "wrong_invocation", "missing_public_job",
+    "dispatch_job_mismatch", "terminal_job_mismatch", "wrong_request_revision",
+    "wrong_request_sequence", "terminal_readback_mismatch", "foreign_request_id",
+    "foreign_idempotency_key", "initial_operation_mismatch", "final_operation_mismatch",
+    "foreign_job", "missing_initial_request_id", "missing_initial_idempotency_key",
+    "missing_initial_operation_id", "missing_initial_job_id", "missing_initial_request_hash",
+    "missing_terminal_request_id", "missing_terminal_idempotency_key",
+    "missing_terminal_operation_id", "missing_terminal_job_id", "missing_terminal_request_hash",
+    "missing_stored_operation", "missing_stored_request_id", "missing_stored_idempotency_key",
+    "missing_stored_operation_id", "missing_stored_request_hash", "request_hash_mismatch",
+    "revision_skip",
+])
+def test_bma_probe_run_never_promotes_configuration_or_incomplete_solution_to_producer(mutation):
+    preparation = _validated_bma_probe_preparation()
+    readback = _bma_probe_run_readback(preparation)
+    request = _bma_probe_run_request(preparation)
+    route_result = _bma_probe_public_route_result(readback, request)
+    if mutation == "configuration_only":
+        readback["study_or_solver_invoked"] = False
+        readback["solver_calls"] = 0
+    elif mutation == "empty_solution":
+        readback["status"] = "BMA_OUTPUT_PROBE_READBACK_INCOMPLETE"
+        readback["producer_status"] = "UNVERIFIED_SOLUTION_COUNT_OR_AXIS_READBACK"
+        readback["post_solve_solution_state"] = {"is_valid": True, "solver_sequence_is_empty": True,
+            "outer_solnums": [], "solution_pairs": [], "pair_count": 0}
+    elif mutation == "duplicate_pair":
+        readback["post_solve_solution_state"]["solution_pairs"][1]["inner_index"] = 1
+        readback["post_solve_solution_state"]["solution_pairs"][1]["solnum"] = 1
+    elif mutation == "repeated_inner_across_outer":
+        readback["post_solve_solution_state"]["outer_solnums"] = [1, 2]
+        readback["post_solve_solution_state"]["solution_pairs"][1]["outer_index"] = 2
+        readback["post_solve_solution_state"]["solution_pairs"][1]["inner_index"] = 1
+        readback["post_solve_solution_state"]["solution_pairs"][1]["solnum"] = 1
+    elif mutation == "multiple_outer_axis":
+        readback["post_solve_solution_state"]["outer_solnums"] = [1, 2]
+        readback["post_solve_solution_state"]["solution_pairs"][1]["outer_index"] = 2
+    elif mutation == "foreign_sequence":
+        readback["post_solve_solution_state"]["solution_pairs"][0]["solver_sequence_tag"] = "solOther"
+    elif mutation == "missing_public_job":
+        route_result["job_id"] = None
+    elif mutation == "dispatch_job_mismatch":
+        route_result["dispatch_response"]["execution"]["job_id"] = "job-other"
+    elif mutation == "terminal_job_mismatch":
+        route_result["job_wait_responses"][0]["data"]["job_id"] = "job-other"
+    elif mutation == "foreign_job":
+        route_result["job_id"] = "job-foreign"
+    elif mutation == "wrong_request_revision":
+        request["execution"]["expected_revision"] = 8
+    elif mutation == "wrong_request_sequence":
+        request["arguments"]["arguments"]["arguments"]["solver_sequence_tag"] = "solOther"
+    elif mutation == "terminal_readback_mismatch":
+        route_result["response"]["data"]["readback"]["readback"]["invocation"]["method"] = "Study.run"
+        route_result["job_wait_responses"][0]["data"]["result"] = copy.deepcopy(route_result["response"])
+    elif mutation == "foreign_request_id":
+        request["execution"]["request_id"] = "foreign-request"
+    elif mutation == "foreign_idempotency_key":
+        request["execution"]["idempotency_key"] = "foreign-idempotency"
+    elif mutation == "initial_operation_mismatch":
+        route_result["dispatch_response"]["execution"]["operation_id"] = "op-other"
+    elif mutation == "final_operation_mismatch":
+        route_result["response"]["execution"]["operation_id"] = "op-other"
+        route_result["job_wait_responses"][0]["data"]["result"] = copy.deepcopy(route_result["response"])
+    elif mutation == "missing_initial_request_id":
+        del route_result["dispatch_response"]["execution"]["request_id"]
+    elif mutation == "missing_initial_idempotency_key":
+        del route_result["dispatch_response"]["execution"]["idempotency_key"]
+    elif mutation == "missing_initial_operation_id":
+        del route_result["dispatch_response"]["execution"]["operation_id"]
+    elif mutation == "missing_initial_job_id":
+        del route_result["dispatch_response"]["execution"]["job_id"]
+    elif mutation == "missing_initial_request_hash":
+        del route_result["dispatch_response"]["execution"]["request_hash"]
+    elif mutation == "missing_terminal_request_id":
+        del route_result["response"]["execution"]["request_id"]
+        route_result["job_wait_responses"][0]["data"]["result"] = copy.deepcopy(route_result["response"])
+    elif mutation == "missing_terminal_idempotency_key":
+        del route_result["response"]["execution"]["idempotency_key"]
+        route_result["job_wait_responses"][0]["data"]["result"] = copy.deepcopy(route_result["response"])
+    elif mutation == "missing_terminal_operation_id":
+        del route_result["job_wait_responses"][0]["data"]["operation_id"]
+    elif mutation == "missing_terminal_job_id":
+        del route_result["response"]["execution"]["job_id"]
+        route_result["job_wait_responses"][0]["data"]["result"] = copy.deepcopy(route_result["response"])
+    elif mutation == "missing_terminal_request_hash":
+        del route_result["response"]["execution"]["request_hash"]
+        route_result["job_wait_responses"][0]["data"]["result"] = copy.deepcopy(route_result["response"])
+    elif mutation == "missing_stored_operation":
+        del route_result["job_wait_responses"][0]["data"]["operation"]
+    elif mutation == "missing_stored_request_id":
+        del route_result["job_wait_responses"][0]["data"]["operation"]["request_id"]
+    elif mutation == "missing_stored_idempotency_key":
+        del route_result["job_wait_responses"][0]["data"]["operation"]["idempotency_key"]
+    elif mutation == "missing_stored_operation_id":
+        del route_result["job_wait_responses"][0]["data"]["operation"]["operation_id"]
+    elif mutation == "missing_stored_request_hash":
+        del route_result["job_wait_responses"][0]["data"]["operation"]["request_hash"]
+    elif mutation == "request_hash_mismatch":
+        route_result["response"]["execution"]["request_hash"] = "0" * 64
+        route_result["job_wait_responses"][0]["data"]["result"] = copy.deepcopy(route_result["response"])
+    elif mutation == "revision_skip":
+        route_result["response"]["execution"]["revision"] = 11
+        route_result["job_wait_responses"][0]["data"]["result"] = copy.deepcopy(route_result["response"])
+    elif mutation == "tree_changed_after_prepare":
+        readback["solver_sequence"]["solver_tree_features"].append(
+            {"path": "freq1", "feature_type": "Frequency"})
+    else:
+        readback["invocation"]["method"] = "Study.run"
+    with pytest.raises(Full3DScienceError):
+        validate_full3d_bma_probe_run_readback(
+            readback, preparation=preparation,
+            project_id="project-1", model_tag="M1", model_ref=MODEL_REF,
+            run_request=request, route_result=route_result)
 
 
 def test_public_managed_route_waits_only_on_same_job_and_never_replays_unknown():

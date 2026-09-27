@@ -14,6 +14,9 @@ from typing import Any
 import pytest
 
 from tools.run_native_w23_full3d_setup import (
+    BMA_PROBE_BUDGET,
+    BMA_PROBE_ROUTE_ALLOWLIST,
+    BMA_PRODUCER_API_EVIDENCE,
     EXPLICIT_SITE_PACKAGES,
     EXPECTED_PYTHON,
     PublicDispatchAdapter,
@@ -22,6 +25,7 @@ from tools.run_native_w23_full3d_setup import (
     REPO,
     _assert_no_editable_fallback,
     _audit_loaded_project_modules,
+    _bma_run_failure_evidence,
     _lsof_listeners,
     _bind_native_server_identity,
     _job_ledger_terminal,
@@ -31,8 +35,11 @@ from tools.run_native_w23_full3d_setup import (
     _resource_ownership_receipt,
     _source_inventory,
     build_disconnect_request,
+    _finalize_science_counters,
+    _json_hash,
     orchestrate_cleanup,
     validate_native_mode_configuration,
+    verify_candidate,
 )
 
 
@@ -70,6 +77,132 @@ def _stopped(pid: int = 4201, birth: int = 1700000000100) -> dict[str, Any]:
     return {"status": "STOPPED_AND_REAPED", "pid": pid,
             "start_epoch_ms": birth, "child_exit_confirmed": True,
             "child_reaped": True, "listener_absent": True}
+
+
+def test_bma_probe_budget_keeps_full_sequence_run_inside_wall_and_cleanup_reserve() -> None:
+    budget = BMA_PROBE_BUDGET
+    route_caps = budget["route_wait_caps_seconds"]
+    assert budget["profile"] == "w23_single_receiver_bma_output_probe_v1"
+    assert budget["max_server_processes"] == budget["max_managed_workers"] == 1
+    assert budget["max_gui_processes"] == 0
+    assert budget["study_run_calls"] == 0 and budget["solver_calls"] == 1
+    assert budget["wall_clock_seconds_from_server_birth_including_cleanup"] == 2700
+    assert budget["reserved_cleanup_seconds"] == 120
+    assert budget["unallocated_margin_seconds"] == 300
+    assert sum(route_caps.values()) + budget["reserved_cleanup_seconds"] <= \
+        budget["wall_clock_seconds_from_server_birth_including_cleanup"]
+    assert (sum(route_caps.values()) + budget["reserved_cleanup_seconds"]
+            + budget["unallocated_margin_seconds"]
+            == budget["wall_clock_seconds_from_server_birth_including_cleanup"])
+    assert BMA_PROBE_ROUTE_ALLOWLIST.count(
+        "operation_call:code.execute_java:run_bma_output_probe:SolverSequence.runAll") == 1
+    assert not any("Study.run" in route for route in BMA_PROBE_ROUTE_ALLOWLIST)
+    assert {entry["api"] for entry in BMA_PRODUCER_API_EVIDENCE} == {
+        "Study.createAutoSequences(String)",
+        "SolverSequence.runAll() and SolverSequence.isEmpty()",
+        "SolutionInfo.getOuterSolnum(), getSolnum(int, boolean), getSolverSequence(int)",
+    }
+
+
+def test_candidate_freeze_rejects_mutated_bma_probe_solver_budget(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from tools import run_native_w23_full3d_setup as runner
+
+    evidence = tmp_path / "evidence"
+    evidence.mkdir()
+    source = {"base_commit": "published-base", "source_closure_sha256": "a" * 64}
+    monkeypatch.setattr(runner, "_source_inventory", lambda repo, base: source)
+    body = {
+        "schema_version": 1,
+        "status": "PREPARED_BMA_PROBE_NOT_NATIVE",
+        "campaign_profile": "bma_probe",
+        "source": source,
+        "budget": BMA_PROBE_BUDGET,
+        "routes": BMA_PROBE_ROUTE_ALLOWLIST,
+        "bma_producer_api_evidence": BMA_PRODUCER_API_EVIDENCE,
+    }
+    freeze = {**body, "candidate_sha256": _json_hash(body)}
+    (evidence / "candidate_freeze.json").write_text(json.dumps(freeze), encoding="utf-8")
+    assert verify_candidate(repo=tmp_path, evidence=evidence,
+                            reviewed_sha256=freeze["candidate_sha256"]) == freeze
+
+    body["budget"] = {**BMA_PROBE_BUDGET, "solver_calls": 0}
+    mutated = {**body, "candidate_sha256": _json_hash(body)}
+    (evidence / "candidate_freeze.json").write_text(json.dumps(mutated), encoding="utf-8")
+    with pytest.raises(CandidateError, match="budget or route allowlist"):
+        verify_candidate(repo=tmp_path, evidence=evidence,
+                         reviewed_sha256=mutated["candidate_sha256"])
+
+
+def test_science_finalization_preserves_success_unknown_and_preflight_evidence() -> None:
+    success = {"solver_call_attempts": 1, "solver_calls": 1,
+        "native_scientific_result": "BMA_PROBE_ONLY_FULL3D_OVERLAP_NOT_EVALUATED",
+        "mode_producer_lineage": "VERIFIED_BY_ISOLATED_ONE_STEP_STUDY_AND_EXACT_SEQUENCE_RUNALL"}
+    _finalize_science_counters(success, "bma_probe")
+    assert success["solver_calls"] == 1
+    assert success["native_scientific_result"] == "BMA_PROBE_ONLY_FULL3D_OVERLAP_NOT_EVALUATED"
+    assert success["mode_producer_lineage"].startswith("VERIFIED_BY_ISOLATED_ONE_STEP")
+    assert success["study_run_calls"] == 0
+    assert success["numeric_port_mode_field_mapping"] == "UNVERIFIED"
+
+    unknown_after_dispatch = {"solver_call_attempts": 1, "solver_calls": 0,
+                              "native_scientific_result": "NOT_RUN"}
+    _finalize_science_counters(unknown_after_dispatch, "bma_probe")
+    assert unknown_after_dispatch["solver_calls"] == "UNKNOWN"
+    assert unknown_after_dispatch["native_scientific_result"] == "UNKNOWN"
+    assert unknown_after_dispatch["mode_producer_lineage"] == "UNVERIFIED"
+
+    success_then_cleanup_failure = {"status": "UNKNOWN_PRESERVE_OWNED_RESOURCES",
+        "solver_call_attempts": 1, "solver_calls": 1,
+        "native_scientific_result": "BMA_PROBE_ONLY_FULL3D_OVERLAP_NOT_EVALUATED",
+        "mode_producer_lineage": "VERIFIED_BY_ISOLATED_ONE_STEP_STUDY_AND_EXACT_SEQUENCE_RUNALL",
+        "cleanup_error": {"stage": "worker_retirement"}}
+    _finalize_science_counters(success_then_cleanup_failure, "bma_probe")
+    assert success_then_cleanup_failure["status"] == "UNKNOWN_PRESERVE_OWNED_RESOURCES"
+    assert success_then_cleanup_failure["solver_calls"] == 1
+    assert success_then_cleanup_failure["native_scientific_result"] == \
+        "BMA_PROBE_ONLY_FULL3D_OVERLAP_NOT_EVALUATED"
+    assert success_then_cleanup_failure["mode_producer_lineage"].startswith(
+        "VERIFIED_BY_ISOLATED_ONE_STEP")
+
+    preflight_failure = {"solver_call_attempts": 0, "solver_calls": 0,
+                         "native_scientific_result": "NOT_RUN"}
+    _finalize_science_counters(preflight_failure, "bma_probe")
+    assert preflight_failure["solver_calls"] == 0
+    assert preflight_failure["native_scientific_result"] == "NOT_RUN"
+    assert preflight_failure["study_run_calls"] == 0
+    assert preflight_failure["mode_producer_lineage"] == "UNVERIFIED"
+
+
+def test_bma_unknown_failure_receipt_keeps_original_request_job_and_observation() -> None:
+    from tools.w23_full3d_science import ManagedRouteOutcomeError
+
+    request = {"operation": "operation_call", "execution": {
+        "project_id": "project-1", "request_id": "req-1",
+        "idempotency_key": "idem-1"}}
+    observed = {"dispatch": {"success": True, "data": {"job_id": "job-1"}},
+                "job_wait_responses": [{"success": False, "error": {"code": "TIMEOUT"}}]}
+    error = ManagedRouteOutcomeError("bma-run", "UNKNOWN", "job wait timed out",
+                                     response=observed, job_id="job-1")
+    evidence = _bma_run_failure_evidence(request, error)
+    assert evidence == {"request": request, "outcome": "UNKNOWN", "job_id": "job-1",
+                        "retry_forbidden": True, "observed_response": observed}
+
+
+@pytest.mark.parametrize("status,expected_exit", [
+    ("BMA_PROBE_FAILED_CLEANUP_VERIFIED", 1),
+    ("BMA_PROBE_COMPLETE_CLEANUP_VERIFIED_FULL3D_SCIENCE_NOT_RUN", 0),
+])
+def test_cli_does_not_report_failed_bma_probe_as_success_even_when_cleanup_verified(
+    status: str, expected_exit: int, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from tools import run_native_w23_full3d_setup as runner
+
+    monkeypatch.setattr(runner, "execute_candidate", lambda **_kwargs: {"status": status})
+    code = runner.main(["execute", "--evidence", str(tmp_path),
+                        "--reviewed-candidate-sha256", "a" * 64])
+    assert code == expected_exit
 
 
 def _cleanup(**overrides: Any) -> tuple[list[str], list[str]]:
@@ -607,8 +740,9 @@ def test_real_control_daemon_public_dispatch_binds_exact_popen_without_comsol(
                              str(home_root / "control-private")]
         assert "comsol_mcp._server" not in sys.modules
         launch = json.loads((tmp_path / "control_daemon_launch.json").read_text(encoding="utf-8"))
-        source_binding = _source_inventory(
-            archive_root, "a365420814b9159230364ad953ee13e8db9cc9be")
+        archive_manifest = json.loads(
+            (archive_root / ".w23_published_archive_manifest.json").read_text(encoding="utf-8"))
+        source_binding = _source_inventory(archive_root, archive_manifest["base_commit"])
         assert launch["status"] == "Popen_BIRTH_ENDPOINT_BOUND"
         assert launch["python_no_site_switch"] is True
         assert launch["archive_base_commit"] == source_binding["base_commit"]

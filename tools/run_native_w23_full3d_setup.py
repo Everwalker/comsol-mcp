@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""Prepare and execute the reviewed W23 full-3D managed setup-only candidate.
+"""Prepare and execute the reviewed W23 full-3D managed candidate.
 
 ``prepare`` performs source/runtime inventory and offline Java compilation; it
 never starts COMSOL. ``execute`` refuses to start any process unless the exact
 candidate digest was separately reviewed and supplied on the command line.
-The native stage configures the owned one-receiver/two-eigensolution fixture,
-reads metadata, saves an MPH, and retires only the exact managed Worker before
-stopping the task-owned loopback server. No Study.run or solver operation is
-submitted by this module.
+The ``setup_only`` profile configures and reads the owned fixture without a
+solve. The ``bma_probe`` profile also creates a separate single-step receiver
+Port-2 BMA study and runs only its full generated SolverSequence. Both profiles
+save an MPH and retire only the exact managed Worker before stopping the
+task-owned loopback server; neither submits Study.run.
 """
 from __future__ import annotations
 
@@ -48,6 +49,9 @@ OVERLAY_PATHS = {
     "tools/run_native_w23_full3d_setup.py",
     "tests/test_run_native_w23_full3d_setup.py",
     "tools/java/NativeW23Full3DFixture.java",
+    "tools/w23_full3d_science.py",
+    "tests/test_w23_full3d_science.py",
+    "tests/test_w23_full3d.py",
 }
 EXTRA_CLOSURE_PATHS = {
     "tools/run_native_resume_smoke.py",
@@ -101,6 +105,42 @@ PLANNED_ROUTE_ALLOWLIST = [
     "session.inspect",
 ]
 
+BMA_PROBE_BUDGET = {
+    **SETUP_BUDGET,
+    "profile": "w23_single_receiver_bma_output_probe_v1",
+    "wall_clock_seconds_from_server_birth_including_cleanup": 2700,
+    "unallocated_margin_seconds": 300,
+    "solver_calls": 1,
+    "route_wait_caps_seconds": {
+        **SETUP_BUDGET["route_wait_caps_seconds"],
+        "bma_probe_prepare": 90,
+        "bma_probe_solver_sequence_runAll": 600,
+    },
+}
+BMA_PROBE_ROUTE_ALLOWLIST = [
+    *PLANNED_ROUTE_ALLOWLIST[:6],
+    "operation_call:code.execute_java:prepare_bma_output_probe",
+    "operation_call:code.execute_java:run_bma_output_probe:SolverSequence.runAll",
+    *PLANNED_ROUTE_ALLOWLIST[6:],
+]
+BMA_PRODUCER_API_EVIDENCE = [
+    {"api": "Study.createAutoSequences(String)",
+     "claim": "generate an attached solver sequence with default solver settings; type sol selects solver sequences",
+     "manual": "COMSOL 6.4 Study Object and Methods",
+     "document_path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/api/com/comsol/model/Study.html",
+     "chunk_id": 23089, "source_sha256": "7ab71c87a119f01583dbf0441ec9b032e257c4125aa9994b9d83f72571236546"},
+    {"api": "SolverSequence.runAll() and SolverSequence.isEmpty()",
+     "claim": "run the complete solver sequence and directly test whether its associated solutions are empty",
+     "manual": "COMSOL 6.4 SolverSequence Object and Methods",
+     "document_path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/api/com/comsol/model/SolverSequence.html",
+     "chunk_id": 23079, "source_sha256": "8fcefe8e2f2171858f49fe53ad6210d4231a6a28651766db67effc39c327a2c5"},
+    {"api": "SolutionInfo.getOuterSolnum(), getSolnum(int, boolean), getSolverSequence(int)",
+     "claim": "read outer solution indices, strict one-based inner solution indices, and the solver sequence associated with each outer index",
+     "manual": "COMSOL 6.4 SolutionInfo Object and Methods",
+     "document_path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/api/com/comsol/model/SolutionInfo.html",
+     "chunk_id": 23067, "source_sha256": "94d28f308be1be1b57d81c40932be6aebfd91e134c221b8e2f7e2235d51b9abb"},
+]
+
 
 class CandidateError(RuntimeError):
     pass
@@ -119,6 +159,47 @@ def _json_hash(value: Any) -> str:
     payload = json.dumps(value, sort_keys=True, separators=(",", ":"),
                          ensure_ascii=False, allow_nan=False).encode("utf-8")
     return hashlib.sha256(payload).hexdigest()
+
+
+def _finalize_science_counters(result: dict[str, Any], campaign_profile: str) -> None:
+    """Keep science accounting consistent with observed dispatch and readback."""
+    result["study_run_calls"] = 0
+    result["numeric_port_mode_field_mapping"] = "UNVERIFIED"
+    if campaign_profile == "setup_only":
+        result["solver_calls"] = 0
+        result["native_scientific_result"] = "NOT_RUN"
+        result["mode_producer_lineage"] = "UNVERIFIED"
+        return
+    if campaign_profile != "bma_probe":
+        raise CandidateError("unsupported campaign profile during result finalization")
+    attempts = result.get("solver_call_attempts", 0)
+    if type(attempts) is not int or attempts < 0 or attempts > 1:
+        raise CandidateError("BMA probe solver attempt count is invalid")
+    if attempts == 0:
+        result["solver_calls"] = 0
+        result["native_scientific_result"] = "NOT_RUN"
+        result["mode_producer_lineage"] = "UNVERIFIED"
+        return
+    if result.get("solver_calls") == 0:
+        result["solver_calls"] = "UNKNOWN"
+    if result.get("native_scientific_result") == "NOT_RUN":
+        result["native_scientific_result"] = "UNKNOWN"
+    result.setdefault("mode_producer_lineage", "UNVERIFIED")
+
+
+def _bma_run_failure_evidence(request: Mapping[str, Any], error: BaseException) -> dict[str, Any]:
+    observed = getattr(error, "response", None)
+    if observed is not None and not isinstance(observed, Mapping):
+        observed = {"non_object_response_repr": repr(observed)}
+    elif isinstance(observed, Mapping):
+        observed = dict(observed)
+    return {
+        "request": dict(request),
+        "outcome": getattr(error, "outcome", "UNKNOWN"),
+        "job_id": getattr(error, "job_id", None),
+        "retry_forbidden": getattr(error, "retry_forbidden", True),
+        "observed_response": observed,
+    }
 
 
 def _sha256_bytes(payload: bytes) -> str:
@@ -419,7 +500,10 @@ def _compile_fixture(repo: Path, install_root: Path, jdk_home: Path, out_dir: Pa
 
 
 def prepare_candidate(*, repo: Path, evidence: Path, base_commit: str,
-                      install_root: Path = INSTALL_ROOT, jdk_home: Path = JAVA11) -> dict[str, Any]:
+                      install_root: Path = INSTALL_ROOT, jdk_home: Path = JAVA11,
+                      campaign_profile: str = "setup_only") -> dict[str, Any]:
+    if campaign_profile not in {"setup_only", "bma_probe"}:
+        raise CandidateError("campaign profile must be setup_only or bma_probe")
     if not str(evidence).startswith(EVIDENCE_PREFIX) or evidence.exists():
         raise CandidateError(f"--evidence must be a new unique directory below {EVIDENCE_PREFIX}*")
     if Path.cwd().resolve(strict=True) != repo.resolve(strict=True):
@@ -448,15 +532,21 @@ def prepare_candidate(*, repo: Path, evidence: Path, base_commit: str,
         "python_executable": str(Path(sys.executable).resolve()),
         "python_version": sys.version.split()[0],
     }
+    budget = BMA_PROBE_BUDGET if campaign_profile == "bma_probe" else SETUP_BUDGET
+    routes = BMA_PROBE_ROUTE_ALLOWLIST if campaign_profile == "bma_probe" else PLANNED_ROUTE_ALLOWLIST
     body = {
-        "schema_version": 1, "status": "PREPARED_SETUP_ONLY_NOT_NATIVE",
+        "schema_version": 1,
+        "status": "PREPARED_BMA_PROBE_NOT_NATIVE" if campaign_profile == "bma_probe"
+                  else "PREPARED_SETUP_ONLY_NOT_NATIVE",
+        "campaign_profile": campaign_profile,
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
         "source": source_after, "runtime": runtime_fingerprint,
-        "compile": compile_receipt, "budget": SETUP_BUDGET,
+        "compile": compile_receipt, "budget": budget,
         "native_readback_api_evidence": NATIVE_READBACK_API_EVIDENCE,
+        "bma_producer_api_evidence": BMA_PRODUCER_API_EVIDENCE if campaign_profile == "bma_probe" else [],
         "python_isolation": python_isolation,
         "runtime_import_audit": import_audit,
-        "routes": PLANNED_ROUTE_ALLOWLIST,
+        "routes": routes,
         "scientific_status": "NOT_RUN",
         "mode_producer_lineage": "UNVERIFIED",
         "numeric_port_mode_field_mapping": "UNVERIFIED",
@@ -466,7 +556,12 @@ def prepare_candidate(*, repo: Path, evidence: Path, base_commit: str,
             "bma_output_step": "bmaOutput3d", "bma_output_neigs": 2,
             "basis_ordinals": [1, 2],
             "basis_ordinal_is_not_port_mode_number": True,
-            "study_run_calls": 0, "solver_calls": 0,
+            "isolated_bma_probe_study": ("std3dBmaOutputProbe with only bmaOutputProbe(PortName=2,modeFreq=f0,neigs=2)"
+                                          if campaign_profile == "bma_probe" else "NOT_IN_PROFILE"),
+            "solver_sequence_method": "SolverSequence.runAll" if campaign_profile == "bma_probe" else "NOT_IN_PROFILE",
+            "study_run_calls": 0,
+            "solver_calls": 1 if campaign_profile == "bma_probe" else 0,
+            "field_mapping_status": "UNVERIFIED",
         },
         "evidence_dir": str(evidence.resolve()),
     }
@@ -488,7 +583,16 @@ def verify_candidate(*, repo: Path, evidence: Path, reviewed_sha256: str) -> dic
     current_source = _source_inventory(repo, base_commit)
     if current_source != freeze.get("source"):
         raise CandidateError("current published source/overlay closure differs from the reviewed candidate")
-    if freeze.get("budget") != SETUP_BUDGET or freeze.get("routes") != PLANNED_ROUTE_ALLOWLIST:
+    campaign_profile = freeze.get("campaign_profile")
+    if campaign_profile not in {"setup_only", "bma_probe"}:
+        raise CandidateError("frozen campaign profile is missing or unsupported")
+    expected_budget = BMA_PROBE_BUDGET if campaign_profile == "bma_probe" else SETUP_BUDGET
+    expected_routes = BMA_PROBE_ROUTE_ALLOWLIST if campaign_profile == "bma_probe" else PLANNED_ROUTE_ALLOWLIST
+    expected_status = "PREPARED_BMA_PROBE_NOT_NATIVE" if campaign_profile == "bma_probe" else "PREPARED_SETUP_ONLY_NOT_NATIVE"
+    expected_api_evidence = BMA_PRODUCER_API_EVIDENCE if campaign_profile == "bma_probe" else []
+    if (freeze.get("budget") != expected_budget or freeze.get("routes") != expected_routes
+            or freeze.get("status") != expected_status
+            or freeze.get("bma_producer_api_evidence") != expected_api_evidence):
         raise CandidateError("candidate budget or route allowlist differs from the reviewed freeze")
     return freeze
 
@@ -1381,6 +1485,7 @@ def execute_candidate(*, repo: Path, evidence: Path, reviewed_sha256: str,
                       install_root: Path = INSTALL_ROOT, jdk_home: Path = JAVA11) -> dict[str, Any]:
     python_isolation = _configure_archive_python(repo)
     freeze = verify_candidate(repo=repo, evidence=evidence, reviewed_sha256=reviewed_sha256)
+    campaign_profile = freeze["campaign_profile"]
     if freeze.get("source", {}).get("checkout_kind") != "git_archive":
         raise CandidateError("native setup may execute only from the frozen source-only git archive")
     if Path.cwd().resolve(strict=True) != repo.resolve(strict=True):
@@ -1415,7 +1520,8 @@ def execute_candidate(*, repo: Path, evidence: Path, reviewed_sha256: str,
             or exact_paths.comsol_version_info() != freeze["runtime"].get("comsol_version")
             or exact_paths.jdk_version_info() != freeze["runtime"].get("jdk_version")):
         raise CandidateError("current COMSOL/JDK classpath or version differs from offline candidate evidence")
-    run_dir = evidence / "native-setup-run"
+    run_dir = evidence / ("native-bma-probe-run" if campaign_profile == "bma_probe"
+                          else "native-setup-run")
     if run_dir.exists():
         raise CandidateError("native run evidence directory already exists")
     run_dir.mkdir(parents=True, exist_ok=False)
@@ -1501,9 +1607,12 @@ def execute_candidate(*, repo: Path, evidence: Path, reviewed_sha256: str,
             raise
 
     result: dict[str, Any] = {
-        "schema_version": 1, "status": "RUNNING_SETUP_ONLY", "evidence_dir": str(run_dir),
+        "schema_version": 1,
+        "status": "RUNNING_BMA_PROBE_CANDIDATE" if campaign_profile == "bma_probe" else "RUNNING_SETUP_ONLY",
+        "campaign_profile": campaign_profile, "evidence_dir": str(run_dir),
         "work_dir": str(work), "candidate_sha256": reviewed_sha256,
         "native_scientific_result": "NOT_RUN", "study_run_calls": 0, "solver_calls": 0,
+        "solver_call_attempts": 0,
         "mode_producer_lineage": "UNVERIFIED", "numeric_port_mode_field_mapping": "UNVERIFIED",
         "started_at_utc": datetime.now(timezone.utc).isoformat(),
         "runtime_module_origins": {},
@@ -1559,11 +1668,14 @@ def execute_candidate(*, repo: Path, evidence: Path, reviewed_sha256: str,
             canonical_full3d_recipe, verify_recipe,
         )
         from tools.w23_full3d_science import (
-            _check_full3d_fixture_readback, _java_action_readback,
+            ManagedRouteOutcomeError, _check_full3d_fixture_readback, _java_action_readback,
             _updated_full3d_model_state, bind_full3d_model_create_response,
             bind_full3d_project_create_response, build_full3d_project_create_request,
+            build_full3d_bma_probe_prepare_dispatch, build_full3d_bma_probe_run_dispatch,
             build_full3d_save_dispatch, build_full3d_solution_inventory_dispatch,
             dispatch_public_managed_route, stage_full3d_fixture_source,
+            validate_full3d_bma_probe_preparation,
+            validate_full3d_bma_probe_run_readback,
         )
         from comsol_mcp._runtime_installation import runtime_id_for_root
 
@@ -1584,7 +1696,9 @@ def execute_candidate(*, repo: Path, evidence: Path, reviewed_sha256: str,
 
         project_id_request, project_key = _new_ids("project-create")
         project_req = build_full3d_project_create_request(
-            label="W23 full-3D setup-only candidate", request_id=project_id_request,
+            label=("W23 full-3D isolated BMA producer probe candidate"
+                   if campaign_profile == "bma_probe" else "W23 full-3D setup-only candidate"),
+            request_id=project_id_request,
             idempotency_key=project_key)
         project_result = dispatch_public_managed_route(
             dispatcher, project_req, label="project.create", timeout_s=30)
@@ -1602,7 +1716,7 @@ def execute_candidate(*, repo: Path, evidence: Path, reviewed_sha256: str,
         server_port = server.port
         server_identity = _bind_native_server_identity(server, listener)
         # Map exact OS birth epoch to monotonic time so startup/listener wait is
-        # charged to the same 1,800-second budget.
+        # charged to the profile's frozen wall budget.
         server_birth_mono = time.monotonic() - max(0.0, time.time() - server_identity["start_epoch_ms"] / 1000.0)
         event("task_owned_server_listener_ready", listener=listener,
               server_identity=server_identity,
@@ -1612,8 +1726,10 @@ def execute_candidate(*, repo: Path, evidence: Path, reviewed_sha256: str,
 
         def route(request: Mapping[str, Any], label: str, cap: int) -> dict[str, Any]:
             assert dispatcher is not None and server_birth_mono is not None
-            remaining = MAX_WALL_S - (time.monotonic() - server_birth_mono)
-            allowed = min(float(cap), remaining - CLEANUP_RESERVE_S)
+            wall_budget = float(freeze["budget"]["wall_clock_seconds_from_server_birth_including_cleanup"])
+            cleanup_reserve = float(freeze["budget"]["reserved_cleanup_seconds"])
+            remaining = wall_budget - (time.monotonic() - server_birth_mono)
+            allowed = min(float(cap), remaining - cleanup_reserve)
             if allowed <= 0:
                 raise CandidateError("setup budget has reached the protected cleanup reserve")
             bounded_request = {**dict(request),
@@ -1627,6 +1743,7 @@ def execute_candidate(*, repo: Path, evidence: Path, reviewed_sha256: str,
             })
             observed = dispatch_public_managed_route(
                 dispatcher, bounded_request, label=label, timeout_s=allowed, poll_interval_s=0.2)
+            observed["submitted_request"] = bounded_request
             route_outcomes.append({"route": label, "outcome": observed.get("outcome"),
                                    "job_id": observed.get("job_id")})
             if observed.get("outcome") == "UNKNOWN":
@@ -1694,6 +1811,74 @@ def execute_candidate(*, repo: Path, evidence: Path, reviewed_sha256: str,
                 or apply_readback.get("study_or_solver_invoked") is not False):
             raise CandidateError("fixture builder reported a Study/solver invocation")
 
+        if freeze["campaign_profile"] == "bma_probe":
+            request_id, key = _new_ids("bma-probe-prepare")
+            prepare_request = build_full3d_bma_probe_prepare_dispatch(
+                source_artifact=staged["source_artifact"], project_id=project["project_id"],
+                model_ref=model["model_ref"], model_tag=model["model_tag"],
+                revision=model["revision"], request_id=request_id, idempotency_key=key)
+            prepare_result = route(prepare_request, "bma_probe_prepare", 90)
+            prepare_response = _require_route_ok(prepare_result, "BMA probe preparation")
+            model = _updated_full3d_model_state(prepare_response, prior_model=model)
+            prepare_readback = _java_action_readback(prepare_response, "full3d_bma_probe_prepare")
+            result["bma_probe_preparation_readback"] = prepare_readback
+            preparation = validate_full3d_bma_probe_preparation(
+                prepare_readback, project_id=project["project_id"],
+                model_tag=model["model_tag"], model_ref=model["model_ref"])
+            result["bma_probe_preparation"] = {
+                "operation": prepare_result, "readback": prepare_readback,
+                "validated": preparation}
+            event("isolated_bma_output_probe_prepared",
+                  solver_sequence=preparation["solver_sequence"],
+                  parent_study=preparation["probe_study"],
+                  solution_state=preparation["pre_solve_solution_state"])
+
+            request_id, key = _new_ids("bma-probe-runAll")
+            run_request = build_full3d_bma_probe_run_dispatch(
+                source_artifact=staged["source_artifact"],
+                solver_sequence_tag=preparation["solver_sequence"]["tag"],
+                project_id=project["project_id"], model_ref=model["model_ref"],
+                model_tag=model["model_tag"], revision=model["revision"],
+                request_id=request_id, idempotency_key=key)
+            result["solver_call_attempts"] = 1
+            result["bma_probe_run_request"] = run_request
+            try:
+                bma_run_result = route(run_request, "bma_probe_solver_sequence_runAll", 600)
+            except ManagedRouteOutcomeError as dispatch_exc:
+                if dispatch_exc.outcome == "UNKNOWN":
+                    ambiguous = True
+                route_outcomes.append({"route": "bma_probe_solver_sequence_runAll",
+                    "outcome": dispatch_exc.outcome, "job_id": dispatch_exc.job_id,
+                    "request_id": request_id, "retry_forbidden": dispatch_exc.retry_forbidden})
+                result["bma_probe_run_dispatch_failure"] = _bma_run_failure_evidence(
+                    run_request, dispatch_exc)
+                raise
+            bma_run_response = _require_route_ok(bma_run_result, "BMA producer sequence runAll")
+            result["solver_calls"] = 1
+            result["native_scientific_result"] = "BMA_PROBE_RUN_RETURNED_FULL3D_OVERLAP_NOT_EVALUATED"
+            result["bma_probe_run_operation"] = bma_run_result
+            result["bma_probe_run_response"] = bma_run_response
+            model = _updated_full3d_model_state(bma_run_response, prior_model=model)
+            bma_run_readback = _java_action_readback(bma_run_response, "full3d_bma_probe_run")
+            result["bma_probe_run_readback"] = bma_run_readback
+            producer_proof = validate_full3d_bma_probe_run_readback(
+                bma_run_readback, preparation=preparation,
+                project_id=project["project_id"], model_tag=model["model_tag"],
+                model_ref=model["model_ref"], run_request=run_request,
+                route_result=bma_run_result)
+            result.update({
+                "solver_calls": 1, "study_run_calls": 0,
+                "native_scientific_result": "BMA_PROBE_ONLY_FULL3D_OVERLAP_NOT_EVALUATED",
+                "mode_producer_lineage": producer_proof["producer_step_binding"],
+                "numeric_port_mode_field_mapping": "UNVERIFIED",
+                "bma_probe_run": {"request": run_request, "operation": bma_run_result,
+                    "readback": bma_run_readback, "validated": producer_proof},
+            })
+            event("isolated_bma_output_probe_solved",
+                  producer_status=producer_proof["status"],
+                  solution_pairs=producer_proof["eigensolution_solution_pairs"],
+                  field_mapping_status=producer_proof["numeric_port_mode_field_mapping"])
+
         request_id, key = _new_ids("solution-inventory")
         inventory_request = build_full3d_solution_inventory_dispatch(
             source_artifact=staged["source_artifact"], project_id=project["project_id"],
@@ -1706,7 +1891,9 @@ def execute_candidate(*, repo: Path, evidence: Path, reviewed_sha256: str,
             raise CandidateError("solution inventory does not bind the current managed model")
         inventory_configuration = validate_native_mode_configuration(inventory, inventory=True)
 
-        mph_path = Path(project["workspace"]) / "w23_full3d_setup_only.mph"
+        mph_name = ("w23_full3d_bma_probe.mph" if campaign_profile == "bma_probe"
+                    else "w23_full3d_setup_only.mph")
+        mph_path = Path(project["workspace"]) / mph_name
         request_id, key = _new_ids("model-save")
         save_request = build_full3d_save_dispatch(
             source_artifact=staged["source_artifact"], path=str(mph_path),
@@ -1723,17 +1910,23 @@ def execute_candidate(*, repo: Path, evidence: Path, reviewed_sha256: str,
             raise CandidateError("saved MPH is not a nonempty file in the authoritative project workspace")
         saved_artifact = {"path": str(resolved_mph), "bytes": resolved_mph.stat().st_size,
                           "sha256": _sha256_file(resolved_mph), "readback": save_readback}
-        result.update({"status": "SETUP_COMPLETE_NATIVE_SOLVE_NOT_RUN",
+        result.update({
+            "status": ("BMA_PROBE_NATIVE_SOLVED_FULL3D_SCIENCE_NOT_EVALUATED"
+                       if campaign_profile == "bma_probe" else "SETUP_COMPLETE_NATIVE_SOLVE_NOT_RUN"),
             "model": model, "staged_fixture": staged,
             "recipe_sha256": recipe_check["recipe_sha256"],
             "build_readback": build_readback, "baseline_readback": apply_readback,
             "configuration_readback": configuration_readback,
             "inventory_configuration_readback": inventory_configuration,
             "solution_inventory": inventory, "saved_mph": saved_artifact,
-            "study_run_calls": 0, "solver_calls": 0,
-            "native_scientific_result": "NOT_RUN",
-            "mode_producer_lineage": "UNVERIFIED",
+            "study_run_calls": 0,
             "numeric_port_mode_field_mapping": "UNVERIFIED"})
+        if campaign_profile == "setup_only":
+            result.update({"solver_calls": 0, "native_scientific_result": "NOT_RUN",
+                           "mode_producer_lineage": "UNVERIFIED"})
+        else:
+            result.update({"solver_calls": 1,
+                "native_scientific_result": "BMA_PROBE_ONLY_FULL3D_OVERLAP_NOT_EVALUATED"})
 
         ledger = _job_ledger_terminal(dispatcher, project["project_id"])
         result["pre_retirement_job_ledger"] = {
@@ -1785,9 +1978,13 @@ def execute_candidate(*, repo: Path, evidence: Path, reviewed_sha256: str,
             inspect=inspect, stop_server=stop_server, stop_control=stop_control)
         result["cleanup"] = cleanup
         worker_state = "RETIRED"
-        result["status"] = "SETUP_COMPLETE_CLEANUP_VERIFIED_SOLVE_NOT_RUN"
+        result["status"] = ("BMA_PROBE_COMPLETE_CLEANUP_VERIFIED_FULL3D_SCIENCE_NOT_RUN"
+                             if campaign_profile == "bma_probe"
+                             else "SETUP_COMPLETE_CLEANUP_VERIFIED_SOLVE_NOT_RUN")
         return result
     except BaseException as exc:
+        if campaign_profile == "bma_probe" and result.get("solver_call_attempts") == 1 and result.get("solver_calls") == 0:
+            result["solver_calls"] = "UNKNOWN"
         result["status"] = "UNKNOWN_PRESERVE_OWNED_RESOURCES" if ambiguous or worker_state == "UNKNOWN" else "SETUP_FAILED"
         result["error"] = {"type": type(exc).__name__, "message": str(exc)}
         result["route_outcomes"] = route_outcomes
@@ -1831,7 +2028,9 @@ def execute_candidate(*, repo: Path, evidence: Path, reviewed_sha256: str,
                         inspect=inspect_failure,
                         stop_server=stop_server, stop_control=stop_control)
                     result["cleanup"] = cleanup
-                    result["status"] = "SETUP_FAILED_CLEANUP_VERIFIED"
+                    result["status"] = ("BMA_PROBE_FAILED_CLEANUP_VERIFIED"
+                                         if campaign_profile == "bma_probe"
+                                         else "SETUP_FAILED_CLEANUP_VERIFIED")
             except BaseException as cleanup_exc:
                 result["cleanup_error"] = {"type": type(cleanup_exc).__name__,
                                             "message": str(cleanup_exc),
@@ -1855,7 +2054,9 @@ def execute_candidate(*, repo: Path, evidence: Path, reviewed_sha256: str,
                         stop_server=stop_server, stop_control=stop_control)
                     result["cleanup"] = cleanup
                     result["prebirth_cleanup_job_ledger"] = ledger_summary
-                    result["status"] = "SETUP_FAILED_CLEANUP_VERIFIED"
+                    result["status"] = ("BMA_PROBE_FAILED_CLEANUP_VERIFIED"
+                                         if campaign_profile == "bma_probe"
+                                         else "SETUP_FAILED_CLEANUP_VERIFIED")
             except BaseException as cleanup_exc:
                 result["cleanup_error"] = {"type": type(cleanup_exc).__name__,
                                             "message": str(cleanup_exc),
@@ -1867,11 +2068,7 @@ def execute_candidate(*, repo: Path, evidence: Path, reviewed_sha256: str,
         if server_birth_mono is not None:
             result["elapsed_from_server_birth_s"] = time.monotonic() - server_birth_mono
         result["route_outcomes"] = route_outcomes
-        result["study_run_calls"] = 0
-        result["solver_calls"] = 0
-        result["native_scientific_result"] = "NOT_RUN"
-        result["mode_producer_lineage"] = "UNVERIFIED"
-        result["numeric_port_mode_field_mapping"] = "UNVERIFIED"
+        _finalize_science_counters(result, campaign_profile)
         if server is not None and server.proc is not None:
             if server_identity is None and isinstance(server.process_identity, Mapping):
                 try:
@@ -1911,6 +2108,7 @@ def _parser() -> argparse.ArgumentParser:
     prepare = sub.add_parser("prepare", help="offline source audit and Java compile only")
     prepare.add_argument("--evidence", required=True, type=Path)
     prepare.add_argument("--base-commit", required=True)
+    prepare.add_argument("--profile", choices=("setup_only", "bma_probe"), default="setup_only")
     prepare.add_argument("--comsol-root", type=Path, default=INSTALL_ROOT)
     prepare.add_argument("--jdk11", type=Path, default=JAVA11)
     execute = sub.add_parser("execute", help="run only the separately reviewed setup-only candidate")
@@ -1931,7 +2129,8 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         if args.command == "prepare":
             candidate = prepare_candidate(repo=REPO, evidence=args.evidence,
-                base_commit=args.base_commit, install_root=args.comsol_root, jdk_home=args.jdk11)
+                base_commit=args.base_commit, install_root=args.comsol_root, jdk_home=args.jdk11,
+                campaign_profile=args.profile)
             print(json.dumps({"status": candidate["status"],
                               "candidate_sha256": candidate["candidate_sha256"],
                               "evidence_dir": candidate["evidence_dir"],
@@ -1943,8 +2142,11 @@ def main(argv: list[str] | None = None) -> int:
             reviewed_sha256=args.reviewed_candidate_sha256,
             install_root=args.comsol_root, jdk_home=args.jdk11)
         print(json.dumps(result, indent=2, ensure_ascii=False, default=str))
-        return 0 if result.get("status") in {"SETUP_COMPLETE_CLEANUP_VERIFIED_SOLVE_NOT_RUN",
-                                               "SETUP_FAILED_CLEANUP_VERIFIED"} else 1
+        return 0 if result.get("status") in {
+            "SETUP_COMPLETE_CLEANUP_VERIFIED_SOLVE_NOT_RUN",
+            "SETUP_FAILED_CLEANUP_VERIFIED",
+            "BMA_PROBE_COMPLETE_CLEANUP_VERIFIED_FULL3D_SCIENCE_NOT_RUN",
+        } else 1
     except Exception as exc:
         print(json.dumps({"status": "PREPARE_OR_GATE_FAILED", "type": type(exc).__name__,
                           "message": str(exc)}, indent=2, ensure_ascii=False))

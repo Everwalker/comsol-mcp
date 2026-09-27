@@ -6,6 +6,8 @@ import com.comsol.model.NumericalFeature;
 import com.comsol.model.ParameterEntity;
 import com.comsol.model.PropFeature;
 import com.comsol.model.SelectionFeature;
+import com.comsol.model.SolutionInfo;
+import com.comsol.model.Study;
 import com.comsol.model.StudyFeature;
 import com.comsol.model.SolverFeature;
 import com.comsol.model.SolverSequence;
@@ -33,6 +35,8 @@ public final class NativeW23Full3DFixture {
     private static final String FIXTURE_ID = "w23_full3d_fiber_ball_lens_vector_pml_v1";
     private static final String COMPONENT = "comp3d";
     private static final String GEOMETRY = "geom3d";
+    private static final String BMA_PROBE_STUDY = "std3dBmaOutputProbe";
+    private static final String BMA_PROBE_STEP = "bmaOutputProbe";
     private static final double PORT_SECTION_HALF_LENGTH_UM = 0.01;
     private static final double PORT_SELECTION_RADIAL_MARGIN_UM = 0.02;
     private static final String[] VECTOR_FIELDS = {
@@ -47,6 +51,8 @@ public final class NativeW23Full3DFixture {
         if ("build".equals(phase)) return build(model, args);
         if ("apply_case".equals(phase)) return applyCase(model, args);
         if ("solution_inventory".equals(phase)) return solutionInventory(model);
+        if ("prepare_bma_output_probe".equals(phase)) return prepareBmaOutputProbe(model, args);
+        if ("run_bma_output_probe".equals(phase)) return runBmaOutputProbe(model, args);
         if ("raw_fields".equals(phase)) return rawFields(model, args);
         if ("save".equals(phase)) return save(model, args);
         if ("identity".equals(phase)) return identity(model);
@@ -486,6 +492,291 @@ public final class NativeW23Full3DFixture {
         result.put("solver_execution_count", "UNKNOWN_WITHOUT_RUNTIME_SOLVER_EVIDENCE");
         result.put("native_result", "COMSOL_NATIVE_MODEL_SOURCE_INVENTORY");
         return result;
+    }
+
+    /**
+     * Create an isolated one-step output-Port BMA study and generate its full
+     * default solver sequence. This phase configures only; it never executes a
+     * Study or SolverSequence.
+     */
+    private static Map<String, Object> prepareBmaOutputProbe(Model model, Map<String, Object> args) {
+        Map<String, Object> managedIdentity = readManagedIdentity(model, args);
+        if (!Arrays.asList(model.component().tags()).contains(COMPONENT)
+                || !Arrays.asList(model.study().tags()).contains("std3d"))
+            throw new IllegalStateException("the owned full-3D model and original std3d study are required");
+        if (Arrays.asList(model.study().tags()).contains(BMA_PROBE_STUDY))
+            throw new IllegalStateException("the one-shot BMA producer probe study already exists; refusing replay");
+
+        PhysicsFeature port = model.component(COMPONENT).physics("ewfd").feature("portOut3d");
+        int[] nativePortFaces = port.selection().entities();
+        int[] registeredPortFaces = model.component(COMPONENT).selection("sel3dOutputPort").entities(2);
+        String portModeNumberReadback = port.getString("PortModeNumber");
+        if (!"Numeric".equals(port.getString("PortType"))
+                || !"2".equals(port.getString("PortName"))
+                || !"1".equals(portModeNumberReadback)
+                || !"sel3dOutputPort".equals(port.selection().named())
+                || port.selection().dim() != 2
+                || !sameSet(nativePortFaces, registeredPortFaces))
+            throw new IllegalStateException("actual receiver Port feature/configuration/selection differs from the frozen Numeric Port 2");
+
+        List<Map<String, Object>> originalStepsBefore = studyStepReadback(model, "std3d");
+        requireOriginalStudyConfiguration(originalStepsBefore);
+        Study probe = model.study().create(BMA_PROBE_STUDY);
+        StudyFeature bma = probe.feature().create(BMA_PROBE_STEP, "BoundaryModeAnalysis");
+        configureBma(bma, "2");
+        List<Map<String, Object>> probeSteps = studyStepReadback(model, BMA_PROBE_STUDY);
+        requireProbeStudyConfiguration(probeSteps);
+
+        probe.createAutoSequences("sol");
+        String[] sequenceTags = probe.getSolverSequences("SolverSequence");
+        if (sequenceTags == null || sequenceTags.length != 1 || sequenceTags[0] == null
+                || sequenceTags[0].trim().isEmpty())
+            throw new IllegalStateException("isolated BMA study did not generate exactly one solver sequence");
+        SolverSequence sequence = model.sol(sequenceTags[0]);
+        Map<String, Object> sequenceReadback = solverSequenceReadback(sequence, BMA_PROBE_STUDY);
+        Map<String, Object> preSolveState = solutionState(sequence, sequenceTags[0]);
+        if (!(preSolveState.get("solution_pairs") instanceof List)
+                || !((List<?>) preSolveState.get("solution_pairs")).isEmpty())
+            throw new IllegalStateException("new BMA producer sequence already contains solutions; refusing to attribute old data");
+        List<Map<String, Object>> originalStepsAfter = studyStepReadback(model, "std3d");
+        if (!originalStepsBefore.equals(originalStepsAfter))
+            throw new IllegalStateException("isolated BMA probe changed the original three-step std3d baseline");
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("fixture_id", FIXTURE_ID);
+        result.put("managed_identity", managedIdentity);
+        result.put("status", "BMA_OUTPUT_PROBE_CONFIGURED_NOT_SOLVED");
+        result.put("native_result", "COMSOL_NATIVE_BMA_PROBE_CONFIGURATION_READBACK");
+        result.put("study_or_solver_invoked", false);
+        result.put("producer_status", "PREPARED_ONLY_NOT_PRODUCER_EVIDENCE");
+        result.put("field_mapping_status", "UNVERIFIED");
+        result.put("receiver_port", Map.of("feature_tag", "portOut3d",
+                "feature_type", port.getType(), "port_type", port.getString("PortType"),
+                "port_name", port.getString("PortName"),
+                "port_mode_number_readback", portModeNumberReadback,
+                "selection_tag", port.selection().named(), "entity_dimension", port.selection().dim(),
+                "boundary_ids", intList(nativePortFaces)));
+        result.put("original_std3d_steps", originalStepsAfter);
+        result.put("probe_study", Map.of("study_tag", BMA_PROBE_STUDY,
+                "study_steps", probeSteps));
+        result.put("solver_sequence", sequenceReadback);
+        result.put("pre_solve_solution_state", preSolveState);
+        return result;
+    }
+
+    /** Run only the full generated sequence attached to the isolated BMA-only study. */
+    private static Map<String, Object> runBmaOutputProbe(Model model, Map<String, Object> args) {
+        Map<String, Object> managedIdentity = readManagedIdentity(model, args);
+        if (args == null || !BMA_PROBE_STUDY.equals(args.get("study_tag")))
+            throw new IllegalArgumentException("exact isolated BMA probe study tag is required");
+        String expectedSequenceTag = nonemptyString(args.get("solver_sequence_tag"), "solver_sequence_tag");
+        if (!Arrays.asList(model.study().tags()).contains(BMA_PROBE_STUDY))
+            throw new IllegalStateException("the isolated BMA probe study is absent");
+        List<Map<String, Object>> probeSteps = studyStepReadback(model, BMA_PROBE_STUDY);
+        requireProbeStudyConfiguration(probeSteps);
+        Study probe = model.study(BMA_PROBE_STUDY);
+        String[] sequenceTags = probe.getSolverSequences("SolverSequence");
+        if (sequenceTags == null || sequenceTags.length != 1
+                || !expectedSequenceTag.equals(sequenceTags[0]))
+            throw new IllegalStateException("the isolated BMA study no longer resolves to the exact prepared solver sequence");
+        SolverSequence sequence = model.sol(expectedSequenceTag);
+        Map<String, Object> sequenceReadback = solverSequenceReadback(sequence, BMA_PROBE_STUDY);
+        Map<String, Object> preSolveState = solutionState(sequence, expectedSequenceTag);
+        if (!(preSolveState.get("solution_pairs") instanceof List)
+                || !((List<?>) preSolveState.get("solution_pairs")).isEmpty())
+            throw new IllegalStateException("BMA producer run is one-shot and refuses preexisting solution data");
+
+        // This exact sequence is attached to a parent study with one BMA step;
+        // runAll executes its complete generated solver tree, including all
+        // COMSOL-generated variable/eigenvalue/store features.
+        sequence.runAll();
+        Map<String, Object> postSolveState = solutionState(sequence, expectedSequenceTag);
+        boolean twoDistinctSolutions = hasTwoDistinctInnerSolutions(postSolveState, expectedSequenceTag);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("fixture_id", FIXTURE_ID);
+        result.put("managed_identity", managedIdentity);
+        result.put("status", twoDistinctSolutions
+                ? "BMA_OUTPUT_PROBE_SOLVER_SEQUENCE_RETURNED_TWO_SOLUTION_ROWS"
+                : "BMA_OUTPUT_PRODUCER_READBACK_INCOMPLETE");
+        result.put("native_result", "COMSOL_NATIVE_BMA_PRODUCER_RUN_READBACK");
+        result.put("study_or_solver_invoked", true);
+        result.put("solver_calls", 1);
+        result.put("study_run_calls", 0);
+        result.put("producer_status", twoDistinctSolutions
+                ? "CONTROLLED_SINGLE_STEP_BMA_PRODUCER_VERIFIED"
+                : "UNVERIFIED_SOLUTION_COUNT_OR_AXIS_READBACK");
+        result.put("field_mapping_status", "UNVERIFIED");
+        result.put("invocation", Map.of("method", "SolverSequence.runAll",
+                "solver_sequence_tag", expectedSequenceTag,
+                "parent_study_tag", BMA_PROBE_STUDY,
+                "parent_study_step_tag", BMA_PROBE_STEP,
+                "method_returned", true));
+        result.put("probe_study", Map.of("study_tag", BMA_PROBE_STUDY,
+                "study_steps", probeSteps));
+        result.put("solver_sequence", sequenceReadback);
+        result.put("pre_solve_solution_state", preSolveState);
+        result.put("post_solve_solution_state", postSolveState);
+        result.put("basis_ordinal_mapping", "UNVERIFIED_NATIVE_FIELD_MAPPING_REQUIRED");
+        return result;
+    }
+
+    private static Map<String, Object> readManagedIdentity(Model model, Map<String, Object> args) {
+        if (args == null) throw new IllegalArgumentException("managed identity arguments are required");
+        Object raw = args.get("managed_identity");
+        if (!(raw instanceof Map)) throw new IllegalArgumentException("persisted managed ModelRef is required");
+        @SuppressWarnings("unchecked") Map<String, Object> identity = (Map<String, Object>) raw;
+        String projectId = nonemptyString(identity.get("project_id"), "project_id");
+        Object modelRef = identity.get("model_ref");
+        if (!(modelRef instanceof Map) || ((Map<?, ?>) modelRef).isEmpty())
+            throw new IllegalArgumentException("persisted managed ModelRef is required");
+        String modelTag = nonemptyString(identity.get("model_tag"), "model_tag");
+        if (!modelTag.equals(model.tag())) throw new IllegalStateException("managed model tag differs from native Model");
+        Object revision = identity.get("expected_revision");
+        if (!(revision instanceof Number) || revision instanceof Boolean
+                || ((Number) revision).longValue() < 0
+                || ((Number) revision).doubleValue() != ((Number) revision).longValue())
+            throw new IllegalArgumentException("managed expected revision must be a nonnegative integer");
+        Map<String, Object> bound = new LinkedHashMap<>();
+        bound.put("project_id", projectId);
+        Map<String, Object> modelRefCopy = new LinkedHashMap<>();
+        for (Map.Entry<?, ?> entry : ((Map<?, ?>) modelRef).entrySet()) {
+            if (!(entry.getKey() instanceof String))
+                throw new IllegalArgumentException("managed ModelRef keys must be strings");
+            modelRefCopy.put((String) entry.getKey(), entry.getValue());
+        }
+        bound.put("model_ref", modelRefCopy);
+        bound.put("model_tag", modelTag);
+        bound.put("expected_revision", ((Number) revision).longValue());
+        return bound;
+    }
+
+    private static List<Map<String, Object>> studyStepReadback(Model model, String studyTag) {
+        List<Map<String, Object>> steps = new ArrayList<>();
+        for (String tag : model.study(studyTag).feature().tags()) {
+            StudyFeature feature = model.study(studyTag).feature(tag);
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("tag", tag);
+            row.put("feature_type", feature.getType());
+            for (String property : new String[]{"PortName", "modeFreq", "plist"})
+                if (feature.hasProperty(property)) row.put(property, feature.getString(property));
+            if (feature.hasProperty("neigs")) row.put("neigs", feature.getInt("neigs"));
+            steps.add(row);
+        }
+        return steps;
+    }
+
+    private static void requireOriginalStudyConfiguration(List<Map<String, Object>> steps) {
+        if (steps.size() != 3 || !"bmaInput3d".equals(steps.get(0).get("tag"))
+                || !"bmaOutput3d".equals(steps.get(1).get("tag"))
+                || !"freq3d".equals(steps.get(2).get("tag"))
+                || !"BoundaryModeAnalysis".equals(steps.get(0).get("feature_type"))
+                || !"BoundaryModeAnalysis".equals(steps.get(1).get("feature_type"))
+                || !"Frequency".equals(steps.get(2).get("feature_type"))
+                || !"1".equals(steps.get(0).get("PortName"))
+                || !"2".equals(steps.get(1).get("PortName"))
+                || !"f0".equals(steps.get(0).get("modeFreq"))
+                || !"f0".equals(steps.get(1).get("modeFreq"))
+                || !Integer.valueOf(2).equals(steps.get(0).get("neigs"))
+                || !Integer.valueOf(2).equals(steps.get(1).get("neigs"))
+                || !"f0".equals(steps.get(2).get("plist")))
+            throw new IllegalStateException("original std3d input-BMA/output-BMA/frequency baseline differs from its frozen configuration");
+    }
+
+    private static void requireProbeStudyConfiguration(List<Map<String, Object>> steps) {
+        if (steps.size() != 1 || !BMA_PROBE_STEP.equals(steps.get(0).get("tag"))
+                || !"BoundaryModeAnalysis".equals(steps.get(0).get("feature_type"))
+                || !"2".equals(steps.get(0).get("PortName"))
+                || !"f0".equals(steps.get(0).get("modeFreq"))
+                || !Integer.valueOf(2).equals(steps.get(0).get("neigs")))
+            throw new IllegalStateException("probe parent study must contain exactly the receiver Port 2 BMA step with two requested eigensolutions at f0");
+    }
+
+    private static Map<String, Object> solverSequenceReadback(SolverSequence sequence, String expectedStudy) {
+        String solverStudy = sequence.study();
+        if (!expectedStudy.equals(solverStudy))
+            throw new IllegalStateException("generated solver sequence belongs to a different parent study");
+        List<Map<String, Object>> tree = new ArrayList<>();
+        List<Map<String, Object>> bindings = new ArrayList<>();
+        for (String featureTag : sequence.feature().tags())
+            collectSolverFeature(sequence.feature(featureTag), featureTag, tree, bindings);
+        if (tree.isEmpty() || bindings.size() != 1
+                || !expectedStudy.equals(bindings.get(0).get("study"))
+                || !BMA_PROBE_STEP.equals(bindings.get(0).get("studystep")))
+            throw new IllegalStateException("generated solver tree does not bind exactly the isolated receiver BMA StudyStep");
+        Set<String> featureTypes = new LinkedHashSet<>();
+        for (Map<String, Object> row : tree)
+            if (row.get("feature_type") instanceof String)
+                featureTypes.add((String) row.get("feature_type"));
+        if (!featureTypes.containsAll(Arrays.asList("Variables", "Eigenvalue", "StoreSolution")))
+            throw new IllegalStateException("generated BMA solver tree lacks the Variables/Eigenvalue/StoreSolution computation path");
+        Map<String, Object> output = new LinkedHashMap<>();
+        output.put("tag", sequence.tag());
+        output.put("feature_type", sequence.getType());
+        output.put("parent_study", solverStudy);
+        output.put("solver_tree_features", tree);
+        output.put("study_step_bindings_in_solver_tree_order", bindings);
+        return output;
+    }
+
+    private static Map<String, Object> solutionState(SolverSequence sequence, String expectedSequenceTag) {
+        SolutionInfo info = sequence.getSolutioninfo();
+        boolean valid = info.isValid();
+        int[] outerSolnums = info.getOuterSolnum();
+        if (outerSolnums == null)
+            throw new IllegalStateException("SolutionInfo returned no outer-solution axis readback");
+        Set<Integer> seenOuter = new LinkedHashSet<>();
+        List<Map<String, Object>> pairs = new ArrayList<>();
+        for (int outer : outerSolnums) {
+            if (outer < 1 || !seenOuter.add(outer))
+                throw new IllegalStateException("SolutionInfo outer-solution axis is invalid or duplicated");
+            int[] innerSolnums = info.getSolnum(outer, true);
+            if (innerSolnums == null || innerSolnums.length == 0)
+                throw new IllegalStateException("SolutionInfo has no strict inner-solution axis for a returned outer index");
+            Set<Integer> seenInner = new LinkedHashSet<>();
+            String mappedSequence = info.getSolverSequence(outer);
+            if (!expectedSequenceTag.equals(mappedSequence))
+                throw new IllegalStateException("SolutionInfo outer solution maps to a different solver sequence");
+            for (int inner : innerSolnums) {
+                if (inner < 1 || !seenInner.add(inner))
+                    throw new IllegalStateException("SolutionInfo inner-solution axis is invalid or duplicated");
+                pairs.add(Map.of("outer_index", outer, "inner_index", inner,
+                        "solnum", inner, "solver_sequence_tag", mappedSequence));
+            }
+        }
+        return Map.of("is_valid", valid, "solver_sequence_is_empty", sequence.isEmpty(),
+                "outer_solnums", intList(outerSolnums),
+                "solution_pairs", pairs, "pair_count", pairs.size());
+    }
+
+    private static boolean hasTwoDistinctInnerSolutions(Map<String, Object> state,
+            String expectedSequenceTag) {
+        Object rawOuters = state.get("outer_solnums");
+        Object rawPairs = state.get("solution_pairs");
+        if (!Boolean.TRUE.equals(state.get("is_valid"))
+                || !Boolean.FALSE.equals(state.get("solver_sequence_is_empty"))
+                || !(rawOuters instanceof List) || ((List<?>) rawOuters).size() != 1
+                || !(rawPairs instanceof List) || ((List<?>) rawPairs).size() != 2
+                || !(state.get("pair_count") instanceof Integer)
+                || ((Integer) state.get("pair_count")).intValue() != 2)
+            return false;
+        Object rawOuter = ((List<?>) rawOuters).get(0);
+        if (!(rawOuter instanceof Integer) || ((Integer) rawOuter).intValue() < 1)
+            return false;
+        int outer = ((Integer) rawOuter).intValue();
+        Set<Integer> innerIndices = new LinkedHashSet<>();
+        for (Object rawPair : (List<?>) rawPairs) {
+            if (!(rawPair instanceof Map)) return false;
+            Map<?, ?> pair = (Map<?, ?>) rawPair;
+            Object pairOuter = pair.get("outer_index");
+            Object pairInner = pair.get("inner_index");
+            if (!(pairOuter instanceof Integer) || ((Integer) pairOuter).intValue() != outer
+                    || !(pairInner instanceof Integer) || ((Integer) pairInner).intValue() < 1
+                    || !pairInner.equals(pair.get("solnum"))
+                    || !expectedSequenceTag.equals(pair.get("solver_sequence_tag")))
+                return false;
+            innerIndices.add((Integer) pairInner);
+        }
+        return innerIndices.size() == 2;
     }
 
     private static void collectSolverFeature(SolverFeature feature, String path,
