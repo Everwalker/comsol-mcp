@@ -171,6 +171,10 @@ class ControlDaemon:
         # Resolved user/password values are request-local and never persisted.
         self._session_credentials_refs: dict[tuple[str, str], str | None] = {}
         self._session_process_identities: dict[tuple[str, str], Any] = {}
+        # Retirement requires both the exact Worker Popen object and its
+        # platform-reported birth identity. This is ephemeral host evidence,
+        # never caller supplied and never reconstructed from a PID alone.
+        self._session_worker_child_identities: dict[tuple[str, str], dict[str, Any]] = {}
         self.desktop = DesktopCoordinator(
             store=self.store,
             adapter=desktop_adapter if desktop_adapter is not None else create_native_metadata_adapter(),
@@ -886,6 +890,7 @@ class ControlDaemon:
                 dispatched = True
                 worker = attached["worker"]
                 self._session_worker_handles[(project_id, session_id)] = worker
+                self._remember_session_worker_child((project_id, session_id), worker)
                 peer = attached["peer"]
                 reply = attached["reply"]
                 identity = attached["worker_identity"]
@@ -1201,6 +1206,168 @@ class ControlDaemon:
     def _session_server_state(record: Mapping[str, Any]) -> str:
         return str(record.get("server_state") or "UNKNOWN")
 
+    def _remember_session_worker_child(self, key: tuple[str, str], worker: Any) -> None:
+        """Remember a live, exact child handle and birth after a verified attach."""
+        process = getattr(worker, "_process", None)
+        pid = getattr(process, "pid", None)
+        if (process is None or type(pid) is not int or pid <= 1
+                or not callable(getattr(process, "poll", None))):
+            return
+        try:
+            if process.poll() is not None:
+                return
+            identity = process_identity(pid)
+        except Exception:
+            return
+        birth = identity.get("start_epoch_ms") if isinstance(identity, Mapping) else None
+        if (not isinstance(identity, Mapping) or identity.get("alive") is not True
+                or type(birth) is not int or birth <= 0):
+            return
+        self._session_worker_child_identities[key] = {
+            "worker": worker,
+            "process": process,
+            "pid": pid,
+            "start_epoch_ms": birth,
+        }
+
+    def _session_worker_retirement_proof(self, key: tuple[str, str], worker: Any,
+                                         lifecycle: Mapping[str, Any], *, connected: bool
+                                         ) -> dict[str, Any] | None:
+        """Preflight one exact Worker Popen/birth and connected epoch."""
+        saved = self._session_worker_child_identities.get(key)
+        if not isinstance(saved, Mapping) or saved.get("worker") is not worker:
+            return None
+        process = saved.get("process")
+        pid = saved.get("pid")
+        birth = saved.get("start_epoch_ms")
+        if (process is None or type(pid) is not int or pid <= 1
+                or type(birth) is not int or birth <= 0
+                or getattr(worker, "_process", None) is not process
+                or getattr(process, "pid", None) != pid
+                or not callable(getattr(process, "poll", None))):
+            return None
+        try:
+            if process.poll() is not None:
+                return None
+            current = process_identity(pid)
+            metadata = worker.runtime_metadata()
+        except Exception:
+            return None
+        if (not isinstance(current, Mapping) or current.get("alive") is not True
+                or current.get("start_epoch_ms") != birth
+                or not isinstance(metadata, Mapping)
+                or metadata.get("instance_id") != lifecycle.get("worker_instance_id")
+                or metadata.get("generation") != lifecycle.get("worker_epoch")
+                or metadata.get("connected") is not connected):
+            return None
+        return {"process": process, "pid": pid, "start_epoch_ms": birth,
+                "worker_instance_id": lifecycle.get("worker_instance_id"),
+                "worker_epoch": lifecycle.get("worker_epoch")}
+
+    def _retire_disconnected_session_worker(self, record: Mapping[str, Any],
+                                            lifecycle: Mapping[str, Any], worker: Any,
+                                            proof: Mapping[str, Any], *,
+                                            disconnect_rpc_dispatched: bool) -> dict[str, Any]:
+        """Close/wait one proven disconnected Worker, retaining UNKNOWN on doubt."""
+        project_id, session_id = lifecycle["project_id"], lifecycle["session_id"]
+        key = (project_id, session_id)
+        process = proof["process"]
+        pid, birth = proof["pid"], proof["start_epoch_ms"]
+        cleanup_started = False
+        try:
+            current = self._session_worker_retirement_proof(key, worker, lifecycle, connected=False)
+            if current is None or current["process"] is not process or current["start_epoch_ms"] != birth:
+                raise RuntimeError("exact disconnected Worker identity changed before retirement")
+            cleanup_started = True
+            worker.close()
+            # close() owns graceful/forced termination policy; this adapter
+            # independently waits on the saved Popen object and verifies that
+            # exact child, rather than trusting a return from close().
+            process.wait(timeout=5.0)
+            if process.poll() is None:
+                raise RuntimeError("exact Worker child remained live after close/wait")
+            if getattr(worker, "_process", None) not in (None, process):
+                raise RuntimeError("Worker handle changed to a different child during retirement")
+        except Exception as exc:
+            try:
+                unknown = self._updated_session_lifecycle(
+                    lifecycle, state="UNKNOWN", client_state="UNKNOWN",
+                    worker_instance_id=lifecycle.get("worker_instance_id"),
+                    worker_epoch=lifecycle.get("worker_epoch"),
+                    server_instance_id=lifecycle.get("server_instance_id"),
+                )
+                self.session_lifecycle.save(unknown, expected_revision=lifecycle["revision"])
+            except Exception:
+                pass
+            return self._finish(record, self._error(
+                "EXECUTION_STATE_UNKNOWN", "Worker retirement outcome is unknown; exact handle retained",
+                data={"project_id": project_id, "session_id": session_id,
+                      "state": "UNKNOWN",
+                      "engine_dispatched": disconnect_rpc_dispatched,
+                      "disconnect_rpc_dispatched": disconnect_rpc_dispatched,
+                      "worker_handle_preserved": True,
+                      "worker_close_started": cleanup_started,
+                      "cause_type": type(exc).__name__},
+                safe_retry=False, execution_state_unknown=True,
+            ), "UNKNOWN")
+
+        try:
+            retired = self._updated_session_lifecycle(
+                lifecycle, state="DISCONNECTED", client_state="RETIRED",
+                worker_instance_id=lifecycle.get("worker_instance_id"),
+                worker_epoch=lifecycle.get("worker_epoch"),
+                server_instance_id=None,
+                health={"status": "UNKNOWN", "observed_at": None, "source": None},
+            )
+            self.session_lifecycle.save(retired, expected_revision=lifecycle["revision"])
+        except Exception as exc:
+            # The child is gone, but without a durable RETIRED transition the
+            # session cannot safely be reconnected or reported as complete.
+            try:
+                unknown = self._updated_session_lifecycle(
+                    lifecycle, state="UNKNOWN", client_state="UNKNOWN",
+                    worker_instance_id=lifecycle.get("worker_instance_id"),
+                    worker_epoch=lifecycle.get("worker_epoch"),
+                    server_instance_id=None,
+                )
+                self.session_lifecycle.save(unknown, expected_revision=lifecycle["revision"])
+            except Exception:
+                pass
+            return self._finish(record, self._error(
+                "EXECUTION_STATE_UNKNOWN", "Worker exited but retirement could not be durably recorded",
+                data={"project_id": project_id, "session_id": session_id,
+                      "state": "UNKNOWN",
+                      "engine_dispatched": disconnect_rpc_dispatched,
+                      "disconnect_rpc_dispatched": disconnect_rpc_dispatched,
+                      "worker_handle_preserved": True,
+                      "worker_close_started": True,
+                      "worker_exit_confirmed": True,
+                      "cause_type": type(exc).__name__},
+                safe_retry=False, execution_state_unknown=True,
+            ), "UNKNOWN")
+
+        self._session_worker_handles.pop(key, None)
+        self._session_worker_child_identities.pop(key, None)
+        return self._finish(record, {"success": True, "data": {
+            "project_id": project_id, "session_id": session_id,
+            "state": "DISCONNECTED", "client_state": "RETIRED",
+            "server_stopped": False, "worker_handle_preserved": False,
+            "worker_retirement": {
+                "status": "RETIRED",
+                "worker_instance_id": proof["worker_instance_id"],
+                "worker_epoch": proof["worker_epoch"],
+                "process_identity": {"pid": pid, "start_epoch_ms": birth},
+                "exact_popen_handle": True,
+                "birth_identity_matched_before_close": True,
+                "child_exit_confirmed": True, "child_reaped": True,
+                "admission_fence": "RETIRED",
+                "disconnect_rpc_dispatched": disconnect_rpc_dispatched,
+                "worker_close_started": True,
+            },
+            "engine_dispatched": disconnect_rpc_dispatched,
+            "disconnect_rpc_dispatched": disconnect_rpc_dispatched,
+        }}, "SUCCEEDED")
+
     def _remove_session_context(self, project_id: str, session_id: str,
                                 expected: SessionRuntimeContext | None = None) -> None:
         try:
@@ -1224,12 +1391,71 @@ class ControlDaemon:
                 return self._finish(record, self._error("PROJECT_IDENTITY_MISMATCH", str(exc)), "FAILED")
             if lifecycle is None:
                 return self._finish(record, self._error("SESSION_NOT_FOUND", "session lifecycle record not found"), "FAILED")
+            retire_worker = routed.get("retire_worker", False) is True
             if lifecycle["state"] == "DISCONNECTED":
-                return self._finish(record, {"success": True, "data": {
-                    "project_id": project_id, "session_id": session_id,
-                    "state": "DISCONNECTED", "already_disconnected": True,
-                    "server_stopped": False,
-                }}, "SUCCEEDED")
+                if not retire_worker:
+                    return self._finish(record, {"success": True, "data": {
+                        "project_id": project_id, "session_id": session_id,
+                        "state": "DISCONNECTED", "already_disconnected": True,
+                        "server_stopped": False,
+                    }}, "SUCCEEDED")
+                if lifecycle.get("client_state") == "RETIRED":
+                    return self._finish(record, {"success": True, "data": {
+                        "project_id": project_id, "session_id": session_id,
+                        "state": "DISCONNECTED", "client_state": "RETIRED",
+                        "already_retired": True, "server_stopped": False,
+                        "worker_handle_preserved": False,
+                    }}, "SUCCEEDED")
+                key = (project_id, session_id)
+                worker = self._session_worker_handles.get(key)
+                if worker is None:
+                    unknown = self._updated_session_lifecycle(
+                        lifecycle, state="UNKNOWN", client_state="UNKNOWN",
+                        worker_instance_id=lifecycle["worker_instance_id"],
+                        worker_epoch=lifecycle["worker_epoch"],
+                        server_instance_id=lifecycle["server_instance_id"],
+                    )
+                    try:
+                        self.session_lifecycle.save(unknown, expected_revision=lifecycle["revision"])
+                    except Exception:
+                        pass
+                    return self._finish(record, self._error(
+                        "WORKER_BINDING_UNKNOWN", "disconnected lifecycle has no exact retained Worker handle",
+                        data={"session_id": session_id, "state": "UNKNOWN",
+                              "worker_handle_preserved": False},
+                        safe_retry=False, execution_state_unknown=True,
+                    ), "UNKNOWN")
+                proof = self._session_worker_retirement_proof(
+                    key, worker, lifecycle, connected=False,
+                )
+                if proof is None:
+                    return self._finish(record, self._error(
+                        "WORKER_RETIREMENT_UNAVAILABLE",
+                        "exact Worker Popen, birth, detached epoch, or liveness could not be verified",
+                        data={"project_id": project_id, "session_id": session_id,
+                              "state": "DISCONNECTED", "engine_dispatched": False,
+                              "worker_handle_preserved": True},
+                        safe_retry=False,
+                    ), "FAILED")
+                self._bind_session_job_to_worker(
+                    record, project_id=project_id, session_id=session_id,
+                    worker_instance_id=lifecycle["worker_instance_id"],
+                    worker_epoch=lifecycle["worker_epoch"],
+                )
+                unresolved = self._session_has_unresolved_jobs(
+                    project_id, session_id, excluding_operation_id=record["operation_id"],
+                )
+                if unresolved:
+                    return self._finish(record, self._error(
+                        "SESSION_BUSY", "active or UNKNOWN operations block Worker retirement",
+                        data={"session_id": session_id, "engine_dispatched": False,
+                              "blocking_job_ids": [item["job_id"] for item in unresolved]},
+                        safe_retry=True,
+                    ), "FAILED")
+                return self._retire_disconnected_session_worker(
+                    record, lifecycle, worker, proof,
+                    disconnect_rpc_dispatched=False,
+                )
             if lifecycle["state"] == "UNKNOWN":
                 result = self._error("EXECUTION_STATE_UNKNOWN", "session is UNKNOWN; recover the original Worker before disconnecting",
                                      data={"session_id": session_id, "state": "UNKNOWN", "safe_retry": False},
@@ -1265,6 +1491,20 @@ class ControlDaemon:
                     server_instance_id=lifecycle["server_instance_id"],
                 ), expected_revision=lifecycle["revision"])
                 return self._finish(record, result, "UNKNOWN")
+            retirement_proof = None
+            if retire_worker:
+                retirement_proof = self._session_worker_retirement_proof(
+                    (project_id, session_id), worker, lifecycle, connected=True,
+                )
+                if retirement_proof is None:
+                    return self._finish(record, self._error(
+                        "WORKER_RETIREMENT_UNAVAILABLE",
+                        "exact Worker Popen, birth, connected epoch, or liveness could not be verified",
+                        data={"project_id": project_id, "session_id": session_id,
+                              "state": "CONNECTED", "engine_dispatched": False,
+                              "worker_handle_preserved": True},
+                        safe_retry=False,
+                    ), "FAILED")
             self._bind_session_job_to_worker(
                 record, project_id=project_id, session_id=session_id,
                 worker_instance_id=lifecycle["worker_instance_id"],
@@ -1339,7 +1579,36 @@ class ControlDaemon:
                     server_instance_id=None,
                     health={"status": "UNKNOWN", "observed_at": None, "source": None},
                 )
-                self.session_lifecycle.save(updated, expected_revision=lifecycle["revision"])
+                lifecycle = self.session_lifecycle.save(updated, expected_revision=lifecycle["revision"])
+                if retire_worker:
+                    retirement_proof = self._session_worker_retirement_proof(
+                        (project_id, session_id), worker, lifecycle, connected=False,
+                    )
+                    if retirement_proof is None:
+                        unknown = self._updated_session_lifecycle(
+                            lifecycle, state="UNKNOWN", client_state="UNKNOWN",
+                            worker_instance_id=lifecycle["worker_instance_id"],
+                            worker_epoch=lifecycle["worker_epoch"],
+                            server_instance_id=None,
+                        )
+                        try:
+                            self.session_lifecycle.save(
+                                unknown, expected_revision=lifecycle["revision"],
+                            )
+                        except Exception:
+                            pass
+                        return self._finish(record, self._error(
+                            "EXECUTION_STATE_UNKNOWN",
+                            "Worker detached but exact retirement identity no longer verifies",
+                            data={"project_id": project_id, "session_id": session_id,
+                                  "state": "UNKNOWN", "engine_dispatched": dispatched,
+                                  "worker_handle_preserved": True},
+                            safe_retry=False, execution_state_unknown=True,
+                        ), "UNKNOWN")
+                    return self._retire_disconnected_session_worker(
+                        record, lifecycle, worker, retirement_proof,
+                        disconnect_rpc_dispatched=dispatched,
+                    )
                 result = {"success": True, "data": {
                     "project_id": project_id, "session_id": session_id,
                     "state": "DISCONNECTED", "client_connected": False,
@@ -1406,6 +1675,14 @@ class ControlDaemon:
             worker = self._session_worker_handles.get(key)
             runtime = self._session_runtime_configs.get(key)
             backend = self._session_backends.get(key)
+            if lifecycle.get("client_state") == "RETIRED":
+                return self._finish(record, self._error(
+                    "WORKER_RETIRED", "session Worker was explicitly retired; reconnect cannot create a replacement Worker",
+                    data={"project_id": project_id, "session_id": session_id,
+                          "state": "DISCONNECTED", "client_state": "RETIRED",
+                          "engine_dispatched": False, "new_worker_created": False},
+                    safe_retry=False,
+                ), "FAILED")
             if worker is None or runtime is None or backend is None:
                 try:
                     stale_context = self.session_registry.get(project_id, session_id)
@@ -1607,6 +1884,7 @@ class ControlDaemon:
                             "source": "worker-connect-reply+observed-peer"},
                 )
                 lifecycle = self.session_lifecycle.save(connected_record, expected_revision=lifecycle["revision"])
+                self._remember_session_worker_child(key, worker)
                 result = {"success": True, "data": {
                     "project_id": project_id, "session_id": session_id,
                     "state": "CONNECTED", "runtime_id": runtime.runtime_id,

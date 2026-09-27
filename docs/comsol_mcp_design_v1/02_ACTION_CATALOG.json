@@ -1045,8 +1045,8 @@
       "operation_id": "session.disconnect",
       "mcp_tool_name": "session_disconnect",
       "domain": "session",
-      "purpose": "断开客户端，不默认关闭Server",
-      "arguments_signature": "session_id:str",
+      "purpose": "断开客户端，不默认关闭Server；可选择退休本Daemon精确创建的Worker子进程",
+      "arguments_signature": "session_id:str,retire_worker:bool?",
       "effect": "STATE_WRITE",
       "scope": "project",
       "gate": "G0",
@@ -1071,6 +1071,10 @@
           },
           "session_id": {
             "type": "string"
+          },
+          "retire_worker": {
+            "type": "boolean",
+            "description": "默认false；true仅在精确Worker身份、进程出生和静默fence均可验证时关闭并回收该Worker子进程，不停止COMSOL Server。"
           }
         },
         "required": [
@@ -1086,7 +1090,7 @@
         "normal_path",
         "failure_is_truthful"
       ],
-      "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read."
+      "notes": "retire_worker=true只退休本Daemon持有精确Popen句柄且出生身份可核验的Worker；共享Server不受影响。缺少出生/退出证据时保留句柄并失败关闭。"
     },
     {
       "operation_id": "session.stop",

@@ -5,6 +5,8 @@ from contextlib import contextmanager, nullcontext
 from dataclasses import replace
 import os
 from pathlib import Path
+import subprocess
+import sys
 from types import SimpleNamespace
 import threading
 import time
@@ -246,6 +248,27 @@ class _InjectedConnectWorker:
         self.close_calls += 1
 
 
+class _SyntheticChildProcess:
+    def __init__(self, pid=7411):
+        self.pid = pid
+        self.returncode = None
+        self.wait_calls = 0
+
+    def poll(self):
+        return self.returncode
+
+    def wait(self, timeout=None):
+        self.wait_calls += 1
+        self.returncode = 0
+        return self.returncode
+
+
+class _RetirementFailureWorker(_InjectedConnectWorker):
+    def close(self):
+        self.close_calls += 1
+        raise RuntimeError("synthetic close was not confirmed")
+
+
 class _StartAndRetirementFailureWorker(_InjectedConnectWorker):
     def start(self):
         self.start_calls += 1
@@ -268,11 +291,15 @@ def _connect_request(project_id: str, key: str, *, credentials_ref=None):
     return {"operation": "session.connect", "arguments": arguments, "execution": {}}
 
 
-def _session_mutation_request(operation: str, project_id: str, session_id: str, key: str):
+def _session_mutation_request(operation: str, project_id: str, session_id: str, key: str, *,
+                              retire_worker=False):
+    arguments = {"project_id": project_id, "session_id": session_id,
+                 "idempotency_key": key}
+    if retire_worker:
+        arguments["retire_worker"] = True
     return {
         "operation": operation,
-        "arguments": {"project_id": project_id, "session_id": session_id,
-                      "idempotency_key": key},
+        "arguments": arguments,
         "execution": {},
     }
 
@@ -389,6 +416,279 @@ def test_session_disconnect_detaches_only_client_and_preserves_exact_worker_for_
         assert new_context.worker_epoch == reconnected["data"]["worker_epoch"]
         assert daemon.session_lifecycle.get(project_id, session_id)["state"] == "CONNECTED"
     finally:
+        daemon.close()
+
+
+def test_session_disconnect_can_retire_exact_worker_child_without_stopping_shared_server(tmp_path, monkeypatch):
+    worker = _InjectedConnectWorker()
+    process = _SyntheticChildProcess()
+    worker._process = process
+    monkeypatch.setattr(
+        "comsol_mcp._control_daemon.process_identity",
+        lambda pid: {"alive": pid == process.pid, "start_epoch_ms": 123456 if pid == process.pid else None},
+    )
+    daemon, project_id = _connect_daemon(tmp_path, worker)
+    try:
+        connected = daemon.dispatch(_connect_request(project_id, "connect-retire-worker"))
+        assert connected["success"] is True, connected
+        session_id = connected["data"]["session_id"]
+
+        retired = daemon.dispatch(_session_mutation_request(
+            "session.disconnect", project_id, session_id, "disconnect-and-retire",
+            retire_worker=True,
+        ))
+        assert retired["success"] is True, retired
+        data = retired["data"]
+        assert data["state"] == "DISCONNECTED"
+        assert data["client_state"] == "RETIRED"
+        assert data["server_stopped"] is False
+        assert data["worker_handle_preserved"] is False
+        assert data["worker_retirement"] == {
+            "status": "RETIRED",
+            "worker_instance_id": "worker-fixture-1",
+            "worker_epoch": 3,
+            "process_identity": {"pid": process.pid, "start_epoch_ms": 123456},
+            "exact_popen_handle": True,
+            "birth_identity_matched_before_close": True,
+            "child_exit_confirmed": True,
+            "child_reaped": True,
+            "admission_fence": "RETIRED",
+            "disconnect_rpc_dispatched": True,
+            "worker_close_started": True,
+        }
+        assert data["engine_dispatched"] is True
+        assert data["disconnect_rpc_dispatched"] is True
+        assert worker.disconnect_calls == 1
+        assert worker.close_calls == 1
+        assert process.wait_calls == 1
+        assert process.poll() == 0
+        assert (project_id, session_id) not in daemon._session_worker_handles
+        lifecycle = daemon.session_lifecycle.get(project_id, session_id)
+        assert lifecycle["state"] == "DISCONNECTED"
+        assert lifecycle["client_state"] == "RETIRED"
+
+        replay = daemon.dispatch(_session_mutation_request(
+            "session.disconnect", project_id, session_id, "disconnect-and-retire",
+            retire_worker=True,
+        ))
+        assert replay == retired
+        reconnect = daemon.dispatch(_session_mutation_request(
+            "session.reconnect", project_id, session_id, "reconnect-after-retired-worker",
+        ))
+        assert reconnect["success"] is False
+        assert reconnect["error"]["code"] == "WORKER_RETIRED"
+        assert reconnect["data"]["new_worker_created"] is False
+        assert worker.start_calls == 1
+        assert worker.connect_calls == 1
+    finally:
+        daemon.close()
+
+
+def test_session_disconnect_retirement_is_available_after_prior_client_detach(tmp_path, monkeypatch):
+    worker = _InjectedConnectWorker()
+    process = _SyntheticChildProcess(pid=7412)
+    worker._process = process
+    monkeypatch.setattr(
+        "comsol_mcp._control_daemon.process_identity",
+        lambda pid: {"alive": pid == process.pid, "start_epoch_ms": 123457 if pid == process.pid else None},
+    )
+    daemon, project_id = _connect_daemon(tmp_path, worker)
+    try:
+        connected = daemon.dispatch(_connect_request(project_id, "connect-detach-then-retire"))
+        session_id = connected["data"]["session_id"]
+        detached = daemon.dispatch(_session_mutation_request(
+            "session.disconnect", project_id, session_id, "detach-first",
+        ))
+        assert detached["success"] is True, detached
+        assert worker.close_calls == 0
+        retired = daemon.dispatch(_session_mutation_request(
+            "session.disconnect", project_id, session_id, "retire-after-detach",
+            retire_worker=True,
+        ))
+        assert retired["success"] is True, retired
+        assert retired["data"]["worker_retirement"]["worker_epoch"] == 3
+        assert retired["data"]["engine_dispatched"] is False
+        assert retired["data"]["disconnect_rpc_dispatched"] is False
+        assert worker.disconnect_calls == 1
+        assert worker.close_calls == 1
+        assert process.wait_calls == 1
+    finally:
+        daemon.close()
+
+
+def test_session_disconnect_retirement_rejects_wrong_birth_before_detach(tmp_path, monkeypatch):
+    worker = _InjectedConnectWorker()
+    process = _SyntheticChildProcess(pid=7413)
+    worker._process = process
+    birth = {"value": 123458}
+    monkeypatch.setattr(
+        "comsol_mcp._control_daemon.process_identity",
+        lambda pid: {"alive": pid == process.pid,
+                     "start_epoch_ms": birth["value"] if pid == process.pid else None},
+    )
+    daemon, project_id = _connect_daemon(tmp_path, worker)
+    try:
+        connected = daemon.dispatch(_connect_request(project_id, "connect-wrong-retirement-birth"))
+        session_id = connected["data"]["session_id"]
+        birth["value"] += 1
+        refused = daemon.dispatch(_session_mutation_request(
+            "session.disconnect", project_id, session_id, "retire-wrong-birth",
+            retire_worker=True,
+        ))
+        assert refused["success"] is False
+        assert refused["error"]["code"] == "WORKER_RETIREMENT_UNAVAILABLE"
+        assert refused["data"]["engine_dispatched"] is False
+        assert refused["data"]["worker_handle_preserved"] is True
+        assert worker.disconnect_calls == 0
+        assert worker.close_calls == 0
+        assert process.poll() is None
+        assert daemon.session_lifecycle.get(project_id, session_id)["state"] == "CONNECTED"
+    finally:
+        daemon.close()
+
+
+def test_session_disconnect_retirement_close_failure_keeps_handle_unknown(tmp_path, monkeypatch):
+    worker = _RetirementFailureWorker()
+    process = _SyntheticChildProcess(pid=7414)
+    worker._process = process
+    monkeypatch.setattr(
+        "comsol_mcp._control_daemon.process_identity",
+        lambda pid: {"alive": pid == process.pid, "start_epoch_ms": 123459 if pid == process.pid else None},
+    )
+    daemon, project_id = _connect_daemon(tmp_path, worker)
+    try:
+        connected = daemon.dispatch(_connect_request(project_id, "connect-retirement-close-fails"))
+        session_id = connected["data"]["session_id"]
+        uncertain = daemon.dispatch(_session_mutation_request(
+            "session.disconnect", project_id, session_id, "disconnect-close-fails",
+            retire_worker=True,
+        ))
+        assert uncertain["success"] is False
+        assert uncertain["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
+        assert uncertain["data"]["engine_dispatched"] is True
+        assert uncertain["data"]["disconnect_rpc_dispatched"] is True
+        assert uncertain["data"]["worker_close_started"] is True
+        assert daemon.session_lifecycle.get(project_id, session_id)["state"] == "UNKNOWN"
+        assert daemon._session_worker_handles[(project_id, session_id)] is worker
+        assert worker.disconnect_calls == 1
+        assert worker.close_calls == 1
+        assert process.poll() is None
+        reconnect = daemon.dispatch(_session_mutation_request(
+            "session.reconnect", project_id, session_id, "cannot-reconnect-unknown-retirement",
+        ))
+        assert reconnect["success"] is False
+        assert worker.start_calls == 1
+    finally:
+        daemon.close()
+
+
+def test_session_disconnect_retire_worker_schema_is_optional_boolean():
+    from comsol_mcp._g2_registry import validate_call
+
+    base = {"project_id": "project-fixture", "session_id": "session-fixture",
+            "idempotency_key": "disconnect-schema"}
+    validate_call("session.disconnect", dict(base))
+    validate_call("session.disconnect", {**base, "retire_worker": False})
+    validate_call("session.disconnect", {**base, "retire_worker": True})
+    with pytest.raises(ExecutionContractError):
+        validate_call("session.disconnect", {**base, "retire_worker": "true"})
+    with pytest.raises(ExecutionContractError):
+        validate_call("session.disconnect", {**base, "retire_comsol_server": True})
+
+
+class _RealChildRetirementWorker(_InjectedConnectWorker):
+    def close(self):
+        self.close_calls += 1
+        if self._process.poll() is None:
+            self._process.terminate()
+        self._process.wait(timeout=3)
+
+
+def test_session_disconnect_retires_real_harmless_task_owned_popen(tmp_path):
+    from comsol_mcp._platform_process import process_identity
+
+    process = subprocess.Popen(
+        [sys.executable, "-c", "import time; time.sleep(30)"],
+        stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+    worker = _RealChildRetirementWorker()
+    worker._process = process
+    identity = process_identity(process.pid)
+    if (identity.get("alive") is not True or type(identity.get("start_epoch_ms")) is not int
+            or identity["start_epoch_ms"] <= 0):
+        process.terminate()
+        process.wait(timeout=3)
+        pytest.skip("host cannot provide exact process birth identity")
+    daemon, project_id = _connect_daemon(tmp_path, worker)
+    try:
+        connected = daemon.dispatch(_connect_request(project_id, "connect-real-child-retirement"))
+        assert connected["success"] is True, connected
+        session_id = connected["data"]["session_id"]
+        result = daemon.dispatch(_session_mutation_request(
+            "session.disconnect", project_id, session_id, "retire-real-child",
+            retire_worker=True,
+        ))
+        assert result["success"] is True, result
+        evidence = result["data"]["worker_retirement"]
+        assert evidence["process_identity"] == {
+            "pid": process.pid, "start_epoch_ms": identity["start_epoch_ms"],
+        }
+        assert evidence["exact_popen_handle"] is True
+        assert evidence["birth_identity_matched_before_close"] is True
+        assert evidence["child_exit_confirmed"] is True
+        assert evidence["child_reaped"] is True
+        assert process.poll() is not None
+    finally:
+        daemon.close()
+        if process.poll() is None:
+            process.terminate()
+            process.wait(timeout=3)
+
+
+def test_session_disconnect_retirement_waits_for_accepted_worker_tasks(tmp_path, monkeypatch):
+    worker = _InjectedConnectWorker()
+    process = _SyntheticChildProcess(pid=7415)
+    worker._process = process
+    monkeypatch.setattr(
+        "comsol_mcp._control_daemon.process_identity",
+        lambda pid: {"alive": pid == process.pid, "start_epoch_ms": 123460 if pid == process.pid else None},
+    )
+    daemon, project_id = _connect_daemon(tmp_path, worker)
+    entered, release = threading.Event(), threading.Event()
+    try:
+        connected = daemon.dispatch(_connect_request(project_id, "connect-retirement-busy"))
+        session_id = connected["data"]["session_id"]
+        context = daemon.session_registry.get(project_id, session_id)
+
+        def accepted_work():
+            entered.set()
+            assert release.wait(3)
+
+        future = daemon.session_scheduler.submit(context, accepted_work)
+        assert entered.wait(1)
+        refused = daemon.dispatch(_session_mutation_request(
+            "session.disconnect", project_id, session_id, "retirement-busy",
+            retire_worker=True,
+        ))
+        assert refused["success"] is False
+        assert refused["error"]["code"] == "SESSION_BUSY"
+        assert refused["data"]["engine_dispatched"] is False
+        assert worker.disconnect_calls == 0
+        assert worker.close_calls == 0
+        assert process.poll() is None
+
+        release.set()
+        future.result(timeout=2)
+        retired = daemon.dispatch(_session_mutation_request(
+            "session.disconnect", project_id, session_id, "retirement-after-drain",
+            retire_worker=True,
+        ))
+        assert retired["success"] is True, retired
+        assert worker.disconnect_calls == 1
+        assert worker.close_calls == 1
+    finally:
+        release.set()
         daemon.close()
 
 

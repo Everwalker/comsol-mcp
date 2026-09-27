@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "at_utc": "2026-09-27T15:23:14.328851+00:00",
+  "stage": "F04 public exact Worker retirement",
+  "status": "PASS_SCOPED_SOFTWARE_AND_NATIVE_HARMLESS_CHILD",
+  "overall_lifecycle": "PARTIAL",
+  "base_commit": "c24256640dcd0ed8598bfef2a9db2e3ba2336b93",
+  "source_manifest": [
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "sha256": "ca42ae8f570288a5d27c7abb77c6e1820ef35c55a3892eed062b3af9b69997d0"
+    },
+    {
+      "path": "comsol_mcp/data/g2/02_ACTION_CATALOG.json",
+      "sha256": "36f6a46092dfa1606540820ff27000bb94cc20f2023657466fb7ff73006613bf"
+    },
+    {
+      "path": "docs/comsol_mcp_design_v1/02_ACTION_CATALOG.json",
+      "sha256": "36f6a46092dfa1606540820ff27000bb94cc20f2023657466fb7ff73006613bf"
+    },
+    {
+      "path": "tests/test_control_daemon_sessions.py",
+      "sha256": "641252fafcc82a1ce25dbde32dd65c80102960d53ae8a17c30c856701452f23c"
+    }
+  ],
+  "capability": "session.disconnect(retire_worker=true) retires the exact task-owned Worker; default disconnect preserves reconnect. Shared server is not stopped. Original PID/birth/Popen/epoch and quiescent admission are checked; close/wait doubt preserves UNKNOWN.",
+  "audit": "Connected detach+retire records disconnect_rpc_dispatched=true; detached-only retirement records false. worker_close_started is separate.",
+  "validation": {
+    "tests": {
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "tests": 116,
+      "time_seconds": 1.773
+    },
+    "command": "/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -m pytest -q tests/test_control_daemon_sessions.py tests/test_session_context.py tests/test_control_daemon_projects.py tests/test_g2_registry_packaging.py tests/test_g2_w08_w12.py --junitxml=junit.xml",
+    "runtime_imports": {
+      "action_catalog": "/private/tmp/luna_retire_worker_stage_20260927T1520Z/comsol_mcp/data/g2/02_ACTION_CATALOG.json",
+      "control_daemon": "/private/tmp/luna_retire_worker_stage_20260927T1520Z/comsol_mcp/_control_daemon.py",
+      "python": "/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python"
+    },
+    "main_verified_unchanged_runtime_files": 88,
+    "receipt": {
+      "path": "/private/tmp/luna_retire_worker_stage_20260927T1520Z/release_candidate_receipt.json",
+      "sha256": "e207db508e33aa02e37233ea6c68e083644451ea2ddd09fe6f4ea1526deba954"
+    },
+    "junit": {
+      "path": "/private/tmp/luna_retire_worker_stage_20260927T1520Z/junit.xml",
+      "sha256": "92df308661d6ed73780bb80b918c9b32e8aea2ba0de12389dfae64017b8fbd70"
+    },
+    "actual_harmless_child": {
+      "path": "actual_child_receipt.json",
+      "result": {
+        "birth_start_epoch_ms": 1790522443438,
+        "connect_success": true,
+        "error": null,
+        "popen_returncode": -15,
+        "post_exit_process_identity": {
+          "alive": false,
+          "start_epoch_ms": null
+        },
+        "retirement_evidence": {
+          "admission_fence": "RETIRED",
+          "birth_identity_matched_before_close": true,
+          "child_exit_confirmed": true,
+          "child_reaped": true,
+          "disconnect_rpc_dispatched": true,
+          "exact_popen_handle": true,
+          "process_identity": {
+            "pid": 58484,
+            "start_epoch_ms": 1790522443438
+          },
+          "status": "RETIRED",
+          "worker_close_started": true,
+          "worker_epoch": 3,
+          "worker_instance_id": "worker-fixture-1"
+        },
+        "retirement_success": true,
+        "session_id": "session-0d326521fbb04af09c448f4575ae7f20",
+        "shared_server_stopped": false,
+        "worker_close_calls": 1,
+        "worker_pid": 58484
+      },
+      "sha256": "ade22e4b0f5d5f4d18df21035b4765f98b31322ced513c823cbd6a1756a87926"
+    }
+  },
+  "limitations": [
+    "No COMSOL installation or mphserver was launched; the owned Popen was a task-created harmless Python sleep child attached to the injected Worker fixture.",
+    "Windows native process identity/lifecycle execution was not run in this stage.",
+    "The adapter remains fail-closed on platforms where process birth is unavailable; Linux POSIX process_identity currently returns no birth timestamp.",
+    "This stage only adds Worker retirement through session.disconnect(retire_worker=true); owned COMSOL server start/stop and full session recovery remain separate work."
+  ],
+  "native_comsol": "NOT_RUN",
+  "final_independent_review": "NOT_STARTED",
+  "replay": {
+    "requirements": "Fresh checkout, Python3.12/test dependencies. Darwin harmless-child test requires local process identity access. No COMSOL needed.",
+    "command": "/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -m pytest -q tests/test_control_daemon_sessions.py tests/test_session_context.py tests/test_control_daemon_projects.py tests/test_g2_registry_packaging.py tests/test_g2_w08_w12.py --junitxml=junit.xml",
+    "raw_local_paths_required": false
+  },
+  "next_action": "Use public retirement in frozen W23/W24 native setup candidates; continue owned COMSOL server start-stop, full recovery, remaining W01-W26 and independent final review."
+}
