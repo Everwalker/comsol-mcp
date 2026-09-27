@@ -6,6 +6,8 @@ Updated 2026-09-27 UTC. Overall delivery is **PARTIAL**; execution continues thr
 
 ## Current checkpoint
 
+- **W23 two-mode basis v2: 32 synthetic/envelope tests PASS; native NOT_RUN; route NOT_REGISTERED.** Added complex Gram projection, normalization and independent-field comparison contracts. Review-driven fixes cover overflow, valid low-power scaling, per-mode Hermitian residuals and nonfinite references. Source and evidence hashes verified. See [compact basis checkpoint](docs/full_project_execution/w23_overlap/TWO_MODE_BASIS_CHECKPOINT.json). Authenticated managed native integration remains next.
+
 - **F04 dispatch/control software: 164 tests PASS; overall PARTIAL.** Unified default/registered scheduling; bound job controls to exact Worker/project/session; kept status/authorized stop outside the ordinary engine queue; fixed stop-fence races and required stored/live/caller process-birth agreement. Three session read routes expose cached metadata. Six session mutations and platform lifecycle/native termination remain unverified. See [compact F04 checkpoint](docs/full_project_execution/project_session/f04_dispatch_control_checkpoint_20260927.json).
 
 - **W24 shape post-processing: 23 synthetic-data tests PASS; native NOT_RUN.** Added substrate-complete wet/dry classification, interface/contact-line extraction, requested-time checks and separate volume/speed/shape gates. The raised-start sampling negative control prevents unobserved liquid being labeled dry. See [compact metrics checkpoint](docs/full_project_execution/w24/SHAPE_METRICS_CHECKPOINT.json). Actual managed field acquisition, stable shapes and sensitivity results remain unverified.

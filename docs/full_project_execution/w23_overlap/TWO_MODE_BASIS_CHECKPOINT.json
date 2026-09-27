@@ -1,0 +1,74 @@
+{
+  "additional_checks": {
+    "git_diff_check": "PASS",
+    "py_compile": "PASS"
+  },
+  "checkpoint_id": "w23-mode-basis-v2-numeric-and-compare-fix-20260927T111244Z",
+  "imported_reference_sha256": {
+    "tools/w23_full3d_science.py": "d20dcb49570ece6231d7f554c3033caa7018cce07bca0aa4b6394918806673f8"
+  },
+  "limitations": [
+    "synthetic and envelope-only software checks; no native COMSOL integral/model execution",
+    "no production dispatcher or provenance authentication"
+  ],
+  "native_result": "NOT_RUN",
+  "numerical_fixes": [
+    "diagonal normalization G=D H D; no raw determinant or sqrt(diagonal product)",
+    "per-mode normalized Hermitian residual",
+    "all projected intermediates and eta checked finite",
+    "reference/native G and b normalized by sequential modal/signal scales before error calculations",
+    "independent complex entries revalidated and reference projection recomputed before comparison"
+  ],
+  "production_route": "NOT_REGISTERED",
+  "regressions": [
+    "large finite G,b matching accepted without overflow",
+    "large finite normalized coupling mismatch rejected above relative bound",
+    "valid 2e-12 W basis with normalized condition 19 accepted",
+    "weak-mode diagonal imaginary residual rejected",
+    "NaN independent Gram value rejected"
+  ],
+  "scope": "v2 scaled Hermitian solve and finite scale-normalized native/reference comparison",
+  "source_sha256": {
+    "tests/test_w23_mode_basis_v2.py": "d8bd8bb79b5a3e8008b78a483a412d96abfffe1e43b8e7fb4af4ee6b98a120f0",
+    "tools/w23_mode_basis_v2.py": "a64d90c7c22956a31dcbf1dfaa44479d9b240aad39fcf909dcb030ca8aa48554"
+  },
+  "status": "SOFTWARE_CHECKPOINT_PASS",
+  "study_or_solver_invoked": false,
+  "test": {
+    "argv": [
+      "/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python",
+      "-m",
+      "pytest",
+      "tests/test_w23_mode_basis_v2.py",
+      "-q",
+      "--junitxml=docs/full_project_execution/w23_overlap/evidence/w23_mode_basis_v2_compare_fix_20260927T111244Z/junit.xml"
+    ],
+    "console_sha256": "1d626bce8a5978fd1ebcf6a972929d574a75ae5a5a39f78006f33290f9290911",
+    "errors": 0,
+    "failures": 0,
+    "junit_sha256": "27c58300a86f713b75099a8468219eec4586fc037e199e4d1978d8b5ee996e9a",
+    "python_executable": "/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python",
+    "python_version": "3.12.13 (main, Mar  3 2026, 12:39:30) [Clang 21.0.0 (clang-2100.0.123.102)]",
+    "skipped": 0,
+    "tests": 32
+  },
+  "raw_local_evidence": {
+    "directory": "docs/full_project_execution/w23_overlap/evidence/w23_mode_basis_v2_compare_fix_20260927T111244Z",
+    "receipt_sha256": "f30d5719350e2de4326476cdf2507b19982986e4ee4c9421f89536832a1fe8ae",
+    "junit": "junit.xml",
+    "console": "console.txt",
+    "publication": "Raw evidence retained locally; rebuild using test.argv, creating the output directory first."
+  },
+  "main_review": {
+    "source_receipt_junit_console_hashes": "VERIFIED",
+    "junit": "32 tests; 0 failures/errors/skips",
+    "scope": "Review of software mathematics, finite-value gates and envelope checks; not independent final project acceptance.",
+    "repaired_findings": [
+      "Raw Gram determinant overflow produced nonfinite efficiency; normalized solve now rejects nonfinite values.",
+      "Valid low-power normalized basis was falsely singular; gate now uses normalized condition.",
+      "Weak-mode non-Hermitian residual was masked by largest diagonal.",
+      "Comparator power products could overflow; finite sequential scaling and independent reference revalidation added."
+    ]
+  },
+  "next_action": "Implement authenticated managed v2 integral/field acquisition route and real model-bound validation; preserve scalar v1 semantics. Native execution requires a distinct reviewed candidate. Continue W01-W26 and final independent review."
+}
