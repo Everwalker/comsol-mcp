@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "scope": "W24 single-live-runtime setup readmission, external approval and fourteen-slot science orchestration",
+  "status": "PASS_SCOPED_SOFTWARE",
+  "native_acceptance": "NOT_RUN",
+  "scientific_acceptance": "NOT_ESTABLISHED",
+  "base_commit": "2a61e4c9c7954e0ce12dbdf9cae4792bebe65208",
+  "source_manifest": [
+    {
+      "archive_matches_live": true,
+      "bytes": 97806,
+      "path": "tools/run_native_w24_static_shape_sensitivity_lifecycle.py",
+      "sha256": "c2dbdb468a85705ba9c087f567d7e77a252defc0e20762f7c41a95ca107a3c3a"
+    },
+    {
+      "archive_matches_live": true,
+      "bytes": 22898,
+      "path": "tests/test_run_native_w24_static_shape_sensitivity_lifecycle.py",
+      "sha256": "88b949edfe05e40ed16cdbc42f07830c77fcfe4714cc34c6107777ec55c22473"
+    }
+  ],
+  "capabilities": [
+    "Validate fourteen unsolved setup artifacts, historical cleanup, registered project and existing OperationStore.",
+    "Durably claim one science Server birth per original setup receipt; no restart or alternate hash resets the claim.",
+    "Bind new Server and separate Worker birth identities to one continuous deadline including readmission, approval wait, science and cleanup.",
+    "Write PENDING approval input; accept only external approval path and expected SHA through one private inbox observation.",
+    "Fence public routes by phase; expired/mismatched approval or replaced Worker prevents Study.run.",
+    "UNKNOWN preserves live process handles; cleanup uses existing exact owned Worker/Server lifecycle routines."
+  ],
+  "actual_tests": {
+    "expanded_junit": {
+      "bytes": 36500,
+      "path": "/private/tmp/w24_lifecycle_stage_2a61e4c_20260928/junit-expanded.xml",
+      "sha256": "69eb5674180aff76c4643d1e20afffa8de412061485368c31a8733f93fd5dfa3"
+    },
+    "result": "158 PASS / 0 FAIL / 0 ERROR / 0 SKIP",
+    "command": "/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -m pytest -q --junitxml=/private/tmp/w24_lifecycle_stage_2a61e4c_20260928/junit-expanded.xml tests/test_w24_static_shape_metrics.py tests/test_w24_static_shape_managed.py tests/test_run_native_w24_static_shape_sensitivity_lifecycle.py tests/test_run_native_w24_static_shape_setup_campaign.py tests/test_w24_static_shape_sensitivity_comparison.py tests/test_w24_static_shape_pair_comparison.py tests/test_run_native_w24_static_shape_science.py tests/test_w24_static_shape_sensitivity.py tests/test_w24_static_shape_capture.py",
+    "py_compile": "PASS",
+    "cli_help": "PASS",
+    "root_retests": {
+      "path": "/private/tmp/w24_lifecycle_stage_2a61e4c_20260928/root_lifecycle_retests.xml",
+      "sha256": "e0330bce4bb344899382d453434fc76906f55f31213f25130711b4a991492ce9",
+      "result": "10 PASS / 0 FAIL / 0 ERROR / 0 SKIP"
+    }
+  },
+  "main_review": {
+    "status": "PASS_SCOPED_SOFTWARE",
+    "base_sources_verified": 25,
+    "runtime_import_origins_verified": 20,
+    "overlay_files_verified": 2,
+    "limitations": "Injected runtime and synthetic cases test software gates; no native COMSOL birth, readmission, solve, cleanup or scientific result was executed for this candidate."
+  },
+  "raw_receipt": {
+    "path": "/private/tmp/w24_lifecycle_stage_2a61e4c_20260928/software_replay_extended_receipt.json",
+    "sha256": "f257929528d6c0730f4d31db57a23e97ab8aa670d3da02ff2290bcfd62139a39"
+  },
+  "replay": "Archive base commit, overlay exactly these two source/test files from this stage commit, install Python 3.12 project test dependencies, unset PYTHONPATH, run listed nine test modules. CLI --help is safe; science is not a replay of software tests. Preserve raw evidence locally; do not commit runtime or bulk logs.",
+  "native_constraints": [
+    "The 3600-second Server budget including 90-second cleanup is a preparation proposal only, not new native authorization.",
+    "Original failed setup resources require the pending explicit local cleanup authorization and fresh exact identity/quiescence checks.",
+    "A real setup receipt and independently reviewed current source freeze are required before native execution."
+  ],
+  "next_action": "Continue W24 UV/gel/reference/viscoelastic implementation from original acceptance criteria; review isolated native setup/science candidates when resource blocker is resolved. Continue F16 repaired durable reads and W23 optical convergence/cohort work."
+}
