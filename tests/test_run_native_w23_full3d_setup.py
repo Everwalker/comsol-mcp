@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import os
+import subprocess
 import sys
+import time
 import types
 import importlib
 from pathlib import Path
@@ -15,9 +18,13 @@ from tools.run_native_w23_full3d_setup import (
     EXPECTED_PYTHON,
     PublicDispatchAdapter,
     CleanupRefused,
+    CandidateError,
+    REPO,
     _assert_no_editable_fallback,
     _audit_loaded_project_modules,
     _lsof_listeners,
+    _bind_native_server_identity,
+    _job_ledger_terminal,
     _process_identity,
     _start_control_daemon,
     _stop_owned_process,
@@ -367,6 +374,140 @@ def test_resource_receipt_does_not_bind_wrong_pid_or_missing_birth_to_popen() ->
     assert receipt["managed_worker"]["status"] == "NEVER_DISPATCHED"
 
 
+def _start_actual_isolation_helper_process(tmp_path: Path):
+    """Start a harmless loopback child and obtain the real _process_snapshot shape."""
+    from comsol_mcp._g2_isolation import _process_snapshot
+
+    work = tmp_path.resolve()
+    shadow = work / "comsol-shadow"
+    shadow.mkdir()
+    port_path = work / "listener.port"
+    child = (
+        "import socket,sys,time; s=socket.socket(socket.AF_INET,socket.SOCK_STREAM); "
+        "s.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1); "
+        "s.bind(('127.0.0.1',0)); s.listen(1); "
+        "open(sys.argv[1],'w').write(str(s.getsockname()[1])); time.sleep(60)"
+    )
+    proc = subprocess.Popen(
+        [str(EXPECTED_PYTHON), "-B", "-S", "-c", child,
+         str(port_path), str(shadow), str(work)],
+        cwd=work, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+    try:
+        deadline = time.monotonic() + 5.0
+        while not port_path.exists() and proc.poll() is None and time.monotonic() < deadline:
+            time.sleep(0.02)
+        assert port_path.is_file() and proc.poll() is None
+        port = int(port_path.read_text())
+        raw = _process_snapshot(proc.pid)
+        assert isinstance(raw, dict)
+        assert {"pid", "birth", "command", "command_sha256"} <= set(raw)
+        assert "start_epoch_ms" not in raw
+        assert raw["pid"] == proc.pid
+        assert str(work) in raw["command"] and str(shadow) in raw["command"]
+        server = types.SimpleNamespace(
+            work=work, shadow_root=shadow, proc=proc, port=port,
+            process_identity={**raw, "port": port})
+        listener = {
+            "status": "LOOPBACK_LISTENER_VERIFIED_BEFORE_WORKER",
+            "pid": proc.pid, "port": port,
+            "endpoint": f"127.0.0.1:{port}",
+            "process_identity": server.process_identity,
+        }
+        return proc, server, listener
+    except BaseException:
+        proc.terminate()
+        proc.wait(timeout=3.0)
+        raise
+
+
+def _stop_helper_test_child(proc: subprocess.Popen[Any]) -> None:
+    if proc.poll() is None:
+        proc.terminate()
+        proc.wait(timeout=3.0)
+
+
+def test_native_server_identity_binds_actual_helper_shape_to_exact_popen_birth(tmp_path: Path) -> None:
+    from comsol_mcp._g2_isolation import _process_snapshot
+
+    proc, server, listener = _start_actual_isolation_helper_process(tmp_path)
+    try:
+        assert "start_epoch_ms" not in server.process_identity
+        bound = _bind_native_server_identity(server, listener)
+        assert bound == _process_identity(proc.pid)
+        assert type(bound["start_epoch_ms"]) is int and bound["start_epoch_ms"] > 0
+        assert proc.poll() is None
+        assert _process_snapshot(proc.pid)["birth"] == server.process_identity["birth"]
+    finally:
+        _stop_helper_test_child(proc)
+
+
+@pytest.mark.parametrize("mutation", [
+    "missing_birth", "wrong_pid", "malformed_command_hash", "tampered_command",
+    "wrong_port", "listener_pid_mismatch", "listener_snapshot_mismatch",
+])
+def test_native_server_identity_rejects_actual_helper_shape_tampering(
+    tmp_path: Path, mutation: str,
+) -> None:
+    import copy
+
+    proc, server, listener = _start_actual_isolation_helper_process(tmp_path)
+    try:
+        identity = copy.deepcopy(server.process_identity)
+        observed_listener = copy.deepcopy(listener)
+        if mutation == "missing_birth":
+            identity.pop("birth")
+        elif mutation == "wrong_pid":
+            identity["pid"] += 1
+        elif mutation == "malformed_command_hash":
+            identity["command_sha256"] = "not-a-sha256"
+        elif mutation == "tampered_command":
+            identity["command"] += " /unbound-command"
+        elif mutation == "wrong_port":
+            identity["port"] += 1
+        elif mutation == "listener_pid_mismatch":
+            observed_listener["pid"] += 1
+        elif mutation == "listener_snapshot_mismatch":
+            observed_listener["process_identity"] = {**observed_listener["process_identity"], "birth": "tampered"}
+        if mutation not in {"listener_pid_mismatch", "listener_snapshot_mismatch"}:
+            server.process_identity = identity
+            observed_listener["process_identity"] = identity
+        with pytest.raises(CandidateError):
+            _bind_native_server_identity(server, observed_listener)
+    finally:
+        _stop_helper_test_child(proc)
+
+
+def test_native_server_identity_rejects_popen_that_has_exited(tmp_path: Path) -> None:
+    proc, server, listener = _start_actual_isolation_helper_process(tmp_path)
+    _stop_helper_test_child(proc)
+    assert proc.poll() is not None
+    with pytest.raises(CandidateError):
+        _bind_native_server_identity(server, listener)
+
+
+def test_public_adapter_rejects_missing_or_mismatched_job_list_project_envelope(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from comsol_mcp import _control_client
+
+    adapter = PublicDispatchAdapter(tmp_path, expected_control_home=tmp_path / "control-home",
+                                    archive_root=REPO)
+    monkeypatch.setattr(adapter, "_verify_owned_control_route", lambda: None)
+    dispatched: list[tuple[str, dict[str, Any], dict[str, Any]]] = []
+    monkeypatch.setattr(_control_client, "dispatch",
+                        lambda operation, arguments, execution: dispatched.append(
+                            (operation, dict(arguments), dict(execution))) or {"success": True, "data": {}})
+    with pytest.raises(CandidateError, match="matching arguments and execution project_id"):
+        adapter.dispatch({"operation": "job.list",
+                          "arguments": {"project_id": "project-a", "limit": 500},
+                          "execution": {}})
+    with pytest.raises(CandidateError, match="matching arguments and execution project_id"):
+        adapter.dispatch({"operation": "job.list",
+                          "arguments": {"project_id": "project-a", "limit": 500},
+                          "execution": {"project_id": "project-b"}})
+    assert dispatched == []
+
+
 @pytest.mark.parametrize("surface", ["sys_path", "path_hook", "meta_finder"])
 def test_editable_finder_and_path_hook_are_rejected(surface: str) -> None:
     args: dict[str, Any] = {"sys_path": [], "path_hooks": [], "meta_path": []}
@@ -540,3 +681,73 @@ def test_real_control_daemon_public_dispatch_binds_exact_popen_without_comsol(
             (tmp_path / "no_comsol_control_daemon_smoke_receipt.json").write_text(
                 json.dumps(receipt, indent=2, ensure_ascii=False, allow_nan=False) + "\n",
                 encoding="utf-8")
+def test_job_ledger_pages_real_public_control_daemon_sqlite_route(tmp_path: Path) -> None:
+    from comsol_mcp._control_daemon import ControlDaemon
+
+    project_id = "w23-public-route-project"
+    project_root = tmp_path / "projects"
+    project_root.mkdir()
+    daemon = ControlDaemon(tmp_path / "control-home", project_root=project_root)
+
+    def seed_job(index: int, *, project: str, status: str) -> None:
+        record, reused = daemon.store.begin(
+            request_id=f"w23-route-request-{index}",
+            idempotency_key=f"w23-route-key-{index}",
+            request_hash=hashlib.sha256(f"seed-{index}".encode()).hexdigest(),
+            operation="w23.route.seed",
+            metadata={"operation": "w23.route.seed", "project_id": project,
+                      "execution": {"project_id": project}, "engine_dispatched": False},
+        )
+        assert reused is False
+        daemon.store.finish(record["operation_id"], status=status,
+                            result={"success": status == "SUCCEEDED", "data": {"engine_dispatched": False}})
+
+    class DirectPublicControlRoute:
+        def __init__(self) -> None:
+            self.requests: list[dict[str, Any]] = []
+
+        def dispatch(self, request: dict[str, Any]) -> dict[str, Any]:
+            self.requests.append(json.loads(json.dumps(request)))
+            return daemon.dispatch(request)
+
+    route = DirectPublicControlRoute()
+    try:
+        for index in range(1007):
+            seed_job(index, project=project_id, status="SUCCEEDED")
+        seed_job(2000, project="w23-other-project", status="RUNNING")
+        assert daemon.backend.worker is None
+
+        ledger = _job_ledger_terminal(route, project_id)
+        assert ledger["count"] == 1007
+        assert ledger["total_count"] == 1007
+        assert ledger["page_count"] == 3
+        assert ledger["all_terminal"] is True
+        assert ledger["nonterminal"] == []
+        assert [request["arguments"]["offset"] for request in route.requests] == [0, 500, 1000]
+        assert all(request["arguments"]["limit"] == 500 for request in route.requests)
+        assert all(request["arguments"]["project_id"] == project_id
+                   and request["execution"]["project_id"] == project_id
+                   for request in route.requests)
+
+        seed_job(2001, project=project_id, status="UNKNOWN")
+        route.requests.clear()
+        nonterminal = _job_ledger_terminal(route, project_id)
+        assert nonterminal["count"] == 1008
+        assert nonterminal["all_terminal"] is False
+        assert len(nonterminal["nonterminal"]) == 1
+        assert nonterminal["nonterminal"][0]["status"] == "UNKNOWN"
+
+        action_catalog = json.loads(
+            (REPO / "comsol_mcp/data/g2/02_ACTION_CATALOG.json").read_text(encoding="utf-8"))
+        job_list = next(item for item in action_catalog["operations"]
+                        if item["operation_id"] == "job.list")
+        assert job_list["input_schema"]["properties"]["limit"]["maximum"] == 500
+        too_large = daemon.dispatch({
+            "operation": "job.list",
+            "arguments": {"project_id": project_id, "offset": 0, "limit": 501},
+            "execution": {"project_id": project_id},
+        })
+        assert too_large["success"] is False
+        assert too_large["error"]["code"] == "INVALID_REQUEST"
+    finally:
+        daemon.close()

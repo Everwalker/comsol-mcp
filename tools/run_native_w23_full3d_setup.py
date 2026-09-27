@@ -15,6 +15,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 import tarfile
@@ -34,6 +35,8 @@ EVIDENCE_PREFIX = "/private/tmp/comsol-mcp-w23-full3d-"
 MAX_WALL_S = 1800
 CLEANUP_RESERVE_S = 120
 TERMINAL_JOB_STATES = {"SUCCEEDED", "FAILED", "EXPIRED", "LOST", "CANCELLED"}
+JOB_LIST_PAGE_LIMIT = 500
+MAX_JOB_LEDGER_ROWS = 10000
 EXPECTED_PYTHON = Path("/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python")
 EXPLICIT_SITE_PACKAGES = (EXPECTED_PYTHON.parent.parent / "lib" /
                           f"python{sys.version_info.major}.{sys.version_info.minor}" / "site-packages")
@@ -755,6 +758,12 @@ class PublicDispatchAdapter:
         arguments, execution = request.get("arguments", {}), request.get("execution", {})
         if not isinstance(operation, str) or not isinstance(arguments, dict) or not isinstance(execution, dict):
             raise CandidateError("public route request has invalid operation/arguments/execution")
+        if operation == "job.list":
+            filter_project = arguments.get("project_id")
+            envelope_project = execution.get("project_id")
+            if (not isinstance(filter_project, str) or not filter_project.strip()
+                    or not isinstance(envelope_project, str) or envelope_project != filter_project):
+                raise CandidateError("project-scoped public job.list requires matching arguments and execution project_id")
         if operation in {"study.run", "solve", "solver.run", "model.solve"}:
             raise CandidateError("setup-only route guard rejected a solve operation")
         self._verify_owned_control_route()
@@ -824,17 +833,77 @@ def _managed_model_request(project_id: str, session: Mapping[str, Any]) -> dict[
 
 
 def _job_ledger_terminal(dispatcher: PublicDispatchAdapter, project_id: str) -> dict[str, Any]:
-    response = dispatcher.dispatch({"operation": "job.list",
-        "arguments": {"project_id": project_id, "limit": 1000}, "execution": {}})
-    if response.get("success") is not True:
-        raise CandidateError("public job.list could not verify the project operation ledger")
-    data = response.get("data")
-    jobs = data.get("jobs") if isinstance(data, Mapping) else None
-    if not isinstance(jobs, list):
-        raise CandidateError("public job.list omitted its jobs array")
-    nonterminal = [job for job in jobs if not isinstance(job, Mapping)
-                   or job.get("status") not in TERMINAL_JOB_STATES]
-    return {"jobs": jobs, "count": len(jobs), "nonterminal": nonterminal,
+    if not isinstance(project_id, str) or not project_id.strip():
+        raise CandidateError("public job.list requires an exact project identity")
+    jobs: list[dict[str, Any]] = []
+    seen_ids: set[str] = set()
+    offset = 0
+    expected_total: int | None = None
+    page_count = 0
+    while True:
+        page_count += 1
+        request = {"operation": "job.list",
+            "arguments": {"project_id": project_id, "offset": offset,
+                          "limit": JOB_LIST_PAGE_LIMIT},
+            # job.list is cataloged as project-scoped. Carry the same scope in
+            # the public execution envelope as well as the list filter.
+            "execution": {"project_id": project_id, "rpc_timeout_s": 30.0}}
+        response = dispatcher.dispatch(request)
+        if response.get("success") is not True:
+            error = response.get("error")
+            code = error.get("code") if isinstance(error, Mapping) else None
+            message = error.get("message") if isinstance(error, Mapping) else None
+            raise CandidateError(
+                f"public job.list could not verify the project operation ledger: {code or 'UNKNOWN'}: {message or 'no error detail'}")
+        data = response.get("data")
+        if not isinstance(data, Mapping):
+            raise CandidateError("public job.list omitted its data object")
+        page = data.get("jobs")
+        if not isinstance(page, list):
+            raise CandidateError("public job.list omitted its jobs array")
+        total = data.get("total", data.get("total_count"))
+        total_count = data.get("total_count")
+        if (type(total) is not int or total < 0
+                or (total_count is not None and (type(total_count) is not int or total_count != total))):
+            raise CandidateError("public job.list omitted a stable non-negative total count")
+        response_offset = data.get("offset")
+        response_limit = data.get("limit")
+        has_more = data.get("has_more")
+        next_cursor = data.get("next_cursor")
+        if (type(response_offset) is not int or response_offset != offset
+                or type(response_limit) is not int or response_limit != JOB_LIST_PAGE_LIMIT
+                or type(has_more) is not bool):
+            raise CandidateError("public job.list page metadata does not match its request")
+        if expected_total is None:
+            expected_total = total
+        elif total != expected_total:
+            raise CandidateError("public job.list total changed while paging the project ledger")
+        if len(page) > JOB_LIST_PAGE_LIMIT or offset + len(page) > total:
+            raise CandidateError("public job.list returned an oversized or out-of-range page")
+        for item in page:
+            if not isinstance(item, Mapping):
+                raise CandidateError("public job.list returned a malformed job row")
+            job_id = item.get("job_id")
+            if not isinstance(job_id, str) or not job_id.strip() or job_id in seen_ids:
+                raise CandidateError("public job.list returned a missing or duplicate job identity")
+            seen_ids.add(job_id)
+            jobs.append(dict(item))
+        if len(jobs) > MAX_JOB_LEDGER_ROWS:
+            raise CandidateError("public job.list project ledger exceeds the frozen 10,000-row inspection bound")
+        next_offset = offset + len(page)
+        if has_more:
+            if not page or next_cursor != str(next_offset) or next_offset >= total:
+                raise CandidateError("public job.list continuation cursor/has_more proof is inconsistent")
+            if page_count >= (MAX_JOB_LEDGER_ROWS + JOB_LIST_PAGE_LIMIT - 1) // JOB_LIST_PAGE_LIMIT:
+                raise CandidateError("public job.list exceeds the frozen page inspection bound")
+            offset = next_offset
+            continue
+        if next_cursor is not None or next_offset != total:
+            raise CandidateError("public job.list final page does not close the complete project ledger")
+        break
+    nonterminal = [job for job in jobs if job.get("status") not in TERMINAL_JOB_STATES]
+    return {"jobs": jobs, "count": len(jobs), "total_count": expected_total,
+            "page_count": page_count, "nonterminal": nonterminal,
             "all_terminal": not nonterminal}
 
 
@@ -847,6 +916,58 @@ def _process_identity(pid: int) -> dict[str, Any] | None:
     if value.get("alive") is not True or type(birth) is not int or birth <= 0:
         return None
     return {"pid": pid, "start_epoch_ms": birth}
+
+
+def _bind_native_server_identity(server: Any, listener: Mapping[str, Any] | None) -> dict[str, int]:
+    """Bind the published Popen to Darwin's numeric birth identity.
+
+    NativeLoopbackServer's `_g2_isolation._process_snapshot` readback contains
+    the formatted `birth` string and a command digest, not `start_epoch_ms`.
+    Read the numeric value through `_platform_process.process_identity` while
+    the exact Popen remains live, and cross-check that the helper snapshot and
+    listener both identify that Popen and private shadow.
+    """
+    proc = getattr(server, "proc", None)
+    pid = getattr(proc, "pid", None)
+    port = getattr(server, "port", None)
+    helper_identity = getattr(server, "process_identity", None)
+    if (type(pid) is not int or pid <= 1 or type(port) is not int or not 1 <= port <= 65535
+            or not callable(getattr(proc, "poll", None)) or proc.poll() is not None):
+        raise CandidateError("task-owned server Popen/port is not live for numeric birth binding")
+    if not isinstance(helper_identity, Mapping):
+        raise CandidateError("NativeLoopbackServer omitted its process snapshot")
+    helper_pid = helper_identity.get("pid")
+    helper_birth = helper_identity.get("birth")
+    helper_command = helper_identity.get("command")
+    helper_command_sha = helper_identity.get("command_sha256")
+    helper_port = helper_identity.get("port")
+    work = getattr(server, "work", None)
+    shadow_root = getattr(server, "shadow_root", None)
+    if (helper_pid != pid or not isinstance(helper_birth, str) or not helper_birth.strip()
+            or not isinstance(helper_command, str) or not helper_command
+            or not isinstance(helper_command_sha, str)
+            or re.fullmatch(r"[0-9a-f]{64}", helper_command_sha) is None
+            or _sha256_bytes(helper_command.encode("utf-8")) != helper_command_sha
+            or helper_port != port or work is None or shadow_root is None
+            or str(work) not in helper_command or str(shadow_root) not in helper_command):
+        raise CandidateError("NativeLoopbackServer process snapshot does not match its exact Popen/private shadow")
+    if (not isinstance(listener, Mapping)
+            or listener.get("status") != "LOOPBACK_LISTENER_VERIFIED_BEFORE_WORKER"
+            or listener.get("pid") != pid or listener.get("port") != port
+            or listener.get("endpoint") != f"127.0.0.1:{port}"
+            or listener.get("process_identity") != dict(helper_identity)):
+        raise CandidateError("pre-Worker listener evidence does not bind the same helper process snapshot")
+    first = _process_identity(pid)
+    if first is None or proc.poll() is not None:
+        raise CandidateError("native process birth identity could not be read while the exact Popen was live")
+    second = _process_identity(pid)
+    if second != first or proc.poll() is not None:
+        raise CandidateError("native process birth identity changed while binding the exact Popen")
+    listeners = _lsof_listeners(port)
+    if (len(listeners) != 1 or listeners[0]["pid"] != pid
+            or listeners[0]["endpoint"] != f"127.0.0.1:{port}"):
+        raise CandidateError("native birth binding lacks one current loopback listener owned by the exact Popen")
+    return first
 
 
 def _lsof_listeners(port: int) -> list[dict[str, Any]]:
@@ -1312,6 +1433,7 @@ def execute_candidate(*, repo: Path, evidence: Path, reviewed_sha256: str,
             stream.flush(); os.fsync(stream.fileno())
 
     def stop_server() -> Mapping[str, Any]:
+        nonlocal server_identity, server_port
         if server is None or server.proc is None:
             result = {"status": "NOT_STARTED", "child_started": False}
             process_cleanup["server"] = result
@@ -1319,11 +1441,11 @@ def execute_candidate(*, repo: Path, evidence: Path, reviewed_sha256: str,
         exact_identity = server_identity
         exact_port = server_port
         if exact_identity is None and isinstance(server.process_identity, Mapping):
-            birth = server.process_identity.get("start_epoch_ms")
-            if type(birth) is int and birth > 0:
-                exact_identity = {"pid": server.proc.pid, "start_epoch_ms": birth}
+            exact_identity = _bind_native_server_identity(server, server_listener)
+            server_identity = exact_identity
         if exact_port is None and type(server.port) is int:
             exact_port = server.port
+            server_port = exact_port
         try:
             if exact_identity is None or exact_port is None:
                 raise CandidateError("server Popen exists without exact birth/port proof")
@@ -1478,14 +1600,14 @@ def execute_candidate(*, repo: Path, evidence: Path, reviewed_sha256: str,
         if server.proc is None or type(server.port) is not int or not isinstance(server.process_identity, Mapping):
             raise CandidateError("task-owned server helper omitted Popen/port/birth proof")
         server_port = server.port
-        server_identity = {"pid": server.proc.pid,
-                           "start_epoch_ms": server.process_identity.get("start_epoch_ms")}
-        if type(server_identity["start_epoch_ms"]) is not int or server_identity["start_epoch_ms"] <= 0:
-            raise CandidateError("server process birth timestamp is unavailable")
+        server_identity = _bind_native_server_identity(server, listener)
         # Map exact OS birth epoch to monotonic time so startup/listener wait is
         # charged to the same 1,800-second budget.
         server_birth_mono = time.monotonic() - max(0.0, time.time() - server_identity["start_epoch_ms"] / 1000.0)
         event("task_owned_server_listener_ready", listener=listener,
+              server_identity=server_identity,
+              server_identity_source="comsol_mcp._platform_process.process_identity",
+              helper_birth_format=server.process_identity.get("birth"),
               budget_birth_epoch_ms=server_identity["start_epoch_ms"])
 
         def route(request: Mapping[str, Any], label: str, cap: int) -> dict[str, Any]:
@@ -1752,9 +1874,11 @@ def execute_candidate(*, repo: Path, evidence: Path, reviewed_sha256: str,
         result["numeric_port_mode_field_mapping"] = "UNVERIFIED"
         if server is not None and server.proc is not None:
             if server_identity is None and isinstance(server.process_identity, Mapping):
-                process_birth = server.process_identity.get("start_epoch_ms")
-                if type(process_birth) is int and process_birth > 0:
-                    server_identity = {"pid": server.proc.pid, "start_epoch_ms": process_birth}
+                try:
+                    server_identity = _bind_native_server_identity(server, server_listener)
+                except Exception as identity_exc:
+                    result["server_identity_binding_error"] = {
+                        "type": type(identity_exc).__name__, "message": str(identity_exc)}
             if server_port is None and type(server.port) is int:
                 server_port = server.port
         result["resource_ownership"] = _resource_ownership_receipt(

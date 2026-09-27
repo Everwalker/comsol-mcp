@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "status": "PASS_SCOPED_SOFTWARE",
+  "native_setup_rerun": "NOT_RUN",
+  "native_scientific_result": "NOT_RUN",
+  "candidate": {
+    "archive_manifest_sha256": "fbc93e05c658f6c2258c589ab5db3bab71d81d77216b18b0b0ac9cd3ee0a3262",
+    "base_commit": "a365420814b9159230364ad953ee13e8db9cc9be",
+    "candidate_sha256": "d9934f2477bc9bf026a68ab34a63b2619e5103a0108a9a5579661e149e39d9ad",
+    "freeze_path": "/private/tmp/comsol-mcp-w23-full3d-runner-fix-evidence-20260928/prepare/candidate_freeze.json",
+    "freeze_sha256": "796fb30f7d9c0547e53642f3bfef73b7a078b7dd742a13e3ecc5380c36e6f53c",
+    "overlay_files": {
+      "tests/test_run_native_w23_full3d_setup.py": {
+        "base_blob": null,
+        "bytes": 36480,
+        "candidate_overlay": true,
+        "sha256": "de643eafdcdff3ad9a0d1a5b5e0c7165794c4cee77e703ce2b8632d47819f590"
+      },
+      "tools/java/NativeW23Full3DFixture.java": {
+        "base_blob": null,
+        "bytes": 74113,
+        "candidate_overlay": true,
+        "sha256": "639d03e6a42b5541d1a364ca0765cf506fd4647d01241558080c2536074a4463"
+      },
+      "tools/run_native_w23_full3d_setup.py": {
+        "base_blob": null,
+        "bytes": 112290,
+        "candidate_overlay": true,
+        "sha256": "1e1af6d7f96a842062ff32ed9aec8e8defbb4d50c1e9450fac0e5092a9f0376e"
+      }
+    },
+    "root": "/private/tmp/comsol-mcp-w23-full3d-runner-fix-candidate-20260928",
+    "source_closure_sha256": "a9129b290f8d55062c94b4fa5c929a5c37c6773303f0883be5732d3cfed5992d",
+    "source_file_count": 102,
+    "verified_candidate_sha256": "d9934f2477bc9bf026a68ab34a63b2619e5103a0108a9a5579661e149e39d9ad"
+  },
+  "implementation": {
+    "job_ledger": "Public job.list uses catalog-compatible 500-row offset pages, exact matching project_id in arguments and execution, stable total and offset/limit/cursor metadata, duplicate/malformed row rejection, complete terminal coverage, and 10000-row fail-closed bound.",
+    "project_scope_guard": "PublicDispatchAdapter rejects missing or mismatched arguments.project_id/execution.project_id before its low-level public dispatch.",
+    "server_identity": "Use actual NativeLoopbackServer ps snapshot {pid,birth,command,command_sha256,port}; validate exact Popen PID, command digest, shadow/work paths, listener and loopback endpoint; obtain numeric start_epoch_ms with _process_identity while exact Popen remains alive and require repeated readback equality."
+  },
+  "tests": {
+    "passed": 50,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "junit_sha256": "911aa26c8825c6b1843d78b416156bde60eda96ac30f1a09906fd7ac4d75049b",
+    "junit_path": "/private/tmp/comsol-mcp-w23-full3d-runner-fix-evidence-20260928/software_tests.junit.xml",
+    "actual_helper_shape_test": "real _g2_isolation._process_snapshot on a harmless test-owned Popen; no start_epoch_ms assumed in helper shape; 7 tamper negatives plus exited-Popen rejection",
+    "real_public_dispatch_test": "ControlDaemon.dispatch -> OperationStore SQLite in isolated pytest temp home, 1007 target jobs across 3 pages, foreign project filtered, UNKNOWN job detected, catalog limit 501 rejected"
+  },
+  "main_review": {
+    "source_files_verified": 102,
+    "unchanged_published_files_verified": 99,
+    "receipt_freeze_and_junit_hashes_verified": true
+  },
+  "receipt": {
+    "path": "/private/tmp/comsol-mcp-w23-full3d-runner-fix-evidence-20260928/runner_fix_freeze_receipt.json",
+    "sha256": "eb01cfedf70d03280b54aa029762b6d530dea904c465c7bb7531ada1f44296f3"
+  },
+  "historical_failure": {
+    "native_scientific_result": "NOT_RUN",
+    "path": "/private/tmp/comsol-mcp-w23-full3d-candidate-hardening-20260928c/native-setup-run/setup_result.json",
+    "raw_evidence_sha256": {
+      "control_daemon_launch.json": "0c8e2f542957b54adea6c2d7becf0ef56d51a293b712ebc99749f7b0383c9756",
+      "events.jsonl": "eacffd24f0d370d542b31112194b6cfde1694678a60ebb5089c8fd2afab64f41",
+      "pre_worker_listener.json": "d05749470c4c4ab50ef9794fb424eb91461f2266273bc6661c0db5b95b38e062",
+      "private_shadow_receipt.json": "0f1f2b64b2e59c99437ec12cf8ca863935cc8b665c6e781094d803e8b740d4c3",
+      "public_dispatches.jsonl": "6b90a49dbc935be217300356bed0b4d2b761e6449e0de2ffba3997f9530d9295",
+      "setup_result.json": "a4bae653e735b5a1a9a0fa25b5d9cf1ac08fdf98554a63c67b98b43018c670d5"
+    },
+    "sha256": "a4bae653e735b5a1a9a0fa25b5d9cf1ac08fdf98554a63c67b98b43018c670d5",
+    "status": "UNKNOWN_PRESERVE_OWNED_RESOURCES"
+  },
+  "cleanup_authorization": {
+    "auto_review_rejection_record": "/private/tmp/comsol-mcp-w23-full3d-candidate-hardening-20260928c/native-setup-run/rescue_authorization_rejection.json",
+    "direct_user_authorization_pending": true,
+    "process_cleanup_performed": false,
+    "reconciliation_receipt": "/private/tmp/comsol-mcp-w23-full3d-candidate-hardening-20260928c/native-setup-run/rescue_readonly_reconciliation.json",
+    "sha256": "461b8854c566e8a3746e984c38fd54fa682fdb94c76310b6b5a38fdb8a609a9e",
+    "sha256_auto_review_rejection": "b5678efd51a46dca0a19ef73a898e209d5518847a5bdb03199ba1ebcf9eeda58"
+  },
+  "replay": "Use the source archive exporter from this checkpoint commit with base a365420 and its three-overlay allowlist, then exact Python3.12 -B -S plus explicit dependencies to run tests/test_run_native_w23_full3d_setup.py. Harmless loopback tests require bind access. Prepare a new setup freeze only after tests; native execution requires separate candidate review and resolved prior resources.",
+  "next_action": "Await explicit user authorization for bounded cleanup of preserved prior server/control processes; no workaround. Continue producer-lineage/field-mapping preparation, session recovery and W24. Never promote setup to science acceptance.",
+  "post_test_format_only_change": {
+    "path": "tests/test_run_native_w23_full3d_setup.py",
+    "tested_sha256": "de643eafdcdff3ad9a0d1a5b5e0c7165794c4cee77e703ce2b8632d47819f590",
+    "committed_sha256": "806de024c1de5ef8d165bcbe376c657225d8c125621143182bfe756f42eeaf67",
+    "change": "Removed redundant blank line at EOF; no executable content change."
+  }
+}
