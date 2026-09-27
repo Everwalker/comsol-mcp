@@ -633,7 +633,10 @@
         "tools/java/W24StaticShapeFixture.java",
         "docs/full_project_execution/w24/W24_STATIC_SHAPE_IMPLEMENTATION_DRAFT.md",
         "tools/w24_static_shape_metrics.py",
-        "tests/test_w24_static_shape_metrics.py"
+        "tests/test_w24_static_shape_metrics.py",
+        "tools/run_native_w24_static_shape_setup.py",
+        "tools/java/W24StaticShapeReadback.java",
+        "tests/test_w24_static_shape_managed.py"
       ],
       "evidence": [
         "docs/full_project_execution/w24/evidence/setup_only_candidate_20260927T0117Z/offline_checks.json",
@@ -655,7 +658,8 @@
         "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0510Z/native_run_20260927T0517Z/worker_ledger_reconciliation.json",
         "docs/full_project_execution/w24/evidence/static_shape_offline_20260927T1036Z/checkpoint.json",
         "docs/full_project_execution/w24/STATIC_SHAPE_OFFLINE_CHECKPOINT.json",
-        "docs/full_project_execution/w24/SHAPE_METRICS_CHECKPOINT.json"
+        "docs/full_project_execution/w24/SHAPE_METRICS_CHECKPOINT.json",
+        "docs/full_project_execution/w24/MANAGED_SHAPE_CHECKPOINT.json"
       ],
       "blockers": [
         "The W24 0841Z setup-only attempt failed before engine/Worker birth at project.inspect; preserve its FAIL_OR_INCOMPLETE result and do not replay the stale candidate.",
@@ -665,7 +669,7 @@
         "Windows COMSOL 6.3 remains required and unassessed; only macOS COMSOL 6.3 arm64/x86_64 are USER_REQUESTED_SKIP.",
         "Stress component identity still requires complete native Equation View descriptions/units and both mechanics benchmarks; values or names alone are insufficient."
       ],
-      "note": "W24 remains IN_PROGRESS/PARTIAL. Static-shape fixture compiled with Corretto 11.0.31 against the installed COMSOL 6.4 API classpath; this is API-signature software evidence only. The 0841Z cure setup attempt remains a preserved prebirth failure (0 engine/Worker births and 0 solve submissions). Native configuration, save/reopen, phase initialization and scientific acceptance are NOT_RUN.",
+      "note": "W24 remains PARTIAL. Managed shape setup checkpoint: 20 software tests/Java API compile PASS, exact session routing tested with real daemon and fake backend. Native model build/save/reopen, field/time capture, shape stability and full cure/mechanics/scientific acceptance remain NOT_RUN/incomplete. Prior failures and UNKNOWN jobs unchanged.",
       "execution_notes": [
         "0330Z native attempt: COMSOL 6.4.0.293 server PID 90771/port 63979 and one Worker PID 90848/port 63988; Python 3.14 lacked mcp during production ControlDaemon registry construction, before model setup. 0 solve submissions; exact cleanup and global quiescence verified.",
         "0346Z offline candidate adds exact Python interpreter/distribution inventory and a pre-birth production no-engine gate. Actual pip check passed; collect_legacy_registry and ControlDaemon construction/close passed; JDK11 compile and 37 focused tests passed. Software-only; no native result.",

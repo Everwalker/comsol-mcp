@@ -1,0 +1,126 @@
+{
+  "api_basis": {
+    "chunk_id": 17526,
+    "contract": "SolverSequence.getSize() returns [degrees of freedom, stored solution count].",
+    "doc_id": 4603,
+    "relative_path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_solver.51.08.html",
+    "source_sha256": "bc721d9c6cb94abc000a4e83a7b930e622dc26ece61b1d2bfb804014185e7c8d",
+    "title": "COMSOL 6.4 - General Information",
+    "version": "COMSOL 6.4 documentation"
+  },
+  "commands": [
+    {
+      "argv": [
+        "/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python",
+        "-m",
+        "py_compile",
+        "tools/run_native_w24_static_shape_setup.py",
+        "tests/test_w24_static_shape_managed.py"
+      ],
+      "exit_code": 0,
+      "log": "py_compile.log"
+    },
+    {
+      "argv": [
+        "/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "--junitxml=docs/full_project_execution/w24/evidence/managed_shape_readback_fix_20260927T112554Z/junit.xml",
+        "tests/test_w24_static_shape_managed.py"
+      ],
+      "counts": {
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0,
+        "tests": 20
+      },
+      "exit_code": 0,
+      "junit": "junit.xml",
+      "log": "pytest.log"
+    },
+    {
+      "argv": [
+        "/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home/bin/javac",
+        "-cp",
+        "/Applications/COMSOL64/Multiphysics/plugins/*:/Applications/COMSOL64/Multiphysics/apiplugins/*",
+        "-d",
+        "/private/tmp/w24_shape_readback_compile_v2",
+        "tools/java/W24StaticShapeFixture.java",
+        "tools/java/W24StaticShapeReadback.java"
+      ],
+      "exit_code": 0,
+      "log": "javac.log"
+    }
+  ],
+  "evidence_hashes": {
+    "javac.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "javac_version.log": "564a144eaeffbc8b100ee804a7bab94ce3fe6dd767e28a672ba4097d765fe504",
+    "junit.xml": "0a0429950e9e65d4dd9515a33402086a68a257376bc8fa55601e5c1c2aad9b56",
+    "py_compile.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "pytest.log": "14ce6f3e0f0c8063bf4ee47a818cd266ef1bcafbd086e0e43d61df88e4609a66"
+  },
+  "java_compiler_version_log": "javac_version.log",
+  "native_acceptance": "NOT_RUN",
+  "native_engine_births": 0,
+  "persistent_class_hashes": {
+    "compiled_fixture_class": {
+      "path": "/private/tmp/w24_shape_readback_compile_v2/W24StaticShapeFixture.class",
+      "sha256": "75e17f7be189ce38c9f7d490680074247b8e9a69a4518191300e8c6168b1d45b"
+    },
+    "compiled_readback_class": {
+      "path": "/private/tmp/w24_shape_readback_compile_v2/W24StaticShapeReadback.class",
+      "sha256": "4020ea942a4d187adbe53c227cdb9db6f9efafbec29ce71f8f5e27ea9ef9310d"
+    }
+  },
+  "python": {
+    "executable": "/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python",
+    "pytest": "9.1.1",
+    "version": "3.12.13"
+  },
+  "repair_scope": [
+    "Use exact registered SessionRuntimeContext.backend for project binding/Worker epoch reads.",
+    "Pass the parent session id in the project-scoped model_load execution envelope.",
+    "Reject boolean, NaN, and infinite SI parameter readbacks.",
+    "Before readback/save, observe each solver sequence getSize(); fail if any nonempty or inconsistent and never clear solution data."
+  ],
+  "schema": "W24_MANAGED_SHAPE_READBACK_FIX_RECEIPT_V1",
+  "source_hashes": {
+    "java_fixture": {
+      "path": "tools/java/W24StaticShapeFixture.java",
+      "sha256": "6c6cd9b1bf125f1a0b60614c207cb52126b6cc745ccb3da3d9bc407903495b18"
+    },
+    "java_readback": {
+      "path": "tools/java/W24StaticShapeReadback.java",
+      "sha256": "b473bee8d01f80bf416ba0a33ae42ab7dd25a001ca2aeb3880f5882382cbcf9a"
+    },
+    "runner": {
+      "path": "tools/run_native_w24_static_shape_setup.py",
+      "sha256": "eabc51dbaca8f695ee5712437454f1ab50318b45061789f6c9cc541a1bff4204"
+    },
+    "tests": {
+      "path": "tests/test_w24_static_shape_managed.py",
+      "sha256": "e36e8b26b8d4d0c1dfc4e11204156b18ae99261f71ab80d714df48fd87ccef68"
+    }
+  },
+  "source_scope_note": "Synthetic tests and API compilation only; not a COMSOL runtime or physics acceptance result.",
+  "status": "OFFLINE_SOFTWARE_CHECKPOINT_PASS",
+  "study_run_calls": 0,
+  "raw_local_evidence": {
+    "directory": "docs/full_project_execution/w24/evidence/managed_shape_readback_fix_20260927T112554Z",
+    "receipt_sha256": "b709e239f4366a63a1c079887d2b8c113ef923b69795aae9dccc42ec40c4e754",
+    "policy": "Raw logs/classes remain local; replay commands retained above."
+  },
+  "main_review": {
+    "verification": "Source, class, receipt and evidence hashes verified; JUnit 20 tests with zero failures/errors/skips; same-version API documentation independently read.",
+    "limitations": [
+      "No COMSOL engine/model execution or physics acceptance.",
+      "Real ControlDaemon route test uses a fake session backend; it verifies routing only.",
+      "Java compilation verifies signatures, not native property/solution behavior.",
+      "Complete runtime dependency closure must be freshly frozen before native setup."
+    ]
+  },
+  "next_action": "Finish managed raw field/time capture and cure/static-shape science; prepare isolated committed setup-only candidate and focused gates, then main prelaunch review."
+}

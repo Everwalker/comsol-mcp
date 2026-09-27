@@ -6,6 +6,8 @@ Updated 2026-09-27 UTC. Overall delivery is **PARTIAL**; execution continues thr
 
 ## Current checkpoint
 
+- **W24 managed shape setup: 20 software tests PASS; Java API compilation PASS; native NOT_RUN.** Added exact registered-session build/adopt/inspect/save/reopen orchestration and native configuration readback. Fixed default-session routing, nonfinite parameter acceptance and unproven unsolved-save claims; solver data is checked without clearing it. The real daemon routing test uses a fake backend. See [compact managed-shape checkpoint](docs/full_project_execution/w24/MANAGED_SHAPE_CHECKPOINT.json). Raw field/time acquisition and an isolated setup candidate remain next.
+
 - **W23 two-mode basis v2: 32 synthetic/envelope tests PASS; native NOT_RUN; route NOT_REGISTERED.** Added complex Gram projection, normalization and independent-field comparison contracts. Review-driven fixes cover overflow, valid low-power scaling, per-mode Hermitian residuals and nonfinite references. Source and evidence hashes verified. See [compact basis checkpoint](docs/full_project_execution/w23_overlap/TWO_MODE_BASIS_CHECKPOINT.json). Authenticated managed native integration remains next.
 
 - **F04 dispatch/control software: 164 tests PASS; overall PARTIAL.** Unified default/registered scheduling; bound job controls to exact Worker/project/session; kept status/authorized stop outside the ordinary engine queue; fixed stop-fence races and required stored/live/caller process-birth agreement. Three session read routes expose cached metadata. Six session mutations and platform lifecycle/native termination remain unverified. See [compact F04 checkpoint](docs/full_project_execution/project_session/f04_dispatch_control_checkpoint_20260927.json).
