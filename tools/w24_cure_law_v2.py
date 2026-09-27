@@ -286,13 +286,15 @@ def _wasactive_map(frame: Mapping[str, Any]) -> dict[tuple[str, ...], int]:
 
 
 def compare_v2_history_handoff(source: Mapping[str, Any], target: Mapping[str, Any], *,
-                               branch_dof_names: Sequence[str],
-                               dof_abs_tolerances: Mapping[str, float]) -> dict[str, Any]:
-    """Require complete native DOFs, cure fields, activation state, and branch history.
+                               dof_abs_tolerances: Mapping[str, float],
+                               history_abs_tolerances: Mapping[str, float],
+                               branch_dof_names: Sequence[str] | None = None) -> dict[str, Any]:
+    """Compare all V2 Xmesh DOFs plus explicit thermal/cure/activation histories.
 
-    ``branch_dof_names`` must come from a same-model native solution/Equation
-    View observation. This helper deliberately does not guess private COMSOL
-    internal-variable names from static metadata.
+    ``branch_dof_names`` is retained as a compatibility hint only. Caller
+    labels cannot authenticate COMSOL's private Maxwell memory variables, so
+    the result always keeps that part UNVERIFIED until a public native route
+    captures the actual branch state.
     """
     if not isinstance(source, Mapping) or not isinstance(target, Mapping):
         raise AcceptanceError("handoff frames must be mappings")
@@ -300,17 +302,37 @@ def compare_v2_history_handoff(source: Mapping[str, Any], target: Mapping[str, A
     target_time = _finite(target.get("time_s"), "target.time_s")
     if abs(source_time - target_time) > 1e-12:
         raise AcceptanceError("handoff frames must refer to the same exact boundary time")
+    axes_by_side: dict[str, int] = {}
+    for side, frame in (("source", source), ("target", target)):
+        metadata = _require_frame_v2_snapshot(frame, side)
+        axes = metadata.get("coordinate_axes")
+        axes_by_side[side] = axes
+        _history_capture_at_boundary(frame, side, source_time)
+    if axes_by_side["source"] != axes_by_side["target"]:
+        raise AcceptanceError("handoff Xmesh coordinate axis counts differ")
     left = dof_value_map(source)
     right = dof_value_map(target)
+    required_full_fields = {"comp1_T", "comp1_alpha", "comp1_Duv_rel", "comp1_qpost"}
+    for side, mapping, axes in (("source", left, axes_by_side["source"]),
+                                ("target", right, axes_by_side["target"])):
+        displacement_fields = {"comp1_u", "comp1_w"} if axes == 2 else {"comp1_u", "comp1_v", "comp1_w"}
+        present_names = {row[0] for row in mapping.values()}
+        missing_fields = sorted((required_full_fields | displacement_fields) - present_names)
+        if missing_fields:
+            raise AcceptanceError(
+                f"{side} full Xmesh snapshot lacks required cure/displacement DOF members: {missing_fields}"
+            )
     if set(left) != set(right):
         raise AcceptanceError("complete handoff DOF key sets differ")
-    if not isinstance(branch_dof_names, Sequence) or isinstance(branch_dof_names, (str, bytes)) or \
-            not branch_dof_names or not all(isinstance(name, str) and name for name in branch_dof_names):
-        raise AcceptanceError("native Maxwell branch history DOF names are required")
-    branch_names = set(branch_dof_names)
     observed_names = {row[0] for row in left.values()}
-    if not branch_names.issubset(observed_names):
-        raise AcceptanceError("native solution snapshot does not contain every observed Maxwell branch DOF")
+    branch_hints: set[str] = set()
+    if branch_dof_names is not None:
+        if not isinstance(branch_dof_names, Sequence) or isinstance(branch_dof_names, (str, bytes)) or \
+                not all(isinstance(name, str) and name for name in branch_dof_names):
+            raise AcceptanceError("branch DOF hints must be a sequence of exact observed names")
+        branch_hints = set(branch_dof_names)
+        if not branch_hints.issubset(observed_names):
+            raise AcceptanceError("caller Maxwell branch-name hint is not present in the complete Xmesh snapshot")
     if not isinstance(dof_abs_tolerances, Mapping) or not dof_abs_tolerances:
         raise AcceptanceError("per-field full-DOF handoff tolerances are required")
     if observed_names != set(dof_abs_tolerances):
@@ -327,40 +349,96 @@ def compare_v2_history_handoff(source: Mapping[str, Any], target: Mapping[str, A
             raise AcceptanceError(f"full handoff DOF {name} changed by {error:g}, above {tolerance:g}")
         max_by_name[name] = max(max_by_name[name], error)
 
-    fields = {
-        "dose": (DOSE_FIELD, ALPHA_FIELD, QPOST_FIELD),
-    }
-    cure_max: dict[str, float] = {}
-    for field in fields["dose"]:
-        a = {key: row[1] for key, row in left.items() if row[0] == field}
-        b = {key: row[1] for key, row in right.items() if row[0] == field}
-        if not a or set(a) != set(b):
-            raise AcceptanceError(f"handoff is missing exact native cure DOFs for {field}")
-        cure_max[field] = max(abs(a[key] - b[key]) for key in a)
-
-    wasactive_left = _wasactive_map(source)
-    wasactive_right = _wasactive_map(target)
-    if 1 not in wasactive_left.values():
-        raise AcceptanceError("history handoff source is not a post-gel state with any active adhesive DOF")
-    if set(wasactive_left) != set(wasactive_right):
-        raise AcceptanceError("native wasactive observation coordinates differ across handoff")
-    if wasactive_left != wasactive_right:
-        raise AcceptanceError("solid.wasactive activation history reset or changed across handoff")
-    branch_max = max((max_by_name[name] for name in branch_names), default=0.0)
+    required_history = {"T", "alpha", "Duv_rel", "qpost", "u", "w", "solid.isactive", "solid.wasactive"}
+    if not isinstance(history_abs_tolerances, Mapping) or set(history_abs_tolerances) != required_history:
+        raise AcceptanceError("history tolerance map must exactly cover T/alpha/Duv_rel/qpost/displacement/activation")
+    history_left = _history_capture_at_boundary(source, "source", source_time)
+    history_right = _history_capture_at_boundary(target, "target", source_time)
+    if set(history_left) != required_history or set(history_right) != required_history:
+        raise AcceptanceError("history capture is missing a required thermal/cure/displacement/activation expression")
+    history_max: dict[str, float] = {}
+    for field in sorted(required_history):
+        if len(history_left[field]) != len(history_right[field]):
+            raise AcceptanceError(f"history probe coordinates differ for {field}")
+        tolerance = _finite(history_abs_tolerances[field], f"history_abs_tolerances.{field}")
+        if tolerance < 0:
+            raise AcceptanceError("history field tolerances cannot be negative")
+        jumps = [abs(a - b) for a, b in zip(history_left[field], history_right[field])]
+        maximum_jump = max(jumps, default=0.0)
+        if maximum_jump > tolerance:
+            label = "solid.wasactive activation history reset" if field == "solid.wasactive" else f"native history {field} changed"
+            raise AcceptanceError(f"{label}: {maximum_jump:g} exceeds {tolerance:g}")
+        history_max[field] = maximum_jump
+    for activation_field in ("solid.isactive", "solid.wasactive"):
+        if any(value != 1.0 for value in history_left[activation_field]):
+            raise AcceptanceError(f"history handoff source is not fully post-gel active in {activation_field}")
+        if any(value != 1.0 for value in history_right[activation_field]):
+            raise AcceptanceError(f"history handoff target is not fully post-gel active in {activation_field}")
     return {
-        "status": "HISTORY_HANDOFF_MATCH_SOURCE_AUTH_REQUIRED",
-        "analysis_scope": "caller_supplied_frames_only",
+        "status": "VISIBLE_HISTORY_MATCH_BRANCH_STATE_UNVERIFIED",
+        "analysis_scope": "complete_v2_xmesh_and_native_expression_contract;source_auth_still_required",
         "source_identity_authenticated": False,
         "boundary_time_s": source_time,
         "full_dof_count": len(left),
-        "branch_state_dof_count": len(branch_names),
-        "branch_state_max_abs_jump": branch_max,
-        "cure_field_max_abs_jumps": cure_max,
-        "wasactive_coordinate_count": len(wasactive_left),
-        "wasactive_identical": True,
+        "branch_state_dof_count": 0,
+        "caller_branch_name_hints_ignored_for_acceptance": sorted(branch_hints),
+        "branch_state_max_abs_jump": None,
+        "max_full_dof_jump": max(max_by_name.values(), default=0.0),
+        "history_max_abs_jumps": history_max,
+        "activation_coordinates_identical": True,
+        "isactive_identical": history_max["solid.isactive"] == 0.0,
+        "wasactive_identical": history_max["solid.wasactive"] == 0.0,
         "max_abs_jump_by_dof_name": max_by_name,
+        "maxwell_branch_state": "UNVERIFIED_NO_PUBLIC_REFERENCE_STATE_CAPTURE",
         "native_semantics_verified": False,
     }
+
+
+def _require_frame_v2_snapshot(frame: Mapping[str, Any], label: str) -> Mapping[str, Any]:
+    metadata = frame.get("dofs")
+    if not isinstance(metadata, Mapping) or metadata.get("snapshot_schema") != "W24-DOF-SNAPSHOT-2" or \
+            metadata.get("complete_xmesh_dofs") is not True or metadata.get("coordinate_axes") not in (2, 3):
+        raise AcceptanceError(f"{label} requires a complete V2 Xmesh DOF snapshot")
+    coordinates = metadata.get("coords")
+    if not isinstance(coordinates, list) or len(coordinates) != metadata["coordinate_axes"]:
+        raise AcceptanceError(f"{label} V2 coordinate_axes does not match the Xmesh coordinate row count")
+    return metadata
+
+
+def _history_capture_at_boundary(frame: Mapping[str, Any], label: str,
+                                 time_s: float) -> dict[str, list[float]]:
+    capture = frame.get("history_capture")
+    if not isinstance(capture, Mapping) or capture.get("schema") != "W24_CURE_LAW_V2_HISTORY_CAPTURE_V1":
+        raise AcceptanceError(f"{label} frame lacks the exact V2 public history capture")
+    expressions = capture.get("expressions")
+    units = capture.get("units")
+    expected_expressions = ["T", "alpha", "Duv_rel", "qpost", "u", "w", "solid.isactive", "solid.wasactive"]
+    expected_units = ["K", "1", "s", "1", "m", "m", "1", "1"]
+    if expressions != expected_expressions or units != expected_units:
+        raise AcceptanceError(f"{label} V2 history capture has missing or reordered expressions/units")
+    times = capture.get("stored_times_s")
+    data = capture.get("data")
+    coordinates = capture.get("coordinates_m")
+    if not isinstance(times, list) or not times or not isinstance(data, list) or len(data) != len(expressions) or \
+            not isinstance(coordinates, list) or not coordinates:
+        raise AcceptanceError(f"{label} V2 history capture omitted complete times, values, or coordinates")
+    if coordinates != [[25e-6, 520e-6], [50e-6, 530e-6], [75e-6, 540e-6]]:
+        raise AcceptanceError(f"{label} V2 history coordinates differ from the frozen adhesive probes")
+    matches = [i for i, raw in enumerate(times) if _finite(raw, f"{label}.stored_times_s") == time_s]
+    if len(matches) != 1:
+        raise AcceptanceError(f"{label} V2 history capture lacks the exact handoff boundary time")
+    time_index = matches[0]
+    point_count = len(coordinates)
+    result: dict[str, list[float]] = {}
+    for exp_index, expression in enumerate(expressions):
+        series = data[exp_index]
+        if not isinstance(series, list) or len(series) != len(times) or \
+                not isinstance(series[time_index], list) or len(series[time_index]) != point_count:
+            raise AcceptanceError(f"{label} V2 history values have an incomplete shape for {expression}")
+        result[expression] = [_finite(value, f"{label}.{expression}") for value in series[time_index]]
+    if not time_s > 2.0:
+        raise AcceptanceError(f"{label} history frame is not a post-gel state")
+    return result
 
 
 def validate_gel_stress_free_control(capture: Mapping[str, Any], *,

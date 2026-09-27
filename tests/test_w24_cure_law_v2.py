@@ -116,6 +116,45 @@ def test_v2_moduli_and_maxwell_ramp_hold_reference_check_absolute_xx_yy_amplitud
     )
 
 
+def test_v2_java_control_capture_binds_dataset_solver_full_times_and_real_quasistatic_readback():
+    source = CONTROL_FIXTURE.read_text(encoding="utf-8")
+    science = (REPO / "tools/java/W24CureScienceFixture.java").read_text(encoding="utf-8")
+    assert '"capture_maxwell_control".equals(action)' in source
+    assert '"capture_gel_control".equals(action)' in source
+    assert '"solution_snapshot_v2".equals(action)' in source
+    assert 'getString("StructuralTransientBehavior")' in source
+    assert 'result.put("quasistatic_readback", requireQuasistatic(model))' in source
+    assert 'new String[]{"solid.sx", "solid.sy"}' in source
+    assert '"solid.sxy",' in source and '"solid.syz", "solid.isactive", "solid.wasactive"' in source
+    assert 'dataset.set("solution", solverTag)' in source
+    assert 'interpolation.set("solnum", "all")' in source
+    assert 'interpolation.setInterpolationCoordinates(coordinates)' in source
+    assert '"time_source", "SolverSequence.getPVals"' in source
+    assert '"native_study_run_calls", 0' in source
+    assert "study.run(" not in source
+    start = science.index("private static Map<String, Object> historyCaptureV2")
+    end = science.index("private static final class NumericalValues", start)
+    assert "study.run(" not in science[start:end]
+
+
+def test_v2_history_capture_includes_relative_dose_all_cure_displacement_and_both_activation_variables():
+    source = (REPO / "tools/java/W24CureScienceFixture.java").read_text(encoding="utf-8")
+    start = source.index("private static Map<String, Object> historyCaptureV2")
+    end = source.index("private static final class NumericalValues", start)
+    action = source[start:end]
+    for expected in (
+        '"T", "alpha", "Duv_rel", "qpost", "u", "w"',
+        '"solid.isactive", "solid.wasactive"',
+        '"K", "1", "s", "1", "m", "m", "1", "1"',
+        '"native_study_run_calls", 0',
+        '"maxwell_branch_state", "UNVERIFIED_NO_PUBLIC_REFERENCE_STATE_CAPTURE"',
+    ):
+        assert expected in action
+    assert "solution.getPVals()" in action
+    assert 'dataset.set("solution", solverTag)' in action
+    assert '"Quasistatic".equals(quasistatic)' in action
+
+
 def test_maxwell_capture_requires_fixed_checkpoints_native_pa_and_absolute_match():
     times = [0.0, 0.5, *MAXWELL_CONTROL_REQUIRED_TIMES_S]
     reference = maxwell_control_reference(times)
@@ -162,112 +201,210 @@ def test_maxwell_capture_requires_fixed_checkpoints_native_pa_and_absolute_match
         )
 
 
-def _history_frame(time_s, values=None, wasactive_values=None):
-    names = [DOSE_FIELD, ALPHA_FIELD, QPOST_FIELD, "comp1.u", "solid.branch_state_fixture"]
-    base = [120.0, 0.6, 0.1, 1.0e-6, 2.0e6]
+def _history_frame(time_s, values=None, *, history_overrides=None, wasactive_values=None,
+                   isactive_values=None, snapshot_schema="W24-DOF-SNAPSHOT-2", axes=2):
+    names = ["comp1_T", "comp1_alpha", "comp1_Duv_rel", "comp1_qpost", "comp1_u"]
+    base = [300.0, 0.6, 120.0, 0.1, 1.0e-6]
+    if axes == 3:
+        names.append("comp1_v")
+        base.append(1.5e-6)
+    names.extend(["comp1_w", "solid.branch_state_fixture"])
+    base.extend([2.0e-6, 2.0e6])
     values = list(base if values is None else values)
     assert len(values) == len(names)
     count = len(names)
+    expressions = ["T", "alpha", "Duv_rel", "qpost", "u", "w", "solid.isactive", "solid.wasactive"]
+    rows = [[[300.0] * 3, [300.0] * 3], [[0.6] * 3, [0.6] * 3],
+            [[120.0] * 3, [120.0] * 3], [[0.1] * 3, [0.1] * 3],
+            [[1e-6] * 3, [1e-6] * 3], [[2e-6] * 3, [2e-6] * 3],
+            [[1.0] * 3, [1.0] * 3], [[1.0] * 3, [1.0] * 3]]
+    for field, value in (history_overrides or {}).items():
+        rows[expressions.index(field)][1] = [value, value, value]
+    if isactive_values is not None:
+        rows[expressions.index("solid.isactive")][1] = list(isactive_values)
+    if wasactive_values is not None:
+        rows[expressions.index("solid.wasactive")][1] = list(wasactive_values)
     return {
         "time_s": time_s,
         "dofs": {
+            "snapshot_schema": snapshot_schema,
+            "coordinate_axes": axes,
+            "complete_xmesh_dofs": True,
             "geomNums": [1] * count,
             "nodes": list(range(1, count + 1)),
-            "coords": [[float(i) * 1e-6 for i in range(count)], [0.0] * count, [0.0] * count],
+            "coords": [[float(i) * 1e-6 for i in range(count)] for _ in range(axes)],
             "dofNames": names,
             "nameInds": list(range(count)),
             "solVectorInds": list(range(count)),
         },
         "u_real": values,
         "u_imag": [0.0] * count,
-        "wasactive": {
-            "native_evaluated": True,
-            "expression": "solid.wasactive",
-            "coordinates_m": [[50e-6, 50e-6, 50e-6], [75e-6, 50e-6, 50e-6]],
-            "values": [1, 1] if wasactive_values is None else list(wasactive_values),
+        "history_capture": {
+            "schema": "W24_CURE_LAW_V2_HISTORY_CAPTURE_V1",
+            "stored_times_s": [0.0, time_s],
+            "expressions": expressions,
+            "units": ["K", "1", "s", "1", "m", "m", "1", "1"],
+            "coordinates_m": [[25e-6, 520e-6], [50e-6, 530e-6], [75e-6, 540e-6]],
+            "data": rows,
         },
     }
 
 
-def _handoff_tolerances():
-    return {
-        DOSE_FIELD: 1e-12,
-        ALPHA_FIELD: 1e-12,
-        QPOST_FIELD: 1e-12,
-        "comp1.u": 1e-15,
-        "solid.branch_state_fixture": 1e-9,
-    }
+def _handoff_tolerances(axes=2):
+    result = {"comp1_T": 1e-6, "comp1_alpha": 1e-12, "comp1_Duv_rel": 1e-12,
+              "comp1_qpost": 1e-12, "comp1_u": 1e-15, "comp1_w": 1e-15,
+              "solid.branch_state_fixture": 1e-9}
+    if axes == 3:
+        result["comp1_v"] = 1e-15
+    return result
 
 
-def test_history_handoff_requires_full_dofs_cure_states_wasactive_and_branch_state():
+def _history_handoff_tolerances():
+    return {"T": 1e-6, "alpha": 1e-12, "Duv_rel": 1e-12, "qpost": 1e-12,
+            "u": 1e-15, "w": 1e-15, "solid.isactive": 0.0, "solid.wasactive": 0.0}
+
+
+def test_history_handoff_requires_full_dofs_visible_fields_and_keeps_branch_state_unverified():
     source = _history_frame(300.0)
     target = _history_frame(300.0)
     result = compare_v2_history_handoff(
-        source,
-        target,
-        branch_dof_names=["solid.branch_state_fixture"],
+        source, target, branch_dof_names=["solid.branch_state_fixture"],
         dof_abs_tolerances=_handoff_tolerances(),
-    )
-    assert result["status"] == "HISTORY_HANDOFF_MATCH_SOURCE_AUTH_REQUIRED"
+        history_abs_tolerances=_history_handoff_tolerances())
+    assert result["status"] == "VISIBLE_HISTORY_MATCH_BRANCH_STATE_UNVERIFIED"
     assert result["source_identity_authenticated"] is False
-    assert result["full_dof_count"] == 5
-    assert result["branch_state_dof_count"] == 1
-    assert result["wasactive_identical"] is True
-    assert result["native_semantics_verified"] is False
+    assert result["full_dof_count"] == 7
+    assert result["branch_state_dof_count"] == 0
+    assert result["caller_branch_name_hints_ignored_for_acceptance"] == ["solid.branch_state_fixture"]
+    assert result["isactive_identical"] is True and result["wasactive_identical"] is True
+    assert result["maxwell_branch_state"] == "UNVERIFIED_NO_PUBLIC_REFERENCE_STATE_CAPTURE"
 
 
-@pytest.mark.parametrize("index,field", [(0, DOSE_FIELD), (1, ALPHA_FIELD), (2, QPOST_FIELD), (4, "solid.branch_state_fixture")])
-def test_history_handoff_detects_dose_conversion_postgel_or_branch_reset(index, field):
+@pytest.mark.parametrize("field", ["comp1_T", "comp1_alpha", "comp1_Duv_rel", "comp1_qpost",
+                                    "comp1_u", "comp1_w"])
+def test_history_handoff_detects_full_field_reset_even_when_probe_history_is_unchanged(field):
     source = _history_frame(300.0)
-    changed = [120.0, 0.6, 0.1, 1e-6, 2e6]
-    changed[index] = 0.0
-    target = _history_frame(300.0, values=changed)
+    target = _history_frame(300.0)
+    field_index = target["dofs"]["dofNames"].index(field)
+    vector_index = target["dofs"]["solVectorInds"][field_index]
+    target["u_real"][vector_index] = 0.0
     with pytest.raises(AcceptanceError, match="changed by|DOF"):
         compare_v2_history_handoff(
-            source,
-            target,
-            branch_dof_names=["solid.branch_state_fixture"],
+            source, target,
             dof_abs_tolerances=_handoff_tolerances(),
-        )
+            history_abs_tolerances=_history_handoff_tolerances())
 
 
-def test_history_handoff_rejects_wasactive_reset_missing_branch_or_incomplete_observation():
+def test_history_handoff_detects_visible_cure_activation_and_displacement_resets():
     source = _history_frame(300.0)
-    target = _history_frame(300.0, wasactive_values=[0, 0])
+    for field in ("T", "alpha", "Duv_rel", "qpost", "u", "w"):
+        with pytest.raises(AcceptanceError, match=f"native history {field} changed"):
+            compare_v2_history_handoff(
+                source, _history_frame(300.0, history_overrides={field: 0.0}),
+                dof_abs_tolerances=_handoff_tolerances(),
+                history_abs_tolerances=_history_handoff_tolerances())
+    with pytest.raises(AcceptanceError, match="native history solid.isactive changed"):
+        compare_v2_history_handoff(
+            source, _history_frame(300.0, isactive_values=[0, 0, 0]),
+            dof_abs_tolerances=_handoff_tolerances(),
+            history_abs_tolerances=_history_handoff_tolerances())
     with pytest.raises(AcceptanceError, match="wasactive activation history reset"):
         compare_v2_history_handoff(
-            source,
-            target,
-            branch_dof_names=["solid.branch_state_fixture"],
+            source, _history_frame(300.0, wasactive_values=[0, 0, 0]),
             dof_abs_tolerances=_handoff_tolerances(),
-        )
+            history_abs_tolerances=_history_handoff_tolerances())
 
-    with pytest.raises(AcceptanceError, match="native Maxwell branch history DOF names"):
-        compare_v2_history_handoff(
-            source,
-            source,
-            branch_dof_names=[],
-            dof_abs_tolerances=_handoff_tolerances(),
-        )
 
-    all_inactive = _history_frame(300.0, wasactive_values=[0, 0])
-    with pytest.raises(AcceptanceError, match="not a post-gel state"):
+def test_history_handoff_rejects_v1_or_incomplete_capture():
+    source = _history_frame(300.0)
+    legacy = _history_frame(300.0, snapshot_schema="W24-DOF-SNAPSHOT-1")
+    with pytest.raises(AcceptanceError, match="complete V2 Xmesh"):
         compare_v2_history_handoff(
-            all_inactive,
-            all_inactive,
-            branch_dof_names=["solid.branch_state_fixture"],
-            dof_abs_tolerances=_handoff_tolerances(),
-        )
+            source, legacy, dof_abs_tolerances=_handoff_tolerances(),
+            history_abs_tolerances=_history_handoff_tolerances())
+    missing = copy.deepcopy(source)
+    missing["history_capture"]["expressions"].remove("Duv_rel")
+    with pytest.raises(AcceptanceError, match="missing or reordered expressions/units"):
+        compare_v2_history_handoff(
+            source, missing, dof_abs_tolerances=_handoff_tolerances(),
+            history_abs_tolerances=_history_handoff_tolerances())
+    missing_dof = copy.deepcopy(source)
+    name_index = missing_dof["dofs"]["dofNames"].index("comp1_w")
+    replacement_index = missing_dof["dofs"]["dofNames"].index("comp1_u")
+    missing_dof["dofs"]["nameInds"] = [
+        replacement_index if item == name_index else item for item in missing_dof["dofs"]["nameInds"]
+    ]
+    with pytest.raises(AcceptanceError, match="lacks required cure/displacement DOF members"):
+        compare_v2_history_handoff(
+            missing_dof, source, dof_abs_tolerances=_handoff_tolerances(),
+            history_abs_tolerances=_history_handoff_tolerances())
 
-    missing_native_eval = copy.deepcopy(source)
-    missing_native_eval["wasactive"]["native_evaluated"] = False
-    with pytest.raises(AcceptanceError, match="native solid.wasactive"):
+
+@pytest.mark.parametrize("missing_name", ["comp1_T", "comp1_alpha", "comp1_Duv_rel", "comp1_qpost"])
+def test_history_handoff_rejects_missing_full_cure_dof_members_even_if_name_table_remains(missing_name):
+    source = _history_frame(300.0)
+    target = _history_frame(300.0)
+    tolerances = _handoff_tolerances()
+    tolerances.pop(missing_name)
+    for frame in (source, target):
+        names = frame["dofs"]["dofNames"]
+        missing_name_index = names.index(missing_name)
+        replacement_name_index = names.index("comp1_u")
+        # Preserve the name table entry while removing all actual Xmesh members
+        # for the required field from both sides of the comparison.
+        frame["dofs"]["nameInds"] = [
+            replacement_name_index if name_index == missing_name_index else name_index
+            for name_index in frame["dofs"]["nameInds"]
+        ]
+    with pytest.raises(AcceptanceError, match="lacks required cure/displacement DOF members"):
         compare_v2_history_handoff(
-            missing_native_eval,
-            source,
-            branch_dof_names=["solid.branch_state_fixture"],
-            dof_abs_tolerances=_handoff_tolerances(),
-        )
+            source, target, dof_abs_tolerances=tolerances,
+            history_abs_tolerances=_history_handoff_tolerances())
+
+
+def test_history_handoff_rejects_coordinate_axis_count_that_does_not_match_coords_rows():
+    source = _history_frame(300.0)
+    target = _history_frame(300.0)
+    source["dofs"]["coordinate_axes"] = 3
+    with pytest.raises(AcceptanceError, match="coordinate_axes does not match"):
+        compare_v2_history_handoff(
+            source, target, dof_abs_tolerances=_handoff_tolerances(),
+            history_abs_tolerances=_history_handoff_tolerances())
+
+
+def test_history_handoff_requires_all_three_dimensional_displacement_dofs_when_present():
+    source = _history_frame(300.0, axes=3)
+    target = _history_frame(300.0, axes=3)
+    report = compare_v2_history_handoff(
+        source, target, dof_abs_tolerances=_handoff_tolerances(axes=3),
+        history_abs_tolerances=_history_handoff_tolerances())
+    assert report["status"] == "VISIBLE_HISTORY_MATCH_BRANCH_STATE_UNVERIFIED"
+    assert report["full_dof_count"] == 8
+
+    changed = _history_frame(300.0, axes=3)
+    field_index = changed["dofs"]["dofNames"].index("comp1_v")
+    changed["u_real"][changed["dofs"]["solVectorInds"][field_index]] = 0.0
+    with pytest.raises(AcceptanceError, match="comp1_v changed by"):
+        compare_v2_history_handoff(
+            source, changed,
+            dof_abs_tolerances=_handoff_tolerances(axes=3),
+            history_abs_tolerances=_history_handoff_tolerances())
+
+
+@pytest.mark.parametrize("missing_name", ["comp1_u", "comp1_v", "comp1_w"])
+def test_history_handoff_rejects_each_missing_three_dimensional_displacement_dof(missing_name):
+    incomplete = _history_frame(300.0, axes=3)
+    name_index = incomplete["dofs"]["dofNames"].index(missing_name)
+    replacement_field = "comp1_w" if missing_name == "comp1_u" else "comp1_u"
+    replacement_index = incomplete["dofs"]["dofNames"].index(replacement_field)
+    incomplete["dofs"]["nameInds"] = [
+        replacement_index if item == name_index else item for item in incomplete["dofs"]["nameInds"]
+    ]
+    with pytest.raises(AcceptanceError, match="lacks required cure/displacement DOF members"):
+        compare_v2_history_handoff(
+            incomplete, _history_frame(300.0, axes=3),
+            dof_abs_tolerances=_handoff_tolerances(axes=3),
+            history_abs_tolerances=_history_handoff_tolerances())
 
 
 def test_gel_stress_free_control_is_independent_and_uses_postgel_pa_samples():

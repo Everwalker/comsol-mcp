@@ -95,6 +95,30 @@ def _write_solution_snapshot(path: Path, times: list[float]):
             stream.write(struct.pack(">d", float(index)))
 
 
+def _write_solution_snapshot_v2(path: Path, times: list[float], *, axes=3):
+    names = ["comp1_T", "comp1_u", "comp1_v", "comp1_w"]
+    points = [
+        (1, 1, 0, 0, [0.0, 0.0, 0.0]),
+        (1, 2, 1, 1, [1e-6, 0.0, 0.0]),
+        (1, 3, 2, 2, [0.0, 1e-6, 0.0]),
+        (1, 4, 3, 3, [0.0, 0.0, 1e-6]),
+    ]
+    with gzip.open(path, "wb") as stream:
+        _write_java_utf(stream, "W24-DOF-SNAPSHOT-2")
+        stream.write(struct.pack(">i", axes))
+        stream.write(struct.pack(">i", len(names)))
+        for name in names:
+            _write_java_utf(stream, name)
+        stream.write(struct.pack(">i", len(points)))
+        for geom, node, name_index, vector_index, coordinates in points:
+            stream.write(struct.pack(">iiii", geom, node, name_index, vector_index))
+            stream.write(struct.pack(">" + "d" * axes, *coordinates[:axes]))
+        stream.write(struct.pack(">i", len(times)))
+        for index, time_s in enumerate(times):
+            stream.write(struct.pack(">di", time_s, len(names)))
+            stream.write(struct.pack(">" + "d" * len(names), *[float(index + j) for j in range(len(names))]))
+
+
 def _metric_readback(feature_type, units, dimension, axisymmetric_key, *, expression=None,
                      time_count=2, entity_count=1):
     return {"native_tag": f"test_{feature_type}", "type": feature_type, "dataset": "dset1",
@@ -563,6 +587,29 @@ def test_java_solution_snapshot_reader_streams_exact_dofs_and_times(tmp_path):
     truncated.write_bytes(truncated.read_bytes()[:-6])
     with pytest.raises((runner.CampaignError, EOFError)):
         list(runner.iter_solution_snapshot(truncated))
+
+
+def test_java_solution_snapshot_v2_preserves_full_three_dimensional_xmesh_and_v1_stays_compatible(tmp_path):
+    path = tmp_path / "fields-v2.bin.gz"
+    _write_solution_snapshot_v2(path, [0.0, 1.0])
+    frames = list(runner.iter_solution_snapshot(path))
+    assert [frame["time_s"] for frame in frames] == [0.0, 1.0]
+    assert frames[0]["dofs"]["snapshot_schema"] == "W24-DOF-SNAPSHOT-2"
+    assert frames[0]["dofs"]["coordinate_axes"] == 3
+    assert frames[0]["dofs"]["complete_xmesh_dofs"] is True
+    assert frames[0]["dofs"]["coords"] == [[0.0, 1e-6, 0.0, 0.0], [0.0, 0.0, 1e-6, 0.0], [0.0, 0.0, 0.0, 1e-6]]
+    assert frames[1]["u_real"] == [1.0, 2.0, 3.0, 4.0]
+
+    invalid_axes = tmp_path / "fields-v2-invalid-axes.bin.gz"
+    _write_solution_snapshot_v2(invalid_axes, [0.0], axes=1)
+    with pytest.raises(runner.CampaignError, match="coordinate/name dimension"):
+        list(runner.iter_solution_snapshot(invalid_axes))
+
+    # V1 remains readable after adding the 3D V2 format.
+    legacy = tmp_path / "legacy-v1.bin.gz"
+    _write_solution_snapshot(legacy, [0.0, 1.0])
+    assert [frame["dofs"]["snapshot_schema"] for frame in runner.iter_solution_snapshot(legacy)] == [
+        "W24-DOF-SNAPSHOT-1", "W24-DOF-SNAPSHOT-1"]
 
 
 def test_native_metric_receipt_requires_full_time_and_material_readbacks(tmp_path):

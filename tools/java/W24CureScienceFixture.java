@@ -58,6 +58,7 @@ public final class W24CureScienceFixture {
         if ("study_run".equals(action)) return studyRun(model, args);
         if ("solution_snapshot".equals(action)) return solutionSnapshot(model, args);
         if ("cure_metrics_capture".equals(action)) return cureMetricsCapture(model, args);
+        if ("history_capture_v2".equals(action)) return historyCaptureV2(model, args);
         if ("mechanics_build".equals(action)) return mechanicsBuild(model, args);
         if ("mechanics_study_run".equals(action)) return mechanicsStudyRun(model, args);
         if ("mechanics_capture".equals(action)) return mechanicsCapture(model, args);
@@ -807,6 +808,146 @@ public final class W24CureScienceFixture {
             if (cleanupFailure != null) {
                 throw new IllegalStateException("native metric artifact was captured but temporary numerical cleanup failed",
                     cleanupFailure);
+            }
+        }
+        return receipt;
+    }
+
+    /** Capture all visible cure/thermal/displacement/activation histories at fixed adhesive probes.
+     * This action only reads an already-solved model; it does not submit Study.run.
+     */
+    private static Map<String, Object> historyCaptureV2(Model model, Map<String, Object> args) {
+        String studyTag = safeToken(args.get("study_tag"), "study_tag");
+        String solverTag = safeToken(args.get("solver_tag"), "solver_tag");
+        String pathText = String.valueOf(args.getOrDefault("path", ""));
+        if (pathText.isBlank() || !Arrays.asList(model.study().tags()).contains(studyTag)) {
+            throw new IllegalArgumentException("history_capture_v2 requires an existing study and a new output path");
+        }
+        if (model.component(COMPONENT).geom(GEOMETRY).getSDim() != 2) {
+            throw new IllegalStateException("history_capture_v2 currently accepts only the frozen 2D axisymmetric W24 cure coupon");
+        }
+        String[] attached = model.study(studyTag).getSolverSequences("SolverSequence");
+        if (attached.length != 1 || !solverTag.equals(attached[0])) {
+            throw new IllegalStateException("history capture requires the exact unique solver attached to its study");
+        }
+        SolverSequence solution = model.sol(solverTag);
+        if (!solution.isAttached() || !studyTag.equals(solution.study())) {
+            throw new IllegalStateException("history capture solver attachment does not match the requested study");
+        }
+        double[] times = solution.getPVals();
+        if (times == null || times.length == 0) {
+            throw new IllegalStateException("history capture requires every native stored solution time");
+        }
+        for (int i = 0; i < times.length; i++) {
+            if (!Double.isFinite(times[i]) || (i > 0 && times[i] <= times[i - 1])) {
+                throw new IllegalStateException("history capture stored times are nonfinite or non-increasing");
+            }
+        }
+        String[] expressions = {"T", "alpha", "Duv_rel", "qpost", "u", "w",
+            "solid.isactive", "solid.wasactive"};
+        String[] units = {"K", "1", "s", "1", "m", "m", "1", "1"};
+        double[][] coordinates = new double[][]{
+            new double[]{25e-6, 50e-6, 75e-6},
+            new double[]{520e-6, 530e-6, 540e-6}
+        };
+        String datasetTag = "w24v2histds" + Long.toUnsignedString(System.nanoTime(), 36);
+        List<String> numericalTags = new ArrayList<>();
+        boolean datasetCreated = false;
+        Map<String, Object> receipt = new LinkedHashMap<>();
+        try {
+            DatasetFeature dataset = model.result().dataset().create(datasetTag, "Solution");
+            datasetCreated = true;
+            dataset.set("solution", solverTag);
+            if (!solverTag.equals(dataset.getString("solution"))) {
+                throw new IllegalStateException("history dataset did not read back the exact SolverSequence");
+            }
+            NumericalValues values = evaluateInterpolation(model, datasetTag, numericalTags,
+                "history_v2", expressions, units, coordinates, times.length);
+            List<Object> data = new ArrayList<>();
+            for (int expression = 0; expression < expressions.length; expression++) {
+                List<Object> expressionTimes = new ArrayList<>();
+                for (int time = 0; time < times.length; time++) {
+                    List<Double> points = new ArrayList<>();
+                    for (int point = 0; point < coordinates[0].length; point++) {
+                        double value = values.values[expression][time * coordinates[0].length + point];
+                        if (("solid.isactive".equals(expressions[expression]) ||
+                             "solid.wasactive".equals(expressions[expression])) && value != 0.0 && value != 1.0) {
+                            throw new IllegalStateException("native Activation history values must be exactly zero or one");
+                        }
+                        points.add(value);
+                    }
+                    expressionTimes.add(points);
+                }
+                data.add(expressionTimes);
+            }
+            StudyFeature timeFeature = model.study(studyTag).feature("time");
+            String quasistatic = model.physics("solid").prop("StructuralTransientBehavior")
+                .getString("StructuralTransientBehavior");
+            if (!"Quasistatic".equals(quasistatic)) {
+                throw new IllegalStateException("history capture requires an actual Quasistatic Solid Mechanics readback");
+            }
+            Map<String, Object> interpolationReadback = new LinkedHashMap<>();
+            interpolationReadback.put("type", values.readback.get("type"));
+            interpolationReadback.put("dataset", values.readback.get("dataset"));
+            interpolationReadback.put("expressions", values.readback.get("expression"));
+            interpolationReadback.put("units", values.readback.get("unit"));
+            interpolationReadback.put("solnum", values.readback.get("solution_selection"));
+            interpolationReadback.put("coorderr", values.readback.get("coordinate_error"));
+            interpolationReadback.put("matherr", values.readback.get("math_error"));
+            interpolationReadback.put("coordinates_m", values.readback.get("coordinates_m"));
+            interpolationReadback.put("coordinate_source", "fixed axisymmetric Java coordinates passed to setInterpolationCoordinates");
+            interpolationReadback.put("shape", Arrays.asList(expressions.length, times.length, coordinates[0].length));
+            Map<String, Object> artifact = new LinkedHashMap<>();
+            artifact.put("schema", "W24_CURE_LAW_V2_HISTORY_CAPTURE_V1");
+            artifact.put("status", "NATIVE_HISTORY_CAPTURED_NO_SOLVE_SUBMITTED");
+            artifact.put("study_tag", studyTag);
+            artifact.put("solver_tag", solverTag);
+            artifact.put("dataset_tag", datasetTag);
+            artifact.put("dataset_type_requested", "Solution");
+            artifact.put("dataset_solution_readback", dataset.getString("solution"));
+            artifact.put("stored_times_s", boxed(times));
+            artifact.put("time_source", "SolverSequence.getPVals");
+            artifact.put("study_tlist_readback", timeFeature.getString("tlist"));
+            artifact.put("quasistatic_readback", quasistatic);
+            artifact.put("expressions", Arrays.asList(expressions));
+            artifact.put("units", Arrays.asList(units));
+            artifact.put("coordinates_m", Arrays.asList(Arrays.asList(25e-6, 520e-6),
+                Arrays.asList(50e-6, 530e-6), Arrays.asList(75e-6, 540e-6)));
+            artifact.put("shape", Arrays.asList(expressions.length, times.length, coordinates[0].length));
+            artifact.put("data", data);
+            artifact.put("feature_readback", interpolationReadback);
+            artifact.put("activation_variables_documented_by", "COMSOL 6.4 Structural Mechanics Module User's Guide page 317");
+            artifact.put("maxwell_branch_state", "UNVERIFIED_NO_PUBLIC_REFERENCE_STATE_CAPTURE");
+            artifact.put("native_study_run_calls", 0);
+            byte[] bytes = (toJson(artifact) + "\n").getBytes(StandardCharsets.UTF_8);
+            Path output = Path.of(pathText);
+            writeNewAndSync(output, bytes);
+            receipt.put("status", "NATIVE_HISTORY_CAPTURE_WRITTEN");
+            receipt.put("schema", "W24_CURE_LAW_V2_HISTORY_CAPTURE_V1");
+            receipt.put("path", output.toString());
+            receipt.put("size_bytes", bytes.length);
+            receipt.put("sha256", sha256(bytes));
+            receipt.put("study_tag", studyTag);
+            receipt.put("solver_tag", solverTag);
+            receipt.put("dataset_tag", datasetTag);
+            receipt.put("stored_time_count", times.length);
+            receipt.put("expression_count", expressions.length);
+            receipt.put("shape", Arrays.asList(expressions.length, times.length, coordinates[0].length));
+            receipt.put("quasistatic_readback", quasistatic);
+            receipt.put("native_study_run_calls", 0);
+            receipt.put("maxwell_branch_state", "UNVERIFIED_NO_PUBLIC_REFERENCE_STATE_CAPTURE");
+        } finally {
+            RuntimeException cleanupFailure = null;
+            for (String tag : numericalTags) {
+                try { model.result().numerical().remove(tag); }
+                catch (RuntimeException exception) { if (cleanupFailure == null) cleanupFailure = exception; }
+            }
+            if (datasetCreated) {
+                try { model.result().dataset().remove(datasetTag); }
+                catch (RuntimeException exception) { if (cleanupFailure == null) cleanupFailure = exception; }
+            }
+            if (cleanupFailure != null) {
+                throw new IllegalStateException("history artifact may be written but temporary result cleanup failed", cleanupFailure);
             }
         }
         return receipt;

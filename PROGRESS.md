@@ -4,15 +4,15 @@ Updated 2026-09-27 UTC. **Overall PARTIAL; execution continues through W26.** Th
 
 ## Current stage
 
-**W23 source-cohort and mesh stability: PASS for scoped software; W23/project overall PARTIAL.** Each mesh level now binds original fixture setup/readback, the exact Study revision, post-solve mesh identity and registered v2 integral result. Comparisons recompute basis-invariant projection and signed powers; individual Gram diagonal powers are diagnostics only. Stored sample readbacks must match the exact public route response.
+**W24 public capture and full-field history: PASS for scoped software; W24/project overall PARTIAL.** Capture verification binds the authorized project, original durable operation/job, exact Java source, ModelRef/revision and raw artifact hash. V2 Xmesh snapshots support complete 2D/3D coordinates and retain V1 decoding. Full-field temperature, cure, dose, shrinkage history and displacement membership are mandatory; three probe values cannot substitute missing spatial state.
 
-**Actually executed:** isolated published `81fcc73` plus seven-file overlay: **222 PASS / 0 FAIL / 0 ERROR / 0 SKIP**. Main verified 103 baseline files, seven overlays, 75 audited imports and evidence hashes, then reran **16 critical tests PASS**. Java 11/COMSOL 6.4 API compile passed. A separate **1 PASS** no-COMSOL loopback test retained exact child birth/private-home evidence and confirmed child reap/listener removal. [Compact evidence and replay](docs/full_project_execution/w23_overlap/MESH_COHORT_SOFTWARE_CHECKPOINT.json).
+**Actually executed:** isolated published `81fcc73` plus eight-file overlay: **85 PASS / 0 FAIL / 0 ERROR / 0 SKIP**. Main verified 363 unchanged base files, eight overlays, 58 imported-source hashes and evidence identities, then independently ran **33 critical tests PASS**. Both unchanged Java sources retain verified JDK 11/COMSOL 6.4 API compile evidence. Tests use a harmless stub Worker with real ControlDaemon/SQLite storage; no COMSOL was started. [Compact evidence and replay](docs/full_project_execution/w24/CURE_V2_CAPTURE_SOFTWARE_CHECKPOINT.json).
 
-The earlier 190-test archive omitted a necessary modified test helper; main rejected that candidate. The current 222-test archive includes the helper. Earlier missing-dependency and sandbox failures remain preserved, and superseded results are not current-candidate acceptance.
+Main rejected the first 78-test candidate after reproducing acceptance with missing full-field history members. The fixed candidate rejects all four missing-field counterexamples while the complete positive control passes; original failure evidence is preserved.
 
-**COMSOL/native NOT_RUN; scientific acceptance NOT_ESTABLISHED.** Actual producer/field lineage is UNVERIFIED; native mesh/capture/quadrature/power balance remains NOT_RUN. Radiation geometry and homogeneous PML backing still require implementation. F16 software was published as `ae4e817` (281 isolated plus one historical-object test, eight main tests); weighted evidence and original experiment gaps continue. W24 capture/full-history work continues from `81fcc73`.
+**Native start/solve/science NOT_RUN; Maxwell branch/reference state UNVERIFIED.** Live interpolation and internal-history semantics, continuous/staged/reopen validation, full W24 science and resource budget remain incomplete. F16 weighted evidence and original experiment gaps continue; W23 radiation/PML geometry remains under implementation after its published mesh-cohort checkpoint.
 
-Automatic approval previously rejected cleanup of the failed owned native resources; explicit local termination authorization remains pending, with no cleanup/relaunch.
+Automatic approval previously rejected cleanup of failed owned native resources; explicit local termination authorization remains pending, with no cleanup/relaunch.
 
 ## Latest accepted software baseline
 
@@ -40,4 +40,4 @@ Earlier source checkpoints and failures remain in the existing state and linked 
 
 Continue the three Luna Max work streams: complete F16 weighted native evidence, experiment-case metric associations and original experiment reporting/model gaps; complete W23 radiation geometry, capture/quadrature/power-balance and original optics acceptance; complete W24 UV/gel/reference/viscoelastic implementation and remaining science. Publish each accepted software stage immediately. Then freeze isolated managed native candidates, execute their reviewed scope, complete all remaining W01–W26 work, and run a fresh independent overall review with repair/retest until accepted.
 
-The latest focused replay is in [MESH_COHORT_SOFTWARE_CHECKPOINT.json](docs/full_project_execution/w23_overlap/MESH_COHORT_SOFTWARE_CHECKPOINT.json). Recover from GitHub and existing state. Last previously verified GitHub sync: `ae4e817ee1a57ab70a1f9890f4946603806ed7d5`; this stage is recorded as synchronized only after post-push fetch and HEAD/origin-main equality.
+The latest focused replay is in [CURE_V2_CAPTURE_SOFTWARE_CHECKPOINT.json](docs/full_project_execution/w24/CURE_V2_CAPTURE_SOFTWARE_CHECKPOINT.json). Recover from GitHub and existing state. Last previously verified GitHub sync: `eb31e7fd4414004263f3097df42419bf58554202`; this stage is recorded as synchronized only after post-push fetch and HEAD/origin-main equality.

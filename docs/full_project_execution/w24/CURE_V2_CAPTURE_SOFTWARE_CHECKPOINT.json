@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "stage": "W24 public cure-control capture and full-field history contract",
+  "status": "PASS_SCOPED_SOFTWARE",
+  "overall_w24": "PARTIAL",
+  "native_start_solve_science": "NOT_RUN",
+  "maxwell_branch_reference_state": "UNVERIFIED",
+  "base_commit": "81fcc73784e1a7e36197ae433c862fd1f4f9c621",
+  "source_overlay": [
+    {
+      "bytes": 47283,
+      "path": "tools/java/W24CureLawV2ControlFixture.java",
+      "sha256": "c42d49737e22bfe178169e5ee8c3e746beb206c845352914804c7792cfa8bf65"
+    },
+    {
+      "bytes": 94719,
+      "path": "tools/java/W24CureScienceFixture.java",
+      "sha256": "7ea1d943656b14119f5ed48bd5eb2e9b6533fbc403f09c7e02a36f6a9c2b4053"
+    },
+    {
+      "bytes": 246509,
+      "path": "tools/run_native_w24_cure_science.py",
+      "sha256": "580689379c8c5f5f55d1474dedb3b6446857632b9d2e5ce2df5e1ea58a5f4a14"
+    },
+    {
+      "bytes": 29239,
+      "path": "tools/w24_cure_law_v2.py",
+      "sha256": "cc652e1cd9236879cf635f88343349eae6bd35e97668b131fd82253c193bc34e"
+    },
+    {
+      "bytes": 33503,
+      "path": "tools/w24_cure_v2_capture.py",
+      "sha256": "556756d2014f92f90405a29b7901194c82f30eb291103ea67760e4b8ba600f30"
+    },
+    {
+      "bytes": 24089,
+      "path": "tests/test_w24_cure_law_v2.py",
+      "sha256": "89c53042f984ee47530c6939935aba080a4b29e9ab6a574ec3b5a9dfd715a712"
+    },
+    {
+      "bytes": 54148,
+      "path": "tests/test_w24_cure_science_runner.py",
+      "sha256": "7836d137d1403d83fc1ecd3ff3dfacff7aa487c68567bfb5a3c2c71deb3b24e0"
+    },
+    {
+      "bytes": 29383,
+      "path": "tests/test_w24_cure_v2_capture.py",
+      "sha256": "d10d94fc30c31fb8d9250bf950a3afc4d1cf54ab5b3128c5fd257c4ee05a786f"
+    }
+  ],
+  "capabilities": [
+    "Capture dispatch and verification bound to authorized project, original private OperationStore operation/job, source bytes, ModelRef/revision and raw artifact hash",
+    "Maxwell and gel full stored-time interpolation capture; axisymmetric cure history probes with explicit internal-state limitation",
+    "V2 complete 2D/3D Xmesh binary capture/decoder with legacy V1 compatibility",
+    "Full-field T/alpha/Duv_rel/qpost and dimensional displacement presence and continuity checks; fixed probe values cannot substitute missing spatial DOFs"
+  ],
+  "tests": {
+    "command": "/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -m pytest -q --junitxml=/private/tmp/w24-cure-v2-full-history-fix-junit.xml -p w24_cure_v2_import_trace_fix tests/test_w24_cure_law_v2.py tests/test_w24_cure_v2_capture.py tests/test_w24_cure_science_runner.py tests/test_w24_cure_coupon_fixture.py",
+    "counts": {
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "tests": 85
+    },
+    "import_manifest": {
+      "bytes": 8813,
+      "imported_repo_python_sources": 58,
+      "path": "/private/tmp/w24-cure-v2-full-history-fix-import-manifest.json",
+      "sha256": "7de5216915d5e0a7af67ebe877e2f5d11e2bd49fe31c2eb621bfdad8c1dbe679"
+    },
+    "junit": {
+      "bytes": 13852,
+      "path": "/private/tmp/w24-cure-v2-full-history-fix-junit.xml",
+      "sha256": "867ff0513ffd417d2c344826e024b5f4cae0109b02c5f6165d718e6d8447f8cc"
+    },
+    "result": "PASS"
+  },
+  "java_compile": {
+    "result": "PASS_API_COMPILE_ONLY",
+    "unchanged_sources_reused": true,
+    "receipt_path": "/private/tmp/w24-cure-v2-capture-final-receipt.json",
+    "receipt_sha256": "555e635e99cb05598c0abbe623b22aaaacb872fe92cb46732a102db45e6311fa",
+    "jdk": "Corretto 11.0.31",
+    "comsol_api": "6.4.0.293",
+    "source_paths": [
+      "tools/java/W24CureLawV2ControlFixture.java",
+      "tools/java/W24CureScienceFixture.java"
+    ]
+  },
+  "main_review": {
+    "base_archive": {
+      "bytes": 13301760,
+      "path": "/private/tmp/w24_cure_v2_capture_base_81fcc_20260928.tar",
+      "sha256": "127824999b6f83270933d33d7355ed1f2d7ad90123c593fa729e249f1aea79cb"
+    },
+    "unchanged_base_files_verified": 363,
+    "overlay_hashes_verified": 8,
+    "loaded_source_hashes_verified": 58,
+    "tests_passed": 33,
+    "junit": {
+      "path": "/private/tmp/w24-cure-v2-root-fixed-junit.xml",
+      "sha256": "2c0507e7406b8baf1421ecbe67737ae2d61ec9494c362b6f02570a89b2315bb7"
+    },
+    "counterexample": {
+      "path": "/private/tmp/w24-cure-v2-missing-full-history-root-reproducer.json",
+      "sha256": "7e43cd09d4b42655e9d76f10d1ee4cf3ad65fcea17f9f6504df7ec8b318b7a66",
+      "result": "FAIL_PRIOR_CANDIDATE_ACCEPTED_MISSING_FULL_FIELDS"
+    },
+    "retest": {
+      "path": "/private/tmp/w24-cure-v2-full-history-main-retest.json",
+      "sha256": "c22089853452f42568a438d721cdaa910103ccae8b154ad6325f0ae2423043d7",
+      "result": "PASS_CLEAN_ACCEPTED_FOUR_MISSING_FIELDS_REJECTED"
+    }
+  },
+  "local_receipt": {
+    "path": "/private/tmp/w24-cure-v2-full-history-fix-receipt.json",
+    "sha256": "dc24ad9660fa1f14adeeffa07dd44660982cf0465d030043b2cea43ab3afc195"
+  },
+  "preserved_prior_candidate": {
+    "path": "/private/tmp/w24-cure-v2-capture-final-receipt.json",
+    "prior_candidate_retained": true,
+    "sha256": "555e635e99cb05598c0abbe623b22aaaacb872fe92cb46732a102db45e6311fa"
+  },
+  "replay": "With Python 3.12 and project dependencies run pytest -q tests/test_w24_cure_law_v2.py tests/test_w24_cure_v2_capture.py tests/test_w24_cure_science_runner.py tests/test_w24_cure_coupon_fixture.py. API compile both named Java sources with JDK 11 against a licensed COMSOL 6.4 apiplugins directory. These commands do not establish native execution.",
+  "remaining": [
+    "Actual native Interp shape/unit/coordinate behavior and solve provenance",
+    "Maxwell internal branch/reference state capture and restart continuity",
+    "Full original static shape, cure, sensitivity, conservation, continuous-versus-staged and reopen native acceptance",
+    "Native resource cleanup authorization and separately reviewed campaign budget"
+  ],
+  "next_action": "Continue same-version native history/reference API investigation and connect authenticated captures to continuous/staged/reopen orchestration. Preserve required internal-state gates; freeze reviewed native budget before execution."
+}

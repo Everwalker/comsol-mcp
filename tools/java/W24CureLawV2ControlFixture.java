@@ -1,14 +1,31 @@
 import com.comsol.model.GeomSequence;
+import com.comsol.model.DatasetFeature;
 import com.comsol.model.Model;
+import com.comsol.model.NumericalFeature;
 import com.comsol.model.SolverSequence;
 import com.comsol.model.Study;
 import com.comsol.model.StudyFeature;
 import com.comsol.model.physics.PhysicsFeature;
+import java.io.BufferedOutputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.zip.GZIPOutputStream;
 
 /**
  * Build-only W24 cure-law v2 controls. No action in this class submits a solve.
@@ -29,6 +46,9 @@ public final class W24CureLawV2ControlFixture {
         if ("readback_maxwell_ramp_hold".equals(action)) return readbackMaxwellRampHold(model);
         if ("build_gel_stress_free".equals(action)) return buildGelStressFree(model);
         if ("readback_gel_stress_free".equals(action)) return readbackGelStressFree(model);
+        if ("capture_maxwell_control".equals(action)) return captureControl(model, args, true);
+        if ("capture_gel_control".equals(action)) return captureControl(model, args, false);
+        if ("solution_snapshot_v2".equals(action)) return solutionSnapshotV2(model, args);
         throw new IllegalArgumentException("unsupported cure-law v2 control action: " + action);
     }
 
@@ -95,6 +115,7 @@ public final class W24CureLawV2ControlFixture {
         }
 
         Map<String, Object> result = commonReadback(geometry);
+        result.put("quasistatic_readback", requireQuasistatic(model));
         result.put("case_id", "maxwell_ramp_hold_control");
         result.put("study_tag", "stdMaxwell");
         result.put("study_output_times", time.getString("tlist"));
@@ -188,6 +209,7 @@ public final class W24CureLawV2ControlFixture {
             throw new IllegalStateException("gel stress-free transient output/solver attachment readback mismatch");
         }
         Map<String, Object> result = commonReadback(geometry);
+        result.put("quasistatic_readback", requireQuasistatic(model));
         result.put("case_id", "gel_stress_free_control");
         result.put("study_tag", "stdGel");
         result.put("study_output_times", time.getString("tlist"));
@@ -199,6 +221,411 @@ public final class W24CureLawV2ControlFixture {
         result.put("native_activation_reference_state", "UNVERIFIED_FAIL_CLOSED");
         result.put("solver_submissions", 0);
         return result;
+    }
+
+    /** Capture results from an already-solved frozen control; never calls Study.run. */
+    private static Map<String, Object> captureControl(Model model, Map<String, Object> args,
+                                                       boolean maxwell) {
+        String solverTag = safeToken(args.get("solver_tag"), "solver_tag");
+        String pathText = String.valueOf(args.getOrDefault("path", ""));
+        if (pathText.isBlank()) throw new IllegalArgumentException("control capture requires a new output path");
+        String caseId = maxwell ? "maxwell_ramp_hold_control" : "gel_stress_free_control";
+        String studyTag = maxwell ? "stdMaxwell" : "stdGel";
+        Map<String, Object> configuration = maxwell ? readbackMaxwellRampHold(model) : readbackGelStressFree(model);
+        if (!"Quasistatic".equals(configuration.get("quasistatic_readback"))) {
+            throw new IllegalStateException("native control capture requires the actual Quasistatic property readback");
+        }
+        String[] solvers = model.study(studyTag).getSolverSequences("SolverSequence");
+        if (solvers.length != 1 || !solverTag.equals(solvers[0])) {
+            throw new IllegalStateException("capture solver must be the exact unique solver attached to the frozen study");
+        }
+        SolverSequence solution = model.sol(solverTag);
+        if (!solution.isAttached() || !studyTag.equals(solution.study())) {
+            throw new IllegalStateException("capture SolverSequence is detached or belongs to another study");
+        }
+        double[] times = solution.getPVals();
+        verifyControlStoredTimes(times, maxwell);
+
+        String[] expressions;
+        String[] units;
+        if (maxwell) {
+            expressions = new String[]{"solid.sx", "solid.sy"};
+            units = new String[]{"Pa", "Pa"};
+        } else {
+            expressions = new String[]{"solid.sx", "solid.sy", "solid.sz", "solid.sxy",
+                "solid.sxz", "solid.syz", "solid.isactive", "solid.wasactive"};
+            units = new String[]{"Pa", "Pa", "Pa", "Pa", "Pa", "Pa", "1", "1"};
+        }
+        double[][] coordinates = new double[][]{{SIDE_M / 2.0}, {SIDE_M / 2.0}, {SIDE_M / 2.0}};
+        String datasetTag = "w24v2d" + Long.toUnsignedString(System.nanoTime(), 36);
+        String interpolationTag = "w24v2i" + Long.toUnsignedString(System.nanoTime(), 36);
+        boolean datasetCreated = false;
+        boolean interpolationCreated = false;
+        try {
+            DatasetFeature dataset = model.result().dataset().create(datasetTag, "Solution");
+            datasetCreated = true;
+            dataset.set("solution", solverTag);
+            if (!solverTag.equals(dataset.getString("solution"))) {
+                throw new IllegalStateException("capture dataset does not read back the exact SolverSequence");
+            }
+            NumericalFeature interpolation = model.result().numerical().create(interpolationTag, "Interp");
+            interpolationCreated = true;
+            interpolation.set("data", datasetTag);
+            interpolation.set("expr", expressions);
+            interpolation.set("unit", units);
+            interpolation.set("solnum", "all");
+            interpolation.set("coorderr", "on");
+            interpolation.set("matherr", "on");
+            interpolation.setInterpolationCoordinates(coordinates);
+            if (!datasetTag.equals(interpolation.getString("data")) ||
+                !Arrays.equals(expressions, interpolation.getStringArray("expr")) ||
+                !Arrays.equals(units, interpolation.getStringArray("unit")) ||
+                !"all".equals(interpolation.getString("solnum")) ||
+                !interpolation.getBoolean("coorderr") || !interpolation.getBoolean("matherr")) {
+                throw new IllegalStateException("native control Interp readback differs from the frozen expression/unit/dataset contract");
+            }
+            interpolation.run();
+            double[][][] raw = interpolation.getData();
+            if (raw == null || raw.length != expressions.length) {
+                throw new IllegalStateException("native control Interp expression axis has an unexpected shape");
+            }
+            List<Object> series = new ArrayList<>();
+            for (int expression = 0; expression < expressions.length; expression++) {
+                if (raw[expression] == null || raw[expression].length != times.length) {
+                    throw new IllegalStateException("native control Interp stored-time axis differs from SolverSequence.getPVals");
+                }
+                List<Object> expressionTimes = new ArrayList<>();
+                for (int time = 0; time < times.length; time++) {
+                    if (raw[expression][time] == null || raw[expression][time].length != 1 ||
+                        !Double.isFinite(raw[expression][time][0])) {
+                        throw new IllegalStateException("native control Interp coordinate/value shape is incomplete or nonfinite");
+                    }
+                    double value = raw[expression][time][0];
+                    if ("1".equals(units[expression]) && value != 0.0 && value != 1.0) {
+                        throw new IllegalStateException("native Activation variable is not exactly binary");
+                    }
+                    expressionTimes.add(Arrays.asList(value));
+                }
+                series.add(expressionTimes);
+            }
+            Map<String, Object> interpolationReadback = new LinkedHashMap<>();
+            interpolationReadback.put("type", "Interp");
+            interpolationReadback.put("dataset", interpolation.getString("data"));
+            interpolationReadback.put("expressions", Arrays.asList(interpolation.getStringArray("expr")));
+            interpolationReadback.put("units", Arrays.asList(interpolation.getStringArray("unit")));
+            interpolationReadback.put("solnum", interpolation.getString("solnum"));
+            interpolationReadback.put("coorderr", interpolation.getString("coorderr"));
+            interpolationReadback.put("matherr", interpolation.getString("matherr"));
+            interpolationReadback.put("coordinates_m", Arrays.asList(
+                Arrays.asList(coordinates[0][0], coordinates[1][0], coordinates[2][0])));
+            interpolationReadback.put("coordinate_source", "fixed 3D Java coordinates passed to setInterpolationCoordinates");
+            interpolationReadback.put("shape", Arrays.asList(expressions.length, times.length, 1));
+
+            Map<String, Object> artifact = new LinkedHashMap<>();
+            artifact.put("schema", "W24_CURE_V2_NATIVE_CONTROL_CAPTURE_V1");
+            artifact.put("status", "NATIVE_CONTROL_CAPTURED_NO_SOLVE_SUBMITTED");
+            artifact.put("case_id", caseId);
+            artifact.put("study_tag", studyTag);
+            artifact.put("solver_tag", solverTag);
+            artifact.put("dataset_tag", datasetTag);
+            artifact.put("dataset_type_requested", "Solution");
+            artifact.put("dataset_solution_readback", dataset.getString("solution"));
+            artifact.put("stored_times_s", boxed(times));
+            artifact.put("time_source", "SolverSequence.getPVals");
+            artifact.put("expressions", Arrays.asList(expressions));
+            artifact.put("units", Arrays.asList(units));
+            artifact.put("coordinates_m", interpolationReadback.get("coordinates_m"));
+            artifact.put("shape", Arrays.asList(expressions.length, times.length, 1));
+            artifact.put("data", series);
+            artifact.put("feature_readback", interpolationReadback);
+            artifact.put("quasistatic_readback", configuration.get("quasistatic_readback"));
+            artifact.put("study_tlist_readback", model.study(studyTag).feature("time1").getString("tlist"));
+            artifact.put("native_study_run_calls", 0);
+            artifact.put("activation_semantics", maxwell ? "NO_ACTIVATION_FEATURE" : "EXPRESSION_VALUES_CAPTURED");
+            artifact.put("maxwell_branch_reference_state", "UNVERIFIED_NO_PUBLIC_REFERENCE_STATE_CAPTURE");
+            byte[] bytes = (toJson(artifact) + "\n").getBytes(StandardCharsets.UTF_8);
+            Path output = Path.of(pathText);
+            writeNewAndSync(output, bytes);
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("status", "NATIVE_CONTROL_CAPTURE_WRITTEN");
+            result.put("case_id", caseId);
+            result.put("solver_tag", solverTag);
+            result.put("study_tag", studyTag);
+            result.put("dataset_tag", datasetTag);
+            result.put("path", output.toString());
+            result.put("size_bytes", bytes.length);
+            result.put("sha256", sha256(bytes));
+            result.put("stored_time_count", times.length);
+            result.put("expression_count", expressions.length);
+            result.put("shape", Arrays.asList(expressions.length, times.length, 1));
+            result.put("quasistatic_readback", configuration.get("quasistatic_readback"));
+            result.put("native_study_run_calls", 0);
+            result.put("maxwell_branch_reference_state", "UNVERIFIED_NO_PUBLIC_REFERENCE_STATE_CAPTURE");
+            return result;
+        } finally {
+            RuntimeException cleanupFailure = null;
+            if (interpolationCreated) {
+                try { model.result().numerical().remove(interpolationTag); }
+                catch (RuntimeException exception) { cleanupFailure = exception; }
+            }
+            if (datasetCreated) {
+                try { model.result().dataset().remove(datasetTag); }
+                catch (RuntimeException exception) { if (cleanupFailure == null) cleanupFailure = exception; }
+            }
+            if (cleanupFailure != null) {
+                throw new IllegalStateException("native control artifact may exist but temporary result cleanup failed", cleanupFailure);
+            }
+        }
+    }
+
+    private static void verifyControlStoredTimes(double[] times, boolean maxwell) {
+        int expectedCount = maxwell ? 902 : 7;
+        if (times == null || times.length != expectedCount) {
+            throw new IllegalStateException("SolverSequence stored time count differs from the frozen full output schedule");
+        }
+        double step = maxwell ? 1.0 : 0.5;
+        for (int i = 0; i < times.length; i++) {
+            double expected = i * step;
+            if (!Double.isFinite(times[i]) || Math.abs(times[i] - expected) > 1e-12) {
+                throw new IllegalStateException("SolverSequence stored time differs from the exact frozen control time at index " + i);
+            }
+        }
+    }
+
+    /** Serialize all actual 3D Xmesh DOFs and real solution vectors, including every stored time. */
+    private static Map<String, Object> solutionSnapshotV2(Model model, Map<String, Object> args) {
+        String studyTag = safeToken(args.get("study_tag"), "study_tag");
+        String solverTag = safeToken(args.get("solver_tag"), "solver_tag");
+        String pathText = String.valueOf(args.getOrDefault("path", ""));
+        if (pathText.isBlank() || !Arrays.asList(model.study().tags()).contains(studyTag)) {
+            throw new IllegalArgumentException("solution_snapshot_v2 requires an existing exact study and output path");
+        }
+        String[] attached = model.study(studyTag).getSolverSequences("SolverSequence");
+        if (attached.length != 1 || !solverTag.equals(attached[0])) {
+            throw new IllegalStateException("V2 snapshot requires the exact unique solver attached to its study");
+        }
+        SolverSequence solution = model.sol(solverTag);
+        double[] times = solution.getPVals();
+        if (!solution.isAttached() || !studyTag.equals(solution.study()) || times == null || times.length == 0) {
+            throw new IllegalStateException("V2 snapshot solver attachment differs from its exact study or has no stored times");
+        }
+        String quasistatic = requireQuasistatic(model);
+        com.comsol.model.XmeshInfoDofs dofs = solution.xmeshInfo().dofs();
+        int[] geometryNumbers = dofs.geomNums();
+        int[] nodes = dofs.nodes();
+        int[] nameIndices = dofs.nameInds();
+        int[] vectorIndices = dofs.solVectorInds();
+        double[][] coordinates = dofs.coords();
+        String[] names = dofs.dofNames();
+        int count = geometryNumbers.length;
+        int axes = coordinates == null ? 0 : coordinates.length;
+        if ((axes != 2 && axes != 3) || count <= 0 || names == null || names.length == 0 || nodes.length != count ||
+            nameIndices.length != count || vectorIndices.length != count) {
+            throw new IllegalStateException("W24 snapshot V2 requires complete 2D or 3D XmeshInfoDofs metadata");
+        }
+        for (int axis = 0; axis < axes; axis++) {
+            if (coordinates[axis] == null || coordinates[axis].length != count) {
+                throw new IllegalStateException("3D Xmesh coordinates do not align with the complete DOF mapping");
+            }
+        }
+        Path output = Path.of(pathText);
+        Path parent = output.getParent();
+        if (parent == null || !Files.isDirectory(parent) || Files.exists(output)) {
+            throw new IllegalArgumentException("V2 snapshot output must be a new file in an existing task directory");
+        }
+        int maxVectorIndex = -1;
+        for (int i = 0; i < count; i++) {
+            if (nameIndices[i] < 0 || nameIndices[i] >= names.length || vectorIndices[i] < 0) {
+                throw new IllegalStateException("V2 Xmesh DOF index is outside its native name/solution mapping");
+            }
+            maxVectorIndex = Math.max(maxVectorIndex, vectorIndices[i]);
+            for (int axis = 0; axis < axes; axis++) {
+                if (!Double.isFinite(coordinates[axis][i])) throw new IllegalStateException("V2 DOF coordinate is nonfinite");
+            }
+        }
+        try (DataOutputStream out = new DataOutputStream(new BufferedOutputStream(
+                new GZIPOutputStream(Files.newOutputStream(output, StandardOpenOption.CREATE_NEW))))) {
+            out.writeUTF("W24-DOF-SNAPSHOT-2");
+            out.writeInt(axes);
+            out.writeInt(names.length);
+            for (String name : names) out.writeUTF(name);
+            out.writeInt(count);
+            for (int i = 0; i < count; i++) {
+                out.writeInt(geometryNumbers[i]);
+                out.writeInt(nodes[i]);
+                out.writeInt(nameIndices[i]);
+                out.writeInt(vectorIndices[i]);
+                for (int axis = 0; axis < axes; axis++) out.writeDouble(coordinates[axis][i]);
+            }
+            out.writeInt(times.length);
+            double prior = Double.NEGATIVE_INFINITY;
+            for (int solnum = 1; solnum <= times.length; solnum++) {
+                double time = times[solnum - 1];
+                if (!Double.isFinite(time) || time <= prior || !solution.isRealU(solnum, "Sol")) {
+                    throw new IllegalStateException("V2 snapshot requires finite increasing times and real native solution vectors");
+                }
+                double[] values = solution.getU(solnum, "Sol");
+                if (values == null || values.length <= maxVectorIndex) {
+                    throw new IllegalStateException("V2 solution vector does not cover every Xmesh DOF");
+                }
+                out.writeDouble(time);
+                out.writeInt(values.length);
+                for (double value : values) {
+                    if (!Double.isFinite(value)) throw new IllegalStateException("V2 solution vector contains a nonfinite value");
+                    out.writeDouble(value);
+                }
+                prior = time;
+            }
+            out.flush();
+        } catch (IOException exception) {
+            throw new IllegalStateException("failed to write compressed W24 3D solution snapshot V2", exception);
+        }
+        try (FileChannel channel = FileChannel.open(output, StandardOpenOption.WRITE)) { channel.force(true); }
+        catch (IOException exception) { throw new IllegalStateException("failed to fsync W24 3D solution snapshot V2", exception); }
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("status", "SOLUTION_SNAPSHOT_V2_WRITTEN");
+        result.put("schema", "W24-DOF-SNAPSHOT-2");
+        result.put("study_tag", studyTag);
+        result.put("solver_tag", solverTag);
+        result.put("study_tlist_readback", model.study(studyTag).feature("time1").getString("tlist"));
+        result.put("quasistatic_readback", quasistatic);
+        result.put("path", output.toString());
+        result.put("size_bytes", safeFileSize(output));
+        result.put("sha256", sha256(output));
+        result.put("stored_time_count", times.length);
+        result.put("dof_count", count);
+        result.put("dof_names", Arrays.asList(names));
+        result.put("coordinate_axes", axes);
+        result.put("real_solution", true);
+        result.put("complete_xmesh_dofs", true);
+        result.put("max_solution_vector_index", maxVectorIndex);
+        return result;
+    }
+
+    private static String requireQuasistatic(Model model) {
+        String value = model.physics("solid").prop("StructuralTransientBehavior")
+            .getString("StructuralTransientBehavior");
+        if (!"Quasistatic".equals(value)) {
+            throw new IllegalStateException("actual Solid Mechanics StructuralTransientBehavior is not Quasistatic");
+        }
+        return value;
+    }
+
+    private static long safeFileSize(Path path) {
+        try { return Files.size(path); }
+        catch (IOException exception) { throw new IllegalStateException("cannot read V2 snapshot size", exception); }
+    }
+
+    private static String safeToken(Object value, String label) {
+        if (!(value instanceof String)) throw new IllegalArgumentException(label + " must be a string token");
+        String result = (String) value;
+        if (!result.matches("[A-Za-z0-9_-]{1,64}")) {
+            throw new IllegalArgumentException(label + " contains unsupported characters");
+        }
+        return result;
+    }
+
+    private static void writeNewAndSync(Path output, byte[] bytes) {
+        Path parent = output.getParent();
+        if (parent == null || !Files.isDirectory(parent) || Files.exists(output)) {
+            throw new IllegalArgumentException("native control metrics must be new in an existing task directory");
+        }
+        try (FileChannel channel = FileChannel.open(output, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)) {
+            ByteBuffer buffer = ByteBuffer.wrap(bytes);
+            while (buffer.hasRemaining()) channel.write(buffer);
+            channel.force(true);
+        } catch (IOException exception) {
+            throw new IllegalStateException("failed to write and fsync native control metrics", exception);
+        }
+    }
+
+    private static String sha256(byte[] bytes) {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(bytes);
+            StringBuilder text = new StringBuilder();
+            for (byte value : digest) text.append(String.format("%02x", value & 0xff));
+            return text.toString();
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 is unavailable", exception);
+        }
+    }
+
+    private static String sha256(Path path) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] buffer = new byte[1024 * 1024];
+            try (InputStream input = Files.newInputStream(path)) {
+                int count;
+                while ((count = input.read(buffer)) >= 0) {
+                    if (count > 0) digest.update(buffer, 0, count);
+                }
+            }
+            StringBuilder text = new StringBuilder();
+            for (byte value : digest.digest()) text.append(String.format("%02x", value & 0xff));
+            return text.toString();
+        } catch (IOException | NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("failed to hash complete V2 solution snapshot", exception);
+        }
+    }
+
+    private static String toJson(Object value) {
+        StringBuilder out = new StringBuilder();
+        appendJson(out, value);
+        return out.toString();
+    }
+
+    private static void appendJson(StringBuilder out, Object value) {
+        if (value == null) { out.append("null"); return; }
+        if (value instanceof String || value instanceof Character) {
+            out.append('"');
+            String text = String.valueOf(value);
+            for (int i = 0; i < text.length(); i++) {
+                char ch = text.charAt(i);
+                switch (ch) {
+                    case '"': out.append("\\\""); break;
+                    case '\\': out.append("\\\\"); break;
+                    case '\n': out.append("\\n"); break;
+                    case '\r': out.append("\\r"); break;
+                    case '\t': out.append("\\t"); break;
+                    default: if (ch < 0x20) out.append(String.format("\\u%04x", (int) ch)); else out.append(ch);
+                }
+            }
+            out.append('"');
+        } else if (value instanceof Number) {
+            if (!Double.isFinite(((Number) value).doubleValue())) throw new IllegalArgumentException("JSON cannot contain nonfinite values");
+            out.append(value.toString());
+        } else if (value instanceof Boolean) {
+            out.append(value.toString());
+        } else if (value instanceof Map<?, ?>) {
+            out.append('{');
+            boolean first = true;
+            for (Map.Entry<?, ?> entry : ((Map<?, ?>) value).entrySet()) {
+                if (!first) out.append(',');
+                first = false;
+                appendJson(out, String.valueOf(entry.getKey()));
+                out.append(':');
+                appendJson(out, entry.getValue());
+            }
+            out.append('}');
+        } else if (value instanceof Iterable<?>) {
+            out.append('[');
+            boolean first = true;
+            for (Object item : (Iterable<?>) value) {
+                if (!first) out.append(',');
+                first = false;
+                appendJson(out, item);
+            }
+            out.append(']');
+        } else if (value.getClass().isArray()) {
+            out.append('[');
+            for (int i = 0; i < java.lang.reflect.Array.getLength(value); i++) {
+                if (i > 0) out.append(',');
+                appendJson(out, java.lang.reflect.Array.get(value, i));
+            }
+            out.append(']');
+        } else {
+            throw new IllegalArgumentException("unsupported native control JSON type " + value.getClass().getName());
+        }
     }
 
     private static void commonParameters(Model model) {

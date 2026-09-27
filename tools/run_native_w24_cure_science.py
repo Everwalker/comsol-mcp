@@ -2941,7 +2941,7 @@ def _read_modified_utf(stream: Any, label: str) -> str:
 
 
 def iter_solution_snapshot(path: Path) -> Iterator[dict[str, Any]]:
-    """Stream one complete Java W24-DOF-SNAPSHOT-1 frame at a time.
+    """Stream complete Java W24 DOF snapshots (legacy 2D V1 or full 3D V2).
 
     The binary format is written by DataOutputStream in big-endian order. The
     iterator checks every index/vector, coordinate, finite solution value,
@@ -2954,11 +2954,12 @@ def iter_solution_snapshot(path: Path) -> Iterator[dict[str, Any]]:
         raise CampaignError(f"cannot open compressed native DOF snapshot: {exc}") from exc
     with snapshot as stream:
         magic = _read_modified_utf(stream, "snapshot magic")
-        if magic != "W24-DOF-SNAPSHOT-1":
+        if magic not in {"W24-DOF-SNAPSHOT-1", "W24-DOF-SNAPSHOT-2"}:
             raise CampaignError(f"unsupported native DOF snapshot schema: {magic!r}")
         axes = _read_i32(stream, "coordinate axis count")
         name_count = _read_i32(stream, "dof name count")
-        if axes != 2 or name_count <= 0 or name_count > 10000:
+        valid_axes = (axes == 2) if magic == "W24-DOF-SNAPSHOT-1" else axes in (2, 3)
+        if not valid_axes or name_count <= 0 or name_count > 10000:
             raise CampaignError("native DOF snapshot has an invalid coordinate/name dimension")
         names = [_read_modified_utf(stream, f"dofNames[{i}]") for i in range(name_count)]
         count = _read_i32(stream, "DOF count")
@@ -2968,18 +2969,17 @@ def iter_solution_snapshot(path: Path) -> Iterator[dict[str, Any]]:
         nodes: list[int] = []
         name_indices: list[int] = []
         vector_indices: list[int] = []
-        coordinates: list[tuple[float, float]] = []
+        coordinates: list[tuple[float, ...]] = []
         exact_keys: set[tuple[Any, ...]] = set()
         for i in range(count):
             geom_num = _read_i32(stream, f"geomNums[{i}]")
             node = _read_i32(stream, f"nodes[{i}]")
             name_index = _read_i32(stream, f"nameInds[{i}]")
             vector_index = _read_i32(stream, f"solVectorInds[{i}]")
-            x = _read_f64(stream, f"coords[0][{i}]")
-            y = _read_f64(stream, f"coords[1][{i}]")
             if not 0 <= name_index < len(names) or vector_index < 0:
                 raise CampaignError(f"native DOF snapshot index is out of bounds at row {i}")
-            key = (geom_num, node, x.hex(), y.hex(), names[name_index], name_index)
+            point = tuple(_read_f64(stream, f"coords[{axis}][{i}]") for axis in range(axes))
+            key = (geom_num, node, *(axis.hex() for axis in point), names[name_index], name_index)
             if key in exact_keys:
                 raise CampaignError(f"native DOF snapshot contains duplicate exact key at row {i}")
             exact_keys.add(key)
@@ -2987,7 +2987,7 @@ def iter_solution_snapshot(path: Path) -> Iterator[dict[str, Any]]:
             nodes.append(node)
             name_indices.append(name_index)
             vector_indices.append(vector_index)
-            coordinates.append((x, y))
+            coordinates.append(point)
         max_vector_index = max(vector_indices)
         time_count = _read_i32(stream, "stored time count")
         if time_count <= 0 or time_count > 10_000_000:
@@ -2998,7 +2998,10 @@ def iter_solution_snapshot(path: Path) -> Iterator[dict[str, Any]]:
             "nodes": nodes,
             "nameInds": name_indices,
             "solVectorInds": vector_indices,
-            "coords": [[row[0] for row in coordinates], [row[1] for row in coordinates]],
+            "coords": [[row[axis] for row in coordinates] for axis in range(axes)],
+            "snapshot_schema": magic,
+            "coordinate_axes": axes,
+            "complete_xmesh_dofs": magic == "W24-DOF-SNAPSHOT-2",
         }
         prior_time: float | None = None
         for frame_index in range(time_count):
