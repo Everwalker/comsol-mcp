@@ -207,7 +207,11 @@ class StaticShapeManagedRunner:
     def _dispatch(self, operation: str, arguments: Mapping[str, Any], *,
                   binding: ManagedModelBinding | None = None,
                   session_id: str | None = None,
-                  worker_required: bool, timeout_s: float | None = None) -> dict[str, Any]:
+                  worker_required: bool, timeout_s: float | None = None,
+                  idempotency_key: str | None = None,
+                  request_id: str | None = None,
+                  request_capture_path: Path | None = None,
+                  request_capture_metadata: Mapping[str, Any] | None = None) -> dict[str, Any]:
         timeout = self.timeout_s if timeout_s is None else float(timeout_s)
         if not math_is_positive_finite(timeout):
             raise CampaignError("static-shape RPC timeout must be positive and finite")
@@ -227,17 +231,35 @@ class StaticShapeManagedRunner:
             execution: dict[str, Any] = {
                 "project_id": self.project_id, "rpc_timeout_s": timeout,
                 "queue_timeout_s": 60.0, "execution_timeout_s": None,
-                "idempotency_key": f"w24-shape-{uuid4()}",
-                "request_id": f"w24-shape-request-{uuid4()}",
+                "idempotency_key": (f"w24-shape-{uuid4()}" if idempotency_key is None
+                                    else idempotency_key),
+                "request_id": (f"w24-shape-request-{uuid4()}" if request_id is None
+                               else request_id),
             }
+            if (not isinstance(execution["idempotency_key"], str) or
+                    not execution["idempotency_key"] or not isinstance(execution["request_id"], str) or
+                    not execution["request_id"]):
+                raise CampaignError("managed operation identities must be nonempty strings")
             if session_id is not None:
                 execution["session_id"] = session_id
             if binding is not None:
                 execution["model_ref"] = dict(binding.model_ref)
                 execution["expected_revision"] = binding.revision
-            response = self.daemon.dispatch({"operation": operation,
-                                             "arguments": dict(arguments),
-                                             "execution": execution})
+            request = {"operation": operation,
+                       "arguments": dict(arguments),
+                       "execution": execution}
+            if request_capture_path is not None:
+                if not isinstance(request_capture_metadata, Mapping):
+                    raise CampaignError("durable request capture requires its exact slot/source metadata")
+                capture_payload = {
+                    "schema": "W24_STATIC_SHAPE_READMISSION_REQUEST_EVIDENCE_V1",
+                    **dict(request_capture_metadata),
+                    "request": request,
+                }
+                _write_json_fsynced(Path(request_capture_path), capture_payload)
+            elif request_capture_metadata is not None:
+                raise CampaignError("request capture metadata cannot be supplied without a durable capture path")
+            response = self.daemon.dispatch(request)
         except BaseException as exc:
             _append_jsonl_fsynced(self.rpc_journal, {
                 "event": "dispatch_exception", **event, "terminal_observed": False,
@@ -265,13 +287,21 @@ class StaticShapeManagedRunner:
         return response
 
     def _java_action(self, binding: ManagedModelBinding, *, source_role: str,
-                     entrypoint: str, arguments: Mapping[str, Any]) -> tuple[ManagedModelBinding, dict[str, Any], dict[str, Any]]:
+                     entrypoint: str, arguments: Mapping[str, Any],
+                     idempotency_key: str | None = None,
+                     request_id: str | None = None,
+                     request_capture_path: Path | None = None,
+                     request_capture_metadata: Mapping[str, Any] | None = None
+                     ) -> tuple[ManagedModelBinding, dict[str, Any], dict[str, Any]]:
         source = self.source_paths[source_role]
         response = self._dispatch("operation_call", {
             "operation_id": "code.execute_java",
             "arguments": {"source_artifact": source.name, "entrypoint": entrypoint,
                           "arguments": dict(arguments), "mode": "trusted"},
-        }, binding=binding, worker_required=True)
+        }, binding=binding, worker_required=True,
+            idempotency_key=idempotency_key, request_id=request_id,
+            request_capture_path=request_capture_path,
+            request_capture_metadata=request_capture_metadata)
         result = self.setup_runner._java_action_readback(response, f"W24 static-shape {entrypoint}")
         updated = self._updated_binding(binding, response)
         return updated, response, result
@@ -336,7 +366,12 @@ class StaticShapeManagedRunner:
 
     def _inspect(self, binding: ManagedModelBinding) -> tuple[ManagedModelBinding, dict[str, Any]]:
         response = self._dispatch("model.inspect", {"detail": "summary"}, binding=binding,
-                                  worker_required=True)
+                                  # model.inspect is a synchronous public
+                                  # read-only route, not a Worker request. Its
+                                  # terminal contract is success=true plus the
+                                  # exact identity/revision readback below; it
+                                  # does not add data.worker.status.
+                                  worker_required=False)
         data = response.get("data")
         execution = response.get("execution")
         identity = data.get("model_identity") if isinstance(data, Mapping) else None

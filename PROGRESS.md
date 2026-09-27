@@ -4,13 +4,13 @@ Updated 2026-09-27 UTC. **Overall PARTIAL; execution continues through W26.** Th
 
 ## Current stage
 
-**F04 no-ModelRef lifecycle recovery: PASS for scoped software; F04/project overall PARTIAL.** Recovery now requires exact original process/Worker/request identity and consumes existing close/reap evidence. SQLite atomically records lifecycle state and proof while preserving original UNKNOWN results. Missing live context remains explicit.
+**W24 fourteen-model readmission and budget identity: PASS for scoped software; W24/project overall PARTIAL.** Reloaded models now bind the exact saved artifact, actual load/readback requests, durable operation/job identity and new Worker ModelRef/revision. Readmission and science share one immutable Worker birth/deadline/reserve; reload time counts against the campaign.
 
-**Actually executed:** isolated published `b484a735` plus three-file overlay: **164 PASS / 0 FAIL / 0 ERROR / 0 SKIP**, plus the separately run historical Git-blob test **1 PASS**. Compilation passed. Main review verified 249 unchanged source files and all three overlay files, receipt/JUnit hashes, and independently reran four identity/retirement controls. [Compact evidence and replay](docs/full_project_execution/project_session/LIFECYCLE_RECOVERY_CHECKPOINT.json).
+**Actually executed:** isolated published `7c91f8c` plus three-file overlay: **100 PASS / 0 FAIL / 0 ERROR / 0 SKIP** (79 science and 21 managed-setup tests). Main review verified 77 imported sources, all overlay bytes and JUnit/receipt hashes, and reran **9 budget negative controls PASS**. [Compact evidence and replay](docs/full_project_execution/w24/READMISSION_SOFTWARE_CHECKPOINT.json).
 
-**COMSOL/native NOT_RUN.** Live context reconstruction and Server-lifecycle UNKNOWN recovery remain incomplete. Main review rejected two earlier candidates and verified their repairs; this scoped review is not the final independent overall review.
+**Native setup/reload/solve NOT_RUN; science NOT_ESTABLISHED.** The earlier budget-reset candidate was rejected after a synthetic solve escaped an expired budget; this repair rejects before dispatch. Full production orchestration and scientific acceptance remain open.
 
-W23 single-BMA producer software was published as `b484a735` (134 tests); paired-field mapping continues. W24 setup was published as `21ff75c` (53 tests); new-epoch readmission/budget identity repair is awaiting main review. Automatic approval rejected local cleanup SIGTERM; explicit authorization remains pending, with no cleanup or relaunch.
+F04 lifecycle recovery was published and post-push verified as `ebb30ce` (164 isolated tests plus one separate historical-object test). F16 durable experiment reads continue. W23 BMA producer was published as `b484a735` (134 tests); paired-field mapping continues. Automatic approval rejected local cleanup SIGTERM; explicit authorization remains pending, with no cleanup or relaunch.
 
 ## Latest accepted software baseline
 
@@ -35,6 +35,6 @@ Earlier source checkpoints and failures remain in the existing state and linked 
 
 ## Next action and recovery
 
-Continue the three Luna Max work streams: implement F16 canonical durable experiment reads; implement W23 paired-field mode mapping; review W24 new-epoch readmission budget identity and complete science orchestration. Publish each accepted software stage immediately. Then freeze isolated managed native candidates, execute their reviewed scope, complete all remaining W01–W26 work, and run a fresh independent overall review with repair/retest until accepted.
+Continue the three Luna Max work streams: implement F16 canonical durable experiment reads; implement W23 paired-field mode mapping; complete W24 production orchestration and remaining science. Publish each accepted software stage immediately. Then freeze isolated managed native candidates, execute their reviewed scope, complete all remaining W01–W26 work, and run a fresh independent overall review with repair/retest until accepted.
 
-The latest focused replay is in [LIFECYCLE_RECOVERY_CHECKPOINT.json](docs/full_project_execution/project_session/LIFECYCLE_RECOVERY_CHECKPOINT.json). Recover from GitHub and existing state. Last previously verified GitHub sync: `b484a735b7460c3780ff6a02329d6781a1faadce`; this stage is recorded as synchronized only after post-push fetch and HEAD/origin-main equality.
+The latest focused replay is in [READMISSION_SOFTWARE_CHECKPOINT.json](docs/full_project_execution/w24/READMISSION_SOFTWARE_CHECKPOINT.json). Recover from GitHub and existing state. Last previously verified GitHub sync: `ebb30cecb48af25adc1f300b12b0aeb576952c3c`; this stage is recorded as synchronized only after post-push fetch and HEAD/origin-main equality.

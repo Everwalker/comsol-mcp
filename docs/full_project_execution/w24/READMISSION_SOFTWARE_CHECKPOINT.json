@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "scope": "W24 exact new-Worker readmission of fourteen unsolved models and immutable birth budget",
+  "status": "PASS_SCOPED_SOFTWARE",
+  "native_acceptance": "NOT_RUN",
+  "scientific_acceptance": "NOT_ESTABLISHED",
+  "base_commit": "7c91f8ccb38660f962bfd8c45704eab49fea3200",
+  "source_manifest": [
+    {
+      "path": "tools/run_native_w24_static_shape_setup.py",
+      "sha256": "47f12e8d8296efd67cd66ad2319bcb093260dddfa99763a2f50ec65b60a25da5"
+    },
+    {
+      "path": "tools/run_native_w24_static_shape_sensitivity_science.py",
+      "sha256": "09888490e0e77f65df98f2b6392fb8a4109e937add7acadead993d5b7d067dd9"
+    },
+    {
+      "path": "tests/test_run_native_w24_static_shape_science.py",
+      "sha256": "90700cef1af723fb6ea4e0b7b9848e65f7711d2588f378bcd196c9e585fb3aab"
+    }
+  ],
+  "capabilities": [
+    "Bind original saved artifact hash to actual public model_load request/response and exact durable operation/job/canonical hash.",
+    "Read back configuration, unsolved state and new ModelRef/revision for fourteen distinct slots in one new Worker epoch.",
+    "Stable slot keys independent of transition ID; UNKNOWN stops without retry or reloading.",
+    "Pin Worker birth/deadline/duration/cleanup reserve through readmission observations, approval and science executor; charge readmission time.",
+    "Validate complete evidence before first Study.run; preserve old failures and original epoch receipts."
+  ],
+  "actual_tests": {
+    "combined": {
+      "path": "/private/tmp/w24_readmission_identity_repair_7c91f8c_20260928/budget_identity_full_100_junit.xml",
+      "sha256": "0bf69f908036e840c0f182347d78897d4171eca670032d5e2036e3fd66355f81",
+      "tests": 100
+    },
+    "result": {
+      "errors": 0,
+      "exit_code": 0,
+      "failures": 0,
+      "skipped": 0,
+      "tests": 100
+    },
+    "primary_science": {
+      "path": "/private/tmp/w24_readmission_identity_repair_7c91f8c_20260928/budget_identity_science_junit.xml",
+      "sha256": "e626b472aa6cf13c4f071c020f1ac5cd088f799d1cb6325e2a720a57d24451cc",
+      "tests": 79
+    },
+    "managed_setup": {
+      "path": "/private/tmp/w24_readmission_identity_repair_7c91f8c_20260928/budget_identity_managed_setup21_junit.xml",
+      "sha256": "6a165eebb974ac9f27baf8f1ff8200b7cf4da4673f3e24f178be5e04753933e4",
+      "tests": 21
+    },
+    "command": [
+      "/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python",
+      "-m",
+      "pytest",
+      "-m",
+      "not comsol_server",
+      "-q",
+      "tests/test_run_native_w24_static_shape_science.py",
+      "tests/test_run_native_w24_static_shape_setup_campaign.py",
+      "tests/test_w24_static_shape_sensitivity.py",
+      "tests/test_w24_static_shape_sensitivity_comparison.py",
+      "tests/test_w24_static_shape_managed.py",
+      "--tb=short",
+      "--junitxml=/private/tmp/w24_readmission_identity_repair_7c91f8c_20260928/budget_identity_full_100_junit.xml"
+    ],
+    "root_budget_retests": {
+      "path": "/private/tmp/w24_readmission_identity_repair_7c91f8c_20260928/root_budget_retests.xml",
+      "sha256": "85a73054a8ebab35a337b1bd0f15ee8e0c440084daaa4e14a75ea8e7d4ff54fb",
+      "result": "9 PASS / 0 FAIL / 0 ERROR / 0 SKIP"
+    }
+  },
+  "main_review": {
+    "verdict": "PASS_SCOPED_SOFTWARE",
+    "import_sources_verified": 77,
+    "nonoverlay_import_sources_verified_against_base": 75,
+    "overlay_files_verified": 3,
+    "prior_evidence_preserved": true,
+    "closed_finding": "Expired original readmission budget formerly accepted with replacement birth; now rejected before solve dispatch."
+  },
+  "raw_receipt": {
+    "path": "/private/tmp/w24_readmission_identity_repair_7c91f8c_20260928/budget_identity_software_replay_receipt.json",
+    "sha256": "2850bb95d52cebc77b9dbc94c1f15cd7d39cb8ee0ac0183dc9e028e80ee42e10"
+  },
+  "import_manifest": {
+    "path": "/private/tmp/w24_readmission_identity_repair_7c91f8c_20260928/budget_identity_source_import_manifest.json",
+    "sha256": "510813bacf2ad9ec5b1534dd6b25c0a0c7d2face2ae94df3f6f31f0df489d441"
+  },
+  "negative_controls": [
+    "replacement Worker birth",
+    "extended absolute deadline",
+    "reduced cleanup reserve",
+    "cross-epoch manifest budget",
+    "missing budget history",
+    "inconsistent elapsed/remaining budget history",
+    "slot readback budget mutation",
+    "expired original budget",
+    "replacement budget after original deadline",
+    "approval budget mutation"
+  ],
+  "rejected_predecessor": {
+    "receipt_sha256": "46c8e7c8c1bd8d199bcdd4013ae64f5f9e99db2c8c78f2152c5bdfe10ae6cc5e",
+    "reproducer_path": "/private/tmp/w24_readmission_identity_repair_7c91f8c_20260928/root_budget_reset_reproducer.json",
+    "reproducer_sha256": "8ede3e130f4cc083aab804edd58f2ae7d944c84d8389c7704f261587769e4722",
+    "result": "REJECTED: one synthetic Study.run after original budget expiry"
+  },
+  "replay": "Archive base commit, overlay exactly these three files from this stage commit, install Python 3.12 project test dependencies, unset PYTHONPATH and run the listed five test modules. All engine behavior is synthetic; no native COMSOL process is needed. Do not interpret fixtures as native setup or science evidence.",
+  "next_action": "Complete end-to-end setup/retirement/readmission/science orchestration with genuine Worker/Server birth budgets; then isolated native candidate preparation and remaining UV/gel/reference/viscoelastic work. No native launch while resource authorization is unresolved."
+}

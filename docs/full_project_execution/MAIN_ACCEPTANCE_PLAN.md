@@ -306,3 +306,7 @@ The strict lifecycle follow-up overlay cc3c4e796543185c996681ac1ccb77092c48f935a
 ### F04 lifecycle recovery scoped verdict
 
 Final overlay `80091c1538087cb8fd3d1fdeeae0970c65dd86a3fcb958220848502b99a7880d` passed main software review: 164 isolated tests plus one separate historical-blob test and four main retests. Both earlier rejection findings are repaired. See LIFECYCLE_RECOVERY_CHECKPOINT.json for source/test identities. No COMSOL native acceptance, live-context reconstruction, Server UNKNOWN recovery or whole-project acceptance is implied. Next implementation unit is F16 item 1 above, reusing existing durable experiment records.
+
+### W24 readmission budget repair scoped verdict
+
+Receipt `2850bb95d52cebc77b9dbc94c1f15cd7d39cb8ee0ac0183dc9e028e80ee42e10` passed main software review: 100 isolated tests, 77 import sources verified and 9 main budget retests. Readmission, approval and science bind the same Worker birth/epoch/deadline/duration/reserve; replacement or expired budgets fail before solve. Prior rejected evidence remains preserved. See READMISSION_SOFTWARE_CHECKPOINT.json. Full production orchestration/native science remains incomplete; this creates no new native solve authorization.
