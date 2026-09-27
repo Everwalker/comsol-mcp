@@ -601,7 +601,9 @@
         "tests/test_w24_science_acceptance.py",
         "tools/run_native_w24_cure_science.py",
         "tools/java/W24CureScienceFixture.java",
-        "tests/test_w24_cure_science_runner.py"
+        "tests/test_w24_cure_science_runner.py",
+        "tools/java/W24StaticShapeFixture.java",
+        "docs/full_project_execution/w24/W24_STATIC_SHAPE_IMPLEMENTATION_DRAFT.md"
       ],
       "evidence": [
         "docs/full_project_execution/w24/evidence/setup_only_candidate_20260927T0117Z/offline_checks.json",
@@ -620,19 +622,24 @@
         "docs/full_project_execution/w24/evidence/root_cause_external_strain_20260927T0523Z.json",
         "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0510Z/native_run_20260927T0517Z/summary.json",
         "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0510Z/native_run_20260927T0517Z/exact_owned_cleanup_receipt.json",
-        "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0510Z/native_run_20260927T0517Z/worker_ledger_reconciliation.json"
+        "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0510Z/native_run_20260927T0517Z/worker_ledger_reconciliation.json",
+        "docs/full_project_execution/w24/evidence/static_shape_offline_20260927T1036Z/checkpoint.json",
+        "docs/full_project_execution/w24/STATIC_SHAPE_OFFLINE_CHECKPOINT.json"
       ],
       "blockers": [
-        "Latest reviewed W24 setup candidate 0510Z failed on Unknown_feature_ID_X#ExternalStrain; its durable job/operation remains UNKNOWN, execution_state_unknown=true and safe_retry=false. Preserve raw result and exact cleanup evidence.",
-        "Offline ExternalStrain parent hierarchy correction under solid.lemm1 is in progress; compile/tests/source freeze/root review remain. No native retry is authorized by this checkpoint.",
-        "W24 science executor remains incomplete and NOT_FROZEN/NOT_STARTED; no solve submissions. Full gel/reference-state/viscoelastic/static-shape scope remains open.",
+        "The W24 0841Z setup-only attempt failed before engine/Worker birth at project.inspect; preserve its FAIL_OR_INCOMPLETE result and do not replay the stale candidate.",
+        "The cure setup ExternalStrain native readback remains unverified after earlier UNKNOWN failure; no replacement setup candidate has been reviewed or authorized.",
+        "Static-shape baseline is offline compile-only. Managed model adoption, native geometry/selection/property readback, save/reopen, phase initialization, field/time capture, stationary-window and sensitivity criteria remain NOT_RUN.",
+        "W24 cure science executor and full gel/reference-state/viscoelastic/static-shape acceptance remain incomplete; native science budget is NOT_FROZEN/NOT_STARTED.",
+        "Windows COMSOL 6.3 remains required and unassessed; only macOS COMSOL 6.3 arm64/x86_64 are USER_REQUESTED_SKIP.",
         "Stress component identity still requires complete native Equation View descriptions/units and both mechanics benchmarks; values or names alone are insufficient."
       ],
-      "note": "0510Z setup-only candidate SHA 17a79db2…dce73 ran one COMSOL 6.4.0.293 server/one Worker and failed with Unknown_feature_ID_X#ExternalStrain at the physics root; durable UNKNOWN and cleanup receipts are preserved, 0 solves. Offline 6.4 documentation and saved-model evidence support the child path solid.lemm1/ExternalStrain. Current fix is not frozen/native-verified; StrainInput/dV require actual native getter readback. No repeat birth authorized. Science executor remains incomplete; full W24 scope remains open.",
+      "note": "W24 remains IN_PROGRESS/PARTIAL. Static-shape fixture compiled with Corretto 11.0.31 against the installed COMSOL 6.4 API classpath; this is API-signature software evidence only. The 0841Z cure setup attempt remains a preserved prebirth failure (0 engine/Worker births and 0 solve submissions). Native configuration, save/reopen, phase initialization and scientific acceptance are NOT_RUN.",
       "execution_notes": [
         "0330Z native attempt: COMSOL 6.4.0.293 server PID 90771/port 63979 and one Worker PID 90848/port 63988; Python 3.14 lacked mcp during production ControlDaemon registry construction, before model setup. 0 solve submissions; exact cleanup and global quiescence verified.",
         "0346Z offline candidate adds exact Python interpreter/distribution inventory and a pre-birth production no-engine gate. Actual pip check passed; collect_legacy_registry and ControlDaemon construction/close passed; JDK11 compile and 37 focused tests passed. Software-only; no native result.",
-        "0510Z reviewed setup candidate native execution failed on the ExternalStrain parent path; status FAIL_OR_INCOMPLETE, durable UNKNOWN retained, exact cleanup verified, 0 solve submissions. Offline hierarchy root-cause evidence: docs/full_project_execution/w24/evidence/root_cause_external_strain_20260927T0523Z.json."
+        "0510Z reviewed setup candidate native execution failed on the ExternalStrain parent path; status FAIL_OR_INCOMPLETE, durable UNKNOWN retained, exact cleanup verified, 0 solve submissions. Offline hierarchy root-cause evidence: docs/full_project_execution/w24/evidence/root_cause_external_strain_20260927T0523Z.json.",
+        "2026-09-27 10:36Z: offline static-shape checkpoint recorded at docs/full_project_execution/w24/evidence/static_shape_offline_20260927T1036Z/checkpoint.json; javac 11.0.31 passed over 349 COMSOL plugin jars. Native acceptance remains NOT_RUN; compile does not establish COMSOL property/selection runtime readback."
       ]
     },
     {

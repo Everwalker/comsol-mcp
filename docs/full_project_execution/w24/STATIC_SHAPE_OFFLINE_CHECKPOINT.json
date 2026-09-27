@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "checkpoint": "W24 static-shape baseline Java setup fixture",
+  "status": "PARTIAL",
+  "compile_status": "PASS",
+  "native_acceptance": "NOT_RUN",
+  "science_status": "NOT_FROZEN_NOT_RUN",
+  "implemented": [
+    "Equal-analytic-volume flat and stepped axisymmetric glue/gas baseline geometry",
+    "Full substrate wetting selections through Rbox, including split boundary IDs and coverage probes",
+    "Phase materials and initial-value domain links; incompressible pressure-point reference",
+    "Mesh and unsolved Phase Initialization/transient solver configuration with readback assertions",
+    "Bulk energy explicitly diagnostic-only"
+  ],
+  "validation": {
+    "kind": "Java API signature compilation only",
+    "javac_version": "javac 11.0.31",
+    "compile_exit": 0,
+    "compile_command": [
+      "/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home/bin/javac",
+      "-cp",
+      "/Applications/COMSOL64/Multiphysics/plugins/*:/Applications/COMSOL64/Multiphysics/apiplugins/*",
+      "-d",
+      "/private/tmp/w24_static_shape_compile",
+      "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/tools/java/W24StaticShapeFixture.java"
+    ],
+    "classpath_jar_count": 349,
+    "classpath_canonical_entries_sha256": "67aa979f9ba8ff1ed897967c6069b693c83db8395badb66c6763eadbfed090ca",
+    "classpath_manifest_file_sha256": "5e396d70bbb40cbfc49fa978282c84926169fdde4ca9be2fa04dbf433c070b17",
+    "compiled_class_sha256": "75e17f7be189ce38c9f7d490680074247b8e9a69a4518191300e8c6168b1d45b",
+    "independent_root_check": "Source/draft/class hashes and all 349 installed JAR hashes verified; compile logs empty",
+    "pytest": "NOT_RUN for this Java-only baseline checkpoint",
+    "server_starts": 0,
+    "worker_starts": 0,
+    "study_or_solver_calls": 0
+  },
+  "files": [
+    {
+      "path": "tools/java/W24StaticShapeFixture.java",
+      "sha256": "6c6cd9b1bf125f1a0b60614c207cb52126b6cc745ccb3da3d9bc407903495b18"
+    },
+    {
+      "path": "docs/full_project_execution/w24/W24_STATIC_SHAPE_IMPLEMENTATION_DRAFT.md",
+      "sha256": "3f769e82cb749c78c9f109d782872f628b83f802c4a5d1be97e692dd8afa2b11"
+    }
+  ],
+  "local_evidence": {
+    "checkpoint_path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/docs/full_project_execution/w24/evidence/static_shape_offline_20260927T1036Z/checkpoint.json",
+    "checkpoint_sha256": "f9341c3cdacba0aa4f858b7afc26d48a1bee1b975c6409cdd58f3ea8ce459b11",
+    "classpath_manifest_path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/docs/full_project_execution/w24/evidence/static_shape_offline_20260927T1036Z/classpath_manifest.json",
+    "compiled_class_path": "/private/tmp/w24_static_shape_compile/W24StaticShapeFixture.class",
+    "rebuild": "Use a licensed local COMSOL 6.4 installation and the recorded JDK/classpath compile command. Commercial JARs and generated classes are not distributed."
+  },
+  "remaining": [
+    "Actual native geometry/property/selection/material/solver readbacks",
+    "Managed build/readback runner and raw field/time capture",
+    "Wet-support-aware interface and contact-line extraction; proposed fixed-radial draft is not frozen",
+    "Phase initialization, shape convergence, volume/stability gates and mesh/interface/time sensitivity",
+    "Windows6.3 compatibility and remaining target validation",
+    "Total wall-plus-bulk energy formulation if total-energy acceptance is added"
+  ],
+  "next_action": "Complete managed setup/readback and field-extraction implementation, review and freeze a distinct setup-only candidate before native dispatch; do not reuse an earlier campaign budget."
+}

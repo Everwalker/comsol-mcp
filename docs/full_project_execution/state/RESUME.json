@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "phase": "W24_SETUP_PREBIRTH_PROJECT_INSPECT_FAILURE_AND_OFFLINE_REPAIR",
+  "phase": "W24_STATIC_SHAPE_OFFLINE_BASELINE_AND_MANAGED_READBACK_PREPARATION",
   "task": "W24_CURE_HISTORY_SETUP_PREFLIGHT_AND_SCIENCE_EXECUTOR",
-  "status": "IN_PROGRESS_OFFLINE_PROJECT_INSPECT_CONTRACT_REPAIR_AFTER_ZERO_BIRTH_FAILURE",
-  "candidate_source": "W24 0841Z setup-only freeze SHA-256 c5eac2b9f2f23067443d26242f9cb4fadad084dfd71fc2ca9c4125aed1dca4af was invoked once at 0857Z and failed before any engine/Worker birth: project.create succeeded, project.inspect failed INVALID_REQUEST because execution.idempotency_key was injected into strict project domain args. Preserve FAIL_OR_INCOMPLETE; 0 birth/0 solve. Offline runner now omits the unnecessary inspect envelope key, and release fixed production envelope/domain separation. Real ControlDaemon create→inspect regression 2/2 passed; receipt docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_runner_regression_receipt.json. The old freeze is stale; F04 shared runtime integration is still in progress.",
+  "status": "PARTIAL_STATIC_SHAPE_JAVAC_PASS_NATIVE_NOT_RUN; CURE_SETUP_0857Z_PREBIRTH_FAILURE_PRESERVED",
+  "candidate_source": "W24 0841Z cure setup freeze was invoked once at 0857Z and failed before engine/Worker birth; preserve FAIL_OR_INCOMPLETE, 0 births/0 solves. The static-shape baseline fixture is not yet frozen; offline compile checkpoint is docs/full_project_execution/w24/evidence/static_shape_offline_20260927T1036Z/checkpoint.json (source SHA-256 6c6cd9b1…495b18; Corretto 11.0.31/API-signature compile PASS). Native geometry/property readback, managed save/reopen, phase initialization, field capture and science acceptance remain NOT_RUN.",
   "completed_work": [
     "PIN source restoration completed and verified: 10832 files, zero missing LFS backing objects; repository HEAD matches pinned commit/tree.",
     "tools/init_completion.py --repo repository completed; frozen inventory: 26 work packages, 272 actions, 60 tests x 6 targets = 360 test cells.",
@@ -56,7 +56,7 @@
     "2026-09-27T07:26:09Z: W24 Worker-transition source now compares ModelRef Worker epochs instead of logical session IDs, safely permitting the same endpoint session on Worker 2 while rejecting retired server_instance_id values. The runner fsyncs Worker 2 start intent and records observed Popen births separately from successful connected Worker sessions, without retries; Worker connection receipts are copied per Worker. py_compile and 39 focused tests passed; durable receipt is docs/full_project_execution/evidence/w24_worker_epoch_transition_20260927T072244Z/run_receipt.json, independently reviewed in docs/full_project_execution/evidence/main_w24_worker_epoch_transition_integrity_review.json. No engine/solve started.",
     "W24 retirement integration checkpoint 2026-09-27T08:29Z: public ControlDaemon quiescence readback validation now matches the released schema (Worker instance and connection epoch; COMSOL server epoch remains separately bound through ModelRefs). Worker transition and final cleanup hold worker_retirement_guard from the fresh cross-project ledger/direct-RPC readback through exact owned cleanup and Popen exit confirmation. Actual ControlDaemon + fake Worker tests cover cross-project RUNNING work, work racing after an observational snapshot, admission refusal under RETIRING, and confirmed retirement. Exact Python 3.12.13 py_compile passed; 37 focused tests passed in the immutable capsule; an expanded W24-focused suite passed 83 tests. Receipt: docs/full_project_execution/w24/evidence/worker_retirement_integration_20260927T0829Z/run_receipt.json (SHA-256 e9a99f8dd8df1fcc327e633b53a419174f73d98a2d3b07f41c972b615758c244). Native status NOT_RUN; no COMSOL process or solve was launched, and no old FAIL/UNKNOWN state changed."
   ],
-  "next_action": "Continue the existing Luna executors: F04 nine session routes and multi-Worker isolation/dispatch; W23 managed full-3D geometry/deformation/complex-field/save-reopen chain; W24 static-shape fixture and science executor. Run focused offline tests and compile against the versioned local API. After stable source handoffs, refresh and review a new native candidate; do not replay the failed 0841Z freeze or retry UNKNOWN jobs. Keep the original W01-W26 scope and remaining P0 routes, platform/native acceptance and final independent review open. Sync each completed clear stage to GitHub without stopping. Windows 6.3 remains required; only macOS 6.3 targets are user-skipped.",
+  "next_action": "Continue the existing Luna executors through W01-W26: finish F04 unified scheduling, exact Worker job controls and remaining session lifecycle routes; finish W23 managed full-3D chain and versioned two-mode basis; implement W24 managed shape build/readback and wet-support-aware field/stability/sensitivity extraction while continuing cure history. Repair classified offline regressions, then refresh source closure and review a distinct native setup candidate. Do not replay expired failed candidates or retry UNKNOWN jobs. Preserve all remaining P0, platform, W25/W26 and final independent review requirements. Sync each completed stage without stopping.",
   "active_jobs": [],
   "blockers": [
     "W24 setup attempt 0841Z/0857Z ended FAIL_OR_INCOMPLETE before engine birth: project.create SUCCEEDED and project.inspect FAILED on injected idempotency_key. Preserve original receipt; do not replay this freeze. Offline helper fix and focused production test pass, but a new complete closure and root review are required before another setup launch.",
@@ -84,7 +84,7 @@
     "native_solve_budget_remaining": 0,
     "evidence": "docs/full_project_execution/evidence/luna_process_reconciliation/mac_readonly_snapshot_20260926T2152Z.json"
   },
-  "updated_at": "2026-09-27T09:46:53.732575+00:00",
+  "updated_at": "2026-09-27T10:36:30+00:00",
   "note": "Continuous authorized execution through W26. OpenViking task-detail retrieval was denied by auto-review because it would disclose internal roadmap identifiers externally; no workaround. Use current frozen workpack and read-only local memory only. Do not rerun bootstrap/init on resume. Source files now contain executor edits; do not rerun bootstrap/init. Git metadata is an APFS pointer managed by main agent; migration requires bundle/source transfer, not copying only the repository pointer. Git metadata migration is documented by evidence/git_metadata_relocation.json and owned by the main agent; do not copy the APFS git pointer to another machine without source bundle/archive. GUI permission boundary and checkpoint solution-scope caveat recorded. This executor has one W24 native setup-only failure with exact cleanup verified; the durable operation/job UNKNOWN records remain unchanged. No W24 solver submission occurred. Saved-MPH readback supplement uses separate time/evidence and zero study/solver calls; run08 remains FAIL_OR_INCOMPLETE. Root raw SQLite recomputation is linked under native_resume_saved_artifact_supplement.raw_recomputation_evidence; original run08 remains FAIL_OR_INCOMPLETE and no solve budget is restored. Latest checkpoint 2026-09-27T03:50:43Z: W24 0334Z setup run failed pre-model due Python 3.14 missing mcp, with exact cleanup; 0346Z candidate pins the validated 3.12.13 environment and passes a production no-engine registry/daemon preflight. Native setup remains pending root review; science implementation continues offline. Latest checkpoint 2026-09-27T09:09:28Z: W24 0841Z candidate was invoked once at 0857Z and failed before any engine/Worker birth because project.inspect received an injected idempotency_key; project.create persisted successfully. Exact read-only SQLite hash and operation result are in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_contract_diagnostic.json. The runner now omits the unnecessary inspect key; actual ControlDaemon focused regression is 2/2 PASS in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_runner_regression_receipt.json. No native retry or acceptance is claimed; release F04 runtime integration is active, so refresh closure and root review are required before another launch. Windows COMSOL 6.3 remains required/unassessed; only macOS 6.3 is USER_REQUESTED_SKIP.",
   "native_resume_smoke": {
     "status": "FAIL_OR_INCOMPLETE_POINT_SCHEMA_FAILURE; SOLVED_CHILD_ARTIFACT_DURABLE; SOLVE_BUDGET_EXHAUSTED; SEPARATE_SAVED_MPH_READBACK_PASS",
@@ -699,39 +699,39 @@
     "scope": "API-only evidence; no optical, numerical, or physical acceptance"
   },
   "recent_checkpoint": {
-    "at_utc": "2026-09-27T09:09:28Z",
-    "scope": "W24 0841Z setup-only candidate prebirth outcome, exact read-only project.inspect diagnosis, and offline W24 runner correction. No native engine was born.",
+    "at_utc": "2026-09-27T10:36:30Z",
+    "scope": "W24 static-shape baseline offline compile and managed-readback preparation; no native engine/Worker or solver was started.",
     "w24": {
-      "status": "FAIL_OR_INCOMPLETE_PREBIRTH_PROJECT_INSPECT_CONTRACT_MISMATCH; OFFLINE_FIX_TESTED",
-      "candidate_sha256": "c5eac2b9f2f23067443d26242f9cb4fadad084dfd71fc2ca9c4125aed1dca4af",
-      "native_births_this_checkpoint": 0,
+      "status": "OFFLINE_JAVAC_PASS_NATIVE_NOT_RUN",
+      "source": "tools/java/W24StaticShapeFixture.java",
+      "source_sha256": "6c6cd9b1bf125f1a0b60614c207cb52126b6cc745ccb3da3d9bc407903495b18",
+      "draft": "docs/full_project_execution/w24/W24_STATIC_SHAPE_IMPLEMENTATION_DRAFT.md",
+      "draft_sha256": "3f769e82cb749c78c9f109d782872f628b83f802c4a5d1be97e692dd8afa2b11",
+      "receipt": "docs/full_project_execution/w24/evidence/static_shape_offline_20260927T1036Z/checkpoint.json",
+      "javac": "Corretto 11.0.31",
+      "classpath_jar_count": 349,
+      "classpath_manifest_sha256": "67aa979f9ba8ff1ed897967c6069b693c83db8395badb66c6763eadbfed090ca",
+      "compiled_class_sha256": "75e17f7be189ce38c9f7d490680074247b8e9a69a4518191300e8c6168b1d45b",
+      "scope_note": "API signature compilation only; geometry/property selection readback, model save/reopen, phase initialization and solver behavior remain unverified."
+    },
+    "latest_cure_native_attempt": {
+      "candidate": "W24 0841Z setup-only freeze",
+      "status": "FAIL_OR_INCOMPLETE_PREBIRTH_PRESERVED",
+      "engine_births": 0,
+      "worker_births": 0,
       "study_solver_submissions": 0,
-      "diagnostic": "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_contract_diagnostic.json",
-      "offline_regression_receipt": "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_runner_regression_receipt.json",
-      "offline_regression_tests": "2 passed using real ControlDaemon; software only",
-      "prior_0517_failure_preserved": "ExternalStrain failure, durable UNKNOWN/safe_retry=false; exact cleanup verified; no solve",
-      "science_campaign": "10-solve/3600s/2 sequential Worker plan remains NOT_FROZEN/NOT_STARTED",
-      "next": "Continue science executor and phasefield offline; after release stable handoff refresh source closure and submit a new setup candidate for root review; do not rerun 0841Z freeze."
+      "summary": "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/summary.json"
     },
-    "w23_candidate09": {
-      "status": "FAILED_NATIVE_PATH_ADMISSION_0_SOLVES_CLEANUP_REVIEWED",
-      "evidence": "docs/full_project_execution/evidence/main_w23_candidate09_native_failure_review.json"
+    "f03": "INTEGRATION_VERIFIED; native acceptance NOT_RUN",
+    "f04": "IN_PROGRESS_SHARED_RUNTIME_INTEGRATION; native acceptance NOT_RUN",
+    "w23": "candidate09 failure and exact cleanup remain preserved; no W24 scope change",
+    "platform_scope": {
+      "windows_comsol63": "REQUIRED_UNASSESSED",
+      "macos_comsol63_arm64": "USER_REQUESTED_SKIP",
+      "macos_comsol63_x86_64": "USER_REQUESTED_SKIP"
     },
-    "f03": {
-      "status": "INTEGRATION_VERIFIED",
-      "tests": 96,
-      "acceptance": "production integration only; native F03 acceptance NOT_RUN"
-    },
-    "f04": {
-      "status": "IN_PROGRESS_SHARED_RUNTIME_INTEGRATION",
-      "acceptance": "native NOT_RUN"
-    },
-    "windows_readonly_query": "Existing user-authorized redacted receipt verified; not repeated.",
-    "windows_comsol63": "REQUIRED_UNASSESSED",
-    "macos_comsol63": {
-      "arm64": "USER_REQUESTED_SKIP",
-      "x86_64": "USER_REQUESTED_SKIP"
-    }
+    "next_action": "Continue offline in new files: implement the registered-project managed static-shape build/adopt/save/reopen/readback sequence and focused synthetic production-route tests; define field extraction support/multiple-branch/dry-substrate handling before freezing criteria. Do not mutate the just-checkpointed Java fixture or draft without an explicit new change handoff. No native setup or solve is authorized in this checkpoint; continue the cure science executor and remaining W01-W26 scope.",
+    "public_summary": "docs/full_project_execution/w24/STATIC_SHAPE_OFFLINE_CHECKPOINT.json"
   },
   "root_resume_summary_correction": {
     "at": "2026-09-27T05:10:40.509110+00:00",
@@ -825,6 +825,33 @@
         "result": "2 passed"
       },
       "source_race": "Release F04 shared runtime integration resumed; no W24 freeze made."
+    },
+    {
+      "at_utc": "2026-09-27T10:36:30Z",
+      "scope": "W24 static-shape baseline offline compile and managed-readback preparation; no native engine/Worker or solver was started.",
+      "static_shape": {
+        "status": "OFFLINE_JAVAC_PASS_NATIVE_NOT_RUN",
+        "source": "tools/java/W24StaticShapeFixture.java",
+        "source_sha256": "6c6cd9b1bf125f1a0b60614c207cb52126b6cc745ccb3da3d9bc407903495b18",
+        "draft": "docs/full_project_execution/w24/W24_STATIC_SHAPE_IMPLEMENTATION_DRAFT.md",
+        "draft_sha256": "3f769e82cb749c78c9f109d782872f628b83f802c4a5d1be97e692dd8afa2b11",
+        "receipt": "docs/full_project_execution/w24/evidence/static_shape_offline_20260927T1036Z/checkpoint.json",
+        "javac": "Corretto 11.0.31",
+        "classpath_jar_count": 349,
+        "classpath_manifest_sha256": "67aa979f9ba8ff1ed897967c6069b693c83db8395badb66c6763eadbfed090ca",
+        "compiled_class_sha256": "75e17f7be189ce38c9f7d490680074247b8e9a69a4518191300e8c6168b1d45b",
+        "scope_note": "API signature compilation only; geometry/property selection readback, model save/reopen, phase initialization and solver behavior remain unverified."
+      },
+      "prior_native_failure": {
+        "candidate": "W24 0841Z setup-only freeze",
+        "status": "FAIL_OR_INCOMPLETE_PREBIRTH_PRESERVED",
+        "engine_births": 0,
+        "worker_births": 0,
+        "study_solver_submissions": 0,
+        "summary": "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/summary.json"
+      },
+      "native_acceptance": "NOT_RUN",
+      "next_action": "Continue offline in new files: implement the registered-project managed static-shape build/adopt/save/reopen/readback sequence and focused synthetic production-route tests; define field extraction support/multiple-branch/dry-substrate handling before freezing criteria. Do not mutate the just-checkpointed Java fixture or draft without an explicit new change handoff. No native setup or solve is authorized in this checkpoint; continue the cure science executor and remaining W01-W26 scope."
     }
   ],
   "windows_readonly_summary": {
@@ -874,26 +901,31 @@
   },
   "acceptance_cells_changed": false,
   "current_execution_checkpoint": {
-    "at_utc": "2026-09-27T09:09:28Z",
-    "status": "W24_0841_SETUP_ATTEMPT_FAILED_PREBIRTH_ZERO_ENGINE_ZERO_SOLVES; OFFLINE_PROJECT_INSPECT_FIX_TESTED",
-    "candidate_freeze": "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/offline_candidate_freeze.json",
-    "candidate_sha256": "c5eac2b9f2f23067443d26242f9cb4fadad084dfd71fc2ca9c4125aed1dca4af",
-    "native_summary": "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/summary.json",
-    "diagnostic": "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_contract_diagnostic.json",
-    "offline_regression_receipt": "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_runner_regression_receipt.json",
-    "verification": {
-      "focused_production_path_tests": "2 passed",
-      "native": "FAIL_OR_INCOMPLETE before birth",
+    "at_utc": "2026-09-27T10:36:30Z",
+    "scope": "W24 static-shape baseline offline compile and managed-readback preparation; no native engine/Worker or solver was started.",
+    "static_shape": {
+      "status": "OFFLINE_JAVAC_PASS_NATIVE_NOT_RUN",
+      "source": "tools/java/W24StaticShapeFixture.java",
+      "source_sha256": "6c6cd9b1bf125f1a0b60614c207cb52126b6cc745ccb3da3d9bc407903495b18",
+      "draft": "docs/full_project_execution/w24/W24_STATIC_SHAPE_IMPLEMENTATION_DRAFT.md",
+      "draft_sha256": "3f769e82cb749c78c9f109d782872f628b83f802c4a5d1be97e692dd8afa2b11",
+      "receipt": "docs/full_project_execution/w24/evidence/static_shape_offline_20260927T1036Z/checkpoint.json",
+      "javac": "Corretto 11.0.31",
+      "classpath_jar_count": 349,
+      "classpath_manifest_sha256": "67aa979f9ba8ff1ed897967c6069b693c83db8395badb66c6763eadbfed090ca",
+      "compiled_class_sha256": "75e17f7be189ce38c9f7d490680074247b8e9a69a4518191300e8c6168b1d45b",
+      "scope_note": "API signature compilation only; geometry/property selection readback, model save/reopen, phase initialization and solver behavior remain unverified."
+    },
+    "prior_native_failure": {
+      "candidate": "W24 0841Z setup-only freeze",
+      "status": "FAIL_OR_INCOMPLETE_PREBIRTH_PRESERVED",
       "engine_births": 0,
       "worker_births": 0,
-      "study_solver_submissions": 0
+      "study_solver_submissions": 0,
+      "summary": "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/summary.json"
     },
-    "source_sha256": {
-      "tools/run_native_w24_cure_preflight.py": "dbc83fc52d3bec58e93058a8f43bf688a4ef96c57d84bfa238c9a6fca7a06a28",
-      "tests/test_w24_cure_preflight_runner.py": "693c287607c018ccc1bee4ef724b5c3273073c1fc75e9fcf578e05c99d2df2e8",
-      "comsol_mcp/_control_daemon.py": "e85067d318eaf7c24488c6dbdb45a78a516df24bd3568a48d0da7c7afba4d9ea"
-    },
-    "source_window": "Release still integrating F04; these are a focused software regression snapshot, not a frozen W24 closure."
+    "native_acceptance": "NOT_RUN",
+    "next_action": "Continue offline in new files: implement the registered-project managed static-shape build/adopt/save/reopen/readback sequence and focused synthetic production-route tests; define field extraction support/multiple-branch/dry-substrate handling before freezing criteria. Do not mutate the just-checkpointed Java fixture or draft without an explicit new change handoff. No native setup or solve is authorized in this checkpoint; continue the cure science executor and remaining W01-W26 scope."
   },
   "w24_setup_candidate_0841z_native_attempt": {
     "candidate_id": "W24-CURE-HIST-AXISYM-01",
@@ -919,10 +951,10 @@
   },
   "verified_git_sync": {
     "status": "VERIFIED",
-    "head": "1be74ff8d222d07548ca2e9d2fc61ca50525f1c3",
-    "origin_main": "1be74ff8d222d07548ca2e9d2fc61ca50525f1c3",
+    "head": "6f79e83193772f6909282001cf0d57f61b77898d",
+    "origin_main": "6f79e83193772f6909282001cf0d57f61b77898d",
     "method": "non-force synchronization",
-    "verified_at_utc": "2026-09-27T09:46:53.732575+00:00",
+    "verified_at_utc": "2026-09-27T10:41:25.129693+00:00",
     "semantics": "Historical confirmed synchronization point; later commits may descend from it. This record is not a reset target or a claim that a later HEAD has already been pushed."
   }
 }

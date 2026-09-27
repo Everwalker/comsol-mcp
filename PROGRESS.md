@@ -6,6 +6,8 @@ Updated 2026-09-27 UTC. Overall delivery is **PARTIAL**; execution continues thr
 
 ## Current checkpoint
 
+- **W24 static-shape baseline: PARTIAL; offline Java compilation PASS.** Equal-volume flat/step setup code now covers the full wetting substrate, uses an explicit pressure reference, and treats bulk energy as diagnostic only. Source/draft/class hashes and all 349 installed JAR identities were independently checked. No server, Worker, native model build or solve was run. See [compact compile checkpoint](docs/full_project_execution/w24/STATIC_SHAPE_OFFLINE_CHECKPOINT.json); managed readback, field extraction, stability and sensitivity work continue.
+
 - **Latest full offline attempt on `ceac7a0`: FAIL / PARTIAL** — 2596 passed, 28 failed, 39 skipped, 11 errors. The source export omitted root historical evidence and Git metadata; these export limitations are separated from code/test defects. An explicitly permitted loopback subset rerun produced 53 passed, 2 failed, 1 skipped, 0 errors. Original failures remain preserved. See [compact regression summary](docs/full_project_execution/release/OFFLINE_REGRESSION_20260927.json) for hashes, replay commands and classifications. This is not a full-suite or native PASS.
 - **Repairs pending:** Worker allowlist lacks the verified `GeomObjectSelection.init(int)` used by geometry measurement; older tests need real project/provenance prerequisites and self-contained fixtures. Unpublished F04 integration also has a reproduced legacy-versus-registered queue overlap; repair and retest before publishing that implementation checkpoint.
 
