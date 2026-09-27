@@ -2,7 +2,7 @@
 
 Updated 2026-09-27 UTC. Overall delivery is **PARTIAL**; execution continues through W01–W26 without a phase stop. This is the concise GitHub handoff. Recovery authority: [RESUME.json](docs/full_project_execution/state/RESUME.json). Evidence and rebuild commands: [checkpoint summary](docs/full_project_execution/release/PARTIAL_CHECKPOINT_20260927.json). Raw evidence remains local; historical state paths are not bundled artifacts.
 
-**Current software checkpoint: 236 tests PASS** from an index-only clean snapshot (0 failures/errors/skips). This covers project control, W23 mapping/full-3D/preflight, release controls, W24 preflight, and artifact geometry runners; it is not full-suite or native acceptance. Stage publication follows non-force push and remote hash verification. Subsequent stages use this same progress entry and existing state files.
+**Current software checkpoint: 236 tests PASS** from an index-only clean snapshot (0 failures/errors/skips). This covers project control, W23 mapping/full-3D/preflight, release controls, W24 preflight, and artifact geometry runners; it is not full-suite or native acceptance. The source checkpoint `1be74ff8d222d07548ca2e9d2fc61ca50525f1c3` was pushed non-force and verified equal to `origin/main`. Subsequent stages use this same progress entry and existing state files.
 
 ## Current checkpoint
 
@@ -24,3 +24,5 @@ Focused offline runner check (software only):
 /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -m pytest -q -p no:cacheprovider \
   tests/test_w24_cure_preflight_runner.py
 ```
+
+Recovery instructions now use the existing GitHub checkout and preserve state. Root `AGENTS.md` records continuous Luna execution and per-stage synchronization. Documentation checks confirm 26 work packages, 272 actions, 60 acceptance definitions and tracked progress links; these checks add no native or scientific acceptance. See [START_HERE](docs/full_project_execution/START_HERE.md).

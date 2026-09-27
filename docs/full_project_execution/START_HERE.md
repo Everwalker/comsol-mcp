@@ -1,8 +1,23 @@
 # 全项目持续完成工作包
 
-这是新一轮唯一活动入口：**主 Agent 直接开发全部剩余规划；最后由独立 Reviewer 统一验收，必要整改后再复审，最终交付。**不再在W23/W24/W25完成时停下来等新的Goal。开发过程仍运行自测和必要安全检查，不是等到最后才测试。
+当前唯一简洁进度入口是仓库根 `PROGRESS.md`。**主 Agent 规划和审查，GPT-6 Luna Max 连续实施、测试和修复；最后由独立 Reviewer 统一验收，必要整改后再复审，最终交付。**不再在W23/W24/W25完成时停下来等新的Goal。开发过程仍运行自测和必要安全检查，不是等到最后才测试。
 
-## 使用
+## 从已有 GitHub 仓库继续（当前优先）
+
+在仓库根目录核验当前提交。`state/RESUME.json` 中的 `verified_git_sync.head` 是最近记录的历史同步点，后续提交可以是它的后代，不要求当前 HEAD 永远等于该值，也不能因此 reset；若要继续追到更新的 `origin/main`，先 fetch 并阅读更新后的 `PROGRESS.md` 与状态文件。不要对已有克隆运行外部恢复包的 `bootstrap.py` 或重新运行 `init_completion.py`，以免把已提交状态重建成新的初始化结果。
+
+```sh
+git status --short
+git rev-parse HEAD
+python3.12 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e '.[dev]'
+```
+
+然后按顺序阅读仓库根 `PROGRESS.md`、`docs/full_project_execution/state/RESUME.json`、`state/TASKS.json`、`MASTER_GOAL.md` 与 `CONTINUATION.md`。已恢复的提交状态是续跑入口；原始机器上的绝对路径和未跟踪 raw evidence 不随 GitHub 克隆恢复，不能作为新机器上存在的文件使用。COMSOL、许可证、JDK 和各目标平台依赖需在新机器上独立核验。
+
+## 从联网恢复包重建（仅当没有现成克隆时）
+
 在装有COMSOL的Windows电脑，把整个包解压到新的普通本地目录，用Antigravity或实际Agent Host打开包根，粘贴GOAL.txt。主文档是MASTER_GOAL.md，旧阶段“停止W22/不得W23”的指令不再是当前范围。
 
 ```powershell

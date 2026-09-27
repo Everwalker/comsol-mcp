@@ -1,5 +1,11 @@
 # 新目录恢复与最终可恢复性
 
+## 从现有 GitHub 克隆恢复续跑
+
+有现成克隆时，以 GitHub 上已发布的仓库状态为入口，而不是重建工作包状态。先在仓库根核对 `git status --short`、`git rev-parse HEAD`，将 `state/RESUME.json` 的 `verified_git_sync.head` 作为历史同步祖先记录核验，而不是强制当前 HEAD 等于旧值或回退的目标；若明确要追随更新后的 `origin/main`，先 fetch，再阅读新的根 `PROGRESS.md` 和 `RESUME.json`。按 `START_HERE.md` 安装 `pyproject.toml` 声明的依赖，然后从 `PROGRESS.md`、`RESUME.json`、`TASKS.json` 和 `MASTER_GOAL.md` 恢复任务。
+
+不要对已有克隆运行本文件后文的 bootstrap/init 重建命令；它们属于“没有现成克隆时的新目录恢复”，不是 GitHub 工作树初始化。保留已提交状态，不重新初始化任务表或覆盖检查点。只有提交进 GitHub 的相对路径文件会被克隆恢复；原机器绝对路径下的 raw evidence、临时运行目录和许可证/JDK/COMSOL 安装都必须按状态记录重新核验，不能假定它们随仓库存在。
+
 ## 当前包
 网络恢复固定PIN，不包含完整Git仓库源码字节。Git路径用cat-file原字节写出所有支持的tracked文件并核对root tree/每个blob；归档路径也核对完整树，不自动退main。商业软件、凭据、科学未提交数据均不恢复。
 

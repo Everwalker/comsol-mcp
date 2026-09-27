@@ -138,31 +138,15 @@ These are resolved by importing the target function from the other module.
 - Integration tests requiring a live COMSOL Server are marked `@pytest.mark.comsol_server` and skipped by default
 
 
-## Fork synchronization after each completed phase
+## Current execution and phase synchronization
 
-User instruction (2026-09-18): publish this project's current progress to
-https://github.com/Everwalker/comsol-mcp and synchronize again whenever a phase
-is completed. This is standing authorization for ordinary non-force pushes to
-that fork; it does not authorize starting another phase.
+Current user instructions (2026-09-27) supersede older phase-stop and progress-file instructions. Continue `docs/full_project_execution/MASTER_GOAL.md` through all original W01–W26 requirements without waiting for approval between phases. The main Agent plans, handles architecture and reviews results; delegate defined implementation, testing and debugging to the same GPT-6 Luna executor with Max reasoning when available. Final acceptance requires a fresh independent Reviewer against the complete original scope, followed by repair and re-review. Software checks alone never establish native or scientific acceptance.
 
-- The delivery remote is `origin` at `https://github.com/Everwalker/comsol-mcp.git`;
-  the delivery branch is `main`. Preserve other remotes.
-- Before publishing a completed phase, update
-  `docs/comsol_mcp_design_v1/PROGRESS.md`, commit its implementation, tests and
-  audit evidence, and retain PASS/FAIL/BLOCKED/NOT_RUN distinctions. Never turn
-  an unavailable environment into VERIFIED merely because code exists.
-- Exclude credentials, `.phase1-private/`, transient preferences and caches.
-  Preserve the intended scientific artifacts and failure evidence.
-- Fetch `origin/main` and inspect unexpected remote changes before pushing.
-  Use `git push origin HEAD:main` from the current development branch; no force
-  push, remote history rewrite, or silent replacement of remote user changes.
-  If terminal authentication is unavailable but the GitHub connector is authenticated,
-  its Git object API may publish equivalent phase trees as ordinary child commits.
-  Preserve the original local branch, verify each tree SHA, and use a delivery
-  branch tracking the resulting remote history.
-  If branch protection requires a PR, use that route and report pending merge.
-- Verify the remote `refs/heads/main` SHA equals the published local HEAD before
-  reporting synchronization complete. If authentication/network/protection
-  blocks delivery, retain the commits and report the actual blocker.
-- Synchronize at the phase completion boundary, not after every small edit.
-  Do not install a polling automation or advance beyond the authorized scope.
+- Read root `PROGRESS.md` first, then the existing `docs/full_project_execution/state/RESUME.json` and `TASKS.json`. Preserve active/UNKNOWN jobs and reconcile their original identities before any new solve. Do not bootstrap over this checkout or reinitialize existing state.
+- Root `PROGRESS.md` is the sole concise progress entry: current stage/work packages, PASS/PARTIAL/BLOCKED/NOT_RUN, actual capabilities and tests, unresolved items, concrete next action and recovery/rebuild entry. Reuse existing state files; do not create parallel progress systems.
+- Every completed clear phase must be committed and synchronized immediately to `origin` (`https://github.com/Everwalker/comsol-mcp.git`), then work continues. This is standing authorization for ordinary non-force pushes to `main`.
+- Commit only necessary production source/configuration/scripts, tests, rebuildable fixtures, existing execution state and compact evidence summaries/manifests/key request-results. Preserve large raw evidence locally with identity/hash/rebuild pointers. Exclude credentials, token/preferences, venv/cache/runtime directories, commercial software/JARs, compiled output and duplicate large artifacts.
+- Before each phase commit, run `git status`, `git fetch origin main` and `git log --oneline --decorate -5`. Inspect unexpected remote changes and merge/rebase safely without replacing unknown changes. Stage an explicit file allowlist and commit with a concise stage description.
+- Push with `git push origin HEAD:main`; never force-push or rewrite remote history. If branch protection requires a PR, use it and report pending merge. Preserve local commits if authentication, network or protection blocks delivery.
+- After pushing, run `git fetch origin main`, `git rev-parse HEAD` and `git rev-parse origin/main`. Only matching hashes justify reporting GitHub synchronization complete.
+- Continue the next authorized work immediately after synchronization. Do not publish unexecuted checks as PASS or mark the full project complete while required work, true blockers or final review remain.
