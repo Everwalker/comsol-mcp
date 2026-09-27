@@ -373,6 +373,23 @@ class ActionEntry:
                 "ActionResult data: native COMSOL raw signal/mode/overlap/incident integrals and normalized eta_mode; "
                 "integration cleanup and source/surface identity are included, while physical acceptance is not implied."
             )
+        if self.operation_id == "result.mode_overlap_basis_v2":
+            from ._w23_basis_v2_results import NATIVE_RESULT_SCHEMA
+            result["runtime_dispatch_contract"] = {
+                "handler": "managed W23 full-3D two-mode subspace native integral adapter v2",
+                "entrypoints": [self.operation_id, "registry_call", "operation_call"],
+                "effect": "catalog EVALUATE; ordinary managed project_write permission, isolation, revision and callback gates apply",
+                "engine_queue": "serialized_worker_queue",
+                "identity": "project, complete ModelRef, model revision and mode solution selectors are checked against the active managed execution context before Worker access",
+                "integrals": "eight COMSOL IntSurface reads produce the complex 2x2 Gram matrix, two coupling terms, and signal/incident powers on named port apertures",
+                "caller_arrays": "not accepted; all fields, datasets, solution selectors and named surfaces are native model readbacks",
+                "verification_scope": "native raw-integral route only; independent field quadrature, basis projection acceptance and optical-science acceptance remain separate gates",
+            }
+            result["data_schema"] = json.loads(json.dumps(NATIVE_RESULT_SCHEMA))
+            result["output_contract"] = (
+                "ActionResult data: exact native complex Gram/coupling/power integrals and readbacks; "
+                "no projection, quadrature-comparison, or physical acceptance is implied."
+            )
         return result
 
 
@@ -466,6 +483,12 @@ def _effective_input_schema(catalog_schema: Mapping[str, Any], operation_id: str
         # the catalog's historical unconstrained definition object with the
         # native source/surface contract consumed by W23.
         from ._w23_results import NATIVE_DEFINITION_SCHEMA
+        for name in ("project_id", "session_id", "model_ref", "expected_revision", "idempotency_key", "request_id"):
+            properties.pop(name, None)
+        properties["definition"] = json.loads(json.dumps(NATIVE_DEFINITION_SCHEMA))
+        effective["required"] = ["definition"]
+    if operation_id == "result.mode_overlap_basis_v2" and isinstance(properties, dict):
+        from ._w23_basis_v2_results import NATIVE_DEFINITION_SCHEMA
         for name in ("project_id", "session_id", "model_ref", "expected_revision", "idempotency_key", "request_id"):
             properties.pop(name, None)
         properties["definition"] = json.loads(json.dumps(NATIVE_DEFINITION_SCHEMA))
@@ -859,6 +882,9 @@ def _validate_operation_shape(operation_id: str, arguments: Mapping[str, Any]) -
             raise ExecutionContractError("INVALID_REQUEST", "detail must be summary, structure, or dependencies")
     elif operation_id == "result.mode_overlap":
         from ._w23_results import validate_request_shape
+        validate_request_shape(arguments)
+    elif operation_id == "result.mode_overlap_basis_v2":
+        from ._w23_basis_v2_results import validate_request_shape
         validate_request_shape(arguments)
     elif operation_id == "study.run" and "recovery_policy" in arguments:
         policy = arguments.get("recovery_policy")

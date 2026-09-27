@@ -43,6 +43,85 @@ _REQUEST_POLICY = {
     "eta_absolute_tolerance": 1e-10,
 }
 
+# Registry-facing shape for the versioned adapter. The adapter's strict
+# semantic validator below remains authoritative for nested source, surface,
+# provenance, and applicability fields; this schema publishes the closed wire
+# envelope without duplicating every cross-field invariant in JSON Schema.
+BASIS_REQUEST_SCHEMA: dict[str, Any] = {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "W23 full-3D two-mode basis request v2",
+    "type": "object",
+    "required": sorted(REQUEST_KEYS),
+    "properties": {
+        "schema_id": {"const": BASIS_SCHEMA_ID},
+        "schema_version": {"const": BASIS_SCHEMA_VERSION},
+        "profile": {"const": BASIS_PROFILE_ID},
+        "algorithm_id": {"const": BASIS_ALGORITHM_ID},
+        "basis_id": {"type": "string", "minLength": 1},
+        "case": {"type": "object", "required": ["case_id", "case_identity_sha256"]},
+        "project_id": {"type": "string", "minLength": 1},
+        "model_ref": {
+            "type": "object", "required": ["schema_version", "session_id", "server_instance_id", "model_tag", "generation"],
+            "properties": {
+                "schema_version": {"const": 1},
+                "session_id": {"type": "string", "minLength": 1},
+                "server_instance_id": {"type": "string", "minLength": 1},
+                "model_tag": {"type": "string", "minLength": 1},
+                "generation": {"type": "integer", "minimum": 1},
+            },
+            "additionalProperties": False,
+        },
+        "model_revision": {"type": "integer", "minimum": 0},
+        "geometry_revision": {"type": "integer", "minimum": 0},
+        "frequency_hz": {"type": "number", "exclusiveMinimum": 0},
+        "coordinate_frame": {"type": "string", "minLength": 1},
+        "power_unit": {"const": "W"},
+        "field_units": {"const": {"electric": "V/m", "magnetic": "A/m"}},
+        "phasor_convention": {"const": PHASOR_CONVENTION},
+        "output_surface": {"type": "object"},
+        "input_surface": {"type": "object"},
+        "signal_source": {"type": "object"},
+        "basis_modes": {"type": "array", "minItems": 2, "maxItems": 2},
+        "incident_source": {"type": "object"},
+        "applicability": {"type": "object"},
+        "policy": {"const": _REQUEST_POLICY},
+        "quadratures": {"type": "object"},
+        "native_verification": {"const": "NOT_RUN"},
+        "native_result": {"const": "NOT_RUN"},
+        "dispatchable": {"const": False},
+        "production_route_status": {"const": "NOT_REGISTERED"},
+        "native_integral_plan": {"type": "object"},
+        "request_id": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "study_or_solver_invoked": {"const": False},
+    },
+    "additionalProperties": False,
+    "$comment": "Nested cross-field identities are checked by validate_basis_request before scheduling.",
+}
+
+NATIVE_DEFINITION_SCHEMA: dict[str, Any] = {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "urn:comsol-mcp:result.mode_overlap_basis_v2:definition:1.0.0",
+    "title": "result.mode_overlap_basis_v2 definition v1.0.0",
+    "type": "object",
+    "required": ["schema_id", "schema_version", "basis_request", "mode_axis_parameters", "definition_sha256"],
+    "properties": {
+        "schema_id": {"const": "urn:comsol-mcp:result.mode_overlap_basis_v2:definition:1.0.0"},
+        "schema_version": {"const": "1.0.0"},
+        "basis_request": BASIS_REQUEST_SCHEMA,
+        "mode_axis_parameters": {
+            "type": "array", "minItems": 2, "maxItems": 2,
+            "items": {
+                "type": "object", "required": ["mode_id", "parameter"],
+                "properties": {"mode_id": {"type": "string", "minLength": 1},
+                               "parameter": {"type": "string", "minLength": 1}},
+                "additionalProperties": False,
+            },
+        },
+        "definition_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    },
+    "additionalProperties": False,
+}
+
 
 def _fail(code: str, message: str) -> None:
     raise ExecutionContractError(code, message, stage="validation")
@@ -254,6 +333,6 @@ def validate_basis_request(request: Any) -> dict[str, Any]:
 
 __all__ = [
     "BASIS_ALGORITHM_ID", "BASIS_PROFILE_ID", "BASIS_SCHEMA_ID", "BASIS_SCHEMA_VERSION",
-    "PHASOR_CONVENTION", "REQUEST_BINDING_KEYS", "REQUEST_KEYS", "basis_request_binding",
-    "validate_basis_request",
+    "BASIS_REQUEST_SCHEMA", "NATIVE_DEFINITION_SCHEMA", "PHASOR_CONVENTION",
+    "REQUEST_BINDING_KEYS", "REQUEST_KEYS", "basis_request_binding", "validate_basis_request",
 ]

@@ -19,6 +19,7 @@ import pytest
 from comsol_mcp import _g3_common, _w23_results
 from comsol_mcp._g2_contract import ExecutionContractError
 from comsol_mcp._w23_basis_v2_results import (
+    NATIVE_RESULT_SCHEMA,
     OPERATION_ID,
     RESULT_SCHEMA_ID,
     build_definition,
@@ -138,7 +139,7 @@ def test_definition_schema_is_digest_bound_and_accepts_only_one_definition():
     request, definition = _definition()
     assert definition["schema_id"].endswith("definition:1.0.0")
     validate_request_shape({"definition": definition})
-    with pytest.raises(ExecutionContractError, match="only definition"):
+    with pytest.raises(ExecutionContractError, match="managed execution identity only"):
         validate_request_shape({"definition": definition, "fields": []})
 
     altered = copy.deepcopy(definition)
@@ -162,7 +163,9 @@ def test_handler_integrates_exact_gram_couplings_and_powers_on_bound_named_surfa
     assert result["native_result"] == "COMSOL_NATIVE_RAW"
     assert result["quadrature_comparison"] == "NOT_RUN"
     assert result["projection_acceptance"] == "NOT_RUN"
-    assert result["production_route_status"] == "HANDLER_IMPLEMENTED_NOT_REGISTERED"
+    assert result["production_route_status"] == "ROUTE_REGISTERED_NATIVE_INTEGRATION_ONLY"
+    from jsonschema import validate
+    validate(instance=result, schema=NATIVE_RESULT_SCHEMA)
     assert result["study_or_solver_invoked"] is False
     assert result["caller_field_arrays_accepted"] is False
     assert len(calls) == 8

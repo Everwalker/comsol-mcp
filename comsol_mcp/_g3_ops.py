@@ -49,6 +49,7 @@ _MODULES = (
     "_g3_w20_validation",
     "_g3_w21",
     "_w23_results",
+    "_w23_basis_v2_results",
 )
 
 #: Effects for operations the design catalogue does not (yet) describe.  Every
@@ -99,6 +100,7 @@ _FALLBACK_EFFECTS: dict[str, str] = {
     "result.at_points": "EVALUATE",
     "result.sample_path": "EVALUATE",
     "result.mode_overlap": "EVALUATE",
+    "result.mode_overlap_basis_v2": "EVALUATE",
     "result.numerical_manage": "DYNAMIC",
     "result.table_manage": "DYNAMIC",
     "result.field_export": "FILE_WRITE",

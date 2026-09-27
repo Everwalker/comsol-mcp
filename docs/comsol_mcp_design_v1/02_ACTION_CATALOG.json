@@ -3,7 +3,7 @@
   "status": "DESIGN_NOT_IMPLEMENTED",
   "baseline_commit": "ccca65aa8277d1205c5de5fb6221e460aca5997a",
   "date": "2026-09-18",
-  "operation_count": 272,
+  "operation_count": 273,
   "scope_note": "This is a logical action catalog. An operation with action/type_id is not a claim that every COMSOL feature is already supported. Product/version/OS capability and integration tests remain mandatory. Generated input schemas provide top-level contract; each feature/subaction must add discriminated semantic validation before release.",
   "operations": [
     {
@@ -12433,6 +12433,65 @@
         "failure_is_truthful"
       ],
       "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read."
+    },
+    {
+      "operation_id": "result.mode_overlap_basis_v2",
+      "mcp_tool_name": "result_mode_overlap_basis_v2",
+      "domain": "result",
+      "purpose": "Compute a full-3D native complex projection onto an explicitly identified two-mode subspace",
+      "arguments_signature": "definition:object",
+      "effect": "EVALUATE",
+      "scope": "model",
+      "gate": "G5",
+      "implementation_status": "IMPLEMENTED",
+      "route": "versioned managed COMSOL native integration adapter",
+      "capability_requirements": "connected managed model with a project-bound ModelRef and exact native solution/surface readbacks",
+      "input_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "result.mode_overlap_basis_v2 input",
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "session_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "model_ref": {
+            "type": "string",
+            "minLength": 1
+          },
+          "idempotency_key": {
+            "type": "string",
+            "minLength": 1
+          },
+          "request_id": {
+            "type": "string"
+          },
+          "definition": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "project_id",
+          "session_id",
+          "model_ref",
+          "idempotency_key",
+          "definition"
+        ],
+        "additionalProperties": false
+      },
+      "output_contract": "ActionResult data: native complex two-mode Gram/coupling/power integrals and source/surface readbacks; basis projection and scientific acceptance remain separate.",
+      "required_tests": [
+        "schema_valid",
+        "direct_and_nested_route_consistency",
+        "managed_provenance",
+        "isolation_refusal_before_dispatch",
+        "failure_is_truthful"
+      ],
+      "notes": "The v2 route is distinct from scalar result.mode_overlap. It does not accept caller arrays, invoke a study or solver, or imply independent quadrature or optical acceptance. EVALUATE retains standard project_write permission, isolation, revision, callback, and idempotency gates."
     },
     {
       "operation_id": "probe.list",

@@ -21,7 +21,7 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 from ._g2_contract import ExecutionContractError
-from ._w23_basis_v2_contract import validate_basis_request
+from ._w23_basis_v2_contract import NATIVE_DEFINITION_SCHEMA, validate_basis_request
 
 
 OPERATION_ID = "result.mode_overlap_basis_v2"
@@ -54,6 +54,84 @@ _INTEGRAL_TOLERANCES = {
     "entity_dimension_3d_boundary": 2,
     "power_unit": "W",
     "feature_type": "IntSurface",
+}
+_OPERATION_ENVELOPE_FIELDS = frozenset({
+    "project_id", "session_id", "model_ref", "expected_revision", "idempotency_key", "request_id",
+})
+
+_COMPLEX_INTEGRAL_SCHEMA = {
+    "type": "object",
+    "required": ["real", "imag", "unit", "expression", "dataset_id", "solution_id",
+                 "feature_type", "cleanup", "selection_measure_m2", "selection_measure_source", "is_complex"],
+    "properties": {
+        "real": {"type": "number"}, "imag": {"type": "number"}, "unit": {"const": "W"},
+        "expression": {"type": "string"}, "dataset_id": {"type": "string", "minLength": 1},
+        "solution_id": {"type": "string", "minLength": 1}, "feature_type": {"const": "IntSurface"},
+        "cleanup": {"type": "object", "required": ["created", "removed", "cleanup_failed", "type_id", "tag"]},
+        "selection_measure_m2": {"type": "number", "exclusiveMinimum": 0},
+        "selection_measure_source": {"type": "string", "minLength": 1}, "is_complex": {"type": "boolean"},
+    },
+    "additionalProperties": False,
+}
+
+NATIVE_RESULT_SCHEMA: dict[str, Any] = {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": RESULT_SCHEMA_ID,
+    "title": "result.mode_overlap_basis_v2 native integral result v1.0.0",
+    "type": "object",
+    "required": ["schema_id", "schema_version", "operation_id", "status", "result_status",
+                 "algorithm_id", "basis_request_id", "definition_sha256", "identity",
+                 "managed_execution_binding", "source_readbacks", "surface_readbacks",
+                 "native_integrals", "term_bindings", "policy", "origin",
+                 "study_or_solver_invoked", "caller_field_arrays_accepted", "native_result",
+                 "quadrature_comparison", "projection_acceptance", "production_route_status"],
+    "properties": {
+        "schema_id": {"const": RESULT_SCHEMA_ID}, "schema_version": {"const": "1.0.0"},
+        "operation_id": {"const": OPERATION_ID}, "status": {"const": "SUCCEEDED"},
+        "result_status": {"const": "COMPUTED_NATIVE_TWO_MODE_INTEGRALS"},
+        "algorithm_id": {"const": "reciprocal_lossless_forward_two_mode_basis_projection_v2"},
+        "basis_request_id": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "definition_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "identity": {"type": "object", "required": ["basis_id", "case", "project_id", "model_ref", "model_tag",
+            "model_revision", "geometry_revision", "frequency_hz", "coordinate_frame", "mode_ids", "mode_indices"]},
+        "managed_execution_binding": {"type": "object", "required": ["project_id", "model_ref", "model_revision", "source"]},
+        "source_readbacks": {"type": "object", "required": ["signal", "mode_0", "mode_1", "incident"]},
+        "surface_readbacks": {"type": "object", "required": ["output", "input"]},
+        "native_integrals": {
+            "type": "object", "required": ["gram_matrix", "coupling_vector", "signal_power",
+                "incident_reference_power", "terms"],
+            "properties": {
+                "gram_matrix": {"type": "array", "minItems": 2, "maxItems": 2,
+                    "items": {"type": "array", "minItems": 2, "maxItems": 2, "items": _COMPLEX_INTEGRAL_SCHEMA}},
+                "coupling_vector": {"type": "array", "minItems": 2, "maxItems": 2, "items": _COMPLEX_INTEGRAL_SCHEMA},
+                "signal_power": _COMPLEX_INTEGRAL_SCHEMA,
+                "incident_reference_power": _COMPLEX_INTEGRAL_SCHEMA,
+                "terms": {"type": "object", "required": ["G00", "G01", "G10", "G11", "b0", "b1", "P_signal", "P_incident"],
+                    "additionalProperties": _COMPLEX_INTEGRAL_SCHEMA},
+            },
+            "additionalProperties": False,
+        },
+        "term_bindings": {"type": "object", "required": ["G00", "G01", "G10", "G11", "b0", "b1", "P_signal", "P_incident"],
+            "additionalProperties": {"type": "object"}},
+        "policy": {"const": _INTEGRAL_TOLERANCES},
+        "origin": {"const": "COMSOL_NATIVE_INT_SURFACE"},
+        "study_or_solver_invoked": {"const": False},
+        "caller_field_arrays_accepted": {"const": False},
+        "native_result": {"const": "COMSOL_NATIVE_RAW"},
+        "quadrature_comparison": {"const": "NOT_RUN"},
+        "projection_acceptance": {"const": "NOT_RUN"},
+        "production_route_status": {"const": "ROUTE_REGISTERED_NATIVE_INTEGRATION_ONLY"},
+        "isolation_proof": {"type": "object"},
+        "domain_state": {"enum": ["succeeded", "partial", "failed", "unknown"]},
+        "verification_status": {"enum": ["PASSED", "FAILED", "NOT_RUN", "NOT_APPLICABLE", "UNKNOWN"]},
+        "execution_state_unknown": {"type": "boolean"}, "partial_change": {"type": "boolean"},
+        "cleanup_failed": {"type": "boolean"},
+        "dispatch_stage": {"enum": ["validation", "post_dispatch"]},
+        "domain_outcome": {"type": "object"}, "effect": {"const": "evaluate"},
+        "operation": {"const": OPERATION_ID},
+    },
+    "additionalProperties": False,
+    "$comment": "Raw native integrals only; no independent quadrature, basis projection acceptance, or optical-science conclusion is implied.",
 }
 
 
@@ -141,9 +219,31 @@ def _validate_definition(value: Any) -> dict[str, Any]:
 
 def validate_request_shape(arguments: Mapping[str, Any]) -> None:
     args = _mapping(arguments, "arguments")
-    if set(args) != {"definition"}:
-        _fail("INVALID_REQUEST", "result.mode_overlap_basis_v2 accepts only definition")
+    _validate_operation_arguments(args)
     _validate_definition(args["definition"])
+
+
+def _validate_operation_arguments(args: Mapping[str, Any]) -> None:
+    if "definition" not in args or set(args) - ({"definition"} | _OPERATION_ENVELOPE_FIELDS):
+        _fail("INVALID_REQUEST", "result.mode_overlap_basis_v2 accepts definition and managed execution identity only")
+    if "project_id" in args and (not isinstance(args["project_id"], str) or not args["project_id"]):
+        _fail("INVALID_REQUEST", "operation project_id must be a nonempty managed identity")
+    if "session_id" in args and (not isinstance(args["session_id"], str) or not args["session_id"]):
+        _fail("INVALID_REQUEST", "operation session_id must be a nonempty managed identity")
+    if "model_ref" in args:
+        ref = args["model_ref"]
+        required_ref = {"schema_version", "session_id", "server_instance_id", "model_tag", "generation"}
+        if (not isinstance(ref, Mapping) or set(ref) != required_ref
+                or type(ref.get("schema_version")) is not int or ref.get("schema_version") != 1
+                or any(not isinstance(ref.get(key), str) or not ref[key]
+                       for key in ("session_id", "server_instance_id", "model_tag"))
+                or type(ref.get("generation")) is not int or ref["generation"] < 1):
+            _fail("MODEL_IDENTITY_MISMATCH", "operation model_ref must be a complete managed ModelRef")
+    if "expected_revision" in args and (type(args["expected_revision"]) is not int or args["expected_revision"] < 0):
+        _fail("INVALID_REQUEST", "operation expected_revision must be a nonnegative integer")
+    for key in ("idempotency_key", "request_id"):
+        if key in args and (not isinstance(args[key], str) or not args[key]):
+            _fail("INVALID_REQUEST", f"operation {key} must be a nonempty string")
 
 
 def _source_roles(request: Mapping[str, Any]) -> dict[str, tuple[str, Mapping[str, Any]]]:
@@ -328,7 +428,8 @@ def _validate_native_source(request: Mapping[str, Any], role: str, source_kind: 
         _fail("MODE_IDENTITY_MISMATCH", f"{role} Numeric Port mode index provenance is invalid")
 
 
-def _validate_managed_execution_identity(request: Mapping[str, Any], model_tag: str) -> dict[str, Any]:
+def _validate_managed_execution_identity(request: Mapping[str, Any], model_tag: str,
+                                         arguments: Mapping[str, Any]) -> dict[str, Any]:
     """Bind request identity to daemon-installed context before any Worker read."""
     from ._observation_store import current_context
 
@@ -348,6 +449,17 @@ def _validate_managed_execution_identity(request: Mapping[str, Any], model_tag: 
         _fail("REVISION_CONFLICT", "active managed model revision is unavailable")
     if request.get("model_revision") != active_revision:
         _fail("REVISION_CONFLICT", "W23 v2 request model revision is stale relative to managed execution")
+    envelope_expectations = {
+        "project_id": active_project,
+        "session_id": active_ref.get("session_id"),
+        "model_ref": dict(active_ref),
+        "expected_revision": active_revision,
+    }
+    for key, expected in envelope_expectations.items():
+        if key in arguments and arguments[key] != expected:
+            code = "REVISION_CONFLICT" if key == "expected_revision" else (
+                "PROJECT_IDENTITY_MISMATCH" if key == "project_id" else "MODEL_IDENTITY_MISMATCH")
+            _fail(code, f"W23 v2 operation envelope {key} differs from the active managed execution context")
     return {"project_id": active_project, "model_ref": dict(active_ref),
             "model_revision": active_revision, "source": "managed_observation_context"}
 
@@ -361,11 +473,10 @@ def result_mode_overlap_basis_v2(worker: Any, model_tag: str,
     acceptance, or any Study.run/solver activity.
     """
     args = _mapping(arguments, "arguments")
-    if set(args) != {"definition"}:
-        _fail("INVALID_REQUEST", "result.mode_overlap_basis_v2 accepts only definition")
+    _validate_operation_arguments(args)
     definition = _validate_definition(args["definition"])
     request = definition["basis_request"]
-    managed_binding = _validate_managed_execution_identity(request, model_tag)
+    managed_binding = _validate_managed_execution_identity(request, model_tag, args)
     from ._g3_common import bound_model
     from ._w23_results import _native_integral, _solution_info, _source_selection, _space_dimension
 
@@ -543,7 +654,7 @@ def result_mode_overlap_basis_v2(worker: Any, model_tag: str,
         "native_result": "COMSOL_NATIVE_RAW",
         "quadrature_comparison": "NOT_RUN",
         "projection_acceptance": "NOT_RUN",
-        "production_route_status": "HANDLER_IMPLEMENTED_NOT_REGISTERED",
+        "production_route_status": "ROUTE_REGISTERED_NATIVE_INTEGRATION_ONLY",
     }
 
 
@@ -553,6 +664,6 @@ OPERATION_REQUIRED = {OPERATION_ID: ("definition",)}
 
 __all__ = [
     "DEFINITION_SCHEMA_ID", "DEFINITION_SCHEMA_VERSION", "OPERATION_ARGUMENTS",
-    "OPERATION_ID", "OPERATION_REQUIRED", "OPERATIONS", "RESULT_SCHEMA_ID",
+    "NATIVE_DEFINITION_SCHEMA", "NATIVE_RESULT_SCHEMA", "OPERATION_ID", "OPERATION_REQUIRED", "OPERATIONS", "RESULT_SCHEMA_ID",
     "build_definition", "result_mode_overlap_basis_v2", "validate_request_shape",
 ]

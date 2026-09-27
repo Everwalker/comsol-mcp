@@ -130,7 +130,7 @@ def test_v2_comsol_plan_contains_exact_eight_surface_integrals_and_stays_not_run
     assert plan["native_result"] == "NOT_RUN"
     assert plan["study_or_solver_invoked"] is False
     assert plan["dispatchable"] is False
-    assert plan["production_route_status"] == "NOT_REGISTERED"
+    assert plan["production_route_status"] == "ROUTE_REGISTERED_NOT_DISPATCHED"
 
     terms = {row["term_id"]: row for row in plan["terms"]}
     cross = terms["G01"]

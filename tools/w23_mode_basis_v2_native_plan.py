@@ -2,10 +2,10 @@
 
 This helper prepares exact 3-D IntSurface expressions after solution, dataset,
 and surface identities have been read back. It does not dispatch them or
-authenticate their results. The eventual versioned v2 handler owns the native
-integration route; this plan is never a public ``result.evaluate`` request.
-Every returned plan remains native_result=NOT_RUN and
-production_route_status=NOT_REGISTERED.
+authenticate their results. The registered versioned v2 handler owns the
+native integration route; this plan is never a public ``result.evaluate``
+request. Every returned plan remains native_result=NOT_RUN and
+production_route_status=ROUTE_REGISTERED_NOT_DISPATCHED.
 """
 from __future__ import annotations
 
@@ -386,7 +386,7 @@ def build_two_mode_comsol_integral_plan(
         "terms": plans, "origin_required": "COMSOL_NATIVE_INTEGRATION_FEATURES",
         "managed_operation_id": "result.mode_overlap_basis_v2",
         "native_result": "NOT_RUN", "study_or_solver_invoked": False,
-        "dispatchable": False, "production_route_status": "NOT_REGISTERED",
+        "dispatchable": False, "production_route_status": "ROUTE_REGISTERED_NOT_DISPATCHED",
         "provenance_note": "solution/surface metadata supplied to this pure helper is not authenticated; managed route must acquire and attest it",
     }
     return {**identity, "plan_id": _digest(identity)}
