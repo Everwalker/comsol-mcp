@@ -6,6 +6,8 @@ Updated 2026-09-27 UTC. Overall delivery is **PARTIAL**; execution continues thr
 
 ## Current checkpoint
 
+- **W24 shape post-processing: 23 synthetic-data tests PASS; native NOT_RUN.** Added substrate-complete wet/dry classification, interface/contact-line extraction, requested-time checks and separate volume/speed/shape gates. The raised-start sampling negative control prevents unobserved liquid being labeled dry. See [compact metrics checkpoint](docs/full_project_execution/w24/SHAPE_METRICS_CHECKPOINT.json). Actual managed field acquisition, stable shapes and sensitivity results remain unverified.
+
 - **W23 full-3D science/setup software: 55 tests PASS; native NOT_RUN.** Added the project-bound public-dispatch configuration chain, complex-vector quadrature comparison with fixed zero-channel tolerances, and a self-contained planarity negative fixture. Java compilation passed with an unchecked-operations warning. No native setup, solve or optical result is claimed. See [compact W23 checkpoint](docs/full_project_execution/w23_overlap/FULL3D_SCIENCE_CHECKPOINT.json). Versioned two-mode basis and real managed science execution remain next.
 
 - **W24 static-shape baseline: PARTIAL; offline Java compilation PASS.** Equal-volume flat/step setup code now covers the full wetting substrate, uses an explicit pressure reference, and treats bulk energy as diagnostic only. Source/draft/class hashes and all 349 installed JAR identities were independently checked. No server, Worker, native model build or solve was run. See [compact compile checkpoint](docs/full_project_execution/w24/STATIC_SHAPE_OFFLINE_CHECKPOINT.json); managed readback, field extraction, stability and sensitivity work continue.

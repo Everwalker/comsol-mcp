@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "checkpoint": "W24 static shape support/profile/stability metric helpers",
+  "status": "PARTIAL",
+  "software_tests": "PASS",
+  "native_acceptance": "NOT_RUN",
+  "scope": "synthetic-data software tests for native post-processing contracts; no native COMSOL data was produced or accepted",
+  "implemented": [
+    "Substrate-complete vertical sampling; all-gas columns starting above the wall cannot be certified dry",
+    "Single oriented upper-interface branch; dry support retained; malformed/multiple/truncated branches refused",
+    "Common-wet-grid comparison without cross-grid interpolation",
+    "Substrate arclength contact-line extraction with explicit sampling resolution",
+    "Requested-time coverage and separate history/stable-window volume, speed, interface and contact-line gates",
+    "Separate profile/contact-line/volume sensitivity comparison"
+  ],
+  "validation": {
+    "passed": 23,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "python_version": "Python 3.12.13",
+    "pytest_version": "pytest 9.1.1",
+    "pytest_command": [
+      "/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python",
+      "-m",
+      "pytest",
+      "-q",
+      "-p",
+      "no:cacheprovider",
+      "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/tests/test_w24_static_shape_metrics.py",
+      "--junitxml=/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/docs/full_project_execution/w24/evidence/shape_metrics_offline_20260927T1052Z/junit.xml"
+    ],
+    "py_compile_exit": 0,
+    "junit_local_path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/docs/full_project_execution/w24/evidence/shape_metrics_offline_20260927T1052Z/junit.xml",
+    "junit_sha256": "a34034e0d73d8c821a9c5308630c130cc64c33831be50d2796f87facf9244089",
+    "root_review": "Source/test/JUnit hashes and all 23 testcase outcomes independently verified; reviewed substrate completeness and separate metric gates"
+  },
+  "source_hashes_sha256": {
+    "tools/w24_static_shape_metrics.py": "5b99e6f363ff86afec7963603711bb8ddb27485097236d365550eb6575fd2792",
+    "tests/test_w24_static_shape_metrics.py": "fa7008510125d5219e288a35514bab372579f2a3c650eeacb44a8bea527bbcd8"
+  },
+  "local_receipt": {
+    "path": "docs/full_project_execution/w24/evidence/shape_metrics_offline_20260927T1052Z/checkpoint.json",
+    "sha256": "37b8b1894dad9243f8cc05e8446644d3245ef7318d99f272682418fe24bb1982"
+  },
+  "remaining": [
+    "Bind samples and substrate/time/solution identities to actual managed native observations",
+    "Complete managed build/adopt/save/reopen readback runner",
+    "Freeze complete numerical criteria and native resource budget",
+    "Run shape histories and mesh/interface-width/time-step variants; preserve raw phase and mass data",
+    "Complete W24 cure/gel/reference-state/viscoelastic route and available-platform acceptance"
+  ],
+  "next_action": "Continue managed shape setup/readback and native-data adapter implementation; these numerical helpers alone do not establish T047/T058 or physical acceptance."
+}

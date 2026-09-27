@@ -610,7 +610,9 @@
         "tools/java/W24CureScienceFixture.java",
         "tests/test_w24_cure_science_runner.py",
         "tools/java/W24StaticShapeFixture.java",
-        "docs/full_project_execution/w24/W24_STATIC_SHAPE_IMPLEMENTATION_DRAFT.md"
+        "docs/full_project_execution/w24/W24_STATIC_SHAPE_IMPLEMENTATION_DRAFT.md",
+        "tools/w24_static_shape_metrics.py",
+        "tests/test_w24_static_shape_metrics.py"
       ],
       "evidence": [
         "docs/full_project_execution/w24/evidence/setup_only_candidate_20260927T0117Z/offline_checks.json",
@@ -631,7 +633,8 @@
         "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0510Z/native_run_20260927T0517Z/exact_owned_cleanup_receipt.json",
         "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0510Z/native_run_20260927T0517Z/worker_ledger_reconciliation.json",
         "docs/full_project_execution/w24/evidence/static_shape_offline_20260927T1036Z/checkpoint.json",
-        "docs/full_project_execution/w24/STATIC_SHAPE_OFFLINE_CHECKPOINT.json"
+        "docs/full_project_execution/w24/STATIC_SHAPE_OFFLINE_CHECKPOINT.json",
+        "docs/full_project_execution/w24/SHAPE_METRICS_CHECKPOINT.json"
       ],
       "blockers": [
         "The W24 0841Z setup-only attempt failed before engine/Worker birth at project.inspect; preserve its FAIL_OR_INCOMPLETE result and do not replay the stale candidate.",
@@ -646,7 +649,8 @@
         "0330Z native attempt: COMSOL 6.4.0.293 server PID 90771/port 63979 and one Worker PID 90848/port 63988; Python 3.14 lacked mcp during production ControlDaemon registry construction, before model setup. 0 solve submissions; exact cleanup and global quiescence verified.",
         "0346Z offline candidate adds exact Python interpreter/distribution inventory and a pre-birth production no-engine gate. Actual pip check passed; collect_legacy_registry and ControlDaemon construction/close passed; JDK11 compile and 37 focused tests passed. Software-only; no native result.",
         "0510Z reviewed setup candidate native execution failed on the ExternalStrain parent path; status FAIL_OR_INCOMPLETE, durable UNKNOWN retained, exact cleanup verified, 0 solve submissions. Offline hierarchy root-cause evidence: docs/full_project_execution/w24/evidence/root_cause_external_strain_20260927T0523Z.json.",
-        "2026-09-27 10:36Z: offline static-shape checkpoint recorded at docs/full_project_execution/w24/evidence/static_shape_offline_20260927T1036Z/checkpoint.json; javac 11.0.31 passed over 349 COMSOL plugin jars. Native acceptance remains NOT_RUN; compile does not establish COMSOL property/selection runtime readback."
+        "2026-09-27 10:36Z: offline static-shape checkpoint recorded at docs/full_project_execution/w24/evidence/static_shape_offline_20260927T1036Z/checkpoint.json; javac 11.0.31 passed over 349 COMSOL plugin jars. Native acceptance remains NOT_RUN; compile does not establish COMSOL property/selection runtime readback.",
+        "2026-09-27: static-shape metric helpers passed 23 synthetic-data tests and py_compile. Source/test/JUnit verified. Substrate-complete sampling, separate volume/contact/profile/speed gates are software-only; native field/history and sensitivity acceptance NOT_RUN."
       ]
     },
     {
