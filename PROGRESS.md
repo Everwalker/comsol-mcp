@@ -2,9 +2,12 @@
 
 Updated 2026-09-27 UTC. Overall delivery is **PARTIAL**; execution continues through W01–W26 without a phase stop. This is the concise GitHub handoff. Recovery authority: [RESUME.json](docs/full_project_execution/state/RESUME.json). Evidence and rebuild commands: [checkpoint summary](docs/full_project_execution/release/PARTIAL_CHECKPOINT_20260927.json). Raw evidence remains local; historical state paths are not bundled artifacts.
 
-**Current software checkpoint: 236 tests PASS** from an index-only clean snapshot (0 failures/errors/skips). This covers project control, W23 mapping/full-3D/preflight, release controls, W24 preflight, and artifact geometry runners; it is not full-suite or native acceptance. The source checkpoint `1be74ff8d222d07548ca2e9d2fc61ca50525f1c3` was pushed non-force and verified equal to `origin/main`. Subsequent stages use this same progress entry and existing state files.
+**Prior scoped software checkpoint: 236 tests PASS** from an index-only clean snapshot (0 failures/errors/skips). This covers project control, W23 mapping/full-3D/preflight, release controls, W24 preflight, and artifact geometry runners; it is not full-suite or native acceptance. The source checkpoint `1be74ff8d222d07548ca2e9d2fc61ca50525f1c3` was pushed non-force and verified equal to `origin/main`. Subsequent stages use this same progress entry and existing state files.
 
 ## Current checkpoint
+
+- **Latest full offline attempt on `ceac7a0`: FAIL / PARTIAL** — 2596 passed, 28 failed, 39 skipped, 11 errors. The source export omitted root historical evidence and Git metadata; these export limitations are separated from code/test defects. An explicitly permitted loopback subset rerun produced 53 passed, 2 failed, 1 skipped, 0 errors. Original failures remain preserved. See [compact regression summary](docs/full_project_execution/release/OFFLINE_REGRESSION_20260927.json) for hashes, replay commands and classifications. This is not a full-suite or native PASS.
+- **Repairs pending:** Worker allowlist lacks the verified `GeomObjectSelection.init(int)` used by geometry measurement; older tests need real project/provenance prerequisites and self-contained fixtures. Unpublished F04 integration also has a reproduced legacy-versus-registered queue overlap; repair and retest before publishing that implementation checkpoint.
 
 - **W01–W22:** existing implementation and evidence baseline; overall acceptance remains open.
 - **W23:** mapping/full-3D scoped software checks passed (59 tests); native acceptance is **NOT_RUN**.
@@ -14,7 +17,7 @@ Updated 2026-09-27 UTC. Overall delivery is **PARTIAL**; execution continues thr
 
 ## Next work
 
-Continue W24 executor and phase-field fixture implementation offline while release completes F04. At a stable source handoff, refresh the complete closure and run focused offline gates; submit a new setup-only candidate for independent review before any native launch. Do not replay the failed 0841Z freeze. Continue remaining P0/W01–W26 gaps and independent overall review.
+Repair the classified offline regressions with their owning executors while completing F04 unified scheduling and precise job/Worker routing. Continue W23 full-3D managed-chain and versioned two-mode basis work, plus W24 executor and phase-field fixture implementation. At a stable source handoff, refresh the complete closure and run focused offline gates; submit a new setup-only candidate for independent review before any native launch. Do not replay the failed 0841Z freeze. Continue remaining P0/W01–W26 gaps and independent overall review.
 
 Focused offline runner check (software only):
 

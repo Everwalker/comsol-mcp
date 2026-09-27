@@ -1,0 +1,88 @@
+{
+  "schema": "offline-regression-summary-v1",
+  "created_at_utc": "2026-09-27T10:07:38.474971+00:00",
+  "status": "FAIL_INCOMPLETE",
+  "source_commit": "ceac7a0b7acf2bd4771f853a7bc451a65aeb9f7e",
+  "python": "/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python",
+  "source_export": "/private/tmp/comsol-offline-ceac7a0",
+  "export_scope": [
+    "comsol_mcp",
+    "tests",
+    "tools",
+    "audit",
+    "docs",
+    "pyproject.toml",
+    "README.md",
+    "LICENSE",
+    "AGENTS.md",
+    ".gitignore"
+  ],
+  "export_exclusions": [
+    "root evidence directory",
+    "Git metadata"
+  ],
+  "runs": [
+    {
+      "run": "restricted_full",
+      "counts": {
+        "tests": 2674,
+        "failures": 28,
+        "errors": 11,
+        "skipped": 39,
+        "passed": 2596
+      },
+      "junit_local_path": "/private/tmp/comsol-offline-ceac7a0.junit.xml",
+      "junit_sha256": "6ac59bbaf7529fb7d80cdcd6748e95ab9440a7309a7fe16d35453b266019fb3d",
+      "log_local_path": "/private/tmp/comsol-offline-ceac7a0.pytest.log",
+      "log_sha256": "c6025cb47c996bf6e82e418c2bfbcb2d842a263377533193eb67ee7646abbf1c",
+      "exit_code": 1,
+      "reproduce_command": "python -m pytest -q -p no:cacheprovider --junitxml=offline-full.junit.xml"
+    },
+    {
+      "run": "loopback_authorized_subset",
+      "counts": {
+        "tests": 56,
+        "failures": 2,
+        "errors": 0,
+        "skipped": 1,
+        "passed": 53
+      },
+      "junit_local_path": "/private/tmp/comsol-offline-ceac7a0.loopback.xml",
+      "junit_sha256": "1eb082aac0e19f4c821e4faac58458e2e47dd3ffec981fa9bcee8fff18f265dd",
+      "log_local_path": "/private/tmp/comsol-offline-ceac7a0.loopback.log",
+      "log_sha256": "1755d38487de21d94d88da39a900975cba38aeeec42ffe724b9874d8279b720d",
+      "exit_code": 1,
+      "reproduce_command": "python -m pytest -q -p no:cacheprovider --junitxml=offline-loopback.junit.xml tests/test_g3_c05_license_marshalling.py tests/test_java_worker.py tests/test_g3_chain_c_fixture.py::test_chain_c_fixture_live_without_an_engine_is_blocked tests/test_g3_phase4_driver.py::test_phase4_offline_protocol_case_produces_evidence",
+      "environment_requirement": "Local loopback socket binding permitted; actual Java Worker software tests, no COMSOL Server/solve."
+    }
+  ],
+  "classification": [
+    {
+      "group": "restricted_loopback",
+      "finding": "Java Worker and local socket tests were denied bind permissions. The explicitly authorized subset rerun has 53 PASS, 2 FAIL, 1 SKIP and 0 ERROR; no COMSOL Server was launched. Original failure is preserved."
+    },
+    {
+      "group": "production_defect",
+      "finding": "_g3_w14 calls GeomObjectSelection.init(int), absent from PersistentComsolWorker METHODS. Local COMSOL6.4 javap verifies this method; repair and retest pending.",
+      "api_jar_sha256": "9bdc47a9e320be5721956336f44f5afa4cb06a20cfa887bc7d32d1a837483a67"
+    },
+    {
+      "group": "fixtures_and_contract_alignment",
+      "finding": "Artifact and cleanup tests lack newly required durable project authority; older registration/effect-source assertions predate added routes. Repair tests to exercise real prerequisites without bypassing authorization."
+    },
+    {
+      "group": "provenance_negative_controls",
+      "finding": "Old r01 tests expect client-constructed observation arrays to yield MODEL_VALIDATED. Do not restore that insecure behavior; migrate to backend-produced provenance and retain forged-input refusal."
+    },
+    {
+      "group": "private_fixture_dependency",
+      "finding": "Mode-overlap test references an uncommitted local planarity reproducer. Replace with self-contained equivalent synthetic input."
+    },
+    {
+      "group": "export_limitations",
+      "finding": "The selected source export omitted a tracked historical javap evidence file and Git metadata required by one historical-blob test; these are not established production failures."
+    }
+  ],
+  "acceptance": "No full-suite PASS and no native/scientific acceptance. This is a baseline for targeted repairs; active F04/W23/W24 edits are outside this fixed commit.",
+  "next_action": "Repair the identified production allowlist and stale/private test prerequisites in the owning executors; rerun affected checks and then the full suite on the next stable candidate. Preserve original failures and scope."
+}
