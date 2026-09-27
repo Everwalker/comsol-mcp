@@ -67,9 +67,31 @@ def test_aggregator_compares_raw_registered_terms_to_independent_fields_but_keep
     assert result["provenance_gates"]["numeric_port_mode_index_readbacks"] == {
         "mode_0": "UNVERIFIED", "mode_1": "UNVERIFIED"}
     assert result["provenance_gates"]["native_surface_frame_normal_readback"] == (
-        "NOT_PRESENT_IN_RAW_INTEGRAL_RESULT")
+        "PRESENT_IN_ENVELOPE_UNAUTHENTICATED_FRAME_AND_PORT_RELATION_UNVERIFIED")
     assert result["basis_request_id"] == request["request_id"]
     assert result["study_or_solver_invoked_by_aggregator"] is False
+
+
+def test_aggregator_preserves_legacy_raw_integral_results_without_normal_provenance(monkeypatch):
+    request, definition, response, independent = _aligned_response(monkeypatch)
+    for key in ("output", "input"):
+        response["surface_readbacks"][key].pop("normal_provenance")
+
+    result = aggregate_two_mode_native_result(definition, response, independent)
+
+    assert result["status"] == "SOFTWARE_COMPARISON_PASS_PROVENANCE_PENDING"
+    assert result["provenance_gates"]["native_surface_frame_normal_readback"] == (
+        "NOT_PRESENT_IN_LEGACY_RAW_RESULT")
+    assert result["native_acceptance"] == "NOT_RUN"
+    assert result["basis_request_id"] == request["request_id"]
+
+
+def test_aggregator_rejects_partial_normal_provenance(monkeypatch):
+    _request, definition, response, independent = _aligned_response(monkeypatch)
+    response["surface_readbacks"]["input"].pop("normal_provenance")
+
+    with pytest.raises(AggregationError, match="only partially present"):
+        aggregate_two_mode_native_result(definition, response, independent)
 
 
 def test_aggregator_rejects_foreign_managed_identity_before_comparison(monkeypatch):

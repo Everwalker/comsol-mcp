@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "phase": "W23_AGGREGATION_SOFTWARE_CHECKPOINT",
+  "phase": "W23_NORMAL_READBACK_SOFTWARE_CHECKPOINT",
   "task": "W01_W26_CONTINUOUS_IMPLEMENTATION",
-  "status": "PARTIAL_SOFTWARE_95_PASS_NATIVE_PROVENANCE_PENDING",
+  "status": "PARTIAL_EXECUTION_CONTINUING_NATIVE_UNVERIFIED",
   "candidate_source": "docs/full_project_execution/w23_overlap/AGGREGATION_CHECKPOINT.json",
   "completed_work": [
     "PIN source restoration completed and verified: 10832 files, zero missing LFS backing objects; repository HEAD matches pinned commit/tree.",
@@ -64,9 +64,10 @@
     "Frozen commit 6474bf4 full tracked offline suite: 2818 PASS/9 SKIP/0 FAIL/0 ERROR, exit0. Separate enabled loopback 1 PASS. Root verified JUnit/log/manifest hashes; native/platform/scientific acceptance not established.",
     "W23 distinct v2 registered route: 88 software tests PASS; isolated wheel build/install/package registry smoke PASS, source/evidence hashes root verified. Native/scientific acceptance NOT_RUN.",
     "W24 static-shape science orchestration preliminary: synthetic 52/52 passed and Java compile succeeded, but root review rejected checkpoint because solve dispatch generated a new RPC idempotency key per attempt and the approval/Java ledger did not provide cross-process exactly-once admission. No native birth/solve; repair in progress.",
-    "W23 raw integral/field aggregation: 95 combined software tests PASS (7 new), fourteen source/dependency hashes and JUnit root verified. Tools-layer only; native provenance/scientific acceptance pending."
+    "W23 raw integral/field aggregation: 95 combined software tests PASS (7 new), fourteen source/dependency hashes and JUnit root verified. Tools-layer only; native provenance/scientific acceptance pending.",
+    "W23 surface normal readback: 99 focused software tests PASS in isolated published25c22c5 + exact5-file overlay; root verified 87 runtime hashes, 57 project import paths and JUnit. Native/science NOT_RUN. See docs/full_project_execution/w23_overlap/NORMAL_READBACK_CHECKPOINT.json"
   ],
-  "next_action": "Continue session.connect and remaining lifecycle/F16; repair W24 atomic admission and concurrency controls; prepare isolated W23/W24 native candidates, then W25/W26 and final independent review.",
+  "next_action": "Implement actual Port -> BMA -> solver/dataset -> SolutionInfo provenance. Keep frame/propagation and native physics UNVERIFIED until managed execution. Continue session lifecycle and W24 atomic admission repair.",
   "active_jobs": [],
   "blockers": [
     "W24 setup attempt 0841Z/0857Z ended FAIL_OR_INCOMPLETE before engine birth: project.create SUCCEEDED and project.inspect FAILED on injected idempotency_key. Preserve original receipt; do not replay this freeze. Offline helper fix and focused production test pass, but a new complete closure and root review are required before another setup launch.",
@@ -94,7 +95,7 @@
     "native_solve_budget_remaining": 0,
     "evidence": "docs/full_project_execution/evidence/luna_process_reconciliation/mac_readonly_snapshot_20260926T2152Z.json"
   },
-  "updated_at": "2026-09-27T12:43:00Z",
+  "updated_at": "2026-09-27T13:48:06.971022+00:00",
   "note": "Continuous authorized execution through W26. OpenViking task-detail retrieval was denied by auto-review because it would disclose internal roadmap identifiers externally; no workaround. Use current frozen workpack and read-only local memory only. Do not rerun bootstrap/init on resume. Source files now contain executor edits; do not rerun bootstrap/init. Git metadata is an APFS pointer managed by main agent; migration requires bundle/source transfer, not copying only the repository pointer. Git metadata migration is documented by evidence/git_metadata_relocation.json and owned by the main agent; do not copy the APFS git pointer to another machine without source bundle/archive. GUI permission boundary and checkpoint solution-scope caveat recorded. This executor has one W24 native setup-only failure with exact cleanup verified; the durable operation/job UNKNOWN records remain unchanged. No W24 solver submission occurred. Saved-MPH readback supplement uses separate time/evidence and zero study/solver calls; run08 remains FAIL_OR_INCOMPLETE. Root raw SQLite recomputation is linked under native_resume_saved_artifact_supplement.raw_recomputation_evidence; original run08 remains FAIL_OR_INCOMPLETE and no solve budget is restored. Latest checkpoint 2026-09-27T03:50:43Z: W24 0334Z setup run failed pre-model due Python 3.14 missing mcp, with exact cleanup; 0346Z candidate pins the validated 3.12.13 environment and passes a production no-engine registry/daemon preflight. Native setup remains pending root review; science implementation continues offline. Latest checkpoint 2026-09-27T09:09:28Z: W24 0841Z candidate was invoked once at 0857Z and failed before any engine/Worker birth because project.inspect received an injected idempotency_key; project.create persisted successfully. Exact read-only SQLite hash and operation result are in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_contract_diagnostic.json. The runner now omits the unnecessary inspect key; actual ControlDaemon focused regression is 2/2 PASS in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_runner_regression_receipt.json. No native retry or acceptance is claimed; release F04 runtime integration is active, so refresh closure and root review are required before another launch. Windows COMSOL 6.3 remains required/unassessed; only macOS 6.3 is USER_REQUESTED_SKIP.",
   "native_resume_smoke": {
     "status": "FAIL_OR_INCOMPLETE_POINT_SCHEMA_FAILURE; SOLVED_CHILD_ARTIFACT_DURABLE; SOLVE_BUDGET_EXHAUSTED; SEPARATE_SAVED_MPH_READBACK_PASS",
@@ -883,31 +884,13 @@
   },
   "acceptance_cells_changed": false,
   "current_execution_checkpoint": {
-    "at_utc": "2026-09-27T10:36:30Z",
-    "scope": "W24 static-shape baseline offline compile and managed-readback preparation; no native engine/Worker or solver was started.",
-    "static_shape": {
-      "status": "OFFLINE_JAVAC_PASS_NATIVE_NOT_RUN",
-      "source": "tools/java/W24StaticShapeFixture.java",
-      "source_sha256": "6c6cd9b1bf125f1a0b60614c207cb52126b6cc745ccb3da3d9bc407903495b18",
-      "draft": "docs/full_project_execution/w24/W24_STATIC_SHAPE_IMPLEMENTATION_DRAFT.md",
-      "draft_sha256": "3f769e82cb749c78c9f109d782872f628b83f802c4a5d1be97e692dd8afa2b11",
-      "receipt": "docs/full_project_execution/w24/evidence/static_shape_offline_20260927T1036Z/checkpoint.json",
-      "javac": "Corretto 11.0.31",
-      "classpath_jar_count": 349,
-      "classpath_manifest_sha256": "67aa979f9ba8ff1ed897967c6069b693c83db8395badb66c6763eadbfed090ca",
-      "compiled_class_sha256": "75e17f7be189ce38c9f7d490680074247b8e9a69a4518191300e8c6168b1d45b",
-      "scope_note": "API signature compilation only; geometry/property selection readback, model save/reopen, phase initialization and solver behavior remain unverified."
-    },
-    "prior_native_failure": {
-      "candidate": "W24 0841Z setup-only freeze",
-      "status": "FAIL_OR_INCOMPLETE_PREBIRTH_PRESERVED",
-      "engine_births": 0,
-      "worker_births": 0,
-      "study_solver_submissions": 0,
-      "summary": "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/summary.json"
-    },
+    "at_utc": "2026-09-27T13:48:06.971022+00:00",
+    "scope": "W23 surface normal readback",
+    "status": "PASS_SOFTWARE_ONLY",
+    "summary": "docs/full_project_execution/w23_overlap/NORMAL_READBACK_CHECKPOINT.json",
+    "tests": 99,
     "native_acceptance": "NOT_RUN",
-    "next_action": "Continue offline in new files: implement the registered-project managed static-shape build/adopt/save/reopen/readback sequence and focused synthetic production-route tests; define field extraction support/multiple-branch/dry-substrate handling before freezing criteria. Do not mutate the just-checkpointed Java fixture or draft without an explicit new change handoff. No native setup or solve is authorized in this checkpoint; continue the cure science executor and remaining W01-W26 scope."
+    "next_action": "Implement actual Port -> BMA -> solver/dataset -> SolutionInfo provenance. Keep frame/propagation and native physics UNVERIFIED until managed execution. Continue session lifecycle and W24 atomic admission repair."
   },
   "w24_setup_candidate_0841z_native_attempt": {
     "candidate_id": "W24-CURE-HIST-AXISYM-01",
@@ -932,9 +915,9 @@
     "next": "Wait for stable F04 runtime handoff; refresh closure and submit a new candidate for root review. No automatic rerun."
   },
   "verified_git_sync": {
-    "commit": "df80493214b566c3920fe72f0cf53f843c72216b",
+    "commit": "25c22c5a9adb7ee3baca6a83f8a8cf24c5b75154",
     "status": "HEAD_EQUALS_ORIGIN_MAIN_VERIFIED",
-    "scope": "Prior registered v2 and installed-wheel checkpoint."
+    "scope": "W23 aggregation checkpoint; post-push fetch succeeded after usage service recovered."
   },
   "w24_static_shape_science_admission_repair": {
     "status": "PRELIMINARY_52_TESTS_NOT_ACCEPTED_AFTER_ROOT_REVIEW",
@@ -946,5 +929,31 @@
     "native_engine_births_this_software_unit": 0,
     "study_run_submissions_this_software_unit": 0,
     "sensitivity_plan": "7 configurations × 2 paired models = 14 Study.run calls; epsilon variants scale hmax/epsilon=1/2, hmin/epsilon=1/4, and capture spacing=epsilon/4. This exceeds the old 10-solve campaign and remains NOT_AUTHORIZED; no old budget reused."
+  },
+  "execution_interruption": {
+    "cause": "Usage limit ended execution agents and prevented automatic approval review of the post-push fetch.",
+    "active_agents_observed": [
+      "root"
+    ],
+    "last_commit": "25c22c5a9adb7ee3baca6a83f8a8cf24c5b75154",
+    "push_response": "SUCCESS: df80493..25c22c5 HEAD -> main",
+    "post_push_fetch": "NOT_EXECUTED_APPROVAL_SERVICE_USAGE_LIMIT",
+    "local_tracking_ref": "25c22c5a9adb7ee3baca6a83f8a8cf24c5b75154",
+    "sync_verification": "INCOMPLETE: local tracking ref equality is not a fresh fetch",
+    "goal_complete": false,
+    "working_files_preserved": true,
+    "unaccepted_w24_science": "52-test preliminary stage remains CHANGES_REQUIRED; original approval/ledger concurrency defects must be rechecked before any execution.",
+    "resolution": {
+      "resolved_at_utc": "2026-09-27T13:08:06.285473+00:00",
+      "usage_check": "ordinaryUsageAllowed=true",
+      "post_push_fetch": "EXECUTED_SUCCESSFULLY",
+      "verified_head_and_origin_main": "25c22c5a9adb7ee3baca6a83f8a8cf24c5b75154",
+      "active_replacement_agents": [
+        "luna_w24_recovery",
+        "luna_runtime_recovery",
+        "luna_w23_recovery"
+      ],
+      "scope": "Resume existing work; no native launches and no budget resets."
+    }
   }
 }

@@ -1,0 +1,156 @@
+{
+  "schema_version": 1,
+  "stage": "W23 surface normal readback",
+  "updated_at": "2026-09-27T13:48:06.971022+00:00",
+  "status": "PASS_SOFTWARE_ONLY",
+  "overall_W23": "PARTIAL",
+  "native_status": "NOT_RUN",
+  "scientific_acceptance": "NOT_RUN",
+  "published_base_commit": "25c22c5a9adb7ee3baca6a83f8a8cf24c5b75154",
+  "capabilities": {
+    "changed_file_allowlist": [
+      "comsol_mcp/_w23_basis_v2_results.py",
+      "tools/w23_mode_basis_v2_aggregate.py",
+      "tests/test_w23_mode_basis_v2_results.py",
+      "tests/test_w23_mode_basis_v2_registry.py",
+      "tests/test_w23_mode_basis_v2_aggregate.py"
+    ],
+    "behavior": "Actual nx/ny/nz and squared-normal IntSurface integrals on the managed output/input selections; versioned normal provenance; curved/nonreal/unit/area failures close; aggregator distinguishes present-unattested, legacy-absent, and partial provenance.",
+    "known_unverified": [
+      "request frame to COMSOL global xyz mapping",
+      "Port orientation to propagation direction",
+      "managed native dispatch authentication in offline aggregator",
+      "Numeric Port mode/eigensolution field identity"
+    ],
+    "preserved_statuses": [
+      "quadrature comparison NOT_RUN until aggregation",
+      "projection acceptance NOT_RUN in native result",
+      "scientific acceptance NOT_RUN"
+    ]
+  },
+  "source_manifest": [
+    {
+      "path": "comsol_mcp/_w23_basis_v2_results.py",
+      "bytes": 52165,
+      "sha256": "c20a8287c2f3207b668c6605f611b6f4b156c11252309d15100fa43ff5a99a4a"
+    },
+    {
+      "path": "tests/test_w23_mode_basis_v2.py",
+      "bytes": 31260,
+      "sha256": "d8bd8bb79b5a3e8008b78a483a412d96abfffe1e43b8e7fb4af4ee6b98a120f0"
+    },
+    {
+      "path": "tests/test_w23_mode_basis_v2_aggregate.py",
+      "bytes": 7130,
+      "sha256": "d70d9be5c4b2fc70cf1f0fb6c4de738dc181f082874d23651a91a7565bd7c677"
+    },
+    {
+      "path": "tests/test_w23_mode_basis_v2_native_plan.py",
+      "bytes": 11331,
+      "sha256": "c4533af999942d425745684a2b096e223dc0e9a2de36ec360e40788184f9de1f"
+    },
+    {
+      "path": "tests/test_w23_mode_basis_v2_registry.py",
+      "bytes": 8089,
+      "sha256": "a4ef54f8066f93cedc528edb5b90af41fd5d59a78f264c316121a3a0e11d0f08"
+    },
+    {
+      "path": "tests/test_w23_mode_basis_v2_results.py",
+      "bytes": 21602,
+      "sha256": "28e962f2e698f89ed830c543409f5b3ebb68f73c5fe63059f55307f882734c23"
+    },
+    {
+      "path": "tests/test_w23_native_results.py",
+      "bytes": 21999,
+      "sha256": "a70ffc77ec243d63eaf683095a93a346729322d7cfbc997141f6fe352f28fef3"
+    },
+    {
+      "path": "tools/w23_mode_basis_v2_aggregate.py",
+      "bytes": 30483,
+      "sha256": "3a39b29b8d6f01ff7f18330dc78fd55190a06f810bf96cfdebcf38fe5a69e406"
+    }
+  ],
+  "validation": {
+    "tests": 99,
+    "passed": 99,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "python_version": "3.12.13",
+    "pytest_version": "9.1.1",
+    "suite": [
+      "tests/test_w23_mode_basis_v2.py",
+      "tests/test_w23_mode_basis_v2_native_plan.py",
+      "tests/test_w23_mode_basis_v2_results.py",
+      "tests/test_w23_mode_basis_v2_registry.py",
+      "tests/test_w23_native_results.py",
+      "tests/test_w23_mode_basis_v2_aggregate.py"
+    ],
+    "junit": {
+      "local_path": "/private/tmp/w23-normal-isolation-25c22c5-ez9fzq49/junit-no-editable.xml",
+      "sha256": "e69e78c7c9a37dcd11b211123a6563e798ad79615742df4e8c56fe7bb2bed1e2"
+    },
+    "isolation": {
+      "archive_paths": [
+        "comsol_mcp",
+        "tests",
+        "tools",
+        "pyproject.toml",
+        "docs/comsol_mcp_design_v1/02_ACTION_CATALOG.json"
+      ],
+      "archive_inventory": {
+        "file_count": 339,
+        "total_bytes": 11496769,
+        "manifest_sha256": "d24a6694e43fbd23873f960c59143b2054a81d1a3918397d6b6bb5bd34ef1f9c"
+      },
+      "unmodified_runtime_files_verified_against_base": 87,
+      "project_imports_verified_inside_archive": 57,
+      "editable_import_hooks_removed": true,
+      "live_repository_imports": 0
+    },
+    "prior_attempts": [
+      {
+        "path": "/private/tmp/w23-normal-readback-review/junit.xml",
+        "sha256": "5d6892cefc4dc313c7deb14819ffe4703a1b313e737b8270a2d3a5af5463b509",
+        "tests": 99,
+        "failures": 12,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "path": "/private/tmp/w23-normal-readback-review/junit-rerun.xml",
+        "sha256": "3cdacc5dd60dac027f8ead0ed6e7d0e6751cae0b6739eb6eddcd106a61dc4fc2",
+        "tests": 99,
+        "failures": 3,
+        "errors": 0,
+        "skipped": 0
+      }
+    ]
+  },
+  "raw_evidence": [
+    {
+      "local_path": "/private/tmp/w23-normal-readback-review/normal_readback_receipt.json",
+      "sha256": "4ad812068d46cac85a67116adc3df8442fb7c88c87be303a9795f2895343e93a"
+    },
+    {
+      "local_path": "/private/tmp/w23-normal-isolation-25c22c5-ez9fzq49/isolated_recheck_final_receipt.json",
+      "sha256": "84ec08b81f397c0ed1d8c936b70a0244eb8f6ac9e36adba7acf7e66e20a3d303"
+    }
+  ],
+  "local_kb_support": [
+    {
+      "version": "COMSOL 6.4",
+      "document": "Reference Manual, comsol_ref_definitions.21.045.html",
+      "chunk_id": 18117,
+      "sha256": "4cd4ec36520f31db724553444d39e3c68fdbdffc977f5fd9adf526d1ac57644f",
+      "supports": "nx, ny, nz are outward normal components relative to meshed domains; used only to implement measured outward normal fields, not a Port propagation convention."
+    }
+  ],
+  "reproduce": [
+    "Use a clean checkout of the commit containing this checkpoint; verify source_manifest hashes.",
+    "Create a fresh Python 3.12 virtualenv outside the checkout; install project declared dependencies and pytest 9.1.1 without editable project installations.",
+    "From the clean checkout run: python -m pytest -q -p no:cacheprovider --junitxml=/tmp/w23-normal-recheck.xml tests/test_w23_mode_basis_v2.py tests/test_w23_mode_basis_v2_native_plan.py tests/test_w23_mode_basis_v2_results.py tests/test_w23_mode_basis_v2_registry.py tests/test_w23_native_results.py tests/test_w23_mode_basis_v2_aggregate.py",
+    "For the exact isolated candidate, archive the published_base_commit paths above and overlay only changed_file_allowlist from this checkpoint commit. All other runtime sources must match the base."
+  ],
+  "next_action": "Implement actual Port -> BMA -> solver/dataset -> SolutionInfo provenance. Keep frame/propagation and native physics UNVERIFIED until managed execution. Continue session lifecycle and W24 atomic admission repair."
+}

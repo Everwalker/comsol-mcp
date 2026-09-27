@@ -215,7 +215,7 @@ def _verify_source_readbacks(request: Mapping[str, Any], definition: Mapping[str
     return mode_readback_status
 
 
-def _verify_surfaces_and_terms(request: Mapping[str, Any], result: Mapping[str, Any]) -> None:
+def _verify_surfaces_and_terms(request: Mapping[str, Any], result: Mapping[str, Any]) -> str:
     surfaces = result.get("surface_readbacks")
     terms = result.get("term_bindings")
     native = result.get("native_integrals")
@@ -250,6 +250,8 @@ def _verify_surfaces_and_terms(request: Mapping[str, Any], result: Mapping[str, 
         measured_surfaces[key] = {"entity_ids": ids, "area_m2": area,
                                   "tag": expected["selection_tag"],
                                   "aperture_id": expected["aperture_id"]}
+
+    normal_status = _verify_surface_normal_provenance(request, result, measured_surfaces)
 
     source_roles = _source_roles(request)
     for term_id, (role_a, role_b, surface_key) in _TERM_ROLES.items():
@@ -293,6 +295,105 @@ def _verify_surfaces_and_terms(request: Mapping[str, Any], result: Mapping[str, 
     output_entities = [terms[name]["entity_ids"] for name in ("G00", "G01", "G10", "G11", "b0", "b1", "P_signal")]
     if any(ids != output_entities[0] for ids in output_entities[1:]):
         _fail("all output-plane native integrals must resolve to the same exact boundary entity IDs")
+    return normal_status
+
+
+def _verify_surface_normal_provenance(request: Mapping[str, Any], result: Mapping[str, Any],
+                                      measured_surfaces: Mapping[str, Mapping[str, Any]]) -> str:
+    surfaces = result["surface_readbacks"]
+    present = [isinstance(surfaces[key].get("normal_provenance"), Mapping)
+               for key in ("output", "input")]
+    if not any(present):
+        return "NOT_PRESENT_IN_LEGACY_RAW_RESULT"
+    if not all(present):
+        _fail("surface normal provenance is only partially present across input/output surfaces")
+
+    expected_sources = {"output": request["signal_source"], "input": request["incident_source"]}
+    for key in ("output", "input"):
+        expected = request["output_surface" if key == "output" else "input_surface"]
+        row = surfaces[key]
+        normal = row["normal_provenance"]
+        source = expected_sources[key]
+        if (normal.get("schema_id") != "urn:comsol-mcp:result.mode_overlap_basis_v2:surface-normal-readback:1.0.0"
+                or normal.get("schema_version") != "1.0.0"
+                or normal.get("status") != "NATIVE_OUTWARD_NORMAL_READBACK_PASSED_FRAME_LINK_UNVERIFIED"):
+            _fail(f"{key} outward-normal provenance version/status is unsupported")
+        expected_binding = {name: source[name] for name in
+                            ("dataset_id", "solution_id", "outer_index", "inner_index", "solnum")}
+        if normal.get("source_binding") != expected_binding:
+            _fail(f"{key} outward-normal readback is not bound to its exact canonical source")
+        selection = normal.get("selection")
+        expected_selection = {
+            "component": expected["component"], "geometry": expected["geometry"],
+            "tag": expected["selection_tag"], "entity_dimension": 2,
+            "entity_ids": row["entity_ids"], "area_m2": measured_surfaces[key]["area_m2"],
+        }
+        if not isinstance(selection, Mapping) or dict(selection) != expected_selection:
+            _fail(f"{key} outward-normal readback selection/area differs from the native surface readback")
+        if (normal.get("request_frame_id") != expected["frame_id"]
+                or normal.get("native_component_frame") != "COMSOL_GLOBAL_XYZ_OUTWARD_RELATIVE_TO_MESHED_DOMAINS"
+                or normal.get("request_frame_mapping_status") != "UNVERIFIED"
+                or normal.get("port_orientation_relation_status") != "UNVERIFIED"
+                or normal.get("requested_integration_sign") != expected["native_normal_sign"]
+                or normal.get("requested_forward_axis_xyz") != expected["axis_xyz"]):
+            _fail(f"{key} outward-normal frame/Port relation must remain explicitly unverified")
+
+        records = normal["native_integrals"]
+        area = measured_surfaces[key]["area_m2"]
+        values = {}
+        for component, expression in (("x", "nx"), ("y", "ny"), ("z", "nz"),
+                                      ("squared_norm", "nx^2+ny^2+nz^2")):
+            record = records[component]
+            if (record.get("unit") != "m^2" or record.get("is_complex") is not False
+                    or record.get("expression") != expression
+                    or record.get("dataset_id") != source["dataset_id"]
+                    or record.get("solution_id") != source["solution_id"]
+                    or record.get("feature_type") != "IntSurface"):
+                _fail(f"{key} native normal integral {component} has a unit/expression/source mismatch")
+            cleanup = record.get("cleanup")
+            if (not isinstance(cleanup, Mapping) or cleanup.get("created") is not True
+                    or cleanup.get("removed") is not True or cleanup.get("cleanup_failed") is not False
+                    or cleanup.get("type_id") != "IntSurface"):
+                _fail(f"{key} native normal integral {component} lacks IntSurface cleanup evidence")
+            measured_area = _close(record.get("selection_measure_m2"), area,
+                                   label=f"{key} normal {component} selected area")
+            measure_source = record.get("selection_measure_source")
+            if not isinstance(measure_source, str) or "engine integral of 1" not in measure_source:
+                _fail(f"{key} normal integral {component} lacks integral-of-one area provenance")
+            values[component] = _finite(record.get("real"), f"{key} normal integral {component}")
+            if record.get("imag") != 0.0 or not math.isclose(measured_area, area, rel_tol=1e-10, abs_tol=1e-30):
+                _fail(f"{key} normal integral {component} is not a finite real area integral")
+
+        mean = [values[axis] / area for axis in "xyz"]
+        mean_norm = math.sqrt(sum(value * value for value in mean))
+        second_moment = values["squared_norm"] / area
+        variance = second_moment - mean_norm * mean_norm
+        tolerance = _finite(normal.get("mean_normal_unit_tolerance"), f"{key} normal tolerance")
+        variance_tolerance = _finite(normal.get("normal_variance_absolute_tolerance"), f"{key} variance tolerance")
+        second_tolerance = _finite(normal.get("second_moment_relative_tolerance"), f"{key} second-moment tolerance")
+        if (normal.get("area_unit") != "m^2"
+                or abs(mean_norm - 1.0) > tolerance
+                or abs(second_moment - 1.0) > second_tolerance
+                or variance < -variance_tolerance or variance > variance_tolerance):
+            _fail(f"{key} outward-normal envelope fails its stated unit/variance checks")
+        for index, axis in enumerate("xyz"):
+            _close(normal["observed_outward_normal_xyz_area_mean"][index], mean[index],
+                   label=f"{key} observed outward normal {axis}")
+        _close(normal.get("observed_outward_normal_norm"), mean_norm,
+               label=f"{key} observed outward-normal norm")
+        _close(normal.get("observed_normal_variance"), variance,
+               label=f"{key} observed normal variance")
+        signed = [expected["native_normal_sign"] * value for value in mean]
+        for index, axis in enumerate("xyz"):
+            _close(normal["signed_observed_outward_normal_xyz"][index], signed[index],
+                   label=f"{key} signed observed outward normal {axis}")
+        component_dot = sum(mean[index] * expected["axis_xyz"][index] for index in range(3))
+        _close(normal.get("outward_component_dot_requested_axis_if_frames_coincide"), component_dot,
+               label=f"{key} component dot product")
+        _close(normal.get("signed_outward_component_dot_requested_axis_if_frames_coincide"),
+               expected["native_normal_sign"] * component_dot,
+               label=f"{key} signed component dot product")
+    return "PRESENT_IN_ENVELOPE_UNAUTHENTICATED_FRAME_AND_PORT_RELATION_UNVERIFIED"
 
 
 def _term_complex(native_result: Mapping[str, Any], term_id: str, *, require_complex: bool) -> dict[str, Any]:
@@ -331,7 +432,7 @@ def aggregate_two_mode_native_result(
         _fail("native result must be a mapping")
     _verify_result_identity(request, definition, native_result)
     mode_readback = _verify_source_readbacks(request, definition, native_result)
-    _verify_surfaces_and_terms(request, native_result)
+    normal_status = _verify_surfaces_and_terms(request, native_result)
 
     if (not isinstance(independent_reference, Mapping)
             or independent_reference.get("native_result") != "NOT_RUN"
@@ -410,7 +511,7 @@ def aggregate_two_mode_native_result(
         "provenance_gates": {
             "native_dispatch_authentication": "NOT_PROVIDED_TO_OFFLINE_AGGREGATOR",
             "numeric_port_mode_index_readbacks": mode_readback,
-            "native_surface_frame_normal_readback": "NOT_PRESENT_IN_RAW_INTEGRAL_RESULT",
+            "native_surface_frame_normal_readback": normal_status,
             "overall_scientific_acceptance": "NOT_RUN",
         },
         "native_acceptance": "NOT_RUN",

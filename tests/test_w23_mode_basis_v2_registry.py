@@ -121,7 +121,11 @@ def test_v2_managed_entrypoints_share_normal_route_and_evaluate_ticket(tmp_path,
         assert response["data"]["study_or_solver_invoked"] is False
         assert response["data"]["production_route_status"] == "ROUTE_REGISTERED_NATIVE_INTEGRATION_ONLY"
         assert response["data"]["native_result"] == "COMSOL_NATIVE_RAW"
-        assert len(calls) == 8
+        assert len(calls) == 16
+        assert sum(call["term_id"] in {
+            "G00", "G01", "G10", "G11", "b0", "b1", "P_signal", "P_incident",
+        } for call in calls) == 8
+        assert sum(call["term_id"].startswith("normal ") for call in calls) == 8
         assert len(isolation_calls) == 1
         assert response["execution"]["revision"] == 1
         assert response["execution"]["dirty"] is False

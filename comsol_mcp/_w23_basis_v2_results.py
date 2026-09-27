@@ -27,6 +27,7 @@ from ._w23_basis_v2_contract import NATIVE_DEFINITION_SCHEMA, validate_basis_req
 OPERATION_ID = "result.mode_overlap_basis_v2"
 DEFINITION_SCHEMA_ID = "urn:comsol-mcp:result.mode_overlap_basis_v2:definition:1.0.0"
 RESULT_SCHEMA_ID = "urn:comsol-mcp:result.mode_overlap_basis_v2:native-result:1.0.0"
+NORMAL_READBACK_SCHEMA_ID = "urn:comsol-mcp:result.mode_overlap_basis_v2:surface-normal-readback:1.0.0"
 DEFINITION_SCHEMA_VERSION = "1.0.0"
 _TAG = re.compile(r"^[A-Za-z][A-Za-z0-9_]{0,62}$")
 _UNIT = re.compile(r"^[A-Za-z0-9_*/^.-]+$")
@@ -55,6 +56,15 @@ _INTEGRAL_TOLERANCES = {
     "power_unit": "W",
     "feature_type": "IntSurface",
 }
+_NORMAL_READBACK_POLICY = {
+    "schema_id": NORMAL_READBACK_SCHEMA_ID,
+    "schema_version": "1.0.0",
+    "component_frame": "COMSOL_GLOBAL_XYZ_OUTWARD_RELATIVE_TO_MESHED_DOMAINS",
+    "area_unit": "m^2",
+    "second_moment_relative_tolerance": 1e-8,
+    "normal_variance_absolute_tolerance": 1e-10,
+    "mean_normal_unit_tolerance": 1e-10,
+}
 _OPERATION_ENVELOPE_FIELDS = frozenset({
     "project_id", "session_id", "model_ref", "expected_revision", "idempotency_key", "request_id",
 })
@@ -70,6 +80,64 @@ _COMPLEX_INTEGRAL_SCHEMA = {
         "cleanup": {"type": "object", "required": ["created", "removed", "cleanup_failed", "type_id", "tag"]},
         "selection_measure_m2": {"type": "number", "exclusiveMinimum": 0},
         "selection_measure_source": {"type": "string", "minLength": 1}, "is_complex": {"type": "boolean"},
+    },
+    "additionalProperties": False,
+}
+_NORMAL_INTEGRAL_SCHEMA = {
+    "type": "object",
+    "required": ["real", "imag", "unit", "expression", "dataset_id", "solution_id",
+                 "feature_type", "cleanup", "selection_measure_m2", "selection_measure_source", "is_complex"],
+    "properties": {
+        "real": {"type": "number"}, "imag": {"const": 0.0},
+        "unit": {"const": "m^2"}, "expression": {"type": "string"},
+        "dataset_id": {"type": "string", "minLength": 1},
+        "solution_id": {"type": "string", "minLength": 1},
+        "feature_type": {"const": "IntSurface"},
+        "cleanup": {"type": "object", "required": ["created", "removed", "cleanup_failed", "type_id", "tag"]},
+        "selection_measure_m2": {"type": "number", "exclusiveMinimum": 0},
+        "selection_measure_source": {"type": "string", "minLength": 1},
+        "is_complex": {"const": False},
+    },
+    "additionalProperties": False,
+}
+_NORMAL_READBACK_SCHEMA = {
+    "$id": NORMAL_READBACK_SCHEMA_ID,
+    "type": "object",
+    "required": ["schema_id", "schema_version", "status", "source_binding", "selection",
+                 "native_integrals", "observed_outward_normal_xyz_area_mean", "observed_outward_normal_norm",
+                 "observed_normal_variance", "native_component_frame", "request_frame_id",
+                 "area_unit", "second_moment_relative_tolerance", "normal_variance_absolute_tolerance",
+                 "mean_normal_unit_tolerance",
+                 "request_frame_mapping_status", "requested_forward_axis_xyz", "requested_integration_sign",
+                 "signed_observed_outward_normal_xyz", "outward_component_dot_requested_axis_if_frames_coincide",
+                 "signed_outward_component_dot_requested_axis_if_frames_coincide",
+                 "port_orientation_relation_status"],
+    "properties": {
+        "schema_id": {"const": NORMAL_READBACK_SCHEMA_ID}, "schema_version": {"const": "1.0.0"},
+        "status": {"const": "NATIVE_OUTWARD_NORMAL_READBACK_PASSED_FRAME_LINK_UNVERIFIED"},
+        "source_binding": {"type": "object", "required": ["dataset_id", "solution_id", "outer_index", "inner_index", "solnum"]},
+        "selection": {"type": "object", "required": ["component", "geometry", "tag", "entity_dimension", "entity_ids", "area_m2"]},
+        "native_integrals": {
+            "type": "object", "required": ["x", "y", "z", "squared_norm"],
+            "properties": {key: _NORMAL_INTEGRAL_SCHEMA for key in ("x", "y", "z", "squared_norm")},
+            "additionalProperties": False,
+        },
+        "observed_outward_normal_xyz_area_mean": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"type": "number"}},
+        "observed_outward_normal_norm": {"type": "number", "minimum": 0},
+        "observed_normal_variance": {"type": "number"},
+        "native_component_frame": {"const": _NORMAL_READBACK_POLICY["component_frame"]},
+        "area_unit": {"const": _NORMAL_READBACK_POLICY["area_unit"]},
+        "second_moment_relative_tolerance": {"const": _NORMAL_READBACK_POLICY["second_moment_relative_tolerance"]},
+        "normal_variance_absolute_tolerance": {"const": _NORMAL_READBACK_POLICY["normal_variance_absolute_tolerance"]},
+        "mean_normal_unit_tolerance": {"const": _NORMAL_READBACK_POLICY["mean_normal_unit_tolerance"]},
+        "request_frame_id": {"type": "string", "minLength": 1},
+        "request_frame_mapping_status": {"const": "UNVERIFIED"},
+        "requested_forward_axis_xyz": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"type": "number"}},
+        "requested_integration_sign": {"enum": [-1, 1]},
+        "signed_observed_outward_normal_xyz": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"type": "number"}},
+        "outward_component_dot_requested_axis_if_frames_coincide": {"type": "number"},
+        "signed_outward_component_dot_requested_axis_if_frames_coincide": {"type": "number"},
+        "port_orientation_relation_status": {"const": "UNVERIFIED"},
     },
     "additionalProperties": False,
 }
@@ -96,7 +164,18 @@ NATIVE_RESULT_SCHEMA: dict[str, Any] = {
             "model_revision", "geometry_revision", "frequency_hz", "coordinate_frame", "mode_ids", "mode_indices"]},
         "managed_execution_binding": {"type": "object", "required": ["project_id", "model_ref", "model_revision", "source"]},
         "source_readbacks": {"type": "object", "required": ["signal", "mode_0", "mode_1", "incident"]},
-        "surface_readbacks": {"type": "object", "required": ["output", "input"]},
+        "surface_readbacks": {
+            "type": "object", "required": ["output", "input"],
+            "properties": {
+                key: {
+                    "type": "object",
+                    "required": ["selection", "entity_dimension", "entity_ids", "aperture_id",
+                                 "expected_area_m2", "measured_area_m2"],
+                    "properties": {"normal_provenance": _NORMAL_READBACK_SCHEMA},
+                }
+                for key in ("output", "input")
+            },
+        },
         "native_integrals": {
             "type": "object", "required": ["gram_matrix", "coupling_vector", "signal_power",
                 "incident_reference_power", "terms"],
@@ -399,6 +478,132 @@ def _check_selection_measure(record: Mapping[str, Any], surface: Mapping[str, An
     return measured
 
 
+def _real_surface_integral(record: Mapping[str, Any], *, expression: str, source: Mapping[str, Any],
+                           surface: Mapping[str, Any], label: str) -> tuple[float, dict[str, Any]]:
+    """Validate one native area integral without mixing it into the W-valued term schema."""
+    if record.get("unit") != _NORMAL_READBACK_POLICY["area_unit"]:
+        _fail("UNIT_MISMATCH", f"{label} native normal integral unit {record.get('unit')!r} is not m^2",
+              details={"record": dict(record)}, stage="post_dispatch")
+    if record.get("is_complex") is not False:
+        _fail("COMPLEX_DATA_ERROR", f"{label} geometric normal integral must be natively real",
+              details={"record": dict(record)}, stage="post_dispatch")
+    value = record.get("value")
+    if (not isinstance(value, complex) or not math.isfinite(value.real)
+            or not math.isfinite(value.imag) or value.imag != 0.0):
+        _fail("NATIVE_RESULT_INVALID", f"{label} native normal integral is not a finite real scalar",
+              details={"record": dict(record)}, stage="post_dispatch")
+    cleanup = record.get("cleanup")
+    if (not isinstance(cleanup, Mapping) or cleanup.get("type_id") != "IntSurface"
+            or cleanup.get("removed") is not True or cleanup.get("cleanup_failed") is True):
+        _fail("EXECUTION_STATE_UNKNOWN", f"{label} normal IntSurface cleanup was not verified",
+              details={"record": dict(record)}, stage="post_dispatch")
+    if (record.get("dataset") != source.get("dataset_id")
+            or record.get("solution") != source.get("solution_id")
+            or record.get("expression") != expression):
+        _fail("SOLUTION_BINDING_MISMATCH", f"{label} normal integral is not bound to the exact native source/expression",
+              details={"record": dict(record)}, stage="post_dispatch")
+    area = _check_selection_measure(record, surface, label)
+    return value.real, {
+        "real": value.real, "imag": 0.0, "unit": _NORMAL_READBACK_POLICY["area_unit"],
+        "expression": expression, "dataset_id": record.get("dataset"),
+        "solution_id": record.get("solution"), "feature_type": cleanup.get("type_id"),
+        "cleanup": dict(cleanup), "selection_measure_m2": area,
+        "selection_measure_source": record.get("selection_measure_source"),
+        "is_complex": False,
+    }
+
+
+def _native_surface_normal_readback(worker: Any, model_tag: str, source: Mapping[str, Any],
+                                    selection: Mapping[str, Any], readback: Mapping[str, Any],
+                                    surface: Mapping[str, Any], *, label: str) -> dict[str, Any]:
+    """Read and validate the actual outward normal distribution on one named surface.
+
+    COMSOL's nx/ny/nz are global normal components pointing outward relative to
+    meshed domains. Their area integrals and the integrated squared norm expose
+    the measured direction and reject a materially varying normal field. This
+    deliberately does not authenticate the request's coordinate-frame mapping
+    or the physical Port propagation convention.
+    """
+    from ._w23_results import _native_integral
+
+    expressions = {"x": "nx", "y": "ny", "z": "nz",
+                   "squared_norm": "nx^2+ny^2+nz^2"}
+    records: dict[str, dict[str, Any]] = {}
+    for component, expression in expressions.items():
+        raw = _native_integral(worker, model_tag, source, selection, readback,
+                               expression, label=f"W23 v2 normal {label} {component}")
+        if not isinstance(raw, Mapping):
+            _fail("NATIVE_READBACK_UNVERIFIED", f"{label} outward-normal integral {component} is not structured",
+                  stage="post_dispatch")
+        _, records[component] = _real_surface_integral(
+            raw, expression=expression, source=source, surface=surface,
+            label=f"{label} outward-normal integral {component}")
+
+    area = records["x"]["selection_measure_m2"]
+    for component in ("y", "z", "squared_norm"):
+        if not math.isclose(records[component]["selection_measure_m2"], area,
+                            rel_tol=_INTEGRAL_TOLERANCES["surface_area_relative_tolerance"],
+                            abs_tol=_INTEGRAL_TOLERANCES["surface_area_absolute_tolerance_m2"]):
+            _fail("SELECTION_MEASURE_MISMATCH", f"{label} normal component integrals do not share one measured area",
+                  stage="post_dispatch")
+
+    outward = [records[axis]["real"] / area for axis in "xyz"]
+    mean_norm = math.sqrt(sum(value * value for value in outward))
+    second_moment = records["squared_norm"]["real"] / area
+    variance = second_moment - mean_norm * mean_norm
+    if (not all(math.isfinite(value) for value in (*outward, mean_norm, second_moment, variance))
+            or not math.isclose(second_moment, 1.0,
+                                rel_tol=_NORMAL_READBACK_POLICY["second_moment_relative_tolerance"],
+                                abs_tol=_NORMAL_READBACK_POLICY["second_moment_relative_tolerance"])):
+        _fail("NATIVE_NORMAL_INVALID", f"{label} native outward-normal field is not finite/unit length",
+              details={"mean_normal_xyz": outward, "mean_normal_norm": mean_norm,
+                       "mean_squared_norm": second_moment}, stage="post_dispatch")
+    if (variance < -_NORMAL_READBACK_POLICY["normal_variance_absolute_tolerance"]
+            or variance > _NORMAL_READBACK_POLICY["normal_variance_absolute_tolerance"]
+            or abs(mean_norm - 1.0) > _NORMAL_READBACK_POLICY["mean_normal_unit_tolerance"]):
+        _fail("NON_PLANAR_SURFACE_NORMAL", f"{label} named surface does not have one uniform outward normal",
+              details={"mean_normal_xyz": outward, "mean_normal_norm": mean_norm,
+                       "normal_variance": variance,
+                       "normal_variance_tolerance": _NORMAL_READBACK_POLICY["normal_variance_absolute_tolerance"]},
+              stage="post_dispatch")
+
+    forward_axis = [_finite(value, f"{label} requested forward axis") for value in surface["axis_xyz"]]
+    requested_sign = surface["native_normal_sign"]
+    component_dot = sum(outward[index] * forward_axis[index] for index in range(3))
+    signed_outward = [requested_sign * value for value in outward]
+    signed_component_dot = requested_sign * component_dot
+    return {
+        "schema_id": NORMAL_READBACK_SCHEMA_ID,
+        "schema_version": _NORMAL_READBACK_POLICY["schema_version"],
+        "area_unit": _NORMAL_READBACK_POLICY["area_unit"],
+        "second_moment_relative_tolerance": _NORMAL_READBACK_POLICY["second_moment_relative_tolerance"],
+        "normal_variance_absolute_tolerance": _NORMAL_READBACK_POLICY["normal_variance_absolute_tolerance"],
+        "mean_normal_unit_tolerance": _NORMAL_READBACK_POLICY["mean_normal_unit_tolerance"],
+        "status": "NATIVE_OUTWARD_NORMAL_READBACK_PASSED_FRAME_LINK_UNVERIFIED",
+        "source_binding": {
+            "dataset_id": source["dataset_id"], "solution_id": source["solution_id"],
+            "outer_index": source["outer_index"], "inner_index": source["inner_index"],
+            "solnum": source["solnum"],
+        },
+        "selection": {"component": selection["component"], "geometry": selection["geometry"],
+                      "tag": selection["tag"], "entity_dimension": readback["entity_dimension"],
+                      "entity_ids": list(readback["entity_ids"]), "area_m2": area},
+        "native_integrals": {key: records[key] for key in expressions},
+        "observed_outward_normal_xyz_area_mean": outward,
+        "observed_outward_normal_norm": mean_norm,
+        "observed_normal_variance": variance,
+        "native_component_frame": _NORMAL_READBACK_POLICY["component_frame"],
+        "request_frame_id": surface["frame_id"],
+        "request_frame_mapping_status": "UNVERIFIED",
+        "requested_forward_axis_xyz": forward_axis,
+        "requested_integration_sign": requested_sign,
+        "signed_observed_outward_normal_xyz": signed_outward,
+        "outward_component_dot_requested_axis_if_frames_coincide": component_dot,
+        "signed_outward_component_dot_requested_axis_if_frames_coincide": signed_component_dot,
+        "port_orientation_relation_status": "UNVERIFIED",
+    }
+
+
 def _validate_native_source(request: Mapping[str, Any], role: str, source_kind: str,
                             source: Mapping[str, Any], native_binding: Mapping[str, Any],
                             axes: Mapping[str, Any], model_tag: str) -> None:
@@ -535,6 +740,16 @@ def result_mode_overlap_basis_v2(worker: Any, model_tag: str,
     if any(entities != output_ids[0] for entities in output_ids[1:]):
         _fail("SELECTION_READBACK_MISMATCH", "signal and both basis modes do not resolve to the same output boundary IDs")
 
+    normal_readbacks = {}
+    for key, role in (("output", "signal"), ("input", "incident")):
+        surface = request[f"{key}_surface"]
+        source = roles[role]["source"]
+        selection = {"component": surface["component"], "geometry": surface["geometry"],
+                     "tag": surface["selection_tag"]}
+        normal_readbacks[key] = _native_surface_normal_readback(
+            worker, model_tag, source, selection, selection_readbacks[role], surface,
+            label=key)
+
     # Mapping from the immutable canonical request's eight terms to one
     # current dataset plus, when needed, an exact withsol expression. The
     # source on the left side is the current result dataset; the right-side
@@ -623,6 +838,7 @@ def result_mode_overlap_basis_v2(worker: Any, model_tag: str,
             "aperture_id": request[f"{key}_surface"]["aperture_id"],
             "expected_area_m2": request[f"{key}_surface"]["surface_area_m2"],
             "measured_area_m2": measure,
+            "normal_provenance": normal_readbacks[key],
         }
     return {
         "schema_id": RESULT_SCHEMA_ID, "schema_version": "1.0.0",

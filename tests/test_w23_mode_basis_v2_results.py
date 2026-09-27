@@ -53,7 +53,9 @@ def _invoke(request, definition, *, model_tag="model1", project_id=None,
 
 def _install_native_test_doubles(monkeypatch, request, *, mutate_source=None,
                                  mutate_selection=None, area_override=None,
-                                 cleanup_removed=True, complex_flag=True):
+                                 cleanup_removed=True, complex_flag=True,
+                                 normal_integrals_override=None,
+                                 normal_complex_flag=False):
     calls = []
     monkeypatch.setattr(_g3_common, "bound_model", lambda _worker, tag: {"model_tag": tag})
 
@@ -121,6 +123,27 @@ def _install_native_test_doubles(monkeypatch, request, *, mutate_source=None,
             request["input_surface"]["surface_area_m2"]
             if selection["tag"] == request["input_surface"]["selection_tag"]
             else request["output_surface"]["surface_area_m2"])
+        if term_id.startswith("normal "):
+            _, surface_key, component = term_id.split()
+            if normal_integrals_override:
+                normal_value = normal_integrals_override(surface_key, component, area)
+            else:
+                normal_value = {
+                    ("output", "x"): area, ("output", "y"): 0.0,
+                    ("output", "z"): 0.0, ("output", "squared_norm"): area,
+                    ("input", "x"): -area, ("input", "y"): 0.0,
+                    ("input", "z"): 0.0, ("input", "squared_norm"): area,
+                }[(surface_key, component)]
+            return {
+                "value": complex(normal_value, 0.0), "unit": "m^2",
+                "is_complex": normal_complex_flag,
+                "expression": expression, "dataset": source["dataset_id"],
+                "solution": source["solution_id"], "selection_measure": area,
+                "selection_measure_source": "COMSOL engine integral of 1 over named selection",
+                "cleanup": {"created": True, "removed": cleanup_removed,
+                            "cleanup_failed": not cleanup_removed, "type_id": "IntSurface",
+                            "tag": "tmp_w23_v2_normal"},
+            }
         return {
             "value": values[term_id], "unit": "W", "is_complex": complex_flag,
             "expression": expression, "dataset": source["dataset_id"],
@@ -168,13 +191,12 @@ def test_handler_integrates_exact_gram_couplings_and_powers_on_bound_named_surfa
     validate(instance=result, schema=NATIVE_RESULT_SCHEMA)
     assert result["study_or_solver_invoked"] is False
     assert result["caller_field_arrays_accepted"] is False
-    assert len(calls) == 8
-    assert {call["term_id"] for call in calls} == {
+    assert len(calls) == 16
+    assert {call["term_id"] for call in calls if call["term_id"] in {
         "G00", "G01", "G10", "G11", "b0", "b1", "P_signal", "P_incident",
-    }
-    assert result["native_integrals"]["gram_matrix"][0][1] == {"real": 0.1, "imag": 0.2, "unit": "W", "expression": calls[1]["expression"], "dataset_id": "dModeA", "solution_id": "sModeA", "feature_type": "IntSurface", "cleanup": {"created": True, "removed": True, "cleanup_failed": False, "type_id": "IntSurface", "tag": "tmp_w23_v2"}, "selection_measure_m2": request["output_surface"]["surface_area_m2"], "selection_measure_source": "COMSOL engine integral of 1 over named selection", "is_complex": True}
-
+    }} == {"G00", "G01", "G10", "G11", "b0", "b1", "P_signal", "P_incident"}
     terms = {call["term_id"]: call for call in calls}
+    assert result["native_integrals"]["gram_matrix"][0][1] == {"real": 0.1, "imag": 0.2, "unit": "W", "expression": terms["G01"]["expression"], "dataset_id": "dModeA", "solution_id": "sModeA", "feature_type": "IntSurface", "cleanup": {"created": True, "removed": True, "cleanup_failed": False, "type_id": "IntSurface", "tag": "tmp_w23_v2"}, "selection_measure_m2": request["output_surface"]["surface_area_m2"], "selection_measure_source": "COMSOL engine integral of 1 over named selection", "is_complex": True}
     assert "0.25*(1)*" in terms["G01"]["expression"]
     assert "withsol('sModeB',ewfd.Emodex_2,setval(freq," in terms["G01"]["expression"]
     assert "setind(lambda,1)" in terms["G01"]["expression"]
@@ -191,6 +213,47 @@ def test_handler_integrates_exact_gram_couplings_and_powers_on_bound_named_surfa
         "native_port_mode_index_readback": "NOT_PROVIDED",
     }
     assert all(row["entity_dimension"] == 2 for row in result["term_bindings"].values())
+    output_normal = result["surface_readbacks"]["output"]["normal_provenance"]
+    input_normal = result["surface_readbacks"]["input"]["normal_provenance"]
+    assert output_normal["schema_id"].endswith(":surface-normal-readback:1.0.0")
+    assert output_normal["observed_outward_normal_xyz_area_mean"] == pytest.approx([1.0, 0.0, 0.0])
+    assert input_normal["observed_outward_normal_xyz_area_mean"] == pytest.approx([-1.0, 0.0, 0.0])
+    assert input_normal["requested_integration_sign"] == -1
+    assert input_normal["signed_observed_outward_normal_xyz"] == pytest.approx([1.0, 0.0, 0.0])
+    assert output_normal["outward_component_dot_requested_axis_if_frames_coincide"] == pytest.approx(1.0)
+    assert input_normal["outward_component_dot_requested_axis_if_frames_coincide"] == pytest.approx(-1.0)
+    assert output_normal["request_frame_mapping_status"] == "UNVERIFIED"
+    assert input_normal["port_orientation_relation_status"] == "UNVERIFIED"
+    assert output_normal["schema_id"] == "urn:comsol-mcp:result.mode_overlap_basis_v2:surface-normal-readback:1.0.0"
+
+
+def test_handler_rejects_nonuniform_native_outward_normal_before_power_terms(monkeypatch):
+    request, definition = _definition()
+
+    def curved_normal(surface_key, component, area):
+        if surface_key == "output":
+            return {"x": area / 2.0, "y": area / 2.0,
+                    "z": 0.0, "squared_norm": area}[component]
+        return {"x": -area, "y": 0.0, "z": 0.0,
+                "squared_norm": area}[component]
+
+    calls = _install_native_test_doubles(
+        monkeypatch, request, normal_integrals_override=curved_normal)
+    with pytest.raises(ExecutionContractError) as caught:
+        _invoke(request, definition)
+    assert caught.value.code == "NON_PLANAR_SURFACE_NORMAL"
+    # Normal acquisition is fail-closed before any of the eight W-valued terms.
+    assert len(calls) == 4
+    assert all(call["term_id"].startswith("normal output ") for call in calls)
+
+
+def test_handler_rejects_complex_normal_readback(monkeypatch):
+    request, definition = _definition()
+    calls = _install_native_test_doubles(monkeypatch, request, normal_complex_flag=True)
+    with pytest.raises(ExecutionContractError) as caught:
+        _invoke(request, definition)
+    assert caught.value.code == "COMPLEX_DATA_ERROR"
+    assert len(calls) == 1
 
 
 @pytest.mark.parametrize("mutation, expected_code", [
@@ -248,14 +311,16 @@ def test_handler_rejects_selection_identity_dimension_and_area_drift(monkeypatch
     assert calls == []
 
     def wrong_area(term_id, selection):
-        expected = request["output_surface"]["surface_area_m2"]
+        expected = (request["input_surface"]["surface_area_m2"]
+                    if selection["tag"] == request["input_surface"]["selection_tag"]
+                    else request["output_surface"]["surface_area_m2"])
         return expected * 1.01 if term_id == "G00" else expected
 
     calls = _install_native_test_doubles(monkeypatch, request, area_override=wrong_area)
     with pytest.raises(ExecutionContractError) as caught:
         _invoke(request, definition)
     assert caught.value.code == "SELECTION_MEASURE_MISMATCH"
-    assert len(calls) == 1
+    assert len(calls) == 9
 
 
 def test_handler_rejects_basis_sources_that_resolve_to_different_boundary_ids(monkeypatch):
@@ -281,7 +346,7 @@ def test_handler_requires_complex_status_for_reciprocal_integrals(monkeypatch):
     with pytest.raises(ExecutionContractError) as caught:
         _invoke(request, definition)
     assert caught.value.code == "COMPLEX_DATA_ERROR"
-    assert len(calls) == 1
+    assert len(calls) == 9
 
 
 @pytest.mark.parametrize("context_change, expected_code", [
