@@ -1,0 +1,178 @@
+{
+  "schema_version": 1,
+  "scope": "F04 no-ModelRef lifecycle recovery",
+  "status": "PASS_SCOPED_SOFTWARE",
+  "project_status": "PARTIAL",
+  "native_acceptance": "NOT_RUN",
+  "base_commit": "b484a735b7460c3780ff6a02329d6781a1faadce",
+  "overlay": {
+    "baseline": "b484a735b7460c3780ff6a02329d6781a1faadce",
+    "digest_algorithm": "SHA256(concat in manifest order: UTF8(relative_path) + NUL + raw 32-byte file SHA256)",
+    "files": [
+      {
+        "bytes": 388624,
+        "path": "comsol_mcp/_control_daemon.py",
+        "sha256": "218218566b784c8fe9b4fa34d6498125696edfa890f9032dd73686f28e6eecfc"
+      },
+      {
+        "bytes": 70747,
+        "path": "comsol_mcp/_operation_store.py",
+        "sha256": "3f4a748e766f19e4f2f4712a80d807a239bca1085cb09ba0be96b534a9b8cc25"
+      },
+      {
+        "bytes": 166009,
+        "path": "tests/test_control_daemon_sessions.py",
+        "sha256": "ab9554ddb04b414c01671ea6578aaab61d2735d9bd9c5c7d9b570798070438b9"
+      }
+    ],
+    "manifest_path": "/private/tmp/comsol-session-lifecycle-recovery-fix-b484a735-H1Y49U/overlay-manifest.json",
+    "manifest_sha256": "51c85a503c40b006b51376f1f2031ea4f6d6cfd5e05da883fc0409c3fd26721e",
+    "overlay_sha256": "80091c1538087cb8fd3d1fdeeae0970c65dd86a3fcb958220848502b99a7880d"
+  },
+  "capabilities": [
+    "Observe and atomically reconcile original connect/disconnect/reconnect UNKNOWN without new engine actions.",
+    "Require exact retained Popen, runtime PID, process birth, Worker epoch, original RPC identities and durable evidence.",
+    "Retirement recovery consumes original WorkerCloseStarted/WorkerCloseReaped only; never creates close/reap evidence.",
+    "Atomic lifecycle CAS, immutable proof and source gate pointer; preserve original UNKNOWN job/operation/result.",
+    "Missing live context stays ATTACHED_BUT_CONTEXT_UNAVAILABLE; repeated proven recovery adds no RPC."
+  ],
+  "validation": {
+    "archive_only": {
+      "command": [
+        "/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python",
+        "-m",
+        "pytest",
+        "tests/test_control_daemon.py",
+        "tests/test_control_daemon_projects.py",
+        "tests/test_control_daemon_sessions.py",
+        "tests/test_operation_store.py",
+        "tests/test_operation_store_migrations.py",
+        "tests/test_session_context.py",
+        "tests/test_session_lifecycle.py",
+        "-q",
+        "-k",
+        "not historical_fixture_commit_and_blob_identity_resolve",
+        "--junitxml=/private/tmp/comsol-session-lifecycle-recovery-fix-b484a735-H1Y49U/lifecycle-recovery-archive-only.junit.xml"
+      ],
+      "cwd": "/private/tmp/comsol-session-lifecycle-recovery-fix-b484a735-H1Y49U",
+      "deselected": [
+        "test_historical_fixture_commit_and_blob_identity_resolve"
+      ],
+      "environment": {
+        "GIT_DIR": "unset",
+        "PYTHONPATH": "/private/tmp/comsol-session-lifecycle-recovery-fix-b484a735-H1Y49U"
+      },
+      "exit_code": 0,
+      "junit_path": "/private/tmp/comsol-session-lifecycle-recovery-fix-b484a735-H1Y49U/lifecycle-recovery-archive-only.junit.xml",
+      "junit_sha256": "908f7b5b0b792332d8cd1298322338425934022e1a595d5a4bbe9bf899e5d5c6",
+      "result": "164 passed, 1 deselected",
+      "summary": {
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0,
+        "tests": 164
+      }
+    },
+    "historical_blob": {
+      "command": [
+        "/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python",
+        "-m",
+        "pytest",
+        "tests/test_operation_store_migrations.py::test_historical_fixture_commit_and_blob_identity_resolve",
+        "-q",
+        "--junitxml=/private/tmp/comsol-session-lifecycle-recovery-fix-b484a735-H1Y49U/lifecycle-recovery-historical-blob.junit.xml"
+      ],
+      "cwd": "/private/tmp/comsol-session-lifecycle-recovery-fix-b484a735-H1Y49U",
+      "environment": {
+        "GIT_DIR": "/Users/everwalker/Library/Application Support/Comsol-MCP/git-store-20260926-01a0dbbd/repository.git",
+        "PYTHONPATH": "/private/tmp/comsol-session-lifecycle-recovery-fix-b484a735-H1Y49U"
+      },
+      "exit_code": 0,
+      "git_action": "source test invokes only git rev-parse COMMIT:path; no refs/index writes",
+      "git_object_database_state_after": {
+        "files": {
+          "HEAD": "d0c888604e2ac9f3177d1f03fb93b1e9e35376e61acc29f0b2b8ad6c98f2c718",
+          "index": "a784ce308cf5a294dade5e17534402d9cccef978cab59d4fbda06df06453f41d",
+          "refs/heads/handoff/full-project-completion": "216e8c518d6ebff66a8b0cef8b608ac146ee71227da79f32e7edfe59d6d2d4ad",
+          "refs/remotes/origin/main": "216e8c518d6ebff66a8b0cef8b608ac146ee71227da79f32e7edfe59d6d2d4ad"
+        },
+        "git_dir": "/Users/everwalker/Library/Application Support/Comsol-MCP/git-store-20260926-01a0dbbd/repository.git",
+        "lockfiles": []
+      },
+      "git_object_database_state_before": {
+        "files": {
+          "HEAD": "d0c888604e2ac9f3177d1f03fb93b1e9e35376e61acc29f0b2b8ad6c98f2c718",
+          "index": "a784ce308cf5a294dade5e17534402d9cccef978cab59d4fbda06df06453f41d",
+          "refs/heads/handoff/full-project-completion": "216e8c518d6ebff66a8b0cef8b608ac146ee71227da79f32e7edfe59d6d2d4ad",
+          "refs/remotes/origin/main": "216e8c518d6ebff66a8b0cef8b608ac146ee71227da79f32e7edfe59d6d2d4ad"
+        },
+        "git_dir": "/Users/everwalker/Library/Application Support/Comsol-MCP/git-store-20260926-01a0dbbd/repository.git",
+        "lockfiles": []
+      },
+      "git_object_database_state_unchanged": true,
+      "junit_path": "/private/tmp/comsol-session-lifecycle-recovery-fix-b484a735-H1Y49U/lifecycle-recovery-historical-blob.junit.xml",
+      "junit_sha256": "05eb63b38a04cde344c3e92641f783fc2ddc89eaa8f361b031a7ef5f19100bb8",
+      "result": "1 passed",
+      "summary": {
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0,
+        "tests": 1
+      }
+    },
+    "compile": {
+      "command": [
+        "/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python",
+        "-m",
+        "py_compile",
+        "comsol_mcp/_control_daemon.py",
+        "comsol_mcp/_operation_store.py",
+        "tests/test_control_daemon_sessions.py"
+      ],
+      "cwd": "/private/tmp/comsol-session-lifecycle-recovery-fix-b484a735-H1Y49U",
+      "environment": {
+        "GIT_DIR": "unset",
+        "PYTHONPATH": "/private/tmp/comsol-session-lifecycle-recovery-fix-b484a735-H1Y49U"
+      },
+      "exit_code": 0
+    },
+    "main_review": {
+      "status": "SCOPED_SOFTWARE_REVIEW_PASS",
+      "non_overlay_archive_files_verified": 249,
+      "overlay_files_verified": 3,
+      "receipt_sha256": "1f8ab3a20fe94be1288b2da61620419ecc73f8b1eb832172436658864d908506",
+      "root_retests": [
+        "worker_wrong_birth",
+        "worker_runtime_pid_missing",
+        "predetached_extra_submission_False",
+        "predetached_extra_submission_True"
+      ],
+      "isolated_tests": [
+        164,
+        1
+      ],
+      "native_acceptance": "NOT_RUN"
+    },
+    "main_review_sha256": "b071c084dda05bd5cfdce344a75eea3e84a938ff824911b6d856fc732fcedfdc"
+  },
+  "local_raw_receipt": {
+    "path": "/private/tmp/comsol-session-lifecycle-recovery-fix-b484a735-H1Y49U/receipt.json",
+    "sha256": "1f8ab3a20fe94be1288b2da61620419ecc73f8b1eb832172436658864d908506"
+  },
+  "replay": "Use base commit plus the three manifest files from this checkpoint commit, or this checkpoint commit itself. Python 3.12 and project test dependencies; run the listed seven pytest modules excluding historical_fixture_commit_and_blob_identity_resolve. Run that single test separately with the repository Git object database available. No COMSOL required.",
+  "rejected_candidates": [
+    {
+      "overlay": "b04e53b1c98d32882d64650dee018bce4ffb2878e70ba2a186612c7f1c291c0f",
+      "finding": "Identity mismatch and recovery-generated reap evidence; rejected."
+    },
+    {
+      "overlay": "cc3c4e796543185c996681ac1ccb77092c48f935af40e30cb2cdee450ac89395",
+      "finding": "Valid pre-detached retirement refused; missing runtime PID tolerated; rejected."
+    }
+  ],
+  "remaining": [
+    "Live context reconstruction and Server-lifecycle UNKNOWN recovery are incomplete.",
+    "Real COMSOL and required platform acceptance remain open.",
+    "F16 durable read adapters are the next bounded software unit; full W01-W26 acceptance remains incomplete."
+  ]
+}

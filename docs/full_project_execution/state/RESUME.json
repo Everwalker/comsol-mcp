@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "phase": "W23_BMA_PRODUCER_SOFTWARE_CHECKPOINT",
+  "phase": "F04_LIFECYCLE_RECOVERY_SOFTWARE_CHECKPOINT",
   "task": "W01_W26_CONTINUOUS_IMPLEMENTATION",
   "status": "PARTIAL_EXECUTION_CONTINUING_NATIVE_UNVERIFIED",
-  "candidate_source": "docs/full_project_execution/w23_overlap/BMA_PRODUCER_SOFTWARE_CHECKPOINT.json",
+  "candidate_source": "docs/full_project_execution/project_session/LIFECYCLE_RECOVERY_CHECKPOINT.json",
   "completed_work": [
     "PIN source restoration completed and verified: 10832 files, zero missing LFS backing objects; repository HEAD matches pinned commit/tree.",
     "tools/init_completion.py --repo repository completed; frozen inventory: 26 work packages, 272 actions, 60 tests x 6 targets = 360 test cells.",
@@ -71,14 +71,21 @@
     "Darwin process-birth adapter:13 isolated tests PASS, real task-owned harmless child stable birth/wrong-birth rejection/confirmed exit. Root verified87 unchanged runtime sources and SDK/probe/JUnit hashes. COMSOL lifecycle NOT_RUN. docs/full_project_execution/project_session/DARWIN_PROCESS_BIRTH_CHECKPOINT.json",
     "W24 setup campaign scoped software: 53 isolated PASS, Python/Java compile PASS; root verified 2 overlays and107 published files. Native/science NOT_RUN. docs/full_project_execution/w24/SETUP_CAMPAIGN_CHECKPOINT.json",
     "F04 ModelRef-bound UNKNOWN quiescence recovery143 isolated PASS/1 Git-object test deselected; main verified92 runtime sources/5 overlays/archive/JUnit. Original UNKNOWN/domain outcome preserved; lifecycle without ModelRef still PARTIAL. docs/full_project_execution/project_session/MODEL_RECOVERY_CHECKPOINT.json",
-    "W23 single-BMA producer134 isolated software PASS; main verified6 overlays/99 published files/compile/JUnit and original request-mismatch retest. Native/field mapping not accepted. docs/full_project_execution/w23_overlap/BMA_PRODUCER_SOFTWARE_CHECKPOINT.json"
+    "W23 single-BMA producer134 isolated software PASS; main verified6 overlays/99 published files/compile/JUnit and original request-mismatch retest. Native/field mapping not accepted. docs/full_project_execution/w23_overlap/BMA_PRODUCER_SOFTWARE_CHECKPOINT.json",
+    {
+      "scope": "F04 no-ModelRef lifecycle recovery",
+      "status": "PASS_SCOPED_SOFTWARE",
+      "checkpoint": "docs/full_project_execution/project_session/LIFECYCLE_RECOVERY_CHECKPOINT.json",
+      "native_acceptance": "NOT_RUN"
+    }
   ],
-  "next_action": "Implement paired native field/eigensolution mapping probe and negative controls; review bounded native candidate after retained-resource reconciliation. Continue original W01-W26.",
+  "next_action": "Implement F16 canonical project-scoped experiment.inspect/case_result durable reads; review W24 budget identity repair; continue W23 paired-field mapping. Native cleanup remains pending explicit authorization.",
   "active_jobs": [],
   "blockers": [
-    "W24 setup attempt 0841Z/0857Z ended FAIL_OR_INCOMPLETE before engine birth: project.create SUCCEEDED and project.inspect FAILED on injected idempotency_key. Preserve original receipt; do not replay this freeze. Offline helper fix and focused production test pass, but a new complete closure and root review are required before another setup launch.",
-    "Release is still integrating F04 shared runtime routes, so no coherent new W24 closure can be frozen yet. W24 science template has no accepted native setup receipt; the 10-solve executor remains NOT_FROZEN/NOT_STARTED.",
-    "The earlier 0517Z ExternalStrain failure and durable UNKNOWN/safe_retry=false remain unchanged; full cure/reference-state/viscoelastic/static-shape acceptance is open."
+    "W23 failed setup owned Server 75272 and daemon 75260 remain preserved: cleanup SIGTERM was rejected by automatic approval and explicit authorization is pending; no cleanup or relaunch authorized by elapsed time.",
+    "W24 managed setup and sensitivity software can be frozen from published baselines; native 14-case setup/readmission/science remains NOT_RUN. New-epoch budget identity repair is awaiting main review; historical 10-solve budget is not authorization for 14 solves.",
+    "Earlier W24 0841Z/0857Z pre-birth failure and 0517Z ExternalStrain FAIL/UNKNOWN/safe_retry=false remain historical failures; full cure/reference-state/viscoelastic/static-shape acceptance is open.",
+    "F04 scoped software recovery does not establish live context reconstruction, Server lifecycle UNKNOWN recovery or required native platform acceptance."
   ],
   "review_round": 0,
   "external_state_missing": true,
@@ -101,7 +108,7 @@
     "native_solve_budget_remaining": 0,
     "evidence": "docs/full_project_execution/evidence/luna_process_reconciliation/mac_readonly_snapshot_20260926T2152Z.json"
   },
-  "updated_at": "2026-09-27T18:37:01.013286+00:00",
+  "updated_at": "2026-09-27T19:49:57.839175+00:00",
   "note": "Continuous authorized execution through W26. OpenViking task-detail retrieval was denied by auto-review because it would disclose internal roadmap identifiers externally; no workaround. Use current frozen workpack and read-only local memory only. Do not rerun bootstrap/init on resume. Source files now contain executor edits; do not rerun bootstrap/init. Git metadata is an APFS pointer managed by main agent; migration requires bundle/source transfer, not copying only the repository pointer. Git metadata migration is documented by evidence/git_metadata_relocation.json and owned by the main agent; do not copy the APFS git pointer to another machine without source bundle/archive. GUI permission boundary and checkpoint solution-scope caveat recorded. This executor has one W24 native setup-only failure with exact cleanup verified; the durable operation/job UNKNOWN records remain unchanged. No W24 solver submission occurred. Saved-MPH readback supplement uses separate time/evidence and zero study/solver calls; run08 remains FAIL_OR_INCOMPLETE. Root raw SQLite recomputation is linked under native_resume_saved_artifact_supplement.raw_recomputation_evidence; original run08 remains FAIL_OR_INCOMPLETE and no solve budget is restored. Latest checkpoint 2026-09-27T03:50:43Z: W24 0334Z setup run failed pre-model due Python 3.14 missing mcp, with exact cleanup; 0346Z candidate pins the validated 3.12.13 environment and passes a production no-engine registry/daemon preflight. Native setup remains pending root review; science implementation continues offline. Latest checkpoint 2026-09-27T09:09:28Z: W24 0841Z candidate was invoked once at 0857Z and failed before any engine/Worker birth because project.inspect received an injected idempotency_key; project.create persisted successfully. Exact read-only SQLite hash and operation result are in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_contract_diagnostic.json. The runner now omits the unnecessary inspect key; actual ControlDaemon focused regression is 2/2 PASS in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_runner_regression_receipt.json. No native retry or acceptance is claimed; release F04 runtime integration is active, so refresh closure and root review are required before another launch. Windows COMSOL 6.3 remains required/unassessed; only macOS 6.3 is USER_REQUESTED_SKIP.",
   "native_resume_smoke": {
     "status": "FAIL_OR_INCOMPLETE_POINT_SCHEMA_FAILURE; SOLVED_CHILD_ARTIFACT_DURABLE; SOLVE_BUDGET_EXHAUSTED; SEPARATE_SAVED_MPH_READBACK_PASS",
@@ -716,10 +723,10 @@
     "scope": "API-only evidence; no optical, numerical, or physical acceptance"
   },
   "recent_checkpoint": {
-    "scope": "F04 dispatch/control software",
-    "status": "PARTIAL",
-    "public_summary": "docs/full_project_execution/project_session/f04_dispatch_control_checkpoint_20260927.json",
-    "tests_passed": 164,
+    "scope": "F04 no-ModelRef lifecycle recovery",
+    "status": "PASS_SCOPED_SOFTWARE",
+    "public_summary": "docs/full_project_execution/project_session/LIFECYCLE_RECOVERY_CHECKPOINT.json",
+    "tests_passed": 165,
     "native_acceptance": "NOT_RUN"
   },
   "root_resume_summary_correction": {
@@ -939,7 +946,7 @@
   },
   "acceptance_cells_changed": false,
   "current_execution_checkpoint": {
-    "path": "docs/full_project_execution/w23_overlap/BMA_PRODUCER_SOFTWARE_CHECKPOINT.json",
+    "path": "docs/full_project_execution/project_session/LIFECYCLE_RECOVERY_CHECKPOINT.json",
     "status": "PASS_SCOPED_SOFTWARE_NATIVE_NOT_RUN"
   },
   "w24_setup_candidate_0841z_native_attempt": {
@@ -965,9 +972,9 @@
     "next": "Wait for stable F04 runtime handoff; refresh closure and submit a new candidate for root review. No automatic rerun."
   },
   "verified_git_sync": {
-    "commit": "7c91f8ccb38660f962bfd8c45704eab49fea3200",
-    "origin_main": "7c91f8ccb38660f962bfd8c45704eab49fea3200",
-    "verified_at": "2026-09-27T17:52:18.277919+00:00",
+    "commit": "b484a735b7460c3780ff6a02329d6781a1faadce",
+    "origin_main": "b484a735b7460c3780ff6a02329d6781a1faadce",
+    "verified_at": "2026-09-27T18:38:32.263145+00:00",
     "method": "post-push fetch origin main; HEAD == origin/main"
   },
   "w24_static_shape_science_admission_repair": {

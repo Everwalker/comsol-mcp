@@ -738,6 +738,202 @@ class OperationStore:
                 return None
             return {**dict(row), "metadata": json.loads(row["metadata"] or "{}")}
 
+    def session_lifecycle_recovery_resolution(self, job_id: str) -> dict[str, Any] | None:
+        """Return the first immutable lifecycle recovery event for one job."""
+        with self.lock:
+            row = self.db.execute(
+                "SELECT id,event,metadata,created_at FROM job_events "
+                "WHERE job_id=? AND event='SessionLifecycleRecoveryResolution' ORDER BY id LIMIT 1",
+                (job_id,),
+            ).fetchone()
+            if row is None:
+                return None
+            return {**dict(row), "metadata": json.loads(row["metadata"] or "{}")}
+
+    def record_session_lifecycle_recovery_resolution(
+        self, job_id: str, source_operation_id: str, expected_lifecycle_revision: int,
+        lifecycle_after: dict[str, Any], evidence: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Atomically CAS lifecycle state and append one source-bound resolution.
+
+        The historical source operation/job/result remain untouched. The
+        lifecycle transition, append-only proof event, and source-job
+        quiescence pointer either commit together or do not become visible.
+        """
+        if (not isinstance(job_id, str) or not job_id
+                or not isinstance(source_operation_id, str) or not source_operation_id
+                or type(expected_lifecycle_revision) is not int or expected_lifecycle_revision < 1
+                or not isinstance(lifecycle_after, dict) or not isinstance(evidence, dict)):
+            raise ValueError("lifecycle recovery requires exact source and lifecycle identities")
+        required = {
+            "schema_version", "source_job_id", "source_operation_id",
+            "session_recovery_operation_id", "project_id", "session_id",
+            "source_operation", "source_status", "source_operation_status",
+            "source_result_sha256", "original_unknown_reason", "worker_observation",
+            "original_worker_binding", "request_observations", "terminal_reply_identities",
+            "reconnect_baseline", "connection_observation", "worker_close_event_sha256",
+            "worker_close_reaped_event_sha256", "resolution_scope", "classification",
+            "replay_performed", "new_worker_created",
+        }
+        if (not required.issubset(evidence)
+                or evidence.get("schema_version") != 1
+                or evidence.get("source_job_id") != job_id
+                or evidence.get("source_operation_id") != source_operation_id
+                or evidence.get("source_operation") not in {
+                    "session.connect", "session.disconnect", "session.reconnect",
+                }
+                or evidence.get("source_status") not in {"UNKNOWN", "RECONCILING"}
+                or evidence.get("source_operation_status") not in {"UNKNOWN", "RECONCILING"}
+                or evidence.get("replay_performed") is not False
+                or evidence.get("new_worker_created") is not False
+                or not isinstance(evidence.get("worker_observation"), dict)
+                or not isinstance(evidence.get("original_worker_binding"), dict)
+                or not isinstance(evidence.get("request_observations"), list)
+                or not isinstance(evidence.get("terminal_reply_identities"), list)
+                or not isinstance(evidence.get("classification"), str)
+                or not evidence.get("classification")
+                or evidence.get("resolution_scope") not in {
+                    "SESSION_LIFECYCLE_RPC_TERMINAL_QUIESCENCE",
+                    "SESSION_WORKER_RETIRED_EXACT",
+                }):
+            raise ValueError("lifecycle recovery evidence is incomplete or has mismatched source binding")
+
+        from ._session_lifecycle import validate_lifecycle_record
+
+        proposed = validate_lifecycle_record(lifecycle_after)
+        project_id, session_id = evidence["project_id"], evidence["session_id"]
+        if (proposed["project_id"] != project_id or proposed["session_id"] != session_id
+                or proposed["revision"] != expected_lifecycle_revision + 1
+                or proposed["health"] != {"status": "UNKNOWN", "observed_at": None, "source": None}):
+            raise ValueError("lifecycle recovery target is not the next exact session revision")
+
+        with self.lock:
+            self.db.execute("BEGIN IMMEDIATE")
+            try:
+                row = self.db.execute(
+                    "SELECT j.job_id,j.operation_id,j.status AS job_status,j.metadata AS job_metadata,"
+                    "o.status AS operation_status,o.operation,o.result AS operation_result "
+                    "FROM jobs j JOIN operations o ON o.operation_id=j.operation_id WHERE j.job_id=?",
+                    (job_id,),
+                ).fetchone()
+                if row is None:
+                    self.db.execute("ROLLBACK")
+                    return {"recorded": False, "reason": "SOURCE_JOB_NOT_FOUND", "resolution": None}
+                if row["operation_id"] != source_operation_id:
+                    self.db.execute("ROLLBACK")
+                    return {"recorded": False, "reason": "SOURCE_OPERATION_MISMATCH", "resolution": None}
+                existing = self.db.execute(
+                    "SELECT id,event,metadata,created_at FROM job_events "
+                    "WHERE job_id=? AND event='SessionLifecycleRecoveryResolution' ORDER BY id LIMIT 1",
+                    (job_id,),
+                ).fetchone()
+                if existing is not None:
+                    resolution = {**dict(existing), "metadata": json.loads(existing["metadata"] or "{}")}
+                    self.db.execute("COMMIT")
+                    return {"recorded": False, "reason": "ALREADY_RESOLVED", "resolution": resolution}
+
+                unresolved = {"UNKNOWN", "RECONCILING"}
+                if row["job_status"] not in unresolved or row["operation_status"] not in unresolved:
+                    self.db.execute("ROLLBACK")
+                    return {"recorded": False, "reason": "SOURCE_NOT_UNRESOLVED", "resolution": None}
+                if row["operation"] != evidence["source_operation"]:
+                    self.db.execute("ROLLBACK")
+                    return {"recorded": False, "reason": "SOURCE_OPERATION_KIND_MISMATCH", "resolution": None}
+                job_metadata = json.loads(row["job_metadata"] or "{}")
+                if (not isinstance(job_metadata, dict)
+                        or job_metadata.get("project_id") != project_id
+                        or job_metadata.get("session_id") != session_id
+                        or job_metadata.get("operation") != evidence["source_operation"]):
+                    self.db.execute("ROLLBACK")
+                    return {"recorded": False, "reason": "SOURCE_SESSION_BINDING_MISMATCH", "resolution": None}
+                try:
+                    source_result = json.loads(row["operation_result"] or "null")
+                except (TypeError, json.JSONDecodeError):
+                    source_result = None
+                if not isinstance(source_result, dict):
+                    self.db.execute("ROLLBACK")
+                    return {"recorded": False, "reason": "SOURCE_RESULT_UNAVAILABLE", "resolution": None}
+                result_digest = session_recovery_evidence_sha256({"source_result": source_result})
+                if evidence["source_result_sha256"] != result_digest:
+                    self.db.execute("ROLLBACK")
+                    return {"recorded": False, "reason": "SOURCE_RESULT_CHANGED", "resolution": None}
+
+                session_row = self.db.execute(
+                    "SELECT metadata FROM sessions WHERE session_id=?", (session_id,),
+                ).fetchone()
+                if session_row is None:
+                    self.db.execute("ROLLBACK")
+                    return {"recorded": False, "reason": "SESSION_LIFECYCLE_NOT_FOUND", "resolution": None}
+                session_metadata = json.loads(session_row["metadata"] or "{}")
+                if not isinstance(session_metadata, dict) or not isinstance(session_metadata.get("lifecycle"), dict):
+                    self.db.execute("ROLLBACK")
+                    return {"recorded": False, "reason": "SESSION_LIFECYCLE_MALFORMED", "resolution": None}
+                current = validate_lifecycle_record(session_metadata["lifecycle"])
+                if current["project_id"] != project_id or current["session_id"] != session_id:
+                    self.db.execute("ROLLBACK")
+                    return {"recorded": False, "reason": "SESSION_LIFECYCLE_IDENTITY_MISMATCH", "resolution": None}
+                if current["revision"] != expected_lifecycle_revision or current["state"] != "UNKNOWN":
+                    self.db.execute("ROLLBACK")
+                    return {
+                        "recorded": False, "reason": "SESSION_LIFECYCLE_REVISION_CONFLICT",
+                        "current_revision": current["revision"], "current_state": current["state"],
+                        "resolution": None,
+                    }
+
+                now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+                updated = dict(proposed)
+                updated["revision"] = current["revision"] + 1
+                updated["created_at"] = current["created_at"]
+                updated["updated_at"] = now
+                updated = validate_lifecycle_record(updated)
+                event_evidence = {
+                    **evidence,
+                    "lifecycle_transition": {
+                        "from_revision": current["revision"],
+                        "to_revision": updated["revision"],
+                        "from_state": current["state"],
+                        "from_client_state": current["client_state"],
+                        "target_lifecycle": updated,
+                    },
+                }
+                digest = session_recovery_evidence_sha256(event_evidence)
+                event_metadata = {**event_evidence, "evidence_sha256": digest}
+                cursor = self.db.execute(
+                    "INSERT INTO job_events(job_id,event,metadata) VALUES(?,?,?)",
+                    (job_id, "SessionLifecycleRecoveryResolution", _dumps_canonical(event_metadata)),
+                )
+                session_metadata = dict(session_metadata)
+                session_metadata["lifecycle"] = updated
+                self.db.execute(
+                    "UPDATE sessions SET metadata=? WHERE session_id=?",
+                    (_dumps_canonical(session_metadata), session_id),
+                )
+                job_metadata["reconciled_quiescent"] = True
+                job_metadata["session_lifecycle_recovery_resolution"] = {
+                    "event_id": int(cursor.lastrowid),
+                    "evidence_sha256": digest,
+                    "session_id": session_id,
+                    "project_id": project_id,
+                    "lifecycle_revision": updated["revision"],
+                    "resolution_scope": evidence["resolution_scope"],
+                }
+                self.db.execute(
+                    "UPDATE jobs SET metadata=? WHERE job_id=?",
+                    (_dumps_canonical(job_metadata), job_id),
+                )
+                self.db.execute("COMMIT")
+                return {
+                    "recorded": True, "reason": None,
+                    "resolution": {"id": int(cursor.lastrowid),
+                                   "event": "SessionLifecycleRecoveryResolution",
+                                   "metadata": event_metadata},
+                    "lifecycle": updated,
+                }
+            except Exception:
+                if self.db.in_transaction:
+                    self.db.execute("ROLLBACK")
+                raise
+
     def record_session_recovery_resolution(
         self, job_id: str, source_operation_id: str, evidence: dict[str, Any],
     ) -> dict[str, Any]:

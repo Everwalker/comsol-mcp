@@ -294,6 +294,59 @@ class _RetirementFailureWorker(_InjectedConnectWorker):
         raise RuntimeError("synthetic close was not confirmed")
 
 
+class _ObservedLifecycleWorker(_InjectedConnectWorker):
+    """Worker double that persists the same terminal reply envelope as JavaWorker."""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._process = _SyntheticChildProcess(pid=7420)
+        self.metadata["pid"] = self._process.pid
+        self.disconnect_timeout_after_reply = False
+        self.connect_timeout_after_reply = False
+
+    def _observe(self, request_id, kind, result):
+        wrapper = {"ok": True, "request_id": request_id, "type": kind,
+                   "status": "SUCCEEDED", "result": dict(result)}
+        self.request_status[request_id] = wrapper
+        if self.event_callback:
+            self.event_callback({
+                "phase": "observed", "request_id": request_id,
+                "operation_id": self.current_operation_id, "kind": kind,
+                "reply": wrapper, "metadata": {},
+            })
+
+    def connect(self, port, host, **kwargs):
+        reply = super().connect(port, host, **kwargs)
+        self._observe(kwargs.get("request_id"), "connect", reply)
+        if self.connect_timeout_after_reply:
+            from comsol_mcp._java_worker import JavaWorkerTimeout
+            raise JavaWorkerTimeout("synthetic wait expired after terminal connect reply")
+        return reply
+
+    def disconnect(self, **kwargs):
+        reply = super().disconnect(**kwargs)
+        self._observe(kwargs.get("request_id"), "disconnect", reply)
+        if self.disconnect_timeout_after_reply:
+            from comsol_mcp._java_worker import JavaWorkerTimeout
+            raise JavaWorkerTimeout("synthetic wait expired after terminal disconnect reply")
+        return reply
+
+
+class _ExitThenFailCloseWorker(_ObservedLifecycleWorker):
+    def close(self):
+        self.close_calls += 1
+        if self._process.poll() is None:
+            self._process.returncode = 0
+        raise RuntimeError("synthetic close raised after exact child exit")
+
+
+class _ExitOnCloseWorker(_ObservedLifecycleWorker):
+    def close(self):
+        self.close_calls += 1
+        if self._process.poll() is None:
+            self._process.returncode = 0
+
+
 class _StartAndRetirementFailureWorker(_InjectedConnectWorker):
     def start(self):
         self.start_calls += 1
@@ -329,7 +382,18 @@ def _session_mutation_request(operation: str, project_id: str, session_id: str, 
     }
 
 
-def _connect_daemon(tmp_path, worker, *, peer=CanonicalSocket("127.0.0.1", 2046), credentials_resolver=None):
+def _connect_daemon(tmp_path, worker, *, peer=CanonicalSocket("127.0.0.1", 2046),
+                    credentials_resolver=None, monkeypatch=None):
+    process = getattr(worker, "_process", None)
+    if monkeypatch is not None and process is not None:
+        birth = 123460
+
+        def synthetic_process_identity(pid):
+            exact = pid == getattr(process, "pid", None)
+            alive = bool(exact and process.poll() is None)
+            return {"alive": alive, "start_epoch_ms": birth if alive else None}
+
+        monkeypatch.setattr("comsol_mcp._control_daemon.process_identity", synthetic_process_identity)
     workspace_root = tmp_path / "workspaces"
     workspace_root.mkdir(parents=True)
     state_root = tmp_path / "test-session-state"
@@ -355,6 +419,28 @@ def _connect_daemon(tmp_path, worker, *, peer=CanonicalSocket("127.0.0.1", 2046)
     )
     project = _create_project(daemon, "session-connect")
     return daemon, project["project_id"]
+
+
+def _unknown_connect_after_terminal_reply(monkeypatch, daemon, project_id, key):
+    """Leave a real terminal connect reply behind an UNKNOWN lifecycle result."""
+    original_save = daemon.session_lifecycle.save
+    failed_once = {"value": False}
+
+    def fail_connected_lifecycle(record, *, expected_revision=None):
+        if record.get("state") == "CONNECTED" and not failed_once["value"]:
+            failed_once["value"] = True
+            raise OSError("injected durable connect lifecycle interruption")
+        return original_save(record, expected_revision=expected_revision)
+
+    monkeypatch.setattr(daemon.session_lifecycle, "save", fail_connected_lifecycle)
+    uncertain = daemon.dispatch(_connect_request(project_id, key))
+    monkeypatch.setattr(daemon.session_lifecycle, "save", original_save)
+    assert uncertain["success"] is False
+    assert uncertain["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
+    source = daemon.store.operation_job(uncertain["execution"]["operation_id"])
+    assert source["status"] == "UNKNOWN"
+    assert source["operation"]["status"] == "UNKNOWN"
+    return uncertain, source, uncertain["data"]["session_id"]
 
 
 def _unknown_session_model_job(daemon, project_id, session_id, worker, suffix, *,
@@ -1134,7 +1220,7 @@ def test_session_disconnect_retirement_waits_for_accepted_worker_tasks(tmp_path,
         daemon.close()
 
 
-def test_session_disconnect_unknown_retains_handle_and_recover_only_queries_original_request(tmp_path):
+def test_session_disconnect_unknown_without_exact_popen_does_not_query_worker_or_recover(tmp_path):
     worker = _InjectedConnectWorker(disconnect_timeout=True)
     daemon, project_id = _connect_daemon(tmp_path, worker)
     try:
@@ -1169,8 +1255,12 @@ def test_session_disconnect_unknown_retains_handle_and_recover_only_queries_orig
         assert worker.disconnect_calls == 1
         assert worker.connect_calls == 1
         assert worker.start_calls == 1
-        assert len(worker.status_calls) == 1
-        assert worker.status_calls[0].endswith(":disconnect")
+        assert worker.status_calls == []
+        source = daemon.store.operation_job(failed["execution"]["operation_id"])
+        assert daemon.store.session_lifecycle_recovery_resolution(source["job_id"]) is None
+        assert daemon._job_quiescence_proven(source) is False
+        assert any(item.get("classification") == "WORKER_PROCESS_IDENTITY_UNCONFIRMED"
+                   for item in recovered["data"]["request_observations"])
 
         retry = daemon.dispatch(_session_mutation_request(
             "session.reconnect", project_id, session_id, "reconnect-after-unknown",
@@ -1267,6 +1357,841 @@ def test_session_recover_records_model_quiescence_proof_without_rewriting_unknow
         daemon.store.update_job(job_id, "UNKNOWN", result={"success": False, "tampered": True})
         assert daemon._job_quiescence_proven(daemon.store.job(job_id)) is False
     finally:
+        daemon.close()
+
+
+def test_session_recover_classifies_connect_only_with_exact_live_context_and_peer(tmp_path, monkeypatch):
+    worker = _ObservedLifecycleWorker()
+    daemon, project_id = _connect_daemon(tmp_path, worker, monkeypatch=monkeypatch)
+    original_save = daemon.session_lifecycle.save
+    failed_once = {"value": False}
+
+    def fail_connected_lifecycle(record, *, expected_revision=None):
+        if record.get("state") == "CONNECTED" and not failed_once["value"]:
+            failed_once["value"] = True
+            raise OSError("injected durable registration interruption")
+        return original_save(record, expected_revision=expected_revision)
+
+    monkeypatch.setattr(daemon.session_lifecycle, "save", fail_connected_lifecycle)
+    try:
+        uncertain = daemon.dispatch(_connect_request(project_id, "connect-recover-lifecycle-proof"))
+        assert uncertain["success"] is False
+        assert uncertain["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
+        session_id = uncertain["data"]["session_id"]
+        source = daemon.store.operation_job(uncertain["execution"]["operation_id"])
+        assert source["status"] == "UNKNOWN"
+        assert daemon.session_registry.get(project_id, session_id).worker is worker
+        original_result = source["result"]
+        rpc_count = worker.connect_calls
+
+        recovered = daemon.dispatch(_session_mutation_request(
+            "session.recover", project_id, session_id, "recover-connect-lifecycle-proof",
+        ))
+        assert recovered["success"] is True, recovered
+        data = recovered["data"]
+        assert data["replayed_requests"] == 0
+        assert data["new_worker_created"] is False
+        assert data["lifecycle_state"] == "CONNECTED"
+        assert data["resolved_jobs"][0]["historical_status"] == "UNKNOWN"
+        assert data["resolved_jobs"][0]["classification"] == "CONNECTED_EXACT_REPLY_WORKER_AND_PEER"
+        assert worker.connect_calls == rpc_count
+        assert len(worker.status_calls) == 1
+
+        source_after = daemon.store.job(source["job_id"])
+        assert source_after["status"] == "UNKNOWN"
+        assert source_after["operation"]["status"] == "UNKNOWN"
+        assert source_after["result"] == original_result
+        proof = daemon.store.session_lifecycle_recovery_resolution(source["job_id"])
+        assert proof["metadata"]["resolution_scope"] == "SESSION_LIFECYCLE_RPC_TERMINAL_QUIESCENCE"
+        assert proof["metadata"]["connection_observation"]["remote_engine_version"] == "6.4.0.293"
+        assert proof["metadata"]["connection_observation"]["remote_engine_build"] is None
+        assert proof["metadata"]["connection_observation"]["remote_engine_build_source"] == "NOT_REPORTED"
+        assert proof["metadata"]["worker_observation"]["remote_engine_health_claim"] is False
+        assert proof["metadata"]["worker_observation"]["state"] == "LIVE_EXACT"
+        assert proof["metadata"]["worker_observation"]["runtime_pid_matches"] is True
+        assert proof["metadata"]["worker_observation"]["process_birth_matches"] is True
+        assert daemon._job_quiescence_proven(source_after) is True
+        assert daemon._session_lifecycle_recovery_resolution_is_valid(source_after) is True
+
+        status_calls = list(worker.status_calls)
+        repeated = daemon.dispatch(_session_mutation_request(
+            "session.recover", project_id, session_id, "recover-connect-lifecycle-proof-again",
+        ))
+        assert repeated["success"] is True
+        assert repeated["data"]["resolved_jobs"][0]["quiescence_resolution"] == "ALREADY_PROVEN"
+        assert worker.status_calls == status_calls
+        assert worker.connect_calls == rpc_count
+    finally:
+        daemon.close()
+
+
+def test_session_recover_keeps_attached_connect_without_context_unresolved(tmp_path, monkeypatch):
+    worker = _ObservedLifecycleWorker()
+    worker.connect_timeout_after_reply = True
+    daemon, project_id = _connect_daemon(tmp_path, worker, monkeypatch=monkeypatch)
+    try:
+        uncertain = daemon.dispatch(_connect_request(project_id, "connect-recover-no-context"))
+        assert uncertain["success"] is False
+        assert uncertain["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
+        session_id = uncertain["data"]["session_id"]
+        source = daemon.store.operation_job(uncertain["execution"]["operation_id"])
+        assert source["status"] == "UNKNOWN"
+        assert daemon._session_worker_handles[(project_id, session_id)] is worker
+        with pytest.raises(SessionContextMissing):
+            daemon.session_registry.get(project_id, session_id)
+
+        recovered = daemon.dispatch(_session_mutation_request(
+            "session.recover", project_id, session_id, "recover-connect-no-context",
+        ))
+        assert recovered["success"] is True, recovered
+        assert recovered["data"]["replayed_requests"] == 0
+        assert recovered["data"]["new_worker_created"] is False
+        assert recovered["data"]["resolved_jobs"] == []
+        assert any(item.get("classification") == "ATTACHED_BUT_CONTEXT_UNAVAILABLE"
+                   for item in recovered["data"]["request_observations"])
+        assert daemon.store.session_lifecycle_recovery_resolution(source["job_id"]) is None
+        assert daemon._job_quiescence_proven(daemon.store.job(source["job_id"])) is False
+        assert worker.connect_calls == 1
+        assert worker.start_calls == 1
+    finally:
+        daemon.close()
+
+
+def test_session_lifecycle_recovery_gate_revalidates_persisted_live_process_proof(tmp_path, monkeypatch):
+    from comsol_mcp._operation_store import session_recovery_evidence_sha256
+
+    worker = _ObservedLifecycleWorker()
+    daemon, project_id = _connect_daemon(tmp_path, worker, monkeypatch=monkeypatch)
+    try:
+        _uncertain, source, session_id = _unknown_connect_after_terminal_reply(
+            monkeypatch, daemon, project_id, "connect-lifecycle-proof-validator",
+        )
+        recovered = daemon.dispatch(_session_mutation_request(
+            "session.recover", project_id, session_id, "recover-process-proof-for-validator",
+        ))
+        assert recovered["success"] is True, recovered
+        assert daemon._job_quiescence_proven(daemon.store.job(source["job_id"])) is True
+
+        resolution = daemon.store.session_lifecycle_recovery_resolution(source["job_id"])
+        metadata = dict(resolution["metadata"])
+        worker_observation = dict(metadata["worker_observation"])
+        worker_observation.update({
+            "state": "LIVE_IDENTITY_UNCONFIRMED",
+            "runtime_pid_matches": False,
+            "process_birth_matches": False,
+        })
+        metadata["worker_observation"] = worker_observation
+        metadata.pop("evidence_sha256", None)
+        digest = session_recovery_evidence_sha256(metadata)
+        metadata["evidence_sha256"] = digest
+        with daemon.store.lock:
+            daemon.store.db.execute(
+                "UPDATE job_events SET metadata=? WHERE id=?",
+                (json.dumps(metadata, sort_keys=True), resolution["id"]),
+            )
+        current = daemon.store.job(source["job_id"])
+        pointer = dict(current["metadata"]["session_lifecycle_recovery_resolution"])
+        pointer["evidence_sha256"] = digest
+        daemon.store.update_job(source["job_id"], current["status"], {
+            "session_lifecycle_recovery_resolution": pointer,
+        })
+        tampered = daemon.store.job(source["job_id"])
+        assert tampered["metadata"]["reconciled_quiescent"] is True
+        assert daemon._session_lifecycle_recovery_resolution_is_valid(tampered) is False
+        assert daemon._job_quiescence_proven(tampered) is False
+    finally:
+        daemon.close()
+
+
+def test_session_recover_rechecks_live_birth_after_status_readback(tmp_path, monkeypatch):
+    worker = _ObservedLifecycleWorker()
+    daemon, project_id = _connect_daemon(tmp_path, worker, monkeypatch=monkeypatch)
+    original_status = worker.status
+    process = worker._process
+    try:
+        _uncertain, source, session_id = _unknown_connect_after_terminal_reply(
+            monkeypatch, daemon, project_id, "connect-birth-changes-during-readback",
+        )
+
+        def status_then_wrong_birth(request_id, *, timeout_s=1.0):
+            result = original_status(request_id, timeout_s=timeout_s)
+            monkeypatch.setattr(
+                "comsol_mcp._control_daemon.process_identity",
+                lambda pid: {"alive": pid == process.pid,
+                             "start_epoch_ms": 123461 if pid == process.pid else None},
+            )
+            return result
+
+        worker.status = status_then_wrong_birth
+        recovered = daemon.dispatch(_session_mutation_request(
+            "session.recover", project_id, session_id, "recover-birth-changes-during-readback",
+        ))
+        assert recovered["success"] is True, recovered
+        assert recovered["data"]["resolved_jobs"] == []
+        assert any(item.get("reason") == "WORKER_POPEN_OR_EPOCH_CHANGED_DURING_LIFECYCLE_READBACK"
+                   for item in recovered["data"]["unresolved_items"])
+        assert daemon.store.session_lifecycle_recovery_resolution(source["job_id"]) is None
+        assert daemon._job_quiescence_proven(daemon.store.job(source["job_id"])) is False
+        assert worker.connect_calls == 1
+        assert len(worker.status_calls) == 1
+    finally:
+        daemon.close()
+
+
+def test_session_recover_proves_completed_disconnect_without_replay(tmp_path, monkeypatch):
+    worker = _ObservedLifecycleWorker()
+    daemon, project_id = _connect_daemon(tmp_path, worker, monkeypatch=monkeypatch)
+    try:
+        connected = daemon.dispatch(_connect_request(project_id, "connect-disconnect-recover"))
+        session_id = connected["data"]["session_id"]
+        worker.disconnect_timeout_after_reply = True
+        uncertain = daemon.dispatch(_session_mutation_request(
+            "session.disconnect", project_id, session_id, "disconnect-terminal-then-timeout",
+        ))
+        assert uncertain["success"] is False
+        assert uncertain["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
+        source = daemon.store.operation_job(uncertain["execution"]["operation_id"])
+        assert source["status"] == "UNKNOWN"
+        disconnect_count = worker.disconnect_calls
+        connect_count = worker.connect_calls
+
+        recovered = daemon.dispatch(_session_mutation_request(
+            "session.recover", project_id, session_id, "recover-disconnect-terminal",
+        ))
+        assert recovered["success"] is True, recovered
+        assert recovered["data"]["lifecycle_state"] == "DISCONNECTED"
+        assert recovered["data"]["resolved_jobs"][0]["classification"] == "DISCONNECTED_EXACT_WORKER_EPOCH"
+        assert recovered["data"]["replayed_requests"] == 0
+        assert recovered["data"]["new_worker_created"] is False
+        assert worker.disconnect_calls == disconnect_count
+        assert worker.connect_calls == connect_count
+        assert len(worker.status_calls) == 1
+        after = daemon.store.job(source["job_id"])
+        assert after["status"] == "UNKNOWN"
+        assert after["operation"]["status"] == "UNKNOWN"
+        assert daemon._job_quiescence_proven(after) is True
+        lifecycle = daemon.session_lifecycle.get(project_id, session_id)
+        assert lifecycle["state"] == "DISCONNECTED"
+        assert lifecycle["client_state"] == "DISCONNECTED"
+        assert lifecycle["worker_epoch"] == worker.metadata["generation"]
+        assert lifecycle["health"]["status"] == "UNKNOWN"
+        proof = daemon.store.session_lifecycle_recovery_resolution(source["job_id"])
+        assert proof["metadata"]["worker_observation"]["state"] == "LIVE_EXACT"
+        assert proof["metadata"]["worker_observation"]["process_birth_matches"] is True
+    finally:
+        daemon.close()
+
+
+def test_session_recover_never_claims_reconnect_without_original_context(tmp_path, monkeypatch):
+    worker = _ObservedLifecycleWorker()
+    daemon, project_id = _connect_daemon(tmp_path, worker, monkeypatch=monkeypatch)
+    try:
+        connected = daemon.dispatch(_connect_request(project_id, "connect-reconnect-recover"))
+        session_id = connected["data"]["session_id"]
+        detached = daemon.dispatch(_session_mutation_request(
+            "session.disconnect", project_id, session_id, "disconnect-before-reconnect-recover",
+        ))
+        assert detached["success"] is True, detached
+        original_save = daemon.session_lifecycle.save
+        failed_once = {"value": False}
+
+        def fail_reconnected_lifecycle(record, *, expected_revision=None):
+            if record.get("state") == "CONNECTED" and not failed_once["value"]:
+                failed_once["value"] = True
+                raise OSError("injected reconnect lifecycle commit interruption")
+            return original_save(record, expected_revision=expected_revision)
+
+        monkeypatch.setattr(daemon.session_lifecycle, "save", fail_reconnected_lifecycle)
+        uncertain = daemon.dispatch(_session_mutation_request(
+            "session.reconnect", project_id, session_id, "reconnect-terminal-without-context",
+        ))
+        assert uncertain["success"] is False
+        assert uncertain["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
+        source = daemon.store.operation_job(uncertain["execution"]["operation_id"])
+        assert source["status"] == "UNKNOWN"
+        events = daemon.store.events(source["job_id"])
+        baseline = [item for item in events if item["event"] == "SessionReconnectBaseline"]
+        submitted = [item for item in events if item["event"] == "worker_request"
+                     and item["metadata"].get("phase") == "submitted"]
+        assert len(baseline) == 1
+        assert baseline[0]["metadata"]["baseline_recorded_before_worker_rpc"] is True
+        assert baseline[0]["id"] < min(item["id"] for item in submitted)
+        assert baseline[0]["metadata"]["detach_required"] is False
+        assert [item["metadata"]["kind"] for item in submitted] == ["connect"]
+        assert daemon._session_worker_handles[(project_id, session_id)] is worker
+        with pytest.raises(SessionContextMissing):
+            daemon.session_registry.get(project_id, session_id)
+        connect_count = worker.connect_calls
+
+        recovered = daemon.dispatch(_session_mutation_request(
+            "session.recover", project_id, session_id, "recover-reconnect-context-missing",
+        ))
+        assert recovered["success"] is True, recovered
+        assert recovered["data"]["resolved_jobs"] == []
+        assert any(item.get("classification") == "ATTACHED_BUT_CONTEXT_UNAVAILABLE"
+                   for item in recovered["data"]["request_observations"])
+        assert daemon.store.session_lifecycle_recovery_resolution(source["job_id"]) is None
+        assert worker.connect_calls == connect_count
+        assert daemon.session_lifecycle.get(project_id, session_id)["state"] == "UNKNOWN"
+    finally:
+        daemon.close()
+
+
+def test_session_recover_verifies_prior_exact_worker_close_without_closing_again(tmp_path, monkeypatch):
+    worker = _ExitOnCloseWorker()
+    process = worker._process
+    daemon, project_id = _connect_daemon(tmp_path, worker, monkeypatch=monkeypatch)
+    try:
+        connected = daemon.dispatch(_connect_request(project_id, "connect-exit-retirement-recover"))
+        session_id = connected["data"]["session_id"]
+        original_save = daemon.session_lifecycle.save
+        failed_once = {"value": False}
+
+        def fail_retired_lifecycle(record, *, expected_revision=None):
+            if record.get("client_state") == "RETIRED" and not failed_once["value"]:
+                failed_once["value"] = True
+                raise OSError("injected retirement lifecycle commit interruption")
+            return original_save(record, expected_revision=expected_revision)
+
+        monkeypatch.setattr(daemon.session_lifecycle, "save", fail_retired_lifecycle)
+        uncertain = daemon.dispatch(_session_mutation_request(
+            "session.disconnect", project_id, session_id, "retire-exit-recover", retire_worker=True,
+        ))
+        assert uncertain["success"] is False
+        assert uncertain["data"]["worker_close_started"] is True
+        assert process.poll() == 0
+        assert process.wait_calls == 1
+        source = daemon.store.operation_job(uncertain["execution"]["operation_id"])
+        assert source["status"] == "UNKNOWN"
+        reaped_events = [item for item in daemon.store.events(source["job_id"])
+                         if item["event"] == "WorkerCloseReaped"]
+        assert len(reaped_events) == 1
+        assert reaped_events[0]["metadata"]["wait_confirmed"] is True
+        assert reaped_events[0]["metadata"]["exact_popen_handle"] is True
+        close_calls, disconnect_calls = worker.close_calls, worker.disconnect_calls
+
+        recovered = daemon.dispatch(_session_mutation_request(
+            "session.recover", project_id, session_id, "recover-exact-retirement-event",
+        ))
+        assert recovered["success"] is True, recovered
+        assert recovered["data"]["resolved_jobs"][0]["classification"] == "EXACT_WORKER_RETIRED"
+        assert recovered["data"]["resolved_jobs"][0]["resolution_scope"] == "SESSION_WORKER_RETIRED_EXACT"
+        assert recovered["data"]["lifecycle_state"] == "DISCONNECTED"
+        assert recovered["data"]["worker_process_observation"]["state"] == "EXITED_EXACT"
+        assert recovered["data"]["worker_process_observation"]["wait_confirmed"] is True
+        assert recovered["data"]["worker_process_observation"]["wait_evidence_source"] == "persisted_worker_close_reaped_event"
+        assert worker.close_calls == close_calls
+        assert worker.disconnect_calls == disconnect_calls
+        assert process.wait_calls == 1
+        assert (project_id, session_id) not in daemon._session_worker_handles
+        after = daemon.store.job(source["job_id"])
+        assert after["status"] == "UNKNOWN"
+        assert daemon._job_quiescence_proven(after) is True
+    finally:
+        daemon.close()
+
+
+@pytest.mark.parametrize(
+    "inject_submitted_request,expected_resolution",
+    [(False, True), (True, False)],
+    ids=["valid-zero-submissions", "unexpected-submitted-request"],
+)
+def test_session_recover_classifies_pre_detached_worker_retirement_exactly(
+    tmp_path, monkeypatch, inject_submitted_request, expected_resolution,
+):
+    worker = _ExitOnCloseWorker()
+    process = worker._process
+    daemon, project_id = _connect_daemon(tmp_path, worker, monkeypatch=monkeypatch)
+    try:
+        connected = daemon.dispatch(_connect_request(
+            project_id, "connect-before-pre-detached-retirement",
+        ))
+        assert connected["success"] is True, connected
+        session_id = connected["data"]["session_id"]
+        detached = daemon.dispatch(_session_mutation_request(
+            "session.disconnect", project_id, session_id,
+            "disconnect-before-pre-detached-retirement",
+        ))
+        assert detached["success"] is True, detached
+        assert detached["data"]["state"] == "DISCONNECTED"
+        assert worker.disconnect_calls == 1
+        assert worker.close_calls == 0
+        assert process.wait_calls == 0
+
+        original_save = daemon.session_lifecycle.save
+        failed_once = {"value": False}
+
+        def fail_retired_lifecycle(record, *, expected_revision=None):
+            if record.get("client_state") == "RETIRED" and not failed_once["value"]:
+                failed_once["value"] = True
+                raise OSError("injected pre-detached retirement lifecycle commit interruption")
+            return original_save(record, expected_revision=expected_revision)
+
+        monkeypatch.setattr(daemon.session_lifecycle, "save", fail_retired_lifecycle)
+        uncertain = daemon.dispatch(_session_mutation_request(
+            "session.disconnect", project_id, session_id,
+            "retire-pre-detached-lifecycle-commit-failure", retire_worker=True,
+        ))
+        assert uncertain["success"] is False
+        assert uncertain["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
+        assert uncertain["data"]["worker_close_started"] is True
+        assert uncertain["data"]["disconnect_rpc_dispatched"] is False
+        source = daemon.store.operation_job(uncertain["execution"]["operation_id"])
+        assert source["status"] == "UNKNOWN"
+        events = daemon.store.events(source["job_id"])
+        close_events = [item for item in events if item["event"] == "WorkerCloseStarted"]
+        reaped_events = [item for item in events if item["event"] == "WorkerCloseReaped"]
+        assert len(close_events) == 1
+        assert len(reaped_events) == 1
+        assert close_events[0]["metadata"]["disconnect_rpc_dispatched"] is False
+        assert close_events[0]["metadata"]["disconnect_request_id"] is None
+        assert not [item for item in events if item["event"] == "worker_request"
+                    and item["metadata"].get("phase") == "submitted"]
+        assert worker.close_calls == 1
+        assert worker.disconnect_calls == 1
+        assert worker.connect_calls == 1
+        assert process.wait_calls == 1
+
+        if inject_submitted_request:
+            daemon.store.add_event(source["job_id"], "worker_request", {
+                "phase": "submitted",
+                "request_id": "unexpected-pre-detached-worker-rpc",
+                "operation_id": source["operation_id"],
+                "kind": "disconnect",
+                "request_hash": "synthetic-unexpected-request-hash",
+            })
+
+        before_recovery = (
+            worker.close_calls, worker.disconnect_calls, worker.connect_calls,
+            process.wait_calls, list(worker.status_calls),
+        )
+        recovered = daemon.dispatch(_session_mutation_request(
+            "session.recover", project_id, session_id, "recover-pre-detached-retirement",
+        ))
+        assert recovered["success"] is True, recovered
+        if expected_resolution:
+            assert recovered["data"]["resolved_jobs"][0]["classification"] == "EXACT_WORKER_RETIRED"
+            assert recovered["data"]["resolved_jobs"][0]["resolution_scope"] == "SESSION_WORKER_RETIRED_EXACT"
+            assert daemon._job_quiescence_proven(daemon.store.job(source["job_id"])) is True
+            repeated = daemon.dispatch(_session_mutation_request(
+                "session.recover", project_id, session_id,
+                "recover-pre-detached-retirement-again",
+            ))
+            assert repeated["success"] is True, repeated
+            assert repeated["data"]["resolved_jobs"][0]["quiescence_resolution"] == "ALREADY_PROVEN"
+            assert daemon._job_quiescence_proven(daemon.store.job(source["job_id"])) is True
+        else:
+            assert recovered["data"]["resolved_jobs"] == []
+            assert any(
+                item.get("job_id") == source["job_id"]
+                and item.get("reason") == "UNEXPECTED_WORKER_RPC_FOR_PREDETACHED_RETIREMENT"
+                for item in recovered["data"]["unresolved_items"]
+            )
+            assert daemon.store.session_lifecycle_recovery_resolution(source["job_id"]) is None
+            assert daemon._job_quiescence_proven(daemon.store.job(source["job_id"])) is False
+            repeated = daemon.dispatch(_session_mutation_request(
+                "session.recover", project_id, session_id,
+                "recover-pre-detached-unexpected-rpc-again",
+            ))
+            assert repeated["success"] is True, repeated
+            assert repeated["data"]["resolved_jobs"] == []
+            assert any(
+                item.get("job_id") == source["job_id"]
+                and item.get("reason") == "UNEXPECTED_WORKER_RPC_FOR_PREDETACHED_RETIREMENT"
+                for item in repeated["data"]["unresolved_items"]
+            )
+            assert daemon.store.session_lifecycle_recovery_resolution(source["job_id"]) is None
+            assert daemon._job_quiescence_proven(daemon.store.job(source["job_id"])) is False
+
+        assert (
+            worker.close_calls, worker.disconnect_calls, worker.connect_calls,
+            process.wait_calls, list(worker.status_calls),
+        ) == before_recovery
+    finally:
+        daemon.close()
+
+
+def test_session_recover_does_not_reap_unattributed_exited_worker(tmp_path, monkeypatch):
+    worker = _ObservedLifecycleWorker()
+    daemon, project_id = _connect_daemon(tmp_path, worker, monkeypatch=monkeypatch)
+    try:
+        _uncertain, source, session_id = _unknown_connect_after_terminal_reply(
+            monkeypatch, daemon, project_id, "connect-worker-exits-without-close-event",
+        )
+        process = worker._process
+        process.returncode = 17
+        connect_calls, close_calls = worker.connect_calls, worker.close_calls
+        recovered = daemon.dispatch(_session_mutation_request(
+            "session.recover", project_id, session_id, "recover-unattributed-worker-exit",
+        ))
+        assert recovered["success"] is True, recovered
+        assert recovered["data"]["resolved_jobs"] == []
+        assert any(item.get("job_id") == source["job_id"]
+                   for item in recovered["data"]["unresolved_items"])
+        observation = next(item for item in recovered["data"]["request_observations"]
+                           if item.get("job_id") == source["job_id"])
+        assert observation["classification"] == "WORKER_EXITED_DURING_LIFECYCLE_RECOVERY"
+        assert observation["worker_observation"]["state"] == "EXITED_EXACT_UNREAPED"
+        assert daemon.store.session_lifecycle_recovery_resolution(source["job_id"]) is None
+        assert not [item for item in daemon.store.events(source["job_id"])
+                    if item["event"] in {"WorkerCloseStarted", "WorkerCloseReaped"}]
+        assert process.wait_calls == 0
+        assert worker.close_calls == close_calls
+        assert worker.connect_calls == connect_calls == 1
+        assert worker.status_calls == []
+        assert daemon._job_quiescence_proven(daemon.store.job(source["job_id"])) is False
+    finally:
+        daemon.close()
+
+
+def test_session_recover_requires_prior_persisted_worker_reap_and_never_waits(tmp_path, monkeypatch):
+    worker = _ExitThenFailCloseWorker()
+    daemon, project_id = _connect_daemon(tmp_path, worker, monkeypatch=monkeypatch)
+    try:
+        connected = daemon.dispatch(_connect_request(project_id, "connect-worker-close-without-reap"))
+        session_id = connected["data"]["session_id"]
+        uncertain = daemon.dispatch(_session_mutation_request(
+            "session.disconnect", project_id, session_id,
+            "retire-worker-close-without-reap", retire_worker=True,
+        ))
+        assert uncertain["success"] is False
+        assert uncertain["data"]["worker_close_started"] is True
+        source = daemon.store.operation_job(uncertain["execution"]["operation_id"])
+        events_before = daemon.store.events(source["job_id"])
+        assert len([item for item in events_before if item["event"] == "WorkerCloseStarted"]) == 1
+        assert not [item for item in events_before if item["event"] == "WorkerCloseReaped"]
+        assert worker._process.poll() == 0
+        assert worker._process.wait_calls == 0
+        close_calls, disconnect_calls = worker.close_calls, worker.disconnect_calls
+
+        recovered = daemon.dispatch(_session_mutation_request(
+            "session.recover", project_id, session_id, "recover-no-prior-worker-reap",
+        ))
+        assert recovered["success"] is True, recovered
+        assert recovered["data"]["resolved_jobs"] == []
+        assert any(item.get("reason") == "WORKER_CLOSE_REAP_EVIDENCE_NOT_RECORDED"
+                   for item in recovered["data"]["unresolved_items"])
+        assert daemon.store.session_lifecycle_recovery_resolution(source["job_id"]) is None
+        assert daemon._job_quiescence_proven(daemon.store.job(source["job_id"])) is False
+        assert worker._process.wait_calls == 0
+        assert worker.close_calls == close_calls
+        assert worker.disconnect_calls == disconnect_calls
+        events_after = daemon.store.events(source["job_id"])
+        assert len([item for item in events_after if item["event"] == "WorkerCloseStarted"]) == 1
+        assert not [item for item in events_after if item["event"] == "WorkerCloseReaped"]
+    finally:
+        daemon.close()
+
+
+def test_session_lifecycle_recovery_resolution_rolls_back_event_state_and_gate_on_sqlite_failure(
+    tmp_path, monkeypatch,
+):
+    worker = _ObservedLifecycleWorker()
+    daemon, project_id = _connect_daemon(tmp_path, worker, monkeypatch=monkeypatch)
+    trigger = "fail_lifecycle_recovery_pointer_update"
+    try:
+        uncertain, source, session_id = _unknown_connect_after_terminal_reply(
+            monkeypatch, daemon, project_id, "connect-atomic-lifecycle-recovery",
+        )
+        original_result = source["result"]
+        lifecycle_before = daemon.session_lifecycle.get(project_id, session_id)
+        connect_calls = worker.connect_calls
+        with daemon.store.lock:
+            daemon.store.db.execute(
+                f"CREATE TRIGGER {trigger} BEFORE UPDATE OF metadata ON jobs "
+                f"WHEN NEW.job_id='{source['job_id']}' "
+                "AND instr(NEW.metadata, '\"session_lifecycle_recovery_resolution\"') > 0 "
+                "BEGIN SELECT RAISE(ABORT, 'injected source pointer failure'); END"
+            )
+
+        interrupted = daemon.dispatch(_session_mutation_request(
+            "session.recover", project_id, session_id, "recover-atomic-write-fails",
+        ))
+        assert interrupted["success"] is False
+        assert interrupted["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
+        assert daemon.store.session_lifecycle_recovery_resolution(source["job_id"]) is None
+        assert daemon.session_lifecycle.get(project_id, session_id) == lifecycle_before
+        after = daemon.store.job(source["job_id"])
+        assert after["status"] == "UNKNOWN"
+        assert after["operation"]["status"] == "UNKNOWN"
+        assert after["result"] == original_result
+        assert "session_lifecycle_recovery_resolution" not in after["metadata"]
+        assert after["metadata"].get("reconciled_quiescent") is not True
+        assert daemon._job_quiescence_proven(after) is False
+        assert worker.connect_calls == connect_calls
+
+        with daemon.store.lock:
+            daemon.store.db.execute(f"DROP TRIGGER {trigger}")
+        recovered = daemon.dispatch(_session_mutation_request(
+            "session.recover", project_id, session_id, "recover-atomic-write-retry",
+        ))
+        assert recovered["success"] is True, recovered
+        assert recovered["data"]["resolved_jobs"][0]["quiescence_resolution"] == "PROVEN_AND_AUDITED"
+        after_retry = daemon.store.job(source["job_id"])
+        assert after_retry["status"] == "UNKNOWN"
+        assert after_retry["result"] == original_result
+        assert daemon._job_quiescence_proven(after_retry) is True
+        status_calls = list(worker.status_calls)
+        repeated = daemon.dispatch(_session_mutation_request(
+            "session.recover", project_id, session_id, "recover-atomic-write-repeat",
+        ))
+        assert repeated["success"] is True
+        assert repeated["data"]["resolved_jobs"][0]["quiescence_resolution"] == "ALREADY_PROVEN"
+        assert worker.status_calls == status_calls
+        assert worker.connect_calls == connect_calls
+    finally:
+        with daemon.store.lock:
+            daemon.store.db.execute(f"DROP TRIGGER IF EXISTS {trigger}")
+        daemon.close()
+
+
+def test_session_lifecycle_recovery_cas_conflict_keeps_unknown_gate_closed_until_retry(
+    tmp_path, monkeypatch,
+):
+    worker = _ObservedLifecycleWorker()
+    daemon, project_id = _connect_daemon(tmp_path, worker, monkeypatch=monkeypatch)
+    original_record = daemon.store.record_session_lifecycle_recovery_resolution
+    bumped = {"value": False}
+    try:
+        uncertain, source, session_id = _unknown_connect_after_terminal_reply(
+            monkeypatch, daemon, project_id, "connect-lifecycle-cas-conflict",
+        )
+        original_revision = daemon.session_lifecycle.get(project_id, session_id)["revision"]
+
+        def bump_revision_before_cas(job_id, source_operation_id, expected_revision,
+                                     lifecycle_after, evidence):
+            if not bumped["value"]:
+                bumped["value"] = True
+                current = daemon.session_lifecycle.get(project_id, session_id)
+                daemon.session_lifecycle.save(current, expected_revision=current["revision"])
+            return original_record(job_id, source_operation_id, expected_revision,
+                                   lifecycle_after, evidence)
+
+        monkeypatch.setattr(daemon.store, "record_session_lifecycle_recovery_resolution",
+                            bump_revision_before_cas)
+        conflicted = daemon.dispatch(_session_mutation_request(
+            "session.recover", project_id, session_id, "recover-lifecycle-cas-conflict",
+        ))
+        assert conflicted["success"] is True, conflicted
+        assert conflicted["data"]["resolved_jobs"] == []
+        assert any(item.get("reason") == "SESSION_LIFECYCLE_REVISION_CONFLICT"
+                   for item in conflicted["data"]["unresolved_items"])
+        assert daemon.store.session_lifecycle_recovery_resolution(source["job_id"]) is None
+        lifecycle_after_conflict = daemon.session_lifecycle.get(project_id, session_id)
+        assert lifecycle_after_conflict["state"] == "UNKNOWN"
+        assert lifecycle_after_conflict["revision"] == original_revision + 1
+        source_after_conflict = daemon.store.job(source["job_id"])
+        assert source_after_conflict["status"] == "UNKNOWN"
+        assert source_after_conflict["result"] == source["result"]
+        assert source_after_conflict["metadata"].get("reconciled_quiescent") is not True
+        assert daemon._job_quiescence_proven(source_after_conflict) is False
+
+        monkeypatch.setattr(daemon.store, "record_session_lifecycle_recovery_resolution", original_record)
+        retried = daemon.dispatch(_session_mutation_request(
+            "session.recover", project_id, session_id, "recover-lifecycle-cas-retry",
+        ))
+        assert retried["success"] is True, retried
+        assert retried["data"]["resolved_jobs"][0]["quiescence_resolution"] == "PROVEN_AND_AUDITED"
+        assert daemon._job_quiescence_proven(daemon.store.job(source["job_id"])) is True
+        assert worker.connect_calls == 1
+    finally:
+        daemon.close()
+
+
+@pytest.mark.parametrize("tamper", [
+    "worker_instance", "worker_epoch", "request_id", "request_type",
+    "request_operation", "backend_peer_identity", "worker_wrong_birth",
+    "worker_runtime_pid", "worker_runtime_pid_missing",
+    "worker_popen_replaced", "worker_popen_missing",
+    "worker_child_identity_missing",
+])
+def test_session_lifecycle_recovery_rejects_mismatched_source_binding_or_peer(
+    tmp_path, monkeypatch, tamper,
+):
+    worker = _ObservedLifecycleWorker()
+    daemon, project_id = _connect_daemon(tmp_path, worker, monkeypatch=monkeypatch)
+    try:
+        _uncertain, source, session_id = _unknown_connect_after_terminal_reply(
+            monkeypatch, daemon, project_id, f"connect-lifecycle-negative-{tamper}",
+        )
+        before_result = source["result"]
+        if tamper in {"worker_instance", "worker_epoch"}:
+            metadata = dict(source["metadata"])
+            binding = dict(metadata["runtime_binding"])
+            binding["worker_instance_id" if tamper == "worker_instance" else "worker_epoch"] = (
+                "foreign-worker" if tamper == "worker_instance"
+                else binding["worker_epoch"] + 1
+            )
+            metadata["runtime_binding"] = binding
+            daemon.store.update_job(source["job_id"], source["status"], metadata)
+        elif tamper in {"request_id", "request_type", "request_operation"}:
+            submitted = [item for item in daemon.store.events(source["job_id"])
+                         if item["event"] == "worker_request"
+                         and item["metadata"].get("phase") == "submitted"]
+            assert len(submitted) == 1
+            event = submitted[0]
+            event_metadata = dict(event["metadata"])
+            if tamper == "request_id":
+                event_metadata["request_id"] = "foreign-connect-request"
+            elif tamper == "request_type":
+                event_metadata["kind"] = "disconnect"
+            else:
+                event_metadata["operation_id"] = "foreign-operation"
+            with daemon.store.lock:
+                daemon.store.db.execute(
+                    "UPDATE job_events SET metadata=? WHERE id=?",
+                    (json.dumps(event_metadata, sort_keys=True), event["id"]),
+                )
+        elif tamper == "backend_peer_identity":
+            context = daemon.session_registry.get(project_id, session_id)
+            identity = dict(context.backend.worker_identity)
+            identity["server_instance_id"] = "foreign-observed-peer-binding"
+            context.backend.worker_identity = identity
+        elif tamper == "worker_wrong_birth":
+            process = worker._process
+            monkeypatch.setattr(
+                "comsol_mcp._control_daemon.process_identity",
+                lambda pid: {"alive": pid == process.pid,
+                             "start_epoch_ms": 123461 if pid == process.pid else None},
+            )
+        elif tamper == "worker_runtime_pid":
+            worker.metadata["pid"] = worker._process.pid + 1
+        elif tamper == "worker_runtime_pid_missing":
+            worker.metadata.pop("pid", None)
+        elif tamper == "worker_popen_replaced":
+            worker._process = _SyntheticChildProcess(pid=worker._process.pid + 1)
+        elif tamper == "worker_popen_missing":
+            worker._process = None
+        elif tamper == "worker_child_identity_missing":
+            daemon._session_worker_child_identities.pop((project_id, session_id), None)
+
+        before_connect_calls = worker.connect_calls
+        before_disconnect_calls = worker.disconnect_calls
+        recovered = daemon.dispatch(_session_mutation_request(
+            "session.recover", project_id, session_id, f"recover-lifecycle-negative-{tamper}",
+        ))
+        assert recovered["success"] is True, recovered
+        assert recovered["data"]["resolved_jobs"] == []
+        assert recovered["data"]["replayed_requests"] == 0
+        assert recovered["data"]["new_worker_created"] is False
+        assert any(item.get("job_id") == source["job_id"]
+                   for item in recovered["data"]["unresolved_items"])
+        source_observation = next(item for item in recovered["data"]["request_observations"]
+                                  if item.get("job_id") == source["job_id"])
+        if tamper == "worker_wrong_birth":
+            assert source_observation["worker_observation"]["state"] == "LIVE_IDENTITY_UNCONFIRMED"
+            assert source_observation["worker_observation"]["process_birth_matches"] is False
+        elif tamper in {"worker_runtime_pid", "worker_runtime_pid_missing"}:
+            assert source_observation["worker_observation"]["state"] == "LIVE_IDENTITY_UNCONFIRMED"
+            assert source_observation["worker_observation"]["runtime_pid_matches"] is False
+        elif tamper in {"worker_popen_replaced", "worker_popen_missing"}:
+            assert source_observation["worker_observation"]["state"] == "MISSING_OR_UNVERIFIABLE"
+        elif tamper == "worker_child_identity_missing":
+            assert source_observation["worker_observation"]["state"] == "LIVE_WORKER_HEALTH_ONLY"
+        assert daemon.store.session_lifecycle_recovery_resolution(source["job_id"]) is None
+        after = daemon.store.job(source["job_id"])
+        assert after["status"] == "UNKNOWN"
+        assert after["operation"]["status"] == "UNKNOWN"
+        assert after["result"] == before_result
+        assert after["metadata"].get("reconciled_quiescent") is not True
+        assert daemon._job_quiescence_proven(after) is False
+        assert worker.connect_calls == before_connect_calls == 1
+        assert worker.disconnect_calls == before_disconnect_calls == 0
+    finally:
+        daemon.close()
+
+
+def test_session_recover_resolves_lifecycle_source_but_keeps_other_unknown_job_blocking(
+    tmp_path, monkeypatch,
+):
+    worker = _ObservedLifecycleWorker()
+    daemon, project_id = _connect_daemon(tmp_path, worker, monkeypatch=monkeypatch)
+    try:
+        _uncertain, source, session_id = _unknown_connect_after_terminal_reply(
+            monkeypatch, daemon, project_id, "connect-lifecycle-with-other-unknown",
+        )
+        other_job_id, _other, _result, model_ref, _request_id = _unknown_session_model_job(
+            daemon, project_id, session_id, worker, "other-running",
+            worker_reply={"ok": True, "request_id": "java-recover-other-running",
+                          "type": "model", "status": "RUNNING"},
+        )
+        snapshots_before = worker.backend_snapshot_calls
+        recovered = daemon.dispatch(_session_mutation_request(
+            "session.recover", project_id, session_id, "recover-mixed-lifecycle-and-model",
+        ))
+        assert recovered["success"] is True, recovered
+        assert [item["job_id"] for item in recovered["data"]["resolved_jobs"]] == [source["job_id"]]
+        assert {item.get("job_id") for item in recovered["data"]["unresolved_items"]} >= {other_job_id}
+        assert daemon._job_quiescence_proven(daemon.store.job(source["job_id"])) is True
+        assert daemon._job_quiescence_proven(daemon.store.job(other_job_id)) is False
+        assert daemon.store.session_recovery_resolution(other_job_id) is None
+        assert worker.backend_snapshot_calls == snapshots_before
+        blocked = daemon.dispatch({
+            "operation": "model.inspect", "arguments": {},
+            "execution": {
+                "project_id": project_id, "session_id": session_id,
+                "model_ref": model_ref, "expected_revision": 0,
+                "request_id": "inspect-mixed-unresolved-jobs",
+                "idempotency_key": "inspect-mixed-unresolved-jobs",
+            },
+        })
+        assert blocked["success"] is False, blocked
+        assert blocked["error"]["code"] in {
+            "SESSION_BUSY", "WORKER_RETIRED_OR_UNKNOWN", "EXECUTION_STATE_UNKNOWN",
+        }, blocked
+        assert worker.backend_snapshot_calls == snapshots_before
+    finally:
+        daemon.close()
+
+
+def test_session_lifecycle_recovery_fence_serializes_new_no_modelref_mutation(
+    tmp_path, monkeypatch,
+):
+    worker = _ObservedLifecycleWorker()
+    daemon, project_id = _connect_daemon(tmp_path, worker, monkeypatch=monkeypatch)
+    entered, release, dispatch_started = threading.Event(), threading.Event(), threading.Event()
+    original_status = worker.status
+    pool = ThreadPoolExecutor(max_workers=2)
+    try:
+        _uncertain, source, session_id = _unknown_connect_after_terminal_reply(
+            monkeypatch, daemon, project_id, "connect-lifecycle-concurrent-fence",
+        )
+        def blocked_status(request_id, *, timeout_s=1.0):
+            entered.set()
+            if not release.wait(timeout=3):
+                raise RuntimeError("lifecycle recovery status barrier was not released")
+            return original_status(request_id, timeout_s=timeout_s)
+
+        worker.status = blocked_status
+        recovery_future = pool.submit(daemon.dispatch, _session_mutation_request(
+            "session.recover", project_id, session_id, "recover-hold-lifecycle-fence",
+        ))
+        assert entered.wait(timeout=2)
+        connect_before, disconnect_before = worker.connect_calls, worker.disconnect_calls
+
+        def concurrent_disconnect():
+            dispatch_started.set()
+            return daemon.dispatch(_session_mutation_request(
+                "session.disconnect", project_id, session_id, "disconnect-after-recovery-fence",
+            ))
+
+        mutation_future = pool.submit(concurrent_disconnect)
+        assert dispatch_started.wait(timeout=2)
+        assert not mutation_future.done()
+        assert worker.connect_calls == connect_before
+        assert worker.disconnect_calls == disconnect_before
+
+        release.set()
+        recovered = recovery_future.result(timeout=3)
+        assert recovered["success"] is True, recovered
+        assert recovered["data"]["resolved_jobs"][0]["job_id"] == source["job_id"]
+        mutation = mutation_future.result(timeout=3)
+        assert mutation["success"] is True, mutation
+        assert worker.disconnect_calls == disconnect_before + 1
+        assert worker.connect_calls == connect_before
+    finally:
+        release.set()
+        pool.shutdown(wait=True)
         daemon.close()
 
 

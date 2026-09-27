@@ -99,8 +99,13 @@
       "source_row": "| W05 模型身份/修订/权限 | G1 | W02 | T010, T011, T035 | 建立session/model/generation、项目授权、请求hash与写前检查。 |",
       "status": "UNASSESSED",
       "implementation_paths": [],
-      "evidence": [],
-      "blockers": []
+      "evidence": [
+        "docs/full_project_execution/project_session/LIFECYCLE_RECOVERY_CHECKPOINT.json"
+      ],
+      "blockers": [],
+      "execution_notes": [
+        "F04 no-ModelRef lifecycle recovery scoped software: 164 isolated tests plus 1 separate historical Git-blob test PASS; native NOT_RUN. W05 and the full F04 scope are not accepted by this checkpoint."
+      ]
     },
     {
       "id": "W06",
