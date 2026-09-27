@@ -14401,9 +14401,15 @@
       "original_effect": "READ",
       "original_scope": "project",
       "gate": "G5",
-      "implementation_status": "UNASSESSED",
-      "production_route": null,
-      "source_paths": [],
+      "implementation_status": "PARTIAL",
+      "production_route": "MCP static entry or canonical/direct registry_call/operation_call -> ControlDaemon authorized durable read -> one OperationStore SQLite snapshot; no Worker/queue/current ModelRef required.",
+      "source_paths": [
+        "comsol_mcp/_control_daemon.py",
+        "comsol_mcp/_operation_store.py",
+        "comsol_mcp/_g2_registry.py",
+        "comsol_mcp/_tools_w21.py",
+        "tests/test_experiment_durable_reads.py"
+      ],
       "targets": {
         "windows-x64/comsol6.3": {
           "status": "UNASSESSED",
@@ -14451,7 +14457,19 @@
           "inheritance_rationale": null,
           "original_contract_basis": null
         }
-      }
+      },
+      "software_evidence": {
+        "checkpoint": "docs/full_project_execution/project_session/EXPERIMENT_READS_SOFTWARE_CHECKPOINT.json",
+        "commit": "f056b76301a220cf39c2edb8d540079d29fc1ef3",
+        "status": "PASS_SCOPED_SOFTWARE",
+        "tests": "139 isolated PASS / 1 explicit loopback SKIP; 22 main retests PASS",
+        "native_acceptance": "NOT_RUN"
+      },
+      "remaining_original_scope": [
+        "Expose actual per-case failure reason and cache identity/status from durable producer records.",
+        "Best feasible result requires frozen objective/constraints and actual evaluated metrics; absent objective must report NOT_DEFINED, never infer direction.",
+        "Required native/platform acceptance remains unverified."
+      ]
     },
     {
       "operation_id": "experiment.case_result",
@@ -14460,9 +14478,15 @@
       "original_effect": "READ",
       "original_scope": "project",
       "gate": "G5",
-      "implementation_status": "UNASSESSED",
-      "production_route": null,
-      "source_paths": [],
+      "implementation_status": "PARTIAL",
+      "production_route": "MCP static entry or canonical/direct registry_call/operation_call -> ControlDaemon authorized durable read -> one OperationStore SQLite snapshot; no Worker/queue/current ModelRef required.",
+      "source_paths": [
+        "comsol_mcp/_control_daemon.py",
+        "comsol_mcp/_operation_store.py",
+        "comsol_mcp/_g2_registry.py",
+        "comsol_mcp/_tools_w21.py",
+        "tests/test_experiment_durable_reads.py"
+      ],
       "targets": {
         "windows-x64/comsol6.3": {
           "status": "UNASSESSED",
@@ -14510,7 +14534,18 @@
           "inheritance_rationale": null,
           "original_contract_basis": null
         }
-      }
+      },
+      "software_evidence": {
+        "checkpoint": "docs/full_project_execution/project_session/EXPERIMENT_READS_SOFTWARE_CHECKPOINT.json",
+        "commit": "f056b76301a220cf39c2edb8d540079d29fc1ef3",
+        "status": "PASS_SCOPED_SOFTWARE",
+        "tests": "139 isolated PASS / 1 explicit loopback SKIP; 22 main retests PASS",
+        "native_acceptance": "NOT_RUN"
+      },
+      "remaining_original_scope": [
+        "Bind each case to its actual immutable/recoverable model artifact or exact checkpoint and raw-result provenance; a reused or historical ModelRef alone does not establish the case model.",
+        "Required native/platform acceptance remains unverified."
+      ]
     },
     {
       "operation_id": "experiment.stage_define",
