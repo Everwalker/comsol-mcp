@@ -86,6 +86,7 @@ class OwnedServerProcessIdentity:
     birth: str
     executable: str
     listener_sockets: tuple[CanonicalSocket, ...]
+    start_epoch_ms: int | None = None
 
     def __post_init__(self) -> None:
         if type(self.pid) is not int or self.pid <= 0:
@@ -95,6 +96,8 @@ class OwnedServerProcessIdentity:
         if (type(self.listener_sockets) is not tuple or not self.listener_sockets
                 or any(not isinstance(sock, CanonicalSocket) for sock in self.listener_sockets)):
             raise ValueError("owned process identity requires an immutable listener socket tuple")
+        if self.start_epoch_ms is not None and (type(self.start_epoch_ms) is not int or self.start_epoch_ms <= 0):
+            raise ValueError("owned process start_epoch_ms must be a positive integer or null")
 
     def attests_peer(self, peer: CanonicalSocket) -> bool:
         """Match exact listeners or same-family wildcard listeners at this port."""
@@ -191,7 +194,7 @@ class SessionRuntimeContext:
     # reach a replacement Worker.
     _IMMUTABLE_BINDING_FIELDS: ClassVar[frozenset[str]] = frozenset({
         "project_id", "session_id", "project_root", "runtime", "endpoint",
-        "worker", "service", "client", "server_handle", "server_ownership",
+        "backend", "worker", "service", "client", "server_handle", "server_ownership",
         "process_identity", "remote_client_factory", "worker_instance_id",
     })
 
@@ -200,6 +203,7 @@ class SessionRuntimeContext:
     project_root: Path
     runtime: SessionRuntimeConfig
     endpoint: SessionEndpointIdentity
+    backend: Any = None
     worker_instance_id: str = ""
     worker: Any = None
     service: Any = None
@@ -226,7 +230,7 @@ class SessionRuntimeContext:
     background_jobs_lock: threading.RLock = field(default_factory=threading.RLock, repr=False)
 
     _INITIAL_BINDING_FIELDS: ClassVar[frozenset[str]] = frozenset({
-        "worker", "service", "client", "server_handle",
+        "backend", "worker", "service", "client", "server_handle",
     })
 
     def __setattr__(self, name: str, value: Any) -> None:
@@ -377,6 +381,15 @@ class SessionRuntimeRegistry:
             raise SessionContextMissing("project/session has no live runtime context")
         return context
 
+    def list_for_project(self, project_id: str) -> tuple[SessionRuntimeContext, ...]:
+        if not isinstance(project_id, str) or not project_id:
+            raise ValueError("project_id is required")
+        with self._lock:
+            return tuple(
+                context for (owner, _session), context in self._contexts.items()
+                if owner == project_id
+            )
+
     def remove(self, project_id: str, session_id: str, *, expected: SessionRuntimeContext) -> None:
         """Remove only the exact handle that was previously registered."""
         key = (project_id, session_id)
@@ -437,20 +450,24 @@ class SessionEndpointScheduler:
         self._owned_lanes: dict[str, ThreadPoolExecutor] = {}
         self._unknown_lane: ThreadPoolExecutor | None = None
         self._socket_process_identity: dict[str, str] = {}
+        self._closed_lane_keys: set[str] = set()
         self._global_gate = _ReadWriteGate()
         self._next_task_id = 0
         self._scheduled_tasks: dict[int, dict[str, Any]] = {}
 
-    def submit(self, context: SessionRuntimeContext,
+    def submit(self, context: SessionRuntimeContext | None,
                callback: Callable[..., Any], *args: Any, **kwargs: Any) -> Future:
-        if not isinstance(context, SessionRuntimeContext):
-            raise TypeError("scheduler requires an explicit session context")
-        peer = context.endpoint.observed_peer
-        if peer is None:
-            raise SessionIdentityUnknown("scheduler requires the actual observed peer address and port")
-        process = context.endpoint.owned_process
-        proven_owned = (
-            context.server_ownership == "mcp_managed"
+        if context is not None and not isinstance(context, SessionRuntimeContext):
+            raise TypeError("scheduler context must be a session context or None for the legacy default")
+        # A missing socket observation is not evidence that the endpoint is
+        # independent.  Such requests use the single global exclusive lane;
+        # they still may not claim an owned-server lane based on the caller's
+        # requested host/port.
+        peer = context.endpoint.observed_peer if context is not None else None
+        process = context.endpoint.owned_process if context is not None else None
+        proven_owned = context is not None and (
+            peer is not None
+            and context.server_ownership == "mcp_managed"
             and process is not None
             and process.attests_peer(peer)
         )
@@ -460,6 +477,8 @@ class SessionEndpointScheduler:
             if self._closed:
                 raise SessionSchedulerClosed("session scheduler is closed")
             if lane_key is not None:
+                if lane_key in self._closed_lane_keys:
+                    raise SessionSchedulerClosed("owned server lane is fenced for retirement")
                 assert process is not None
                 socket_keys = {peer.lock_key, *(sock.lock_key for sock in process.listener_sockets)}
                 for socket_key in socket_keys:
@@ -481,26 +500,39 @@ class SessionEndpointScheduler:
             task_id = self._next_task_id
             self._scheduled_tasks[task_id] = {
                 "context": context,
-                "project_id": context.project_id,
-                "session_id": context.session_id,
-                "worker_epoch": context.worker_epoch,
-                "worker_binding_key": context.worker_binding_key,
+                "project_id": context.project_id if context is not None else None,
+                "session_id": context.session_id if context is not None else None,
+                "worker_epoch": context.worker_epoch if context is not None else None,
+                "worker_binding_key": context.worker_binding_key if context is not None else None,
                 "server_lane_key": lane_key,
                 "unknown_lane": lane_key is None,
                 "state": "QUEUED",
             }
 
             def run_in_scope():
-                with self._lock:
-                    task = self._scheduled_tasks.get(task_id)
-                    if task is not None:
-                        task["state"] = "RUNNING"
                 try:
-                    if proven_owned:
-                        with self._global_gate.known_server_lease(), use_session_context(context):
-                            return callback(*args, **kwargs)
-                    with self._global_gate.unknown_server_exclusive_lease(), use_session_context(context):
+                    from contextlib import nullcontext
+                    session_scope = use_session_context(context) if context is not None else nullcontext()
+
+                    def admit_and_invoke():
+                        # The global lease can block after the initial queue
+                        # check.  Recheck and mark callback admission under
+                        # the same lock used by fence_owned_server_lane so a
+                        # retirement fence that wins while this task waits
+                        # prevents the callback from reaching the Worker.
+                        with self._lock:
+                            if lane_key is not None and lane_key in self._closed_lane_keys:
+                                raise SessionSchedulerClosed("owned server lane was fenced before callback admission")
+                            task = self._scheduled_tasks.get(task_id)
+                            if task is not None:
+                                task["state"] = "RUNNING"
                         return callback(*args, **kwargs)
+
+                    if proven_owned:
+                        with self._global_gate.known_server_lease(), session_scope:
+                            return admit_and_invoke()
+                    with self._global_gate.unknown_server_exclusive_lease(), session_scope:
+                        return admit_and_invoke()
                 finally:
                     with self._lock:
                         self._scheduled_tasks.pop(task_id, None)
@@ -541,8 +573,9 @@ class SessionEndpointScheduler:
             queued = sum(task["state"] == "QUEUED" for task in selected)
             running = sum(task["state"] == "RUNNING" for task in selected)
             worker_tasks = [task for task in self._scheduled_tasks.values()
-                            if (task["context"] is context if context.worker is None
-                                else task["context"].worker is context.worker)
+                            if task["context"] is not None
+                            and (task["context"] is context if context.worker is None
+                                 else task["context"].worker is context.worker)
                             and task["worker_epoch"] == context.worker_epoch]
             worker_queued = sum(task["state"] == "QUEUED" for task in worker_tasks)
             worker_running = sum(task["state"] == "RUNNING" for task in worker_tasks)
@@ -600,6 +633,31 @@ class SessionEndpointScheduler:
             if self._unknown_lane is not None:
                 keys.append("unknown-exclusive")
             return tuple(sorted(keys))
+
+    def fence_owned_server_lane(self, context: SessionRuntimeContext) -> str:
+        """Reject new ordinary API work for an exact owned process lane.
+
+        This is an admission fence, not a queue wait: emergency lifecycle
+        control can terminate a busy server without sitting behind its solve.
+        The lane remains closed because a killed process birth cannot be
+        silently replaced by a different server at the same socket.
+        """
+        if not isinstance(context, SessionRuntimeContext):
+            raise TypeError("lane retirement fence requires a session context")
+        process = context.endpoint.owned_process
+        peer = context.endpoint.observed_peer
+        if (context.server_ownership != "mcp_managed" or process is None or peer is None
+                or not process.attests_peer(peer)):
+            raise SessionIdentityUnknown("only an observed MCP-owned process lane can be fenced")
+        lane_key = process.lock_key
+        with self._lock:
+            if self._closed:
+                raise SessionSchedulerClosed("session scheduler is closed")
+            mapped = self._socket_process_identity.get(peer.lock_key)
+            if mapped not in (None, lane_key):
+                raise SessionIdentityConflict("socket is mapped to a different process birth")
+            self._closed_lane_keys.add(lane_key)
+        return lane_key
 
     @property
     def closed(self) -> bool:

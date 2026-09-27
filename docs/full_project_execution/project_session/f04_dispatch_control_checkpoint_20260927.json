@@ -1,0 +1,81 @@
+{
+  "status": "PARTIAL_SOFTWARE_CHECKPOINT",
+  "scope": "Synthetic/offline; native NOT_RUN.",
+  "test": {
+    "python": "/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python (3.12.13)",
+    "pytest_files": [
+      "tests/test_session_context.py",
+      "tests/test_session_lifecycle.py",
+      "tests/test_control_daemon_sessions.py",
+      "tests/test_control_daemon_projects.py",
+      "tests/test_control_daemon.py",
+      "tests/test_registry_job_control_fallback.py",
+      "tests/test_g3_6_defects_d01_d06.py",
+      "tests/test_job_resume_contract.py",
+      "tests/test_w24_worker_transition.py",
+      "tests/test_w24_cure_preflight_runner.py",
+      "tests/test_w24_cure_science_runner.py"
+    ],
+    "result": "164 pass; 0 fail/error/skip",
+    "junit": [
+      "/private/tmp/f04-dispatch-w24-20260927-v12.xml",
+      "29359f62ec0e300c0997ad28d494d873fa7c093f55cd829c5f6992f0dc8890e6"
+    ],
+    "stdout": [
+      "/private/tmp/f04-dispatch-w24-20260927-v12.log",
+      "b2e2679c8afe8e8a5b9a3f0b856f95c8e00a42b7d906373f246082c1c71a602e"
+    ]
+  },
+  "fixed": [
+    "Default/registered work share the unknown-exclusive gate; tests prove exclusion and production _execute overlap for distinct owned lanes.",
+    "Resume requires durable project/session/Worker epoch+instance; missing/stale bindings fail closed.",
+    "Bound reconcile/force-stop bypass API queue; blocked-invoke response, wrong lease, unbound refusal, termination→UNKNOWN tested.",
+    "Callback admission rechecks the lane fence after global-gate acquisition; deterministic queued-race test passes.",
+    "Force-stop requires stored == live == caller process start ms; PID reuse/missing birth refuse, exact match passes."
+  ],
+  "session_read_routes": [
+    "session.list",
+    "session.inspect",
+    "session.health"
+  ],
+  "unimplemented_mutations": [
+    "session.connect",
+    "session.start",
+    "session.reconnect",
+    "session.disconnect",
+    "session.stop",
+    "session.recover"
+  ],
+  "limits": [
+    "Default-context stop refused; eligibility requires registered observed owned-process identity.",
+    "POSIX/macOS process start ms unavailable, so native force-stop remains fail-closed/UNVERIFIED; tests are synthetic.",
+    "Session health/list/inspect return cached lifecycle metadata, not live engine ownership or liveness proof.",
+    "Cross-platform process-handle or owned-Popen identity-safe termination and check-to-signal race protection remain unverified."
+  ],
+  "sha256": {
+    "comsol_mcp/_control_daemon.py": "8bd0be69fef3ad76c163dc0940c760a63495cd6b0c3a3c663bde901839e08712",
+    "comsol_mcp/_session_context.py": "35eb651e259e016e660ffc0cb264a18f035dcdf4c686b079c3c4a2cbe9751d02",
+    "tests/test_control_daemon.py": "5c83687f97da339d6305e41aa4e70f246f4edec76100aaa7bdae02553acf56b1",
+    "tests/test_control_daemon_projects.py": "b093359370d6ec92f175aae9a17e8cf8546d672874956cc5017298a45bc6ffa0",
+    "tests/test_control_daemon_sessions.py": "750a66d7436e68249d5184f1efda778e3e4c552ff3bc99583e8769e87b7afc1a",
+    "tests/test_g3_6_defects_d01_d06.py": "795767707207a64063bd55653b85ae4868bf137e1dd77e4d557bb639cb1f82b7",
+    "tests/test_job_resume_contract.py": "abf15e6fc9b9da063c77c0099a5f65ac5fe34d2ee02c2a1084eb54dc1fffc746",
+    "tests/test_registry_job_control_fallback.py": "5c441d050862fb0c87c9f5325785722448834527675a0e752880c6d813670fff",
+    "tests/test_session_context.py": "9815a3196ea6c4ab27fe3d2c7b2b87496c1eadaa9bc12eb1e3c3f9e2a625b531",
+    "comsol_mcp/_g2_registry.py": "089c659349923de03d39bebe538e8e82cba9d21086ed8a13f31c7d6fb7bb20da"
+  },
+  "root_review": {
+    "source_and_results": "Ten current source hashes, JUnit 164 cases with zero failures/errors/skips, and stdout hash independently verified. Reviewed queue admission, exact Worker/project/session binding, control-plane responsiveness and stored/live/caller process-birth checks.",
+    "prior_fence_reproducer": {
+      "path": "/private/tmp/f04-fence-after-global-wait-root-reproducer.json",
+      "sha256": "87e704d93d196b579ef379e9adde4d90b10be1fa89a495b6ac3f15ae21470260",
+      "outcome": "FAIL preserved"
+    },
+    "scoped_fence_retest": {
+      "path": "/private/tmp/f04-fence-after-global-wait-root-retest.json",
+      "sha256": "ec39e1a9b79b527512445aa0f5392c529d1925144340d95a832d7ceb3c6a65e7",
+      "scope": "PASS on the preceding scheduler source hash recorded in that receipt; later structured-birth addition is covered by the current 164-test run."
+    }
+  },
+  "next_action": "Repair classified full offline regressions, then finish six session mutations, host-observed identity adapters and session-aware retirement/quiescence. Continue F16 canonical adapters after shared runtime handoff. No native acceptance or new engine budget is granted."
+}

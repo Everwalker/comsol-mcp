@@ -4,6 +4,7 @@ import sqlite3
 import threading
 import hashlib
 from contextlib import contextmanager
+from pathlib import Path
 
 import pytest
 
@@ -133,16 +134,59 @@ class _Worker:
         self.status_value = status
         self.status_calls = []
 
+    def client(self):
+        class _Model:
+            def __init__(self, tag):
+                self.java = type("JavaTag", (), {"tag": lambda _self: tag})()
+
+        class _Client:
+            def model(self, tag):
+                return _Model(tag)
+
+        return _Client()
+
+    @contextmanager
+    def operation_context(self, *_args, **_kwargs):
+        yield
+
     def status(self, request_id):
         self.status_calls.append(request_id)
         return {"status": self.status_value}
 
 
 def _resume_fixture(tmp_path, *, worker_status="FAILED", source_operation="study.run", outer_arguments=None):
-    service = ExecutionService(SessionLedger("session", "server"), _Snapshot(), project_root=tmp_path)
+    project_root = tmp_path / "projects"
+    project_root.mkdir()
+    service = ExecutionService(SessionLedger("session", "server"), _Snapshot(), project_root=project_root)
     model_ref = service.bind_model("source")["execution"]["model_ref"]
     worker = _Worker(worker_status)
-    daemon = ControlDaemon(tmp_path, service=service, registry={}, worker=worker, project_root=tmp_path)
+    daemon = ControlDaemon(tmp_path / "control", service=service, registry={}, worker=worker, project_root=project_root)
+    # Resume is permitted only for the exact durable Worker binding that
+    # accepted the source job.  Give this legacy/default-backend fixture a
+    # stable synthetic identity instead of relying on the old implicit
+    # ``self.worker`` fallback.
+    daemon.backend.worker_identity = {
+        "connection_epoch": 1,
+        "worker_instance_id": "resume-fixture-worker",
+        "endpoint": "resume-fixture-endpoint",
+    }
+    project_result = daemon.dispatch({
+        "operation": "project.create",
+        "arguments": {"label": "resume-fixture", "workspace": "resume-fixture",
+                      "policy": {"permissions": ["inspect", "project_write", "compute"]}},
+        "execution": {"request_id": "resume-fixture-project", "idempotency_key": "resume-fixture-project"},
+    })
+    assert project_result["success"] is True, project_result
+    project = project_result["data"]["project"]
+    project_id = project["project_id"]
+    adopted = daemon.dispatch({
+        "operation": "model.adopt",
+        "arguments": {"server_model_tag": "source"},
+        "execution": {"project_id": project_id, "session_id": "session",
+                      "request_id": "resume-fixture-adopt", "idempotency_key": "resume-fixture-adopt"},
+    })
+    assert adopted["success"] is True, adopted
+    model_ref = adopted["execution"]["model_ref"]
     run_arguments = {"study": {"tag": "std1"}, "recovery_policy": {"mode": "restart_from_checkpoint"}}
     source_arguments = outer_arguments or run_arguments
     if source_operation in {"registry_call", "operation_call"} and outer_arguments is None:
@@ -151,7 +195,12 @@ def _resume_fixture(tmp_path, *, worker_status="FAILED", source_operation="study
         request_id="source-request", idempotency_key="source-idempotency", request_hash="source-hash",
         operation=source_operation,
         metadata={"operation": source_operation, "arguments": source_arguments,
-                  "execution": {"session_id": "session", "model_ref": model_ref, "expected_revision": 0}},
+                  "execution": {"project_id": project_id, "session_id": "session",
+                                "model_ref": model_ref, "expected_revision": 0},
+                  "runtime_binding": {"kind": "default_backend", "project_id": project_id,
+                                      "session_id": "session", "worker_epoch": 1,
+                                      "worker_instance_id": "resume-fixture-worker",
+                                      "endpoint": "resume-fixture-endpoint"}},
     )
     assert reused is False
     daemon.store.finish(source_record["operation_id"], status="FAILED",
@@ -162,7 +211,7 @@ def _resume_fixture(tmp_path, *, worker_status="FAILED", source_operation="study
         daemon.store.add_event(source_job_id, "worker_request", {
             "phase": "observed", "request_id": "engine-run-1", "status": "FAILED"})
 
-    path = tmp_path / "g2_artifacts" / "checkpoints" / "source.mph"
+    path = Path(project["workspace"]) / "g2_artifacts" / "checkpoints" / "source.mph"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(b"native mph bytes")
     digest = hashlib.sha256(path.read_bytes()).hexdigest()
@@ -206,17 +255,17 @@ def _resume_fixture(tmp_path, *, worker_status="FAILED", source_operation="study
         "file_resource_tags": [],
     }
     daemon.store.update_job(source_job_id, "FAILED", {"resume_contract": contract})
-    return daemon, worker, service, source_job_id, source_record, model_ref, run_arguments, checkpoint
+    return daemon, worker, service, project_id, source_job_id, source_record, model_ref, run_arguments, checkpoint
 
 
-def _resume_request(source_job_id, model_ref, *, key="resume-key", arguments=None, revision=0):
+def _resume_request(source_job_id, model_ref, project_id, *, key="resume-key", arguments=None, revision=0):
     return {"operation": "job.resume", "arguments": {"job_id": source_job_id, **(arguments or {})},
-            "execution": {"session_id": "session", "model_ref": model_ref,
+            "execution": {"project_id": project_id, "session_id": "session", "model_ref": model_ref,
                           "expected_revision": revision, "idempotency_key": key}}
 
 
 def test_resume_dispatch_queues_one_idempotent_child_from_verified_failed_source(tmp_path):
-    daemon, _worker, _service, source_job_id, _source, model_ref, run_arguments, _checkpoint = _resume_fixture(tmp_path)
+    daemon, _worker, _service, project_id, source_job_id, _source, model_ref, run_arguments, _checkpoint = _resume_fixture(tmp_path)
     calls = []
 
     def resume_backend(context, arguments, execution, operation_id, event_callback):
@@ -224,7 +273,7 @@ def test_resume_dispatch_queues_one_idempotent_child_from_verified_failed_source
         return {"success": True, "data": {"restart_mode": "restart_from_checkpoint"}, "execution": {}}
 
     daemon.backend.resume_study_run = resume_backend
-    request = _resume_request(source_job_id, model_ref)
+    request = _resume_request(source_job_id, model_ref, project_id)
     try:
         result = daemon.dispatch(request)
         assert result["success"] is True, result
@@ -247,18 +296,18 @@ def test_resume_dispatch_queues_one_idempotent_child_from_verified_failed_source
 
 
 def test_resume_refuses_unknown_worker_state_schema_spoof_and_permission_failures(tmp_path):
-    daemon, _worker, service, source_job_id, _source, model_ref, _args, _checkpoint = _resume_fixture(
+    daemon, _worker, service, project_id, source_job_id, _source, model_ref, _args, _checkpoint = _resume_fixture(
         tmp_path, worker_status="RUNNING")
     calls = []
     daemon.backend.resume_study_run = lambda *args: calls.append(args) or {"success": True, "data": {}, "execution": {}}
     try:
-        unknown = daemon.dispatch(_resume_request(source_job_id, model_ref))
+        unknown = daemon.dispatch(_resume_request(source_job_id, model_ref, project_id))
         assert unknown["success"] is False
         assert unknown["error"]["code"] == "JOB_NOT_QUIESCENT"
         assert calls == []
         assert daemon.store.db.execute("SELECT COUNT(*) FROM resume_claims").fetchone()[0] == 0
 
-        spoof = daemon.dispatch(_resume_request(source_job_id, model_ref, key="spoof",
+        spoof = daemon.dispatch(_resume_request(source_job_id, model_ref, project_id, key="spoof",
                                                 arguments={"reentrant": True}))
         assert spoof["success"] is False
         assert spoof["error"]["code"] == "INVALID_REQUEST"
@@ -266,7 +315,7 @@ def test_resume_refuses_unknown_worker_state_schema_spoof_and_permission_failure
 
         _worker.status_value = "FAILED"
         service.ledger.permissions.remove("compute")
-        denied = daemon.dispatch(_resume_request(source_job_id, model_ref, key="permission"))
+        denied = daemon.dispatch(_resume_request(source_job_id, model_ref, project_id, key="permission"))
         assert denied["success"] is False
         assert denied["error"]["code"] == "PERMISSION_DENIED"
         assert calls == []
@@ -393,7 +442,7 @@ def test_resume_backend_loads_fresh_tag_and_keeps_failed_source_model_bound(tmp_
 def test_resume_study_callback_uses_checkpoint_sha256_returned_by_creator(tmp_path, monkeypatch):
     from comsol_mcp import _g3_ops
 
-    daemon, _worker, _service, _source_job_id, _source, model_ref, _args, _checkpoint = _resume_fixture(tmp_path)
+    daemon, _worker, _service, _project_id, _source_job_id, _source, model_ref, _args, _checkpoint = _resume_fixture(tmp_path)
     backend = daemon.backend
     backend._require_g2_isolation = lambda: {"verified": True}
     backend._preflight_study_resume = lambda *args: {"preflight": "ok"}

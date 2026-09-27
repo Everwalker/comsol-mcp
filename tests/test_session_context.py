@@ -1,4 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from dataclasses import FrozenInstanceError
 import json
 import logging
@@ -326,16 +327,78 @@ def test_actual_peer_address_unifies_requested_aliases():
     assert left.endpoint.owned_process.lock_key == right.endpoint.owned_process.lock_key
 
 
-def test_scheduler_requires_actual_peer_and_valid_process_attestation():
+def test_unobserved_peer_uses_global_exclusive_lane_and_owned_birth_still_requires_attestation():
     scheduler = SessionEndpointScheduler()
     no_peer = _context("no-peer", peer=None)
-    with pytest.raises(SessionIdentityUnknown, match="actual observed peer"):
-        scheduler.submit(no_peer, lambda: None)
     peer = CanonicalSocket("127.0.0.1", 2044)
+    owned = _context("peer-owned", peer=peer,
+                     process=_process(9003, "birth-peer-owned", peer), ownership="mcp_managed")
+    unknown_entered = threading.Event()
+    unknown_release = threading.Event()
+    owned_entered = threading.Event()
+
+    def block_unknown():
+        unknown_entered.set()
+        assert unknown_release.wait(2)
+
+    try:
+        unknown_future = scheduler.submit(no_peer, block_unknown)
+        assert unknown_entered.wait(1)
+        owned_future = scheduler.submit(owned, owned_entered.set)
+        time.sleep(0.05)
+        assert not owned_entered.is_set()
+        unknown_release.set()
+        unknown_future.result(timeout=2)
+        owned_future.result(timeout=2)
+        assert owned_entered.is_set()
+    finally:
+        unknown_release.set()
+        scheduler.close()
+
     wrong_process = _process(9002, "birth-wrong", CanonicalSocket("127.0.0.1", 2045))
     with pytest.raises(ValueError, match="does not attest"):
         _context("wrong-listener", peer=peer, process=wrong_process, ownership="mcp_managed")
-    scheduler.close()
+
+
+def test_retirement_fence_wins_while_owned_task_waits_for_unknown_global_gate():
+    peer = CanonicalSocket("127.0.0.1", 2046)
+    owned = _context("fenced-after-global-wait", port=2046, peer=peer,
+                     process=_process(9004, "birth-fenced-after-wait", peer), ownership="mcp_managed")
+    scheduler = SessionEndpointScheduler()
+    unknown_entered = threading.Event()
+    release_unknown = threading.Event()
+    owned_waiting_for_gate = threading.Event()
+    callback_calls = []
+    original_known_lease = scheduler._global_gate.known_server_lease
+
+    @contextmanager
+    def observed_known_lease():
+        # Signal from inside the queued task immediately before the original
+        # global lease blocks behind the unknown-exclusive holder.
+        owned_waiting_for_gate.set()
+        with original_known_lease():
+            yield
+
+    scheduler._global_gate.known_server_lease = observed_known_lease
+
+    def hold_unknown():
+        unknown_entered.set()
+        assert release_unknown.wait(2)
+
+    try:
+        unknown_future = scheduler.submit(None, hold_unknown)
+        assert unknown_entered.wait(1)
+        owned_future = scheduler.submit(owned, callback_calls.append, "invoked")
+        assert owned_waiting_for_gate.wait(1)
+        scheduler.fence_owned_server_lane(owned)
+        release_unknown.set()
+        unknown_future.result(timeout=2)
+        with pytest.raises(SessionSchedulerClosed, match="fenced before callback admission"):
+            owned_future.result(timeout=2)
+        assert callback_calls == []
+    finally:
+        release_unknown.set()
+        scheduler.close()
 
 
 def test_two_different_proven_server_processes_overlap():
@@ -517,8 +580,7 @@ def test_unknown_lane_excludes_owned_lane_in_both_directions():
     peer = CanonicalSocket("127.0.0.1", 2050)
     owned = _context("owned", port=2050, peer=peer,
                      process=_process(9400, "birth-owned", peer), ownership="mcp_managed")
-    unknown = _context("unknown", port=2051,
-                       peer=CanonicalSocket("192.0.2.51", 2051), ownership="shared")
+    unknown = _context("unknown", port=2051, peer=None, ownership="shared")
     scheduler = SessionEndpointScheduler()
     first_started = threading.Event()
     first_release = threading.Event()

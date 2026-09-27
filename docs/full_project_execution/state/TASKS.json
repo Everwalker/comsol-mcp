@@ -111,27 +111,36 @@
       ],
       "original_delivery": "统一串行队列；取消伪hard timeout；真实状态与缓存分离。",
       "source_row": "| W06 控制进程和Java Worker隔离 | G1 | W02, W05 | T012, T026, T028, T055 | 统一串行队列；取消伪hard timeout；真实状态与缓存分离。 |",
-      "status": "UNASSESSED",
+      "status": "IN_PROGRESS",
       "implementation_paths": [
         "comsol_mcp/_control_daemon.py",
         "comsol_mcp/_g2_registry.py",
         "comsol_mcp/_managed_backend.py",
         "comsol_mcp/_operation_store.py",
         "tests/test_job_cleanup_contract.py",
-        "tests/test_registry_job_control_fallback.py"
+        "tests/test_registry_job_control_fallback.py",
+        "comsol_mcp/_session_context.py",
+        "tests/test_control_daemon.py",
+        "tests/test_control_daemon_projects.py",
+        "tests/test_control_daemon_sessions.py",
+        "tests/test_g3_6_defects_d01_d06.py",
+        "tests/test_job_resume_contract.py",
+        "tests/test_session_context.py"
       ],
       "evidence": [
         "docs/full_project_execution/evidence/luna_control_fallback/junit.xml",
         "docs/full_project_execution/evidence/luna_control_fallback/pytest.log",
         "docs/full_project_execution/evidence/luna_job_cleanup_v4/junit.xml",
-        "docs/full_project_execution/evidence/luna_job_cleanup_v4/pytest.log"
+        "docs/full_project_execution/evidence/luna_job_cleanup_v4/pytest.log",
+        "docs/full_project_execution/project_session/f04_dispatch_control_checkpoint_20260927.json"
       ],
       "blockers": [],
       "execution_notes": [
         "Partial control-plane slice implemented and locally regression-tested: supported job.* actions have strict registry_call/operation_call fallback to the cached operation store while the engine queue is occupied.",
         "This evidence does not complete the task or any native six-target acceptance cell; remaining requirements stay open.",
         "Added bounded cached job-control fallback plus terminal job-row cache compaction; remains partial and does not satisfy the work package or native target acceptance."
-      ]
+      ],
+      "note": "PARTIAL: F04 dispatch/control software checkpoint passed 164 focused synthetic tests. Unified scheduling, exact job/Worker binding, independent control observations and conservative process-birth checks are implemented. Cached session read routes do not prove live health. Six lifecycle mutations, platform adapters and native acceptance remain incomplete."
     },
     {
       "id": "W07",
@@ -443,27 +452,36 @@
       ],
       "original_delivery": "缓存状态独立响应；取消确认；限制共享Server控制权限。",
       "source_row": "| W19 持久jobs/取消/恢复/并发 | G4 | W07, W16, W03 | T022, T023, T024, T025, T026, T027, T028, T053, T054, T057 | 缓存状态独立响应；取消确认；限制共享Server控制权限。 |",
-      "status": "UNASSESSED",
+      "status": "IN_PROGRESS",
       "implementation_paths": [
         "comsol_mcp/_control_daemon.py",
         "comsol_mcp/_g2_registry.py",
         "comsol_mcp/_managed_backend.py",
         "comsol_mcp/_operation_store.py",
         "tests/test_job_cleanup_contract.py",
-        "tests/test_registry_job_control_fallback.py"
+        "tests/test_registry_job_control_fallback.py",
+        "comsol_mcp/_session_context.py",
+        "tests/test_control_daemon.py",
+        "tests/test_control_daemon_projects.py",
+        "tests/test_control_daemon_sessions.py",
+        "tests/test_g3_6_defects_d01_d06.py",
+        "tests/test_job_resume_contract.py",
+        "tests/test_session_context.py"
       ],
       "evidence": [
         "docs/full_project_execution/evidence/luna_control_fallback/junit.xml",
         "docs/full_project_execution/evidence/luna_control_fallback/pytest.log",
         "docs/full_project_execution/evidence/luna_job_cleanup_v4/junit.xml",
-        "docs/full_project_execution/evidence/luna_job_cleanup_v4/pytest.log"
+        "docs/full_project_execution/evidence/luna_job_cleanup_v4/pytest.log",
+        "docs/full_project_execution/project_session/f04_dispatch_control_checkpoint_20260927.json"
       ],
       "blockers": [],
       "execution_notes": [
         "Partial control-plane slice implemented and locally regression-tested: supported job.* actions have strict registry_call/operation_call fallback to the cached operation store while the engine queue is occupied.",
         "This evidence does not complete the task or any native six-target acceptance cell; remaining requirements stay open.",
         "Added bounded cached job-control fallback plus terminal job-row cache compaction; remains partial and does not satisfy the work package or native target acceptance."
-      ]
+      ],
+      "note": "PARTIAL: F04 dispatch/control software checkpoint passed 164 focused synthetic tests. Unified scheduling, exact job/Worker binding, independent control observations and conservative process-birth checks are implemented. Cached session read routes do not prove live health. Six lifecycle mutations, platform adapters and native acceptance remain incomplete."
     },
     {
       "id": "W20",

@@ -583,7 +583,7 @@ def test_queued_project_write_is_reauthorized_after_policy_revocation(tmp_path, 
         if not release.wait(10):
             raise TimeoutError("test queue blocker was not released")
 
-    daemon.queue.submit(block_queue)
+    daemon.session_scheduler.submit(None, block_queue)
     assert entered.wait(2)
     monkeypatch.setattr(
         daemon.backend,
@@ -713,7 +713,7 @@ def test_same_project_pending_request_reuses_identity_but_other_project_conflict
             "error": {"code": "EXECUTION_STATE_UNKNOWN", "message": "synthetic ambiguous outcome"},
         }
 
-    daemon.queue.submit(block_queue)
+    daemon.session_scheduler.submit(None, block_queue)
     assert queue_entered.wait(2)
     monkeypatch.setattr(daemon.backend, "invoke", unknown_invoke)
     request = {

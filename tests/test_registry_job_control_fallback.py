@@ -30,14 +30,14 @@ def _busy_daemon(tmp_path):
         return {"success": True, "data": {"done": True}}
 
     daemon = ControlDaemon(tmp_path, service=service, registry={"set_parameters": blocking_solve})
-    original_submit = daemon.queue.submit
+    original_submit = daemon.session_scheduler.submit
     submitted = []
 
-    def count_submit(fn, *args, **kwargs):
+    def count_submit(context, fn, *args, **kwargs):
         submitted.append(args[1] if len(args) > 1 else None)
-        return original_submit(fn, *args, **kwargs)
+        return original_submit(context, fn, *args, **kwargs)
 
-    daemon.queue.submit = count_submit
+    daemon.session_scheduler.submit = count_submit
     pending = daemon.dispatch({
         "operation": "set_parameters",
         "arguments": {"x": 1},
@@ -139,7 +139,9 @@ def test_registry_job_schema_and_identity_errors_do_not_queue_or_mutate(tmp_path
         for request in bad_calls:
             result = daemon.dispatch(request)
             assert result["success"] is False
-            assert result["error"]["code"] in {"INVALID_REQUEST", "UNSUPPORTED_OPERATION"}
+            assert result["error"]["code"] in {
+                "INVALID_REQUEST", "UNSUPPORTED_OPERATION", "RESUME_SOURCE_NOT_FAILED",
+            }, (request, result)
 
         direct_bad = daemon.dispatch({
             "operation": "job.list",

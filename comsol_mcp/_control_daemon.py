@@ -25,6 +25,15 @@ from ._platform_process import process_identity, terminate_process_tree
 from ._desktop_platforms import create_native_metadata_adapter
 from ._desktop_service import DesktopCoordinator, DesktopOperationError
 from ._project_authority import ProjectAuthority, PROJECT_OPERATIONS
+from ._session_context import (
+    SessionContextMissing,
+    SessionEndpointScheduler,
+    SessionRuntimeRegistry,
+    SessionSchedulerClosed,
+    active_session_context,
+    use_session_context,
+)
+from ._session_lifecycle import SessionLifecycleStore, SessionLifecycleProjectConflict
 
 TERMINAL = {"SUCCEEDED", "FAILED", "EXPIRED", "LOST", "CANCELLED"}
 CONTROL_READS = {
@@ -43,6 +52,14 @@ DESKTOP_OPERATIONS = frozenset({
     "desktop.status", "desktop.bind", "desktop.show_model", "desktop.select_node",
     "desktop.capture", "desktop.action", "desktop.shell_execute", "desktop.migrate_standalone",
 })
+SESSION_OPERATIONS = frozenset({
+    "session.list", "session.connect", "session.start", "session.inspect",
+    "session.reconnect", "session.disconnect", "session.stop", "session.health",
+    "session.recover",
+})
+SESSION_ALIASES = {f"session_{name}": f"session.{name}" for name in (
+    "list", "connect", "start", "inspect", "reconnect", "disconnect", "stop", "recover",
+)}
 
 
 class WorkerRetirementRefused(RuntimeError):
@@ -124,6 +141,9 @@ class ControlDaemon:
             authorization_verifier=project_authorization_verifier,
         )
         self.queue = ThreadPoolExecutor(max_workers=1, thread_name_prefix="comsol-engine-queue")
+        self.session_registry = SessionRuntimeRegistry()
+        self.session_scheduler = SessionEndpointScheduler()
+        self.session_lifecycle = SessionLifecycleStore(self.store)
         self.desktop = DesktopCoordinator(
             store=self.store,
             adapter=desktop_adapter if desktop_adapter is not None else create_native_metadata_adapter(),
@@ -146,6 +166,17 @@ class ControlDaemon:
         self.closed = threading.Event()
         self.monitor = threading.Thread(target=self._monitor, name="comsol-cached-control", daemon=True)
         self.monitor.start()
+
+    @property
+    def backend(self):
+        context = active_session_context()
+        if context is not None and context.backend is not None:
+            return context.backend
+        return self._default_backend
+
+    @backend.setter
+    def backend(self, value):
+        self._default_backend = value
 
     @property
     def service(self): return self.backend.service
@@ -246,7 +277,10 @@ class ControlDaemon:
             arguments, execution = request.get("arguments", {}), request.get("execution", {})
             if not isinstance(operation, str) or not isinstance(arguments, dict) or not isinstance(execution, dict):
                 raise ExecutionContractError("INVALID_REQUEST", "invalid operation/arguments/execution")
+            operation = SESSION_ALIASES.get(operation, operation)
             timeouts = self._timeouts(execution)
+            if operation in SESSION_OPERATIONS:
+                return self._dispatch_session_control(operation, arguments, execution)
             if operation in DESKTOP_OPERATIONS:
                 return self._dispatch_desktop_control(operation, arguments, execution)
             if operation == "job.resume":
@@ -255,8 +289,9 @@ class ControlDaemon:
                 return self._dispatch_catalog_job_control(operation, arguments, execution=execution)
             if operation in CONTROL_READS:
                 if operation in {"job_reconcile", "job.reconcile"}:
-                    with self._worker_observation_admission():
-                        return self._control_read(operation, arguments)
+                    return self._dispatch_job_reconcile(arguments, execution=execution)
+                if operation in {"job_cancel", "job.cancel"} and arguments.get("force_stop") is True:
+                    return self._dispatch_job_cancel(arguments, execution=execution)
                 return self._control_read(operation, arguments)
             if operation in {"registry_call", "operation_call"}:
                 cached = self._cached_registry_control(operation, arguments, execution=execution)
@@ -342,11 +377,16 @@ class ControlDaemon:
                 and operation not in _g3_operations()
             ):
                 raise ExecutionContractError("UNSUPPORTED_OPERATION", f"operation is not registered: {operation}")
-            self._authorize_project_execution(operation, arguments, execution)
-            if isinstance(execution.get("project_id"), str) and execution["project_id"]:
-                timeouts = self.project_authority.apply_timeout_caps(execution["project_id"], timeouts)
-            if operation == "server_connect" and self.service is None and not (os.environ.get("COMSOL_ROOT") and (os.environ.get("COMSOL_JAVA_HOME") or os.environ.get("JAVA_HOME"))):
-                raise ExecutionContractError("RUNTIME_CONFIGURATION_REQUIRED", "COMSOL_ROOT and COMSOL_JAVA_HOME must be configured")
+            session_context = self._execution_session_context(execution)
+            from contextlib import nullcontext
+            session_scope = use_session_context(session_context) if session_context is not None else nullcontext()
+            with session_scope:
+                self._authorize_project_execution(operation, arguments, execution)
+                if isinstance(execution.get("project_id"), str) and execution["project_id"]:
+                    timeouts = self.project_authority.apply_timeout_caps(execution["project_id"], timeouts)
+                if operation == "server_connect" and self.service is None and not (os.environ.get("COMSOL_ROOT") and (os.environ.get("COMSOL_JAVA_HOME") or os.environ.get("JAVA_HOME"))):
+                    raise ExecutionContractError("RUNTIME_CONFIGURATION_REQUIRED", "COMSOL_ROOT and COMSOL_JAVA_HOME must be configured")
+            runtime_binding = self._runtime_binding_for_request(session_context, execution)
             request_id = execution.get("request_id") or str(uuid4())
             key = execution.get("idempotency_key") or str(uuid4())
             if not isinstance(request_id, str) or not isinstance(key, str) or not key:
@@ -399,9 +439,12 @@ class ControlDaemon:
                 if refusal is not None:
                     return refusal
                 with self.lock:
+                    record_metadata = {"operation": operation, "arguments": persisted_arguments,
+                                       "execution": persisted_execution}
+                    if runtime_binding is not None:
+                        record_metadata["runtime_binding"] = runtime_binding
                     record, reused = self.store.begin(request_id=request_id, idempotency_key=key, request_hash=digest,
-                        operation=operation, metadata={"operation": operation, "arguments": persisted_arguments,
-                                                        "execution": persisted_execution}, timeouts=timeouts)
+                        operation=operation, metadata=record_metadata, timeouts=timeouts)
                     if reused:
                         return record["result"] if record["result"] is not None else self._pending(record)
                     submitted = time.monotonic()
@@ -409,9 +452,32 @@ class ControlDaemon:
                     # engine queue. Admission and generation advance are atomic
                     # with respect to the in-process quiescence snapshot.
                     self._activity_generation += 1
-                    future = self.queue.submit(self._execute, record, operation, arguments, execution, timeouts, submitted)
+                    # Legacy/default work has no process-attested session
+                    # context and therefore shares the scheduler's one
+                    # global-exclusive unknown lane with registered unknown
+                    # endpoints.  It must never bypass that gate via the
+                    # historical single-worker queue.
+                    try:
+                        future = self.session_scheduler.submit(
+                            session_context, self._execute, record, operation, arguments,
+                            execution, timeouts, submitted,
+                        )
+                    except SessionSchedulerClosed:
+                        refused = self._error(
+                            "WORKER_RETIRED_OR_UNKNOWN",
+                            "the selected Worker/server lane is fenced and cannot accept new work",
+                            data={"engine_dispatched": False}, safe_retry=False,
+                        )
+                        return self._finish(record, refused, "FAILED")
             try:
                 return future.result(timeout=timeouts["rpc_timeout_s"])
+            except SessionSchedulerClosed:
+                refused = self._error(
+                    "WORKER_RETIRED_OR_UNKNOWN",
+                    "the selected Worker/server lane was fenced before this request dispatched",
+                    data={"engine_dispatched": False}, safe_retry=False,
+                )
+                return self._finish(record, refused, "FAILED")
             except FutureTimeout:
                 return self._pending(record, rpc_wait_expired=True)
         except (ExecutionContractError, IdempotencyConflict) as exc:
@@ -433,8 +499,17 @@ class ControlDaemon:
         if extra_outer and str(outer_arguments.get("operation_id", "")).startswith("job."):
             raise ExecutionContractError("INVALID_REQUEST", f"{outer_operation} has unsupported arguments: {', '.join(extra_outer)}")
         inner_operation = outer_arguments.get("operation_id")
+        if isinstance(inner_operation, str):
+            inner_operation = SESSION_ALIASES.get(inner_operation, inner_operation)
         if extra_outer and inner_operation in DESKTOP_OPERATIONS:
             raise ExecutionContractError("INVALID_REQUEST", f"{outer_operation} has unsupported arguments: {', '.join(extra_outer)}")
+        if inner_operation in SESSION_OPERATIONS:
+            if extra_outer:
+                raise ExecutionContractError("INVALID_REQUEST", f"{outer_operation} has unsupported arguments: {', '.join(extra_outer)}")
+            inner_arguments = outer_arguments.get("arguments", {})
+            if not isinstance(inner_arguments, dict):
+                raise ExecutionContractError("INVALID_REQUEST", "registry call arguments must be an object")
+            return self._dispatch_session_control(inner_operation, inner_arguments, execution)
         if inner_operation in PROJECT_OPERATIONS:
             inner_arguments = outer_arguments.get("arguments", {})
             if not isinstance(inner_arguments, dict):
@@ -546,18 +621,302 @@ class ControlDaemon:
         return False
 
     def _dispatch_catalog_job_control(self, inner_operation: str, inner_arguments: dict[str, Any], *, execution: dict[str, Any]) -> dict[str, Any]:
-        needs_worker_observation = (
-            inner_operation in {"job.reconcile", "job_reconcile"}
-            or (inner_operation in {"job.cancel", "job_cancel"} and inner_arguments.get("force_stop") is True)
-        )
-        if needs_worker_observation:
-            with self._worker_observation_admission():
-                return self._dispatch_catalog_job_control_impl(
-                    inner_operation, inner_arguments, execution=execution,
-                )
         return self._dispatch_catalog_job_control_impl(
             inner_operation, inner_arguments, execution=execution,
         )
+
+    def _dispatch_session_control(self, operation: str, arguments: dict[str, Any], execution: dict[str, Any]) -> dict[str, Any]:
+        """Handle the implemented durable session snapshots without Worker RPC.
+
+        Lifecycle reads are deliberately control-plane only: they cannot wait
+        behind a solve or turn cached evidence into a live-health claim. The
+        mutating lifecycle routes stay unadvertised until their runtime and
+        exact process adapters are installed.
+        """
+        from . import _g2_registry
+
+        if operation not in SESSION_OPERATIONS:
+            raise ExecutionContractError("UNSUPPORTED_OPERATION", f"session operation is not supported: {operation}")
+        routed = dict(arguments)
+        schema = _g2_registry.BY_ID.get(operation)
+        properties = set(schema.input_schema.get("properties", {})) if schema is not None else set()
+        for field in ("project_id", "session_id", "request_id", "idempotency_key", "authorization_ref"):
+            if field not in properties or field not in execution:
+                continue
+            if field in routed and routed[field] != execution[field]:
+                code = "IDEMPOTENCY_CONFLICT" if field == "idempotency_key" else "INVALID_REQUEST"
+                raise ExecutionContractError(code, f"session {field} differs from the execution envelope")
+            routed.setdefault(field, execution[field])
+        _g2_registry.validate_call(operation, routed)
+        project_id = routed.get("project_id")
+        if not isinstance(project_id, str) or not project_id:
+            raise ExecutionContractError("INVALID_REQUEST", "session action requires project_id")
+        if execution.get("project_id") not in (None, project_id):
+            raise ExecutionContractError("PROJECT_IDENTITY_MISMATCH", "session project_id differs from the execution envelope")
+        if operation not in {"session.list", "session.inspect", "session.health"}:
+            # validate_call above gives a truthful UNSUPPORTED_OPERATION for
+            # cataloged lifecycle mutations that do not yet have process-safe
+            # production adapters.
+            raise ExecutionContractError("UNSUPPORTED_OPERATION", f"session lifecycle adapter is not available: {operation}")
+        if operation == "session.list":
+            filters = routed.get("filter", {})
+            if not isinstance(filters, Mapping) or filters:
+                raise ExecutionContractError("INVALID_REQUEST", "session.list currently accepts only an empty filter object")
+        self.project_authority.authorize_operation(project_id, "inspect")
+        if operation == "session.list":
+            records = self.session_lifecycle.list_for_project(project_id)
+            live = {context.session_id for context in self.session_registry.list_for_project(project_id)}
+            return {"success": True, "data": {
+                "project_id": project_id,
+                "sessions": [
+                    {"lifecycle": row, "runtime_live": row["session_id"] in live}
+                    for row in records
+                ],
+                "count": len(records),
+                "inventory_scope": "durable-project-lifecycle-records",
+                "unattributed_legacy_rows": "EXCLUDED",
+            }}
+
+        session_id = routed["session_id"]
+        try:
+            record = self.session_lifecycle.get(project_id, session_id)
+        except SessionLifecycleProjectConflict as exc:
+            raise ExecutionContractError("PROJECT_IDENTITY_MISMATCH", "session belongs to another project") from exc
+        if record is None:
+            raise ExecutionContractError("SESSION_NOT_FOUND", "no project-attributed lifecycle record exists for this session")
+        try:
+            context = self.session_registry.get(project_id, session_id)
+        except SessionContextMissing:
+            context = None
+        if operation == "session.inspect":
+            return {"success": True, "data": {
+                "lifecycle": record,
+                "runtime_live": context is not None,
+                "worker_binding": (
+                    {"worker_instance_id": context.worker_instance_id,
+                     "worker_epoch": context.worker_epoch,
+                     "server_lane": "owned" if context.endpoint.owned_process is not None else "unknown_or_shared"}
+                    if context is not None else None
+                ),
+            }}
+        health = dict(record["health"])
+        return {"success": True, "data": {
+            "project_id": project_id,
+            "session_id": session_id,
+            "session_state": record["state"],
+            "health": health,
+            "freshness": "CACHED" if health.get("status") in {"HEALTHY", "UNHEALTHY"} else "UNKNOWN",
+            "live_context": context is not None,
+            "worker_rpc_performed": False,
+        }}
+
+    def _execution_session_context(self, execution: Mapping[str, Any]):
+        """Resolve a frozen project/session binding, preserving legacy default."""
+        project_id = execution.get("project_id")
+        session_id = execution.get("session_id")
+        if session_id is None:
+            return None
+        if not isinstance(project_id, str) or not project_id:
+            raise ExecutionContractError("PROJECT_IDENTITY_REQUIRED", "session-bound work requires execution.project_id")
+        try:
+            context = self.session_registry.get(project_id, session_id)
+        except SessionContextMissing:
+            service = self._default_backend.service
+            legacy_session = getattr(getattr(service, "ledger", None), "session_id", None)
+            if session_id == legacy_session:
+                return None
+            raise ExecutionContractError(
+                "SESSION_NOT_FOUND", "execution.session_id has no live project-bound runtime context",
+            ) from None
+        if context.project_id != project_id or context.session_id != session_id:
+            raise ExecutionContractError("PROJECT_IDENTITY_MISMATCH", "session runtime binding differs from the execution envelope")
+        return context
+
+    def _runtime_binding_for_request(self, context, execution: Mapping[str, Any]) -> dict[str, Any] | None:
+        """Capture the exact Worker epoch that accepted a durable engine job."""
+        if context is not None:
+            return {
+                "kind": "registered_session",
+                "project_id": context.project_id,
+                "session_id": context.session_id,
+                "worker_epoch": context.worker_epoch,
+                "worker_instance_id": context.worker_instance_id,
+            }
+        backend = self._default_backend
+        service = getattr(backend, "service", None)
+        ledger = getattr(service, "ledger", None)
+        session_id = getattr(ledger, "session_id", None)
+        identity = getattr(backend, "worker_identity", None)
+        if (not isinstance(session_id, str) or not session_id
+                or not isinstance(identity, Mapping)
+                or type(identity.get("connection_epoch")) is not int
+                or identity["connection_epoch"] < 1
+                or not isinstance(identity.get("worker_instance_id"), str)
+                or not identity["worker_instance_id"]):
+            return None
+        requested_session = execution.get("session_id")
+        if requested_session is not None and requested_session != session_id:
+            raise ExecutionContractError("SESSION_IDENTITY_MISMATCH", "execution.session_id differs from the active default Worker")
+        return {
+            "kind": "default_backend",
+            "project_id": execution.get("project_id") if isinstance(execution.get("project_id"), str) else None,
+            "session_id": session_id,
+            "worker_epoch": identity["connection_epoch"],
+            "worker_instance_id": identity["worker_instance_id"],
+            "endpoint": identity.get("endpoint"),
+        }
+
+    def _resolve_job_runtime_context(self, job: Mapping[str, Any], execution: Mapping[str, Any] | None = None):
+        """Resolve only the durable Worker binding recorded when this job was accepted."""
+        metadata = job.get("metadata") if isinstance(job, Mapping) else None
+        binding = metadata.get("runtime_binding") if isinstance(metadata, Mapping) else None
+        if not isinstance(binding, Mapping):
+            raise ExecutionContractError(
+                "WORKER_BINDING_UNKNOWN",
+                "job has no durable project/session/Worker-epoch binding; Worker access is refused",
+            )
+        kind = binding.get("kind")
+        project_id, session_id = binding.get("project_id"), binding.get("session_id")
+        epoch, instance_id = binding.get("worker_epoch"), binding.get("worker_instance_id")
+        if (not isinstance(session_id, str) or not session_id
+                or type(epoch) is not int or epoch < 1
+                or not isinstance(instance_id, str) or not instance_id):
+            raise ExecutionContractError("WORKER_BINDING_UNKNOWN", "durable Worker binding is incomplete")
+        if project_id is not None and (not isinstance(project_id, str) or not project_id):
+            raise ExecutionContractError("WORKER_BINDING_UNKNOWN", "durable project binding is malformed")
+        request_execution = execution if isinstance(execution, Mapping) else {}
+        job_execution = metadata.get("execution") if isinstance(metadata, Mapping) else None
+        if not isinstance(job_execution, Mapping):
+            job_execution = {}
+        for observed in (job_execution, request_execution):
+            for field, expected in (("project_id", project_id), ("session_id", session_id)):
+                supplied = observed.get(field)
+                if supplied is not None and supplied != expected:
+                    raise ExecutionContractError("WORKER_BINDING_MISMATCH", f"job {field} differs from its durable Worker binding")
+        if kind == "registered_session":
+            if not isinstance(project_id, str) or not project_id:
+                raise ExecutionContractError("WORKER_BINDING_UNKNOWN", "registered Worker binding lacks project identity")
+            try:
+                context = self.session_registry.get(project_id, session_id)
+            except SessionContextMissing:
+                raise ExecutionContractError("WORKER_BINDING_UNKNOWN", "the job's registered Worker context is no longer live") from None
+            if (context.worker_epoch != epoch or context.worker_instance_id != instance_id):
+                raise ExecutionContractError("WORKER_BINDING_MISMATCH", "the job belongs to a different Worker epoch")
+            return context
+        if kind == "default_backend":
+            backend = self._default_backend
+            service = getattr(backend, "service", None)
+            ledger = getattr(service, "ledger", None)
+            identity = getattr(backend, "worker_identity", None)
+            if (getattr(ledger, "session_id", None) != session_id
+                    or not isinstance(identity, Mapping)
+                    or identity.get("connection_epoch") != epoch
+                    or identity.get("worker_instance_id") != instance_id):
+                raise ExecutionContractError("WORKER_BINDING_UNKNOWN", "the job's default Worker epoch is no longer live")
+            return None
+        raise ExecutionContractError("WORKER_BINDING_UNKNOWN", "job names an unsupported Worker binding kind")
+
+    def _dispatch_job_reconcile(self, arguments: Mapping[str, Any], *, execution: Mapping[str, Any]) -> dict[str, Any]:
+        job_id = arguments.get("job_id") if isinstance(arguments, Mapping) else None
+        if not isinstance(job_id, str) or not job_id:
+            return self._error("INVALID_REQUEST", "job_id must be a non-empty string")
+        job = self.store.job(job_id)
+        if not job:
+            return self._error("NODE_NOT_FOUND", "job not found")
+        if job.get("status") not in {"UNKNOWN", "RECONCILING"}:
+            return {"success": True, "data": job}
+        # A fully observed request set can be reconciled from durable event
+        # evidence alone.  This path does not consult any Worker and remains
+        # safe even for pre-binding historical records.
+        events = []
+        while True:
+            page = self.store.events(job_id, offset=len(events), limit=1000)
+            events.extend(page)
+            if len(page) < 1000:
+                break
+        submitted_ids = {
+            event.get("metadata", {}).get("request_id")
+            for event in events
+            if event.get("event") == "worker_request"
+            and event.get("metadata", {}).get("phase") == "submitted"
+            and isinstance(event.get("metadata", {}).get("request_id"), str)
+            and event.get("metadata", {}).get("request_id")
+        }
+        observed_ids = {
+            event.get("metadata", {}).get("request_id")
+            for event in events
+            if event.get("event") == "worker_request"
+            and event.get("metadata", {}).get("phase") == "observed"
+            and event.get("metadata", {}).get("status") in {"SUCCEEDED", "FAILED"}
+        }
+        if submitted_ids and submitted_ids.issubset(observed_ids):
+            return self._reconcile(job)
+        try:
+            context = self._resolve_job_runtime_context(job, execution)
+        except ExecutionContractError as exc:
+            return self._exception(exc)
+        try:
+            with self._worker_observation_admission():
+                # Worker status/reconciliation is an existing control-channel
+                # RPC, not ordinary model API work. Bind it to the durable
+                # Worker directly so a busy solve on that lane cannot hide
+                # its own recovery/status path behind the solve queue.
+                from contextlib import nullcontext
+                scope = use_session_context(context) if context is not None else nullcontext()
+                with scope:
+                    return self._reconcile(job)
+        except ExecutionContractError as exc:
+            return self._exception(exc)
+        except Exception as exc:
+            self._log_exception()
+            return self._error("EXECUTION_STATE_UNKNOWN", "job reconciliation could not establish Worker state", type=type(exc).__name__)
+
+    def _dispatch_job_cancel(self, arguments: Mapping[str, Any], *, execution: Mapping[str, Any]) -> dict[str, Any]:
+        """Route force-stop only inside the Worker context durably bound to its job."""
+        if arguments.get("force_stop") is not True:
+            # Ordinary cancellation records a durable intent and never touches
+            # a Worker or service handle, so it does not select a backend.
+            return self._control_read("job_cancel", dict(arguments))
+        server_scope = arguments.get("server_scope")
+        if not isinstance(server_scope, dict):
+            return self._error(
+                "UNAUTHORIZED_FORCE_STOP",
+                "force_stop requires explicit server_scope authorization with verified ownership",
+                data={"job_id": arguments.get("job_id"), "cancel_accepted": False,
+                      "engine_stopped": False, "mode": "FORCE_STOP_REJECTED"},
+            )
+        if "authorized" not in server_scope or type(server_scope["authorized"]) is not bool:
+            return self._error("INVALID_REQUEST", "server_scope.authorized must be a boolean", safe_retry=False)
+        if not server_scope["authorized"]:
+            return self._error(
+                "UNAUTHORIZED_FORCE_STOP",
+                "force_stop requires explicit server_scope authorization with verified ownership",
+                data={"job_id": arguments.get("job_id"), "cancel_accepted": False,
+                      "engine_stopped": False, "mode": "FORCE_STOP_REJECTED"},
+            )
+        job_id = arguments.get("job_id")
+        job = self.store.job(job_id) if isinstance(job_id, str) else None
+        if not job:
+            return self._error("NODE_NOT_FOUND" if isinstance(job_id, str) else "INVALID_REQUEST",
+                               "job not found" if isinstance(job_id, str) else "job_id must be a non-empty string")
+        try:
+            context = self._resolve_job_runtime_context(job, execution)
+        except ExecutionContractError as exc:
+            return self._exception(exc)
+        try:
+            with self._worker_observation_admission():
+                if context is None:
+                    raise ExecutionContractError(
+                        "WORKER_BINDING_UNKNOWN",
+                        "force-stop requires a registered session with exact owned-process evidence",
+                    )
+                with use_session_context(context):
+                    return self._cancel_job(dict(arguments))
+        except ExecutionContractError as exc:
+            return self._exception(exc)
+        except Exception as exc:
+            self._log_exception()
+            return self._error("EXECUTION_STATE_UNKNOWN", "force-stop could not establish the job's bound Worker state", type=type(exc).__name__)
 
     def _dispatch_catalog_job_control_impl(self, inner_operation: str, inner_arguments: dict[str, Any], *, execution: dict[str, Any]) -> dict[str, Any]:
         """Validate and execute a canonical job action using the cached store."""
@@ -637,6 +996,10 @@ class ControlDaemon:
             "job.wait": "job_wait",
             "job.cancel": "job_cancel",
         }
+        if entry.operation_id == "job.reconcile":
+            return self._dispatch_job_reconcile(mapped, execution=execution)
+        if entry.operation_id == "job.cancel" and mapped.get("force_stop") is True:
+            return self._dispatch_job_cancel(mapped, execution=execution)
         return self._control_read(operation_map[entry.operation_id], mapped)
 
     def _dispatch_project_control(self, operation: str, arguments: dict[str, Any], execution: dict[str, Any], timeouts: dict[str, Any]) -> dict[str, Any]:
@@ -783,12 +1146,35 @@ class ControlDaemon:
         self.project_authority.authorize_operation(project_id, permission)
 
     def _dispatch_catalog_job_resume(self, inner_arguments: dict[str, Any], *, execution: dict[str, Any], timeouts: dict[str, Any]) -> dict[str, Any]:
-        with self._worker_observation_admission():
+        source_id = inner_arguments.get("job_id") if isinstance(inner_arguments, Mapping) else None
+        source = self.store.job(source_id) if isinstance(source_id, str) else None
+        if source is None:
             return self._dispatch_catalog_job_resume_impl(
-                inner_arguments, execution=execution, timeouts=timeouts,
+                inner_arguments, execution=execution, timeouts=timeouts, session_context=None,
             )
+        source_operation = self.store.get_operation(source.get("operation_id", ""))
+        if source.get("status") != "FAILED" or not source_operation or source_operation.get("status") != "FAILED":
+            # This rejection is fully decided by durable job state and must
+            # remain responsive even if there is no Worker binding to resolve.
+            return self._dispatch_catalog_job_resume_impl(
+                inner_arguments, execution=execution, timeouts=timeouts, session_context=None,
+            )
+        try:
+            session_context = self._resolve_job_runtime_context(source, execution)
+            request_context = self._execution_session_context(execution)
+            if request_context is not session_context:
+                raise ExecutionContractError("WORKER_BINDING_MISMATCH", "resume execution does not select the source job's exact Worker context")
+            from contextlib import nullcontext
+            scope = use_session_context(session_context) if session_context is not None else nullcontext()
+            with self._worker_observation_admission(), scope:
+                return self._dispatch_catalog_job_resume_impl(
+                    inner_arguments, execution=execution, timeouts=timeouts,
+                    session_context=session_context,
+                )
+        except ExecutionContractError as exc:
+            return self._exception(exc)
 
-    def _dispatch_catalog_job_resume_impl(self, inner_arguments: dict[str, Any], *, execution: dict[str, Any], timeouts: dict[str, Any]) -> dict[str, Any]:
+    def _dispatch_catalog_job_resume_impl(self, inner_arguments: dict[str, Any], *, execution: dict[str, Any], timeouts: dict[str, Any], session_context=None) -> dict[str, Any]:
         """Atomically claim and queue one trusted pre-run snapshot restart."""
         from . import _g2_registry
         from ._execution_contract import canonical_project_path, model_ref_from_mapping
@@ -916,7 +1302,9 @@ class ControlDaemon:
             status = observed.get(identifier)
             if status is None:
                 try:
-                    reply = self.worker.status(identifier)
+                    reply = self.session_scheduler.submit(
+                        session_context, lambda request_id: self.worker.status(request_id), identifier,
+                    ).result()
                     status = reply.get("status") if isinstance(reply, dict) else None
                 except Exception:
                     status = None
@@ -941,10 +1329,13 @@ class ControlDaemon:
                                "restart_mode": "restart_from_checkpoint",
                                "authorization_ref_present": authorization_hash is not None,
                                "authorization_ref_sha256": authorization_hash}}
-        context = {"source_job_id": source_id, "source_operation_id": source.get("operation_id"),
-                   "resume_contract": contract,
-                   "authorization_ref_present": bool(isinstance(authorization_ref, str) and authorization_ref.strip()),
-                   "authorization_ref_sha256": authorization_hash}
+        runtime_binding = self._runtime_binding_for_request(session_context, child_execution)
+        if runtime_binding is not None:
+            metadata["runtime_binding"] = runtime_binding
+        resume_metadata = {"source_job_id": source_id, "source_operation_id": source.get("operation_id"),
+                           "resume_contract": contract,
+                           "authorization_ref_present": bool(isinstance(authorization_ref, str) and authorization_ref.strip()),
+                           "authorization_ref_sha256": authorization_hash}
         record, reused = self.store.begin_resume(source_job_id=source_id, request_id=request_id,
             idempotency_key=key, request_hash=request_hash, metadata=metadata, timeouts=timeouts)
         if reused:
@@ -955,9 +1346,10 @@ class ControlDaemon:
             "restart_mode": "restart_from_checkpoint"})
         submitted = time.monotonic()
         try:
-            with self.lock:
-                future = self.queue.submit(self._execute, record, "study.run", replay_args,
-                    child_execution, timeouts, submitted, resume_context=context)
+            future = self.session_scheduler.submit(
+                session_context, self._execute, record, "study.run", replay_args,
+                child_execution, timeouts, submitted, resume_context=resume_metadata,
+            )
         except Exception as exc:
             result = self._error("RESUME_QUEUE_FAILED", "resume continuation could not enter the serial Worker queue",
                 data={"source_job_id": source_id, "engine_dispatched": False}, cause_type=type(exc).__name__)
@@ -1208,6 +1600,12 @@ class ControlDaemon:
                     return {"success": True, "data": {**job, "wait_expired": True}}
                 time.sleep(poll_interval_s)
         if operation in {"job_cancel", "job.cancel"}:
+            if arguments.get("force_stop") is True:
+                return self._error(
+                    "WORKER_BINDING_UNKNOWN",
+                    "force-stop requires routing through the durable job Worker binding",
+                    safe_retry=False,
+                )
             return self._cancel_job(arguments)
 
         norm_op = operation.replace(".", "_")
@@ -1222,7 +1620,11 @@ class ControlDaemon:
             events = self.store.events(job_id, offset=offset, limit=limit)
             return {"success": True, "data": {"job_id": job_id, "events": events, "next_offset": offset + len(events)}}
         if norm_op == "job_reconcile" and job["status"] in {"UNKNOWN", "RECONCILING"}:
-            return self._reconcile(job)
+            return self._error(
+                "WORKER_BINDING_UNKNOWN",
+                "reconciliation requires routing through the durable job Worker binding",
+                safe_retry=False,
+            )
         success = not (norm_op == "job_result" and job.get("result") is not None and not job["result"].get("success"))
         return {"success": success, "data": job}
 
@@ -1367,6 +1769,19 @@ class ControlDaemon:
                 data={"job_id": job_id, "cancel_accepted": False, "engine_stopped": False, "mode": "FORCE_STOP_REJECTED"},
             )
 
+        context = active_session_context()
+        owned_process = getattr(getattr(context, "endpoint", None), "owned_process", None)
+        observed_peer = getattr(getattr(context, "endpoint", None), "observed_peer", None)
+        if (context is None or context.server_ownership != "mcp_managed"
+                or owned_process is None or observed_peer is None
+                or not owned_process.attests_peer(observed_peer)
+                or context.process_identity != owned_process):
+            return self._error(
+                "PROCESS_IDENTITY_UNKNOWN",
+                "force-stop requires the job's registered, observed MCP-owned process identity",
+                data={"job_id": job_id, "cancel_accepted": False, "engine_stopped": False, "mode": "IDENTITY_REJECTED"},
+            )
+
         # D04: Validate backend ServerLease / RuntimeOwnership if present
         backend_lease = getattr(service, "lease", None) or getattr(service, "server_lease", None) or getattr(service, "runtime_ownership", None)
         if backend_lease is not None:
@@ -1381,20 +1796,43 @@ class ControlDaemon:
 
         managed_pid = getattr(service, "server_pid", None) or getattr(service, "pid", None)
         target_pid = server_scope.get("pid")
-        if not managed_pid or (target_pid is not None and target_pid != managed_pid):
+        if (not managed_pid or managed_pid != owned_process.pid
+                or target_pid != owned_process.pid):
             return self._error(
                 "PROCESS_IDENTITY_MISMATCH",
-                f"server_scope pid {target_pid} does not match active managed server pid {managed_pid}",
+                "server_scope PID does not match the job's exact owned-process binding",
                 data={"job_id": job_id, "cancel_accepted": False, "engine_stopped": False, "mode": "IDENTITY_REJECTED"},
             )
 
         ident = process_identity(managed_pid)
         scope_start = server_scope.get("process_start_epoch_ms")
-        if scope_start and ident.get("start_epoch_ms") and scope_start != ident["start_epoch_ms"]:
+        live_start = ident.get("start_epoch_ms")
+        stored_start = owned_process.start_epoch_ms
+        if (ident.get("alive") is not True
+                or type(live_start) is not int or live_start <= 0
+                or type(scope_start) is not int or scope_start <= 0
+                or type(stored_start) is not int or stored_start <= 0):
+            return self._error(
+                "PROCESS_IDENTITY_UNKNOWN",
+                "stored, live, and authorized process birth identities must all be available",
+                data={"job_id": job_id, "cancel_accepted": False, "engine_stopped": False, "mode": "IDENTITY_REJECTED"},
+            )
+        if not (stored_start == live_start == scope_start):
             return self._error(
                 "PROCESS_IDENTITY_MISMATCH",
-                "process start epoch does not match server_scope",
+                "live and authorized process birth do not match the backend-owned process identity",
                 data={"job_id": job_id, "cancel_accepted": False, "engine_stopped": False, "mode": "IDENTITY_REJECTED"},
+            )
+
+        try:
+            self.session_scheduler.fence_owned_server_lane(context)
+        except Exception as exc:
+            return self._error(
+                "PROCESS_IDENTITY_UNKNOWN",
+                "owned server lane could not be fenced before termination",
+                safe_retry=False,
+                data={"job_id": job_id, "cancel_accepted": False, "engine_stopped": False,
+                      "mode": "IDENTITY_REJECTED", "cause_type": type(exc).__name__},
             )
 
         # D04: Replace raw os.kill(pid, 9) with platform terminate_process_tree and wait for exit
@@ -1462,8 +1900,6 @@ class ControlDaemon:
 
     def _reconcile(self, job):
         # Query existing Java request ids only. Never submit the lost callback.
-        if self.worker is None:
-            return {"success": False, "data": job, "error": {"code": "EXECUTION_STATE_UNKNOWN", "message": "connect to the existing worker before reconciliation", "safe_retry": False}}
         events = []
         while True:
             page = self.store.events(job["job_id"], offset=len(events), limit=1000)
@@ -1474,6 +1910,13 @@ class ControlDaemon:
         completed = {event["metadata"]["request_id"]: event["metadata"]["status"] for event in events
                      if event["event"] == "worker_request" and event["metadata"].get("phase") == "observed"
                      and event["metadata"].get("request_id") and event["metadata"].get("status") in {"SUCCEEDED", "FAILED"}}
+        pending_ids = [identifier for identifier in ids if identifier not in completed]
+        if pending_ids and self.worker is None:
+            return {"success": False, "data": job, "error": {
+                "code": "EXECUTION_STATE_UNKNOWN",
+                "message": "the job's bound Worker is unavailable for reconciliation",
+                "safe_retry": False,
+            }}
         observed = []
         for identifier in ids:
             if identifier in completed:
@@ -1554,6 +1997,7 @@ class ControlDaemon:
         with self._admission_lock:
             self._worker_retirement_state = "CLOSED"
             self.closed.set()
+        self.session_scheduler.close()
         self.queue.shutdown(wait=True)
         self.monitor.join(timeout=2)
         self.store.close()

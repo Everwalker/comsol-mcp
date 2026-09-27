@@ -62,9 +62,19 @@ def test_reconcile_uses_durable_completion_after_worker_replacement(tmp_path):
 def test_reconcile_never_ignores_pending_request_beyond_first_log_page(tmp_path):
     class Replacement:
         def status(self, identifier): return {"request_id": identifier, "status": "RUNNING"}
+    from types import SimpleNamespace
     daemon = ControlDaemon(tmp_path, worker=Replacement())
     try:
-        record, _ = daemon.store.begin(request_id="r", idempotency_key="k", request_hash="h", operation="run_study")
+        daemon.backend.service = SimpleNamespace(ledger=SimpleNamespace(session_id="legacy-session"))
+        daemon.backend.worker_identity = {"connection_epoch": 4, "worker_instance_id": "legacy-worker"}
+        record, _ = daemon.store.begin(
+            request_id="r", idempotency_key="k", request_hash="h", operation="run_study",
+            metadata={"operation": "run_study", "arguments": {},
+                      "execution": {"session_id": "legacy-session"},
+                      "runtime_binding": {"kind": "default_backend", "project_id": None,
+                                          "session_id": "legacy-session", "worker_epoch": 4,
+                                          "worker_instance_id": "legacy-worker"}},
+        )
         job_id = record["job_id"]
         for index in range(501):
             daemon.store.add_event(job_id, "worker_request", {"request_id": str(index), "phase": "submitted"})
