@@ -1,0 +1,133 @@
+{
+  "algorithm_and_gates": {
+    "acceptance": "numerical equality remains SOFTWARE_COMPARISON_PASS_PROVENANCE_PENDING; native/scientific acceptance stays NOT_RUN",
+    "current_provenance_gates": {
+      "mode_index_readback": "UNVERIFIED for both modes because handler output is NOT_PROVIDED",
+      "native_dispatch_authentication": "NOT_PROVIDED_TO_OFFLINE_AGGREGATOR",
+      "surface_frame_normal_readback": "NOT_PRESENT_IN_RAW_INTEGRAL_RESULT"
+    },
+    "native_raw_terms": "strictly validate identities, source/dataset/index/frequency readbacks, selection IDs/dimensions/areas, all eight IntSurface term bindings, cleanup, and duplicate matrix/vector/power summaries before numeric comparison",
+    "numeric_reference": "call existing normalized-complex v2 native-integral versus independent full-vector quadrature comparison using frozen relative/absolute thresholds"
+  },
+  "compile_check": {
+    "command": "PYTHONPYCACHEPREFIX=/private/tmp/w23-v2-aggregation-pycache /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -m py_compile tools/w23_mode_basis_v2_aggregate.py tests/test_w23_mode_basis_v2_aggregate.py",
+    "exit_code": 0
+  },
+  "created_utc": "2026-09-27T12:52Z",
+  "implementation": {
+    "changed_source_files": [
+      "tools/w23_mode_basis_v2_aggregate.py",
+      "tests/test_w23_mode_basis_v2_aggregate.py"
+    ],
+    "focused_tests": "tests/test_w23_mode_basis_v2_aggregate.py",
+    "module": "tools/w23_mode_basis_v2_aggregate.py",
+    "source_manifest": [
+      {
+        "bytes": 23587,
+        "path": "tools/w23_mode_basis_v2_aggregate.py",
+        "sha256": "833b10686f1b387f9c4952d8364670e32379dc280e11d02042b8daae40e4835d"
+      },
+      {
+        "bytes": 6038,
+        "path": "tests/test_w23_mode_basis_v2_aggregate.py",
+        "sha256": "1178f9cc8fd0782b5f77b6a831c984e51c05cd2dc1bd2dc81568eca034d017dd"
+      },
+      {
+        "bytes": 55726,
+        "path": "tools/w23_mode_basis_v2.py",
+        "sha256": "9813d54d407d0f5a99fde0d9ef1b6589a608fe4c25d2996b616dd6f57b943902"
+      },
+      {
+        "bytes": 21224,
+        "path": "tools/w23_mode_basis_v2_native_plan.py",
+        "sha256": "3d6eac812d812c62722e5e1e240bde2acfcef1f680610432abfe70e356c9fde3"
+      },
+      {
+        "bytes": 83925,
+        "path": "tools/w23_full3d_science.py",
+        "sha256": "d20dcb49570ece6231d7f554c3033caa7018cce07bca0aa4b6394918806673f8"
+      },
+      {
+        "bytes": 20040,
+        "path": "comsol_mcp/_w23_basis_v2_contract.py",
+        "sha256": "837f3508acb505d1b6be726274099009d3a6d5d95e3dcf410b2d7db40b877aa4"
+      },
+      {
+        "bytes": 38477,
+        "path": "comsol_mcp/_w23_basis_v2_results.py",
+        "sha256": "9d8e9952dcbe0f184929e4fbab6128d29dc3af4e5e08b112be583319fda42628"
+      },
+      {
+        "bytes": 24789,
+        "path": "comsol_mcp/_g2_contract.py",
+        "sha256": "6de4b2908dc746bea404cfb7db16c16ca7d05a229211d9fbc07128ef4743a562"
+      },
+      {
+        "bytes": 74830,
+        "path": "comsol_mcp/_g3_common.py",
+        "sha256": "9b3e8dfff78966b35d78ee0aa25cb50098c3f2ae556161b8161fd2f44938b6d3"
+      },
+      {
+        "bytes": 5200,
+        "path": "comsol_mcp/_observation_store.py",
+        "sha256": "1518cb7753a860146323275728a39e523d762c7cf98263fdbf3ac67170958271"
+      },
+      {
+        "bytes": 54222,
+        "path": "comsol_mcp/_w23_results.py",
+        "sha256": "fae3ddcc4abab9866eaa3a667b418ef2fe8a70c4fba651bc62ab323316c991ca"
+      },
+      {
+        "bytes": 31260,
+        "path": "tests/test_w23_mode_basis_v2.py",
+        "sha256": "d8bd8bb79b5a3e8008b78a483a412d96abfffe1e43b8e7fb4af4ee6b98a120f0"
+      },
+      {
+        "bytes": 11331,
+        "path": "tests/test_w23_mode_basis_v2_native_plan.py",
+        "sha256": "c4533af999942d425745684a2b096e223dc0e9a2de36ec360e40788184f9de1f"
+      },
+      {
+        "bytes": 17670,
+        "path": "tests/test_w23_mode_basis_v2_results.py",
+        "sha256": "8406bf94c1bff41c4c20a1065c78d98bd7436e5db1054a3c884bca85cad956e9"
+      }
+    ]
+  },
+  "limitations": [
+    "Synthetic Worker substitutions are used only by tests; no test result authenticates a native payload.",
+    "Numeric Port mode identity remains unverified until native mode-index readback is exposed and separately reviewed.",
+    "The helper does not change or strengthen the registered handler response; it post-processes a supplied envelope and labels dispatch authentication unavailable."
+  ],
+  "receipt_type": "W23_V2_NATIVE_INTEGRAL_TO_FIELD_QUADRATURE_AGGREGATION_SOFTWARE_CHECKPOINT",
+  "scope": {
+    "gui_used": false,
+    "native_comsol_calls": 0,
+    "native_result": "NOT_RUN",
+    "package_status": "tools-layer software helper only; not added to installable wheel or public registry route",
+    "solver_calls": 0,
+    "study_calls": 0,
+    "worker_calls": 0
+  },
+  "status": "PASS_SOFTWARE_ONLY",
+  "test_run": {
+    "command": "/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -m pytest -q --junitxml=docs/full_project_execution/w23_overlap/evidence/aggregation_checkpoint_20260927T1252Z/junit.xml tests/test_w23_mode_basis_v2.py tests/test_w23_mode_basis_v2_native_plan.py tests/test_w23_mode_basis_v2_results.py tests/test_w23_mode_basis_v2_registry.py tests/test_w23_native_results.py tests/test_w23_mode_basis_v2_aggregate.py",
+    "counts": {
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "tests": 95
+    },
+    "exit_code": 0,
+    "junit_path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/docs/full_project_execution/w23_overlap/evidence/aggregation_checkpoint_20260927T1252Z/junit.xml",
+    "junit_sha256": "ff16bd3aae6578d3fb174ca1cacc93185c67294144ee8942c34356fc31adccd5",
+    "observed_console_summary": "95 passed in 3.31s",
+    "pytest_version": "9.1.1",
+    "python_version": "3.12.13"
+  },
+  "raw_receipt": {
+    "path": "docs/full_project_execution/w23_overlap/evidence/aggregation_checkpoint_20260927T1252Z/aggregation_software_receipt.json",
+    "sha256": "1ea551014443e5b2865f9b73359d369f72d1fb1025c3d9d92fa0ed664a8ef29d"
+  },
+  "main_review": "Reviewed identity, source and eight-term consistency checks, cleanup gates, normalized complex comparison and explicit provenance-pending outcome. Verified fourteen source/dependency hashes and JUnit 95/0/0/0. Includes seven new aggregator tests; not native evidence or installed public aggregation API."
+}
