@@ -82,6 +82,7 @@ CONTROL_IMPLEMENTED_OPERATIONS = frozenset({
     "job.wait", "job.cancel", "job.cleanup",
     "project.create", "project.inspect", "project.contract_set",
     "project.policy_set", "project.permissions", "project.state_export",
+    "experiment.inspect", "experiment.case_result",
     # Durable project-scoped lifecycle snapshots and process-birth fenced
     # owned Server lifecycle.
     "session.list", "session.inspect", "session.health", "session.connect",
@@ -293,6 +294,66 @@ class ActionEntry:
                 "nested_identity": "model/session/revision/idempotency/request identifiers are not nested action fields and are never copied from the outer execution envelope",
                 "verification_scope": "control-plane software behavior only; no COMSOL solver capability implied",
             }
+        if self.operation_id in {"experiment.inspect", "experiment.case_result"}:
+            result["runtime_dispatch_contract"] = {
+                "handler": "ControlDaemon project-authorized W21 OperationStore snapshot",
+                "entrypoints": [self.operation_id, "registry_call", "operation_call"],
+                "project_scope": "project_id is required in the action body; producer operation metadata proves legacy records that omitted project_id",
+                "engine_queue": "bypassed; no Worker RPC or current ModelRef is required",
+                "snapshot": "design, run, case and producer operation/job metadata are read from one SQLite snapshot",
+                "case_identity": "case_id is matched exactly; case_ordinal is returned as observation metadata and is not an input alias",
+                "verification_scope": "durable software records only; model results remain subject to their recorded run status and provenance",
+            }
+            if self.operation_id == "experiment.inspect":
+                result["data_schema"] = {
+                    "type": "object",
+                    "required": ["project_id", "experiment_id", "status", "design_status", "design", "run", "cases"],
+                    "properties": {
+                        "project_id": {"type": "string"},
+                        "experiment_id": {"type": "string"},
+                        "status": {"type": "string", "enum": ["DESIGNED", "QUEUED", "RUNNING", "UNKNOWN", "COMPLETE", "PARTIAL", "FAILED", "CANCELLED", "EXPIRED", "LOST"]},
+                        "design_status": {"type": "string"},
+                        "design": {"type": "object"},
+                        "run": {"type": "object"},
+                        "cases": {"type": "array", "items": {
+                            "type": "object",
+                            "required": ["case_id", "case_ordinal", "status", "parameters", "record_source"],
+                            "properties": {
+                                "case_id": {"type": "string"},
+                                "case_ordinal": {"type": ["integer", "null"]},
+                                "status": {"type": "string"},
+                                "parameters": {"type": ["object", "null"]},
+                                "record_source": {"type": ["string", "null"]},
+                            },
+                        }},
+                        "result_scope": {"type": "string"},
+                    },
+                    "additionalProperties": False,
+                }
+                result["output_contract"] = (
+                    "ActionResult data: one project-attributed durable design/run snapshot plus exact case_id statuses; "
+                    "RUNNING, UNKNOWN, partial and unrecorded cases remain distinct."
+                )
+            else:
+                result["data_schema"] = {
+                    "type": "object",
+                    "required": ["project_id", "experiment_id", "case_id", "case_ordinal", "status", "run_status", "result", "record_source"],
+                    "properties": {
+                        "project_id": {"type": "string"},
+                        "experiment_id": {"type": "string"},
+                        "case_id": {"type": "string"},
+                        "case_ordinal": {"type": ["integer", "null"]},
+                        "status": {"type": "string"},
+                        "run_status": {"type": "string"},
+                        "result": {"type": ["object", "null"]},
+                        "record_source": {"type": ["string", "null"]},
+                    },
+                    "additionalProperties": False,
+                }
+                result["output_contract"] = (
+                    "ActionResult data: exact case_id result from its hash-checked case artifact or finalized run artifact; "
+                    "case_ordinal is readback only and cannot substitute for case_id."
+                )
             if self.operation_id.startswith("project."):
                 result["runtime_dispatch_contract"].update({
                     "workspace": "created below the explicitly configured project root and revalidated on every access",

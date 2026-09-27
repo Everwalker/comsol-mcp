@@ -23,9 +23,9 @@ comsol_mcp/
   mcp_server.py            # Thin entrypoint: imports + register + main()
 ```
 
-The full profile exposes **67 MCP tools**: 51 legacy names, 7 execution/control
-tools, 7 G2 registry/fallback tools, and 2 W18 plotting tools (`plot.render`, `plot_render`). Domain/expert profiles narrow publication
-while keeping the managed fallback available. The gateway retains legacy arguments and adds an optional `execution`
+The default full profile currently registers **109 MCP tool names**; registration is runtime-discovered, and the exact
+inventory assertion is maintained in `tests/test_registration.py::EXPECTED_TOOLS`. The 51 legacy names retain their
+existing arguments. Domain/expert profiles narrow publication while keeping the managed fallback available. The gateway retains legacy arguments and adds an optional `execution`
 object for model identity, expected revision, idempotency and timeout settings.
 All production calls route through the control daemon. Registration alone is
 not evidence that a capability passed real COMSOL acceptance.
@@ -71,7 +71,8 @@ No circular imports.
 - **Target runtime matrix:** macOS Apple Silicon (Darwin aarch64), Commercial COMSOL Multiphysics 6.4 (Build 293), Java 11 (Amazon Corretto 11.0.28).
   Other environments (Windows, Intel Mac, COMSOL 6.3) remain UNVERIFIED. Cloud Hermes delivery remains `HOST_DELIVERY_UNVERIFIED` until verified with live cloud vision model.
 - **Python 3.10+** (tested on Python 3.14.7)
-- **51 legacy tool names** retain existing arguments; 67 MCP tools published in full profile.
+- **51 legacy tool names** retain existing arguments; the default full profile currently registers 109 MCP tool names
+  (exact inventory: `tests/test_registration.py::EXPECTED_TOOLS`).
 - **Entrypoint backward compat**: `python -m comsol_mcp.mcp_server`, `from comsol_mcp.mcp_server import main`
 - **Visible-main lock**: After `load_visible_main_model()`, tools are guarded by identity check (tag/label/path)
 - **State**: legacy globals in `_server.py` remain guarded by `_runtime_lock`;

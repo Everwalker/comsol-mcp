@@ -7,6 +7,7 @@ from contextlib import ExitStack, contextmanager, nullcontext
 import hashlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import ipaddress
+import itertools
 import json
 import math
 import os
@@ -75,6 +76,7 @@ SESSION_OPERATIONS = frozenset({
     "session.reconnect", "session.disconnect", "session.stop", "session.health",
     "session.recover",
 })
+EXPERIMENT_DURABLE_READS = frozenset({"experiment.inspect", "experiment.case_result"})
 
 _PRESERVE_SERVER_PROCESS_IDENTITY = object()
 SESSION_ALIASES = {f"session_{name}": f"session.{name}" for name in (
@@ -367,6 +369,8 @@ class ControlDaemon:
                 if operation in {"job_cancel", "job.cancel"} and arguments.get("force_stop") is True:
                     return self._dispatch_job_cancel(arguments, execution=execution)
                 return self._control_read(operation, arguments)
+            if operation in EXPERIMENT_DURABLE_READS:
+                return self._dispatch_experiment_durable_read(operation, arguments, execution)
             if operation in {"registry_call", "operation_call"}:
                 cached = self._cached_registry_control(operation, arguments, execution=execution)
                 if cached is not None:
@@ -584,6 +588,13 @@ class ControlDaemon:
             if not isinstance(inner_arguments, dict):
                 raise ExecutionContractError("INVALID_REQUEST", "registry call arguments must be an object")
             return self._dispatch_session_control(inner_operation, inner_arguments, execution)
+        if inner_operation in EXPERIMENT_DURABLE_READS:
+            if extra_outer:
+                raise ExecutionContractError("INVALID_REQUEST", f"{outer_operation} has unsupported arguments: {', '.join(extra_outer)}")
+            inner_arguments = outer_arguments.get("arguments", {})
+            if not isinstance(inner_arguments, dict):
+                raise ExecutionContractError("INVALID_REQUEST", "registry call arguments must be an object")
+            return self._dispatch_experiment_durable_read(inner_operation, inner_arguments, execution)
         if inner_operation in PROJECT_OPERATIONS:
             inner_arguments = outer_arguments.get("arguments", {})
             if not isinstance(inner_arguments, dict):
@@ -615,6 +626,529 @@ class ControlDaemon:
                 )
 
         return self._dispatch_catalog_job_control(inner_operation, inner_arguments, execution=execution)
+
+    @staticmethod
+    def _experiment_record_sha256(record: Mapping[str, Any]) -> str:
+        payload = {key: value for key, value in record.items() if key != "sha256"}
+        return hashlib.sha256(json.dumps(payload, sort_keys=True, allow_nan=False).encode("utf-8")).hexdigest()
+
+    @staticmethod
+    def _experiment_operation_project(operation_record: Mapping[str, Any], project_id: str) -> bool:
+        """Require a producer operation's durable metadata to prove project ownership."""
+        metadata = operation_record.get("metadata")
+        job_metadata = operation_record.get("job_metadata")
+        if not isinstance(metadata, Mapping) or not isinstance(job_metadata, Mapping):
+            return False
+        claims: list[str] = []
+        operation_claims: list[str] = []
+        argument_sources = [metadata.get("arguments")]
+        outer_arguments = metadata.get("arguments")
+        if (operation_record.get("operation") in {"registry_call", "operation_call"}
+                and isinstance(outer_arguments, Mapping)):
+            argument_sources.append(outer_arguments.get("arguments"))
+        for source in (metadata, metadata.get("execution"), *argument_sources):
+            if isinstance(source, Mapping) and "project_id" in source:
+                value = source.get("project_id")
+                if not isinstance(value, str) or not value:
+                    return False
+                operation_claims.append(value)
+                claims.append(value)
+        for source in (job_metadata, job_metadata.get("execution"), job_metadata.get("arguments")):
+            if isinstance(source, Mapping) and "project_id" in source:
+                value = source.get("project_id")
+                if not isinstance(value, str) or not value:
+                    return False
+                claims.append(value)
+        # A job copy may corroborate an operation record, but cannot create
+        # project ownership when the authoritative operation metadata omitted it.
+        return bool(operation_claims) and all(value == project_id for value in claims)
+
+    @staticmethod
+    def _experiment_producer_arguments(operation_record: Mapping[str, Any]) -> tuple[str | None, Mapping[str, Any] | None]:
+        """Resolve direct and registry-fallback producer metadata to one action."""
+        metadata = operation_record.get("metadata")
+        if not isinstance(metadata, Mapping):
+            return None, None
+        row_operation = operation_record.get("operation")
+        recorded_operation = metadata.get("operation")
+        if recorded_operation not in (None, row_operation):
+            return None, None
+        arguments = metadata.get("arguments")
+        if not isinstance(arguments, Mapping):
+            return None, None
+        if row_operation in {"registry_call", "operation_call"}:
+            nested_operation = arguments.get("operation_id")
+            nested_arguments = arguments.get("arguments")
+            if isinstance(nested_operation, str) and isinstance(nested_arguments, Mapping):
+                return nested_operation, nested_arguments
+            return None, None
+        return row_operation if isinstance(row_operation, str) else None, arguments
+
+    @staticmethod
+    def _experiment_operation_status(operation_record: Mapping[str, Any] | None) -> str:
+        if not isinstance(operation_record, Mapping):
+            return "UNKNOWN"
+        status = operation_record.get("status")
+        job_status = operation_record.get("job_status")
+        if not isinstance(status, str) or not isinstance(job_status, str) or status != job_status:
+            return "UNKNOWN"
+        if status in {"UNKNOWN", "RECONCILING", "RUNNING", "QUEUED"}:
+            return "UNKNOWN" if status in {"UNKNOWN", "RECONCILING"} else status
+        if status in TERMINAL:
+            return status
+        return "UNKNOWN"
+
+    @staticmethod
+    def _experiment_parameters_match(actual: Any, planned: Any) -> bool:
+        """Match W21's flat finite-number grid values without Python bool coercion."""
+        if not isinstance(actual, Mapping) or not isinstance(planned, Mapping) or not planned:
+            return False
+        if set(actual) != set(planned):
+            return False
+        for name, expected in planned.items():
+            if not isinstance(name, str) or not name:
+                return False
+            observed = actual[name]
+            if (isinstance(expected, bool) or not isinstance(expected, (int, float))
+                    or isinstance(observed, bool) or not isinstance(observed, (int, float))):
+                return False
+            try:
+                expected_number = float(expected)
+                observed_number = float(observed)
+            except (OverflowError, ValueError):
+                return False
+            if not math.isfinite(expected_number) or not math.isfinite(observed_number):
+                return False
+            if expected_number != observed_number:
+                return False
+        return True
+
+    @staticmethod
+    def _valid_experiment_case_data(
+        value: Any,
+        case_id: str,
+        expected_ordinal: int,
+        planned_parameters: Mapping[str, Any],
+    ) -> bool:
+        if (not isinstance(value, Mapping) or value.get("case_id") != case_id
+                or not isinstance(value.get("status"), str) or not value["status"]):
+            return False
+        if ("case_ordinal" in value
+                and (type(value["case_ordinal"]) is not int or value["case_ordinal"] != expected_ordinal)):
+            return False
+        if "parameters" not in value:
+            # W21 may record a case as NOT_RUN after its budget is exhausted.
+            # Such a marker has no execution parameters; all other result rows
+            # must carry the exact frozen parameter point.
+            return value.get("status") == "NOT_RUN"
+        return ControlDaemon._experiment_parameters_match(value.get("parameters"), planned_parameters)
+
+    @staticmethod
+    def _normalized_experiment_case_data(value: Mapping[str, Any], expected_ordinal: int) -> dict[str, Any]:
+        """Normalize only the allowed historical omission for read comparison."""
+        normalized = dict(value)
+        normalized["case_ordinal"] = expected_ordinal
+        return normalized
+
+    @staticmethod
+    def _experiment_case_rows(
+        record: Mapping[str, Any] | None,
+        planned_cases: Mapping[str, tuple[int, Mapping[str, Any]]],
+    ) -> dict[str, dict[str, Any]] | None:
+        if not isinstance(record, Mapping):
+            return None
+        rows = record.get("cases")
+        if not isinstance(rows, list):
+            return None
+        result: dict[str, dict[str, Any]] = {}
+        seen_ordinals: set[int] = set()
+        for row in rows:
+            if not isinstance(row, dict) or not isinstance(row.get("case_id"), str) or not row["case_id"]:
+                return None
+            case_id = row["case_id"]
+            plan = planned_cases.get(case_id)
+            if plan is None:
+                return None
+            expected_ordinal, planned_parameters = plan
+            if not ControlDaemon._valid_experiment_case_data(
+                    row, case_id, expected_ordinal, planned_parameters):
+                return None
+            ordinal = row.get("case_ordinal")
+            if ordinal is not None and ordinal in seen_ordinals:
+                return None
+            if ordinal is not None:
+                seen_ordinals.add(ordinal)
+            if case_id in result:
+                return None
+            result[case_id] = row
+        return result
+
+    @staticmethod
+    def _planned_experiment_cases(
+        design_cases: Any,
+        planned_case_ids: Any,
+        definition: Mapping[str, Any],
+    ) -> dict[str, tuple[int, Mapping[str, Any]]] | None:
+        """Validate the durable case index against the frozen Cartesian grid."""
+        if (not isinstance(planned_case_ids, list) or len(planned_case_ids) > 500
+                or any(not isinstance(value, str) or not value for value in planned_case_ids)
+                or len(set(planned_case_ids)) != len(planned_case_ids)
+                or not isinstance(design_cases, list) or len(design_cases) > 500
+                or len(design_cases) != len(planned_case_ids)
+                or not isinstance(definition, Mapping)
+                or definition.get("sampling") != {"kind": "cartesian_grid"}):
+            return None
+        parameters = definition.get("parameters")
+        if not isinstance(parameters, Mapping) or not parameters:
+            return None
+        names = sorted(parameters)
+        values_by_name: list[list[float]] = []
+        for name in names:
+            values = parameters[name]
+            if (not isinstance(name, str) or not name or not isinstance(values, list) or not values
+                    or any(isinstance(value, bool) or not isinstance(value, (int, float))
+                           for value in values)):
+                return None
+            try:
+                normalized_values = [float(value) for value in values]
+            except (OverflowError, ValueError):
+                return None
+            if any(not math.isfinite(value) for value in normalized_values):
+                return None
+            if len(set(normalized_values)) != len(normalized_values):
+                return None
+            values_by_name.append(normalized_values)
+        if math.prod(len(values) for values in values_by_name) > 500:
+            return None
+        remaining_grid = set(itertools.product(*values_by_name))
+        if len(remaining_grid) != len(planned_case_ids):
+            return None
+
+        planned: dict[str, tuple[int, Mapping[str, Any]]] = {}
+        for ordinal, (row, case_id) in enumerate(zip(design_cases, planned_case_ids), 1):
+            row_parameters = row.get("parameters") if isinstance(row, Mapping) else None
+            if (not isinstance(row, Mapping) or row.get("case_id") != case_id
+                    or ("case_ordinal" in row
+                        and (type(row["case_ordinal"]) is not int or row["case_ordinal"] != ordinal))
+                    or not isinstance(row_parameters, Mapping) or set(row_parameters) != set(names)):
+                return None
+            normalized_parameters: dict[str, float] = {}
+            for name in names:
+                value = row_parameters[name]
+                if isinstance(value, bool) or not isinstance(value, (int, float)):
+                    return None
+                try:
+                    normalized_value = float(value)
+                except (OverflowError, ValueError):
+                    return None
+                if not math.isfinite(normalized_value):
+                    return None
+                normalized_parameters[name] = normalized_value
+            grid_key = tuple(normalized_parameters[name] for name in names)
+            if grid_key not in remaining_grid:
+                return None
+            remaining_grid.remove(grid_key)
+            planned[case_id] = (ordinal, normalized_parameters)
+        if remaining_grid:
+            return None
+        return planned
+
+    def _dispatch_experiment_durable_read(
+        self, operation: str, arguments: dict[str, Any], execution: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Read project-owned W21 experiment records without Worker or queue access."""
+        from . import _g2_registry
+
+        entry = _g2_registry.validate_call(operation, arguments)
+        if entry.effect.upper() != "READ" or entry.scope != "project":
+            raise ExecutionContractError("UNSUPPORTED_OPERATION", "experiment durable read has an unexpected catalog scope")
+        project_id = arguments.get("project_id")
+        if not isinstance(project_id, str) or not project_id:
+            raise ExecutionContractError("INVALID_REQUEST", "project_id is required")
+        if execution.get("project_id") not in (None, project_id):
+            raise ExecutionContractError("PROJECT_IDENTITY_MISMATCH", "experiment project_id differs from the execution envelope")
+        experiment_id = arguments.get("experiment_id")
+        case_id = arguments.get("case_id") if operation == "experiment.case_result" else None
+        if not isinstance(experiment_id, str) or not experiment_id:
+            raise ExecutionContractError("INVALID_REQUEST", "experiment_id is required")
+        if operation == "experiment.case_result" and (not isinstance(case_id, str) or not case_id):
+            raise ExecutionContractError("INVALID_REQUEST", "case_id is required")
+
+        # Authorize the caller's declared project before any artifact lookup;
+        # foreign IDs and absent IDs therefore share the same response.
+        self.project_authority.authorize_operation(project_id, "inspect")
+        snapshot = self.store.read_experiment_snapshot(project_id, experiment_id, case_id=case_id)
+        design = snapshot.get("design")
+        if not isinstance(design, dict):
+            raise ExecutionContractError("EXPERIMENT_NOT_FOUND", "experiment was not found")
+
+        design_project = design.get("project_id")
+        if design_project is not None and design_project != project_id:
+            raise ExecutionContractError("EXPERIMENT_NOT_FOUND", "experiment was not found")
+        if (type(design.get("schema_version")) is not int or design.get("schema_version") != 1
+                or design.get("kind") != "w21experiment"
+                or design.get("experiment_id") != experiment_id
+                or not isinstance(design.get("sha256"), str)
+                or design.get("sha256") != self._experiment_record_sha256(design)
+                or not isinstance(design.get("definition"), dict)
+                or design.get("definition_sha256") != hashlib.sha256(
+                    json.dumps(design["definition"], sort_keys=True, allow_nan=False).encode("utf-8")
+                ).hexdigest()):
+            raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "durable experiment design failed identity or integrity validation")
+
+        producer_id = design.get("producer")
+        producer = snapshot.get("operations", {}).get(producer_id) if isinstance(producer_id, str) else None
+        producer_operation, producer_arguments = (
+            self._experiment_producer_arguments(producer) if isinstance(producer, Mapping) else (None, None)
+        )
+        if (not isinstance(producer, dict) or producer_operation != "experiment.design"
+                or not isinstance(producer_arguments, Mapping)
+                or not self._experiment_operation_project(producer, project_id)
+                or producer_arguments.get("definition") != design["definition"]):
+            # When the record itself omitted project_id, do not infer that it
+            # belongs to the caller merely because its opaque id was supplied.
+            raise ExecutionContractError("EXPERIMENT_NOT_FOUND", "experiment was not found")
+        design_status = self._experiment_operation_status(producer)
+        if design_status != "SUCCEEDED":
+            design_status = "UNKNOWN"
+
+        planned_case_ids = snapshot.get("planned_case_ids")
+        design_cases = design.get("cases")
+        planned_cases = self._planned_experiment_cases(
+            design_cases, planned_case_ids, design["definition"],
+        )
+        if planned_cases is None:
+            raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "durable experiment case index is malformed")
+
+        run = snapshot.get("run")
+        run_producer: dict[str, Any] | None = None
+        run_status = "NOT_RUN"
+        run_case_rows: dict[str, dict[str, Any]] = {}
+        run_id = None
+        if run is not None:
+            if (not isinstance(run, dict) or type(run.get("schema_version")) is not int
+                    or run.get("schema_version") != 1
+                    or run.get("kind") != "w21experiment_run"
+                    or run.get("experiment_id") != experiment_id
+                    or run.get("design_sha256") != design.get("sha256")
+                    or not isinstance(run.get("run_id"), str) or not run["run_id"]
+                    or not isinstance(run.get("sha256"), str)
+                    or run.get("sha256") != self._experiment_record_sha256(run)):
+                raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "durable experiment run failed identity or integrity validation")
+            if run.get("project_id") is not None and run.get("project_id") != project_id:
+                raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "durable experiment run project binding is inconsistent")
+            run_id = run["run_id"]
+            run_producer_id = run.get("producer")
+            run_producer = snapshot.get("operations", {}).get(run_producer_id) if isinstance(run_producer_id, str) else None
+            run_producer_operation, run_producer_arguments = (
+                self._experiment_producer_arguments(run_producer)
+                if isinstance(run_producer, Mapping) else (None, None)
+            )
+            if (not isinstance(run_producer, dict) or run_producer_operation != "experiment.run"
+                    or not isinstance(run_producer_arguments, Mapping)
+                    or not self._experiment_operation_project(run_producer, project_id)
+                    or run_producer_arguments.get("experiment_id") != experiment_id):
+                raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "durable experiment run producer binding is inconsistent")
+            if (design.get("model_ref") is not None and run.get("model_ref") != design.get("model_ref")):
+                raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "durable experiment model lineage is inconsistent")
+            run_case_rows = self._experiment_case_rows(run, planned_cases)
+            if run_case_rows is None or not set(run_case_rows).issubset(set(planned_case_ids)):
+                raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "durable experiment run case index is malformed")
+            run_status = self._experiment_operation_status(run_producer)
+            if run_status == "SUCCEEDED":
+                declared = run.get("status")
+                if declared not in {"COMPLETE", "PARTIAL", "FAILED", "EXECUTION_STATE_UNKNOWN"}:
+                    run_status = "UNKNOWN"
+                elif declared == "EXECUTION_STATE_UNKNOWN":
+                    run_status = "UNKNOWN"
+                else:
+                    run_status = declared
+            elif run_status == "FAILED":
+                # The durable producer job is authoritative if a callback
+                # failed before it could replace the initial RUNNING artifact.
+                run_status = "FAILED"
+            elif run_status in {"QUEUED", "RUNNING"}:
+                declared = run.get("status")
+                run_status = declared if declared == "RUNNING" else "UNKNOWN"
+
+        # A queued experiment.run has no run artifact until its callback claims
+        # the immutable single-run key.  Observe only operations whose exact
+        # project and experiment arguments are both durably attributable.
+        matching_run_attempts: list[dict[str, Any]] = []
+        ambiguous_run_attempt = False
+        if run is None:
+            candidates = snapshot.get("run_operations", [])
+            if not isinstance(candidates, list):
+                raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "durable run-attempt snapshot is malformed")
+            for candidate in candidates:
+                if not isinstance(candidate, dict):
+                    continue
+                candidate_operation, args = self._experiment_producer_arguments(candidate)
+                metadata = candidate.get("metadata")
+                if candidate_operation != "experiment.run" or not isinstance(args, Mapping) or args.get("experiment_id") != experiment_id:
+                    continue
+                if not self._experiment_operation_project(candidate, project_id):
+                    metadata_project_claims = []
+                    for source in (metadata, metadata.get("execution") if isinstance(metadata, Mapping) else None,
+                                   args, candidate.get("job_metadata")):
+                        if isinstance(source, Mapping) and "project_id" in source:
+                            metadata_project_claims.append(source.get("project_id"))
+                    if (candidate.get("operation") in {"registry_call", "operation_call"}
+                            and isinstance(metadata, Mapping) and isinstance(metadata.get("arguments"), Mapping)
+                            and "project_id" in metadata["arguments"].get("arguments", {})):
+                        metadata_project_claims.append(metadata["arguments"]["arguments"].get("project_id"))
+                    if not metadata_project_claims:
+                        ambiguous_run_attempt = True
+                    continue
+                matching_run_attempts.append(candidate)
+            if ambiguous_run_attempt:
+                run_status = "UNKNOWN"
+            elif matching_run_attempts:
+                statuses = [self._experiment_operation_status(row) for row in matching_run_attempts]
+                if any(status == "UNKNOWN" for status in statuses):
+                    run_status = "UNKNOWN"
+                elif any(status == "RUNNING" for status in statuses):
+                    run_status = "RUNNING"
+                elif any(status == "QUEUED" for status in statuses):
+                    run_status = "QUEUED"
+                elif any(status == "SUCCEEDED" for status in statuses):
+                    # A completed producer without the run artifact it should
+                    # have durably written is an inconsistent record.
+                    run_status = "UNKNOWN"
+                else:
+                    terminal_statuses = set(statuses)
+                    run_status = next(iter(terminal_statuses)) if len(terminal_statuses) == 1 else "UNKNOWN"
+
+        if operation == "experiment.case_result":
+            if case_id not in planned_case_ids:
+                raise ExecutionContractError("CASE_NOT_FOUND", "case was not found in this experiment")
+            case_record = snapshot.get("cases", {}).get(case_id)
+            case_data: dict[str, Any] | None = None
+            record_source = None
+            expected_ordinal, planned_parameters = planned_cases[case_id]
+            if case_record is not None:
+                if (not isinstance(run, dict) or not isinstance(case_record, dict)
+                        or case_record.get("kind") != "w21experiment_case"
+                        or case_record.get("experiment_id") != experiment_id
+                        or case_record.get("run_id") != run_id
+                        or case_record.get("producer") != run.get("producer")
+                        or case_record.get("sha256") != self._experiment_record_sha256(case_record)
+                        or not self._valid_experiment_case_data(
+                            case_record.get("case"), case_id, expected_ordinal, planned_parameters,
+                        )):
+                    raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "durable case result failed identity or integrity validation")
+                if case_record.get("project_id") is not None and case_record.get("project_id") != project_id:
+                    raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "durable case result project binding is inconsistent")
+                if (case_record.get("model_ref") is not None and run is not None
+                        and case_record.get("model_ref") != run.get("model_ref")):
+                    raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "durable case model lineage is inconsistent")
+                case_data = case_record["case"]
+                recorded_by_run = run_case_rows.get(case_id)
+                if (recorded_by_run is not None
+                        and self._normalized_experiment_case_data(recorded_by_run, expected_ordinal)
+                        != self._normalized_experiment_case_data(case_data, expected_ordinal)):
+                    raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "case result disagrees across durable W21 records")
+                record_source = "case_artifact"
+            elif case_id in run_case_rows:
+                # The finalized run artifact is itself a hash-bound durable
+                # result. Older stores may have the aggregate but no per-case
+                # row, so preserve and label that compatible representation.
+                case_data = run_case_rows[case_id]
+                record_source = "run_artifact"
+            return {
+                "success": True,
+                "data": {
+                    "project_id": project_id,
+                    "experiment_id": experiment_id,
+                    "case_id": case_id,
+                    "case_ordinal": expected_ordinal,
+                    "status": (case_data.get("status") if isinstance(case_data, Mapping)
+                               else "UNKNOWN" if run_status == "UNKNOWN"
+                               else "NOT_RECORDED"),
+                    "run_status": run_status,
+                    "result": case_data,
+                    "record_source": record_source,
+                },
+            }
+
+        case_summaries = []
+        for case_id in planned_case_ids:
+            ordinal, planned_parameters = planned_cases[case_id]
+            result_row = snapshot.get("cases", {}).get(case_id)
+            case_data = None
+            source = None
+            if isinstance(result_row, dict):
+                if (result_row.get("kind") != "w21experiment_case"
+                        or result_row.get("experiment_id") != experiment_id
+                        or result_row.get("run_id") != run_id
+                        or result_row.get("producer") != (run.get("producer") if isinstance(run, dict) else None)
+                        or result_row.get("sha256") != self._experiment_record_sha256(result_row)
+                        or not self._valid_experiment_case_data(
+                            result_row.get("case"), case_id, ordinal, planned_parameters,
+                        )):
+                    raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "durable case index failed identity or integrity validation")
+                if result_row.get("project_id") is not None and result_row.get("project_id") != project_id:
+                    raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "durable case project binding is inconsistent")
+                if (result_row.get("model_ref") is not None and isinstance(run, dict)
+                        and result_row.get("model_ref") != run.get("model_ref")):
+                    raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "durable case model lineage is inconsistent")
+                case_data = result_row["case"]
+                if (case_id in run_case_rows
+                        and self._normalized_experiment_case_data(run_case_rows[case_id], ordinal)
+                        != self._normalized_experiment_case_data(case_data, ordinal)):
+                    raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "case result disagrees across durable W21 records")
+                source = "case_artifact"
+            elif case_id in run_case_rows:
+                case_data = run_case_rows[case_id]
+                source = "run_artifact"
+            case_status = (
+                case_data.get("status") if isinstance(case_data, Mapping)
+                else "UNKNOWN" if run_status == "UNKNOWN"
+                else "NOT_RECORDED"
+            )
+            case_summaries.append({
+                "case_id": case_id,
+                "case_ordinal": ordinal,
+                "status": case_status,
+                "parameters": planned_parameters,
+                "record_source": source,
+            })
+
+        if run_status == "NOT_RUN" and design_status != "SUCCEEDED":
+            overall_status = "UNKNOWN"
+        elif run_status == "NOT_RUN":
+            overall_status = "DESIGNED"
+        else:
+            overall_status = run_status
+        return {
+            "success": True,
+            "data": {
+                "project_id": project_id,
+                "experiment_id": experiment_id,
+                "status": overall_status,
+                "design_status": design_status,
+                "design": {
+                    "study": design.get("study"),
+                    "sampling_profile": design.get("sampling_profile"),
+                    "definition_sha256": design.get("definition_sha256"),
+                    "budget": design.get("budget"),
+                    "case_count": len(planned_case_ids),
+                },
+                "run": ({
+                    "run_id": run_id,
+                    "status": run_status,
+                    "completion_status": run.get("completion_status"),
+                    "effective_budget": run.get("effective_budget"),
+                    "budget": run.get("budget"),
+                    "recorded_case_count": len(run_case_rows),
+                } if isinstance(run, dict) else {
+                    "status": run_status,
+                    "attempt_count": len(matching_run_attempts),
+                }),
+                "cases": case_summaries,
+                "result_scope": "durable snapshot only; no current ModelRef validation, Worker RPC, or engine-queue admission",
+            },
+        }
 
     def _dispatch_desktop_control(self, operation: str, arguments: dict[str, Any], execution: dict[str, Any]) -> dict[str, Any]:
         """Validate catalog shape, then use the durable Desktop coordinator."""

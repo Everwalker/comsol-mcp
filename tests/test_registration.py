@@ -110,6 +110,8 @@ EXPECTED_TOOLS = [
     "desktop_status",
     "experiment_design",
     "experiment_run",
+    "experiment_inspect",
+    "experiment_case_result",
     "solver_solution_transfer",
 ]
 

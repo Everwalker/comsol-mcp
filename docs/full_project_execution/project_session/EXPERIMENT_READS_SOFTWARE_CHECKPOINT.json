@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "scope": "F16 canonical project-scoped experiment.inspect and experiment.case_result durable reads",
+  "status": "PASS_SCOPED_SOFTWARE",
+  "native_acceptance": "NOT_RUN",
+  "scientific_acceptance": "NOT_ESTABLISHED",
+  "base_commit": "ebb30cecb48af25adc1f300b12b0aeb576952c3c",
+  "source_manifest": {
+    "AGENTS.md": "1baf280fdb15a418c9d35a808049fde177da4425f5c89dc6b4bd57b568739385",
+    "README.md": "661b8465a2facbfca8cd4636e87a5956233aa5913c31398864dc14d659df5abf",
+    "comsol_mcp/_control_daemon.py": "cd50ae774959c67d1d7d83423c045cd3ba2ea8332b9593a698e92321967c8859",
+    "comsol_mcp/_g2_registry.py": "4240e670b3949945ece80a2bd1358445ebd0ea5383085afe0ab02c532e285199",
+    "comsol_mcp/_operation_store.py": "395d1ff9881bca50b7dd02d7bd4026a0872d105a27a491c2972bb53843c10e92",
+    "comsol_mcp/_tools_w21.py": "f5798e11efe4cdcf2a5e873ae5d4137ebf4c934208284851c4cbf5a0d9bd19fb",
+    "tests/test_experiment_durable_reads.py": "95ef6b0e01e11c080afcbb01269bb3933aec7afc1c2922088c68ef5d77c30a7c",
+    "tests/test_registration.py": "929e25696ec9791138f89297eb3a993f849b1d332c3f9c52766bb151ac5ea359"
+  },
+  "overlay_sha256": "9932dad06eb910f85c0de3fdc72c9388bdd3f460c4e9840a3a4fb889aaeecde9",
+  "capabilities": [
+    "Direct MCP names and canonical direct/registry_call/operation_call routes, without live ModelRef or Worker dispatch.",
+    "Project authorization before lookup; single SQLite transaction reads design, run, case and producer records.",
+    "Exact producer/project/experiment/case/hash/ModelRef lineage; RUNNING, UNKNOWN and partial results remain truthful.",
+    "Case ordinal derives from validated frozen design order; explicit wrong ordinal or mismatched/nonfinite/bool parameter values fail closed.",
+    "Legacy missing fields require authoritative producer attribution; numeric case aliases are refused."
+  ],
+  "actual_tests": {
+    "results": {
+      "combined_isolated_closure": "139 passed, 1 skipped; the sole first-run failure was separately re-resolved with the isolated read-only object lookup",
+      "current_worktree_selected_after_final_code_change": "139 passed, 1 skipped; 140 collected",
+      "isolated_first_pure_archive_run_no_GIT_DIR": "138 passed, 1 failed, 1 skipped; 140 collected",
+      "isolated_historical_blob_identity_run": "1 passed; GIT_DIR set only for this test process",
+      "isolated_pure_archive_retry_without_historical_object_test": "138 passed, 1 skipped, 1 deselected from 140 selected"
+    },
+    "junit": {
+      "first_raw": {
+        "path": "/private/tmp/comsol-f16-experiment-durable-20260928-c1/isolated-all-no-git.xml",
+        "sha256": "70bf24d81f8a2ae6d4c51401429edeade348e6fc11c05ee52aa767cedb3536b9"
+      },
+      "historical_blob_only": {
+        "path": "/private/tmp/comsol-f16-experiment-durable-20260928-c1/isolated-git-identity-1.xml",
+        "sha256": "99a7422630808b52508d04aef7aefe68d11a1045384eb2f56a062457c4d10c1c"
+      },
+      "pure_archive_retry": {
+        "path": "/private/tmp/comsol-f16-experiment-durable-20260928-c1/isolated-no-git-identity.xml",
+        "sha256": "8f7c7f79d34fbb390457e9723df0a28b3fb8923aad74979791fd8ceffcfd673e"
+      }
+    },
+    "commands": {
+      "isolated_full_raw_no_GIT_DIR": "env -u GIT_DIR PYTHONPATH=/private/tmp/comsol-f16-experiment-durable-20260928-c1/source PYTHONDONTWRITEBYTECODE=1 /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -m pytest -q tests/test_experiment_durable_reads.py tests/test_w21_canonical_contracts.py tests/test_registration.py tests/test_mcp_gateway.py tests/test_control_daemon_projects.py tests/test_g2_w08_w12.py tests/test_operation_store.py tests/test_operation_store_migrations.py tests/test_project_authority.py tests/test_g2_registry_packaging.py tests/test_control_daemon.py --junitxml=/private/tmp/comsol-f16-experiment-durable-20260928-c1/isolated-all-no-git.xml",
+      "isolated_historical_blob_identity_only_GIT_DIR_scoped_to_this_process": "env 'GIT_DIR=/Users/everwalker/Library/Application Support/Comsol-MCP/git-store-20260926-01a0dbbd/repository.git' PYTHONPATH=/private/tmp/comsol-f16-experiment-durable-20260928-c1/source PYTHONDONTWRITEBYTECODE=1 /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -m pytest -q tests/test_operation_store_migrations.py::test_historical_fixture_commit_and_blob_identity_resolve --junitxml=/private/tmp/comsol-f16-experiment-durable-20260928-c1/isolated-git-identity-1.xml",
+      "isolated_without_historical_object_test_no_GIT_DIR": "env -u GIT_DIR PYTHONPATH=/private/tmp/comsol-f16-experiment-durable-20260928-c1/source PYTHONDONTWRITEBYTECODE=1 /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -m pytest -q tests/test_experiment_durable_reads.py tests/test_w21_canonical_contracts.py tests/test_registration.py tests/test_mcp_gateway.py tests/test_control_daemon_projects.py tests/test_g2_w08_w12.py tests/test_operation_store.py tests/test_operation_store_migrations.py tests/test_project_authority.py tests/test_g2_registry_packaging.py tests/test_control_daemon.py -k 'not test_historical_fixture_commit_and_blob_identity_resolve' --junitxml=/private/tmp/comsol-f16-experiment-durable-20260928-c1/isolated-no-git-identity.xml"
+    },
+    "skip": {
+      "reason": "requires the explicitly enabled task-owned loopback fixture; not enabled for this offline unit stage",
+      "test": "tests.test_mcp_gateway::test_opt_in_real_stdio_to_task_owned_control_listener"
+    },
+    "first_failure": {
+      "raw_failure_preserved": true,
+      "reason": "standalone source archive has no object for historical commit a3418bd4546ecc33e26448e7f2a1982727a37153; not a code failure",
+      "test": "tests.test_operation_store_migrations::test_historical_fixture_commit_and_blob_identity_resolve"
+    },
+    "root_retests": {
+      "path": "/private/tmp/comsol-f16-experiment-durable-20260928-c1/root_durable_retests.xml",
+      "sha256": "81da2c98bc4677eed70c41e17d6c0121680d36f6b44bddf33c3e133e11b81d3c",
+      "result": "22 PASS / 0 FAIL / 0 ERROR / 0 SKIP"
+    },
+    "actual_producer_roundtrip": {
+      "callbacks": [
+        "comsol_mcp._w21_execution.op_experiment_design",
+        "comsol_mcp._w21_execution.op_experiment_run"
+      ],
+      "cartesian_grid": "two axes with insertion order z then a, validating readback after durable JSON key sorting",
+      "execution_seam": "synthetic execute_case callback; no COMSOL, native engine, daemon Worker, or network process started",
+      "readback": "public GatewayRegistry experiment_inspect and experiment_case_result routes over ControlDaemon + actual SQLite OperationStore"
+    },
+    "py_compile": "PASS"
+  },
+  "main_review": {
+    "status": "PASS_SCOPED_SOFTWARE",
+    "unchanged_archive_members_verified": 11043,
+    "overlay_files_verified": 8,
+    "runtime_import_origins_verified": 5,
+    "registration_count": 109,
+    "closed_finding": "Wrong case ordinal/parameter under the same case ID previously returned success; now EXPERIMENT_STATE_UNKNOWN and safe_retry=false."
+  },
+  "raw_receipt": {
+    "path": "/private/tmp/comsol-f16-experiment-durable-20260928-c1/receipt.json",
+    "sha256": "2dad3b8a8d1a1cd6f3a860c126a0e91cfeb8de342207d411aa4eae44452d8b4c"
+  },
+  "case_identity_rejected_predecessor": {
+    "path": "/private/tmp/f16_main_case_identity_reproducer.json",
+    "sha256": "5e694f8d261a8998dd0bc73a9a72bf03038cfed06023211f7c2be88ea490dd39",
+    "result": "REJECTED: returned mismatched ordinal and parameter as COMPLETED"
+  },
+  "case_identity_retest": {
+    "native_started": false,
+    "observed": "success=false, EXPERIMENT_STATE_UNKNOWN, safe_retry=false",
+    "path": "/private/tmp/f16_main_case_identity_retest.json",
+    "sha256": "eb7e23ab251e08cb0b71ea7eb151253dd35bd39580b5ed3d638ddbd889d0b458"
+  },
+  "replay": "Archive the base commit and overlay exactly the eight listed files from this stage commit. Install Python 3.12 project dependencies and run the listed tests from the isolated source. The historical Git-blob test needs the existing repository object store via read-only GIT_DIR for that one test only; keep initial missing-object failure evidence. Loopback remains an explicit opt-in skip. Tests use actual SQLite and synthetic case execution, not COMSOL.",
+  "next_action": "Implement F16 five versioned metric actions with exact definitions, W17 trusted native observations and historical authorized comparison; preserve live observation epoch checks. Continue W23 convergence/cohort and W24 UV/gel/reference/viscoelastic. Full W01-W26 and final independent overall review remain incomplete."
+}

@@ -159,6 +159,35 @@ def experiment_run(
     return merged
 
 
+def experiment_inspect(
+    project_id: str,
+    experiment_id: str,
+    request_id: str | None = None,
+) -> dict[str, Any]:
+    """Read one project-owned experiment's durable design and case progress."""
+    result: dict[str, Any] = {"project_id": project_id, "experiment_id": experiment_id}
+    if request_id is not None:
+        result["request_id"] = request_id
+    return result
+
+
+def experiment_case_result(
+    project_id: str,
+    experiment_id: str,
+    case_id: str,
+    request_id: str | None = None,
+) -> dict[str, Any]:
+    """Read one exact case_id result from the project's durable experiment records."""
+    result: dict[str, Any] = {
+        "project_id": project_id,
+        "experiment_id": experiment_id,
+        "case_id": case_id,
+    }
+    if request_id is not None:
+        result["request_id"] = request_id
+    return result
+
+
 def register(registry: Any) -> None:
     tools = [
         ("parameter.case_manage", parameter_case_manage),
@@ -177,3 +206,5 @@ def register(registry: Any) -> None:
     ]
     for name, fn in tools:
         registry.add_tool(fn, name=name)
+    registry.add_tool(experiment_inspect, name="experiment_inspect", operation_id="experiment.inspect")
+    registry.add_tool(experiment_case_result, name="experiment_case_result", operation_id="experiment.case_result")

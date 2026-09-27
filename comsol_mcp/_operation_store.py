@@ -1285,6 +1285,149 @@ class OperationStore:
             row = self.db.execute(f"SELECT metadata FROM {table} WHERE {column}=?", (key,)).fetchone()
             return json.loads(row[0]) if row else None
 
+    def read_experiment_snapshot(
+        self, project_id: str, experiment_id: str, *, case_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Read one W21 experiment and its producer records from one SQLite snapshot.
+
+        This is a control-plane read: it neither enters the Worker scheduler nor
+        mutates OperationStore state.  The method deliberately owns the key
+        conventions for W21's durable design/run/case records so callers cannot
+        combine records observed at different database revisions.
+        """
+        if not isinstance(project_id, str) or not project_id:
+            raise ValueError("project_id is required")
+        if not isinstance(experiment_id, str) or not experiment_id:
+            raise ValueError("experiment_id is required")
+        if case_id is not None and (not isinstance(case_id, str) or not case_id):
+            raise ValueError("case_id must be a non-empty string")
+
+        def decode_operation(row: sqlite3.Row) -> dict[str, Any]:
+            value = dict(row)
+            value["result"] = json.loads(value["result"]) if value.get("result") else None
+            value["metadata"] = json.loads(value.get("metadata") or "{}")
+            value["effective_timeouts"] = json.loads(value.get("effective_timeouts") or "{}")
+            value["job_metadata"] = json.loads(value.pop("job_metadata") or "{}")
+            return value
+
+        def decode_artifact(row: sqlite3.Row | None) -> dict[str, Any] | None:
+            return json.loads(row[0]) if row is not None else None
+
+        project_paths = (
+            "$.project_id", "$.execution.project_id", "$.arguments.project_id",
+            "$.arguments.arguments.project_id",
+        )
+
+        def owned_json(expression: str) -> tuple[str, tuple[str, ...]]:
+            any_claim = " OR ".join(
+                f"(json_type({expression},'{path}')='text' AND json_extract({expression},'{path}')=?)"
+                for path in project_paths
+            )
+            all_consistent = " AND ".join(
+                f"(json_type({expression},'{path}') IS NULL OR "
+                f"(json_type({expression},'{path}')='text' AND json_extract({expression},'{path}')=?))"
+                for path in project_paths
+            )
+            return (
+                f"CASE WHEN json_valid({expression}) THEN (({any_claim}) AND ({all_consistent})) ELSE 0 END",
+                (project_id,) * (2 * len(project_paths)),
+            )
+
+        producer_project_match, producer_project_params = owned_json("o.metadata")
+        artifact_project_match = (
+            "CASE WHEN json_valid(a.metadata) THEN "
+            "CASE WHEN json_type(a.metadata,'$.project_id') IS NOT NULL THEN "
+            "(json_type(a.metadata,'$.project_id')='text' AND json_extract(a.metadata,'$.project_id')=?) "
+            "ELSE EXISTS(SELECT 1 FROM operations o "
+            "WHERE o.operation_id=json_extract(a.metadata,'$.producer') AND "
+            f"({producer_project_match})) END ELSE 0 END"
+        )
+        artifact_project_params = (project_id, *producer_project_params)
+
+        with self.lock:
+            self.db.execute("BEGIN")
+            try:
+                design_row = self.db.execute(
+                    "SELECT a.metadata FROM artifacts a WHERE a.artifact_id=? AND " + artifact_project_match,
+                    ("w21experiment:" + experiment_id, *artifact_project_params),
+                ).fetchone()
+                design = decode_artifact(design_row)
+                planned_case_ids: list[str] = []
+                if isinstance(design, dict) and isinstance(design.get("cases"), list):
+                    planned_case_ids = [
+                        row.get("case_id") for row in design["cases"]
+                        if isinstance(row, dict) and isinstance(row.get("case_id"), str)
+                    ]
+                selected_case_ids = (
+                    [case_id] if case_id is not None and case_id in planned_case_ids
+                    else [] if case_id is not None
+                    else planned_case_ids
+                )
+                run = decode_artifact(self.db.execute(
+                    "SELECT a.metadata FROM artifacts a WHERE a.artifact_id=? AND " + artifact_project_match,
+                    ("w21experimentrun:" + experiment_id, *artifact_project_params),
+                ).fetchone())
+                cases: dict[str, dict[str, Any]] = {}
+                for selected in selected_case_ids:
+                    record = decode_artifact(self.db.execute(
+                        "SELECT a.metadata FROM artifacts a WHERE a.artifact_id=? AND " + artifact_project_match,
+                        ("w21experimentcase:" + experiment_id + ":" + selected, *artifact_project_params),
+                    ).fetchone())
+                    if record is not None:
+                        cases[selected] = record
+
+                producer_ids = {
+                    value.get("producer")
+                    for value in (design, run, *cases.values())
+                    if isinstance(value, dict) and isinstance(value.get("producer"), str)
+                }
+                operation_rows: dict[str, dict[str, Any]] = {}
+                if producer_ids:
+                    placeholders = ",".join("?" for _ in producer_ids)
+                    rows = self.db.execute(
+                        "SELECT o.*,j.status AS job_status,j.metadata AS job_metadata "
+                        "FROM operations o LEFT JOIN jobs j ON j.operation_id=o.operation_id "
+                        f"WHERE o.operation_id IN ({placeholders}) AND {producer_project_match}",
+                        (*tuple(sorted(producer_ids)), *producer_project_params),
+                    ).fetchall()
+                    operation_rows.update({row["operation_id"]: decode_operation(row) for row in rows})
+
+                # A queued run has not executed its callback yet, so its run
+                # artifact does not exist.  Capture canonical run claims in
+                # the same read transaction so inspect can report QUEUED or
+                # RUNNING without waiting for the engine lane.
+                run_operation_rows: list[dict[str, Any]] = []
+                if design is not None and run is None:
+                    run_experiment_match = (
+                        "CASE WHEN json_valid(o.metadata) THEN "
+                        "(json_extract(o.metadata,'$.arguments.experiment_id')=? OR "
+                        "(json_extract(o.metadata,'$.arguments.operation_id')='experiment.run' AND "
+                        "json_extract(o.metadata,'$.arguments.arguments.experiment_id')=?)) ELSE 0 END"
+                    )
+                    rows = self.db.execute(
+                        "SELECT o.*,j.status AS job_status,j.metadata AS job_metadata "
+                        "FROM operations o LEFT JOIN jobs j ON j.operation_id=o.operation_id "
+                        "WHERE o.operation IN ('experiment.run','registry_call','operation_call') "
+                        "AND " + run_experiment_match + " AND " + producer_project_match + " "
+                        "ORDER BY o.created_at,o.operation_id",
+                        (experiment_id, experiment_id, *producer_project_params),
+                    ).fetchall()
+                    run_operation_rows = [decode_operation(row) for row in rows]
+
+                self.db.execute("COMMIT")
+                return {
+                    "design": design,
+                    "run": run,
+                    "cases": cases,
+                    "planned_case_ids": planned_case_ids,
+                    "operations": operation_rows,
+                    "run_operations": run_operation_rows,
+                }
+            except BaseException:
+                if self.db.in_transaction:
+                    self.db.execute("ROLLBACK")
+                raise
+
     def list_metadata(self, table: str) -> list[dict[str, Any]]:
         self._metadata_column(table)  # Table interpolation is safe only after allowlisting.
         with self.lock:
