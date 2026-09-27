@@ -1,0 +1,110 @@
+{
+  "base_commit": "a365420814b9159230364ad953ee13e8db9cc9be",
+  "isolation": {
+    "archive_root": "/private/tmp/luna_daemon_close_stage_20260927T1542Z",
+    "base_archive_command": "git archive a365420814b9159230364ad953ee13e8db9cc9be comsol_mcp tests pyproject.toml docs/comsol_mcp_design_v1",
+    "editable_live_fallback": false,
+    "imported_file": "/private/tmp/luna_daemon_close_stage_20260927T1542Z/comsol_mcp/_control_daemon.py",
+    "imported_module": "comsol_mcp._control_daemon",
+    "overlay_allowlist": [
+      "comsol_mcp/_control_daemon.py",
+      "tests/test_control_daemon_sessions.py"
+    ],
+    "overlay_sha256": {
+      "comsol_mcp/_control_daemon.py": "aa1e18e0a9ec498ef4a41b771a04c7d340077c8c8a838183fa36a7737afa19d0",
+      "tests/test_control_daemon_sessions.py": "cd6d70960874f85b8aef15603b095f69babe36af7e35abdc706ad811d44883b6"
+    },
+    "source_manifest": {
+      "file_count": 92,
+      "path": "source_manifest.json",
+      "sha256": "d91dacf00a29f557693877cc5cf03532a32d8fa911071cbe16512f23e6678ed9"
+    }
+  },
+  "lifecycle_behavior": {
+    "busy_then_drain": "first shutdown retirement refuses while accepted task and durable RUNNING job exist; scheduler drains task to SUCCEEDED, then second exact public retirement pass disconnects and reaps Worker Popen",
+    "dispatch_close_race": "close shares one admission condition with public dispatch; admitted connect queued on session lock rechecks closing before Worker birth; barrier negative control observed zero Worker start/connect and no retained Worker",
+    "missing_birth": "birth identity absence leaves real harmless child running and handle retained",
+    "shared_server": "never stopped; both child receipts record server_stopped=false",
+    "unknown_and_busy_unknown": "UNKNOWN lifecycle and unresolved UNKNOWN job preserve original Worker handle; no blind close or kill"
+  },
+  "real_harmless_child_receipts": [
+    {
+      "path": "pytest-tmp/test_control_daemon_close_reti0/daemon_close_child_receipt.json",
+      "result": {
+        "birth_start_epoch_ms": 1790523872071,
+        "child_exit_confirmed": true,
+        "child_returncode": -15,
+        "exact_popen_handle": true,
+        "pid": 64983,
+        "post_exit_process_identity": {
+          "alive": false,
+          "start_epoch_ms": null
+        },
+        "server_stopped": false,
+        "status": "RETIRED_BY_CONTROL_DAEMON_CLOSE",
+        "worker_close_calls": 1,
+        "worker_disconnect_calls": 1
+      },
+      "sha256": "4dfa1fd88f6fe4c57ea7e6a86c882ef7fd8fadffc71465a81ca4ba9be3242389"
+    },
+    {
+      "path": "pytest-tmp/test_control_daemon_close_retr0/daemon_close_after_drain_child_receipt.json",
+      "result": {
+        "birth_start_epoch_ms": 1790523872116,
+        "busy_job_terminal_status": "SUCCEEDED",
+        "child_exit_confirmed": true,
+        "child_returncode": -15,
+        "exact_popen_handle": true,
+        "pid": 64986,
+        "post_exit_process_identity": {
+          "alive": false,
+          "start_epoch_ms": null
+        },
+        "server_stopped": false,
+        "status": "RETIRED_AFTER_SCHEDULER_DRAIN",
+        "worker_close_calls": 1,
+        "worker_disconnect_calls": 1
+      },
+      "sha256": "f91418d1a4b7a4a270b5d6b1db90a64386fadf49e2e81ed21d55d6adf689da2b"
+    }
+  ],
+  "schema_version": 1,
+  "stage": "F04 daemon close exact Worker retirement and shutdown admission fence",
+  "verification": {
+    "command": "PYTHONPATH=<archive> python -m pytest -q tests/test_control_daemon_sessions.py tests/test_session_context.py --basetemp=<archive>/pytest-tmp --junitxml=<archive>/junit.xml",
+    "focused_close_cases": [
+      "test_control_daemon_close_retires_only_proven_session_worker_child",
+      "test_control_daemon_close_leaves_unproven_worker_child_untouched",
+      "test_control_daemon_close_preserves_unknown_session_worker_and_child",
+      "test_control_daemon_close_preserves_busy_session_worker",
+      "test_control_daemon_close_retries_exact_retirement_after_busy_lane_drains",
+      "test_control_daemon_close_waits_for_admitted_connect_before_session_lock"
+    ],
+    "junit": {
+      "path": "junit.xml",
+      "sha256": "d7583de9c33de7d9196f8129cbcc42f314f1a73c6b999f205d3bbdfc4f7781bb"
+    },
+    "native_comsol": "NOT_RUN; no COMSOL executable launched",
+    "py_compile": "PASS on both overlay files",
+    "python_executable": "/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python",
+    "python_version": "3.12.13",
+    "tests": {
+      "errors": 0,
+      "failed": 0,
+      "passed": 80,
+      "skipped": 0,
+      "total": 80
+    }
+  },
+  "status": "PASS_SCOPED_SOFTWARE_AND_NATIVE_HARMLESS_CHILD",
+  "at_utc": "2026-09-27T15:46:55.376795+00:00",
+  "overall_status": "PARTIAL",
+  "main_verified_unchanged_runtime_files": 88,
+  "raw_receipt": {
+    "path": "/private/tmp/luna_daemon_close_stage_20260927T1542Z/release_candidate_receipt.json",
+    "sha256": "059252756faa032c62a21967d47e9b9e8101622b4635e629acd54b4e3315e480"
+  },
+  "scope_limit": "Injected Worker fixtures with real Python children; no native COMSOL or Windows lifecycle acceptance. UNKNOWN and unproven ownership remain unresolved.",
+  "replay": "From fresh checkout with Python3.12/test dependencies, run python -m pytest -q tests/test_control_daemon_sessions.py tests/test_session_context.py. No local raw receipt directory required.",
+  "next_action": "Continue owned Server start-stop/full recovery and isolated W23/W24 native setup. Complete original W01-W26 and final independent overall review."
+}

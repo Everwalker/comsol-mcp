@@ -188,6 +188,12 @@ class ControlDaemon:
         self._admission_lock = threading.RLock()
         self._worker_retirement_state = "OPEN"
         self._worker_admission_inflight = 0
+        self._control_dispatch_inflight = 0
+        self._dispatch_condition = threading.Condition(self._admission_lock)
+        self._closing = False
+        self._close_started = False
+        self._close_complete = False
+        self._shutdown_tasks_drained = False
         # Engine-queue admission advances this value while holding ``lock``;
         # quiescence snapshots compare it before and after durable readback.
         self._activity_generation = 0
@@ -289,6 +295,7 @@ class ControlDaemon:
         finally:
             with self._admission_lock:
                 self._worker_admission_inflight -= 1
+                self._dispatch_condition.notify_all()
 
     def _project_host_permissions(self):
         permissions = set(self.backend.host_permission_ceiling)
@@ -301,6 +308,27 @@ class ControlDaemon:
         return permissions
 
     def dispatch(self, request):
+        # Linearize close against every public request before it can block on
+        # a session lock, create a Worker, or enter an engine lane. Close first
+        # closes this gate, then waits for admitted calls before retiring
+        # children and draining accepted scheduler work.
+        with self._dispatch_condition:
+            if self._closing:
+                return self._error(
+                    "CONTROL_DAEMON_CLOSING",
+                    "control daemon is closing and no longer accepts requests",
+                    data={"engine_dispatched": False},
+                    safe_retry=False,
+                )
+            self._control_dispatch_inflight += 1
+        try:
+            return self._dispatch_admitted(request)
+        finally:
+            with self._dispatch_condition:
+                self._control_dispatch_inflight -= 1
+                self._dispatch_condition.notify_all()
+
+    def _dispatch_admitted(self, request):
         try:
             if not isinstance(request, dict):
                 raise ExecutionContractError("INVALID_REQUEST", "request must be an object")
@@ -839,6 +867,14 @@ class ControlDaemon:
         project_record = self.project_authority.get_project(project_id)
         project_root = Path(project_record["workspace"]).resolve(strict=True)
         with self._session_connect_lock:
+            if self._closing:
+                return self._finish(record, self._error(
+                    "CONTROL_DAEMON_CLOSING",
+                    "session connect was admitted before shutdown but reached the birth gate after close began",
+                    data={"project_id": project_id, "session_id": session_id,
+                          "engine_dispatched": False, "worker_birth_performed": False},
+                    safe_retry=False,
+                ), "FAILED")
             active = [row for row in self.session_lifecycle.list_for_project(project_id)
                       if row.get("endpoint") == {"host": host, "port": port}
                       and row.get("state") in {"CONNECTING", "CONNECTED", "UNKNOWN", "STOPPING"}]
@@ -1527,6 +1563,16 @@ class ControlDaemon:
                     "SESSION_BUSY", str(exc), data={"session_id": session_id, "engine_dispatched": False},
                     safe_retry=True,
                 ), "FAILED")
+            except SessionSchedulerClosed as exc:
+                if not self._shutdown_tasks_drained:
+                    return self._finish(record, self._error(
+                        "WORKER_BINDING_UNKNOWN", "session scheduler closed before shutdown quiescence was confirmed",
+                        data={"session_id": session_id, "engine_dispatched": False,
+                              "cause_type": type(exc).__name__}, safe_retry=False,
+                    ), "FAILED")
+                # close() has globally fenced admission and waited every
+                # accepted scheduler Future. This is a shutdown-only exact
+                # quiescence proof; ordinary requests cannot use it.
             except Exception as exc:
                 return self._finish(record, self._error(
                     "WORKER_BINDING_UNKNOWN", "session Worker admission could not be fenced",
@@ -3397,6 +3443,7 @@ class ControlDaemon:
                     finally:
                         with self._admission_lock:
                             self._worker_admission_inflight -= 1
+                            self._dispatch_condition.notify_all()
 
     @staticmethod
     def _timeouts(execution):
@@ -3424,19 +3471,92 @@ class ControlDaemon:
         with (self.home / "control-errors.log").open("a") as stream:
             traceback.print_exc(file=stream)
 
+    def _retire_owned_session_workers_for_close(self) -> None:
+        """Run the public exact Worker retirement path before daemon teardown.
+
+        Only children for which this daemon retained both a Popen object and
+        exact process-birth readback are considered. Uncertain, busy, unknown,
+        or remotely attached Workers remain untouched.
+        """
+        with self._session_connect_lock:
+            for key in list(self._session_worker_handles):
+                if key not in self._session_worker_child_identities:
+                    continue
+                project_id, session_id = key
+                try:
+                    lifecycle = self.session_lifecycle.get(project_id, session_id)
+                    if (lifecycle is None or lifecycle.get("state") not in {"CONNECTED", "DISCONNECTED"}
+                            or lifecycle.get("client_state") == "RETIRED"):
+                        continue
+                    operation_id = f"daemon-close:{uuid4().hex}"
+                    arguments = {
+                        "project_id": project_id,
+                        "session_id": session_id,
+                        "idempotency_key": operation_id,
+                        "retire_worker": True,
+                    }
+                    execution = {
+                        "project_id": project_id,
+                        "request_id": operation_id,
+                        "idempotency_key": operation_id,
+                    }
+                    # This enters the same catalog validation, authorization,
+                    # quiescence fence, disconnect, exact close/wait, and
+                    # durable lifecycle route exposed to callers.
+                    self._dispatch_session_control("session.disconnect", arguments, execution)
+                except Exception:
+                    # Shutdown remains fail-closed. A cleanup refusal never
+                    # falls back to PID signalling or drops an uncertain handle.
+                    continue
+
     def close(self):
-        with self._admission_lock:
+        with self._dispatch_condition:
+            if self._close_complete:
+                return
+            if self._close_started:
+                while not self._close_complete:
+                    self._dispatch_condition.wait()
+                return
+            self._close_started = True
+            # This shares the public dispatch admission lock, so there is no
+            # check-then-block window in which a request can create a child
+            # after close observed and retired the existing handle set.
+            self._closing = True
             self._worker_retirement_state = "CLOSED"
+            while self._control_dispatch_inflight or self._worker_admission_inflight:
+                self._dispatch_condition.wait()
+        try:
+            self._retire_owned_session_workers_for_close()
+        except Exception:
+            # Retain exact handles and proceed with daemon teardown only after
+            # the scheduler has drained accepted work below.
+            pass
+        with self._admission_lock:
             self.closed.set()
-        self.session_scheduler.close()
-        self.queue.shutdown(wait=True)
-        self.monitor.join(timeout=2)
-        self.store.close()
-        if hasattr(self, "backend") and hasattr(self.backend, "close"):
+        try:
+            self.session_scheduler.close()
+            self.queue.shutdown(wait=True)
+            # The first exact cleanup pass refuses busy work. Once every
+            # accepted lane has drained, retry only through the same public
+            # disconnect/retirement path; durable UNKNOWN work still blocks.
+            self._shutdown_tasks_drained = True
             try:
-                self.backend.close()
+                self._retire_owned_session_workers_for_close()
             except Exception:
                 pass
+            self.monitor.join(timeout=2)
+            if hasattr(self, "backend") and hasattr(self.backend, "close"):
+                try:
+                    self.backend.close()
+                except Exception:
+                    pass
+        finally:
+            try:
+                self.store.close()
+            finally:
+                with self._dispatch_condition:
+                    self._close_complete = True
+                    self._dispatch_condition.notify_all()
 
 
 def serve(home):

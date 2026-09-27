@@ -3,6 +3,7 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager, nullcontext
 from dataclasses import replace
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -644,6 +645,361 @@ def test_session_disconnect_retires_real_harmless_task_owned_popen(tmp_path):
         if process.poll() is None:
             process.terminate()
             process.wait(timeout=3)
+
+
+def test_control_daemon_close_retires_only_proven_session_worker_child(tmp_path):
+    from comsol_mcp._platform_process import process_identity
+
+    process = subprocess.Popen(
+        [sys.executable, "-c", "import time; time.sleep(30)"],
+        stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+    worker = _RealChildRetirementWorker()
+    worker._process = process
+    daemon = None
+    try:
+        identity = process_identity(process.pid)
+        if (identity.get("alive") is not True or type(identity.get("start_epoch_ms")) is not int
+                or identity["start_epoch_ms"] <= 0):
+            pytest.skip("host cannot provide exact process birth identity")
+        daemon, project_id = _connect_daemon(tmp_path, worker)
+        connected = daemon.dispatch(_connect_request(project_id, "connect-close-retires-worker"))
+        assert connected["success"] is True, connected
+        session_id = connected["data"]["session_id"]
+        completed = []
+        original_finish = daemon._finish
+
+        def capture_finish(record, result, status):
+            if record.get("operation") == "session.disconnect":
+                completed.append((dict(result), status))
+            return original_finish(record, result, status)
+
+        daemon._finish = capture_finish
+        daemon.close()
+        assert process.poll() is not None
+        child_receipt = {
+            "status": "RETIRED_BY_CONTROL_DAEMON_CLOSE",
+            "pid": process.pid,
+            "birth_start_epoch_ms": identity["start_epoch_ms"],
+            "exact_popen_handle": True,
+            "child_exit_confirmed": process.poll() is not None,
+            "child_returncode": process.returncode,
+            "post_exit_process_identity": process_identity(process.pid),
+            "worker_disconnect_calls": worker.disconnect_calls,
+            "worker_close_calls": worker.close_calls,
+            "server_stopped": False,
+        }
+        (tmp_path / "daemon_close_child_receipt.json").write_text(
+            json.dumps(child_receipt, sort_keys=True), encoding="utf-8",
+        )
+        assert worker.disconnect_calls == 1
+        assert worker.close_calls == 1
+        assert daemon._session_worker_handles == {}
+        assert daemon.session_scheduler.closed is True
+        assert daemon.closed.is_set()
+        assert completed and completed[-1][1] == "SUCCEEDED"
+        assert completed[-1][0]["data"]["server_stopped"] is False
+        assert completed[-1][0]["data"]["worker_retirement"]["child_reaped"] is True
+        rejected = daemon.dispatch({"operation": "session.list", "arguments": {"project_id": project_id}})
+        assert rejected["success"] is False
+        assert rejected["error"]["code"] == "CONTROL_DAEMON_CLOSING"
+    finally:
+        if daemon is not None:
+            daemon.close()
+        if process.poll() is None:
+            process.terminate()
+            process.wait(timeout=3)
+
+
+def test_control_daemon_close_leaves_unproven_worker_child_untouched(tmp_path, monkeypatch):
+    process = subprocess.Popen(
+        [sys.executable, "-c", "import time; time.sleep(30)"],
+        stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+    worker = _RealChildRetirementWorker()
+    worker._process = process
+    daemon = None
+    try:
+        monkeypatch.setattr(
+            "comsol_mcp._control_daemon.process_identity",
+            lambda pid: {"alive": pid == process.pid, "start_epoch_ms": None},
+        )
+        daemon, project_id = _connect_daemon(tmp_path, worker)
+        connected = daemon.dispatch(_connect_request(project_id, "connect-close-missing-birth"))
+        assert connected["success"] is True, connected
+        daemon.close()
+        assert process.poll() is None
+        assert worker.disconnect_calls == 0
+        assert worker.close_calls == 0
+        assert daemon._session_worker_handles[(project_id, connected["data"]["session_id"])] is worker
+    finally:
+        if daemon is not None:
+            daemon.close()
+        if process.poll() is None:
+            process.terminate()
+            process.wait(timeout=3)
+
+
+def test_control_daemon_close_preserves_unknown_session_worker_and_child(tmp_path):
+    from comsol_mcp._platform_process import process_identity
+
+    process = subprocess.Popen(
+        [sys.executable, "-c", "import time; time.sleep(30)"],
+        stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+    worker = _RealChildRetirementWorker()
+    worker._process = process
+    daemon = None
+    try:
+        identity = process_identity(process.pid)
+        if (identity.get("alive") is not True or type(identity.get("start_epoch_ms")) is not int
+                or identity["start_epoch_ms"] <= 0):
+            pytest.skip("host cannot provide exact process birth identity")
+        daemon, project_id = _connect_daemon(tmp_path, worker)
+        connected = daemon.dispatch(_connect_request(project_id, "connect-close-unknown-preserves-worker"))
+        assert connected["success"] is True, connected
+        session_id = connected["data"]["session_id"]
+        current = daemon.session_lifecycle.get(project_id, session_id)
+        unknown = daemon._updated_session_lifecycle(
+            current, state="UNKNOWN", client_state="UNKNOWN",
+            worker_instance_id=current["worker_instance_id"],
+            worker_epoch=current["worker_epoch"],
+            server_instance_id=current["server_instance_id"],
+        )
+        daemon.session_lifecycle.save(unknown, expected_revision=current["revision"])
+
+        daemon.close()
+
+        assert process.poll() is None
+        assert worker.disconnect_calls == 0
+        assert worker.close_calls == 0
+        assert daemon._session_worker_handles[(project_id, session_id)] is worker
+        from comsol_mcp._operation_store import OperationStore
+        from comsol_mcp._session_lifecycle import SessionLifecycleStore
+        reopened = OperationStore(daemon.home / "operations.sqlite3")
+        try:
+            assert SessionLifecycleStore(reopened).get(project_id, session_id)["state"] == "UNKNOWN"
+        finally:
+            reopened.close()
+    finally:
+        if daemon is not None:
+            daemon.close()
+        if process.poll() is None:
+            process.terminate()
+            process.wait(timeout=3)
+
+
+def test_control_daemon_close_preserves_busy_session_worker(tmp_path):
+    worker = _InjectedConnectWorker()
+    process = _SyntheticChildProcess(pid=7416)
+    worker._process = process
+    daemon, project_id = _connect_daemon(tmp_path, worker)
+    try:
+        connected = daemon.dispatch(_connect_request(project_id, "connect-close-busy-preserves-worker"))
+        assert connected["success"] is True, connected
+        session_id = connected["data"]["session_id"]
+        pending, reused = daemon.store.begin(
+            request_id="close-busy-running-work",
+            idempotency_key="close-busy-running-work",
+            request_hash="close-busy-running-work",
+            operation="study.run",
+            metadata={
+                "project_id": project_id,
+                "session_id": session_id,
+                "runtime_binding": {
+                    "kind": "registered_session", "project_id": project_id,
+                    "session_id": session_id, "worker_instance_id": "worker-fixture-1",
+                    "worker_epoch": 2,
+                },
+            },
+        )
+        assert reused is False
+        daemon.store.update_job(pending["job_id"], "UNKNOWN")
+
+        daemon.close()
+
+        assert worker.disconnect_calls == 0
+        assert worker.close_calls == 0
+        assert daemon._session_worker_handles[(project_id, session_id)] is worker
+        from comsol_mcp._operation_store import OperationStore
+        from comsol_mcp._session_lifecycle import SessionLifecycleStore
+        reopened = OperationStore(daemon.home / "operations.sqlite3")
+        try:
+            assert SessionLifecycleStore(reopened).get(project_id, session_id)["state"] == "CONNECTED"
+        finally:
+            reopened.close()
+        assert process.poll() is None
+    finally:
+        daemon.close()
+
+
+def test_control_daemon_close_retries_exact_retirement_after_busy_lane_drains(tmp_path):
+    from comsol_mcp._platform_process import process_identity
+    from comsol_mcp._operation_store import OperationStore
+    from comsol_mcp._session_lifecycle import SessionLifecycleStore
+
+    process = subprocess.Popen(
+        [sys.executable, "-c", "import time; time.sleep(30)"],
+        stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+    worker = _RealChildRetirementWorker()
+    worker._process = process
+    daemon = None
+    try:
+        identity = process_identity(process.pid)
+        if (identity.get("alive") is not True or type(identity.get("start_epoch_ms")) is not int
+                or identity["start_epoch_ms"] <= 0):
+            pytest.skip("host cannot provide exact process birth identity")
+        daemon, project_id = _connect_daemon(tmp_path, worker)
+        connected = daemon.dispatch(_connect_request(project_id, "connect-close-retires-after-drain"))
+        assert connected["success"] is True, connected
+        session_id = connected["data"]["session_id"]
+        context = daemon.session_registry.get(project_id, session_id)
+        pending, reused = daemon.store.begin(
+            request_id="close-drain-terminal-work",
+            idempotency_key="close-drain-terminal-work",
+            request_hash="close-drain-terminal-work",
+            operation="study.run",
+            metadata={
+                "project_id": project_id, "session_id": session_id,
+                "runtime_binding": {
+                    "kind": "registered_session", "project_id": project_id,
+                    "session_id": session_id, "worker_instance_id": "worker-fixture-1",
+                    "worker_epoch": 2,
+                },
+            },
+        )
+        assert reused is False
+        daemon.store.update_job(pending["job_id"], "RUNNING")
+        entered, release = threading.Event(), threading.Event()
+
+        def accepted_work():
+            entered.set()
+            assert release.wait(5)
+            daemon.store.update_job(pending["job_id"], "SUCCEEDED")
+
+        future = daemon.session_scheduler.submit(context, accepted_work)
+        assert entered.wait(2)
+        first_sweep_done = threading.Event()
+        original_sweep = daemon._retire_owned_session_workers_for_close
+        sweep_count = {"value": 0}
+
+        def observe_sweeps():
+            sweep_count["value"] += 1
+            original_sweep()
+            if sweep_count["value"] == 1:
+                first_sweep_done.set()
+
+        daemon._retire_owned_session_workers_for_close = observe_sweeps
+        close_done = threading.Event()
+        close_thread = threading.Thread(target=lambda: (daemon.close(), close_done.set()))
+        close_thread.start()
+        try:
+            assert first_sweep_done.wait(3)
+            assert process.poll() is None
+            assert worker.disconnect_calls == 0
+            assert worker.close_calls == 0
+            release.set()
+            future.result(timeout=3)
+            assert close_done.wait(5)
+            close_thread.join(timeout=1)
+        finally:
+            release.set()
+            if close_thread.is_alive():
+                close_thread.join(timeout=5)
+
+        assert not close_thread.is_alive()
+        assert sweep_count["value"] == 2
+        assert process.poll() is not None
+        assert worker.disconnect_calls == 1
+        assert worker.close_calls == 1
+        assert daemon._session_worker_handles == {}
+        (tmp_path / "daemon_close_after_drain_child_receipt.json").write_text(
+            json.dumps({
+                "status": "RETIRED_AFTER_SCHEDULER_DRAIN",
+                "pid": process.pid,
+                "birth_start_epoch_ms": identity["start_epoch_ms"],
+                "exact_popen_handle": True,
+                "child_exit_confirmed": process.poll() is not None,
+                "child_returncode": process.returncode,
+                "post_exit_process_identity": process_identity(process.pid),
+                "worker_disconnect_calls": worker.disconnect_calls,
+                "worker_close_calls": worker.close_calls,
+                "server_stopped": False,
+                "busy_job_terminal_status": "SUCCEEDED",
+            }, sort_keys=True), encoding="utf-8",
+        )
+        reopened = OperationStore(daemon.home / "operations.sqlite3")
+        try:
+            lifecycle = SessionLifecycleStore(reopened).get(project_id, session_id)
+            assert lifecycle["state"] == "DISCONNECTED"
+            assert lifecycle["client_state"] == "RETIRED"
+            assert reopened.job(pending["job_id"])["status"] == "SUCCEEDED"
+        finally:
+            reopened.close()
+    finally:
+        if daemon is not None:
+            daemon.close()
+        if process.poll() is None:
+            process.terminate()
+            process.wait(timeout=3)
+
+
+def test_control_daemon_close_waits_for_admitted_connect_before_session_lock(tmp_path, monkeypatch):
+    worker = _InjectedConnectWorker()
+    daemon, project_id = _connect_daemon(tmp_path, worker)
+    trying_connect = threading.Event()
+    result = {}
+    original_connect = daemon._dispatch_session_connect
+
+    def observed_connect(routed, execution):
+        trying_connect.set()
+        return original_connect(routed, execution)
+
+    monkeypatch.setattr(daemon, "_dispatch_session_connect", observed_connect)
+    daemon._session_connect_lock.acquire()
+    request_thread = threading.Thread(
+        target=lambda: result.setdefault("response", daemon.dispatch(
+            _connect_request(project_id, "connect-close-entry-barrier"),
+        )),
+    )
+    close_done = threading.Event()
+    close_thread = threading.Thread(target=lambda: (daemon.close(), close_done.set()))
+    request_thread.start()
+    try:
+        assert trying_connect.wait(2)
+        with daemon._dispatch_condition:
+            assert daemon._dispatch_condition.wait_for(
+                lambda: daemon._control_dispatch_inflight == 1, timeout=2,
+            )
+        close_thread.start()
+        with daemon._dispatch_condition:
+            assert daemon._dispatch_condition.wait_for(lambda: daemon._closing, timeout=2)
+            assert not close_done.is_set()
+        daemon._session_connect_lock.release()
+        request_thread.join(timeout=5)
+        assert not request_thread.is_alive()
+        assert result["response"]["success"] is False
+        assert result["response"]["error"]["code"] == "CONTROL_DAEMON_CLOSING"
+        assert worker.start_calls == 0
+        assert worker.connect_calls == 0
+        assert daemon._session_worker_handles == {}
+        assert close_done.wait(5)
+        close_thread.join(timeout=1)
+    finally:
+        try:
+            daemon._session_connect_lock.release()
+        except RuntimeError:
+            pass
+        if request_thread.is_alive():
+            request_thread.join(timeout=5)
+        if close_thread.ident is not None and close_thread.is_alive():
+            close_thread.join(timeout=5)
+        daemon.close()
 
 
 def test_session_disconnect_retirement_waits_for_accepted_worker_tasks(tmp_path, monkeypatch):
