@@ -383,14 +383,18 @@ class ModeOverlapAnalyticTests(unittest.TestCase):
 
 class ModeOverlapFailureTests(unittest.TestCase):
     def test_main_overlap_planarity_reproducer_rejects_warped_common_samples(self) -> None:
-        evidence_path = ROOT / "docs" / "full_project_execution" / "w23_overlap" / "evidence" / "main_overlap_planarity_reproducer.json"
-        evidence = json.loads(evidence_path.read_text())
-        definition = evidence["input"]
+        # Keep the reproducer self-contained so a clean checkout does not need
+        # the main executor's private raw evidence bundle.  Both fields are
+        # deliberately bound to the same warped coordinates: matching sample
+        # grids do not make a non-planar integration surface admissible.
+        definition = _definition()
         self.assertEqual(definition["plane"]["normal"], [0.0, 0.0, 1.0])
-        self.assertEqual(definition["plane"]["coordinates"][1][2], 0.1)
+        warped = [[0.0, 0.0, 0.0], [0.0, 0.5, 0.1], [0.0, 1.0, 0.0]]
+        _set_coordinates(definition, warped)
+        self.assertEqual(definition["plane"]["coordinates"], warped)
         for field_name in ("signal", "reference_mode"):
-            self.assertEqual(definition[field_name]["sample_coordinates"], definition["plane"]["coordinates"])
-        _expect_error(self, evidence["expected"]["error_code"], definition)
+            self.assertEqual(definition[field_name]["sample_coordinates"], warped)
+        _expect_error(self, "NON_PLANAR_SAMPLING_GEOMETRY", definition)
 
     def test_registered_surface_with_tilt_against_normal_is_rejected(self) -> None:
         definition = _definition()

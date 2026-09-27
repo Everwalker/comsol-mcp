@@ -465,6 +465,9 @@ def _managed_execution_binding(*, project_id: str, model_ref: Mapping[str, Any],
         _fail("registered project id is required for native fixture dispatch")
     if not isinstance(model_ref, Mapping) or not model_ref:
         _fail("persisted managed ModelRef is required for native fixture dispatch")
+    session_id = model_ref.get("session_id")
+    if not isinstance(session_id, str) or not session_id.strip():
+        _fail("exact session_id from the persisted ModelRef is required for native fixture dispatch")
     if not isinstance(model_tag, str) or not _TAG.fullmatch(model_tag):
         _fail("native model tag is malformed")
     if type(revision) is not int or revision < 0:
@@ -472,7 +475,8 @@ def _managed_execution_binding(*, project_id: str, model_ref: Mapping[str, Any],
     for value, label in ((request_id, "request_id"), (idempotency_key, "idempotency_key")):
         if not isinstance(value, str) or not value.strip():
             _fail(f"{label} is required for native fixture dispatch")
-    return {"project_id": project_id, "model_ref": copy.deepcopy(dict(model_ref)),
+    return {"project_id": project_id, "session_id": session_id,
+            "model_ref": copy.deepcopy(dict(model_ref)),
             "model_tag": model_tag, "expected_revision": revision,
             "request_id": request_id, "idempotency_key": idempotency_key}
 
@@ -502,7 +506,7 @@ def build_full3d_fixture_dispatch(
             "source_artifact": source_artifact,
             "entrypoint": "NativeW23Full3DFixture#run",
             "mode": "trusted", "arguments": java_args}},
-        "execution": {"project_id": binding["project_id"],
+        "execution": {"project_id": binding["project_id"], "session_id": binding["session_id"],
                       "model_ref": binding["model_ref"],
                       "expected_revision": binding["expected_revision"],
                       "request_id": binding["request_id"],
@@ -549,7 +553,7 @@ def build_full3d_case_dispatch(
             "source_artifact": source_artifact,
             "entrypoint": "NativeW23Full3DFixture#run",
             "mode": "trusted", "arguments": java_args}},
-        "execution": {"project_id": binding["project_id"],
+        "execution": {"project_id": binding["project_id"], "session_id": binding["session_id"],
                       "model_ref": binding["model_ref"],
                       "expected_revision": binding["expected_revision"],
                       "request_id": binding["request_id"],

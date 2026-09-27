@@ -90,7 +90,8 @@ def test_full3d_java_builder_has_rotation_and_local_section_readback_but_no_stud
 def _managed_binding():
     return {
         "project_id": "project-w23",
-        "model_ref": {"model_id": "model-1", "generation": 3},
+        "model_ref": {"schema_version": 1, "session_id": "session-1",
+                      "server_instance_id": "epoch-1", "model_tag": "model1", "generation": 3},
         "model_tag": "model1",
         "revision": 17,
         "experiment_id": "experiment-w23-full3d",
@@ -107,7 +108,8 @@ def test_full3d_builder_and_case_routes_are_revision_bound_configuration_only_ca
         request_id="request-build", idempotency_key="idem-build")
     assert build["operation"] == "operation_call"
     assert build["execution"] == {
-        "project_id": binding["project_id"], "model_ref": binding["model_ref"],
+        "project_id": binding["project_id"], "session_id": "session-1",
+        "model_ref": binding["model_ref"],
         "expected_revision": binding["revision"], "request_id": "request-build",
         "idempotency_key": "idem-build"}
     wrapped = build["arguments"]["arguments"]
@@ -128,6 +130,7 @@ def test_full3d_builder_and_case_routes_are_revision_bound_configuration_only_ca
     assert java_args["case"]["case_identity_sha256"] == angle["case_identity_sha256"]
     assert java_args["case"]["factor"] == "receiver_theta_z_deg"
     assert route["execution"]["project_id"] == angle["project_id"]
+    assert route["execution"]["session_id"] == "session-1"
     assert route["execution"]["expected_revision"] == angle["expected_revision"]
     assert route["study_or_solver_invoked"] is False
     assert route["native_result"] == "NOT_RUN"

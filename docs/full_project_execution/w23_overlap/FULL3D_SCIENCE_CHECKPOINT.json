@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "checkpoint": "w23_full3d_science_and_managed_chain",
+  "status": "PARTIAL",
+  "software_tests": "PASS",
+  "native_status": "NOT_RUN",
+  "scope": "Software helpers and fake-dispatch integration tests for project-bound full-3D setup, native-source contracts, independent complex-vector quadrature and comparison. Actual COMSOL model build, field extraction and solve were not executed. A Study.run request is generated but never submitted by the configuration chain.",
+  "implemented": [
+    "Public-dispatch-only configuration chain with exact project/ModelRef/revision readback and same-job observation without UNKNOWN replay",
+    "Project-local one-time Java source staging and aligned case configuration",
+    "Full-vector 3-D quadrature and separated mode/capture comparison, with predeclared zero-channel tolerances",
+    "Self-contained warped-plane negative fixture replacing private local JSON dependency"
+  ],
+  "tests": {
+    "passed": 55,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "command": [
+      "/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python",
+      "-m",
+      "pytest",
+      "-q",
+      "tests/test_w23_full3d_science.py",
+      "tests/test_w23_full3d.py",
+      "tests/test_mode_overlap.py",
+      "--junitxml=/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/docs/full_project_execution/w23_overlap/evidence/w23_full3d_science_checkpoint_20260927T103828Z/pytest.junit.xml"
+    ],
+    "python_version": "3.12.13 (main, Mar  3 2026, 12:39:30) [Clang 21.0.0 (clang-2100.0.123.102)]",
+    "junit_sha256": "987bf9e04c86c51c763ff3172b2ab1f58c5db1b3aa1997a31313e4d0b407d3f8",
+    "junit_local_path": "docs/full_project_execution/w23_overlap/evidence/w23_full3d_science_checkpoint_20260927T103828Z/pytest.junit.xml"
+  },
+  "compile": {
+    "class_output_directory": "/private/tmp/w23_full3d_science_javac_20260927T104100Z/classes",
+    "class_output_scope": "private temporary path; no COMSOL JARs or classfiles included in repository evidence bundle",
+    "classpath_jar_content_fingerprint_sha256": "c942b5e0fb93525bbd109028390bf15d27c1f702677149bca1b9f47aba7932b3",
+    "classpath_jar_count": 25,
+    "classpath_manifest_path": "/Applications/COMSOL64/Multiphysics/bin/comsolclientpath.txt",
+    "classpath_manifest_sha256": "ef9ccdd4b236aa56465e155860ed88465c89f63f86982898cc7b15f188ad0574",
+    "compiled_class_hashes": {
+      "NativeW23Full3DFixture$PortFrame.class": {
+        "bytes": 596,
+        "sha256": "bdb5d828a263d749c377035dd23a731dee51017a90a936f70e0736ccb805de92"
+      },
+      "NativeW23Full3DFixture.class": {
+        "bytes": 56763,
+        "sha256": "c6e6644e3af4da9510a2431da222d06ce47713475fd49a925fa4d44d5fd91107"
+      }
+    },
+    "javac_command": [
+      "/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home/bin/javac",
+      "-encoding",
+      "UTF-8",
+      "-classpath",
+      "/Applications/COMSOL64/Multiphysics/apiplugins/com.comsol.api_1.0.0.jar:/Applications/COMSOL64/Multiphysics/apiplugins/com.comsol.client_1.0.0.jar:/Applications/COMSOL64/Multiphysics/apiplugins/com.comsol.clientapi_1.0.0.jar:/Applications/COMSOL64/Multiphysics/apiplugins/com.comsol.communication_1.0.0.jar:/Applications/COMSOL64/Multiphysics/apiplugins/com.comsol.doc_1.0.0.jar:/Applications/COMSOL64/Multiphysics/apiplugins/com.comsol.nativebasicutil_1.0.0.jar:/Applications/COMSOL64/Multiphysics/apiplugins/com.comsol.nativejni_1.0.0.jar:/Applications/COMSOL64/Multiphysics/apiplugins/com.comsol.resources_1.0.0.jar:/Applications/COMSOL64/Multiphysics/apiplugins/com.comsol.security_1.0.0.jar:/Applications/COMSOL64/Multiphysics/apiplugins/com.comsol.systemutils_1.0.0.jar:/Applications/COMSOL64/Multiphysics/apiplugins/com.comsol.util_1.0.0.jar:/Applications/COMSOL64/Multiphysics/apiplugins/org.eclipse.emf.common_2.18.0.v20191225-1014.jar:/Applications/COMSOL64/Multiphysics/apiplugins/org.eclipse.equinox.common_3.11.0.v20200206-0817.jar:/Applications/COMSOL64/Multiphysics/apiplugins/org.eclipse.equinox.registry_3.8.700.v20200121-1457.jar:/Applications/COMSOL64/Multiphysics/apiplugins/javax.websocket-1.0.0.v20140310-1603.jar:/Applications/COMSOL64/Multiphysics/apiplugins/org.eclipse.jetty.jetty-client-9.4.58.v20250814.jar:/Applications/COMSOL64/Multiphysics/apiplugins/org.eclipse.jetty.jetty-http-9.4.58.v20250814.jar:/Applications/COMSOL64/Multiphysics/apiplugins/org.eclipse.jetty.jetty-io-9.4.58.v20250814.jar:/Applications/COMSOL64/Multiphysics/apiplugins/org.eclipse.jetty.jetty-util-9.4.58.v20250814.jar:/Applications/COMSOL64/Multiphysics/apiplugins/org.eclipse.jetty.websocket.javax-websocket-client-impl-9.4.58.v20250814.jar:/Applications/COMSOL64/Multiphysics/apiplugins/org.eclipse.jetty.websocket.websocket-api-9.4.58.v20250814.jar:/Applications/COMSOL64/Multiphysics/apiplugins/org.eclipse.jetty.websocket.websocket-client-9.4.58.v20250814.jar:/Applications/COMSOL64/Multiphysics/apiplugins/org.eclipse.jetty.websocket.websocket-common-9.4.58.v20250814.jar:/Applications/COMSOL64/Multiphysics/apiplugins/org.eclipse.osgi_3.15.200.v20200214-1600.jar:/Applications/COMSOL64/Multiphysics/apiplugins/truezip-6.jar",
+      "-d",
+      "/private/tmp/w23_full3d_science_javac_20260927T104100Z/classes",
+      "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/tools/java/NativeW23Full3DFixture.java"
+    ],
+    "javap_returncode": 0,
+    "returncode": 0,
+    "source": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/tools/java/NativeW23Full3DFixture.java",
+    "source_sha256": "83479fb9ddbc934ac6247611dcbadedcc21fb4528f2474f64be3005d54c9018a",
+    "version": "javac 11.0.31"
+  },
+  "comparison_policy": {
+    "capture_flux_absolute_normalized_tolerance": 1e-05,
+    "cross_absolute_normalized_tolerance": 1e-05,
+    "eta_absolute_tolerance": 1e-10,
+    "policy_id": "w23.full3d.native_vs_quadrature.atol_rtol.v1",
+    "relative_tolerance": 0.001
+  },
+  "source_hashes_sha256": {
+    "tests/test_mode_overlap.py": "affaf33952e8f6a21068104ff543edd6a6f7820f0bc58a7d5c5e0ee2f701e11b",
+    "tests/test_w23_full3d.py": "95f18baa3fdfe30a65b4a0a5afb15d757868b33d1defb4836335366b53fe0578",
+    "tests/test_w23_full3d_science.py": "e717ecdc3d94f1b303f51b045d1b029b6094b35585c646817cd1626d50896df5",
+    "tools/java/NativeW23Full3DFixture.java": "83479fb9ddbc934ac6247611dcbadedcc21fb4528f2474f64be3005d54c9018a",
+    "tools/w23_full3d.py": "be98f8b8521daa578f16fcc419a3c2019ee297acc75983b753c45488d24eaed9",
+    "tools/w23_full3d_science.py": "d20dcb49570ece6231d7f554c3033caa7018cce07bca0aa4b6394918806673f8"
+  },
+  "local_receipt": {
+    "path": "docs/full_project_execution/w23_overlap/evidence/w23_full3d_science_checkpoint_20260927T103828Z/checkpoint_receipt.json",
+    "sha256": "fff6cdd59f44682b64f37128f8e6a818a20269108e7bf04420fa6a3098103d41"
+  },
+  "root_review": {
+    "verified": [
+      "six source hashes",
+      "55 JUnit testcase outcomes and JUnit hash",
+      "COMSOL client classpath manifest file hash",
+      "both compiled class hashes"
+    ],
+    "classpath_content_fingerprint": "executor-reported; independent root verification covered manifest identity and class artifacts, not its aggregation algorithm",
+    "compiler_warning": "unchecked/unsafe Java operations warning; javac exit 0"
+  },
+  "remaining": [
+    "Versioned two-mode basis native adapter and independent projection tests",
+    "Actual managed native build/solve/source identity and raw complex-field acquisition",
+    "Power/mesh/quadrature convergence and full offset/tolerance cases",
+    "Save/reopen reproduction and available-platform native acceptance"
+  ],
+  "next_action": "Continue the separately versioned two-mode basis and managed science integration. Freeze a distinct complete native candidate only after current runtime integration and scoped checks; do not count this checkpoint as T014/T046 native acceptance."
+}
