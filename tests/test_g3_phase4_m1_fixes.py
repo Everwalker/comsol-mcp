@@ -77,6 +77,24 @@ def _case_material(case_dir: Path) -> dict[str, Any]:
             for name in CASE_FILES}
 
 
+def _case_directories(cases_root: Path) -> list[Path]:
+    """Return case directories while ignoring AppleDouble sidecar metadata."""
+    return sorted(
+        path for path in cases_root.iterdir()
+        if path.is_dir() and not path.name.startswith("._")
+    )
+
+
+def test_case_directory_inventory_ignores_appledouble_files(tmp_path: Path) -> None:
+    cases = tmp_path / "cases"
+    cases.mkdir()
+    real_case = cases / "GUARD_T005"
+    real_case.mkdir()
+    (cases / "._GUARD_T005").write_text("AppleDouble sidecar", encoding="utf-8")
+
+    assert _case_directories(cases) == [real_case]
+
+
 def _hash(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
@@ -1013,7 +1031,7 @@ def test_the_runs_shared_binding_is_captured_before_the_isolation_step(driver) -
     # The recorded M1 run shows the leak the fix removes: T006/T015 ran on mcp1, T010/T005 on the
     # model R04 created for itself, and neither isolated case recorded a restore.
     tags: dict[str, list[str]] = {}
-    for case_dir in sorted((RUN_DIR / "cases").iterdir()):
+    for case_dir in _case_directories(RUN_DIR / "cases"):
         text = json.dumps(_case_material(case_dir)["requests"])
         tags[case_dir.name] = sorted({segment for segment in text.split('"') if segment.startswith("mcp")})
     assert tags["W13_T006_variables"] == tags["W13_T015_units"] == ["mcp1"]

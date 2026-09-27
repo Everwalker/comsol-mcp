@@ -621,7 +621,11 @@ def _daemon(tmp_path, monkeypatch, behaviour):
 def _dispatch(daemon, key="k-1", request_id="r-1"):
     return daemon.dispatch({
         "operation": WRITE_OPERATION, "arguments": {},
-        "execution": {"session_id": "session", "model_ref": {"schema_version": 1, "session_id": "session",
+        # These tests exercise the legacy default backend lane.  The ModelRef
+        # carries its ledger session identity; omitting an outer session_id is
+        # the explicit default-session contract and does not fabricate a
+        # project-attributed SessionRuntimeContext.
+        "execution": {"model_ref": {"schema_version": 1, "session_id": "session",
                                                              "server_instance_id": "server",
                                                              "model_tag": "model", "generation": 1},
                       "expected_revision": 0, "idempotency_key": key, "request_id": request_id},

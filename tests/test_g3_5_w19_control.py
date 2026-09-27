@@ -2,11 +2,18 @@
 from __future__ import annotations
 
 import time
+from pathlib import Path
 import pytest
 from comsol_mcp._control_daemon import ControlDaemon
 from comsol_mcp._execution_contract import SessionLedger
 from comsol_mcp._execution_service import ExecutionService
 from comsol_mcp._operation_store import OperationStore
+from comsol_mcp._session_context import (
+    CanonicalSocket,
+    SessionEndpointIdentity,
+    SessionRuntimeConfig,
+    SessionRuntimeContext,
+)
 
 
 class MockAdapter:
@@ -149,25 +156,60 @@ def test_daemon_queued_cancel_prevents_engine_dispatch(tmp_path):
 
 def test_daemon_running_cancel_unsupported_native(tmp_path):
     service = ExecutionService(SessionLedger("s1", "srv1"), MockAdapter(), project_root=tmp_path)
-    ref = service.bind_model("m1")["execution"]["model_ref"]
-
-    def hanging_solve(args):
-        time.sleep(0.4)
-        return {"success": True, "data": {}}
-
-    daemon = ControlDaemon(
-        tmp_path,
+    daemon = ControlDaemon(tmp_path, service=service, registry={}, project_root=tmp_path)
+    project_response = daemon.dispatch({
+        "operation": "project.create",
+        "arguments": {"label": "shared-cancel", "workspace": "shared-cancel",
+                      "policy": {"permissions": ["inspect", "project_write", "compute"]}},
+        "execution": {"request_id": "shared-cancel-project", "idempotency_key": "shared-cancel-project"},
+    })
+    assert project_response["success"] is True, project_response
+    project_id = project_response["data"]["project"]["project_id"]
+    workspace = Path(project_response["data"]["project"]["workspace"])
+    peer = CanonicalSocket("127.0.0.1", 24568)
+    worker = object()
+    backend = type("SharedBackend", (), {
+        "service": service,
+        "worker": worker,
+        "worker_identity": {"connection_epoch": 1, "worker_instance_id": "shared-cancel-worker"},
+    })()
+    context = SessionRuntimeContext(
+        project_id=project_id,
+        session_id="s1",
+        project_root=workspace,
+        runtime=SessionRuntimeConfig(
+            runtime_id="shared-cancel-runtime", comsol_version="6.4.0.293",
+            installation_root=Path("/synthetic/comsol64"),
+            java_executable=Path("/synthetic/comsol64/java/bin/java"),
+            classpath=(Path("/synthetic/comsol64/plugins/client.jar"),),
+            preferences_dir=tmp_path / "prefs",
+            session_state_root=tmp_path / "session-state",
+        ),
+        endpoint=SessionEndpointIdentity(
+            host="127.0.0.1", port=peer.port, worker_epoch=1, observed_peer=peer,
+        ),
+        backend=backend,
+        worker_instance_id="shared-cancel-worker",
+        worker=worker,
         service=service,
-        registry={"run_study": hanging_solve},
+        server_ownership="shared",
     )
+    daemon.session_registry.register(context)
+    record, reused = daemon.store.begin(
+        request_id="shared-running-job", idempotency_key="shared-running-job",
+        request_hash="shared-running-job", operation="run_study",
+        metadata={
+            "operation": "run_study", "arguments": {},
+            "execution": {"project_id": project_id, "session_id": "s1"},
+            "runtime_binding": {"kind": "registered_session", "project_id": project_id,
+                                "session_id": "s1", "worker_epoch": 1,
+                                "worker_instance_id": "shared-cancel-worker"},
+        },
+    )
+    assert reused is False
+    job_id = record["job_id"]
+    daemon.store.update_job(job_id, "RUNNING")
     try:
-        res = daemon.dispatch({
-            "operation": "run_study",
-            "arguments": {},
-            "execution": {"model_ref": ref, "expected_revision": 0, "rpc_timeout_s": 0.05, "idempotency_key": "hk"},
-        })
-        job_id = res["data"]["job_id"]
-        time.sleep(0.08)  # let it enter RUNNING state
         assert daemon.store.job(job_id)["status"] == "RUNNING"
 
         # Request cancellation for running job without force_stop
@@ -182,11 +224,11 @@ def test_daemon_running_cancel_unsupported_native(tmp_path):
         force_res = daemon.dispatch({
             "operation": "job_cancel",
             "arguments": {"job_id": job_id, "force_stop": True, "server_scope": {"authorized": True}},
+            "execution": {"project_id": project_id, "session_id": "s1"},
         })
         assert force_res["success"] is False
         assert force_res["error"]["code"] == "CANNOT_TERMINATE_SHARED_SERVER"
-
-        time.sleep(0.4)
+        assert daemon.store.job(job_id)["status"] == "RUNNING"
     finally:
         daemon.close()
 

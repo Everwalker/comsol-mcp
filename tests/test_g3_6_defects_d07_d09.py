@@ -19,6 +19,7 @@ from comsol_mcp._execution_contract import (
 )
 from comsol_mcp._execution_service import ExecutionService
 from comsol_mcp._operation_store import IdempotencyConflict, OperationStore
+from tests.test_g3_6_defects_d01_d06 import _registered_force_stop_fixture
 
 
 class MockAdapter:
@@ -255,13 +256,17 @@ def test_dual_runtime_isolation_and_cross_rejection(tmp_path):
         assert res_mismatch["success"] is False
         assert res_mismatch["error"]["code"] == "CROSS_RUNTIME_REF_MISMATCH"
 
-        # Create active job in daemon_63
-        rec, _ = daemon_63.store.begin(request_id="r_win63", idempotency_key="k_win63", request_hash="h_win63", operation="run_study")
-        job_id_63 = rec["job_id"]
-        daemon_63.store.update_job(job_id_63, "RUNNING")
+        # Use an actual registered SessionRuntimeContext and durable Worker
+        # binding. An unbound historical row must fail closed before reaching
+        # this lease check.
+        registered_root = tmp_path / "bound"
+        registered_root.mkdir()
+        daemon_bound, _service, process, job_id_63, project_id = _registered_force_stop_fixture(
+            registered_root, lease_id="lease-win63",
+        )
 
         # Attempt force stop on daemon_63 using foreign lease (win64) -> must be rejected
-        cancel_with_foreign_lease = daemon_63.dispatch({
+        cancel_with_foreign_lease = daemon_bound.dispatch({
             "operation": "job_cancel",
             "arguments": {
                 "job_id": job_id_63,
@@ -272,12 +277,16 @@ def test_dual_runtime_isolation_and_cross_rejection(tmp_path):
                     "pid": 22222,               # Foreign PID!
                 },
             },
+            "execution": {"project_id": project_id, "session_id": "force-stop-session"},
         })
         assert cancel_with_foreign_lease["success"] is False
         assert cancel_with_foreign_lease["error"]["code"] == "UNAUTHORIZED_FORCE_STOP"
+        assert daemon_bound.store.job(job_id_63)["status"] == "RUNNING"
     finally:
         daemon_63.close()
         daemon_64.close()
+        if "daemon_bound" in locals():
+            daemon_bound.close()
 
 
 # ===========================================================================

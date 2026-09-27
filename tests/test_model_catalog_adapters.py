@@ -54,45 +54,61 @@ class Worker:
         return nullcontext()
 
 
-def _request(operation, arguments, *, session_id="session", model_ref=None, key="k"):
+def _request(operation, arguments, *, session_id="session", project_id=None, model_ref=None, key="k"):
     execution = {"session_id": session_id, "idempotency_key": key}
+    if project_id is not None:
+        execution["project_id"] = project_id
     if model_ref is not None:
         execution["model_ref"] = model_ref
     return {"operation": operation, "arguments": arguments, "execution": execution}
 
 
-def _nested(outer, operation, arguments, *, session_id="session", model_ref=None, key="k"):
+def _nested(outer, operation, arguments, *, session_id="session", project_id=None, model_ref=None, key="k"):
     execution = {"session_id": session_id, "idempotency_key": key}
+    if project_id is not None:
+        execution["project_id"] = project_id
     if model_ref is not None:
         execution["model_ref"] = model_ref
     return {"operation": outer, "arguments": {"operation_id": operation, "arguments": arguments}, "execution": execution}
 
 
+def _create_project(daemon, label):
+    response = daemon.dispatch({
+        "operation": "project.create",
+        "arguments": {"label": label, "workspace": label,
+                      "policy": {"permissions": ["inspect", "project_write", "compute"]}},
+        "execution": {"request_id": f"create-{label}", "idempotency_key": f"create-{label}"},
+    })
+    assert response["success"] is True, response
+    return response["data"]["project"]["project_id"]
+
+
 def test_model_adopt_adapts_server_model_tag_through_all_entrypoints(tmp_path, monkeypatch):
     service = ExecutionService(SessionLedger("session", "server"), Snapshot(), project_root=tmp_path)
     daemon = ControlDaemon(tmp_path, service=service, registry={}, worker=Worker(), project_root=tmp_path)
+    project_id = _create_project(daemon, "model-adopt-entrypoints")
     calls = []
     monkeypatch.setattr(daemon.backend, "adopt", lambda tag, project_id=None: calls.append((tag, project_id)) or {"success": True, "data": {"model_tag": tag}})
     try:
-        direct = daemon.dispatch(_request("model.adopt", {"server_model_tag": "m"}, key="direct"))
-        registry = daemon.dispatch(_nested("registry_call", "model.adopt", {"server_model_tag": "m"}, key="registry"))
-        operation = daemon.dispatch(_nested("operation_call", "model.adopt", {"server_model_tag": "m"}, key="operation"))
+        direct = daemon.dispatch(_request("model.adopt", {"server_model_tag": "m"}, project_id=project_id, key="direct"))
+        registry = daemon.dispatch(_nested("registry_call", "model.adopt", {"server_model_tag": "m"}, project_id=project_id, key="registry"))
+        operation = daemon.dispatch(_nested("operation_call", "model.adopt", {"server_model_tag": "m"}, project_id=project_id, key="operation"))
         assert all(item["success"] for item in (direct, registry, operation)), (direct, registry, operation)
-        assert calls == [("m", None), ("m", None), ("m", None)]
+        assert calls == [("m", project_id), ("m", project_id), ("m", project_id)]
         assert _g2_registry.is_implemented("model.adopt")
         contract = _g2_registry.operation_describe("model.adopt")["runtime_dispatch_contract"]
         assert contract["engine_queue"] == "serialized_worker_queue"
         assert "server_model_tag" in contract["model_adopt"]
 
         for request in (
-            _request("model.adopt", {"model_tag": "m"}, key="bad-alias"),
-            _request("model.adopt", {"server_model_tag": "m", "model_ref": {}}, key="bad-identity"),
-            _nested("registry_call", "model.adopt", {"server_model_tag": "m", "session_id": "spoof"}, key="bad-nested"),
+            _request("model.adopt", {"model_tag": "m"}, project_id=project_id, key="bad-alias"),
+            _request("model.adopt", {"server_model_tag": "m", "model_ref": {}}, project_id=project_id, key="bad-identity"),
+            _nested("registry_call", "model.adopt", {"server_model_tag": "m", "session_id": "spoof"}, project_id=project_id, key="bad-nested"),
         ):
             result = daemon.dispatch(request)
             assert result["success"] is False
             assert result["error"]["code"] == "INVALID_REQUEST"
-        assert calls == [("m", None), ("m", None), ("m", None)]
+        assert calls == [("m", project_id), ("m", project_id), ("m", project_id)]
     finally:
         daemon.close()
 
@@ -155,10 +171,19 @@ def test_model_inspect_reads_identity_structure_solutions_and_scoped_dependencie
         "datasets": ["dset1"], "results": ["pg1"], "file_path": "/private/model.mph",
     })
     service = ExecutionService(SessionLedger("session", "server"), Snapshot(), project_root=tmp_path)
-    model_ref = service.bind_model("m")["execution"]["model_ref"]
     daemon = ControlDaemon(tmp_path, service=service, registry={}, worker=Worker(), project_root=tmp_path)
+    project_id = _create_project(daemon, "model-inspect")
+    daemon.backend.worker_identity = {
+        "runtime_id": "model-inspect-runtime",
+        "worker_instance_id": "model-inspect-worker",
+        "connection_epoch": 1,
+        "server_instance_id": "model-inspect-connection-epoch",
+    }
     try:
-        result = daemon.dispatch(_request("model.inspect", {"detail": "summary"}, model_ref=model_ref, key="inspect-summary"))
+        adopted = daemon.dispatch(_request("model.adopt", {"server_model_tag": "m"}, project_id=project_id, key="adopt-model"))
+        assert adopted["success"] is True, adopted
+        model_ref = adopted["execution"]["model_ref"]
+        result = daemon.dispatch(_request("model.inspect", {"detail": "summary"}, project_id=project_id, model_ref=model_ref, key="inspect-summary"))
         assert result["success"] is True, result
         data = result["data"]
         assert data["model_identity"] == model_ref
@@ -172,17 +197,17 @@ def test_model_inspect_reads_identity_structure_solutions_and_scoped_dependencie
         assert _g2_registry.is_implemented("model.inspect")
 
         structure_only = daemon.dispatch(_nested("operation_call", "model.inspect", {"detail": "structure"},
-                                                  model_ref=model_ref, key="inspect-structure"))
+                                                  project_id=project_id, model_ref=model_ref, key="inspect-structure"))
         assert structure_only["success"] is True
         assert structure_only["data"]["structure"]["components"] == ["comp1"]
         assert structure_only["data"]["dependency_inventory"] is None
 
-        denied = daemon.dispatch(_request("model.inspect", {"detail": "unknown"}, model_ref=model_ref, key="bad-detail"))
+        denied = daemon.dispatch(_request("model.inspect", {"detail": "unknown"}, project_id=project_id, model_ref=model_ref, key="bad-detail"))
         assert denied["success"] is False
         assert denied["error"]["code"] == "INVALID_REQUEST"
 
         service.ledger.permissions.remove("inspect")
-        unauthorized = daemon.dispatch(_request("model.inspect", {}, model_ref=model_ref, key="no-permission"))
+        unauthorized = daemon.dispatch(_request("model.inspect", {}, project_id=project_id, model_ref=model_ref, key="no-permission"))
         assert unauthorized["success"] is False
         assert unauthorized["error"]["code"] == "PERMISSION_DENIED"
     finally:

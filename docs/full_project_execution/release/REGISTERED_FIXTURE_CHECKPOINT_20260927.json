@@ -1,0 +1,55 @@
+{
+  "prior_attempt": {
+    "blocked_run_directory": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-371/test_the_m1_stage_reruns_offli0/m1-offline",
+    "command": "same focused files plus full tests/test_g3_phase4_m1_fixes.py",
+    "counts": {
+      "errors": 0,
+      "failures": 3,
+      "passed": 68,
+      "skipped": 0,
+      "tests": 71
+    },
+    "junit_path": "/private/tmp/f04-regression-repair-20260927.xml",
+    "junit_sha256": "c49b1c43a9e3b25b8da46eec643e84f9d1219a56ca743e7fc2285901918fa719",
+    "note": "Three fixture failures were repaired in the successful rerun. The full phase4 M1 subprocess integration test itself produced a truthful BLOCKED run: six selected cases BLOCKED because the control daemon did not become ready. BLOCKED is not PASS; no engine acceptance is claimed.",
+    "stdout_stderr": "tool output retained in task transcript only; not separately captured"
+  },
+  "repairs": [
+    "test fixtures now persist connected Worker identity before project-bound ModelRef inspect",
+    "session cancel tests use a durable job bound to a registered context",
+    "foreign-lease force-stop negative preserves exact registered-context behavior",
+    "case inventory excludes AppleDouble sidecars and non-directories",
+    "legacy default-session domain outcome fixtures no longer invent a project/session binding"
+  ],
+  "schema": "f04-regression-repair-receipt/v1",
+  "scope": "offline regression fixture repair; no production runtime files changed",
+  "source_files_sha256": {
+    "tests/test_g3_5_w19_control.py": "4ee4a1b9608aabf840af275057cf2ddf56eb03a4cab44cee5060c569febccb2c",
+    "tests/test_g3_6_defects_d07_d09.py": "4a0fdf62bb6ee3752095dce05411b0177d5daba1cd714c459c59eb62643b66fa",
+    "tests/test_g3_domain_outcome.py": "8a98619bf362442e8c089ef62fa98b37648e06a0efac94cb3e4318565750ad0e",
+    "tests/test_g3_phase4_m1_fixes.py": "db4cb0df9eaed044f1cb2d2df3a81ba770371e81c67d1318fdb1b24e38f31695",
+    "tests/test_model_catalog_adapters.py": "15f7d85a0047cbe8f0fb278902fe4d66105614bc76ea95a6952d3c9cd36e76f1"
+  },
+  "successful_rerun": {
+    "command": "/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -m pytest -q --junitxml=/private/tmp/f04-regression-repair-20260927-v3.xml tests/test_g3_domain_outcome.py tests/test_model_catalog_adapters.py tests/test_g3_5_w19_control.py::test_daemon_running_cancel_unsupported_native tests/test_g3_6_defects_d07_d09.py::test_dual_runtime_isolation_and_cross_rejection tests/test_g3_phase4_m1_fixes.py::test_case_directory_inventory_ignores_appledouble_files",
+    "counts": {
+      "errors": 0,
+      "failures": 0,
+      "passed": 51,
+      "skipped": 0,
+      "tests": 51
+    },
+    "junit_path": "/private/tmp/f04-regression-repair-20260927-v3.xml",
+    "junit_sha256": "77b566bdd692fc80ff197f03eb2f2b89cd82a655b69d0d0436172fe98ccbba98",
+    "pytest": "9.1.1",
+    "python": "3.12.13",
+    "stdout_stderr_path": "/private/tmp/f04-regression-repair-20260927-v3.log",
+    "stdout_stderr_sha256": "87806e0a6e867c9cea74ca79bac0446057c6add49101de78c73f9549cda9bf3c"
+  },
+  "raw_receipt": {
+    "path": "/private/tmp/f04-regression-repair-checkpoint-20260927.json",
+    "sha256": "690a01559129c1e38aebfe9adbbcb1cb7695d02a7885ea09bb9d4a4e5be8d580"
+  },
+  "status": "PARTIAL_SCOPED_51_PASS_FULL_REGRESSION_PENDING",
+  "main_review": "Five source hashes, both JUnit counts/hashes and passing raw log verified. Production checks unchanged; tests use registered durable identities or explicit legacy default lane. M1 daemon readiness BLOCKED and earlier full-suite FAIL remain unresolved."
+}
