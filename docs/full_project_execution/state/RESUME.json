@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "phase": "F04_DAEMON_CLOSE_CHECKPOINT",
+  "phase": "W24_SETUP_CAMPAIGN_SOFTWARE_CHECKPOINT",
   "task": "W01_W26_CONTINUOUS_IMPLEMENTATION",
   "status": "PARTIAL_EXECUTION_CONTINUING_NATIVE_UNVERIFIED",
-  "candidate_source": "docs/full_project_execution/w23_overlap/AGGREGATION_CHECKPOINT.json",
+  "candidate_source": "docs/full_project_execution/w24/SETUP_CAMPAIGN_CHECKPOINT.json",
   "completed_work": [
     "PIN source restoration completed and verified: 10832 files, zero missing LFS backing objects; repository HEAD matches pinned commit/tree.",
     "tools/init_completion.py --repo repository completed; frozen inventory: 26 work packages, 272 actions, 60 tests x 6 targets = 360 test cells.",
@@ -68,9 +68,10 @@
     "W23 surface normal readback: 99 focused software tests PASS in isolated published25c22c5 + exact5-file overlay; root verified 87 runtime hashes, 57 project import paths and JUnit. Native/science NOT_RUN. See docs/full_project_execution/w23_overlap/NORMAL_READBACK_CHECKPOINT.json",
     "F04 session.connect software: isolated published2c1770a +5-file overlay,108 PASS; root verified5 overlay/84 unchanged runtime and JUnit. UNKNOWN retains originalWorker; shared server never owned by attach. Native NOT_RUN. docs/full_project_execution/project_session/SESSION_CONNECT_CHECKPOINT.json",
     "W24 baseline science atomic admission/original-revision repair:78 isolated software PASS including20 setup regressions;6Java sources compiled; hashes verified. Native0/NOT_RUN; sensitivity14 solves remains plan-only. docs/full_project_execution/w24/SCIENCE_ADMISSION_CHECKPOINT.json",
-    "Darwin process-birth adapter:13 isolated tests PASS, real task-owned harmless child stable birth/wrong-birth rejection/confirmed exit. Root verified87 unchanged runtime sources and SDK/probe/JUnit hashes. COMSOL lifecycle NOT_RUN. docs/full_project_execution/project_session/DARWIN_PROCESS_BIRTH_CHECKPOINT.json"
+    "Darwin process-birth adapter:13 isolated tests PASS, real task-owned harmless child stable birth/wrong-birth rejection/confirmed exit. Root verified87 unchanged runtime sources and SDK/probe/JUnit hashes. COMSOL lifecycle NOT_RUN. docs/full_project_execution/project_session/DARWIN_PROCESS_BIRTH_CHECKPOINT.json",
+    "W24 setup campaign scoped software: 53 isolated PASS, Python/Java compile PASS; root verified 2 overlays and107 published files. Native/science NOT_RUN. docs/full_project_execution/w24/SETUP_CAMPAIGN_CHECKPOINT.json"
   ],
-  "next_action": "Luna runtime continues evidence-backed full session.recover after owned start/stop publication. W23 identity/job.list repairs and W24 setup campaign tests continue; orphan cleanup requires pending explicit user authorization, no signal/relaunch. Preserve full W01-W26 and final independent review scope.",
+  "next_action": "Implement/test new-epoch fourteen-artifact reload/readback; continue remaining W24 science software while native resource authorization is pending. Main review F04 recovery and continue W23 single-BMA software; no overall completion.",
   "active_jobs": [],
   "blockers": [
     "W24 setup attempt 0841Z/0857Z ended FAIL_OR_INCOMPLETE before engine birth: project.create SUCCEEDED and project.inspect FAILED on injected idempotency_key. Preserve original receipt; do not replay this freeze. Offline helper fix and focused production test pass, but a new complete closure and root review are required before another setup launch.",
@@ -98,7 +99,7 @@
     "native_solve_budget_remaining": 0,
     "evidence": "docs/full_project_execution/evidence/luna_process_reconciliation/mac_readonly_snapshot_20260926T2152Z.json"
   },
-  "updated_at": "2026-09-27T17:14:28.725497+00:00",
+  "updated_at": "2026-09-27T17:44:12.522118+00:00",
   "note": "Continuous authorized execution through W26. OpenViking task-detail retrieval was denied by auto-review because it would disclose internal roadmap identifiers externally; no workaround. Use current frozen workpack and read-only local memory only. Do not rerun bootstrap/init on resume. Source files now contain executor edits; do not rerun bootstrap/init. Git metadata is an APFS pointer managed by main agent; migration requires bundle/source transfer, not copying only the repository pointer. Git metadata migration is documented by evidence/git_metadata_relocation.json and owned by the main agent; do not copy the APFS git pointer to another machine without source bundle/archive. GUI permission boundary and checkpoint solution-scope caveat recorded. This executor has one W24 native setup-only failure with exact cleanup verified; the durable operation/job UNKNOWN records remain unchanged. No W24 solver submission occurred. Saved-MPH readback supplement uses separate time/evidence and zero study/solver calls; run08 remains FAIL_OR_INCOMPLETE. Root raw SQLite recomputation is linked under native_resume_saved_artifact_supplement.raw_recomputation_evidence; original run08 remains FAIL_OR_INCOMPLETE and no solve budget is restored. Latest checkpoint 2026-09-27T03:50:43Z: W24 0334Z setup run failed pre-model due Python 3.14 missing mcp, with exact cleanup; 0346Z candidate pins the validated 3.12.13 environment and passes a production no-engine registry/daemon preflight. Native setup remains pending root review; science implementation continues offline. Latest checkpoint 2026-09-27T09:09:28Z: W24 0841Z candidate was invoked once at 0857Z and failed before any engine/Worker birth because project.inspect received an injected idempotency_key; project.create persisted successfully. Exact read-only SQLite hash and operation result are in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_contract_diagnostic.json. The runner now omits the unnecessary inspect key; actual ControlDaemon focused regression is 2/2 PASS in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_runner_regression_receipt.json. No native retry or acceptance is claimed; release F04 runtime integration is active, so refresh closure and root review are required before another launch. Windows COMSOL 6.3 remains required/unassessed; only macOS 6.3 is USER_REQUESTED_SKIP.",
   "native_resume_smoke": {
     "status": "FAIL_OR_INCOMPLETE_POINT_SCHEMA_FAILURE; SOLVED_CHILD_ARTIFACT_DURABLE; SOLVE_BUDGET_EXHAUSTED; SEPARATE_SAVED_MPH_READBACK_PASS",
@@ -936,12 +937,8 @@
   },
   "acceptance_cells_changed": false,
   "current_execution_checkpoint": {
-    "stage": "W23_SETUP_RUNNER_REPAIR_SOFTWARE",
-    "status": "PASS_SCOPED_SOFTWARE",
-    "overall": "PARTIAL",
-    "tests": "50 PASS / 0 FAIL / 0 ERROR / 0 SKIP",
-    "evidence": "docs/full_project_execution/w23_overlap/SETUP_RUNNER_REPAIR_CHECKPOINT.json",
-    "native_rerun": "NOT_RUN"
+    "path": "docs/full_project_execution/w24/SETUP_CAMPAIGN_CHECKPOINT.json",
+    "status": "PASS_SCOPED_SOFTWARE_NATIVE_NOT_RUN"
   },
   "w24_setup_candidate_0841z_native_attempt": {
     "candidate_id": "W24-CURE-HIST-AXISYM-01",
@@ -966,11 +963,11 @@
     "next": "Wait for stable F04 runtime handoff; refresh closure and submit a new candidate for root review. No automatic rerun."
   },
   "verified_git_sync": {
-    "commit": "e520e7c04ae0427c7553aa85de271bcbc664d5d9",
-    "origin_main": "e520e7c04ae0427c7553aa85de271bcbc664d5d9",
-    "verified_at": "2026-09-27T16:58:17.807506+00:00",
+    "commit": "3a7622fd4f27b6f27441de9d3b368254038baa8a",
+    "origin_main": "3a7622fd4f27b6f27441de9d3b368254038baa8a",
+    "verified_at": "2026-09-27T17:17:05.029108+00:00",
     "method": "push origin HEAD:main; fetch origin main; HEAD/origin-main equality",
-    "stage": "F04 owned Server lifecycle software"
+    "stage": "W23 setup runner identity and ledger repair"
   },
   "w24_static_shape_science_admission_repair": {
     "status": "SCOPED_SOFTWARE_REPAIR_ACCEPTED_NATIVE_NOT_RUN",

@@ -4,13 +4,13 @@ Updated 2026-09-27 UTC. **Overall PARTIAL; execution continues through W26.** Th
 
 ## Current stage
 
-**W23 setup runner repair: PASS for scoped software; W23 overall PARTIAL.** The runner now handles the actual helper process snapshot and binds numeric birth identity while its exact Popen is alive. Public job.list uses project-scoped, catalog-compatible 500-row pages with complete ledger checks.
+**W24 setup campaign: PASS for scoped software; W24 and project overall PARTIAL.** Fourteen unsolved model slots now have managed save/reopen, dependency preflight, bounded resource admission and conservative cleanup. Process identity failures cannot produce a false quiescent inventory.
 
-**Actually executed:** isolated published `a365420` plus exact overlay, **50 PASS / 0 FAIL / 0 ERROR / 0 SKIP**. Tests use the actual process-snapshot helper on a harmless child and real ControlDaemon/SQLite dispatch with 1007 jobs across three pages, foreign-project filtering, UNKNOWN detection and invalid-limit refusal. Main review verified 102 source files, 99 unchanged published files, candidate/receipt and JUnit hashes. [Compact evidence and replay](docs/full_project_execution/w23_overlap/SETUP_RUNNER_REPAIR_CHECKPOINT.json).
+**Actually executed:** isolated published `a365420` plus two-file overlay, **53 PASS / 0 FAIL / 0 ERROR / 0 SKIP**, Python compilation and four-class Java offline compilation PASS. Main review checked two overlays, 107 published sources and receipt/freeze/JUnit hashes. Integration uses real ControlDaemon/SQLite with stub Worker/Popen; **native and scientific acceptance NOT_RUN**. [Compact evidence and replay](docs/full_project_execution/w24/SETUP_CAMPAIGN_CHECKPOINT.json).
 
-**Native rerun/science NOT_RUN.** The earlier setup failed after creating a Server/control daemon, with no Worker or solver dispatched. Historical UNKNOWN and raw evidence remain intact. Cleanup has not run: automatic approval rejected SIGTERM for lack of explicit user authorization. The pending question scopes only those two task-owned processes; no workaround or relaunch is permitted.
+**Preserved W23 resources remain pending authorization.** Earlier setup failed before Worker/solver dispatch. Automatic approval rejected SIGTERM; cleanup has not run, and the explicit user question is still pending. No relaunch or workaround. Current process inventory has not been refreshed.
 
-F04 [owned Server software](docs/full_project_execution/project_session/OWNED_SERVER_CHECKPOINT.json) remains accepted at 212 PASS / 2 SKIP; full recovery is in progress. W24 setup candidate is being repaired after main review found a missing late-import cleanup dependency despite 40 tests passing; no native W24 execution.
+F04 recovery candidate is under main review (141 isolated software tests passed); W23 independent single-BMA producer software is in progress. These do not establish native acceptance.
 
 ## Latest accepted software baseline
 
@@ -26,8 +26,8 @@ Earlier source checkpoints and failures remain in the existing state and linked 
 
 ## In progress and real limitations
 
-- **F04:** connect/disconnect/reconnect software and recovery readback accepted. Next implement exact owned process lifecycle and full evidence-backed recovery, then managed native validation.
-- **W24:** preliminary 52-test result remains historically rejected; the repaired scoped software now passes78 isolated tests above. Variant-aware sensitivity software is accepted above; full native science remains incomplete and no old solve budget is borrowed.
+- **F04:** connect/disconnect/reconnect software and recovery readback accepted. Owned Server software is accepted; next review full evidence-backed recovery, then managed native validation.
+- **W24:** atomic admission (78 tests), sensitivity (96 tests), and setup campaign (53 tests) are scoped software checkpoints; full native science remains incomplete and no old solve budget is borrowed.
 - **W23:** Port/BMA metadata software is accepted above; actual selected-solution producer and field mapping remain next. Two basis vectors are distinct eigensolutions of one receiver BMA, not two physical Ports. Managed native optics and tolerance/convergence acceptance remain open.
 - **W24 historical attempts:** 0841Z freeze failed before engine birth (0 Workers/solves). Earlier ExternalStrain failure remains FAIL/UNKNOWN with safe_retry=false. Preserve these records; do not replay old freezes or reset budgets.
 - **W01–W22:** existing implementation/evidence is not a blanket completed acceptance. **W25/W26:** Desktop/platform/release matrix acceptance remains incomplete. Final independent overall Reviewer has **not started**.
@@ -35,6 +35,6 @@ Earlier source checkpoints and failures remain in the existing state and linked 
 
 ## Next action and recovery
 
-Continue the three Luna Max work streams: implement remaining session lifecycle routes; implement W23 actual mode provenance; implement W24 sensitivity variants and complete science orchestration. Publish each accepted software stage immediately. Then freeze isolated managed native candidates, execute their reviewed scope, complete all remaining W01–W26 work, and run a fresh independent overall review with repair/retest until accepted.
+Continue the three Luna Max work streams: implement remaining session lifecycle routes; implement W23 actual mode provenance; implement W24 new-epoch model reload and complete science orchestration. Publish each accepted software stage immediately. Then freeze isolated managed native candidates, execute their reviewed scope, complete all remaining W01–W26 work, and run a fresh independent overall review with repair/retest until accepted.
 
-The latest focused replay is in [SETUP_RUNNER_REPAIR_CHECKPOINT.json](docs/full_project_execution/w23_overlap/SETUP_RUNNER_REPAIR_CHECKPOINT.json). Recover from the GitHub checkout and existing state; raw local paths are supporting artifacts, not prerequisite hidden source. Usage interruption was resolved and three replacement executors resumed without restarting native jobs. Last previously verified GitHub sync: `e520e7c04ae0427c7553aa85de271bcbc664d5d9`; current-stage synchronization is recorded only after post-push fetch and HEAD/origin-main equality verification.
+The latest focused replay is in [SETUP_CAMPAIGN_CHECKPOINT.json](docs/full_project_execution/w24/SETUP_CAMPAIGN_CHECKPOINT.json). Recover from the GitHub checkout and existing state. Last previously verified GitHub sync: `3a7622fd4f27b6f27441de9d3b368254038baa8a`; this stage is recorded as synchronized only after post-push fetch and HEAD/origin-main equality.

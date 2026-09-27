@@ -642,7 +642,7 @@
       ],
       "original_delivery": "稳定胶形及全流程独立路线，质量/参考态/应力历史。",
       "source_row": "| W24 胶形/固化领域验收包 | G5 | W20, W21, W18 | T047, T058 | 稳定胶形及全流程独立路线，质量/参考态/应力历史。 |",
-      "status": "IN_PROGRESS",
+      "status": "PARTIAL",
       "implementation_paths": [
         "docs/full_project_execution/W24_MAIN_MODEL_PLAN.md",
         "docs/full_project_execution/w24/W24_CURE_FIXTURE_PROPOSAL.md",
@@ -696,7 +696,8 @@
         "docs/full_project_execution/w24/SHAPE_METRICS_CHECKPOINT.json",
         "docs/full_project_execution/w24/MANAGED_SHAPE_CHECKPOINT.json",
         "docs/full_project_execution/w24/HISTORY_CAPTURE_CHECKPOINT.json",
-        "docs/full_project_execution/w24/SCIENCE_ADMISSION_CHECKPOINT.json"
+        "docs/full_project_execution/w24/SCIENCE_ADMISSION_CHECKPOINT.json",
+        "docs/full_project_execution/w24/SETUP_CAMPAIGN_CHECKPOINT.json"
       ],
       "blockers": [
         "The W24 0841Z setup-only attempt failed before engine/Worker birth at project.inspect; preserve its FAIL_OR_INCOMPLETE result and do not replay the stale candidate.",
@@ -713,7 +714,8 @@
         "0510Z reviewed setup candidate native execution failed on the ExternalStrain parent path; status FAIL_OR_INCOMPLETE, durable UNKNOWN retained, exact cleanup verified, 0 solve submissions. Offline hierarchy root-cause evidence: docs/full_project_execution/w24/evidence/root_cause_external_strain_20260927T0523Z.json.",
         "2026-09-27 10:36Z: offline static-shape checkpoint recorded at docs/full_project_execution/w24/evidence/static_shape_offline_20260927T1036Z/checkpoint.json; javac 11.0.31 passed over 349 COMSOL plugin jars. Native acceptance remains NOT_RUN; compile does not establish COMSOL property/selection runtime readback.",
         "2026-09-27: static-shape metric helpers passed 23 synthetic-data tests and py_compile. Source/test/JUnit verified. Substrate-complete sampling, separate volume/contact/profile/speed gates are software-only; native field/history and sensitivity acceptance NOT_RUN.",
-        "Current science orchestration checkpoint is not accepted: preliminary 52-test synthetic run passed but root found duplicate-submission risk. Deterministic OperationStore admission, exact approval identity binding, Java cross-process lock, and unknown-before-ledger reentry tests remain. Native NOT_RUN; sensitivity matrix requires 14 paired solves and is not authorized under the older 10-solve budget."
+        "Current science orchestration checkpoint is not accepted: preliminary 52-test synthetic run passed but root found duplicate-submission risk. Deterministic OperationStore admission, exact approval identity binding, Java cross-process lock, and unknown-before-ledger reentry tests remain. Native NOT_RUN; sensitivity matrix requires 14 paired solves and is not authorized under the older 10-solve budget.",
+        "Setup campaign53 isolated software tests and offline compile PASS; native/science NOT_RUN. Next new-epoch reload/readback then full science."
       ]
     },
     {

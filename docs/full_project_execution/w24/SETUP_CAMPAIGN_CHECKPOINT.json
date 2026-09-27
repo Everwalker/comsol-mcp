@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "stage": "W24 fourteen-model unsolved setup campaign",
+  "status": "PASS_SCOPED_SOFTWARE",
+  "overall_w24": "PARTIAL",
+  "base_commit": "a365420814b9159230364ad953ee13e8db9cc9be",
+  "candidate": {
+    "candidate_source_closure_sha256": "9c7f09cfc34f100210b7b3bc4bb550ca2221e67d550c8c52b235d2a7a080efc5",
+    "freeze_sha256": "7f41e4cbb7646f1249e0adfc4b494f7784bb6280cccc1c60683de02abc0a5f72",
+    "sha256": "7d960f5eae90ae91bfbdf5359c20dcfb1e0f8a6f1eab058f156090ced97ac9d8",
+    "verification_status": "CANDIDATE_VERIFY_PASS_SETUP_ONLY_NOT_NATIVE",
+    "verify_receipt_sha256": "30fff6464afcd121dd8b1daa90c29bdf8ba2d090841c715f596f73fcdf06ff3b"
+  },
+  "source_manifest": {
+    "tests/test_run_native_w24_static_shape_setup_campaign.py": {
+      "bytes": 37347,
+      "candidate_overlay": true,
+      "sha256": "6cc2cf61496db89cc301e45e21339eea391ae388e4de0395e6d95ffd2d50a627"
+    },
+    "tools/run_native_w24_static_shape_setup_campaign.py": {
+      "bytes": 139317,
+      "candidate_overlay": true,
+      "sha256": "71dda633418a228a700243be8954437d2fab9cbbbfb602d90bf3752f2df70f3f"
+    }
+  },
+  "capabilities": [
+    "Fourteen hash-bound unsolved model setup/save/reopen slots with public managed dispatch, bounded resource admission and fail-closed cleanup.",
+    "Cleanup dependency preflight binds required modules before native birth; real SQLite/ControlDaemon cleanup tested with stub Worker/Popen.",
+    "Every scoped ps process remains present when identity is missing, unknown, exited or fails; failed inventory cannot establish quiescence."
+  ],
+  "validation": {
+    "tests": {
+      "cleanup_integration_scope": "Real ControlDaemon and SQLite OperationStore; actual project.create/session.connect/session.disconnect(retire_worker=true)/session.inspect dispatch; harmless stub Worker and synthetic Popen identity; server-stop adapter stubbed; no COMSOL/JVM/server process created.",
+      "command": [
+        "PYTHONPATH=<archive>:<exact-python-3.12-site-packages>",
+        "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1",
+        "/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python",
+        "-S",
+        "-m",
+        "pytest",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "--junitxml=<candidate-evidence>/focused.junit.xml",
+        "tests/test_run_native_w24_static_shape_setup_campaign.py",
+        "tests/test_w24_static_shape_managed.py",
+        "tests/test_w24_static_shape_sensitivity.py"
+      ],
+      "critical_test_cases": [
+        "test_exact_campaign_cleanup_uses_real_sqlite_daemon_and_stub_worker_only",
+        "test_campaign_receipt_acceptance_route_rejects_prior_worker_epoch",
+        "test_fresh_inventory_never_drops_ps_matched_process_on_identity_result",
+        "test_fresh_inventory_identity_exception_is_retained_as_unknown_process",
+        "test_fresh_inventory_is_quiescent_only_for_successful_empty_scoped_queries",
+        "test_fresh_inventory_empty_output_is_not_quiescent_if_either_query_failed"
+      ],
+      "cwd": "/private/tmp/w24_setup_campaign_a365_inventoryfix_20260928",
+      "junit_sha256": "16d5a7d2d13908863216ecc7ba7418e2f92fe336f241f78e2479b94528dfc0b5",
+      "status": "PASS",
+      "summary": {
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0,
+        "tests": 53,
+        "time_seconds": 0.529
+      }
+    },
+    "java_compile": {
+      "class_files_not_copied_to_repository_evidence": true,
+      "classpath_jar_content_fingerprint_sha256": "c942b5e0fb93525bbd109028390bf15d27c1f702677149bca1b9f47aba7932b3",
+      "classpath_jar_count": 25,
+      "classpath_manifest_sha256": "ef9ccdd4b236aa56465e155860ed88465c89f63f86982898cc7b15f188ad0574",
+      "compiled_class_count": 4,
+      "comsol_version": {
+        "root_name": "Multiphysics",
+        "version_text": "6.4"
+      },
+      "exit_code": 0,
+      "jdk_version": {
+        "arch": "aarch64",
+        "vendor": "Amazon.com Inc.",
+        "version": "11.0.31"
+      },
+      "receipt_sha256": "a54bd2bbd20a3d65116946510ed997c600d7749413f53ecf2e1a064320e9f743",
+      "source_sha256": {
+        "W24StaticShapeFixture.java": "0d585fc74526ccfed32b76ddad0f9e6e7943677f675499248e675fbf7defc421",
+        "W24StaticShapeReadback.java": "212e9e63d6e5f70baeff4aa895d145bed9f1da69a18ffc5f03abb796cf2f29a5"
+      },
+      "status": "COMPILE_PASS"
+    },
+    "main_verified": "2 overlays, 107 published source bytes, receipt/freeze/JUnit hashes and inventory correction reviewed",
+    "raw_receipt": {
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/docs/full_project_execution/w24/evidence/static_shape_setup_campaign_a365_inventoryfix_20260928/software_replay_receipt.json",
+      "sha256": "5f138d5603aba340a5f92dc8f11105d45883185bdb3e5f6a6f55fbca1729bcd9"
+    }
+  },
+  "native_execution": "NOT_RUN",
+  "scientific_acceptance": "NOT_RUN",
+  "process_inventory": "NOT_REFRESHED; sandbox ps denial is not quiescence",
+  "prior_candidates": "1eef1c2b rejected missing cleanup dependency; 4964c336 rejected unknown-identity inventory omission. Original receipts retained locally.",
+  "limitations": [
+    "Tested against published a365420 plus exact two-file overlay; does not certify later F04 runtime changes.",
+    "Native launch remains gated by fresh process inventory and coordination of preserved W23 resources.",
+    "Setup refs become historical after Worker retirement; new science Worker must reload hashes and fully re-read configurations.",
+    "W24 UV/gel/reference/viscoelastic and final independent overall review remain incomplete."
+  ],
+  "replay": {
+    "requirements": "Python 3.12 with project test dependencies; local COMSOL 6.4 JARs and JDK11 for offline compilation.",
+    "source": "git archive a365420814b9159230364ad953ee13e8db9cc9be then overlay only the two source_manifest paths from this checkpoint commit.",
+    "test_command": "python -m pytest -q tests/test_run_native_w24_static_shape_setup_campaign.py tests/test_w24_static_shape_managed.py tests/test_w24_static_shape_sensitivity.py",
+    "entrypoint": "tools/run_native_w24_static_shape_setup_campaign.py; prepare/verify before separately reviewed native execution"
+  },
+  "next_action": "Implement/test new-epoch fourteen-artifact reload/readback; continue remaining W24 science software while native resource authorization is pending."
+}
