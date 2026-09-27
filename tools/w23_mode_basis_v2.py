@@ -555,16 +555,11 @@ def compute_two_mode_basis_projection(
 
 
 def _basis_request_binding(request: Mapping[str, Any]) -> dict[str, Any]:
-    keys = (
-        "schema_id", "schema_version", "profile", "algorithm_id", "basis_id", "case",
-        "project_id", "model_ref", "model_revision", "geometry_revision", "frequency_hz",
-        "coordinate_frame", "power_unit", "field_units", "phasor_convention",
-        "output_surface", "input_surface", "signal_source", "basis_modes",
-        "incident_source", "applicability", "policy", "quadratures",
-        "native_verification", "native_result", "dispatchable", "production_route_status",
-        "native_integral_plan",
-    )
-    return {key: request[key] for key in keys}
+    # The canonical digest body is owned by the installable runtime package so
+    # production validators never depend on the development-only ``tools`` tree.
+    from comsol_mcp._w23_basis_v2_contract import basis_request_binding
+
+    return basis_request_binding(request)
 
 
 def _basis_reference_identity(request: Mapping[str, Any]) -> dict[str, Any]:

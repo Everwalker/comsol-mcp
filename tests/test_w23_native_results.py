@@ -59,6 +59,39 @@ def _capture_definition() -> dict[str, object]:
     return definition
 
 
+def _project_bound_model_ref(daemon, suffix: str, monkeypatch) -> tuple[dict[str, object], dict[str, object]]:
+    """Create a real project row and bind the existing fake-Worker model to it."""
+    # The backend persists project attribution alongside an attested Worker
+    # identity. This is test identity only; the fake Worker never contacts COMSOL.
+    daemon.backend.worker_identity = {
+        "runtime_id": "test-runtime", "worker_instance_id": "test-worker",
+        "connection_epoch": 1, "server_instance_id": "server",
+    }
+    created = daemon.dispatch({
+        "operation": "project.create",
+        "arguments": {
+            "label": f"w23-{suffix}", "workspace": f"w23-{suffix}",
+            "policy": {"permissions": ["inspect", "project_write", "compute"]},
+        },
+        "execution": {"request_id": f"w23-create-{suffix}",
+                      "idempotency_key": f"w23-create-{suffix}"},
+    })
+    assert created["success"] is True, created
+    project = created["data"]["project"]
+    import comsol_mcp._server as server
+    monkeypatch.setattr(server, "_current_model", getattr(server, "_current_model", None), raising=False)
+    adopted = daemon.dispatch({
+        "operation": "model.adopt",
+        "arguments": {"server_model_tag": "m"},
+        "execution": {
+            "project_id": project["project_id"], "session_id": "session",
+            "request_id": f"w23-adopt-{suffix}", "idempotency_key": f"w23-adopt-{suffix}",
+        },
+    })
+    assert adopted["success"] is True, adopted
+    return project, adopted["execution"]["model_ref"]
+
+
 def _install_native_evidence(monkeypatch, *, mode_frequency_hz=193.1e12,
                              cross_value=4 + 3j, cross_unit="W/m", cross_complex=True,
                              cleanup_removed=True, dataset_override=None,
@@ -245,13 +278,14 @@ def test_managed_entrypoints_use_one_native_route_and_keep_evaluate_gates(tmp_pa
             return nullcontext()
 
     service = ExecutionService(SessionLedger("session", "server"), Snapshot(), project_root=tmp_path)
-    model_ref = service.bind_model("m")["execution"]["model_ref"]
     from comsol_mcp._control_daemon import ControlDaemon
 
     daemon = ControlDaemon(tmp_path / "control", service=service, registry={}, worker=Worker(), project_root=tmp_path)
+    project, model_ref = _project_bound_model_ref(daemon, outer, monkeypatch)
     isolation_calls = []
     monkeypatch.setattr(daemon.backend, "_require_g2_isolation", lambda: isolation_calls.append(True) or {"status": "TEST_RECEIPT"})
-    execution = {"session_id": "session", "model_ref": model_ref, "expected_revision": 0,
+    execution = {"project_id": project["project_id"], "session_id": "session",
+                 "model_ref": model_ref, "expected_revision": 0,
                  "idempotency_key": f"key-{outer}", "request_id": f"request-{outer}"}
     inner = {"definition": definition}
     if outer == "direct":
@@ -301,13 +335,14 @@ def test_evaluate_routes_refuse_without_owned_server_receipt_before_native_dispa
     from comsol_mcp._control_daemon import ControlDaemon
 
     service = ExecutionService(SessionLedger("session", "server"), Snapshot(), project_root=tmp_path)
-    model_ref = service.bind_model("m")["execution"]["model_ref"]
     daemon = ControlDaemon(tmp_path / "control", service=service, registry={}, worker=Worker(), project_root=tmp_path)
+    project, model_ref = _project_bound_model_ref(daemon, "no-receipt", monkeypatch)
     monkeypatch.setattr(_managed_backend, "configured_receipt", lambda: None)
     evaluate_args = {"spec": {"expressions": ["emw.Ex"], "solution": {
         "dataset": "d_signal", "solution": "sol_signal", "outer": 1, "inner": 1,
     }, "aggregate": "integral", "entity_dim": 1}}
-    execution = {"session_id": "session", "model_ref": model_ref, "expected_revision": 0}
+    execution = {"project_id": project["project_id"], "session_id": "session",
+                 "model_ref": model_ref, "expected_revision": 0}
     try:
         overlap = daemon.dispatch({"operation": "result.mode_overlap", "arguments": {"definition": definition},
                                    "execution": {**execution, "idempotency_key": "no-receipt-overlap", "request_id": "no-receipt-overlap"}})
@@ -345,8 +380,8 @@ def test_neighboring_result_evaluate_keeps_normal_evaluate_ticket_when_receipt_i
     from comsol_mcp._control_daemon import ControlDaemon
 
     service = ExecutionService(SessionLedger("session", "server"), Snapshot(), project_root=tmp_path)
-    model_ref = service.bind_model("m")["execution"]["model_ref"]
     daemon = ControlDaemon(tmp_path / "control", service=service, registry={}, worker=Worker(), project_root=tmp_path)
+    project, model_ref = _project_bound_model_ref(daemon, "receipt-eval", monkeypatch)
     isolation_calls = []
     native_calls = []
     monkeypatch.setattr(daemon.backend, "_require_g2_isolation", lambda: isolation_calls.append(True) or {"status": "OWNED"})
@@ -354,7 +389,8 @@ def test_neighboring_result_evaluate_keeps_normal_evaluate_ticket_when_receipt_i
                         lambda *_args, **_kwargs: native_calls.append(True) or {"status": "SUCCEEDED", "result": 3})
     try:
         response = daemon.dispatch({"operation": "result.evaluate", "arguments": {"spec": {}},
-                                    "execution": {"session_id": "session", "model_ref": model_ref,
+                                    "execution": {"project_id": project["project_id"],
+                                                  "session_id": "session", "model_ref": model_ref,
                                                   "expected_revision": 0, "idempotency_key": "receipt-eval",
                                                   "request_id": "receipt-eval"}})
     finally:

@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "phase": "OFFLINE_REGRESSION_REPAIR_CHECKPOINT",
+  "phase": "W23_V2_HANDLER_SOFTWARE_CHECKPOINT",
   "task": "W01_W26_CONTINUOUS_IMPLEMENTATION",
-  "status": "PARTIAL_FULL_OFFLINE_FAIL_SCOPED_REPAIRS_PASS",
-  "candidate_source": "Seven-file repair source hashes and separately scoped full-failure/post-fix subset evidence: docs/full_project_execution/release/OFFLINE_REPAIR_CHECKPOINT_20260927.json. No complete native/release candidate is frozen.",
+  "status": "PARTIAL_SCOPED_82_PASS_NATIVE_NOT_RUN",
+  "candidate_source": "docs/full_project_execution/w23_overlap/V2_HANDLER_CHECKPOINT.json",
   "completed_work": [
     "PIN source restoration completed and verified: 10832 files, zero missing LFS backing objects; repository HEAD matches pinned commit/tree.",
     "tools/init_completion.py --repo repository completed; frozen inventory: 26 work packages, 272 actions, 60 tests x 6 targets = 360 test cells.",
@@ -57,9 +57,10 @@
     "W24 retirement integration checkpoint 2026-09-27T08:29Z: public ControlDaemon quiescence readback validation now matches the released schema (Worker instance and connection epoch; COMSOL server epoch remains separately bound through ModelRefs). Worker transition and final cleanup hold worker_retirement_guard from the fresh cross-project ledger/direct-RPC readback through exact owned cleanup and Popen exit confirmation. Actual ControlDaemon + fake Worker tests cover cross-project RUNNING work, work racing after an observational snapshot, admission refusal under RETIRING, and confirmed retirement. Exact Python 3.12.13 py_compile passed; 37 focused tests passed in the immutable capsule; an expanded W24-focused suite passed 83 tests. Receipt: docs/full_project_execution/w24/evidence/worker_retirement_integration_20260927T0829Z/run_receipt.json (SHA-256 e9a99f8dd8df1fcc327e633b53a419174f73d98a2d3b07f41c972b615758c244). Native status NOT_RUN; no COMSOL process or solve was launched, and no old FAIL/UNKNOWN state changed.",
     "W23 full-3D software checkpoint: 55 tests and JDK11 COMSOL6.4 Java compilation PASS; see docs/full_project_execution/w23_overlap/FULL3D_SCIENCE_CHECKPOINT.json. Native setup/fields/solve and T014/T046 acceptance remain NOT_RUN.",
     "W24 shape-metrics software checkpoint: 23 synthetic-data tests and py_compile PASS; source/test/JUnit hashes independently checked. Native observation binding and scientific acceptance remain NOT_RUN.",
-    "F04 unified scheduling and exact job control software checkpoint: 164 focused synthetic tests PASS. Source/JUnit hashes independently verified; three cached session reads implemented, six mutations/native lifecycle still open."
+    "F04 unified scheduling and exact job control software checkpoint: 164 focused synthetic tests PASS. Source/JUnit hashes independently verified; three cached session reads implemented, six mutations/native lifecycle still open.",
+    "W23 isolated v2 handler checkpoint: 82 software tests PASS, all 97 dependency and JUnit/log hashes independently verified. Handler unregistered; native/wheel-install acceptance NOT_RUN."
   ],
-  "next_action": "Continue existing Luna executors through W01-W26. Repair remaining full-offline failures with real registered project/session fixtures, preserved force-stop checks and AppleDouble-safe evidence enumeration; run a frozen tracked/intended-test inventory with authorized loopback and bind exact sources. Then complete six session mutations, host identity and retirement. W23 dedicated native v2 adapter must preserve scalar v1 constraints; W24 continues raw field/time capture and full cure/static-shape science. Prepare isolated committed candidates and review before native launch. Preserve FAIL/UNKNOWN evidence, Windows 6.3 and remaining W25/W26/final independent acceptance. Sync each completed stage and continue.",
+  "next_action": "Register distinct v2 operation and verify managed dispatch/wheel installation; finish W24 full-domain capture checkpoint; rerun frozen full offline inventory; continue session lifecycle, F16, W25/W26 and final independent review.",
   "active_jobs": [],
   "blockers": [
     "W24 setup attempt 0841Z/0857Z ended FAIL_OR_INCOMPLETE before engine birth: project.create SUCCEEDED and project.inspect FAILED on injected idempotency_key. Preserve original receipt; do not replay this freeze. Offline helper fix and focused production test pass, but a new complete closure and root review are required before another setup launch.",
@@ -87,7 +88,7 @@
     "native_solve_budget_remaining": 0,
     "evidence": "docs/full_project_execution/evidence/luna_process_reconciliation/mac_readonly_snapshot_20260926T2152Z.json"
   },
-  "updated_at": "2026-09-27T10:58:57.870413+00:00",
+  "updated_at": "2026-09-27T12:15:00Z",
   "note": "Continuous authorized execution through W26. OpenViking task-detail retrieval was denied by auto-review because it would disclose internal roadmap identifiers externally; no workaround. Use current frozen workpack and read-only local memory only. Do not rerun bootstrap/init on resume. Source files now contain executor edits; do not rerun bootstrap/init. Git metadata is an APFS pointer managed by main agent; migration requires bundle/source transfer, not copying only the repository pointer. Git metadata migration is documented by evidence/git_metadata_relocation.json and owned by the main agent; do not copy the APFS git pointer to another machine without source bundle/archive. GUI permission boundary and checkpoint solution-scope caveat recorded. This executor has one W24 native setup-only failure with exact cleanup verified; the durable operation/job UNKNOWN records remain unchanged. No W24 solver submission occurred. Saved-MPH readback supplement uses separate time/evidence and zero study/solver calls; run08 remains FAIL_OR_INCOMPLETE. Root raw SQLite recomputation is linked under native_resume_saved_artifact_supplement.raw_recomputation_evidence; original run08 remains FAIL_OR_INCOMPLETE and no solve budget is restored. Latest checkpoint 2026-09-27T03:50:43Z: W24 0334Z setup run failed pre-model due Python 3.14 missing mcp, with exact cleanup; 0346Z candidate pins the validated 3.12.13 environment and passes a production no-engine registry/daemon preflight. Native setup remains pending root review; science implementation continues offline. Latest checkpoint 2026-09-27T09:09:28Z: W24 0841Z candidate was invoked once at 0857Z and failed before any engine/Worker birth because project.inspect received an injected idempotency_key; project.create persisted successfully. Exact read-only SQLite hash and operation result are in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_contract_diagnostic.json. The runner now omits the unnecessary inspect key; actual ControlDaemon focused regression is 2/2 PASS in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_runner_regression_receipt.json. No native retry or acceptance is claimed; release F04 runtime integration is active, so refresh closure and root review are required before another launch. Windows COMSOL 6.3 remains required/unassessed; only macOS 6.3 is USER_REQUESTED_SKIP.",
   "native_resume_smoke": {
     "status": "FAIL_OR_INCOMPLETE_POINT_SCHEMA_FAILURE; SOLVED_CHILD_ARTIFACT_DURABLE; SOLVE_BUDGET_EXHAUSTED; SEPARATE_SAVED_MPH_READBACK_PASS",
@@ -925,11 +926,8 @@
     "next": "Wait for stable F04 runtime handoff; refresh closure and submit a new candidate for root review. No automatic rerun."
   },
   "verified_git_sync": {
-    "status": "VERIFIED",
-    "head": "eaca9fe8f15d2f572f2c4899e98174d431fdb15a",
-    "origin_main": "eaca9fe8f15d2f572f2c4899e98174d431fdb15a",
-    "method": "non-force synchronization",
-    "verified_at_utc": "2026-09-27T10:44:19.252321+00:00",
-    "semantics": "Historical confirmed synchronization point; later commits may descend from it. This record is not a reset target or a claim that a later HEAD has already been pushed."
+    "commit": "a0f2c31dc6a6f713b1c49c8ec681dded586c8047",
+    "status": "HEAD_EQUALS_ORIGIN_MAIN_VERIFIED",
+    "scope": "Prior checkpoint, verified before this W23 stage; historical recovery point, not reset instruction."
   }
 }

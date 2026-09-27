@@ -582,7 +582,13 @@
         "tools/w23_full3d.py",
         "tools/w23_full3d_science.py",
         "tools/w23_mode_basis_v2.py",
-        "tests/test_w23_mode_basis_v2.py"
+        "tests/test_w23_mode_basis_v2.py",
+        "comsol_mcp/_w23_basis_v2_contract.py",
+        "comsol_mcp/_w23_basis_v2_results.py",
+        "tools/w23_mode_basis_v2_native_plan.py",
+        "tests/test_w23_mode_basis_v2_native_plan.py",
+        "tests/test_w23_mode_basis_v2_results.py",
+        "tests/test_w23_native_results.py"
       ],
       "evidence": [
         "docs/full_project_execution/w23_overlap/software_test_evidence.md",
@@ -592,10 +598,11 @@
         "docs/full_project_execution/evidence/main_w23_candidate05_cleanup_review.json",
         "docs/full_project_execution/evidence/main_w23_candidate06_native_review.json",
         "docs/full_project_execution/w23_overlap/FULL3D_SCIENCE_CHECKPOINT.json",
-        "docs/full_project_execution/w23_overlap/TWO_MODE_BASIS_CHECKPOINT.json"
+        "docs/full_project_execution/w23_overlap/TWO_MODE_BASIS_CHECKPOINT.json",
+        "docs/full_project_execution/w23_overlap/V2_HANDLER_CHECKPOINT.json"
       ],
       "blockers": [],
-      "note": "W23 remains PARTIAL. Full-3D setup checkpoint: 55 tests/Java compile PASS; basis v2 checkpoint: 32 synthetic/envelope tests PASS. V2 production route NOT_REGISTERED; native build, field extraction, solve and optical acceptance NOT_RUN. Historical native failures remain preserved.",
+      "note": "W23 PARTIAL. Isolated v2 handler: 82 software tests PASS with verified source/JUnit hashes. Distinct managed route still NOT_REGISTERED; native execution and built-wheel install NOT_RUN. Next integrate registration, verify routing/package, then reviewed native science candidate.",
       "execution_notes": [
         "Candidate05 native Port API preflight failed before any solve; exact cleanup confirmed and runtime freeze released. Durable operation/job remain UNKNOWN; no W23 native acceptance.",
         "Candidate06 native PortNumeric API-only readback passed with 1 fixture/0 solves; exact 9.849-second cleanup confirmed. Optical extraction/physics/route integration and total W23 acceptance remain open.",
