@@ -158,6 +158,7 @@ from ._g3_common import (
     resolve_path,
     tag_conflict,
     tag_list,
+    typed_value_from_json,
     validate_tag,
 )
 
@@ -545,11 +546,81 @@ def _status(applied: Sequence[Any], failed: Sequence[Any], not_executed: Sequenc
 
 
 def _property_write(node_path: Mapping[str, Any], worker: Any, model_tag: str,
-                    payload: Sequence[dict[str, Any]]) -> dict[str, Any]:
+                    payload: Sequence[dict[str, Any]], *,
+                    documented_import_filename_fallback: bool = False) -> dict[str, Any]:
     """Run the G2 property-set discipline and normalise its envelope."""
     if not payload:
         return {"applied": [], "failed": [], "not_executed": [], "execution_state_unknown": False,
                 "readback_values": {}, "engine_error": None}
+    if documented_import_filename_fallback:
+        # COMSOL 6.4 documents Import.filename as String and the setter shape
+        # set(property,value): KB doc 4241/chunk 16969, source SHA-256
+        # c6314b25ce71f0874f8d849711c5dc42b2aee37bce8085234717a6bbdb353650.
+        # PropFeature exposes getString: doc 7582/chunk 22860, SHA-256
+        # ce5b7db953dd366ecb91e4a3feee92014d1655aacc6fbf30aaef9e97eaf12ce6.
+        # Keep the exception exact: only this feature/property pair gets the
+        # documented String setter and getString readback; all other unknown
+        # properties still go through G2's fail-closed metadata path.
+        filename_rows = [item for item in payload if item.get("name") == "filename"]
+        if len(filename_rows) != 1:
+            raise ExecutionContractError("INVALID_REQUEST", "the Import filename adapter requires exactly one filename row")
+        filename_item = filename_rows[0]
+        typed = filename_item.get("value")
+        if (not isinstance(typed, Mapping) or typed.get("kind") != "string"
+                or typed.get("shape") != [] or not isinstance(typed.get("data"), str)
+                or typed.get("java_signature") != "java.lang.String"):
+            raise ExecutionContractError("PROPERTY_TYPE_MISMATCH", "Import.filename requires the documented Java String scalar contract")
+        node = resolve_path(worker, model_tag, node_path, label="Import feature")[1]
+        actual_type = _call(node, "getType")
+        if actual_type != "Import":
+            raise ExecutionContractError("API_UNSUPPORTED", "the Import.filename adapter resolved a non-Import feature")
+        applied: list[dict[str, Any]] = []
+        failed: list[dict[str, Any]] = []
+        not_executed: list[dict[str, Any]] = []
+        try:
+            _call(node, "set", "filename", typed["data"])
+            readback = _call(node, "getString", "filename")
+            observed = {"kind": "string", "shape": [], "data": readback,
+                        "java_signature": "java.lang.String"}
+            if not isinstance(readback, str) or readback != typed["data"]:
+                failed.append({"name": "filename", "error": "Import.filename String readback did not exactly match",
+                               "readback": observed, "partial_change": True,
+                               "execution_state_unknown": True})
+                not_executed.extend(item for item in payload if item is not filename_item)
+                return {"applied": applied, "failed": failed, "not_executed": not_executed,
+                        "execution_state_unknown": True, "readback_values": {},
+                        "engine_error": "Import.filename String readback mismatch"}
+            applied.append({"name": "filename", "value": dict(typed), "readback": observed,
+                            "readback_match": True,
+                            "comparison": {"requested_kind": "string", "returned_kind": "string",
+                                           "matched": True, "rule": "exact_documented_import_filename_string"}})
+        except Exception as exc:  # after dispatch, COMSOL may have partially applied the property
+            failed.append({"name": "filename", "error": str(exc),
+                           "code": getattr(exc, "code", "ENGINE_CALL_FAILED"),
+                           "partial_change": True, "execution_state_unknown": True})
+            not_executed.extend(item for item in payload if item is not filename_item)
+            return {"applied": applied, "failed": failed, "not_executed": not_executed,
+                    "execution_state_unknown": True, "readback_values": {}, "engine_error": str(exc)}
+        remaining = [item for item in payload if item is not filename_item]
+        if not remaining:
+            return {"applied": applied, "failed": failed, "not_executed": not_executed,
+                    "execution_state_unknown": False,
+                    "readback_values": {"filename": applied[0]["readback"]}, "engine_error": None}
+        try:
+            rest = _property_write(node_path, worker, model_tag, remaining)
+        except ExecutionContractError as exc:
+            rest = {"applied": [], "failed": [{"name": remaining[0].get("name"), "error": str(exc),
+                                                 "code": exc.code, "partial_change": False,
+                                                 "execution_state_unknown": False}],
+                    "not_executed": remaining[1:], "execution_state_unknown": False,
+                    "readback_values": {}, "engine_error": str(exc)}
+        applied.extend(rest["applied"])
+        failed.extend(rest["failed"])
+        return {"applied": applied, "failed": failed,
+                "not_executed": list(rest["not_executed"]),
+                "execution_state_unknown": bool(rest["execution_state_unknown"]),
+                "readback_values": {"filename": applied[0]["readback"], **rest["readback_values"]},
+                "engine_error": rest["engine_error"]}
     result = property_set(worker, model_tag, node_path, list(payload))
     data = result.get("data") if isinstance(result, Mapping) else None
     data = data if isinstance(data, Mapping) else {}
@@ -780,17 +851,111 @@ def _engine_properties(node: Any) -> list[str]:
 
 
 def _feature_properties(node: Any, definition: Mapping[str, Any], type_id: str, *,
-                        label: str = "definition") -> tuple[list[dict[str, Any]], str]:
+                        label: str = "definition",
+                        allow_documented_import_filename_fallback: bool = False) -> tuple[list[dict[str, Any]], str]:
     """Build a validated ``property_set`` payload for a geometry feature.
 
     Property *names* come from the documented table for ``type_id`` when the
     command page was read offline; otherwise from the node's own
     ``properties()`` enumeration (the engine, not this layer, is then the name
-    authority).  Value kind and rank always come from the node's authoritative
-    ``getValueType`` metadata, exactly like W13.
+    authority). Value kind and rank come from authoritative ``getValueType``
+    metadata, except for the documented Import.filename contract: COMSOL 6.4
+    returns the dynamic type "File", while the verified setter/readback is a
+    Java String scalar. That one pair uses its narrow documented adapter.
     """
     documented = GEOMETRY_FEATURE_PROPERTIES.get(type_id)
     if documented is not None:
+        if allow_documented_import_filename_fallback and type_id == "Import" and "filename" in definition:
+            reject_unknown_keys(definition, documented, label)
+            filename_adapter_source = "documented_import_filename_string_metadata_fallback"
+            filename_value_type: Any = None
+            try:
+                filename_value_type = _call(node, "getValueType", "filename")
+                filename_metadata_unavailable = filename_value_type in (None, "")
+                if filename_value_type == "File":
+                    # The 6.4 Import feature reports its file-path property as
+                    # dynamic type "File", while the documented API setter
+                    # and getter are String-shaped. Keep this exact pair on
+                    # the audited set(String)/getString adapter; do not map
+                    # other non-empty metadata values or other feature types.
+                    filename_metadata_unavailable = True
+                    filename_adapter_source = "documented_import_filename_file_type_string_adapter"
+            except ExecutionContractError as exc:
+                # A read timeout/unobserved RPC must stop this operation here:
+                # it is not evidence that the property's metadata is absent.
+                cause: BaseException | None = exc
+                worker_reply: Mapping[str, Any] | None = None
+                unknown_probe = False
+                while cause is not None:
+                    if (getattr(cause, "execution_state_unknown", False) is True
+                            or type(cause).__name__ == "JavaWorkerTimeout"):
+                        unknown_probe = True
+                    reply = getattr(cause, "reply", None)
+                    if isinstance(reply, Mapping):
+                        worker_reply = reply
+                        if reply.get("status") in {"UNKNOWN", "RUNNING", "RECONCILING"}:
+                            unknown_probe = True
+                    cause = cause.__cause__
+                if unknown_probe:
+                    raise ExecutionContractError(
+                        "EXECUTION_STATE_UNKNOWN",
+                        f"Import.filename getValueType request is unresolved; no property setter or build was dispatched: {exc}",
+                    ) from exc
+                terminal_metadata_failure = False
+                if worker_reply and worker_reply.get("status") == "FAILED":
+                    failure = worker_reply.get("failure")
+                    failure = failure if isinstance(failure, Mapping) else {}
+                    message = str(failure.get("message") or "").lower()
+                    terminal_metadata_failure = (
+                        failure.get("execution_state_unknown") is not True
+                        and "filename" in message
+                        and any(token in message for token in ("metadata unavailable", "metadata is unavailable",
+                                                               "value type unavailable", "value type is unavailable"))
+                    )
+                if terminal_metadata_failure:
+                    filename_metadata_unavailable = True
+                elif worker_reply and worker_reply.get("status") == "FAILED":
+                    raise ExecutionContractError(
+                        exc.code,
+                        f"Import.filename getValueType returned a terminal Worker failure; no fallback setter was used: {exc}",
+                    ) from exc
+                elif exc.code == "API_UNSUPPORTED":
+                    # Missing accessor/method is a definite unsupported route,
+                    # not a license to substitute a value type.
+                    raise
+                else:
+                    # Without a successful null read or an observed terminal
+                    # metadata-specific failure, fail closed and preserve the
+                    # original request's unresolved state.
+                    raise ExecutionContractError(
+                        "EXECUTION_STATE_UNKNOWN",
+                        f"Import.filename getValueType did not produce an observed terminal metadata result: {exc}",
+                    ) from exc
+            if not filename_metadata_unavailable:
+                # A known (or unrecognised non-empty) engine type stays under
+                # the generic authoritative metadata path. The fallback is
+                # only for unavailable dynamic metadata.
+                payload = definition_properties(node, definition, documented, label=label)
+                return payload, "documented_property_table"
+            exposed = _engine_properties(node)
+            if "filename" not in exposed or _call(node, "getType") != "Import":
+                raise ExecutionContractError(
+                    "API_UNSUPPORTED", "COMSOL did not expose filename on the verified Import feature"
+                )
+            rest_definition = {name: value for name, value in definition.items() if name != "filename"}
+            rest_payload = definition_properties(node, rest_definition, documented, label=label) if rest_definition else []
+            filename_value = typed_value_from_json(
+                definition["filename"],
+                {"kind": "string", "shape_rank": 0, "java_signature": "java.lang.String"},
+                label="Import.filename",
+            )
+            filename_value["java_signature"] = "java.lang.String"
+            if filename_value_type == "File":
+                filename_value["comsol_value_type_readback"] = "File"
+            by_name = {item["name"]: item for item in rest_payload}
+            by_name["filename"] = {"name": "filename", "value": filename_value}
+            ordered_payload = [by_name[name] for name in definition]
+            return ordered_payload, filename_adapter_source
         payload = definition_properties(node, definition, documented, label=label)
         return payload, "documented_property_table"
     # No documented table for this type: the node's own properties()
@@ -1113,13 +1278,16 @@ def _feature_create_common(worker: Any, model_tag: str, args: Mapping[str, Any],
     node = _feature_node(sequence, created["tag"])
     if definition:
         try:
-            payload, source = _feature_properties(node, definition, type_id)
+            payload, source = _feature_properties(
+                node, definition, type_id,
+                allow_documented_import_filename_fallback=bool(args.get("_documented_import_filename_fallback")),
+            )
         except ExecutionContractError as exc:
             result.update({
                 "ok": False,
-                "status": "FAILED",
+                "status": "EXECUTION_STATE_UNKNOWN" if exc.code == "EXECUTION_STATE_UNKNOWN" else "FAILED",
                 "partial_change": True,
-                "execution_state_unknown": False,
+                "execution_state_unknown": exc.code == "EXECUTION_STATE_UNKNOWN",
                 "failed": [{
                     "stage": "property_payload", "code": exc.code, "message": str(exc),
                     "feature_created": True, "partial_change": True,
@@ -1131,7 +1299,13 @@ def _feature_create_common(worker: Any, model_tag: str, args: Mapping[str, Any],
             result["not_executed_count"] = 1
             return result
         result["property_source"] = source
-        write = _property_write(created["path"], worker, model_tag, payload)
+        write = _property_write(
+            created["path"], worker, model_tag, payload,
+            documented_import_filename_fallback=(source in {
+                "documented_import_filename_string_metadata_fallback",
+                "documented_import_filename_file_type_string_adapter",
+            }),
+        )
         result["applied"] = write["applied"]
         result["failed"] = write["failed"]
         result["not_executed"] = write["not_executed"]
@@ -1682,6 +1856,7 @@ def geometry_import(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
         "type_id": "Import",
         "definition": definition,
         "property_source": "documented",
+        "_documented_import_filename_fallback": True,
     }
     result = _feature_create_common(worker, model_tag, merged, label="parent")
     result.update({
@@ -1689,7 +1864,12 @@ def geometry_import(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
         "artifact_path_verbatim": True,
         "path_check": path_check,
         "local_probe": local_probe,
-        "import_type_readback": result.get("properties", {}).get("type"),
+        "import_type_readback": None,
+        "import_type_probe": {
+            "status": "NOT_READ_UNTIL_SUCCESSFUL_BUILD",
+            "method": "getString",
+            "property": "type",
+        },
         "license": {
             "status": "UNVERIFIED",
             "note": (
@@ -1703,13 +1883,85 @@ def geometry_import(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
         },
     })
     if options.get("build"):
-        build_args = {"geometry": args["geometry"]}
-        result["build"] = geometry_build(worker, model_tag, build_args)
+        if result.get("ok") is True:
+            build_args = {"geometry": args["geometry"]}
+            build_result = geometry_build(worker, model_tag, build_args)
+            result["build"] = build_result
+            if build_result.get("ok") is not True:
+                result["ok"] = False
+                result["status"] = build_result.get("status") or "FAILED"
+                result["execution_state_unknown"] = bool(
+                    result.get("execution_state_unknown") or build_result.get("execution_state_unknown")
+                )
+                result["partial_change"] = bool(result.get("partial_change") or build_result.get("partial_change"))
+                result.setdefault("failed", []).append({
+                    "stage": "geometry_build",
+                    "code": next((row.get("code") for row in build_result.get("failed", [])
+                                  if isinstance(row, Mapping) and row.get("code")), "ENGINE_CALL_FAILED"),
+                    "message": next((row.get("message") or row.get("error") for row in build_result.get("failed", [])
+                                     if isinstance(row, Mapping) and (row.get("message") or row.get("error"))),
+                                    "geometry build failed"),
+                    "partial_change": result["partial_change"],
+                    "execution_state_unknown": result["execution_state_unknown"],
+                })
+                result["failed_count"] = len(result["failed"])
+                result["not_executed_count"] = len(result.get("not_executed", []))
+            else:
+                # Import.type is set by COMSOL while it detects/reads the
+                # file. It is deliberately not part of the write definition:
+                # only read it after the geometry sequence has built.
+                import_node = _feature_node(sequence, args["tag"])
+                type_probe = call_probe(import_node, "getString", "type")
+                result["import_type_probe"] = {
+                    "status": "READ" if type_probe["ok"] else "READ_FAILED",
+                    "method": "getString",
+                    "property": "type",
+                    "ok": type_probe["ok"],
+                    "value": type_probe["value"],
+                    "error": type_probe["error"],
+                }
+                result["import_type_readback"] = type_probe["value"] if type_probe["ok"] else None
+                if not type_probe["ok"]:
+                    probe_error = type_probe["error"] or {}
+                    result["ok"] = False
+                    result["status"] = (
+                        "EXECUTION_STATE_UNKNOWN"
+                        if probe_error.get("code") == "EXECUTION_STATE_UNKNOWN"
+                        else "PARTIAL_FAILURE"
+                    )
+                    result["execution_state_unknown"] = (
+                        result.get("execution_state_unknown", False)
+                        or probe_error.get("code") == "EXECUTION_STATE_UNKNOWN"
+                    )
+                    result["partial_change"] = True
+                    result.setdefault("failed", []).append({
+                        "stage": "import_type_readback",
+                        "code": probe_error.get("code", "ENGINE_CALL_FAILED"),
+                        "message": probe_error.get("message", "COMSOL Import.type readback failed"),
+                        "property": "type",
+                        "getter": "getString",
+                        "partial_change": True,
+                        "execution_state_unknown": result["execution_state_unknown"],
+                    })
+                    result["failed_count"] = len(result["failed"])
+                    result["not_executed_count"] = len(result.get("not_executed", []))
+        else:
+            result["build"] = {
+                "built": False, "ok": False, "status": "NOT_EXECUTED",
+                "partial_change": bool(result.get("partial_change")),
+                "execution_state_unknown": bool(result.get("execution_state_unknown")),
+                "failed": [], "not_executed": [{"stage": "geometry_build",
+                                                    "reason": "Import property assignment failed"}],
+            }
+            result.setdefault("not_executed", []).append({"stage": "geometry_build",
+                                                           "reason": "Import property assignment failed"})
+            result["not_executed_count"] = len(result["not_executed"])
     result["notes"] = [
         "the engine-side path is passed through verbatim: spaces and non-ASCII characters are preserved, and "
         "no shell expansion or path normalisation happens here",
-        "the engine resolves the format from the file itself and sets the feature's 'type' property; the "
-        "readback above is the engine's own answer, not an assumption from the file extension",
+        "the engine resolves the format from the file itself and sets the feature's 'type' property; when "
+        "build=true, Import.type is read with getString('type') after a successful geometry build, not inferred "
+        "from the file extension",
     ]
     return result
 
@@ -1752,10 +2004,19 @@ def geometry_measure(worker: Any, model_tag: str, arguments: Mapping[str, Any]) 
             _call(selection, "all")
         selected = _call(selection, "entities")
         rows = _measure_rows(measure, metrics)
+        measurement_status = _measurement_status_fields(rows)
+        if measurement_status["execution_state_unknown"]:
+            measurement_status["not_executed"].append({"stage": "geometry_state", "probe": "lengthUnit"})
+        unit_probe = (
+            {"status": "NOT_EXECUTED", "reason": "measurement outcome is unresolved"}
+            if measurement_status["execution_state_unknown"]
+            else call_probe(sequence, "lengthUnit")
+        )
         return {
             "geometry": geometry_path,
             "kind": kind,
             **info,
+            **measurement_status,
             "mode": mode,
             "component": component,
             "source": "component.measure().selection()",
@@ -1766,7 +2027,8 @@ def geometry_measure(worker: Any, model_tag: str, arguments: Mapping[str, Any]) 
                 repr(sorted(int(item) for item in selected)).encode("utf-8")
             ).hexdigest(),
             "metrics": rows,
-            "length_unit": call_probe(sequence, "lengthUnit")["value"],
+            "length_unit": unit_probe.get("value"),
+            "length_unit_probe": unit_probe,
             "notes": [
                 "values are returned in the geometry's own unit system; the length unit is reported next to "
                 "them and no unit conversion is performed",
@@ -1790,19 +2052,32 @@ def geometry_measure(worker: Any, model_tag: str, arguments: Mapping[str, Any]) 
         _call(selection, "set", list(objects))
         selected_objects = objects
     rows = _measure_rows(measure, metrics)
+    measurement_status = _measurement_status_fields(rows)
+    if measurement_status["execution_state_unknown"]:
+        if selected_objects:
+            measurement_status["not_executed"].append({"stage": "selection_readback", "probe": "entities"})
+        measurement_status["not_executed"].append({"stage": "geometry_state", "probe": "lengthUnit"})
+    object_entities = (
+        {tag: call_probe(selection, "entities", tag)["value"] for tag in selected_objects}
+        if selected_objects and not measurement_status["execution_state_unknown"] else None
+    )
+    unit_probe = (
+        {"status": "NOT_EXECUTED", "reason": "measurement outcome is unresolved"}
+        if measurement_status["execution_state_unknown"]
+        else call_probe(sequence, "lengthUnit")
+    )
     return {
         "geometry": geometry_path,
         "kind": kind,
         **info,
+        **measurement_status,
         "mode": mode,
         "source": "geom.measure().selection() (GeomMeasure/GeomObjectSelection)",
         "objects": selected_objects,
-        "object_entities": (
-            {tag: call_probe(selection, "entities", tag)["value"] for tag in selected_objects}
-            if selected_objects else None
-        ),
+        "object_entities": object_entities,
         "metrics": rows,
-        "length_unit": call_probe(sequence, "lengthUnit")["value"],
+        "length_unit": unit_probe.get("value"),
+        "length_unit_probe": unit_probe,
         "notes": [
             "the geometry-sequence measurement tool measures the objects in the current build state "
             "(Programming Reference \"Measurements\")",
@@ -1814,15 +2089,66 @@ def geometry_measure(worker: Any, model_tag: str, arguments: Mapping[str, Any]) 
 
 def _measure_rows(measure: Any, metrics: Sequence[str]) -> dict[str, Any]:
     rows: dict[str, Any] = {}
-    for name in metrics:
+    requested = list(metrics)
+    for index, name in enumerate(requested):
         getter = MEASURE_METRICS[name]
-        probe = call_probe(measure, getter)
+        # Keep the native COMSOL exception text on requested measurement
+        # failures; a failed metric must not look like an optional empty value.
+        probe = call_probe(measure, getter, include_engine_failure_details=True)
         rows[name] = {
             "getter": getter,
             "value": probe["value"] if probe["ok"] else None,
             "error": None if probe["ok"] else probe["error"],
         }
+        if (not probe["ok"] and isinstance(probe.get("error"), Mapping)
+                and probe["error"].get("execution_state_unknown") is True):
+            # Once the Worker reports unresolved post-dispatch state, do not
+            # issue another getter or a later selection/unit probe.
+            for pending in requested[index + 1:]:
+                rows[pending] = {
+                    "getter": MEASURE_METRICS[pending],
+                    "value": None,
+                    "error": None,
+                    "status": "NOT_EXECUTED",
+                }
+            break
     return rows
+
+
+def _measurement_status_fields(rows: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
+    failed = [
+        {
+            "stage": "measurement",
+            "metric": name,
+            "getter": row.get("getter"),
+            "error": dict(row["error"]),
+            "partial_change": True,
+            "execution_state_unknown": row["error"].get("execution_state_unknown") is True,
+        }
+        for name, row in rows.items()
+        if isinstance(row.get("error"), Mapping)
+    ]
+    not_executed = [
+        {"metric": name, "getter": row.get("getter")}
+        for name, row in rows.items()
+        if row.get("status") == "NOT_EXECUTED"
+    ]
+    unknown = any(item["execution_state_unknown"] for item in failed)
+    successful_count = len(rows) - len(failed) - len(not_executed)
+    status = (
+        "EXECUTION_STATE_UNKNOWN" if unknown
+        else "PARTIAL_FAILURE" if failed and successful_count
+        else "FAILED" if failed
+        else "APPLIED"
+    )
+    return {
+        "ok": not failed,
+        "status": status,
+        "failed": failed,
+        "not_executed": not_executed,
+        "partial_change": bool(failed),
+        "execution_state_unknown": unknown,
+    }
 
 
 def geometry_validate(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
@@ -1910,25 +2236,56 @@ def geometry_validate(worker: Any, model_tag: str, arguments: Mapping[str, Any])
 
     measure = _call(sequence, "measure")
     selection = _call(measure, "selection")
-    _call(selection, "all")
+    execution_state_unknown = False
+    not_executed: list[dict[str, Any]] = []
     for name, getter in (("volume", "getVolume"), ("area", "getArea")):
         if expectations.get(name) is None:
+            continue
+        if execution_state_unknown:
+            checks.append({
+                "name": name, "ok": False, "expected": None, "actual": None,
+                "status": "NOT_EXECUTED", "error": None,
+            })
+            not_executed.append({"stage": "measurement", "check": name, "getter": getter})
             continue
         wanted = require_mapping(expectations[name], f"expectations.{name}")
         reject_unknown_keys(wanted, ("value", "tolerance"), f"expectations.{name}")
         expected_value = require_number(wanted["value"], f"expectations.{name}.value")
         local_tolerance = require_number(wanted.get("tolerance", tolerance), f"expectations.{name}.tolerance")
-        probe = call_probe(measure, getter)
+        # COMSOL's GeomObjectSelection.all() selects entities in its current
+        # dimension. Area is measured on 2-D domains/3-D faces; volume on 3-D
+        # domains, so initialize the documented selection explicitly first.
+        _call(selection, "init", 3 if name == "volume" else 2)
+        _call(selection, "all")
+        probe = call_probe(measure, getter, include_engine_failure_details=True)
         actual_value = probe["value"] if probe["ok"] else None
+        probe_error = None if probe["ok"] else probe["error"]
+        execution_state_unknown = bool(
+            isinstance(probe_error, Mapping) and probe_error.get("execution_state_unknown") is True
+        )
         ok = False
         delta = None
         if isinstance(actual_value, (int, float)) and not isinstance(actual_value, bool):
             delta = abs(float(actual_value) - expected_value)
             ok = delta <= local_tolerance
         checks.append({"name": name, "ok": ok, "expected": expected_value, "actual": actual_value,
-                       "tolerance": local_tolerance, "abs_delta": delta, "error": None if probe["ok"] else probe["error"]})
+                       "tolerance": local_tolerance, "abs_delta": delta, "error": probe_error,
+                       "execution_state_unknown": execution_state_unknown})
 
-    failed = [row for row in checks if not row["ok"]]
+    failed = [row for row in checks if not row["ok"] and row.get("status") != "NOT_EXECUTED"]
+    # These are duplicate post-measurement diagnostics.  Once a Worker reports
+    # unresolved engine state, even read-only probes must stop until a fresh
+    # session/model inspection can establish that state.
+    if execution_state_unknown:
+        dimension_probe = {"status": "NOT_EXECUTED", "reason": "measurement outcome is unresolved"}
+        length_unit_probe = {"status": "NOT_EXECUTED", "reason": "measurement outcome is unresolved"}
+        not_executed.extend([
+            {"stage": "geometry_state", "probe": "getSDim"},
+            {"stage": "geometry_state", "probe": "lengthUnit"},
+        ])
+    else:
+        dimension_probe = call_probe(sequence, "getSDim")
+        length_unit_probe = call_probe(sequence, "lengthUnit")
     return {
         "geometry": geometry_path,
         "kind": kind,
@@ -1937,13 +2294,16 @@ def geometry_validate(worker: Any, model_tag: str, arguments: Mapping[str, Any])
         "checks": checks,
         "check_count": len(checks),
         "failed_checks": [row["name"] for row in failed],
+        "not_executed": not_executed,
         "ok": not failed,
-        "status": "APPLIED" if not failed else "FAILED",
+        "status": "EXECUTION_STATE_UNKNOWN" if execution_state_unknown else "APPLIED" if not failed else "FAILED",
         "partial_change": True,
-        "execution_state_unknown": False,
+        "execution_state_unknown": execution_state_unknown,
         "geometry_state": {
-            "dimension": call_probe(sequence, "getSDim")["value"],
-            "length_unit": call_probe(sequence, "lengthUnit")["value"],
+            "dimension": dimension_probe.get("value"),
+            "dimension_probe": dimension_probe,
+            "length_unit": length_unit_probe.get("value"),
+            "length_unit_probe": length_unit_probe,
             "entity_counters": counters,
             "bounding_box": {"value": boxes, "error": None},
             "unavailable": {"problems": _unavailable("problems"), "isBuilt": _unavailable("isBuilt")},

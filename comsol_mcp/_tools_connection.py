@@ -6,16 +6,16 @@ from __future__ import annotations
 import json
 from typing import Any
 
-import comsol_mcp._server as _srv
+from comsol_mcp._server import session_server as _srv
 from comsol_mcp._state import (
     _run_tool, _run_tool_readonly, _json, _now_iso, _require_mph, _port_is_open,
     _server_missing_guidance, _mark_awaiting_manual_server,
     _write_workflow_state, _read_workflow_state, _write_status,
-    _status_payload, _safe_model_label, _resolve_output_path, OUTPUTS_DIR,
+    _status_payload, _safe_model_label, _resolve_output_path,
     _friendly_connection_error,
 )
 from comsol_mcp._connection import (
-    _disconnect_locked, _ensure_client_shell, _timed_call,
+    _disconnect_locked, _ensure_client_shell, _retire_client_binding, _timed_call,
 )
 from comsol_mcp._model import _set_current_model, _adopt_model_by_name
 
@@ -73,12 +73,12 @@ def server_info() -> str:
     return _run_tool_readonly("server_info", _impl)
 
 
-def check_server_port(host: str = _srv.DEFAULT_HOST, port: int = _srv.DEFAULT_PORT) -> str:
+def check_server_port(host: str | None = None, port: int | None = None) -> str:
     """Check whether a manually started COMSOL Server is listening on host:port."""
 
     def _impl() -> dict[str, Any]:
         requested_host = host or _srv.DEFAULT_HOST
-        requested_port = int(port)
+        requested_port = int(_srv.DEFAULT_PORT if port is None else port)
         available = _port_is_open(requested_host, requested_port)
         if not available:
             workflow = _mark_awaiting_manual_server(requested_host, requested_port, "check_server_port")
@@ -166,7 +166,7 @@ def server_start(
     return _run_tool("server_start", _impl)
 
 
-def server_connect(host: str = _srv.DEFAULT_HOST, port: int = _srv.DEFAULT_PORT, model_name: str = "", timeout_seconds: float = 30.0) -> str:
+def server_connect(host: str | None = None, port: int | None = None, model_name: str = "", timeout_seconds: float = 30.0) -> str:
     """Default entrypoint: attach MCP to an already running COMSOL Multiphysics Server.
 
     This is the recommended tool for the visible Desktop workflow:
@@ -177,7 +177,7 @@ def server_connect(host: str = _srv.DEFAULT_HOST, port: int = _srv.DEFAULT_PORT,
     def _impl() -> dict[str, Any]:
         _require_mph()
         requested_host = host or _srv.DEFAULT_HOST
-        requested_port = int(port)
+        requested_port = int(_srv.DEFAULT_PORT if port is None else port)
         effective_timeout = float(timeout_seconds) if float(timeout_seconds) > 0 else 30.0
 
         # Pre-check: TCP port probe before attempting the heavy mph connection
@@ -218,10 +218,10 @@ def server_connect(host: str = _srv.DEFAULT_HOST, port: int = _srv.DEFAULT_PORT,
         except RuntimeError:
             # Timeout or connection failure — discard the client so next
             # attempt gets a fresh one rather than reusing a stale socket.
-            _srv._client = None
+            _retire_client_binding()
             raise
         except Exception as exc:
-            _srv._client = None
+            _retire_client_binding()
             _mark_awaiting_manual_server(requested_host, requested_port, "server_connect")
             raise _friendly_connection_error(exc, requested_host, requested_port) from exc
         _srv._client_connected = True

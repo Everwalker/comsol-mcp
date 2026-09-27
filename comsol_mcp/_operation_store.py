@@ -4,11 +4,17 @@ from __future__ import annotations
 import json
 import sqlite3
 import threading
+import time
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
 
+# ``resume_claims`` is an additive SQLite table.  Keep the on-disk version at
+# 1 because older v1 readers ignore unknown tables and preserve them; the
+# production ProcessLock prevents mixed-version daemons from coordinating the
+# same project concurrently.  Older binaries do not implement resume and are
+# never permitted to replay a claimed continuation after restart.
 SCHEMA_VERSION = 1
 TERMINAL = ("SUCCEEDED", "FAILED", "CANCELLED", "EXPIRED", "LOST")
 METADATA_TABLES = {
@@ -18,10 +24,25 @@ METADATA_TABLES = {
     "artifacts": "artifact_id",
     "checkpoints": "checkpoint_id",
 }
+PROJECT_TABLE_COLUMNS = (
+    ("project_id", "TEXT", 1, 1),
+    ("workspace", "TEXT", 1, 0),
+    ("schema_version", "INTEGER", 1, 0),
+    ("revision", "INTEGER", 1, 0),
+    ("record_json", "TEXT", 1, 0),
+    ("created_at", "TEXT", 1, 0),
+    ("updated_at", "TEXT", 1, 0),
+)
 
 
 class IdempotencyConflict(RuntimeError):
     pass
+
+
+class JobCleanupError(RuntimeError):
+    def __init__(self, code: str, message: str):
+        super().__init__(message)
+        self.code = code
 
 
 class JobList(list):
@@ -61,10 +82,20 @@ class OperationStore:
         self.path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         self.lock = threading.RLock()
         self.db = sqlite3.connect(self.path, check_same_thread=False, isolation_level=None)
-        self.db.row_factory = sqlite3.Row
-        with self.lock:
-            self.db.execute("PRAGMA journal_mode=WAL")
-            self._migrate()
+        try:
+            self.db.row_factory = sqlite3.Row
+            with self.lock:
+                self.db.execute("PRAGMA journal_mode=WAL")
+                self._migrate()
+        except BaseException:
+            # A rejected or failed migration must not leave a connection (or
+            # WAL lock) behind.  Preserve the migration error if close itself
+            # also fails; the caller needs the original failure reason.
+            try:
+                self.db.close()
+            except BaseException:
+                pass
+            raise
 
     def close(self) -> None:
         with self.lock:
@@ -74,13 +105,25 @@ class OperationStore:
         self.db.execute("BEGIN IMMEDIATE")
         try:
             self.db.execute("CREATE TABLE IF NOT EXISTS schema_meta(version INTEGER NOT NULL)")
-            row = self.db.execute("SELECT version FROM schema_meta").fetchone()
-            if not row:
+            rows = self.db.execute("SELECT version FROM schema_meta").fetchall()
+            if len(rows) > 1:
+                raise RuntimeError("ambiguous operation database schema metadata")
+            if not rows:
+                # An absent version row is only a new database when there is
+                # no pre-existing user schema/data to mislabel as current.
+                existing = self.db.execute(
+                    "SELECT type,name FROM sqlite_master "
+                    "WHERE name NOT LIKE 'sqlite_%' AND name!='schema_meta'"
+                ).fetchall()
+                if existing:
+                    raise RuntimeError("unversioned operation database contains existing schema objects")
                 self.db.execute("INSERT INTO schema_meta VALUES(1)")
-            elif row[0] == 0:
+            elif type(rows[0][0]) is not int:
+                raise RuntimeError("invalid operation database schema version")
+            elif rows[0][0] == 0:
                 self.db.execute("UPDATE schema_meta SET version=1")
-            elif row[0] != SCHEMA_VERSION:
-                raise RuntimeError(f"unsupported operation database schema {row[0]}")
+            elif rows[0][0] != SCHEMA_VERSION:
+                raise RuntimeError(f"unsupported operation database schema {rows[0][0]}")
             self.db.execute(
                 "CREATE TABLE IF NOT EXISTS operations("
                 "operation_id TEXT PRIMARY KEY,request_id TEXT,idempotency_key TEXT UNIQUE,"
@@ -107,6 +150,81 @@ class OperationStore:
                 )
             self.db.execute("CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status)")
             self.db.execute("CREATE INDEX IF NOT EXISTS idx_jobs_created_at ON jobs(created_at)")
+            # Additive extension: existing operation/job/audit/result tables
+            # are unchanged, so v1 databases open transactionally without a
+            # rewrite or version bump.  A claim is unique per source job and
+            # idempotency key and points at the normal child operation/job.
+            self.db.execute(
+                "CREATE TABLE IF NOT EXISTS resume_claims("
+                "source_job_id TEXT PRIMARY KEY,idempotency_key TEXT UNIQUE NOT NULL,"
+                "request_hash TEXT NOT NULL,child_operation_id TEXT UNIQUE NOT NULL,"
+                "child_job_id TEXT UNIQUE NOT NULL,created_at TEXT DEFAULT CURRENT_TIMESTAMP)"
+            )
+            resume_object = self.db.execute(
+                "SELECT type FROM sqlite_master WHERE name='resume_claims'"
+            ).fetchone()
+            expected_columns = (
+                ("source_job_id", "TEXT", 0, 1, None),
+                ("idempotency_key", "TEXT", 1, 0, None),
+                ("request_hash", "TEXT", 1, 0, None),
+                ("child_operation_id", "TEXT", 1, 0, None),
+                ("child_job_id", "TEXT", 1, 0, None),
+                ("created_at", "TEXT", 0, 0, "CURRENT_TIMESTAMP"),
+            )
+            observed_columns = tuple(
+                (row[1], (row[2] or "").upper(), row[3], row[5], row[4])
+                for row in self.db.execute("PRAGMA table_info(resume_claims)").fetchall()
+            )
+            unique_columns: set[tuple[str, ...]] = set()
+            for index in self.db.execute("PRAGMA index_list(resume_claims)").fetchall():
+                if index[2] != 1 or (len(index) > 4 and index[4] != 0):
+                    continue
+                index_name = str(index[1]).replace("'", "''")
+                index_columns = self.db.execute(
+                    f"PRAGMA index_info('{index_name}')"
+                ).fetchall()
+                # A unique expression/composite index is not evidence that a
+                # single named column is unique.  In particular, do not drop
+                # expression rows before deciding the index's arity.
+                if len(index_columns) != 1:
+                    continue
+                index_column = index_columns[0]
+                if index_column[1] < 0 or index_column[2] is None:
+                    continue
+                unique_columns.add((index_column[2],))
+            if (resume_object is None or resume_object[0] != "table"
+                    or observed_columns != expected_columns
+                    or not {("source_job_id",), ("idempotency_key",),
+                            ("child_operation_id",), ("child_job_id",)} <= unique_columns):
+                raise RuntimeError("invalid resume_claims schema")
+            # Project authority is an additive v1 extension. Keep it in the
+            # daemon's single transactional store so backups/restarts carry
+            # project records together with operation and job history.
+            self.db.execute(
+                "CREATE TABLE IF NOT EXISTS projects("
+                "project_id TEXT PRIMARY KEY NOT NULL,workspace TEXT NOT NULL UNIQUE,"
+                "schema_version INTEGER NOT NULL,revision INTEGER NOT NULL,record_json TEXT NOT NULL,"
+                "created_at TEXT NOT NULL,updated_at TEXT NOT NULL)"
+            )
+            project_object = self.db.execute(
+                "SELECT type FROM sqlite_master WHERE name='projects'"
+            ).fetchone()
+            observed_project_columns = tuple(
+                (row[1], (row[2] or "").upper(), row[3], row[5])
+                for row in self.db.execute("PRAGMA table_info(projects)").fetchall()
+            )
+            unique_project_columns: set[tuple[str, ...]] = set()
+            for index in self.db.execute("PRAGMA index_list(projects)").fetchall():
+                if index[2] != 1 or (len(index) > 4 and index[4] != 0):
+                    continue
+                name = str(index[1]).replace("'", "''")
+                columns = self.db.execute(f"PRAGMA index_info('{name}')").fetchall()
+                if len(columns) == 1 and columns[0][1] >= 0 and columns[0][2] is not None:
+                    unique_project_columns.add((columns[0][2],))
+            if (project_object is None or project_object[0] != "table"
+                    or observed_project_columns != PROJECT_TABLE_COLUMNS
+                    or ("workspace",) not in unique_project_columns):
+                raise RuntimeError("invalid projects schema")
             self.db.execute("COMMIT")
         except Exception:
             self.db.execute("ROLLBACK")
@@ -157,6 +275,111 @@ class OperationStore:
                     self.db.execute("SELECT * FROM operations WHERE operation_id=?", (operation_id,)).fetchone()
                 )
                 record["job_id"] = job_id
+                self.db.execute("COMMIT")
+                return record, False
+            except Exception:
+                self.db.execute("ROLLBACK")
+                raise
+
+    def begin_resume(
+        self,
+        *,
+        source_job_id: str,
+        request_id: str,
+        idempotency_key: str,
+        request_hash: str,
+        metadata: dict[str, Any],
+        timeouts: dict[str, Any] | None = None,
+    ) -> tuple[dict[str, Any], bool]:
+        """Atomically claim a failed source job and create one continuation.
+
+        The child is an ordinary ``study.run`` operation in the serial queue.
+        Parent status/result are immutable; only an auditable relationship is
+        added.  A source job gets one continuation claim for its lifetime.
+        """
+        if not all(isinstance(value, str) and value for value in
+                   (source_job_id, request_id, idempotency_key, request_hash)):
+            raise ValueError("resume claim identity fields must be non-empty strings")
+        with self.lock:
+            self.db.execute("BEGIN IMMEDIATE")
+            try:
+                claim = self.db.execute(
+                    "SELECT * FROM resume_claims WHERE source_job_id=?", (source_job_id,)
+                ).fetchone()
+                if claim:
+                    if claim["idempotency_key"] != idempotency_key or claim["request_hash"] != request_hash:
+                        raise IdempotencyConflict("source job already has a different resume claim")
+                    row = self.db.execute(
+                        "SELECT * FROM operations WHERE operation_id=?", (claim["child_operation_id"],)
+                    ).fetchone()
+                    if not row:
+                        raise RuntimeError("resume claim points at a missing child operation")
+                    record = self._op(row)
+                    record["job_id"] = claim["child_job_id"]
+                    self.db.execute("COMMIT")
+                    return record, True
+
+                parent = self.db.execute(
+                    "SELECT j.status,j.operation_id,j.metadata AS job_metadata,o.metadata AS operation_metadata "
+                    "FROM jobs j JOIN operations o ON o.operation_id=j.operation_id WHERE j.job_id=?",
+                    (source_job_id,),
+                ).fetchone()
+                if not parent:
+                    raise KeyError(f"source job not found: {source_job_id}")
+                if parent["status"] != "FAILED":
+                    raise ValueError(f"resume source must be FAILED, observed {parent['status']}")
+                existing = self.db.execute(
+                    "SELECT operation_id,request_hash FROM operations WHERE idempotency_key=?",
+                    (idempotency_key,),
+                ).fetchone()
+                if existing:
+                    raise IdempotencyConflict("resume idempotency key is already used by another operation")
+
+                operation_id, child_job_id = str(uuid4()), str(uuid4())
+                operation_metadata = dict(metadata)
+                operation_metadata.setdefault("operation", "study.run")
+                child_metadata = {**operation_metadata, "resume_of_job_id": source_job_id,
+                                  "parent_job_id": source_job_id}
+                serialized_metadata = _dumps_canonical(operation_metadata)
+                serialized_child = _dumps_canonical(child_metadata)
+                serialized_timeouts = _dumps_canonical(timeouts or {})
+                self.db.execute(
+                    "INSERT INTO operations(operation_id,request_id,idempotency_key,request_hash,operation,status,metadata,effective_timeouts) "
+                    "VALUES(?,?,?,?,?,'QUEUED',?,?)",
+                    (operation_id, request_id, idempotency_key, request_hash, "study.run", serialized_metadata, serialized_timeouts),
+                )
+                self.db.execute(
+                    "INSERT INTO jobs(job_id,operation_id,status,metadata,effective_timeouts) VALUES(?,?,'QUEUED',?,?)",
+                    (child_job_id, operation_id, serialized_child, serialized_timeouts),
+                )
+                self.db.execute(
+                    "INSERT INTO resume_claims(source_job_id,idempotency_key,request_hash,child_operation_id,child_job_id) "
+                    "VALUES(?,?,?,?,?)",
+                    (source_job_id, idempotency_key, request_hash, operation_id, child_job_id),
+                )
+                parent_job_metadata = json.loads(parent["job_metadata"] or "{}")
+                child_ids = list(parent_job_metadata.get("continuation_job_ids", []))
+                if child_job_id not in child_ids:
+                    child_ids.append(child_job_id)
+                parent_job_metadata.update({"continuation_job_ids": child_ids, "resumed_by_job_id": child_job_id})
+                parent_operation_metadata = json.loads(parent["operation_metadata"] or "{}")
+                parent_operation_metadata.update({"continuation_job_ids": child_ids, "resumed_by_job_id": child_job_id})
+                self.db.execute("UPDATE jobs SET metadata=? WHERE job_id=?",
+                                (_dumps_canonical(parent_job_metadata), source_job_id))
+                self.db.execute("UPDATE operations SET metadata=? WHERE operation_id=?",
+                                (_dumps_canonical(parent_operation_metadata), parent["operation_id"]))
+                self.db.execute(
+                    "INSERT INTO job_events(job_id,event,metadata) VALUES(?,?,?)",
+                    (source_job_id, "ResumeClaimed", _dumps_canonical({
+                        "child_job_id": child_job_id,
+                        "child_operation_id": operation_id,
+                        "request_hash": request_hash,
+                        "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                    })),
+                )
+                row = self.db.execute("SELECT * FROM operations WHERE operation_id=?", (operation_id,)).fetchone()
+                record = self._op(row)
+                record["job_id"] = child_job_id
                 self.db.execute("COMMIT")
                 return record, False
             except Exception:
@@ -507,6 +730,121 @@ class OperationStore:
                 )
             ]
 
+    def compact_terminal_job_metadata(self, job_ids: list[str], *, project_id: str | None = None) -> list[str]:
+        """Compact selected terminal job-view metadata without deleting audit data.
+
+        Operations, idempotency hashes/keys, results, job events, artifact rows,
+        and checkpoint rows remain untouched. The job row retains project
+        selectors and a cleanup tombstone; a durable event records the action.
+        """
+        if not job_ids or any(not isinstance(job_id, str) or not job_id for job_id in job_ids):
+            raise JobCleanupError("INVALID_REQUEST", "job_ids must contain non-empty strings")
+        if len(set(job_ids)) != len(job_ids):
+            raise JobCleanupError("INVALID_REQUEST", "job_ids must not contain duplicates")
+
+        dependency_fields = {"depends_on_job_ids", "dependency_job_ids", "parent_job_id", "continuation_of_job_id", "resume_of_job_id"}
+
+        def dependency_values(value: Any) -> set[str]:
+            found: set[str] = set()
+            if isinstance(value, dict):
+                for key, item in value.items():
+                    if key in dependency_fields:
+                        if isinstance(item, str) and item:
+                            found.add(item)
+                        elif isinstance(item, list):
+                            found.update(candidate for candidate in item if isinstance(candidate, str) and candidate)
+                    found.update(dependency_values(item))
+            elif isinstance(value, list):
+                for item in value:
+                    found.update(dependency_values(item))
+            return found
+
+        with self.lock:
+            self.db.execute("BEGIN IMMEDIATE")
+            try:
+                selected: list[dict[str, Any]] = []
+                for job_id in job_ids:
+                    row = self.db.execute(
+                        "SELECT j.job_id,j.operation_id,j.status,j.metadata AS job_metadata,"
+                        "o.metadata AS operation_metadata "
+                        "FROM jobs j JOIN operations o ON o.operation_id=j.operation_id WHERE j.job_id=?",
+                        (job_id,),
+                    ).fetchone()
+                    if not row:
+                        raise JobCleanupError("NODE_NOT_FOUND", f"job not found: {job_id}")
+                    if row["status"] not in TERMINAL:
+                        raise JobCleanupError("JOB_NOT_TERMINAL", f"job {job_id} is not terminal")
+                    job_metadata = json.loads(row["job_metadata"] or "{}")
+                    operation_metadata = json.loads(row["operation_metadata"] or "{}")
+                    if project_id is not None:
+                        observed_projects: set[str] = set()
+                        for metadata in (job_metadata, operation_metadata):
+                            if not isinstance(metadata, dict):
+                                continue
+                            for source in (metadata, metadata.get("arguments", {}), metadata.get("execution", {})):
+                                if isinstance(source, dict) and isinstance(source.get("project_id"), str):
+                                    observed_projects.add(source["project_id"])
+                        if project_id not in observed_projects:
+                            raise JobCleanupError("PROJECT_SCOPE_MISMATCH", f"job {job_id} is not recorded in project {project_id}")
+                    if dependency_values([job_metadata, operation_metadata]):
+                        raise JobCleanupError("JOB_HAS_DEPENDENCIES", f"job {job_id} carries linked job dependencies")
+                    selected.append({
+                        "job_id": job_id,
+                        "operation_id": row["operation_id"],
+                        "status": row["status"],
+                        "job_metadata": job_metadata,
+                    })
+
+                selected_ids = set(job_ids)
+                for row in self.db.execute(
+                    "SELECT j.job_id,j.metadata AS job_metadata,o.metadata AS operation_metadata "
+                    "FROM jobs j JOIN operations o ON o.operation_id=j.operation_id"
+                ).fetchall():
+                    if row["job_id"] in selected_ids:
+                        continue
+                    linked = dependency_values([json.loads(row["job_metadata"] or "{}"), json.loads(row["operation_metadata"] or "{}")])
+                    if linked.intersection(selected_ids):
+                        dependent_id = row["job_id"]
+                        raise JobCleanupError("JOB_HAS_DEPENDENCIES", f"job {dependent_id} depends on a selected cleanup job")
+
+                cleaned: list[str] = []
+                for row in selected:
+                    old_metadata = row["job_metadata"]
+                    if old_metadata.get("cleanup", {}).get("metadata_compacted") is True:
+                        continue
+                    compacted: dict[str, Any] = {}
+                    for source in (old_metadata, old_metadata.get("arguments", {}), old_metadata.get("execution", {})):
+                        if isinstance(source, dict):
+                            for field in ("project_id", "project_root"):
+                                if field in source and source[field] is not None:
+                                    compacted.setdefault(field, source[field])
+                    cleaned_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+                    compacted["cleanup"] = {
+                        "metadata_compacted": True,
+                        "cleaned_at": cleaned_at,
+                        "prior_status": row["status"],
+                        "preserved": ["operation/idempotency record", "result", "job events", "formal artifacts", "checkpoints"],
+                    }
+                    self.db.execute(
+                        "UPDATE jobs SET metadata=? WHERE job_id=?",
+                        (_dumps_canonical(compacted), row["job_id"]),
+                    )
+                    self.db.execute(
+                        "INSERT INTO job_events(job_id,event,metadata) VALUES(?,?,?)",
+                        (row["job_id"], "JobCacheCompacted", _dumps_canonical({
+                            "operation_id": row["operation_id"],
+                            "terminal_status": row["status"],
+                            "preserved": compacted["cleanup"]["preserved"],
+                            "at": cleaned_at,
+                        })),
+                    )
+                    cleaned.append(row["job_id"])
+                self.db.execute("COMMIT")
+                return cleaned
+            except Exception:
+                self.db.execute("ROLLBACK")
+                raise
+
     def unresolved_jobs(self) -> list[dict[str, Any]]:
         with self.lock:
             return [
@@ -537,6 +875,16 @@ class OperationStore:
     def put_metadata(self, table: str, key: str, metadata: dict[str, Any]) -> None:
         column = self._metadata_column(table)
         with self.lock:
+            if table == "artifacts":
+                row = self.db.execute(
+                    f"SELECT metadata FROM artifacts WHERE {column}=?", (key,),
+                ).fetchone()
+                if row is not None:
+                    existing = json.loads(row[0])
+                    if existing.get("schema_version") == 2 and existing != metadata:
+                        raise ValueError("registered artifact metadata is immutable")
+                    if existing.get("schema_version") == 2:
+                        return
             if table == "revisions":
                 self.db.execute(
                     "INSERT INTO revisions(model_key,metadata,revision) VALUES(?,?,?) "
@@ -549,6 +897,81 @@ class OperationStore:
                     f"ON CONFLICT({column}) DO UPDATE SET metadata=excluded.metadata",
                     (key, json.dumps(metadata, sort_keys=True)),
                 )
+
+    def merge_metadata_fields(self, table: str, key: str, updates: dict[str, Any]) -> dict[str, Any]:
+        """Atomically merge top-level fields for shared runtime metadata rows.
+
+        Session rows contain both the Worker ledger snapshot and lifecycle
+        authority. Runtime persistence may refresh its own top-level fields,
+        but must not erase the nested lifecycle record. This narrow helper is
+        intentionally limited to those two row types; immutable artifact and
+        revision semantics continue to use their dedicated methods.
+        """
+        if table not in {"sessions", "runtimes"}:
+            raise ValueError("metadata field merge is supported only for sessions and runtimes")
+        if not isinstance(updates, dict):
+            raise TypeError("metadata updates must be an object")
+        column = self._metadata_column(table)
+        with self.lock:
+            self.db.execute("BEGIN IMMEDIATE")
+            try:
+                row = self.db.execute(
+                    f"SELECT metadata FROM {table} WHERE {column}=?", (key,),
+                ).fetchone()
+                current = json.loads(row[0]) if row is not None else {}
+                if not isinstance(current, dict):
+                    raise RuntimeError(f"persisted {table} metadata is malformed")
+                merged = dict(current)
+                merged.update(updates)
+                self.db.execute(
+                    f"INSERT INTO {table}({column},metadata) VALUES(?,?) "
+                    f"ON CONFLICT({column}) DO UPDATE SET metadata=excluded.metadata",
+                    (key, json.dumps(merged, sort_keys=True)),
+                )
+                self.db.execute("COMMIT")
+                return merged
+            except BaseException:
+                self.db.execute("ROLLBACK")
+                raise
+
+    def update_session_lifecycle(self, session_id: str, updater) -> dict[str, Any]:
+        """Update only ``sessions.metadata.lifecycle`` under the store lock.
+
+        ``updater`` receives a detached current lifecycle mapping (or ``None``)
+        and must return the replacement mapping. The surrounding runtime
+        ledger fields are preserved in the same SQLite transaction.
+        """
+        if not isinstance(session_id, str) or not session_id:
+            raise ValueError("session_id is required")
+        if not callable(updater):
+            raise TypeError("lifecycle updater must be callable")
+        with self.lock:
+            self.db.execute("BEGIN IMMEDIATE")
+            try:
+                row = self.db.execute(
+                    "SELECT metadata FROM sessions WHERE session_id=?", (session_id,),
+                ).fetchone()
+                metadata = json.loads(row[0]) if row is not None else {}
+                if not isinstance(metadata, dict):
+                    raise RuntimeError("persisted session metadata is malformed")
+                current = metadata.get("lifecycle")
+                if current is not None and not isinstance(current, dict):
+                    raise RuntimeError("persisted lifecycle metadata is malformed")
+                replacement = updater(dict(current) if current is not None else None)
+                if not isinstance(replacement, dict):
+                    raise TypeError("lifecycle updater must return an object")
+                metadata = dict(metadata)
+                metadata["lifecycle"] = replacement
+                self.db.execute(
+                    "INSERT INTO sessions(session_id,metadata) VALUES(?,?) "
+                    "ON CONFLICT(session_id) DO UPDATE SET metadata=excluded.metadata",
+                    (session_id, json.dumps(metadata, sort_keys=True)),
+                )
+                self.db.execute("COMMIT")
+                return replacement
+            except BaseException:
+                self.db.execute("ROLLBACK")
+                raise
 
     def save_metadata(self, *args: Any, **kwargs: Any) -> None:
         self.put_metadata(*args, **kwargs)
@@ -567,7 +990,48 @@ class OperationStore:
     def persist_artifact(self, key: str, metadata: dict[str, Any]) -> None:
         if not metadata.get("sha256"):
             raise ValueError("artifact sha256 required")
+        # Older output/checkpoint paths share this table. Preserve a registered
+        # content-addressed record if a legacy writer happens to reuse its key;
+        # put_metadata rejects a different payload instead of silently
+        # replacing the project/host/path/provenance binding.
         self.put_metadata("artifacts", key, metadata)
+
+    def register_artifact_if_absent(self, key: str, metadata: dict[str, Any]) -> dict[str, Any] | None:
+        """Atomically insert one content-addressed artifact record.
+
+        Artifact registrations share the existing artifacts table with other
+        durable artifact references. They must never use the general upsert:
+        two callers registering the same digest with different project or
+        provenance metadata must see the original row and let the caller reject
+        the conflict, rather than replacing a record another operation uses.
+
+        Returns the pre-existing row when the key was already present, or
+        ``None`` when this transaction inserted the new row.
+        """
+        if not metadata.get("sha256"):
+            raise ValueError("artifact sha256 required")
+        column = self._metadata_column("artifacts")
+        encoded = json.dumps(metadata, sort_keys=True)
+        with self.lock:
+            self.db.execute("BEGIN IMMEDIATE")
+            try:
+                row = self.db.execute(
+                    f"SELECT metadata FROM artifacts WHERE {column}=?", (key,),
+                ).fetchone()
+                if row is not None:
+                    existing = json.loads(row[0])
+                    self.db.execute("COMMIT")
+                    return existing
+                self.db.execute(
+                    f"INSERT INTO artifacts({column},metadata) VALUES(?,?)",
+                    (key, encoded),
+                )
+                self.db.execute("COMMIT")
+                return None
+            except Exception:
+                if self.db.in_transaction:
+                    self.db.execute("ROLLBACK")
+                raise
 
     def persist_checkpoint(self, key: str, metadata: dict[str, Any]) -> None:
         if not metadata.get("sha256"):

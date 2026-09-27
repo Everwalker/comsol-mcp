@@ -171,8 +171,16 @@ class GatewayRegistry:
         self.functions: dict[str, Callable] = {}
 
     def add_tool(self, function: Callable, **options: Any) -> None:
-        operation = options.get("name") or function.__name__
-        if not is_tool_published(operation, profile=self.profile):
+        # The catalog's public MCP name can differ from the canonical
+        # operation id used by the control service (for example
+        # ``desktop_status`` versus ``desktop.status``).
+        options = dict(options)
+        public_name = options.get("name") or function.__name__
+        operation = options.pop("operation_id", None) or public_name
+        if (not isinstance(public_name, str) or not public_name
+                or not isinstance(operation, str) or not operation):
+            raise ValueError("tool name and operation_id must be non-empty strings")
+        if not is_tool_published(public_name, profile=self.profile):
             return
         self.functions[operation] = function
         original = inspect.signature(function)
@@ -206,7 +214,7 @@ class GatewayRegistry:
                         "success": False,
                         "error": {
                             "code": "INVALID_REQUEST",
-                            "message": f"Unsupported parameter(s) for '{operation}': {sorted(unsupported)}",
+                            "message": f"Unsupported parameter(s) for '{public_name}': {sorted(unsupported)}",
                             "safe_retry": False,
                         },
                         "data": {},
@@ -234,6 +242,15 @@ class GatewayRegistry:
                 if k not in call_args:
                     call_args[k] = v
 
+            # Desktop defaults that are None represent omission unless the
+            # caller explicitly supplied the field. Explicit null remains in
+            # the payload for strict catalog validation to reject.
+            if operation.startswith("desktop."):
+                for name, parameter in original.parameters.items():
+                    if (name not in kwargs and parameter.default is None
+                            and call_args.get(name) is None):
+                        call_args.pop(name, None)
+
             # Only unpack arguments wrapper for declared W20 compatibility schemas
             # Retain nested arguments for registry_call, operation_call, code.execute_java, etc.
             if is_w20_compat and "arguments" in call_args and isinstance(call_args["arguments"], dict):
@@ -256,7 +273,7 @@ class GatewayRegistry:
                             "success": False,
                             "error": {
                                 "code": "INVALID_REQUEST",
-                                "message": f"Unsupported parameter '{k}' in arguments wrapper for '{operation}'",
+                                "message": f"Unsupported parameter '{k}' in arguments wrapper for '{public_name}'",
                                 "safe_retry": False,
                             },
                             "data": {},
@@ -279,11 +296,18 @@ class GatewayRegistry:
                 }, "data": {}}
             return mcp_result(result)
 
-        routed.__name__ = operation
-        routed.__doc__ = (function.__doc__ or "") + (
-            "\nExecution metadata supplies session_id, model_ref, expected_revision, "
-            "idempotency_key and timeout policy. Writes require a current revision."
-        )
+        routed.__name__ = public_name
+        if operation.startswith("desktop."):
+            routed.__doc__ = (function.__doc__ or "") + (
+                "\nThe control service observes the target window from the host. "
+                "Desktop controls require host authorization and an idempotency key; "
+                "unsupported native bindings return an explicit refusal."
+            )
+        else:
+            routed.__doc__ = (function.__doc__ or "") + (
+                "\nExecution metadata supplies session_id, model_ref, expected_revision, "
+                "idempotency_key and timeout policy. Writes require a current revision."
+            )
         routed.__signature__ = inspect.Signature(parameters, return_annotation=CallToolResult)
         routed.__annotations__ = {p.name: p.annotation for p in parameters}
         routed.__annotations__["return"] = CallToolResult

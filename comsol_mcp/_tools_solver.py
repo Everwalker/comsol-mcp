@@ -8,7 +8,7 @@ import logging
 import threading
 from typing import Any
 
-import comsol_mcp._server as _srv
+from comsol_mcp._server import session_server as _srv
 from comsol_mcp._state import (
     _run_tool, _run_tool_readonly, _json, _setup_logging,
     _create_background_job, _update_background_job, _read_background_job,

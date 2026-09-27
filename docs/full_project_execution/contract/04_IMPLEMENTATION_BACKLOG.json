@@ -1,0 +1,424 @@
+{
+  "schema_version": "1.0",
+  "tasks": [
+    {
+      "id": "W01",
+      "title": "冻结基线与遗留工具映射",
+      "gate": "G0",
+      "depends_on": [],
+      "acceptance_tests": [
+        "T038"
+      ],
+      "deliverable": "固定SHA、列50个旧接口、建立新旧schema映射；避免已有用户配置失效。",
+      "status": "NOT_STARTED"
+    },
+    {
+      "id": "W02",
+      "title": "六组合Runtime/Java PoC",
+      "gate": "G0",
+      "depends_on": [
+        "W01"
+      ],
+      "acceptance_tests": [
+        "T001",
+        "T002",
+        "T042",
+        "T059"
+      ],
+      "deliverable": "实机验证JDK11 client classpath、COMSOL server版本、渲染和产品能力。",
+      "status": "NOT_STARTED"
+    },
+    {
+      "id": "W03",
+      "title": "Desktop/取消路线PoC",
+      "gate": "G0",
+      "depends_on": [
+        "W02"
+      ],
+      "acceptance_tests": [
+        "T004",
+        "T023",
+        "T052"
+      ],
+      "deliverable": "验证共享Desktop和可用中止路线；标记GUI-only能力，禁止虚构通用cancel。",
+      "status": "NOT_STARTED"
+    },
+    {
+      "id": "W04",
+      "title": "无破坏求值与变量/选择修复",
+      "gate": "G1",
+      "depends_on": [
+        "W01"
+      ],
+      "acceptance_tests": [
+        "T003",
+        "T005",
+        "T006",
+        "T007",
+        "T033"
+      ],
+      "deliverable": "修F01-F03/F06；清理仅限本次临时节点；移除固定指标。",
+      "status": "NOT_STARTED"
+    },
+    {
+      "id": "W05",
+      "title": "模型身份/修订/权限",
+      "gate": "G1",
+      "depends_on": [
+        "W02"
+      ],
+      "acceptance_tests": [
+        "T010",
+        "T011",
+        "T035"
+      ],
+      "deliverable": "建立session/model/generation、项目授权、请求hash与写前检查。",
+      "status": "NOT_STARTED"
+    },
+    {
+      "id": "W06",
+      "title": "控制进程和Java Worker隔离",
+      "gate": "G1",
+      "depends_on": [
+        "W02",
+        "W05"
+      ],
+      "acceptance_tests": [
+        "T012",
+        "T026",
+        "T028",
+        "T055"
+      ],
+      "deliverable": "统一串行队列；取消伪hard timeout；真实状态与缓存分离。",
+      "status": "NOT_STARTED"
+    },
+    {
+      "id": "W07",
+      "title": "持久存储与幂等",
+      "gate": "G1",
+      "depends_on": [
+        "W05"
+      ],
+      "acceptance_tests": [
+        "T027",
+        "T030",
+        "T057"
+      ],
+      "deliverable": "jobs/operations/revisions/artifacts/checkpoints持久化和迁移。",
+      "status": "NOT_STARTED"
+    },
+    {
+      "id": "W08",
+      "title": "typed值/节点解析",
+      "gate": "G2",
+      "depends_on": [
+        "W04",
+        "W06"
+      ],
+      "acceptance_tests": [
+        "T008",
+        "T009",
+        "T010"
+      ],
+      "deliverable": "保留数据形状；实现typed collection和Work Plane嵌套路径。",
+      "status": "NOT_STARTED"
+    },
+    {
+      "id": "W09",
+      "title": "registry/schema/host兼容",
+      "gate": "G2",
+      "depends_on": [
+        "W01",
+        "W08"
+      ],
+      "acceptance_tests": [
+        "T038",
+        "T039"
+      ],
+      "deliverable": "生成文档、工具发布、operation fallback、structuredContent/isError。",
+      "status": "NOT_STARTED"
+    },
+    {
+      "id": "W10",
+      "title": "公共API与Java执行",
+      "gate": "G2",
+      "depends_on": [
+        "W08",
+        "W05"
+      ],
+      "acceptance_tests": [
+        "T031",
+        "T032",
+        "T037"
+      ],
+      "deliverable": "绑定Model、编译、日志与差异；许可/主机权限与trusted_code分离。",
+      "status": "NOT_STARTED"
+    },
+    {
+      "id": "W11",
+      "title": "版本化文档索引",
+      "gate": "G2",
+      "depends_on": [
+        "W02"
+      ],
+      "acceptance_tests": [
+        "T043",
+        "T036"
+      ],
+      "deliverable": "官方本地帮助索引、来源、版本过滤、无结果语义。",
+      "status": "NOT_STARTED"
+    },
+    {
+      "id": "W12",
+      "title": "计划/试运行/checkpoint",
+      "gate": "G2",
+      "depends_on": [
+        "W07",
+        "W10"
+      ],
+      "acceptance_tests": [
+        "T029",
+        "T033",
+        "T050"
+      ],
+      "deliverable": "static preview与隔离trial不同；定义恢复范围和GUI rebind。",
+      "status": "NOT_STARTED"
+    },
+    {
+      "id": "W13",
+      "title": "参数/变量/函数/选区",
+      "gate": "G3",
+      "depends_on": [
+        "W08",
+        "W11"
+      ],
+      "acceptance_tests": [
+        "T006",
+        "T015",
+        "T016",
+        "T048"
+      ],
+      "deliverable": "多维插值、单位、named/spatial选区与语义校验。",
+      "status": "NOT_STARTED"
+    },
+    {
+      "id": "W14",
+      "title": "几何/WorkPlane/CAD/坐标Pair",
+      "gate": "G3",
+      "depends_on": [
+        "W13"
+      ],
+      "acceptance_tests": [
+        "T009",
+        "T034"
+      ],
+      "deliverable": "完整嵌套编辑、几何测量和模型保留；产品差异能力表。",
+      "status": "NOT_STARTED"
+    },
+    {
+      "id": "W15",
+      "title": "材料/物理/多物理",
+      "gate": "G3",
+      "depends_on": [
+        "W13"
+      ],
+      "acceptance_tests": [
+        "T007",
+        "T017",
+        "T042"
+      ],
+      "deliverable": "属性组和张量、选区、子特征、耦合及初值。",
+      "status": "NOT_STARTED"
+    },
+    {
+      "id": "W16",
+      "title": "网格/Study/Solver",
+      "gate": "G3",
+      "depends_on": [
+        "W14",
+        "W15"
+      ],
+      "acceptance_tests": [
+        "T018",
+        "T019",
+        "T020"
+      ],
+      "deliverable": "从空模型到真实求解；深层solver和物理启用。",
+      "status": "NOT_STARTED"
+    },
+    {
+      "id": "W17",
+      "title": "Dataset/复场/指标/Probe",
+      "gate": "G4",
+      "depends_on": [
+        "W16"
+      ],
+      "acceptance_tests": [
+        "T013",
+        "T014",
+        "T021",
+        "T049"
+      ],
+      "deliverable": "索引、权重、复数、坐标、分块数据，不静默截断。",
+      "status": "NOT_STARTED"
+    },
+    {
+      "id": "W18",
+      "title": "Plot/Export/视觉返回",
+      "gate": "G4",
+      "depends_on": [
+        "W17",
+        "W03"
+      ],
+      "acceptance_tests": [
+        "T040",
+        "T039"
+      ],
+      "deliverable": "真实渲染、数据绑定、图片host回传、数据/报告导出。",
+      "status": "NOT_STARTED"
+    },
+    {
+      "id": "W19",
+      "title": "持久jobs/取消/恢复/并发",
+      "gate": "G4",
+      "depends_on": [
+        "W07",
+        "W16",
+        "W03"
+      ],
+      "acceptance_tests": [
+        "T022",
+        "T023",
+        "T024",
+        "T025",
+        "T026",
+        "T027",
+        "T028",
+        "T053",
+        "T054",
+        "T057"
+      ],
+      "deliverable": "缓存状态独立响应；取消确认；限制共享Server控制权限。",
+      "status": "NOT_STARTED"
+    },
+    {
+      "id": "W20",
+      "title": "结构/数值/物理验证",
+      "gate": "G4",
+      "depends_on": [
+        "W17"
+      ],
+      "acceptance_tests": [
+        "T044",
+        "T058"
+      ],
+      "deliverable": "规则有覆盖边界；三层成功状态；基准解和收敛。",
+      "status": "NOT_STARTED"
+    },
+    {
+      "id": "W21",
+      "title": "扫描/优化/阶段状态传递",
+      "gate": "G5",
+      "depends_on": [
+        "W17",
+        "W19"
+      ],
+      "acceptance_tests": [
+        "T021",
+        "T047"
+      ],
+      "deliverable": "case管理、缓存、参数预算、阶段参考态和变量映射。",
+      "status": "NOT_STARTED"
+    },
+    {
+      "id": "W22",
+      "title": "VCSEL领域验收包",
+      "gate": "G5",
+      "depends_on": [
+        "W20",
+        "W21",
+        "W18"
+      ],
+      "acceptance_tests": [
+        "T045",
+        "T016"
+      ],
+      "deliverable": "静态非轴对称热源、阵列/环功率、距离扫描、热预算。",
+      "status": "NOT_STARTED"
+    },
+    {
+      "id": "W23",
+      "title": "光纤耦合领域验收包",
+      "gate": "G5",
+      "depends_on": [
+        "W20",
+        "W21",
+        "W18"
+      ],
+      "acceptance_tests": [
+        "T046",
+        "T014"
+      ],
+      "deliverable": "复场、模式归一化、耦合与捕获效率分离、容差扫描。",
+      "status": "NOT_STARTED"
+    },
+    {
+      "id": "W24",
+      "title": "胶形/固化领域验收包",
+      "gate": "G5",
+      "depends_on": [
+        "W20",
+        "W21",
+        "W18"
+      ],
+      "acceptance_tests": [
+        "T047",
+        "T058"
+      ],
+      "deliverable": "稳定胶形及全流程独立路线，质量/参考态/应力历史。",
+      "status": "NOT_STARTED"
+    },
+    {
+      "id": "W25",
+      "title": "Desktop迁移与高级GUI",
+      "gate": "G5",
+      "depends_on": [
+        "W03",
+        "W12",
+        "W19"
+      ],
+      "acceptance_tests": [
+        "T051",
+        "T052",
+        "T004"
+      ],
+      "deliverable": "API优先；只对实测GUI路径承诺，明确迁移与重新绑定。",
+      "status": "NOT_STARTED"
+    },
+    {
+      "id": "W26",
+      "title": "离线构件/安全/发布",
+      "gate": "G6",
+      "depends_on": [
+        "W09",
+        "W18",
+        "W19",
+        "W22",
+        "W23",
+        "W24",
+        "W25"
+      ],
+      "acceptance_tests": [
+        "T034",
+        "T035",
+        "T036",
+        "T037",
+        "T041",
+        "T056",
+        "T060"
+      ],
+      "deliverable": "三种OS/arch构件、六组合认证、hash/lock/SBOM、升级回退、完整交付。",
+      "status": "NOT_STARTED"
+    }
+  ]
+}

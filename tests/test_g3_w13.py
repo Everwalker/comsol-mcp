@@ -1542,7 +1542,7 @@ class TestFunctionEvaluate:
         error = expect_error("API_UNSUPPORTED", w13.function_evaluate, worker_for(model), "Model", {
             "path": {"segments": [{"collection": "func", "tag": "int1"}]},
             "arguments": [{"coordinate": [0.5, 0.5]}]})
-        assert "no offline-verified COMSOL 6.4 API" in str(error)
+        assert "source=table fallback" in str(error)
 
     def test_invalid_argument_shape_is_rejected_before_the_refusal(self):
         node = function_node(values={"funcname": "f"})

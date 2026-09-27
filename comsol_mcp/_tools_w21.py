@@ -124,6 +124,41 @@ def stage_state_transfer(
     return merged
 
 
+def solver_solution_transfer(
+    source: dict[str, Any],
+    target: dict[str, Any],
+    mapping: dict[str, Any],
+    arguments: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Select one stored solution as an explicitly addressed Variables initial value."""
+    merged = dict(arguments or {})
+    merged.update(source=source, target=target, mapping=mapping)
+    return merged
+
+
+def experiment_design(definition: dict[str, Any], arguments: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Persist a W21 cartesian-grid experiment bound to the current project/model revision."""
+    merged = dict(arguments or {})
+    merged["definition"] = definition
+    return merged
+
+
+def experiment_run(
+    experiment_id: str,
+    resources: dict[str, Any] | None = None,
+    timeout_s: float | None = None,
+    arguments: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Run a registered experiment with optional budget reductions."""
+    merged = dict(arguments or {})
+    merged["experiment_id"] = experiment_id
+    if resources is not None:
+        merged["resources"] = resources
+    if timeout_s is not None:
+        merged["timeout_s"] = timeout_s
+    return merged
+
+
 def register(registry: Any) -> None:
     tools = [
         ("parameter.case_manage", parameter_case_manage),
@@ -136,6 +171,9 @@ def register(registry: Any) -> None:
         ("stage_checkpoint_create", stage_checkpoint_create),
         ("stage.state_transfer", stage_state_transfer),
         ("stage_state_transfer", stage_state_transfer),
+        ("solver_solution_transfer", solver_solution_transfer),
+        ("experiment_design", experiment_design),
+        ("experiment_run", experiment_run),
     ]
     for name, fn in tools:
         registry.add_tool(fn, name=name)

@@ -3,22 +3,28 @@ from __future__ import annotations
 
 import argparse
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
+from contextlib import contextmanager
+import hashlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import math
 import os
 from pathlib import Path
+import re
 import secrets
 import threading
 import time
 import traceback
-from typing import Any
+from typing import Any, Mapping
 from uuid import uuid4
 
 from ._execution_contract import ExecutionContractError, canonical_request_hash
 from ._managed_backend import ManagedBackend, ProcessLock, collect_legacy_registry, _g3_operations
-from ._operation_store import IdempotencyConflict, OperationStore
+from ._operation_store import IdempotencyConflict, JobCleanupError, OperationStore
 from ._platform_process import process_identity, terminate_process_tree
+from ._desktop_platforms import create_native_metadata_adapter
+from ._desktop_service import DesktopCoordinator, DesktopOperationError
+from ._project_authority import ProjectAuthority, PROJECT_OPERATIONS
 
 TERMINAL = {"SUCCEEDED", "FAILED", "EXPIRED", "LOST", "CANCELLED"}
 CONTROL_READS = {
@@ -30,6 +36,65 @@ CONTROL_READS = {
     "registry_list", "registry_describe", "registry_search", "registry_manifest", "operation_describe",
     "docs_search", "docs_get", "docs_examples", "docs_error_search", "checkpoint_list", "checkpoint_inspect", "checkpoint_diff",
 }
+CACHED_JOB_ACTIONS = frozenset({
+    "job.list", "job.status", "job.log", "job.result", "job.reconcile", "job.wait", "job.cancel", "job.cleanup",
+})
+DESKTOP_OPERATIONS = frozenset({
+    "desktop.status", "desktop.bind", "desktop.show_model", "desktop.select_node",
+    "desktop.capture", "desktop.action", "desktop.shell_execute", "desktop.migrate_standalone",
+})
+
+
+class WorkerRetirementRefused(RuntimeError):
+    """The exact daemon Worker cannot yet enter a retirement fence."""
+
+    def __init__(self, message: str, *, readback: dict[str, Any] | None = None):
+        super().__init__(message)
+        self.readback = readback
+
+
+class WorkerRetirementLease:
+    """Admission fence held while the caller verifies/stops one exact Worker."""
+
+    def __init__(self, daemon, worker, identity, process, readback):
+        self._daemon = daemon
+        self._worker = worker
+        self._identity = dict(identity)
+        self._process = process
+        self._confirmed = False
+        self.cleanup_started = False
+        self.readback = readback
+        self.worker_pid = getattr(process, "pid", None)
+
+    def mark_cleanup_started(self) -> None:
+        if self._confirmed:
+            raise WorkerRetirementRefused("Worker retirement is already confirmed")
+        self.cleanup_started = True
+
+    def confirm_worker_stopped(self) -> None:
+        """Confirm exit of the exact Popen child bound at lease acquisition.
+
+        COMSOL-server ownership is deliberately outside this confirmation; the
+        external lifecycle owner still needs its own PID/birth/listener proof.
+        """
+        if not self.cleanup_started:
+            raise WorkerRetirementRefused("mark exact Worker cleanup started before confirming retirement")
+        if self._process is None or type(self.worker_pid) is not int or self.worker_pid <= 0:
+            raise WorkerRetirementRefused("lease has no exact owned Worker child process handle")
+        try:
+            exited = self._process.poll() is not None
+        except Exception as exc:
+            raise WorkerRetirementRefused("exact Worker child state could not be read") from exc
+        if not exited:
+            raise WorkerRetirementRefused("exact Worker child is still live")
+        if self._daemon.backend.worker is not self._worker:
+            raise WorkerRetirementRefused("daemon Worker binding changed during retirement")
+        if self._daemon.backend.worker_identity != self._identity:
+            raise WorkerRetirementRefused("daemon Worker epoch changed during retirement")
+        current_process = getattr(self._worker, "_process", None)
+        if current_process not in (None, self._process):
+            raise WorkerRetirementRefused("Worker object now refers to a different child process")
+        self._confirmed = True
 
 
 def configure_remote_backend(worker):
@@ -38,7 +103,8 @@ def configure_remote_backend(worker):
 
 
 class ControlDaemon:
-    def __init__(self, home, *, service=None, registry=None, worker=None, project_root=None):
+    def __init__(self, home, *, service=None, registry=None, worker=None, project_root=None,
+                 desktop_adapter=None, project_authorization_verifier=None):
         self.home = Path(home)
         self.home.mkdir(mode=0o700, parents=True, exist_ok=True)
         self.store = OperationStore(self.home / "operations.sqlite3")
@@ -50,8 +116,30 @@ class ControlDaemon:
             worker=worker,
             project_root=project_root,
         )
+        self.project_authority = ProjectAuthority(
+            self.store,
+            workspace_root=self.backend.project_root,
+            grant_ceiling=frozenset(self.backend.host_permission_ceiling),
+            permission_provider=self._project_host_permissions,
+            authorization_verifier=project_authorization_verifier,
+        )
         self.queue = ThreadPoolExecutor(max_workers=1, thread_name_prefix="comsol-engine-queue")
+        self.desktop = DesktopCoordinator(
+            store=self.store,
+            adapter=desktop_adapter if desktop_adapter is not None else create_native_metadata_adapter(),
+            authorize=self._authorize_desktop,
+            engine_queue=self._desktop_engine_queue,
+            resolve_action=self._resolve_desktop_action,
+            resolve_artifact=self._resolve_desktop_artifact,
+            authorize_save_copy=self._authorize_desktop_save_copy,
+        )
         self.lock = threading.RLock()
+        self._admission_lock = threading.RLock()
+        self._worker_retirement_state = "OPEN"
+        self._worker_admission_inflight = 0
+        # Engine-queue admission advances this value while holding ``lock``;
+        # quiescence snapshots compare it before and after durable readback.
+        self._activity_generation = 0
         self.running = {}
         self.worker_health = {"status": "NOT_STARTED", "observed_at": None}
         self.store.reconcile_after_restart()
@@ -65,6 +153,91 @@ class ControlDaemon:
     @property
     def worker(self): return self.backend.worker
 
+    def quiescence_readback(self, project_id: str, session_id: str) -> dict[str, Any]:
+        """Trusted in-process readback before retiring this daemon's Worker."""
+        from ._daemon_quiescence import control_daemon_quiescence_readback
+
+        return control_daemon_quiescence_readback(self, project_id, session_id)
+
+    @contextmanager
+    def worker_retirement_guard(self, project_id: str, session_id: str):
+        """Fence new Worker admissions through exact child-process retirement.
+
+        A plain quiescence snapshot is observational only. This context manager
+        closes the existing Worker admission gate before re-reading durable and
+        direct-RPC state, then keeps admissions closed until the caller confirms
+        exit of the exact Popen child. Exiting without cleanup revokes the fence;
+        uncertain cleanup leaves it fail-closed.
+        """
+        with self._admission_lock:
+            if self._worker_retirement_state != "OPEN":
+                raise WorkerRetirementRefused(
+                    f"Worker admission is {self._worker_retirement_state.lower()}"
+                )
+            if self._worker_admission_inflight:
+                raise WorkerRetirementRefused("a direct Worker observation is still in progress")
+            readback = self.quiescence_readback(project_id, session_id)
+            data = readback.get("data") if isinstance(readback, dict) else None
+            if (not isinstance(data, dict) or data.get("worker_status") != "QUIESCENT"
+                    or data.get("safe_to_retire_worker") is not True):
+                raise WorkerRetirementRefused("Worker has queued, running, unknown, or unobserved work",
+                                              readback=readback)
+            worker = self.backend.worker
+            identity = dict(self.backend.worker_identity or {})
+            process = getattr(worker, "_process", None)
+            if (worker is None or not callable(getattr(process, "poll", None))
+                    or type(getattr(process, "pid", None)) is not int
+                    or process.pid <= 0):
+                raise WorkerRetirementRefused(
+                    "exact Worker Popen identity is unavailable; cannot fence retirement",
+                    readback=readback,
+                )
+            self._worker_retirement_state = "RETIRING"
+            lease = WorkerRetirementLease(self, worker, identity, process, readback)
+        try:
+            yield lease
+        except BaseException:
+            with self._admission_lock:
+                self._worker_retirement_state = "UNKNOWN" if lease.cleanup_started else "OPEN"
+            raise
+        else:
+            with self._admission_lock:
+                self._worker_retirement_state = (
+                    "RETIRED" if lease._confirmed else
+                    ("UNKNOWN" if lease.cleanup_started else "OPEN")
+                )
+
+    def _worker_admission_refusal(self) -> dict[str, Any] | None:
+        state = self._worker_retirement_state
+        if state == "OPEN":
+            return None
+        code = "WORKER_RETIREMENT_IN_PROGRESS" if state == "RETIRING" else "WORKER_RETIRED_OR_UNKNOWN"
+        return self._error(code, "managed Worker admission is closed by its retirement fence",
+                           data={"engine_dispatched": False, "worker_retirement_state": state})
+
+    @contextmanager
+    def _worker_observation_admission(self):
+        with self._admission_lock:
+            refusal = self._worker_admission_refusal()
+            if refusal is not None:
+                raise ExecutionContractError(refusal["error"]["code"], refusal["error"]["message"])
+            self._worker_admission_inflight += 1
+        try:
+            yield
+        finally:
+            with self._admission_lock:
+                self._worker_admission_inflight -= 1
+
+    def _project_host_permissions(self):
+        permissions = set(self.backend.host_permission_ceiling)
+        service = self.backend.service
+        if service is not None:
+            current = getattr(getattr(service, "ledger", None), "permissions", None)
+            if not isinstance(current, (set, frozenset)):
+                raise RuntimeError("connected service permission state is unavailable")
+            permissions &= set(current)
+        return permissions
+
     def dispatch(self, request):
         try:
             if not isinstance(request, dict):
@@ -74,22 +247,104 @@ class ControlDaemon:
             if not isinstance(operation, str) or not isinstance(arguments, dict) or not isinstance(execution, dict):
                 raise ExecutionContractError("INVALID_REQUEST", "invalid operation/arguments/execution")
             timeouts = self._timeouts(execution)
+            if operation in DESKTOP_OPERATIONS:
+                return self._dispatch_desktop_control(operation, arguments, execution)
+            if operation == "job.resume":
+                return self._dispatch_catalog_job_resume(arguments, execution=execution, timeouts=timeouts)
+            if operation in CACHED_JOB_ACTIONS:
+                return self._dispatch_catalog_job_control(operation, arguments, execution=execution)
             if operation in CONTROL_READS:
+                if operation in {"job_reconcile", "job.reconcile"}:
+                    with self._worker_observation_admission():
+                        return self._control_read(operation, arguments)
                 return self._control_read(operation, arguments)
+            if operation in {"registry_call", "operation_call"}:
+                cached = self._cached_registry_control(operation, arguments, execution=execution)
+                if cached is not None:
+                    return cached
             if operation == "runtime_poc_v64":
                 raise ExecutionContractError("UNSUPPORTED_OPERATION", "historical one-shot probe is disabled in the managed backend")
             from ._g3_w21 import ALIASES
             operation = ALIASES.get(operation, operation)
+            operation = {"artifact_register": "artifact.register", "geometry_import": "geometry.import"}.get(operation, operation)
+            operation = {
+                "project_create": "project.create", "project_inspect": "project.inspect",
+                "project_contract_set": "project.contract_set", "project_policy_set": "project.policy_set",
+                "project_permissions": "project.permissions", "project_state_export": "project.state_export",
+            }.get(operation, operation)
             if operation == "plot_render":
                 operation = "plot.render"
             if operation.startswith("validate_"):
                 operation = operation.replace("validate_", "validate.", 1)
+            if operation in PROJECT_OPERATIONS:
+                return self._dispatch_project_control(operation, arguments, execution, timeouts)
+            if operation == "artifact.register":
+                from ._g2_registry import validate_call
+                validate_call(operation, arguments)
+                project_id = arguments.get("project_id")
+                idempotency_key = arguments.get("idempotency_key")
+                if execution.get("project_id") not in (None, project_id):
+                    raise ExecutionContractError("PROJECT_IDENTITY_MISMATCH", "artifact.register project_id differs from the execution envelope")
+                if execution.get("idempotency_key") not in (None, idempotency_key):
+                    raise ExecutionContractError("IDEMPOTENCY_CONFLICT", "artifact.register idempotency_key differs from the execution envelope")
+                body_request_id = arguments.get("request_id")
+                if execution.get("request_id") not in (None, body_request_id) and body_request_id is not None:
+                    raise ExecutionContractError("INVALID_REQUEST", "artifact.register request_id differs from the execution envelope")
+                execution = {
+                    **execution,
+                    "project_id": project_id,
+                    "idempotency_key": idempotency_key,
+                    **({"request_id": body_request_id} if body_request_id is not None else {}),
+                }
+            if operation == "geometry.import":
+                from ._g2_registry import validate_call
+                scoped = dict(arguments)
+                for identity in ("project_id", "session_id", "model_ref", "expected_revision", "idempotency_key", "request_id"):
+                    if identity not in scoped and identity in execution:
+                        scoped[identity] = execution[identity]
+                if scoped.get("project_id") != execution.get("project_id"):
+                    raise ExecutionContractError("PROJECT_IDENTITY_MISMATCH", "geometry.import project_id must match the execution envelope")
+                validate_call(operation, scoped)
+                for identity in ("session_id", "expected_revision", "idempotency_key"):
+                    if identity in arguments and identity in execution and arguments[identity] != execution[identity]:
+                        raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", f"geometry.import {identity} differs from the execution envelope")
+            if operation in {"model.adopt", "model.inspect"}:
+                nested_identity = {"project_id", "session_id", "model_ref", "expected_revision", "idempotency_key", "request_id"}
+                present = sorted(nested_identity.intersection(arguments))
+                if present:
+                    raise ExecutionContractError(
+                        "INVALID_REQUEST",
+                        f"{operation} identity belongs in the outer execution envelope: {', '.join(present)}",
+                    )
+                from ._g2_registry import validate_call
+                validate_call(operation, arguments)
+                if not isinstance(execution.get("session_id"), str) or not execution["session_id"]:
+                    raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", f"{operation} requires execution.session_id")
+                if operation == "model.inspect" and not isinstance(execution.get("model_ref"), dict):
+                    raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "model.inspect requires execution.model_ref")
+            if operation == "study.run":
+                nested_identity = {"project_id", "session_id", "model_ref", "expected_revision", "idempotency_key", "request_id"}
+                present = sorted(nested_identity.intersection(arguments))
+                if present:
+                    raise ExecutionContractError("INVALID_REQUEST", "study.run identity belongs in the outer execution envelope: " + ", ".join(present))
+                from ._g2_registry import validate_call
+                validate_call(operation, arguments)
+                if not isinstance(execution.get("session_id"), str) or not execution["session_id"]:
+                    raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "study.run requires execution.session_id")
+                if not isinstance(execution.get("model_ref"), dict):
+                    raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "study.run requires execution.model_ref")
+                revision = execution.get("expected_revision")
+                if isinstance(revision, bool) or not isinstance(revision, int) or revision < 0:
+                    raise ExecutionContractError("REVISION_CONFLICT", "study.run requires a non-negative execution.expected_revision")
             if (
                 operation not in self.backend.registry
-                and operation not in {"model_adopt", "model_inspect"}
+                and operation not in {"registry_call", "operation_call", "model_adopt", "model_inspect", "model.adopt", "model.inspect", "artifact.register"}
                 and operation not in _g3_operations()
             ):
                 raise ExecutionContractError("UNSUPPORTED_OPERATION", f"operation is not registered: {operation}")
+            self._authorize_project_execution(operation, arguments, execution)
+            if isinstance(execution.get("project_id"), str) and execution["project_id"]:
+                timeouts = self.project_authority.apply_timeout_caps(execution["project_id"], timeouts)
             if operation == "server_connect" and self.service is None and not (os.environ.get("COMSOL_ROOT") and (os.environ.get("COMSOL_JAVA_HOME") or os.environ.get("JAVA_HOME"))):
                 raise ExecutionContractError("RUNTIME_CONFIGURATION_REQUIRED", "COMSOL_ROOT and COMSOL_JAVA_HOME must be configured")
             request_id = execution.get("request_id") or str(uuid4())
@@ -97,17 +352,64 @@ class ControlDaemon:
             if not isinstance(request_id, str) or not isinstance(key, str) or not key:
                 raise ExecutionContractError("INVALID_REQUEST", "request and idempotency identifiers must be strings")
             execution = {**execution, "request_id": request_id, "idempotency_key": key}
-            digest = canonical_request_hash(operation, arguments, execution.get("model_ref"), execution.get("expected_revision"),
+            digest_operation, digest_arguments = operation, arguments
+            if operation in {"registry_call", "operation_call"}:
+                nested_operation = arguments.get("operation_id")
+                nested_arguments = arguments.get("arguments", {})
+                if isinstance(nested_operation, str) and isinstance(nested_arguments, dict):
+                    # The wrapper is a transport adapter, not a distinct
+                    # semantic operation. Bind direct and nested entrypoints
+                    # to one idempotency identity.
+                    digest_operation, digest_arguments = nested_operation, nested_arguments
+            digest = canonical_request_hash(
+                digest_operation, digest_arguments, execution.get("model_ref"), execution.get("expected_revision"),
+                **({"project_id": execution["project_id"]} if isinstance(execution.get("project_id"), str) else {}),
                 session_id=execution.get("session_id"), queue_timeout_s=timeouts["queue_timeout_s"],
-                execution_timeout_s=timeouts["execution_timeout_s"], no_progress_warning_s=timeouts["no_progress_warning_s"])
-            record, reused = self.store.begin(request_id=request_id, idempotency_key=key, request_hash=digest,
-                operation=operation, metadata={"operation": operation, "arguments": arguments, "execution": execution}, timeouts=timeouts)
-            if reused:
-                return record["result"] if record["result"] is not None else self._pending(record)
-            submitted = time.monotonic()
-            # The durable operation/job exists before it can enter the engine queue.
-            with self.lock:
-                future = self.queue.submit(self._execute, record, operation, arguments, execution, timeouts, submitted)
+                execution_timeout_s=timeouts["execution_timeout_s"], no_progress_warning_s=timeouts["no_progress_warning_s"],
+            )
+            # Authorization references are transient control inputs. Bind
+            # their digests to the idempotency identity and persisted metadata,
+            # but never store the raw references in operation or job records.
+            persisted_arguments = dict(arguments)
+            persisted_execution = dict(execution)
+            if operation in {"runtime.license_checkout", "runtime.render_probe"}:
+                persisted_arguments.pop("authorization_ref_sha256", None)
+                persisted_execution.pop("authorization_ref_sha256", None)
+                authorization_hashes = []
+                for location, mapping in (("arguments", persisted_arguments), ("execution", persisted_execution)):
+                    authorization_ref = mapping.pop("authorization_ref", None)
+                    if authorization_ref is not None:
+                        if isinstance(authorization_ref, str):
+                            encoded_ref = authorization_ref.encode("utf-8")
+                        else:
+                            encoded_ref = json.dumps(
+                                authorization_ref, ensure_ascii=False, sort_keys=True,
+                                separators=(",", ":"), allow_nan=False,
+                            ).encode("utf-8")
+                        authorization_sha256 = hashlib.sha256(encoded_ref).hexdigest()
+                        mapping["authorization_ref_sha256"] = authorization_sha256
+                        authorization_hashes.append((location, authorization_sha256))
+                if authorization_hashes:
+                    # Keep the exact control location in the idempotency
+                    # identity without persisting either raw authorization ref.
+                    auth_identity = "\0".join(f"{where}:{value}" for where, value in authorization_hashes)
+                    digest = hashlib.sha256(f"{digest}\0authorization_refs:{auth_identity}".encode("utf-8")).hexdigest()
+            with self._admission_lock:
+                refusal = self._worker_admission_refusal()
+                if refusal is not None:
+                    return refusal
+                with self.lock:
+                    record, reused = self.store.begin(request_id=request_id, idempotency_key=key, request_hash=digest,
+                        operation=operation, metadata={"operation": operation, "arguments": persisted_arguments,
+                                                        "execution": persisted_execution}, timeouts=timeouts)
+                    if reused:
+                        return record["result"] if record["result"] is not None else self._pending(record)
+                    submitted = time.monotonic()
+                    # The durable operation/job exists before it can enter the
+                    # engine queue. Admission and generation advance are atomic
+                    # with respect to the in-process quiescence snapshot.
+                    self._activity_generation += 1
+                    future = self.queue.submit(self._execute, record, operation, arguments, execution, timeouts, submitted)
             try:
                 return future.result(timeout=timeouts["rpc_timeout_s"])
             except FutureTimeout:
@@ -118,7 +420,562 @@ class ControlDaemon:
             self._log_exception()
             return self._error("EXECUTION_STATE_UNKNOWN", "control could not establish the request state", type=type(exc).__name__)
 
-    def _execute(self, record, operation, arguments, execution, timeouts, submitted):
+    def _cached_registry_control(self, outer_operation: str, outer_arguments: dict[str, Any], *, execution: dict[str, Any]) -> dict[str, Any] | None:
+        """Route supported nested job controls to the cached store directly.
+
+        Other registry actions retain the existing ManagedBackend path.  The
+        execution envelope is intentionally not copied into nested arguments:
+        job controls are project/control-plane operations, not model writes.
+        """
+        if not isinstance(outer_arguments, dict):
+            raise ExecutionContractError("INVALID_REQUEST", f"{outer_operation} arguments must be an object")
+        extra_outer = sorted(set(outer_arguments) - {"operation_id", "arguments"})
+        if extra_outer and str(outer_arguments.get("operation_id", "")).startswith("job."):
+            raise ExecutionContractError("INVALID_REQUEST", f"{outer_operation} has unsupported arguments: {', '.join(extra_outer)}")
+        inner_operation = outer_arguments.get("operation_id")
+        if extra_outer and inner_operation in DESKTOP_OPERATIONS:
+            raise ExecutionContractError("INVALID_REQUEST", f"{outer_operation} has unsupported arguments: {', '.join(extra_outer)}")
+        if inner_operation in PROJECT_OPERATIONS:
+            inner_arguments = outer_arguments.get("arguments", {})
+            if not isinstance(inner_arguments, dict):
+                raise ExecutionContractError("INVALID_REQUEST", "registry call arguments must be an object")
+            return self._dispatch_project_control(
+                inner_operation, inner_arguments, execution, self._timeouts(execution),
+            )
+        if not isinstance(inner_operation, str) or not inner_operation.startswith("job."):
+            if inner_operation in DESKTOP_OPERATIONS:
+                inner_arguments = outer_arguments.get("arguments", {})
+                if not isinstance(inner_arguments, dict):
+                    raise ExecutionContractError("INVALID_REQUEST", "registry call arguments must be an object")
+                return self._dispatch_desktop_control(inner_operation, inner_arguments, execution)
+            return None
+        inner_arguments = outer_arguments.get("arguments", {})
+        if not isinstance(inner_arguments, dict):
+            raise ExecutionContractError("INVALID_REQUEST", "registry call arguments must be an object")
+        if inner_operation == "job.resume":
+            return self._dispatch_catalog_job_resume(
+                inner_arguments, execution=execution, timeouts=self._timeouts(execution),
+            )
+        if inner_operation in {"model.adopt", "model.inspect"}:
+            nested_identity = {"project_id", "session_id", "model_ref", "expected_revision", "idempotency_key", "request_id"}
+            present = sorted(nested_identity.intersection(inner_arguments))
+            if present:
+                raise ExecutionContractError(
+                    "INVALID_REQUEST",
+                    f"{inner_operation} identity belongs in the outer execution envelope: {', '.join(present)}",
+                )
+
+        return self._dispatch_catalog_job_control(inner_operation, inner_arguments, execution=execution)
+
+    def _dispatch_desktop_control(self, operation: str, arguments: dict[str, Any], execution: dict[str, Any]) -> dict[str, Any]:
+        """Validate catalog shape, then use the durable Desktop coordinator."""
+        from . import _g2_registry
+
+        routed = dict(arguments)
+        for field in ("project_id", "idempotency_key", "request_id"):
+            if field not in execution:
+                continue
+            if (field in routed and routed[field] != execution[field]
+                    and not (field == "request_id" and routed[field] == "")):
+                raise ExecutionContractError("INVALID_REQUEST", f"Desktop {field} differs from the execution envelope")
+            if field not in routed or (field == "request_id" and routed[field] == ""):
+                routed[field] = execution[field]
+        _g2_registry.validate_call(
+            operation,
+            routed,
+            allow_coordinator_only=True,
+        )
+        return self.desktop.dispatch(operation, routed)
+
+    def _authorize_desktop(self, project_id: str, permission: str) -> bool:
+        """Map catalog Desktop permissions to host-owned capability grants."""
+        if not isinstance(project_id, str) or not project_id:
+            return False
+        service = self.backend.service
+        if permission == "READ" and service is None:
+            # The control endpoint is same-user, loopback-only, and bearer
+            # authenticated. A read-only platform status query does not need a
+            # COMSOL session; connected sessions still use the ledger grant.
+            return True
+        if service is None:
+            return False
+        permissions = getattr(getattr(service, "ledger", None), "permissions", None)
+        if not isinstance(permissions, set):
+            return False
+        required = {"READ": "inspect", "HOST_CONTROL": "host_control", "TRUSTED_CODE": "trusted_code"}.get(permission)
+        return required is not None and required in permissions
+
+    def _desktop_engine_queue(self, operation, arguments, model_ref, context):
+        """Serialize any future managed API substep and fail closed today."""
+        future = self.queue.submit(self._reject_unavailable_desktop_engine_route, operation)
+        return future.result()
+
+    @staticmethod
+    def _reject_unavailable_desktop_engine_route(operation: str) -> dict[str, Any]:
+        # desktop.binding.resolve/inspect and Desktop Shell execution do not
+        # yet have a trusted current-window binding API in ManagedBackend.
+        # Keeping the rejection inside the existing queue ensures that a
+        # future approved implementation cannot silently bypass serialization.
+        return {
+            "success": False,
+            "data": {"engine_dispatched": False},
+            "error": {
+                "code": "UNSUPPORTED_CONTROL",
+                "message": f"managed Desktop engine route is unavailable: {operation}",
+                "stage": "validation",
+                "safe_retry": True,
+            },
+        }
+
+    @staticmethod
+    def _resolve_desktop_action(project_id, action):
+        raise DesktopOperationError(
+            "UNSUPPORTED_CONTROL", "no versioned trusted Desktop action resolver is configured",
+            safe_retry=True,
+        )
+
+    @staticmethod
+    def _resolve_desktop_artifact(project_id, artifact_id):
+        raise DesktopOperationError(
+            "UNSUPPORTED_CONTROL", "no trusted Desktop Shell artifact resolver is configured",
+            safe_retry=True,
+        )
+
+    @staticmethod
+    def _authorize_desktop_save_copy(project_id, destination):
+        return False
+
+    def _dispatch_catalog_job_control(self, inner_operation: str, inner_arguments: dict[str, Any], *, execution: dict[str, Any]) -> dict[str, Any]:
+        needs_worker_observation = (
+            inner_operation in {"job.reconcile", "job_reconcile"}
+            or (inner_operation in {"job.cancel", "job_cancel"} and inner_arguments.get("force_stop") is True)
+        )
+        if needs_worker_observation:
+            with self._worker_observation_admission():
+                return self._dispatch_catalog_job_control_impl(
+                    inner_operation, inner_arguments, execution=execution,
+                )
+        return self._dispatch_catalog_job_control_impl(
+            inner_operation, inner_arguments, execution=execution,
+        )
+
+    def _dispatch_catalog_job_control_impl(self, inner_operation: str, inner_arguments: dict[str, Any], *, execution: dict[str, Any]) -> dict[str, Any]:
+        """Validate and execute a canonical job action using the cached store."""
+        from . import _g2_registry
+        entry = _g2_registry.validate_call(inner_operation, inner_arguments)
+        forbidden_identity = {"session_id", "model_ref", "expected_revision", "idempotency_key", "request_id"}
+        present_identity = sorted(forbidden_identity.intersection(inner_arguments))
+        if present_identity:
+            raise ExecutionContractError(
+                "INVALID_REQUEST",
+                f"{inner_operation} identity belongs in the outer execution envelope: {', '.join(present_identity)}",
+            )
+        if "project_id" in inner_arguments and inner_operation != "job.list":
+            raise ExecutionContractError("INVALID_REQUEST", f"project_id is not an argument for {inner_operation}")
+
+        mapped = dict(inner_arguments)
+        if entry.operation_id == "job.list":
+            if "cursor" in mapped and "offset" in mapped:
+                raise ExecutionContractError("INVALID_REQUEST", "job.list accepts either cursor or offset, not both")
+            cursor = mapped.pop("cursor", None)
+            if cursor is not None:
+                mapped["offset"] = self._page_cursor_offset(cursor, "job.list cursor")
+            filters = mapped.pop("filter", None)
+            if filters is not None:
+                if not isinstance(filters, dict):
+                    raise ExecutionContractError("INVALID_REQUEST", "job.list filter must be an object")
+                unknown_filters = sorted(set(filters) - {"status", "project_id"})
+                if unknown_filters:
+                    raise ExecutionContractError("INVALID_REQUEST", f"job.list has unsupported filter fields: {', '.join(unknown_filters)}")
+                for name, value in filters.items():
+                    if name in mapped:
+                        raise ExecutionContractError("INVALID_REQUEST", f"job.list {name} cannot be set both directly and in filter")
+                    mapped[name] = value
+            response = self._control_read("job_list", mapped)
+            if response.get("success") and isinstance(response.get("data"), dict):
+                data = response["data"]
+                data["next_cursor"] = str(data["offset"] + len(data["jobs"])) if data.get("has_more") else None
+            return response
+
+        if entry.operation_id == "job.log":
+            cursor = mapped.pop("cursor", None)
+            offset = self._page_cursor_offset(cursor, "job.log cursor") if cursor is not None else 0
+            mapped["offset"] = offset
+            response = self._control_read("job_log", mapped)
+            if response.get("success") and isinstance(response.get("data"), dict):
+                response["data"]["next_cursor"] = str(response["data"].get("next_offset", offset))
+            return response
+
+        if entry.operation_id == "job.cleanup":
+            job_ids = mapped.get("job_ids")
+            if not isinstance(job_ids, list) or not job_ids or any(not isinstance(job_id, str) or not job_id for job_id in job_ids):
+                raise ExecutionContractError("INVALID_REQUEST", "job.cleanup requires an explicit non-empty job_ids array")
+            if len(set(job_ids)) != len(job_ids):
+                raise ExecutionContractError("INVALID_REQUEST", "job.cleanup job_ids must not contain duplicates")
+            policy = mapped.get("policy", {})
+            if not isinstance(policy, dict):
+                raise ExecutionContractError("INVALID_REQUEST", "job.cleanup policy must be an object")
+            unknown_policy = sorted(set(policy) - {"metadata_only"})
+            if unknown_policy:
+                raise ExecutionContractError("INVALID_REQUEST", f"job.cleanup has unsupported policy fields: {', '.join(unknown_policy)}")
+            metadata_only = policy.get("metadata_only", True)
+            if type(metadata_only) is not bool or not metadata_only:
+                raise ExecutionContractError("INVALID_REQUEST", "job.cleanup policy.metadata_only must be true")
+            try:
+                project_id = execution.get("project_id")
+                if project_id is not None and (not isinstance(project_id, str) or not project_id):
+                    raise ExecutionContractError("INVALID_REQUEST", "execution.project_id must be a non-empty string")
+                cleaned_ids = self.store.compact_terminal_job_metadata(job_ids, project_id=project_id)
+            except JobCleanupError as exc:
+                return self._error(exc.code, str(exc), safe_retry=False)
+            return {"success": True, "data": {"cleaned_job_ids": cleaned_ids, "cleaned_count": len(cleaned_ids)}}
+
+        operation_map = {
+            "job.status": "job_status",
+            "job.result": "job_result",
+            "job.reconcile": "job_reconcile",
+            "job.wait": "job_wait",
+            "job.cancel": "job_cancel",
+        }
+        return self._control_read(operation_map[entry.operation_id], mapped)
+
+    def _dispatch_project_control(self, operation: str, arguments: dict[str, Any], execution: dict[str, Any], timeouts: dict[str, Any]) -> dict[str, Any]:
+        """Run project CRUD on the durable store without entering the engine queue."""
+        from . import _g2_registry
+
+        if not self.backend.project_root_explicit:
+            raise ExecutionContractError(
+                "RUNTIME_CONFIGURATION_REQUIRED",
+                "project actions require an explicit project_root or COMSOL_PROJECT_ROOT",
+            )
+
+        body = dict(arguments)
+        outer = dict(execution)
+        # Keep transport identity in the durable outer execution envelope.
+        # Only project.create/contract_set/policy_set have a domain-level
+        # idempotency_key in their accepted ProjectAuthority shapes; injecting
+        # it into read-only project.inspect (or permissions/state_export)
+        # turns a valid envelope into an unsupported domain argument.
+        envelope_fields = ["project_id", "request_id"]
+        if operation in {"project.create", "project.contract_set", "project.policy_set"}:
+            envelope_fields.append("idempotency_key")
+        if operation == "project.policy_set":
+            envelope_fields.append("authorization_ref")
+        for field in envelope_fields:
+            if field not in outer:
+                continue
+            if field in body and body[field] != outer[field]:
+                code = "IDEMPOTENCY_CONFLICT" if field == "idempotency_key" else "INVALID_REQUEST"
+                raise ExecutionContractError(code, f"project {field} differs from the execution envelope")
+            body.setdefault(field, outer[field])
+        _g2_registry.validate_call(operation, body, allow_unbound_identity=True)
+        request_id = outer.get("request_id") or body.get("request_id") or str(uuid4())
+        key = outer.get("idempotency_key") or body.get("idempotency_key")
+        if key is None:
+            if operation in {"project.create", "project.contract_set", "project.policy_set"}:
+                raise ExecutionContractError("INVALID_REQUEST", f"{operation} requires idempotency_key")
+            key = str(uuid4())
+        if not isinstance(request_id, str) or not request_id or not isinstance(key, str) or not key:
+            raise ExecutionContractError("INVALID_REQUEST", "project request identifiers must be nonempty strings")
+        if len(key) > 256:
+            raise ExecutionContractError("INVALID_REQUEST", "idempotency_key exceeds the supported size")
+        request_execution = {**outer, "request_id": request_id, "idempotency_key": key}
+        digest = canonical_request_hash(
+            operation, arguments, request_execution.get("model_ref"), request_execution.get("expected_revision"),
+            session_id=request_execution.get("session_id"),
+            **({"project_id": body["project_id"]} if isinstance(body.get("project_id"), str) else {}),
+            queue_timeout_s=timeouts.get("queue_timeout_s"),
+            execution_timeout_s=timeouts.get("execution_timeout_s"),
+            no_progress_warning_s=timeouts.get("no_progress_warning_s"),
+        )
+        persisted_arguments = dict(arguments)
+        persisted_execution = dict(request_execution)
+        authorization_hashes = []
+        for location, mapping in (("arguments", persisted_arguments), ("execution", persisted_execution)):
+            raw_ref = mapping.pop("authorization_ref", None)
+            mapping.pop("authorization_ref_sha256", None)
+            if raw_ref is not None:
+                if (not isinstance(raw_ref, str) or not raw_ref.strip() or len(raw_ref) > 512
+                        or any(ord(char) < 32 for char in raw_ref)):
+                    raise ExecutionContractError("AUTHORIZATION_REQUIRED", "project policy update requires a valid authorization reference")
+                value = hashlib.sha256(raw_ref.encode("utf-8")).hexdigest()
+                mapping["authorization_ref_sha256"] = value
+                authorization_hashes.append((location, value))
+        if authorization_hashes:
+            auth_identity = "\0".join(f"{where}:{value}" for where, value in authorization_hashes)
+            digest = hashlib.sha256(f"{digest}\0authorization_refs:{auth_identity}".encode("utf-8")).hexdigest()
+            persisted_execution["authorization_ref_sha256"] = hashlib.sha256(
+                "\0".join(value for _where, value in authorization_hashes).encode("ascii")
+            ).hexdigest()
+        persisted_execution.pop("authorization_ref", None)
+        record, reused = self.store.begin(
+            request_id=request_id,
+            idempotency_key=key,
+            request_hash=digest,
+            operation=operation,
+            metadata={"operation": operation, "arguments": persisted_arguments, "execution": persisted_execution},
+            timeouts=timeouts,
+        )
+        if reused:
+            return record["result"] if record["result"] is not None else self._pending(record)
+        job_id = record["job_id"]
+        self.store.update_job(job_id, "RUNNING", {"control_plane": True, "engine_dispatched": False})
+        self.store.add_event(job_id, "RUNNING", {"operation_id": record["operation_id"], "engine_dispatched": False})
+        try:
+            result = self.project_authority.dispatch(operation, body)
+            status = "SUCCEEDED" if result.get("success") is True else "FAILED"
+        except ExecutionContractError as exc:
+            result = self._exception(exc)
+            status = "FAILED"
+        except Exception as exc:
+            self._log_exception()
+            result = self._error("EXECUTION_STATE_UNKNOWN", "project request state could not be established", type=type(exc).__name__)
+            status = "UNKNOWN"
+        return self._finish(record, result, status)
+
+    @staticmethod
+    def _permission_for_effect(effect: Any) -> str | None:
+        return {
+            "INSPECT": "inspect", "PROJECT_WRITE": "project_write",
+            "READ": "inspect", "WRITE": "project_write", "STATE_WRITE": "project_write",
+            "FILE_WRITE": "project_write", "COMPUTE": "compute", "EVALUATE": "project_write",
+            "TRUSTED_CODE": "trusted_code", "HOST_CONTROL": "host_control",
+        }.get(str(effect).upper())
+
+    def _authorize_project_execution(self, operation: str, arguments: dict[str, Any], execution: dict[str, Any]) -> None:
+        """Apply project policy to project-tagged work and exact ModelRefs."""
+        from . import _g2_registry
+
+        scoped_operation = operation
+        if operation in {"registry_call", "operation_call"}:
+            candidate = arguments.get("operation_id")
+            if isinstance(candidate, str):
+                scoped_operation = candidate
+        project_id = execution.get("project_id")
+        ref = execution.get("model_ref")
+        if ref is not None and not isinstance(ref, Mapping):
+            raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "execution.model_ref must be an object")
+        binding = self.backend.model_project_binding(ref) if isinstance(ref, Mapping) else None
+        if binding and binding["attribution"] == "PROJECT_BOUND":
+            if project_id is None:
+                raise ExecutionContractError("PROJECT_IDENTITY_REQUIRED", "project-bound ModelRef requires execution.project_id")
+            if project_id != binding["project_id"]:
+                raise ExecutionContractError("PROJECT_IDENTITY_MISMATCH", "execution.project_id differs from the ModelRef project binding")
+        elif binding and project_id is not None and scoped_operation not in {"model.adopt", "model_adopt"}:
+            raise ExecutionContractError("PROJECT_IDENTITY_MISMATCH", "UNATTRIBUTED ModelRef cannot be assigned by an operation")
+        if project_id is None:
+            return
+        if not isinstance(project_id, str) or not project_id:
+            raise ExecutionContractError("INVALID_REQUEST", "execution.project_id must be a nonempty string")
+        entry = _g2_registry.BY_ID.get(scoped_operation)
+        effect = entry.effect if entry is not None else None
+        if effect is None:
+            try:
+                from ._g3_ops import EFFECTS as g3_effects
+                effect = g3_effects.get(scoped_operation)
+            except Exception:
+                effect = None
+        if effect is None:
+            effect = _g2_registry.LEGACY_TOOL_EFFECTS.get(scoped_operation)
+        permission = self._permission_for_effect(effect)
+        if permission is None:
+            raise ExecutionContractError("PROJECT_SCOPE_UNSUPPORTED", "project-scoped operation has no enforced effect mapping")
+        self.project_authority.authorize_operation(project_id, permission)
+
+    def _dispatch_catalog_job_resume(self, inner_arguments: dict[str, Any], *, execution: dict[str, Any], timeouts: dict[str, Any]) -> dict[str, Any]:
+        with self._worker_observation_admission():
+            return self._dispatch_catalog_job_resume_impl(
+                inner_arguments, execution=execution, timeouts=timeouts,
+            )
+
+    def _dispatch_catalog_job_resume_impl(self, inner_arguments: dict[str, Any], *, execution: dict[str, Any], timeouts: dict[str, Any]) -> dict[str, Any]:
+        """Atomically claim and queue one trusted pre-run snapshot restart."""
+        from . import _g2_registry
+        from ._execution_contract import canonical_project_path, model_ref_from_mapping
+
+        _g2_registry.validate_call("job.resume", inner_arguments)
+        forbidden = {"session_id", "model_ref", "expected_revision", "idempotency_key", "request_id", "project_id"}
+        present = sorted(forbidden.intersection(inner_arguments))
+        if present:
+            raise ExecutionContractError("INVALID_REQUEST", "job.resume identity belongs in execution: " + ", ".join(present))
+        key = execution.get("idempotency_key")
+        request_id = execution.get("request_id") or str(uuid4())
+        if not isinstance(key, str) or not key:
+            raise ExecutionContractError("INVALID_REQUEST", "job.resume requires execution.idempotency_key")
+
+        source_id = inner_arguments["job_id"]
+        source = self.store.job(source_id)
+        if not source:
+            raise ExecutionContractError("NODE_NOT_FOUND", "source job not found")
+        source_operation = self.store.get_operation(source.get("operation_id", ""))
+        if source.get("status") != "FAILED" or not source_operation or source_operation.get("status") != "FAILED":
+            raise ExecutionContractError("RESUME_SOURCE_NOT_FAILED", "job.resume requires terminal FAILED job and operation states")
+        contract = source.get("metadata", {}).get("resume_contract")
+        required = {"schema_version", "source_job_id", "source_operation_id", "source_outer_operation",
+                    "source_outer_request_hash", "source_model_ref", "source_revision", "source_fingerprint",
+                    "source_external_event_counter", "source_model_readback", "original_arguments", "run_arguments", "checkpoint_id",
+                    "checkpoint_sha256", "checkpoint_path", "checkpoint_restore_scope", "source_solution_tags", "file_resource_tags"}
+        if not isinstance(contract, dict) or not required.issubset(contract):
+            raise ExecutionContractError("RESUME_NOT_SUPPORTED", "source job has no complete backend-created reentry contract")
+        source_op = source_operation or {}
+        if (contract.get("schema_version") != 1 or contract.get("source_job_id") != source_id
+                or contract.get("source_operation_id") != source.get("operation_id")
+                or contract.get("source_outer_operation") != source_op.get("operation")
+                or contract.get("source_outer_request_hash") != source_op.get("request_hash")):
+            raise ExecutionContractError("CHECKPOINT_BINDING_MISMATCH", "source job/operation does not match the trusted reentry contract")
+        source_args = (source_op.get("metadata") or {}).get("arguments")
+        if source_op.get("operation") in {"registry_call", "operation_call"} and isinstance(source_args, dict):
+            if source_args.get("operation_id") != "study.run" or not isinstance(source_args.get("arguments"), dict):
+                raise ExecutionContractError("RESUME_NOT_SUPPORTED", "source fallback request did not call study.run")
+            source_args = source_args["arguments"]
+        elif source_op.get("operation") != "study.run":
+            raise ExecutionContractError("RESUME_NOT_SUPPORTED", "only direct or registry study.run jobs are reentrant")
+        if source_args != contract.get("original_arguments"):
+            raise ExecutionContractError("CHECKPOINT_BINDING_MISMATCH", "source run arguments differ from the trusted contract")
+        if source_args.get("recovery_policy") != {"mode": "restart_from_checkpoint"}:
+            raise ExecutionContractError("RESUME_NOT_SUPPORTED", "source study.run did not opt in to snapshot restart")
+        replay_args = {name: value for name, value in source_args.items() if name != "recovery_policy"}
+        if replay_args != contract.get("run_arguments"):
+            raise ExecutionContractError("CHECKPOINT_BINDING_MISMATCH", "replay arguments differ from the source request")
+        source_readback = contract.get("source_model_readback")
+        if (not isinstance(source_readback, dict) or not isinstance(source_readback.get("signature"), str)
+                or len(source_readback["signature"]) != 64 or not isinstance(source_readback.get("state"), dict)):
+            raise ExecutionContractError("CHECKPOINT_BINDING_MISMATCH", "source model readback signature is malformed")
+        if contract.get("source_solution_tags") != [] or contract.get("file_resource_tags") != []:
+            raise ExecutionContractError("RESUME_NOT_SUPPORTED", "source model is outside the no-prior-solutions/no-file-resources allowlist")
+
+        ref_value = execution.get("model_ref")
+        if not isinstance(ref_value, dict):
+            raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "job.resume requires execution.model_ref")
+        ref = model_ref_from_mapping(ref_value)
+        if ref.as_dict() != contract.get("source_model_ref") or execution.get("session_id") != ref.session_id:
+            raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "resume session/ModelRef does not match the source job")
+        if self.service is None:
+            raise ExecutionContractError("ENGINE_UNRESPONSIVE", "managed session is unavailable for resume")
+        if not {"compute", "project_write"}.issubset(self.service.ledger.permissions):
+            raise ExecutionContractError("PERMISSION_DENIED", "job.resume requires compute and project_write")
+        state = self.service.ledger._state_for(ref)
+        revision = execution.get("expected_revision")
+        if isinstance(revision, bool) or not isinstance(revision, int) or revision != state.revision:
+            raise ExecutionContractError("REVISION_CONFLICT", "job.resume requires the current source model revision")
+        authorization_ref = inner_arguments.get("authorization_ref")
+        needs_auth = bool(state.dirty or state.revision != contract.get("source_revision")
+                          or state.external_event_counter != state.observed_external_event_counter
+                          or state.external_event_counter != contract.get("source_external_event_counter"))
+        if needs_auth and (not isinstance(authorization_ref, str) or not authorization_ref.strip()):
+            raise ExecutionContractError("REVISION_CONFLICT", "dirty or advanced source state requires authorization_ref")
+
+        checkpoint_id = contract.get("checkpoint_id")
+        if inner_arguments.get("checkpoint_id") not in (None, checkpoint_id):
+            raise ExecutionContractError("CHECKPOINT_BINDING_MISMATCH", "requested checkpoint is not bound to the source job")
+        checkpoint = next((row for row in self.store.list_metadata("checkpoints")
+                           if row.get("checkpoint_id") == checkpoint_id), None)
+        binding = checkpoint.get("source_binding") if isinstance(checkpoint, dict) else None
+        if (not isinstance(checkpoint, dict) or not isinstance(binding, dict)
+                or checkpoint.get("sha256") != contract.get("checkpoint_sha256")
+                or checkpoint.get("path") != contract.get("checkpoint_path")
+                or checkpoint.get("resume_source_job_id") != source_id
+                or checkpoint.get("resume_source_operation_id") != contract.get("source_operation_id")
+                or checkpoint.get("resume_source_readback_signature") != source_readback.get("signature")
+                or binding.get("model_ref") != ref.as_dict()
+                or binding.get("revision") != contract.get("source_revision")
+                or binding.get("fingerprint") != contract.get("source_fingerprint")
+                or binding.get("external_event_counter") != contract.get("source_external_event_counter")
+                or checkpoint.get("restore_scope") != contract.get("checkpoint_restore_scope")
+                or checkpoint.get("restore_scope", {}).get("solution") != "included_by_COMSOL_save_unverified"):
+            raise ExecutionContractError("CHECKPOINT_BINDING_MISMATCH", "checkpoint metadata is not the source job's trusted pre-run save")
+        path = canonical_project_path(self.backend.project_root, checkpoint["path"])
+        if not path.is_file():
+            raise ExecutionContractError("ARTIFACT_MISSING", "trusted pre-run checkpoint file is unavailable")
+        digest = hashlib.sha256()
+        with path.open("rb") as stream:
+            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                digest.update(chunk)
+        if digest.hexdigest() != contract.get("checkpoint_sha256"):
+            raise ExecutionContractError("ARTIFACT_MISSING", "trusted pre-run checkpoint SHA-256 mismatch")
+
+        events = []
+        while True:
+            page = self.store.events(source_id, offset=len(events), limit=1000)
+            events.extend(page)
+            if len(page) < 1000:
+                break
+        request_ids = list(dict.fromkeys(row.get("metadata", {}).get("request_id") for row in events
+            if row.get("event") == "worker_request" and row.get("metadata", {}).get("phase") == "submitted"
+            and row.get("metadata", {}).get("request_id")))
+        observed = {row.get("metadata", {}).get("request_id"): row.get("metadata", {}).get("status")
+            for row in events if row.get("event") == "worker_request"
+            and row.get("metadata", {}).get("phase") == "observed"
+            and row.get("metadata", {}).get("status") in {"SUCCEEDED", "FAILED"}}
+        if not request_ids:
+            raise ExecutionContractError("JOB_NOT_QUIESCENT", "source job has no durable Worker request history")
+        if self.worker is None:
+            raise ExecutionContractError("ENGINE_UNRESPONSIVE", "connect to the existing Worker before resume")
+        observations = []
+        for identifier in request_ids:
+            status = observed.get(identifier)
+            if status is None:
+                try:
+                    reply = self.worker.status(identifier)
+                    status = reply.get("status") if isinstance(reply, dict) else None
+                except Exception:
+                    status = None
+                self.store.add_event(source_id, "ResumeQuiescenceObserved", {
+                    "request_id": identifier, "status": status if isinstance(status, str) else "UNKNOWN",
+                    "source": "worker_status_readback",
+                })
+            observations.append({"request_id": identifier, "status": status})
+        if any(row["status"] not in {"SUCCEEDED", "FAILED"} for row in observations):
+            raise ExecutionContractError("JOB_NOT_QUIESCENT", "source job has RUNNING, QUEUED or unobserved Worker requests")
+
+        request_hash = canonical_request_hash("job.resume", inner_arguments, ref, revision,
+            session_id=execution.get("session_id"), project_id=execution.get("project_id"))
+        child_execution = {"session_id": ref.session_id, "model_ref": ref.as_dict(),
+                           "expected_revision": revision, "idempotency_key": key, "request_id": request_id}
+        if isinstance(execution.get("project_id"), str):
+            child_execution["project_id"] = execution["project_id"]
+        authorization_hash = hashlib.sha256(authorization_ref.encode("utf-8")).hexdigest() \
+            if isinstance(authorization_ref, str) and authorization_ref else None
+        metadata = {"operation": "study.run", "arguments": replay_args, "execution": child_execution,
+                    "resume": {"source_job_id": source_id, "checkpoint_id": checkpoint_id,
+                               "restart_mode": "restart_from_checkpoint",
+                               "authorization_ref_present": authorization_hash is not None,
+                               "authorization_ref_sha256": authorization_hash}}
+        context = {"source_job_id": source_id, "source_operation_id": source.get("operation_id"),
+                   "resume_contract": contract,
+                   "authorization_ref_present": bool(isinstance(authorization_ref, str) and authorization_ref.strip()),
+                   "authorization_ref_sha256": authorization_hash}
+        record, reused = self.store.begin_resume(source_job_id=source_id, request_id=request_id,
+            idempotency_key=key, request_hash=request_hash, metadata=metadata, timeouts=timeouts)
+        if reused:
+            return record["result"] if record.get("result") is not None else self._pending(
+                record, source_job_id=source_id, restart_mode="restart_from_checkpoint")
+        self.store.add_event(record["job_id"], "ResumeContinuationQueued", {
+            "source_job_id": source_id, "checkpoint_id": checkpoint_id,
+            "restart_mode": "restart_from_checkpoint"})
+        submitted = time.monotonic()
+        try:
+            with self.lock:
+                future = self.queue.submit(self._execute, record, "study.run", replay_args,
+                    child_execution, timeouts, submitted, resume_context=context)
+        except Exception as exc:
+            result = self._error("RESUME_QUEUE_FAILED", "resume continuation could not enter the serial Worker queue",
+                data={"source_job_id": source_id, "engine_dispatched": False}, cause_type=type(exc).__name__)
+            return self._finish(record, result, "FAILED")
+        try:
+            return future.result(timeout=timeouts["rpc_timeout_s"])
+        except FutureTimeout:
+            return self._pending(record, rpc_wait_expired=True, source_job_id=source_id,
+                                 restart_mode="restart_from_checkpoint")
+
+    @staticmethod
+    def _page_cursor_offset(cursor: Any, label: str) -> int:
+        """Decode the documented decimal, zero-based page cursor."""
+        if not isinstance(cursor, str) or re.fullmatch(r"(?:0|[1-9][0-9]*)", cursor) is None:
+            raise ExecutionContractError("INVALID_REQUEST", f"{label} must be a decimal non-negative offset string")
+        return int(cursor)
+
+    def _execute(self, record, operation, arguments, execution, timeouts, submitted, *, resume_context=None):
         job_id, operation_id = record["job_id"], record["operation_id"]
         current_job = self.store.job(job_id)
         if current_job and current_job["status"] == "CANCELLED":
@@ -153,7 +1010,26 @@ class ControlDaemon:
                 if job_id in self.running:
                     self.running[job_id]["last_event"] = time.monotonic()
         try:
-            result = self.backend.invoke(operation, arguments, execution, operation_id, worker_event)
+            project_id = execution.get("project_id")
+            if project_id is not None:
+                # Project policy is control-plane state and may be narrowed
+                # while this job is waiting in the serial engine queue. Check
+                # again at the dispatch boundary so queued work cannot rely on
+                # an admission-time grant that has since been revoked.
+                self._authorize_project_execution(operation, arguments, execution)
+                timeouts = self.project_authority.apply_timeout_caps(project_id, timeouts)
+                project_record = self.project_authority.get_project(project_id)
+                project_scope = self.backend.project_root_scope(project_record["workspace"])
+            else:
+                from contextlib import nullcontext
+                project_scope = nullcontext()
+            with project_scope:
+                if resume_context is None:
+                    result = self.backend.invoke(operation, arguments, execution, operation_id, worker_event)
+                else:
+                    result = self.backend.resume_study_run(
+                        resume_context, arguments, execution, operation_id, worker_event,
+                    )
             if not isinstance(result, dict) or type(result.get("success")) is not bool:
                 raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "backend returned an invalid execution envelope")
             detail = result.get("data") if isinstance(result.get("data"), dict) else {}
@@ -632,12 +1508,21 @@ class ControlDaemon:
                     if warning is not None and not state["progress_warned"] and now - state["last_event"] >= warning:
                         state["progress_warned"] = True
                         self.store.add_event(job_id, "NoProgressWarning", {"progress_percentage": None, "engine_stopped": False})
-            if self.worker is not None and now - health_at >= 0.5:
+            if (self.worker is not None and callable(getattr(self.worker, "health", None))
+                    and now - health_at >= 0.5):
                 health_at = now
-                try:
-                    self.worker_health = {**self.worker.health(timeout_s=0.2), "observed_at": time.time()}
-                except Exception:
-                    self.worker_health = {"status": "UNKNOWN", "observed_at": time.time()}
+                with self._admission_lock:
+                    may_observe = self._worker_retirement_state == "OPEN" and not self.closed.is_set()
+                    if may_observe:
+                        self._worker_admission_inflight += 1
+                if may_observe:
+                    try:
+                        self.worker_health = {**self.worker.health(timeout_s=0.2), "observed_at": time.time()}
+                    except Exception:
+                        self.worker_health = {"status": "UNKNOWN", "observed_at": time.time()}
+                    finally:
+                        with self._admission_lock:
+                            self._worker_admission_inflight -= 1
 
     @staticmethod
     def _timeouts(execution):
@@ -666,7 +1551,9 @@ class ControlDaemon:
             traceback.print_exc(file=stream)
 
     def close(self):
-        self.closed.set()
+        with self._admission_lock:
+            self._worker_retirement_state = "CLOSED"
+            self.closed.set()
         self.queue.shutdown(wait=True)
         self.monitor.join(timeout=2)
         self.store.close()
@@ -682,6 +1569,12 @@ def serve(home):
     home.mkdir(mode=0o700, parents=True, exist_ok=True)
     os.chmod(home, 0o700)
     singleton = ProcessLock(home / "control.lock")
+    try:
+        from ._state_backup import assert_no_pending_restore
+        assert_no_pending_restore(home)
+    except Exception:
+        singleton.close()
+        raise
     token = secrets.token_urlsafe(32)
     daemon = ControlDaemon(home)
     class Handler(BaseHTTPRequestHandler):

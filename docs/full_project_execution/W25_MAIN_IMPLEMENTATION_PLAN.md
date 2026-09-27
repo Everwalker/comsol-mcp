@@ -1,0 +1,36 @@
+# W25 implementation decisions
+
+Status: `SOFTWARE_COORDINATOR_IMPLEMENTED / NATIVE_DESKTOP_CONTROLS_UNSUPPORTED_OR_UNVERIFIED / BLOCK_OTHER_CLIENTS_AUTH_CORRECTION_READY_PENDING_NEW_NATIVE_AUTH`.
+
+The source implementation now has all eight public Desktop tool wrappers, catalog routing, a durable `DesktopCoordinator`, authorization and idempotency checks, and fail-closed platform metadata adapters. The seven write controls remain unsupported in the production adapter because no evidenced current-window/model binding or COMSOL control provider exists. Do not treat the fixtures or Windows pixel helper as native control support. Current per-operation evidence is in [the Desktop service interface](w25/desktop_service_interface.md), [public control wiring](w25/desktop_control_wiring.md), and [the platform adapter matrix](w25/desktop_platform_adapter_matrix.md). The dated [route audit](W25_ROUTE_AUDIT.md) remains a historical record of the source state it inspected.
+
+The separately scoped `ModelUtil.blockOtherClients` API experiment has two immutable native `UNKNOWN` receipts. The first failed before connect because Java 11 could not load a class-file-61 COMSOL class; its exact cleanup is in [the first run reconciliation](evidence/w25_block_other_clients/20260926T2208Z/cleanup_reconciliation.json). The second used bundled Temurin 21.0.7 but failed authentication before `CONNECTED`; it recorded zero trials and model operations. Its exact server/client cleanup and payload hashes are in [the second run archive](evidence/w25_block_other_clients/campaign_20260926T2235Z/run_20260926T2236Z/cleanup_reconciliation.json) and [manifest](evidence/w25_block_other_clients/campaign_20260926T2235Z/run_20260926T2236Z/manifest.json). The second raw receipt remains `UNKNOWN`.
+
+An offline-only client configuration correction now matches the existing worker path: each Java client receives `-Dcs.prefsdir=<same task-private prefs directory as server>` and calls the documented `ModelUtil.connect(host, port, false)` WebSocket overload. The fail-closed process gate also detects Java COMSOL server and `PersistentComsolWorker` entry points. Nine focused tests passed, and the revised client compiled and loaded against the installed COMSOL 6.4 classpath using Corretto `javac 11.0.31` and bundled Temurin 21.0.7. This proves the corrected inputs compile and load; it does not prove authentication or any native trial. See the [authentication correction note](w25/client_auth_configuration_correction.md) and its [candidate freeze](evidence/w25_block_other_clients/auth_correction_20260926T2252Z/candidate_freeze.json). Root authorized one further bounded engine campaign after this candidate freeze; the two earlier native receipts remain `UNKNOWN` and will not be rewritten.
+
+The user-requested macOS COMSOL 6.3 skip remains `USER_REQUESTED_SKIP / NOT_RUN`. No Computer Use or GUI interaction was used; native Desktop binding, controls, migration, permissions and cancel remain unaccepted.
+
+The design decisions below continue to define required behavior. The remaining desktop gaps are not cleared by the coordinator implementation; GUI permission failure does not explain missing source handlers, and unsupported platform status is an honest intermediate state rather than completion.
+
+## Desktop scope
+
+Implement the catalog's Desktop service as a distinct capability with precise per-platform status, schema, authorization and audit boundaries. A caller-provided title, path or model tag does not prove a window/model association. Issue handles only from observed platform process/window identities and bind them to process birth identity and current desktop session. Revalidate before any action. Cross-check observed server endpoint/model identity with the managed ModelRef and generation; report unknown binding where that observation cannot be made. Do not advertise simulated adapters as native support.
+
+Keep non-GUI server operations on their existing managed routes. UI-only selection, capture and action require a verified adapter and authorized target. Standalone migration requires an explicit save-copy strategy, preserving the source window and its unsaved state until the copy is saved and verified, then loading a new server model and returning both identities. Do not treat loading a previously saved file as successful migration of current Desktop memory.
+
+Implement and test the service's control logic without executing GUI automation in this session. Native adapter implementation remains required work where absent; unsupported platform status is an honest intermediate state, not completion. Actual target testing remains distinct from implementation and requires accessible GUI observations. Arbitrary desktop.shell_execute must retain HOST_CONTROL authorization, precise command and target provenance, and cannot become a permission-bypass fallback.
+
+## Server client blocking is independently testable through Java
+
+COMSOL 6.4's local official API explicitly documents ModelUtil.blockOtherClients(boolean). It blocks all other clients' messages and defers model-change notifications. There is no server timeout. The requesting client must release it; disconnect automatically releases it. Therefore this is server-wide exclusion, not a per-model lock and not the worker's local endpoint FileLock.
+
+Use explicit opt-in, scoped server authorization and a task-owned connection for first validation. Wrap a bounded synchronous operation in acquire / try / finally release, with durable acquire/release/failure events. Do not hold the block during long solves by default. If release fails or its result is unknown, record uncertainty; a Python timeout alone does not prove release. Recovery may disconnect only the requesting task-owned client after reconciling its work, never kill the shared server or another client. Do not claim a timeout bound until an independent process demonstrates the disconnect/release recovery.
+
+Native acceptance can use two Java clients against one new task-owned server without computer use: establish both connections before exclusion; observe the second client's bounded busy response or delayed operation; release and confirm its operation completes. Inject an exception and then loss/disconnect of the owning client; confirm the second client recovers in each case. Preserve timestamps and process/server identities. This verifies server blocking/release only; Desktop interactivity after a long operation still needs separate evidence. Inspect the installed 6.3 API before transferring the implementation claim to 6.3.
+
+## Same-version source evidence
+
+- COMSOL 6.4.0.293 local KB doc 7768, chunk 23171: doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/api/com/comsol/model/util/ModelUtil.html; SHA256 a5e4c080407a673a5dd78e95b9fb089d92c0f518477ffdcc4f62b3348085c4eb. Read the actual blockOtherClients method documentation, including no timeout and release on disconnect.
+- KB doc 4086, chunk 16699: doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_general.47.15.html; SHA256 efba38a9c78d87e68e7306ced73ccc947c97ca43802bfb5b29045b45c56bb16a. Confirms multi-client server scope and release semantics.
+
+These are vendor API reference observations, not engine execution evidence. No GUI or COMSOL engine was started by this design work.

@@ -8,12 +8,12 @@ import os
 from pathlib import Path
 from typing import Any
 
-import comsol_mcp._server as _srv
+from comsol_mcp._server import session_server as _srv
 from comsol_mcp._state import (
     _json, _now_iso, _read_workflow_state, _write_workflow_state,
     _append_operation, _safe_model_label, _safe_model_path,
     _safe_model_tag, _resolved_model_file_path, _normcase_path,
-    _resolve_path, _resolve_output_path, OUTPUTS_DIR,
+    _resolve_path, _resolve_output_path, _runtime_output_dir,
 )
 from comsol_mcp._connection import _require_client
 
@@ -258,12 +258,12 @@ def _require_model() -> Any:
 def _save_model_path(model: Any, path: str = "") -> Path:
     current_path = _safe_model_path(model)
     if path:
-        target = _resolve_output_path(path, OUTPUTS_DIR / f"{_safe_model_label(model) or 'model'}.mph")
+        target = _resolve_output_path(path, _runtime_output_dir() / f"{_safe_model_label(model) or 'model'}.mph")
     elif current_path:
         target = Path(current_path)
     else:
         stem = _safe_model_label(model) or "server_model"
-        target = _resolve_output_path("", OUTPUTS_DIR / f"{stem}.mph")
+        target = _resolve_output_path("", _runtime_output_dir() / f"{stem}.mph")
     model.save(target)
     _set_current_model(model, origin=_srv._current_model_origin or "saved", requested_path=str(target))
     return target

@@ -1,0 +1,746 @@
+{
+  "schema_version": 1,
+  "tasks": [
+    {
+      "id": "W01",
+      "title": "冻结基线与遗留工具映射",
+      "gate": "G0",
+      "dependencies": [],
+      "required_tests": [
+        "T038"
+      ],
+      "original_delivery": "固定SHA、列50个旧接口、建立新旧schema映射；避免已有用户配置失效。",
+      "source_row": "| W01 冻结基线与遗留工具映射 | G0 | 无 | T038 | 固定SHA、列50个旧接口、建立新旧schema映射；避免已有用户配置失效。 |",
+      "status": "UNASSESSED",
+      "implementation_paths": [],
+      "evidence": [],
+      "blockers": []
+    },
+    {
+      "id": "W02",
+      "title": "六组合Runtime/Java PoC",
+      "gate": "G0",
+      "dependencies": [
+        "W01"
+      ],
+      "required_tests": [
+        "T001",
+        "T002",
+        "T042",
+        "T059"
+      ],
+      "original_delivery": "实机验证JDK11 client classpath、COMSOL server版本、渲染和产品能力。",
+      "source_row": "| W02 六组合Runtime/Java PoC | G0 | W01 | T001, T002, T042, T059 | 实机验证JDK11 client classpath、COMSOL server版本、渲染和产品能力。 |",
+      "status": "UNASSESSED",
+      "implementation_paths": [],
+      "evidence": [],
+      "blockers": []
+    },
+    {
+      "id": "W03",
+      "title": "Desktop/取消路线PoC",
+      "gate": "G0",
+      "dependencies": [
+        "W02"
+      ],
+      "required_tests": [
+        "T004",
+        "T023",
+        "T052"
+      ],
+      "original_delivery": "验证共享Desktop和可用中止路线；标记GUI-only能力，禁止虚构通用cancel。",
+      "source_row": "| W03 Desktop/取消路线PoC | G0 | W02 | T004, T023, T052 | 验证共享Desktop和可用中止路线；标记GUI-only能力，禁止虚构通用cancel。 |",
+      "status": "UNASSESSED",
+      "implementation_paths": [],
+      "evidence": [],
+      "blockers": []
+    },
+    {
+      "id": "W04",
+      "title": "无破坏求值与变量/选择修复",
+      "gate": "G1",
+      "dependencies": [
+        "W01"
+      ],
+      "required_tests": [
+        "T003",
+        "T005",
+        "T006",
+        "T007",
+        "T033"
+      ],
+      "original_delivery": "修F01-F03/F06；清理仅限本次临时节点；移除固定指标。",
+      "source_row": "| W04 无破坏求值与变量/选择修复 | G1 | W01 | T003, T005, T006, T007, T033 | 修F01-F03/F06；清理仅限本次临时节点；移除固定指标。 |",
+      "status": "UNASSESSED",
+      "implementation_paths": [],
+      "evidence": [],
+      "blockers": []
+    },
+    {
+      "id": "W05",
+      "title": "模型身份/修订/权限",
+      "gate": "G1",
+      "dependencies": [
+        "W02"
+      ],
+      "required_tests": [
+        "T010",
+        "T011",
+        "T035"
+      ],
+      "original_delivery": "建立session/model/generation、项目授权、请求hash与写前检查。",
+      "source_row": "| W05 模型身份/修订/权限 | G1 | W02 | T010, T011, T035 | 建立session/model/generation、项目授权、请求hash与写前检查。 |",
+      "status": "UNASSESSED",
+      "implementation_paths": [],
+      "evidence": [],
+      "blockers": []
+    },
+    {
+      "id": "W06",
+      "title": "控制进程和Java Worker隔离",
+      "gate": "G1",
+      "dependencies": [
+        "W02",
+        "W05"
+      ],
+      "required_tests": [
+        "T012",
+        "T026",
+        "T028",
+        "T055"
+      ],
+      "original_delivery": "统一串行队列；取消伪hard timeout；真实状态与缓存分离。",
+      "source_row": "| W06 控制进程和Java Worker隔离 | G1 | W02, W05 | T012, T026, T028, T055 | 统一串行队列；取消伪hard timeout；真实状态与缓存分离。 |",
+      "status": "UNASSESSED",
+      "implementation_paths": [
+        "comsol_mcp/_control_daemon.py",
+        "comsol_mcp/_g2_registry.py",
+        "comsol_mcp/_managed_backend.py",
+        "comsol_mcp/_operation_store.py",
+        "tests/test_job_cleanup_contract.py",
+        "tests/test_registry_job_control_fallback.py"
+      ],
+      "evidence": [
+        "docs/full_project_execution/evidence/luna_control_fallback/junit.xml",
+        "docs/full_project_execution/evidence/luna_control_fallback/pytest.log",
+        "docs/full_project_execution/evidence/luna_job_cleanup_v4/junit.xml",
+        "docs/full_project_execution/evidence/luna_job_cleanup_v4/pytest.log"
+      ],
+      "blockers": [],
+      "execution_notes": [
+        "Partial control-plane slice implemented and locally regression-tested: supported job.* actions have strict registry_call/operation_call fallback to the cached operation store while the engine queue is occupied.",
+        "This evidence does not complete the task or any native six-target acceptance cell; remaining requirements stay open.",
+        "Added bounded cached job-control fallback plus terminal job-row cache compaction; remains partial and does not satisfy the work package or native target acceptance."
+      ]
+    },
+    {
+      "id": "W07",
+      "title": "持久存储与幂等",
+      "gate": "G1",
+      "dependencies": [
+        "W05"
+      ],
+      "required_tests": [
+        "T027",
+        "T030",
+        "T057"
+      ],
+      "original_delivery": "jobs/operations/revisions/artifacts/checkpoints持久化和迁移。",
+      "source_row": "| W07 持久存储与幂等 | G1 | W05 | T027, T030, T057 | jobs/operations/revisions/artifacts/checkpoints持久化和迁移。 |",
+      "status": "UNASSESSED",
+      "implementation_paths": [
+        "comsol_mcp/_control_daemon.py",
+        "comsol_mcp/_g2_registry.py",
+        "comsol_mcp/_managed_backend.py",
+        "comsol_mcp/_operation_store.py",
+        "tests/test_job_cleanup_contract.py",
+        "tests/test_registry_job_control_fallback.py"
+      ],
+      "evidence": [
+        "docs/full_project_execution/evidence/luna_control_fallback/pytest.log",
+        "docs/full_project_execution/evidence/luna_job_cleanup_v4/junit.xml",
+        "docs/full_project_execution/evidence/luna_job_cleanup_v4/pytest.log"
+      ],
+      "blockers": [],
+      "execution_notes": [
+        "Added bounded cached job-control fallback plus terminal job-row cache compaction; remains partial and does not satisfy the work package or native target acceptance."
+      ]
+    },
+    {
+      "id": "W08",
+      "title": "typed值/节点解析",
+      "gate": "G2",
+      "dependencies": [
+        "W04",
+        "W06"
+      ],
+      "required_tests": [
+        "T008",
+        "T009",
+        "T010"
+      ],
+      "original_delivery": "保留数据形状；实现typed collection和Work Plane嵌套路径。",
+      "source_row": "| W08 typed值/节点解析 | G2 | W04, W06 | T008, T009, T010 | 保留数据形状；实现typed collection和Work Plane嵌套路径。 |",
+      "status": "UNASSESSED",
+      "implementation_paths": [],
+      "evidence": [],
+      "blockers": []
+    },
+    {
+      "id": "W09",
+      "title": "registry/schema/host兼容",
+      "gate": "G2",
+      "dependencies": [
+        "W01",
+        "W08"
+      ],
+      "required_tests": [
+        "T038",
+        "T039"
+      ],
+      "original_delivery": "生成文档、工具发布、operation fallback、structuredContent/isError。",
+      "source_row": "| W09 registry/schema/host兼容 | G2 | W01, W08 | T038, T039 | 生成文档、工具发布、operation fallback、structuredContent/isError。 |",
+      "status": "UNASSESSED",
+      "implementation_paths": [
+        "comsol_mcp/_control_daemon.py",
+        "comsol_mcp/_g2_registry.py",
+        "comsol_mcp/_managed_backend.py",
+        "comsol_mcp/_operation_store.py",
+        "tests/test_job_cleanup_contract.py",
+        "tests/test_registry_job_control_fallback.py"
+      ],
+      "evidence": [
+        "docs/full_project_execution/evidence/luna_control_fallback/junit.xml",
+        "docs/full_project_execution/evidence/luna_control_fallback/pytest.log",
+        "docs/full_project_execution/evidence/luna_job_cleanup_v4/junit.xml",
+        "docs/full_project_execution/evidence/luna_job_cleanup_v4/pytest.log"
+      ],
+      "blockers": [],
+      "execution_notes": [
+        "Partial control-plane slice implemented and locally regression-tested: supported job.* actions have strict registry_call/operation_call fallback to the cached operation store while the engine queue is occupied.",
+        "This evidence does not complete the task or any native six-target acceptance cell; remaining requirements stay open.",
+        "Added bounded cached job-control fallback plus terminal job-row cache compaction; remains partial and does not satisfy the work package or native target acceptance."
+      ]
+    },
+    {
+      "id": "W10",
+      "title": "公共API与Java执行",
+      "gate": "G2",
+      "dependencies": [
+        "W08",
+        "W05"
+      ],
+      "required_tests": [
+        "T031",
+        "T032",
+        "T037"
+      ],
+      "original_delivery": "绑定Model、编译、日志与差异；许可/主机权限与trusted_code分离。",
+      "source_row": "| W10 公共API与Java执行 | G2 | W08, W05 | T031, T032, T037 | 绑定Model、编译、日志与差异；许可/主机权限与trusted_code分离。 |",
+      "status": "UNASSESSED",
+      "implementation_paths": [],
+      "evidence": [],
+      "blockers": []
+    },
+    {
+      "id": "W11",
+      "title": "版本化文档索引",
+      "gate": "G2",
+      "dependencies": [
+        "W02"
+      ],
+      "required_tests": [
+        "T043",
+        "T036"
+      ],
+      "original_delivery": "官方本地帮助索引、来源、版本过滤、无结果语义。",
+      "source_row": "| W11 版本化文档索引 | G2 | W02 | T043, T036 | 官方本地帮助索引、来源、版本过滤、无结果语义。 |",
+      "status": "UNASSESSED",
+      "implementation_paths": [],
+      "evidence": [],
+      "blockers": []
+    },
+    {
+      "id": "W12",
+      "title": "计划/试运行/checkpoint",
+      "gate": "G2",
+      "dependencies": [
+        "W07",
+        "W10"
+      ],
+      "required_tests": [
+        "T029",
+        "T033",
+        "T050"
+      ],
+      "original_delivery": "static preview与隔离trial不同；定义恢复范围和GUI rebind。",
+      "source_row": "| W12 计划/试运行/checkpoint | G2 | W07, W10 | T029, T033, T050 | static preview与隔离trial不同；定义恢复范围和GUI rebind。 |",
+      "status": "UNASSESSED",
+      "implementation_paths": [],
+      "evidence": [],
+      "blockers": []
+    },
+    {
+      "id": "W13",
+      "title": "参数/变量/函数/选区",
+      "gate": "G3",
+      "dependencies": [
+        "W08",
+        "W11"
+      ],
+      "required_tests": [
+        "T006",
+        "T015",
+        "T016",
+        "T048"
+      ],
+      "original_delivery": "多维插值、单位、named/spatial选区与语义校验。",
+      "source_row": "| W13 参数/变量/函数/选区 | G3 | W08, W11 | T006, T015, T016, T048 | 多维插值、单位、named/spatial选区与语义校验。 |",
+      "status": "UNASSESSED",
+      "implementation_paths": [],
+      "evidence": [],
+      "blockers": []
+    },
+    {
+      "id": "W14",
+      "title": "几何/WorkPlane/CAD/坐标Pair",
+      "gate": "G3",
+      "dependencies": [
+        "W13"
+      ],
+      "required_tests": [
+        "T009",
+        "T034"
+      ],
+      "original_delivery": "完整嵌套编辑、几何测量和模型保留；产品差异能力表。",
+      "source_row": "| W14 几何/WorkPlane/CAD/坐标Pair | G3 | W13 | T009, T034 | 完整嵌套编辑、几何测量和模型保留；产品差异能力表。 |",
+      "status": "PARTIAL_IMPLEMENTATION",
+      "implementation_paths": [
+        "comsol_mcp/_g3_w14.py",
+        "comsol_mcp/worker_java/PersistentComsolWorker.java",
+        "tests/test_artifact_registration_import.py",
+        "tests/test_g3_w14.py",
+        "tools/java/NativeArtifactGeometryFixture.java",
+        "tools/run_native_artifact_geometry.py"
+      ],
+      "evidence": [
+        "docs/full_project_execution/evidence/luna_f10_artifact_import/native_geometry/REVISED_CANDIDATE_FREEZE_run_20260926T1055Z_geometry_retest02.json",
+        "docs/full_project_execution/evidence/luna_f10_artifact_import/native_geometry/import_filename_failure_gate_repair_20260926T0942Z.json",
+        "docs/full_project_execution/evidence/luna_f10_artifact_import/native_geometry/offline_javac_worker_and_fixture_20260926T1100Z.json",
+        "docs/full_project_execution/evidence/luna_f10_artifact_import/native_geometry/run_20260926T0924Z_revised_candidate/action_03_geometry_import_build.json",
+        "docs/full_project_execution/evidence/luna_f10_artifact_import/native_geometry/run_20260926T1055Z_geometry_retest02/action_03_geometry_import_build.json",
+        "docs/full_project_execution/evidence/luna_f10_artifact_import/native_geometry/run_20260926T1055Z_geometry_retest02/cleanup.json",
+        "docs/full_project_execution/evidence/luna_f10_artifact_import/native_geometry/run_20260926T1055Z_geometry_retest02/failure.json",
+        "docs/full_project_execution/evidence/luna_f10_artifact_import/native_geometry/run_20260926T1055Z_geometry_retest02/native_failure_diagnosis.json",
+        "docs/full_project_execution/evidence/luna_f10_artifact_import/native_geometry/run_20260926T1055Z_geometry_retest02/worker_connection.json",
+        "docs/full_project_execution/evidence/luna_f10_artifact_import/native_geometry/software_regression_file_type_adapter_20260926T1101Z.log",
+        "docs/full_project_execution/evidence/luna_f10_artifact_import/native_geometry/software_regression_file_type_adapter_20260926T1101Z.xml",
+        "docs/full_project_execution/evidence/luna_f10_artifact_import/native_geometry/software_regression_import_filename_fail_closed_20260926T0942Z.xml"
+      ],
+      "blockers": [
+        "The frozen macOS 6.4 native retest terminated at Import.filename type handling: the COMSOL API returned the exact dynamic type \"File\" and the then-current generic schema rejected it. The narrow documented String adapter now passes software tests, but a fresh native candidate is still required.",
+        "This probe did not dispatch geometry build/measure/validate after import failure. Broader W14 WorkPlane/CAD/coordinate-pair requirements remain only partially verified."
+      ]
+    },
+    {
+      "id": "W15",
+      "title": "材料/物理/多物理",
+      "gate": "G3",
+      "dependencies": [
+        "W13"
+      ],
+      "required_tests": [
+        "T007",
+        "T017",
+        "T042"
+      ],
+      "original_delivery": "属性组和张量、选区、子特征、耦合及初值。",
+      "source_row": "| W15 材料/物理/多物理 | G3 | W13 | T007, T017, T042 | 属性组和张量、选区、子特征、耦合及初值。 |",
+      "status": "UNASSESSED",
+      "implementation_paths": [],
+      "evidence": [],
+      "blockers": []
+    },
+    {
+      "id": "W16",
+      "title": "网格/Study/Solver",
+      "gate": "G3",
+      "dependencies": [
+        "W14",
+        "W15"
+      ],
+      "required_tests": [
+        "T018",
+        "T019",
+        "T020"
+      ],
+      "original_delivery": "从空模型到真实求解；深层solver和物理启用。",
+      "source_row": "| W16 网格/Study/Solver | G3 | W14, W15 | T018, T019, T020 | 从空模型到真实求解；深层solver和物理启用。 |",
+      "status": "UNASSESSED",
+      "implementation_paths": [],
+      "evidence": [],
+      "blockers": []
+    },
+    {
+      "id": "W17",
+      "title": "Dataset/复场/指标/Probe",
+      "gate": "G4",
+      "dependencies": [
+        "W16"
+      ],
+      "required_tests": [
+        "T013",
+        "T014",
+        "T021",
+        "T049"
+      ],
+      "original_delivery": "索引、权重、复数、坐标、分块数据，不静默截断。",
+      "source_row": "| W17 Dataset/复场/指标/Probe | G4 | W16 | T013, T014, T021, T049 | 索引、权重、复数、坐标、分块数据，不静默截断。 |",
+      "status": "UNASSESSED",
+      "implementation_paths": [],
+      "evidence": [],
+      "blockers": []
+    },
+    {
+      "id": "W18",
+      "title": "Plot/Export/视觉返回",
+      "gate": "G4",
+      "dependencies": [
+        "W17",
+        "W03"
+      ],
+      "required_tests": [
+        "T040",
+        "T039"
+      ],
+      "original_delivery": "真实渲染、数据绑定、图片host回传、数据/报告导出。",
+      "source_row": "| W18 Plot/Export/视觉返回 | G4 | W17, W03 | T040, T039 | 真实渲染、数据绑定、图片host回传、数据/报告导出。 |",
+      "status": "UNASSESSED",
+      "implementation_paths": [],
+      "evidence": [],
+      "blockers": []
+    },
+    {
+      "id": "W19",
+      "title": "持久jobs/取消/恢复/并发",
+      "gate": "G4",
+      "dependencies": [
+        "W07",
+        "W16",
+        "W03"
+      ],
+      "required_tests": [
+        "T022",
+        "T023",
+        "T024",
+        "T025",
+        "T026",
+        "T027",
+        "T028",
+        "T053",
+        "T054",
+        "T057"
+      ],
+      "original_delivery": "缓存状态独立响应；取消确认；限制共享Server控制权限。",
+      "source_row": "| W19 持久jobs/取消/恢复/并发 | G4 | W07, W16, W03 | T022, T023, T024, T025, T026, T027, T028, T053, T054, T057 | 缓存状态独立响应；取消确认；限制共享Server控制权限。 |",
+      "status": "UNASSESSED",
+      "implementation_paths": [
+        "comsol_mcp/_control_daemon.py",
+        "comsol_mcp/_g2_registry.py",
+        "comsol_mcp/_managed_backend.py",
+        "comsol_mcp/_operation_store.py",
+        "tests/test_job_cleanup_contract.py",
+        "tests/test_registry_job_control_fallback.py"
+      ],
+      "evidence": [
+        "docs/full_project_execution/evidence/luna_control_fallback/junit.xml",
+        "docs/full_project_execution/evidence/luna_control_fallback/pytest.log",
+        "docs/full_project_execution/evidence/luna_job_cleanup_v4/junit.xml",
+        "docs/full_project_execution/evidence/luna_job_cleanup_v4/pytest.log"
+      ],
+      "blockers": [],
+      "execution_notes": [
+        "Partial control-plane slice implemented and locally regression-tested: supported job.* actions have strict registry_call/operation_call fallback to the cached operation store while the engine queue is occupied.",
+        "This evidence does not complete the task or any native six-target acceptance cell; remaining requirements stay open.",
+        "Added bounded cached job-control fallback plus terminal job-row cache compaction; remains partial and does not satisfy the work package or native target acceptance."
+      ]
+    },
+    {
+      "id": "W20",
+      "title": "结构/数值/物理验证",
+      "gate": "G4",
+      "dependencies": [
+        "W17"
+      ],
+      "required_tests": [
+        "T044",
+        "T058"
+      ],
+      "original_delivery": "规则有覆盖边界；三层成功状态；基准解和收敛。",
+      "source_row": "| W20 结构/数值/物理验证 | G4 | W17 | T044, T058 | 规则有覆盖边界；三层成功状态；基准解和收敛。 |",
+      "status": "UNASSESSED",
+      "implementation_paths": [],
+      "evidence": [],
+      "blockers": []
+    },
+    {
+      "id": "W21",
+      "title": "扫描/优化/阶段状态传递",
+      "gate": "G5",
+      "dependencies": [
+        "W17",
+        "W19"
+      ],
+      "required_tests": [
+        "T021",
+        "T047"
+      ],
+      "original_delivery": "case管理、缓存、参数预算、阶段参考态和变量映射。",
+      "source_row": "| W21 扫描/优化/阶段状态传递 | G5 | W17, W19 | T021, T047 | case管理、缓存、参数预算、阶段参考态和变量映射。 |",
+      "status": "PARTIAL_IMPLEMENTATION",
+      "implementation_paths": [
+        "comsol_mcp/_g3_w21.py",
+        "comsol_mcp/_g3_ops.py",
+        "comsol_mcp/_managed_backend.py",
+        "comsol_mcp/_w21_execution.py",
+        "comsol_mcp/_tools_w21.py",
+        "tests/test_w21_canonical_contracts.py",
+        "docs/full_project_execution/w21_canonical_partial_scope.md"
+      ],
+      "evidence": [
+        "docs/full_project_execution/evidence/luna_w21_canonical/run_20260926T103600Z_r2/pytest.log",
+        "docs/full_project_execution/evidence/luna_w21_canonical/run_20260926T103600Z_r2/junit.xml",
+        "docs/full_project_execution/evidence/luna_w21_canonical/run_20260926T103600Z_r2/py_compile.log"
+      ],
+      "blockers": [],
+      "note": "Partial canonical solver.solution_transfer selector and durable Cartesian experiment.run profiles are implemented. The frozen source/target variable map, geometry/interpolation/conservation guarantees, history-preserving transfer, native verification and T021/T047 remain open. Prior scoped W21 approval is retained; no test cell is promoted."
+    },
+    {
+      "id": "W22",
+      "title": "VCSEL领域验收包",
+      "gate": "G5",
+      "dependencies": [
+        "W20",
+        "W21",
+        "W18"
+      ],
+      "required_tests": [
+        "T045",
+        "T016"
+      ],
+      "original_delivery": "静态非轴对称热源、阵列/环功率、距离扫描、热预算。",
+      "source_row": "| W22 VCSEL领域验收包 | G5 | W20, W21, W18 | T045, T016 | 静态非轴对称热源、阵列/环功率、距离扫描、热预算。 |",
+      "status": "PRIOR_SCOPED_APPROVAL_TO_MAP",
+      "implementation_paths": [],
+      "evidence": [],
+      "blockers": [],
+      "note": "Retain scoped prior approval. Map exact target/evidence applicability; do not blanket-pass original requirements."
+    },
+    {
+      "id": "W23",
+      "title": "光纤耦合领域验收包",
+      "gate": "G5",
+      "dependencies": [
+        "W20",
+        "W21",
+        "W18"
+      ],
+      "required_tests": [
+        "T046",
+        "T014"
+      ],
+      "original_delivery": "复场、模式归一化、耦合与捕获效率分离、容差扫描。",
+      "source_row": "| W23 光纤耦合领域验收包 | G5 | W20, W21, W18 | T046, T014 | 复场、模式归一化、耦合与捕获效率分离、容差扫描。 |",
+      "status": "PARTIAL_IMPLEMENTATION",
+      "implementation_paths": [
+        "comsol_mcp/_mode_overlap.py",
+        "tests/test_mode_overlap.py",
+        "docs/full_project_execution/w23_overlap/definition.schema.json",
+        "docs/full_project_execution/w23_overlap/result.schema.json",
+        "docs/full_project_execution/w23_overlap/integration_contract.md"
+      ],
+      "evidence": [
+        "docs/full_project_execution/w23_overlap/software_test_evidence.md",
+        "docs/full_project_execution/w23_overlap/software_test_ulp_planarity_28tests_junit.xml",
+        "docs/full_project_execution/w23_overlap/evidence/main_overlap_planarity_reproducer.json",
+        "docs/full_project_execution/evidence/main_overlap_correction_retest.xml",
+        "docs/full_project_execution/evidence/main_w23_candidate05_cleanup_review.json",
+        "docs/full_project_execution/evidence/main_w23_candidate06_native_review.json"
+      ],
+      "blockers": [],
+      "note": "Software overlap kernel remains partial. Candidate06 confirms only COMSOL 6.4 PortNumeric API configuration/selected-ID readback with zero solves and exact cleanup (independent evidence main_w23_candidate06_native_review.json); it does not establish native fields, optical results, mesh convergence, physical/scientific acceptance, or overall W23 completion.",
+      "execution_notes": [
+        "Candidate05 native Port API preflight failed before any solve; exact cleanup confirmed and runtime freeze released. Durable operation/job remain UNKNOWN; no W23 native acceptance.",
+        "Candidate06 native PortNumeric API-only readback passed with 1 fixture/0 solves; exact 9.849-second cleanup confirmed. Optical extraction/physics/route integration and total W23 acceptance remain open."
+      ]
+    },
+    {
+      "id": "W24",
+      "title": "胶形/固化领域验收包",
+      "gate": "G5",
+      "dependencies": [
+        "W20",
+        "W21",
+        "W18"
+      ],
+      "required_tests": [
+        "T047",
+        "T058"
+      ],
+      "original_delivery": "稳定胶形及全流程独立路线，质量/参考态/应力历史。",
+      "source_row": "| W24 胶形/固化领域验收包 | G5 | W20, W21, W18 | T047, T058 | 稳定胶形及全流程独立路线，质量/参考态/应力历史。 |",
+      "status": "IN_PROGRESS",
+      "implementation_paths": [
+        "docs/full_project_execution/W24_MAIN_MODEL_PLAN.md",
+        "docs/full_project_execution/w24/W24_CURE_FIXTURE_PROPOSAL.md",
+        "tools/java/W24CureCouponFixture.java",
+        "tools/run_native_w24_cure_preflight.py",
+        "tests/test_w24_cure_coupon_fixture.py",
+        "tests/test_w24_cure_preflight_runner.py",
+        "tools/w24_science_acceptance.py",
+        "tests/test_w24_science_acceptance.py",
+        "tools/run_native_w24_cure_science.py",
+        "tools/java/W24CureScienceFixture.java",
+        "tests/test_w24_cure_science_runner.py"
+      ],
+      "evidence": [
+        "docs/full_project_execution/w24/evidence/setup_only_candidate_20260927T0117Z/offline_checks.json",
+        "docs/full_project_execution/w24/evidence/setup_only_candidate_20260927T0117Z/offline_intbnd_api_correction.json",
+        "docs/full_project_execution/w24/evidence/setup_only_candidate_20260927T0117Z/native_run_20260927T0121Z/worker_job_reconciliation_paged_v3.json",
+        "docs/full_project_execution/w24/evidence/setup_only_candidate_20260927T0117Z/native_run_20260927T0121Z/exact_owned_cleanup_retry1.json",
+        "docs/full_project_execution/w24/evidence/setup_only_candidate_20260927T0117Z/native_run_20260927T0121Z/cleanup_current_recheck_20260927T0141Z.json",
+        "docs/full_project_execution/w24/evidence/setup_only_candidate_20260927T0117Z/native_run_20260927T0121Z/process_state_reconciliation_20260927T0147Z.json",
+        "docs/full_project_execution/w24/evidence/science_runner_development_20260927T0223Z/offline_tests.json",
+        "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0330Z/offline_candidate_freeze.json",
+        "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0330Z/offline_candidate_receipt.json",
+        "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0346Z/offline_candidate_freeze.json",
+        "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0346Z/offline_candidate_receipt.json",
+        "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0346Z/runtime_preflight_final/python_runtime_preflight.json",
+        "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0330Z/native_run_20260927T0334Z/summary.json",
+        "docs/full_project_execution/w24/evidence/root_cause_external_strain_20260927T0523Z.json",
+        "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0510Z/native_run_20260927T0517Z/summary.json",
+        "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0510Z/native_run_20260927T0517Z/exact_owned_cleanup_receipt.json",
+        "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0510Z/native_run_20260927T0517Z/worker_ledger_reconciliation.json"
+      ],
+      "blockers": [
+        "Latest reviewed W24 setup candidate 0510Z failed on Unknown_feature_ID_X#ExternalStrain; its durable job/operation remains UNKNOWN, execution_state_unknown=true and safe_retry=false. Preserve raw result and exact cleanup evidence.",
+        "Offline ExternalStrain parent hierarchy correction under solid.lemm1 is in progress; compile/tests/source freeze/root review remain. No native retry is authorized by this checkpoint.",
+        "W24 science executor remains incomplete and NOT_FROZEN/NOT_STARTED; no solve submissions. Full gel/reference-state/viscoelastic/static-shape scope remains open.",
+        "Stress component identity still requires complete native Equation View descriptions/units and both mechanics benchmarks; values or names alone are insufficient."
+      ],
+      "note": "0510Z setup-only candidate SHA 17a79db2…dce73 ran one COMSOL 6.4.0.293 server/one Worker and failed with Unknown_feature_ID_X#ExternalStrain at the physics root; durable UNKNOWN and cleanup receipts are preserved, 0 solves. Offline 6.4 documentation and saved-model evidence support the child path solid.lemm1/ExternalStrain. Current fix is not frozen/native-verified; StrainInput/dV require actual native getter readback. No repeat birth authorized. Science executor remains incomplete; full W24 scope remains open.",
+      "execution_notes": [
+        "0330Z native attempt: COMSOL 6.4.0.293 server PID 90771/port 63979 and one Worker PID 90848/port 63988; Python 3.14 lacked mcp during production ControlDaemon registry construction, before model setup. 0 solve submissions; exact cleanup and global quiescence verified.",
+        "0346Z offline candidate adds exact Python interpreter/distribution inventory and a pre-birth production no-engine gate. Actual pip check passed; collect_legacy_registry and ControlDaemon construction/close passed; JDK11 compile and 37 focused tests passed. Software-only; no native result.",
+        "0510Z reviewed setup candidate native execution failed on the ExternalStrain parent path; status FAIL_OR_INCOMPLETE, durable UNKNOWN retained, exact cleanup verified, 0 solve submissions. Offline hierarchy root-cause evidence: docs/full_project_execution/w24/evidence/root_cause_external_strain_20260927T0523Z.json."
+      ]
+    },
+    {
+      "id": "W25",
+      "title": "Desktop迁移与高级GUI",
+      "gate": "G5",
+      "dependencies": [
+        "W03",
+        "W12",
+        "W19"
+      ],
+      "required_tests": [
+        "T051",
+        "T052",
+        "T004"
+      ],
+      "original_delivery": "API优先；只对实测GUI路径承诺，明确迁移与重新绑定。",
+      "source_row": "| W25 Desktop迁移与高级GUI | G5 | W03, W12, W19 | T051, T052, T004 | API优先；只对实测GUI路径承诺，明确迁移与重新绑定。 |",
+      "status": "PARTIAL_IMPLEMENTATION",
+      "implementation_paths": [
+        "comsol_mcp/_desktop_service.py",
+        "comsol_mcp/_desktop_platforms.py",
+        "comsol_mcp/_desktop_windows.py",
+        "comsol_mcp/_desktop_macos.py",
+        "comsol_mcp/_desktop_capture.py",
+        "comsol_mcp/_desktop_win32_identity.py",
+        "tests/test_desktop_service.py",
+        "tests/test_desktop_capture.py",
+        "tests/test_desktop_win32_identity.py",
+        "docs/full_project_execution/w25/desktop_service_interface.md",
+        "docs/full_project_execution/w25/desktop_platform_adapter_matrix.md"
+      ],
+      "evidence": [
+        "docs/full_project_execution/evidence/main_desktop_correction_retest.xml",
+        "docs/full_project_execution/w25/desktop_service_interface.md",
+        "docs/full_project_execution/w25/desktop_platform_adapter_matrix.md",
+        "docs/full_project_execution/w25/modelutil_block_other_clients_compile.json"
+      ],
+      "blockers": [],
+      "note": "Coordinator, bounded software fixtures, versioned capability profiles and exact ModelUtil.blockOtherClients API compile probe exist. Native COMSOL Desktop window/control execution was not performed; the user requested avoiding Computer Use and CUA access was denied. Eight frozen desktop action gates/T004/T051/T052 remain not accepted."
+    },
+    {
+      "id": "W26",
+      "title": "离线构件/安全/发布",
+      "gate": "G6",
+      "dependencies": [
+        "W09",
+        "W18",
+        "W19",
+        "W22",
+        "W23",
+        "W24",
+        "W25"
+      ],
+      "required_tests": [
+        "T034",
+        "T035",
+        "T036",
+        "T037",
+        "T041",
+        "T056",
+        "T060"
+      ],
+      "original_delivery": "三种OS/arch构件、六组合认证、hash/lock/SBOM、升级回退、完整交付。",
+      "source_row": "| W26 离线构件/安全/发布 | G6 | W09, W18, W19, W22, W23, W24, W25 | T034, T035, T036, T037, T041, T056, T060 | 三种OS/arch构件、六组合认证、hash/lock/SBOM、升级回退、完整交付。 |",
+      "status": "PARTIAL_IMPLEMENTATION",
+      "implementation_paths": [
+        "tools/full_project_release.py",
+        "tests/test_full_project_release.py",
+        "docs/full_project_execution/release/"
+      ],
+      "evidence": [
+        "docs/full_project_execution/release/RESUME.json",
+        "docs/full_project_execution/release/windows_t034_chinese_path_20260926_01/windows_t034_verification.json",
+        "docs/full_project_execution/release/source_recovery_candidate_20260926_01/evidence/source_rebuild/representative-tests.json",
+        "docs/full_project_execution/release/status-supersession-cryptography-x86-assessment.json",
+        "docs/full_project_execution/release/campaign_state_snapshot_supersession_20260926_01.json"
+      ],
+      "blockers": [],
+      "note": "Preliminary release tooling and local-only campaign recovery are implemented. Windows CPython 3.12 no-index install/doctor and T034 Chinese-path software restore passed; Windows native engine/rebinding/network isolation, Intel-host install, current-source final bundles, final six-combination verification and final acceptance remain open."
+    }
+  ],
+  "effective_scope_decisions": [
+    {
+      "id": "USER_SCOPE_WAIVER_MACOS_COMSOL63_20260926",
+      "effective_disposition": "USER_REQUESTED_SKIP",
+      "user_instruction": "跳过mac 6.3验证",
+      "scope": [
+        "macos-arm64/comsol6.3",
+        "macos-x86_64/comsol6.3"
+      ],
+      "applies_to": "Mac native COMSOL 6.3 validation for both Apple Silicon and Intel targets",
+      "does_not_apply_to": [
+        "windows-x64/comsol6.3",
+        "windows-x64/comsol6.4",
+        "macos-arm64/comsol6.4",
+        "macos-x86_64/comsol6.4"
+      ],
+      "original_contract_preserved": true,
+      "status_handling": "Keep existing target status NOT_RUN (or preserve an already-recorded historical status); do not convert to PASS or NOT_APPLICABLE.",
+      "claims_prohibited": [
+        "macOS Apple Silicon COMSOL 6.3 compatibility verified",
+        "macOS Intel COMSOL 6.3 compatibility verified"
+      ],
+      "recorded_at": "2026-09-26T09:26:38Z"
+    }
+  ],
+  "execution_notes": [
+    "User-requested scope waiver: native Mac COMSOL 6.3 checks for both Apple Silicon and Intel are USER_REQUESTED_SKIP; keep acceptance cells NOT_RUN and original required contract unchanged. No Mac 6.3 compatibility claim is allowed. Windows 6.3/6.4 and both Mac 6.4 targets remain in scope."
+  ]
+}

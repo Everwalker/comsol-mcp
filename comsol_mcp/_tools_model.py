@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import Any
 
-import comsol_mcp._server as _srv
+from comsol_mcp._server import session_server as _srv
 from comsol_mcp._state import (
     _run_tool, _now_iso, _resolve_path, _read_workflow_state, _write_workflow_state,
     _safe_model_label, _safe_model_path, _safe_model_tag,

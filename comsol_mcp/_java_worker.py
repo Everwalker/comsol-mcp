@@ -425,7 +425,7 @@ class PersistentJavaWorker:
 
     def submit(self, kind: str, payload: Mapping[str, Any], *, request_id: str | None = None,
                queue_timeout_s: float | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
-        if kind not in {"connect", "disconnect", "model", "modelutil", "model_snapshot", "call", "children", "walk", "lock_selftest", "code_compile", "code_execute"}:
+        if kind not in {"connect", "disconnect", "model", "modelutil", "license_checkout", "model_snapshot", "call", "children", "walk", "lock_selftest", "code_compile", "code_execute"}:
             raise JavaWorkerError("unknown private worker command")
         body = dict(payload); body["type"] = kind; body["request_id"] = request_id or f"wrk-{uuid.uuid4()}"
         if queue_timeout_s is not None:
@@ -468,6 +468,20 @@ class PersistentJavaWorker:
                 request_id: str | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
         return self.submit("connect", {"host": host, "port": port, "encrypted": encrypted, "user": user, "password": password},
                            request_id=request_id, rpc_timeout_s=rpc_timeout_s)
+
+    def checkout_license(self, products: list[str], *, request_id: str,
+                         queue_timeout_s: float, rpc_timeout_s: float) -> dict[str, Any]:
+        """Issue one explicit seat-consuming request on this existing session.
+
+        The payload contains only the product tokens. Authorization references
+        stay in the control plane and are never sent to the Java Worker.
+        """
+        if not isinstance(products, list) or not products or len(products) > 32:
+            raise JavaWorkerError("license checkout requires 1 to 32 products")
+        if not isinstance(request_id, str) or not request_id:
+            raise JavaWorkerError("license checkout requires a durable request_id")
+        return self.submit("license_checkout", {"products": list(products)}, request_id=request_id,
+                           queue_timeout_s=queue_timeout_s, rpc_timeout_s=rpc_timeout_s)
 
     def model_snapshot(self, model_tag: str, *, request_id: str | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
         return self.submit("model_snapshot", {"tag": model_tag}, request_id=request_id, rpc_timeout_s=rpc_timeout_s)
@@ -560,7 +574,8 @@ class RemoteJava:
     def __init__(self, worker: PersistentJavaWorker, handle: str, generation: int, java_type: str = "") -> None:
         self._worker, self._handle, self._generation, self.java_type = worker, handle, generation, java_type
 
-    def _call(self, method: str, *args: Any, request_id: str | None = None, rpc_timeout_s: float | None = None) -> Any:
+    def _call(self, method: str, *args: Any, request_id: str | None = None,
+              queue_timeout_s: float | None = None, rpc_timeout_s: float | None = None) -> Any:
         if self._generation != self._worker.generation:
             raise JavaWorkerError("STALE_WORKER_HANDLE")
         # C01 dispatch witness: record the method actually dispatched to the
@@ -571,7 +586,8 @@ class RemoteJava:
         from ._domain_outcome import record_engine_method
         record_engine_method(method, *args, command="call", receiver=self._handle)
         reply = self._worker.submit("call", {"handle": self._handle, "generation": self._generation, "method": method, "args": list(args)},
-                                    request_id=request_id, rpc_timeout_s=rpc_timeout_s)
+                                    request_id=request_id, queue_timeout_s=queue_timeout_s,
+                                    rpc_timeout_s=rpc_timeout_s)
         return _decode_reply(reply, self._worker)
 
     def __getattr__(self, method: str):

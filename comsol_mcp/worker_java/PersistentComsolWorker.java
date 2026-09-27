@@ -2,7 +2,10 @@ package comsol_mcp.worker_java;
 
 import com.sun.security.auth.module.NTSystem;
 import com.comsol.model.Model;
+import com.comsol.model.ModelParam;
 import com.comsol.model.NumericalFeature;
+import com.comsol.model.ResultParam;
+import com.comsol.util.exceptions.FlException;
 import com.comsol.model.util.ModelChangeInfo;
 import com.comsol.model.util.ModelChangedHandler;
 import com.comsol.model.util.ModelUtil;
@@ -97,6 +100,13 @@ public final class PersistentComsolWorker {
       // returns only a validated [dimension, point_count] shape, never the
       // coordinate matrix itself.
       "setInterpolationCoordinates", "getCoordinates", "getCoordinatesShape", "getNData",
+      // Restart/model inspection needs only the embedded Model.FileResourceList
+      // tag inventory. This narrow adapter is type-checked below and returns
+      // strings; it does not expose FileResourceList or a generic file() handle.
+      // COMSOL 6.4 Model.file()->FileResourceList and inherited tags() were
+      // verified by the local 6.4 API docs and javap of apiplugins/
+      // com.comsol.api_1.0.0.jar (sha256 9bdc47a9e320be5721956336f44f5afa4cb06a20cfa887bc7d32d1a837483a67).
+      "getFileResourceTags",
       // W17: result, numerical and table API methods javap-verified
       // TableBaseFeature.setColumnHeaders(String[]) is present in the local
       // COMSOL 6.4 API probe; keep the setter reachable with its readback
@@ -253,7 +263,7 @@ public final class PersistentComsolWorker {
     if ("reflection_selftest".equals(type)) return map("ok", true, "result", reflectionSelftest());
     if ("marshalling_selftest".equals(type)) return map("ok", true, "result", marshallingSelftest());
     if ("shutdown".equals(type)) return error("PERMISSION_DENIED", "worker shutdown is controlled by its owner process");
-    if (!"connect".equals(type) && !"call".equals(type) && !"model".equals(type) && !"modelutil".equals(type) && !"model_snapshot".equals(type) && !"disconnect".equals(type) && !"lock_selftest".equals(type) && !"code_compile".equals(type) && !"code_execute".equals(type) && !"children".equals(type) && !"walk".equals(type))
+    if (!"connect".equals(type) && !"call".equals(type) && !"model".equals(type) && !"modelutil".equals(type) && !"license_checkout".equals(type) && !"model_snapshot".equals(type) && !"disconnect".equals(type) && !"lock_selftest".equals(type) && !"code_compile".equals(type) && !"code_execute".equals(type) && !"children".equals(type) && !"walk".equals(type))
       return error("UNKNOWN_COMMAND", "unsupported internal worker command");
     String id = requiredId(request);
     RequestState old = requests.get(id);
@@ -282,6 +292,7 @@ public final class PersistentComsolWorker {
       else if ("model_snapshot".equals(type)) result = modelSnapshot(request);
       else if ("lock_selftest".equals(type)) result = lockSelftest(request);
       else if ("modelutil".equals(type)) result = modelUtil(request);
+      else if ("license_checkout".equals(type)) result = licenseCheckout(request);
       else if ("code_compile".equals(type)) result = compileJava(request);
       else if ("code_execute".equals(type)) result = executeJava(request);
       else if ("children".equals(type)) result = childrenProbe(request);
@@ -523,6 +534,65 @@ public final class PersistentComsolWorker {
           map("method", method, "argument_count", (long) args.size()));
     }
   }
+
+  /**
+   * Explicit, seat-consuming checkout route. This is deliberately a separate
+   * Worker command; the generic modelutil allow-list never contains checkout.
+   * The operation uses the already-connected client and never connects,
+   * disconnects, starts, or stops a COMSOL server.
+   */
+  private Object licenseCheckout(Map<String, Object> request) throws Exception {
+    ensureConnected();
+    Object rawProducts = request.get("products");
+    if (!(rawProducts instanceof List))
+      throw new WorkerFailure("INVALID_REQUEST", "products must be a nonempty array of product tokens",
+          map("checkout_dispatched", false));
+    List<?> values = (List<?>) rawProducts;
+    if (values.isEmpty() || values.size() > 32)
+      throw new WorkerFailure("INVALID_REQUEST", "products must contain between 1 and 32 product tokens",
+          map("checkout_dispatched", false));
+    String[] products = new String[values.size()];
+    Set<String> unique = new HashSet<>();
+    for (int i = 0; i < values.size(); i++) {
+      Object value = values.get(i);
+      if (!(value instanceof String))
+        throw new WorkerFailure("INVALID_REQUEST", "each product must be a string token",
+            map("checkout_dispatched", false));
+      String product = (String) value;
+      if (!product.matches("[A-Za-z][A-Za-z0-9_]{0,63}") || !unique.add(product))
+        throw new WorkerFailure("INVALID_REQUEST", "product tokens must be valid and unique",
+            map("checkout_dispatched", false));
+      products[i] = product;
+    }
+    final Method method;
+    try {
+      // ModelUtil declares checkoutLicense(String...) as checkoutLicense(String[]).
+      method = ModelUtil.class.getMethod("checkoutLicense", String[].class);
+    } catch (NoSuchMethodException absent) {
+      throw new WorkerFailure("MODEL_UTIL_METHOD_ABSENT",
+          "the connected runtime does not declare ModelUtil.checkoutLicense(String...)",
+          map("checkout_dispatched", false));
+    }
+    if (!Modifier.isStatic(method.getModifiers()) || method.getReturnType() != boolean.class) {
+      throw new WorkerFailure("MODEL_UTIL_SIGNATURE_UNSUPPORTED",
+          "the connected runtime checkoutLicense signature does not match the documented boolean method",
+          map("checkout_dispatched", false));
+    }
+    try {
+      Object result = method.invoke(null, (Object) products);
+      if (!(result instanceof Boolean))
+        throw new WorkerFailure("MODEL_UTIL_SIGNATURE_UNSUPPORTED",
+            "the connected runtime checkoutLicense did not return a boolean",
+            map("checkout_dispatched", true, "execution_state_unknown", true, "post_dispatch", true));
+      return map("granted", result, "method", "ModelUtil.checkoutLicense(String...)",
+          "product_count", products.length, "checkout_scope", "current_client_session");
+    } catch (InvocationTargetException invoked) {
+      Throwable cause = invoked.getCause() == null ? invoked : invoked.getCause();
+      String message = cause.getMessage() == null ? cause.getClass().getSimpleName() : cause.getMessage();
+      throw new WorkerFailure("LICENSE_CHECKOUT_CALL_FAILED", message,
+          map("checkout_dispatched", true, "execution_state_unknown", true, "post_dispatch", true), cause);
+    }
+  }
   @SuppressWarnings("unchecked")
   private Object call(Map<String, Object> request) throws Exception {
     ensureConnected(); long claimed = number(request.get("generation"), -1);
@@ -535,7 +605,89 @@ public final class PersistentComsolWorker {
       if (!args.isEmpty()) throw new IllegalArgumentException("getCoordinatesShape takes no arguments");
       return getCoordinatesShape(target);
     }
+    if ("getFileResourceTags".equals(method)) {
+      if (!args.isEmpty()) throw new IllegalArgumentException("getFileResourceTags takes no arguments");
+      return getFileResourceTags(target);
+    }
+    // Only the model's typed ModelParam.evaluateComplex(String) path may
+    // classify the one observed interpolation-range error as a completed
+    // sample failure. ResultParam, overloaded calls, other tags, transport,
+    // serialization and every other API exception retain generic UNKNOWN.
+    if (target instanceof ModelParam && !(target instanceof ResultParam) && "evaluateComplex".equals(method)
+        && args.size() == 1 && args.get(0) instanceof String) {
+      return evaluateModelParameterComplex((ModelParam) target, (String) args.get(0),
+          string(request.get("request_id")));
+    }
     return invoke(target, target.getClass(), method, args);
+  }
+
+  private Object evaluateModelParameterComplex(ModelParam target, String expression,
+                                               String nativeRequestId) throws Exception {
+    try {
+      return target.evaluateComplex(expression);
+    } catch (Exception failure) {
+      Map<String, Object> terminal = terminalInterpolationRangeFailure(
+          target, "evaluateComplex", Collections.<Object>singletonList(expression),
+          failure, nativeRequestId);
+      if (terminal == null) throw failure;
+      throw new WorkerFailure("FUNCTION_EVALUATION_ERROR",
+          "ModelParam.evaluateComplex(String) completed with a recognized interpolation range error",
+          terminal, failure);
+    }
+  }
+
+  /**
+   * Narrow classifier for one stable, directly observed FlException tag. The
+   * caller is the direct typed synchronous ModelParam read boundary, so there
+   * is no reflective InvocationTargetException wrapper to interpret. ResultParam
+   * is excluded explicitly, including a hypothetical dual-interface receiver.
+   * No localized message matching is used. Package visibility exists only so
+   * the no-engine Java probe can test all fail-closed predicates against this
+   * production helper.
+   */
+  static Map<String, Object> terminalInterpolationRangeFailure(
+      Object target, String method, List<?> args, Throwable failure, String nativeRequestId) {
+    if (!(target instanceof ModelParam) || target instanceof ResultParam || !"evaluateComplex".equals(method)
+        || args == null || args.size() != 1 || !(args.get(0) instanceof String)
+        || failure == null || failure.getClass() != FlException.class
+        || !"Interpolation_function_is_out_of_range".equals(failure.getMessage())) {
+      return null;
+    }
+    Map<String, Object> details = new LinkedHashMap<>();
+    details.put("classification", "COMSOL_INTERPOLATION_RANGE");
+    details.put("terminal_sample_error", true);
+    details.put("execution_state_unknown", false);
+    details.put("post_dispatch", true);
+    details.put("serialization_failed", false);
+    details.put("read_only_source", "com.comsol.model.ModelParam.evaluateComplex(String)");
+    details.put("method", method);
+    details.put("target_contract", ModelParam.class.getName());
+    details.put("target_implementation_type", target.getClass().getName());
+    details.put("exception_type", failure.getClass().getName());
+    details.put("error_tag", failure.getMessage());
+    details.put("exception_message", failure.getMessage());
+    if (nativeRequestId != null && !nativeRequestId.isEmpty()) {
+      details.put("native_request_id", nativeRequestId);
+    }
+    Throwable cause = failure.getCause();
+    if (cause != null) {
+      details.put("cause_type", cause.getClass().getName());
+      details.put("cause_message", String.valueOf(cause.getMessage()));
+    } else {
+      details.put("cause_type", null);
+      details.put("cause_message", null);
+    }
+    return details;
+  }
+
+  /** Return only the public Model.FileResourceList tag inventory. */
+  private Object getFileResourceTags(Object target) throws Exception {
+    if (!(target instanceof Model)) {
+      throw new WorkerFailure("FILE_RESOURCE_TAGS_TARGET_INVALID",
+          "getFileResourceTags is only valid for a Model handle");
+    }
+    String[] tags = ((Model) target).file().tags();
+    return tags == null ? Collections.emptyList() : new ArrayList<String>(Arrays.asList(tags));
   }
 
   /**
@@ -1076,6 +1228,7 @@ public final class PersistentComsolWorker {
     final String code; final Map<String,Object> details;
     WorkerFailure(String code,String message){this(code,message,null);}
     WorkerFailure(String code,String message,Map<String,Object> details){super(message);this.code=code;this.details=details;}
+    WorkerFailure(String code,String message,Map<String,Object> details,Throwable cause){super(message,cause);this.code=code;this.details=details;}
   }
   private static final class SourceSpec {
     final Path path; final String text, sha256, entrypoint;

@@ -1,0 +1,876 @@
+import com.comsol.model.Coordsys;
+import com.comsol.model.GeomMeasure;
+import com.comsol.model.GeomSequence;
+import com.comsol.model.Model;
+import com.comsol.model.ParameterEntity;
+import com.comsol.model.PropFeature;
+import com.comsol.model.SelectionFeature;
+import com.comsol.model.StudyFeature;
+import com.comsol.model.physics.Physics;
+import com.comsol.model.physics.PhysicsFeature;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+/**
+ * Owned 3-D full-vector W23 fiber/ball-lens recipe builder.
+ *
+ * The builder configures geometry, materials, a 3-D EWFD physics interface,
+ * Numeric ports, BMA/frequency study features and mesh. It never calls a study
+ * or solver. Angular cases rotate both output fiber solids around the registered
+ * pivot, then configure and read back a local Numeric-port surface selection.
+ */
+public final class NativeW23Full3DFixture {
+    private static final String FIXTURE_ID = "w23_full3d_fiber_ball_lens_vector_pml_v1";
+    private static final String COMPONENT = "comp3d";
+    private static final String GEOMETRY = "geom3d";
+    private static final double PORT_SECTION_HALF_LENGTH_UM = 0.01;
+    private static final double PORT_SELECTION_RADIAL_MARGIN_UM = 0.02;
+    private static final String[] VECTOR_FIELDS = {
+        "ewfd.Ex", "ewfd.Ey", "ewfd.Ez", "ewfd.Hx", "ewfd.Hy", "ewfd.Hz"
+    };
+
+    private NativeW23Full3DFixture() {}
+
+    public static Object run(Model model, Map<String, Object> args) {
+        if (model == null) throw new IllegalArgumentException("model is required");
+        String phase = args == null ? "" : String.valueOf(args.get("phase"));
+        if ("build".equals(phase)) return build(model, args);
+        if ("apply_case".equals(phase)) return applyCase(model, args);
+        if ("identity".equals(phase)) return identity(model);
+        throw new IllegalArgumentException("phase must be build, apply_case, or identity");
+    }
+
+    private static Map<String, Object> build(Model model, Map<String, Object> args) {
+        Map<String, Object> managedIdentity = verifyManagedIdentity(model, args);
+        String recipeSha = requiredSha256(args.get("recipe_sha256"), "recipe_sha256");
+        if (!FIXTURE_ID.equals(args.get("fixture_id")))
+            throw new IllegalArgumentException("registered full-3D fixture id differs");
+        if (Arrays.asList(model.component().tags()).contains(COMPONENT))
+            throw new IllegalStateException("refusing to replace an existing 3-D component");
+        model.label("W23 owned full-3D vector fiber/lens mechanism fixture - not solved");
+        model.param().set("lambda0", "1.55[um]");
+        model.param().set("f0", "193.414489032258[THz]");
+        model.param().set("w23Ncore", "1.47");
+        model.param().set("w23Nclad", "1.44");
+        model.param().set("w23Nlens", "1.52");
+        model.param().set("w23CoreR", "1.2[um]");
+        model.param().set("w23CladR", "2.5[um]");
+        model.param().set("w23LensR", "4[um]");
+        model.param().set("w23AirHalfY", "6[um]");
+        model.param().set("w23AirHalfZ", "6[um]");
+        model.param().set("w23PmlT", "2[um]");
+        model.param().set("w23XIn", "-20[um]");
+        model.param().set("w23XInEnd", "-5[um]");
+        model.param().set("w23XOutStart", "5[um]");
+        model.param().set("w23XOut", "20[um]");
+        model.param().set("w23XDomainMax", "21[um]");
+        model.param().set("w23OutDy", "0[um]");
+        model.param().set("w23OutDz", "0[um]");
+        model.param().set("w23ThetaY", "0[deg]");
+        model.param().set("w23ThetaZ", "0[deg]");
+
+        model.component().create(COMPONENT);
+        GeomSequence geom = model.component(COMPONENT).geom().create(GEOMETRY, 3);
+        geom.lengthUnit("um");
+
+        block(geom, "outerBox", "w23XDomainMax-w23XIn", "2*(w23AirHalfY+w23PmlT)",
+              "2*(w23AirHalfZ+w23PmlT)", "w23XIn", "-w23AirHalfY-w23PmlT",
+              "-w23AirHalfZ-w23PmlT");
+        block(geom, "innerBox", "w23XDomainMax-w23XIn", "2*w23AirHalfY", "2*w23AirHalfZ",
+              "w23XIn", "-w23AirHalfY", "-w23AirHalfZ");
+
+        cylinder(geom, "coreIn", "w23CoreR", "w23XInEnd-w23XIn", "w23XIn 0 0");
+        cylinder(geom, "cladOuterIn", "w23CladR", "w23XInEnd-w23XIn", "w23XIn 0 0");
+        difference(geom, "cladShellIn", "cladOuterIn", "coreIn", true);
+        cylinder(geom, "coreOut", "w23CoreR", "w23XOut-w23XOutStart",
+                 "w23XOutStart w23OutDy w23OutDz");
+        cylinder(geom, "cladOuterOut", "w23CladR", "w23XOut-w23XOutStart",
+                 "w23XOutStart w23OutDy w23OutDz");
+        difference(geom, "cladShellOut", "cladOuterOut", "coreOut", true);
+        rotate(geom, "rotCoreOutY", "coreOut", new String[]{"0", "1", "0"}, "w23ThetaY");
+        rotate(geom, "rotCoreOutZ", "rotCoreOutY", new String[]{"0", "0", "1"}, "w23ThetaZ");
+        rotate(geom, "rotCladShellOutY", "cladShellOut", new String[]{"0", "1", "0"}, "w23ThetaY");
+        rotate(geom, "rotCladShellOutZ", "rotCladShellOutY", new String[]{"0", "0", "1"}, "w23ThetaZ");
+        sphere(geom, "lensBall", "w23LensR", "0 0 0");
+
+        geom.create("solidOptics", "Union");
+        geom.feature("solidOptics").selection("input").set(
+                new String[]{"coreIn", "cladShellIn", "rotCoreOutZ", "rotCladShellOutZ", "lensBall"});
+        geom.feature("solidOptics").set("intbnd", "on");
+        geom.feature("solidOptics").set("keep", "on");
+        resultSelection(geom, "solidOptics");
+
+        geom.create("airRemainder", "Difference");
+        geom.feature("airRemainder").selection("input").set(new String[]{"innerBox"});
+        geom.feature("airRemainder").selection("input2").set(new String[]{"solidOptics"});
+        geom.feature("airRemainder").set("keepsubtract", "on");
+        resultSelection(geom, "airRemainder");
+
+        geom.create("pmlShell", "Difference");
+        geom.feature("pmlShell").selection("input").set(new String[]{"outerBox"});
+        geom.feature("pmlShell").selection("input2").set(new String[]{"innerBox"});
+        geom.feature("pmlShell").set("keepsubtract", "on");
+        resultSelection(geom, "pmlShell");
+
+        geom.create("allDomains", "Union");
+        geom.feature("allDomains").selection("input").set(
+                new String[]{"airRemainder", "solidOptics", "pmlShell"});
+        geom.feature("allDomains").set("intbnd", "on");
+        resultSelection(geom, "allDomains");
+        geom.run();
+
+        int[] coreIn = domainSelection(model, "geom3d_coreIn_dom");
+        int[] coreOut = domainSelection(model, "geom3d_rotCoreOutZ_dom");
+        int[] cladIn = domainSelection(model, "geom3d_cladShellIn_dom");
+        int[] cladOut = domainSelection(model, "geom3d_rotCladShellOutZ_dom");
+        int[] lens = domainSelection(model, "geom3d_lensBall_dom");
+        int[] air = domainSelection(model, "geom3d_airRemainder_dom");
+        int[] pmlDomains = domainSelection(model, "geom3d_pmlShell_dom");
+        assertDisjoint(coreIn, coreOut, cladIn, cladOut, lens, air, pmlDomains);
+        SelectionFeature deformationTarget = createDeformationTargetSelection(
+                model, coreIn, coreOut, cladIn, cladOut, lens);
+
+        SelectionFeature inputPortSelection = box(model, "sel3dInputPort", -20.001, -19.999,
+                -8.001, 8.001, -8.001, 8.001);
+        SelectionFeature outputPortSelection = localPortCylinder(model, "sel3dOutputPort",
+                new double[]{1.0, 0.0, 0.0}, new double[]{20.0, 0.0, 0.0}, 2.5);
+        if (inputPortSelection.entities(2).length == 0 || outputPortSelection.entities(2).length == 0)
+            throw new IllegalStateException("3-D input Box or local output-port section selection is empty");
+
+        Coordsys pml = model.component(COMPONENT).coordSystem().create("pmlYZ", GEOMETRY, "PML");
+        pml.selection().named("geom3d_pmlShell_dom");
+        pml.set("ScalingType", "Cartesian");
+        pml.set("stretchingType", "polynomial");
+        pml.set("typicalWavelength", "lambda0");
+
+        material(model, "matCore3d", "geom3d_coreIn_dom", "w23Ncore^2");
+        material(model, "matCoreOut3d", "geom3d_rotCoreOutZ_dom", "w23Ncore^2");
+        material(model, "matCladIn3d", "geom3d_cladShellIn_dom", "w23Nclad^2");
+        material(model, "matCladOut3d", "geom3d_rotCladShellOutZ_dom", "w23Nclad^2");
+        material(model, "matLens3d", "geom3d_lensBall_dom", "w23Nlens^2");
+        material(model, "matAir3d", "geom3d_airRemainder_dom", "1");
+        material(model, "matPmlAir3d", "geom3d_pmlShell_dom", "1");
+
+        Physics ewfd = model.component(COMPONENT).physics().create("ewfd", "ElectromagneticWaves", GEOMETRY);
+        ewfd.selection().all();
+        // True 3-D EWFD uses the documented full three-component field by
+        // dimension. Do not set the 2-D-only out-of-plane property here.
+        PhysicsFeature portIn = ewfd.feature().create("portIn3d", "Port", 2);
+        PhysicsFeature portOut = ewfd.feature().create("portOut3d", "Port", 2);
+        portIn.selection().named("sel3dInputPort");
+        portOut.selection().named("sel3dOutputPort");
+        configureNumericPort(portIn, "1", true);
+        configureNumericPort(portOut, "2", false);
+
+        model.study().create("std3d");
+        StudyFeature bmaInput = model.study("std3d").feature().create("bmaInput3d", "BoundaryModeAnalysis");
+        StudyFeature bmaOutput = model.study("std3d").feature().create("bmaOutput3d", "BoundaryModeAnalysis");
+        StudyFeature frequency = model.study("std3d").feature().create("freq3d", "Frequency");
+        configureBma(bmaInput, "1");
+        configureBma(bmaOutput, "2");
+        frequency.set("plist", "f0");
+
+        model.component(COMPONENT).mesh().create("mesh3d", GEOMETRY);
+        model.component(COMPONENT).mesh("mesh3d").feature("size").set("custom", "on");
+        model.component(COMPONENT).mesh("mesh3d").feature("size").set("hmax", "lambda0/(5*w23Nlens)");
+        model.component(COMPONENT).mesh("mesh3d").feature("size").set("hmin", "lambda0/(12*w23Nlens)");
+        model.component(COMPONENT).mesh("mesh3d").run();
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("fixture_id", FIXTURE_ID);
+        result.put("recipe_sha256", recipeSha);
+        result.put("managed_identity", managedIdentity);
+        result.put("status", "BUILT_CONFIGURED_NOT_SOLVED");
+        result.put("native_result", "NOT_RUN");
+        result.put("study_or_solver_invoked", false);
+        result.put("geometry", Map.of("dimension", 3, "length_unit", geom.lengthUnit(),
+                "domain_count", geom.getNDomains(), "bounding_box", geom.getBoundingBox(),
+                "propagation_axis", "+x", "lens", "parameterized sphere",
+                "fiber", "two core/cladding cylinder pairs", "background", "air remainder",
+                "pml", "transverse outer Cartesian shell; native directional readback required"));
+        result.put("domain_selections", Map.of(
+                "core_input", intList(coreIn), "core_output", intList(coreOut),
+                "cladding_input", intList(cladIn), "cladding_output", intList(cladOut),
+                "lens", intList(lens), "air", intList(air), "pml", intList(pmlDomains)));
+        result.put("deformation_target_selection", deformationTargetReadback(model, deformationTarget));
+        result.put("port_selections", Map.of(
+                "input", selectionReadback("sel3dInputPort", inputPortSelection.entities(2)),
+                "output", portSectionReadback(model, outputPortSelection,
+                        new double[]{1.0, 0.0, 0.0}, new double[]{20.0, 0.0, 0.0}, 2.5)));
+        result.put("ports", List.of(
+                Map.of("tag", "portIn3d", "properties", propertyReadback(portIn,
+                        new String[]{"PortType", "PortName", "PortExcitation", "PortModeNumber", "Pin", "Thetap", "PortOrientation"})),
+                Map.of("tag", "portOut3d", "properties", propertyReadback(portOut,
+                        new String[]{"PortType", "PortName", "PortExcitation", "PortModeNumber", "Thetap", "PortOrientation"}))));
+        result.put("pml", propertyReadback(pml, new String[]{"ScalingType", "stretchingType", "typicalWavelength"}));
+        result.put("study_steps", List.of(
+                Map.of("tag", "bmaInput3d", "type", bmaInput.getType(), "port", bmaInput.getString("PortName"),
+                       "modeFreq", bmaInput.getString("modeFreq")),
+                Map.of("tag", "bmaOutput3d", "type", bmaOutput.getType(), "port", bmaOutput.getString("PortName"),
+                       "modeFreq", bmaOutput.getString("modeFreq")),
+                Map.of("tag", "freq3d", "type", frequency.getType(), "plist", frequency.getString("plist"))));
+        result.put("fields_expected", Arrays.asList(VECTOR_FIELDS));
+        result.put("vector_field_contract", "3-D ElectromagneticWaves interface; full vector by space dimension; native variable/readback still required");
+        result.put("mode_basis_contract", Map.of("dimension", 2,
+                "basis_id", "fundamental_spatial_mode_two_polarization_subspace_v1",
+                "tracking", "complex power-overlap matrix; mode index labels alone are insufficient"));
+        result.put("angular_cases", Map.of(
+                "status", "ROTATION_AND_LOCAL_PORT_SELECTION_CONFIGURED_NOT_SOLVED",
+                "rotation_order", "right-handed +global y then +global z; shared output-core/cladding pivot",
+                "port_plane", "local finite Cylinder selection follows the transformed output axis",
+                "native_port_selection_readback", portSectionReadback(model, outputPortSelection,
+                        new double[]{1.0, 0.0, 0.0}, new double[]{20.0, 0.0, 0.0}, 2.5)));
+        result.put("mesh", Map.of("tag", "mesh3d", "hmax", "lambda0/(5*w23Nlens)",
+                "hmin", "lambda0/(12*w23Nlens)",
+                "elements", model.component(COMPONENT).mesh("mesh3d").getNumElem()));
+        return result;
+    }
+
+    private static Map<String, Object> applyCase(Model model, Map<String, Object> args) {
+        Map<String, Object> managedIdentity = verifyManagedIdentity(model, args);
+        String recipeSha = requiredSha256(args.get("recipe_sha256"), "recipe_sha256");
+        if (!FIXTURE_ID.equals(args.get("fixture_id")))
+            throw new IllegalArgumentException("registered full-3D fixture id differs");
+        if (!Arrays.asList(model.component().tags()).contains(COMPONENT))
+            throw new IllegalStateException("the canonical full-3D fixture must be built first");
+        Object raw = args == null ? null : args.get("case");
+        if (!(raw instanceof Map)) throw new IllegalArgumentException("a managed immutable case record is required");
+        @SuppressWarnings("unchecked") Map<String, Object> row = (Map<String, Object>) raw;
+        String factor = String.valueOf(row.get("factor"));
+        Object numeric = row.get("value");
+        if (!(numeric instanceof Number) || numeric instanceof Boolean)
+            throw new IllegalArgumentException("case factor value must be numeric");
+        double value = ((Number) numeric).doubleValue();
+        if (!Double.isFinite(value)) throw new IllegalArgumentException("case factor value must be finite");
+        requireRegisteredCaseValue(factor, value);
+        PortFrame frame = casePortFrame(factor, value);
+        verifyReceiverFrame(row.get("receiver_transform"), frame);
+        for (String key : new String[]{"project_id", "model_ref", "model_tag", "expected_revision"}) {
+            if (!managedIdentity.get(key).equals(row.get(key)))
+                throw new IllegalArgumentException("case row is not bound to the managed " + key);
+        }
+        if (!recipeSha.equals(row.get("recipe_sha256")))
+            throw new IllegalArgumentException("case row belongs to another full-3D recipe");
+        resetGeometryParameters(model);
+        if (factor.equals("baseline")) {
+        } else if (factor.equals("receiver_gap_x_um")) {
+            model.param().set("w23XOutStart", "(5[um])+((" + value + ")[um])");
+        } else if (factor.equals("receiver_dy_um")) {
+            model.param().set("w23OutDy", "(" + value + ")[um]");
+        } else if (factor.equals("receiver_dz_um")) {
+            model.param().set("w23OutDz", "(" + value + ")[um]");
+        } else if (factor.equals("receiver_theta_y_deg")) {
+            model.param().set("w23ThetaY", Double.toString(value) + "[deg]");
+        } else if (factor.equals("receiver_theta_z_deg")) {
+            model.param().set("w23ThetaZ", Double.toString(value) + "[deg]");
+        } else if (factor.equals("core_radius_relative")) {
+            model.param().set("w23CoreR", "1.2[um]*(1+(" + value + "))");
+        } else if (factor.equals("cladding_radius_relative")) {
+            model.param().set("w23CladR", "2.5[um]*(1+(" + value + "))");
+        } else if (factor.equals("lens_radius_relative")) {
+            model.param().set("w23LensR", "4[um]*(1+(" + value + "))");
+        } else if (factor.equals("lens_index_delta")) {
+            model.param().set("w23Nlens", "1.52+(" + value + ")");
+        } else {
+            throw new IllegalArgumentException("unregistered full-3D case factor: " + factor);
+        }
+        model.component(COMPONENT).geom(GEOMETRY).run();
+        SelectionFeature deformationTarget = refreshDeformationTargetSelection(model);
+        SelectionFeature portSelection = model.component(COMPONENT).selection("sel3dOutputPort");
+        configureLocalPortCylinder(portSelection, frame.axis, frame.center, frame.claddingRadius);
+        model.component(COMPONENT).mesh("mesh3d").run();
+        Map<String, Object> result = new LinkedHashMap<>();
+        for (String key : new String[]{"project_id", "model_ref", "model_tag", "experiment_id",
+                                       "expected_revision", "case_id", "case_identity_sha256", "recipe_sha256"}) {
+            if (!row.containsKey(key)) throw new IllegalArgumentException("case lacks immutable " + key);
+            result.put(key, row.get(key));
+        }
+        result.put("factor", factor);
+        result.put("factor_value", value);
+        result.put("fixture_id", FIXTURE_ID);
+        result.put("managed_identity", managedIdentity);
+        result.put("status", "GEOMETRY_CASE_CONFIGURED_NOT_SOLVED");
+        result.put("native_result", "NOT_RUN");
+        result.put("study_or_solver_invoked", false);
+        result.put("geometry", Map.of("dimension", 3, "domain_count", model.component(COMPONENT).geom(GEOMETRY).getNDomains(),
+                "input_port_entities", intList(model.component(COMPONENT).selection("sel3dInputPort").entities(2)),
+                "output_port_entities", intList(model.component(COMPONENT).selection("sel3dOutputPort").entities(2))));
+        result.put("receiver_port_section", portSectionReadback(model, portSelection,
+                frame.axis, frame.center, frame.claddingRadius));
+        result.put("deformation_target_selection", deformationTargetReadback(model, deformationTarget));
+        result.put("receiver_transform", Map.of("rotation_order", "right-handed global +y then +z",
+                "axis_xyz", boxed(frame.axis), "center_xyz_um", boxed(frame.center),
+                "theta_y_deg", model.param().get("w23ThetaY"), "theta_z_deg", model.param().get("w23ThetaZ")));
+        result.put("geometry_parameters", Map.of(
+                "core_radius", model.param().get("w23CoreR"),
+                "cladding_radius", model.param().get("w23CladR"),
+                "lens_radius", model.param().get("w23LensR"),
+                "lens_index", model.param().get("w23Nlens"),
+                "receiver_translation_y", model.param().get("w23OutDy"),
+                "receiver_translation_z", model.param().get("w23OutDz"),
+                "receiver_start_x", model.param().get("w23XOutStart"),
+                "receiver_theta_y", model.param().get("w23ThetaY"),
+                "receiver_theta_z", model.param().get("w23ThetaZ")));
+        return result;
+    }
+
+    private static Map<String, Object> verifyManagedIdentity(Model model, Map<String, Object> args) {
+        if (args == null || !Boolean.FALSE.equals(args.get("study_or_solver_invoked"))
+                || !"NOT_RUN".equals(args.get("native_result")))
+            throw new IllegalArgumentException("full-3D fixture entrypoint is configuration-only and must remain NOT_RUN");
+        Object raw = args.get("managed_identity");
+        if (!(raw instanceof Map)) throw new IllegalArgumentException("managed project/model identity is required");
+        @SuppressWarnings("unchecked") Map<String, Object> identity = (Map<String, Object>) raw;
+        String projectId = nonemptyString(identity.get("project_id"), "project_id");
+        Object modelRef = identity.get("model_ref");
+        if (!(modelRef instanceof Map) || ((Map<?, ?>) modelRef).isEmpty())
+            throw new IllegalArgumentException("persisted managed ModelRef is required");
+        String modelTag = nonemptyString(identity.get("model_tag"), "model_tag");
+        if (!modelTag.equals(model.tag())) throw new IllegalStateException("managed model tag differs from native Model");
+        Object revision = identity.get("expected_revision");
+        if (!(revision instanceof Number) || revision instanceof Boolean
+                || ((Number) revision).longValue() < 0
+                || ((Number) revision).doubleValue() != ((Number) revision).longValue())
+            throw new IllegalArgumentException("managed expected revision must be a nonnegative integer");
+        Map<String, Object> bound = new LinkedHashMap<>();
+        bound.put("project_id", projectId);
+        Map<String, Object> modelRefCopy = new LinkedHashMap<>();
+        for (Map.Entry<?, ?> entry : ((Map<?, ?>) modelRef).entrySet()) {
+            if (!(entry.getKey() instanceof String))
+                throw new IllegalArgumentException("managed ModelRef keys must be strings");
+            modelRefCopy.put((String) entry.getKey(), entry.getValue());
+        }
+        bound.put("model_ref", modelRefCopy);
+        bound.put("model_tag", modelTag);
+        bound.put("expected_revision", ((Number) revision).longValue());
+        return bound;
+    }
+
+    private static void requireRegisteredCaseValue(String factor, double value) {
+        double[] registered;
+        switch (factor) {
+            case "baseline": registered = new double[]{0.0}; break;
+            case "receiver_gap_x_um":
+            case "receiver_dy_um":
+            case "receiver_dz_um": registered = new double[]{-0.25, 0.25}; break;
+            case "receiver_theta_y_deg":
+            case "receiver_theta_z_deg": registered = new double[]{-0.5, 0.5}; break;
+            case "core_radius_relative":
+            case "cladding_radius_relative":
+            case "lens_radius_relative": registered = new double[]{-0.02, 0.02}; break;
+            case "lens_index_delta": registered = new double[]{-0.005, 0.005}; break;
+            default: throw new IllegalArgumentException("unregistered full-3D case factor: " + factor);
+        }
+        for (double allowed : registered)
+            if (Math.abs(value - allowed) <= 1e-12) return;
+        throw new IllegalArgumentException("case value is outside the frozen full-3D one-factor matrix");
+    }
+
+    private static String nonemptyString(Object raw, String label) {
+        if (!(raw instanceof String) || ((String) raw).trim().isEmpty())
+            throw new IllegalArgumentException(label + " must be a nonempty string");
+        return (String) raw;
+    }
+
+    private static String requiredSha256(Object raw, String label) {
+        if (!(raw instanceof String) || !((String) raw).matches("^[0-9a-f]{64}$"))
+            throw new IllegalArgumentException(label + " must be a lowercase SHA-256 digest");
+        return (String) raw;
+    }
+
+    private static void resetGeometryParameters(Model model) {
+        model.param().set("w23CoreR", "1.2[um]");
+        model.param().set("w23CladR", "2.5[um]");
+        model.param().set("w23LensR", "4[um]");
+        model.param().set("w23Nlens", "1.52");
+        model.param().set("w23OutDy", "0[um]");
+        model.param().set("w23OutDz", "0[um]");
+        model.param().set("w23XOutStart", "5[um]");
+        model.param().set("w23XDomainMax", "21[um]");
+        model.param().set("w23ThetaY", "0[deg]");
+        model.param().set("w23ThetaZ", "0[deg]");
+    }
+
+    private static Map<String, Object> identity(Model model) {
+        if (!Arrays.asList(model.component().tags()).contains(COMPONENT))
+            throw new IllegalStateException("full-3D fixture component is absent");
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("fixture_id", FIXTURE_ID);
+        result.put("model_tag", model.tag());
+        result.put("component", COMPONENT);
+        result.put("geometry", GEOMETRY);
+        result.put("dimension", model.component(COMPONENT).geom(GEOMETRY).getSDim());
+        result.put("length_unit", model.component(COMPONENT).geom(GEOMETRY).lengthUnit());
+        result.put("domain_count", model.component(COMPONENT).geom(GEOMETRY).getNDomains());
+        result.put("solver_tags", Arrays.asList(model.sol().tags()));
+        result.put("study_tags", Arrays.asList(model.study().tags()));
+        result.put("dataset_tags", Arrays.asList(model.result().dataset().tags()));
+        result.put("study_or_solver_invoked", false);
+        result.put("native_result", "NOT_RUN");
+        return result;
+    }
+
+    private static void block(GeomSequence geom, String tag, String sx, String sy, String sz,
+                              String px, String py, String pz) {
+        geom.create(tag, "Block");
+        geom.feature(tag).set("size", new String[]{sx, sy, sz});
+        geom.feature(tag).set("base", "corner");
+        geom.feature(tag).set("pos", new String[]{px, py, pz});
+    }
+
+    private static void cylinder(GeomSequence geom, String tag, String radius, String height, String position) {
+        geom.create(tag, "Cylinder");
+        geom.feature(tag).set("r", radius);
+        geom.feature(tag).set("h", height);
+        geom.feature(tag).set("pos", position.split(" "));
+        geom.feature(tag).set("axis", new String[]{"1", "0", "0"});
+        resultSelection(geom, tag);
+    }
+
+    private static void rotate(GeomSequence geom, String tag, String input, String[] axis,
+                               String angleParameter) {
+        geom.create(tag, "Rotate");
+        geom.feature(tag).selection("input").set(new String[]{input});
+        geom.feature(tag).set("specify", "axis");
+        geom.feature(tag).set("specifypoint", "coord");
+        geom.feature(tag).set("axistype", "cartesian");
+        geom.feature(tag).set("axis", axis);
+        geom.feature(tag).set("pos", new String[]{"w23XOutStart", "w23OutDy", "w23OutDz"});
+        geom.feature(tag).set("rot", new String[]{angleParameter});
+        geom.feature(tag).set("keep", "off");
+        geom.feature(tag).set("propagatesel", "on");
+        resultSelection(geom, tag);
+    }
+
+    private static void sphere(GeomSequence geom, String tag, String radius, String position) {
+        geom.create(tag, "Sphere");
+        geom.feature(tag).set("r", radius);
+        geom.feature(tag).set("pos", position.split(" "));
+        resultSelection(geom, tag);
+    }
+
+    private static void difference(GeomSequence geom, String tag, String add, String subtract,
+                                   boolean keepSubtract) {
+        geom.create(tag, "Difference");
+        geom.feature(tag).selection("input").set(new String[]{add});
+        geom.feature(tag).selection("input2").set(new String[]{subtract});
+        geom.feature(tag).set("keepsubtract", keepSubtract ? "on" : "off");
+        resultSelection(geom, tag);
+    }
+
+    private static void resultSelection(GeomSequence geom, String tag) {
+        geom.feature(tag).set("selresult", "on");
+        geom.feature(tag).set("selresultshow", "dom");
+    }
+
+    private static SelectionFeature box(Model model, String tag, double xmin, double xmax,
+                                        double ymin, double ymax, double zmin, double zmax) {
+        SelectionFeature selection = model.component(COMPONENT).selection().create(tag, "Box");
+        selection.set("entitydim", 2);
+        selection.set("condition", "inside");
+        selection.set("xmin", xmin); selection.set("xmax", xmax);
+        selection.set("ymin", ymin); selection.set("ymax", ymax);
+        selection.set("zmin", zmin); selection.set("zmax", zmax);
+        return selection;
+    }
+
+    private static SelectionFeature localPortCylinder(Model model, String tag, double[] axis,
+            double[] center, double claddingRadius) {
+        SelectionFeature selection = model.component(COMPONENT).selection().create(tag, "Cylinder");
+        configureLocalPortCylinder(selection, axis, center, claddingRadius);
+        return selection;
+    }
+
+    private static SelectionFeature createDeformationTargetSelection(Model model,
+            int[] coreIn, int[] coreOut, int[] cladIn, int[] cladOut, int[] lens) {
+        SelectionFeature selection = model.component(COMPONENT).selection().create(
+                "sel3dDeformationTarget", "Explicit");
+        selection.geom(GEOMETRY);
+        selection.set("entitydim", 3);
+        int[] entities = concatenate(coreIn, coreOut, cladIn, cladOut, lens);
+        selection.set(entities);
+        verifyDeformationTargetSelection(selection, entities);
+        return selection;
+    }
+
+    private static SelectionFeature refreshDeformationTargetSelection(Model model) {
+        int[] coreIn = domainSelection(model, "geom3d_coreIn_dom");
+        int[] coreOut = domainSelection(model, "geom3d_rotCoreOutZ_dom");
+        int[] cladIn = domainSelection(model, "geom3d_cladShellIn_dom");
+        int[] cladOut = domainSelection(model, "geom3d_rotCladShellOutZ_dom");
+        int[] lens = domainSelection(model, "geom3d_lensBall_dom");
+        int[] entities = concatenate(coreIn, coreOut, cladIn, cladOut, lens);
+        SelectionFeature selection = model.component(COMPONENT).selection("sel3dDeformationTarget");
+        selection.geom(GEOMETRY);
+        selection.set("entitydim", 3);
+        selection.clear();
+        selection.set(entities);
+        verifyDeformationTargetSelection(selection, entities);
+        return selection;
+    }
+
+    private static void verifyDeformationTargetSelection(SelectionFeature selection, int[] expected) {
+        if (selection.getInt("entitydim") != 3 || !GEOMETRY.equals(selection.geom())
+                || !sameSet(expected, selection.entities(3)))
+            throw new IllegalStateException("native deformation target selection differs from the generated optical material domains");
+    }
+
+    private static Map<String, Object> deformationTargetReadback(Model model, SelectionFeature selection) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("tag", selection.tag());
+        result.put("evidence_scope", "COMSOL_NATIVE_GEOMETRY_READBACK");
+        result.put("selection_type", "Explicit");
+        result.put("component_tag", COMPONENT);
+        result.put("geometry_tag", selection.geom());
+        result.put("entity_dimension", selection.getInt("entitydim"));
+        result.put("entity_ids", intList(selection.entities(3)));
+        result.put("geometry_length_unit", model.component(COMPONENT).geom(GEOMETRY).lengthUnit());
+        result.put("coordinate_frame", "spatial");
+        result.put("coordinate_unit", "m");
+        result.put("vector_basis", "global_xyz");
+        result.put("selected_material_domains", Arrays.asList("core input", "core output",
+                "cladding input", "cladding output", "ball lens"));
+        result.put("excluded_domains", Arrays.asList("air remainder", "PML shell"));
+        result.put("entity_ids_derived_from", "native geometry result selections after geometry build");
+        result.put("deformation_mapping", "W21 source displacement field; no caller arrays");
+        return result;
+    }
+
+    private static int[] concatenate(int[]... groups) {
+        List<Integer> values = new ArrayList<>();
+        Set<Integer> seen = new LinkedHashSet<>();
+        for (int[] group : groups) {
+            if (group == null || group.length == 0)
+                throw new IllegalStateException("deformation target domain group is empty");
+            for (int value : group) {
+                if (value < 1 || !seen.add(value))
+                    throw new IllegalStateException("deformation target domain IDs are invalid or overlapping");
+                values.add(value);
+            }
+        }
+        int[] result = new int[values.size()];
+        for (int i = 0; i < result.length; i++) result[i] = values.get(i);
+        return result;
+    }
+
+    private static boolean sameSet(int[] left, int[] right) {
+        if (left == null || right == null || left.length != right.length) return false;
+        int[] a = left.clone(), b = right.clone();
+        Arrays.sort(a); Arrays.sort(b);
+        return Arrays.equals(a, b);
+    }
+
+    private static void configureLocalPortCylinder(SelectionFeature selection, double[] axis,
+            double[] center, double claddingRadius) {
+        if (axis == null || axis.length != 3 || center == null || center.length != 3
+                || !(claddingRadius > 0.0))
+            throw new IllegalArgumentException("local receiver section needs a finite axis, center, and positive radius");
+        double norm = Math.sqrt(axis[0]*axis[0] + axis[1]*axis[1] + axis[2]*axis[2]);
+        if (!Double.isFinite(norm) || Math.abs(norm - 1.0) > 1e-10)
+            throw new IllegalArgumentException("receiver selection axis must be a unit vector");
+        double halfLength = PORT_SECTION_HALF_LENGTH_UM;
+        double[] base = new double[]{center[0] - halfLength*axis[0],
+                center[1] - halfLength*axis[1], center[2] - halfLength*axis[2]};
+        selection.set("entitydim", 2);
+        selection.set("condition", "inside");
+        selection.set("axistype", "cartesian");
+        selection.set("axis", axis);
+        selection.set("pos", base);
+        selection.set("bottom", 0.0);
+        selection.set("top", 2.0*halfLength);
+        selection.set("r", claddingRadius + PORT_SELECTION_RADIAL_MARGIN_UM);
+        selection.set("rin", 0.0);
+        if (selection.getInt("entitydim") != 2 || !"inside".equals(selection.getString("condition"))
+                || !"cartesian".equals(selection.getString("axistype"))
+                || Math.abs(selection.getDouble("bottom")) > 1e-15
+                || Math.abs(selection.getDouble("top") - 2.0*halfLength) > 1e-12
+                || Math.abs(selection.getDouble("r") - (claddingRadius + PORT_SELECTION_RADIAL_MARGIN_UM)) > 1e-12)
+            throw new IllegalStateException("local output port Cylinder selection readback differs from the registered section");
+        requireVectorNear(selection.getDoubleArray("axis"), axis, 1e-10, "local section axis");
+        requireVectorNear(selection.getDoubleArray("pos"), base, 1e-10, "local section base point");
+    }
+
+    private static PortFrame casePortFrame(String factor, double value) {
+        double startX = 5.0, dy = 0.0, dz = 0.0, radius = 2.5, thetaY = 0.0, thetaZ = 0.0;
+        if ("receiver_gap_x_um".equals(factor)) startX += value;
+        else if ("receiver_dy_um".equals(factor)) dy = value;
+        else if ("receiver_dz_um".equals(factor)) dz = value;
+        else if ("receiver_theta_y_deg".equals(factor)) thetaY = value;
+        else if ("receiver_theta_z_deg".equals(factor)) thetaZ = value;
+        else if ("cladding_radius_relative".equals(factor)) radius *= (1.0 + value);
+        double ry = Math.toRadians(thetaY), rz = Math.toRadians(thetaZ);
+        double[] axis = new double[]{Math.cos(rz)*Math.cos(ry), Math.sin(rz)*Math.cos(ry), -Math.sin(ry)};
+        double length = 20.0 - startX;
+        double[] center = new double[]{startX + length*axis[0], dy + length*axis[1], dz + length*axis[2]};
+        return new PortFrame(new double[]{startX, dy, dz}, axis, center, radius, thetaY, thetaZ);
+    }
+
+    private static void verifyReceiverFrame(Object raw, PortFrame frame) {
+        if (!(raw instanceof Map)) throw new IllegalArgumentException("registered receiver transform is required");
+        @SuppressWarnings("unchecked") Map<String, Object> expected = (Map<String, Object>) raw;
+        if (!"right-handed global +y then +z".equals(expected.get("rotation_order")))
+            throw new IllegalArgumentException("receiver rotation order differs from the frozen transform");
+        requireVectorNear(requiredDoubleVector(expected.get("pivot_xyz_um"), "receiver pivot"),
+                frame.pivot, 1e-10, "receiver pivot");
+        requireVectorNear(requiredDoubleVector(expected.get("axis_xyz"), "receiver axis"),
+                frame.axis, 1e-10, "receiver axis");
+        requireVectorNear(requiredDoubleVector(expected.get("center_xyz_um"), "receiver center"),
+                frame.center, 1e-9, "receiver center");
+        requireNear(requiredFiniteNumber(expected.get("cladding_radius_um"), "cladding radius"),
+                frame.claddingRadius, 1e-10, "receiver cladding radius");
+        requireNear(requiredFiniteNumber(expected.get("theta_y_deg"), "theta_y"),
+                frame.thetaY, 1e-10, "receiver theta_y");
+        requireNear(requiredFiniteNumber(expected.get("theta_z_deg"), "theta_z"),
+                frame.thetaZ, 1e-10, "receiver theta_z");
+        requireNear(requiredFiniteNumber(expected.get("selection_half_length_um"), "selection half length"),
+                PORT_SECTION_HALF_LENGTH_UM, 1e-10, "receiver selection half length");
+        requireNear(requiredFiniteNumber(expected.get("selection_radial_margin_um"), "selection radial margin"),
+                PORT_SELECTION_RADIAL_MARGIN_UM, 1e-10, "receiver selection radial margin");
+    }
+
+    private static double[] requiredDoubleVector(Object raw, String label) {
+        if (!(raw instanceof List) || ((List<?>) raw).size() != 3)
+            throw new IllegalArgumentException(label + " must have exactly three coordinates");
+        List<?> input = (List<?>) raw;
+        double[] values = new double[3];
+        for (int i = 0; i < values.length; i++)
+            values[i] = requiredFiniteNumber(input.get(i), label);
+        return values;
+    }
+
+    private static double requiredFiniteNumber(Object raw, String label) {
+        if (!(raw instanceof Number) || raw instanceof Boolean
+                || !Double.isFinite(((Number) raw).doubleValue()))
+            throw new IllegalArgumentException(label + " must be finite numeric data");
+        return ((Number) raw).doubleValue();
+    }
+
+    private static void requireNear(double actual, double expected, double tolerance, String label) {
+        if (!Double.isFinite(actual) || Math.abs(actual - expected) > tolerance)
+            throw new IllegalStateException(label + " readback differs from the frozen receiver transform");
+    }
+
+    private static Map<String, Object> portSectionReadback(Model model, SelectionFeature selection,
+            double[] expectedAxis, double[] expectedCenter, double claddingRadius) {
+        int[] entities = selection.entities(2);
+        if (entities == null || entities.length == 0)
+            throw new IllegalStateException("local output Numeric-port section selected no native faces");
+        GeomSequence geom = model.component(COMPONENT).geom(GEOMETRY);
+        GeomMeasure measure = geom.measure();
+        measure.selection().init(2);
+        measure.selection().set("allDomains", entities);
+        double area = measure.getArea();
+        double[] bounds = measure.getBoundingBox();
+        if (!Double.isFinite(area) || area <= 0.0 || bounds == null || bounds.length != 6)
+            throw new IllegalStateException("native port-face area/bounds readback is invalid");
+        double[] centroid = new double[]{(bounds[0] + bounds[1]) / 2.0,
+                (bounds[2] + bounds[3]) / 2.0, (bounds[4] + bounds[5]) / 2.0};
+        double[] selectionAxis = selection.getDoubleArray("axis");
+        double[] selectionBase = selection.getDoubleArray("pos");
+        double selectionBottom = selection.getDouble("bottom");
+        double selectionTop = selection.getDouble("top");
+        double[] selectionCenter = new double[3];
+        for (int axis = 0; axis < selectionCenter.length; axis++)
+            selectionCenter[axis] = selectionBase[axis]
+                    + (selectionBottom + selectionTop) * 0.5 * selectionAxis[axis];
+        double centroidError = Math.sqrt(square(centroid[0]-expectedCenter[0])
+                + square(centroid[1]-expectedCenter[1]) + square(centroid[2]-expectedCenter[2]));
+        if (centroidError > 0.005)
+            throw new IllegalStateException("native local port-section AABB centroid differs from rigidly transformed cap center");
+        double expectedArea = Math.PI * claddingRadius * claddingRadius;
+        double relativeAreaError = Math.abs(area - expectedArea) / expectedArea;
+        if (relativeAreaError > 0.03)
+            throw new IllegalStateException("native output port face selection area differs by more than the frozen 3% geometry-measure tolerance");
+
+        List<Map<String, Object>> faces = new ArrayList<>();
+        int normalSign = 0;
+        for (int entity : entities) {
+            double[] range = geom.faceParamRange(entity);
+            if (range == null || range.length != 4)
+                throw new IllegalStateException("native output port face has no 2D parameter range");
+            double[][] params = new double[][]{{(range[0]+range[1])/2.0, (range[2]+range[3])/2.0}};
+            double[][] xyz = geom.faceX(entity, params);
+            double[][] normal = geom.faceNormal(entity, params);
+            if (xyz == null || xyz.length != 1 || xyz[0].length != 3
+                    || normal == null || normal.length != 1 || normal[0].length != 3)
+                throw new IllegalStateException("native output port face point/normal readback has unexpected shape");
+            double normalNorm = Math.sqrt(normal[0][0]*normal[0][0] + normal[0][1]*normal[0][1]
+                    + normal[0][2]*normal[0][2]);
+            if (!Double.isFinite(normalNorm) || normalNorm == 0.0)
+                throw new IllegalStateException("native output port face has a nonfinite/zero normal");
+            double[] unitNormal = new double[]{normal[0][0]/normalNorm, normal[0][1]/normalNorm,
+                    normal[0][2]/normalNorm};
+            double dot = unitNormal[0]*expectedAxis[0] + unitNormal[1]*expectedAxis[1]
+                    + unitNormal[2]*expectedAxis[2];
+            if (Math.abs(Math.abs(dot) - 1.0) > 1e-5)
+                throw new IllegalStateException("native output port face normal is not parallel to the transformed receiver axis");
+            int sign = dot >= 0.0 ? 1 : -1;
+            if (normalSign != 0 && sign != normalSign)
+                throw new IllegalStateException("selected port faces do not share one native normal orientation");
+            normalSign = sign;
+            faces.add(Map.of("boundary_id", entity, "point_um", boxed(xyz[0]), "unit_normal_xyz", boxed(unitNormal),
+                    "axis_dot", dot));
+        }
+        Map<String, Object> output = new LinkedHashMap<>();
+        output.put("tag", selection.tag());
+        output.put("evidence_scope", "COMSOL_NATIVE_GEOMETRY_READBACK");
+        output.put("selection_type", "Cylinder");
+        output.put("entity_dimension", 2);
+        output.put("entity_ids", intList(entities));
+        output.put("selection_geometry", selection.selection().geom());
+        output.put("selection_condition", selection.getString("condition"));
+        output.put("selection_axis_type", selection.getString("axistype"));
+        output.put("selection_axis_xyz", boxed(selectionAxis));
+        output.put("selection_center_um", boxed(selectionCenter));
+        output.put("selection_base_um", boxed(selectionBase));
+        output.put("selection_radius_um", selection.getDouble("r"));
+        output.put("selection_bottom_um", selectionBottom);
+        output.put("selection_top_um", selectionTop);
+        output.put("area_um2", area);
+        output.put("expected_circle_area_um2", expectedArea);
+        output.put("area_relative_error", relativeAreaError);
+        output.put("area_tolerance", "3% geometry-measure approximation gate");
+        output.put("centroid_um", boxed(centroid));
+        output.put("expected_transformed_center_um", boxed(expectedCenter));
+        output.put("centroid_error_um", centroidError);
+        output.put("bounding_box_um", boxed(bounds));
+        output.put("native_face_oriented_axis_sign", normalSign);
+        output.put("faces", faces);
+        output.put("coordinate_unit", "um");
+        output.put("normal_basis", "global_xyz");
+        return output;
+    }
+
+    private static void requireVectorNear(double[] actual, double[] expected, double tolerance, String label) {
+        if (actual == null || expected == null || actual.length != expected.length)
+            throw new IllegalStateException(label + " readback dimension differs");
+        for (int i = 0; i < actual.length; i++)
+            if (!Double.isFinite(actual[i]) || Math.abs(actual[i] - expected[i]) > tolerance)
+                throw new IllegalStateException(label + " readback differs from the frozen rigid transform");
+    }
+
+    private static double square(double value) { return value * value; }
+
+    private static List<Double> boxed(double[] values) {
+        List<Double> result = new ArrayList<>();
+        if (values != null) for (double value : values) result.add(value);
+        return result;
+    }
+
+    private static final class PortFrame {
+        final double[] pivot;
+        final double[] axis;
+        final double[] center;
+        final double claddingRadius;
+        final double thetaY;
+        final double thetaZ;
+        PortFrame(double[] pivot, double[] axis, double[] center, double claddingRadius,
+                  double thetaY, double thetaZ) {
+            this.pivot = pivot; this.axis = axis; this.center = center; this.claddingRadius = claddingRadius;
+            this.thetaY = thetaY; this.thetaZ = thetaZ;
+        }
+    }
+
+    private static int[] domainSelection(Model model, String tag) {
+        if (!Arrays.asList(model.component(COMPONENT).selection().tags()).contains(tag))
+            throw new IllegalStateException("geometry result-domain selection is missing: " + tag);
+        int[] ids = model.component(COMPONENT).selection(tag).entities(3);
+        if (ids == null || ids.length == 0)
+            throw new IllegalStateException("geometry result-domain selection is empty: " + tag);
+        return ids;
+    }
+
+    private static void assertDisjoint(int[]... selections) {
+        Set<Integer> all = new LinkedHashSet<>();
+        for (int[] selection : selections) {
+            for (int id : selection) {
+                if (id < 1 || !all.add(id))
+                    throw new IllegalStateException("material/PML domain selections are invalid or overlap");
+            }
+        }
+    }
+
+    private static void material(Model model, String tag, String selection, String eps) {
+        model.material().create(tag, "Common", COMPONENT);
+        model.material(tag).selection().named(selection);
+        String[][] epsilon = {{eps, "0", "0"}, {"0", eps, "0"}, {"0", "0", eps}};
+        String[][] mu = {{"1", "0", "0"}, {"0", "1", "0"}, {"0", "0", "1"}};
+        model.material(tag).propertyGroup("def").set("relpermittivity", epsilon);
+        model.material(tag).propertyGroup("def").set("relpermeability", mu);
+    }
+
+    private static void configureNumericPort(PhysicsFeature port, String number, boolean excited) {
+        port.set("PortType", "Numeric");
+        port.set("PortName", number);
+        port.set("PortExcitation", excited ? "on" : "off");
+        port.set("PortOrientation", "ForwardPort");
+        port.set("PortModeNumber", 1);
+        port.set("Thetap", "0[deg]");
+        if (excited) port.set("Pin", "1[W]");
+    }
+
+    private static void configureBma(StudyFeature feature, String port) {
+        feature.set("PortName", port);
+        feature.set("modeFreq", "f0");
+        feature.set("neigs", 2);
+        feature.set("eigwhich", "effective_mode_index");
+        feature.set("shiftactive", "on");
+        feature.set("shift", "1.45");
+    }
+
+    private static Map<String, Object> selectionReadback(String tag, int[] entities) {
+        return Map.of("tag", tag, "entity_dimension", 2, "entity_ids", intList(entities),
+                      "entity_count", entities == null ? 0 : entities.length);
+    }
+
+    private static List<Integer> intList(int[] values) {
+        List<Integer> output = new ArrayList<>();
+        if (values != null) for (int value : values) output.add(value);
+        return output;
+    }
+
+    private static Map<String, Object> propertyReadback(ParameterEntity entity, String[] keys) {
+        Map<String, Object> output = new LinkedHashMap<>();
+        output.put("properties", Arrays.asList(entity.properties()));
+        Map<String, Object> requested = new LinkedHashMap<>();
+        for (String key : keys) {
+            Map<String, Object> row = new LinkedHashMap<>();
+            boolean present = entity.hasProperty(key);
+            row.put("has_property_exact", present);
+            if (present) {
+                try { row.put("string_readback", entity.getString(key)); }
+                catch (Throwable error) { row.put("readback_error", error.getClass().getName()); }
+                try { row.put("allowed_values", entity.getAllowedPropertyValues(key)); }
+                catch (Throwable error) { row.put("allowed_values_error", error.getClass().getName()); }
+            }
+            requested.put(key, row);
+        }
+        output.put("requested_properties", requested);
+        return output;
+    }
+
+    private static Map<String, Object> propertyReadback(PropFeature entity, String[] keys) {
+        Map<String, Object> output = new LinkedHashMap<>();
+        output.put("properties", Arrays.asList(entity.properties()));
+        Map<String, Object> requested = new LinkedHashMap<>();
+        for (String key : keys) {
+            Map<String, Object> row = new LinkedHashMap<>();
+            boolean present = entity.hasProperty(key);
+            row.put("has_property_exact", present);
+            if (present) {
+                try { row.put("string_readback", entity.getString(key)); }
+                catch (Throwable error) { row.put("readback_error", error.getClass().getName()); }
+                try { row.put("allowed_values", entity.getAllowedPropertyValues(key)); }
+                catch (Throwable error) { row.put("allowed_values_error", error.getClass().getName()); }
+            }
+            requested.put(key, row);
+        }
+        output.put("requested_properties", requested);
+        return output;
+    }
+}

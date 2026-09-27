@@ -785,7 +785,8 @@ def node_type(node: Any) -> str | None:
     return str(value) if value is not None else None
 
 
-def call_probe(node: Any, method: str, *args: Any) -> dict[str, Any]:
+def call_probe(node: Any, method: str, *args: Any,
+               include_engine_failure_details: bool = False) -> dict[str, Any]:
     """Call an optional accessor, reporting - never hiding - a failure.
 
     A method the worker allow-list rejects surfaces as ``METHOD_REJECTED``;
@@ -796,6 +797,8 @@ def call_probe(node: Any, method: str, *args: Any) -> dict[str, Any]:
     try:
         return {"ok": True, "value": getattr(node, method)(*args), "error": None}
     except Exception as exc:  # noqa: BLE001 - probe must not raise
+        if include_engine_failure_details:
+            return {"ok": False, "value": None, "error": describe_engine_failure(exc, method)}
         return {
             "ok": False,
             "value": None,

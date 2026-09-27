@@ -48,6 +48,7 @@ _MODULES = (
     "_g3_w18",
     "_g3_w20_validation",
     "_g3_w21",
+    "_w23_results",
 )
 
 #: Effects for operations the design catalogue does not (yet) describe.  Every
@@ -55,6 +56,10 @@ _MODULES = (
 #: safety net for a versioned adapter rather than a second source of truth; a
 #: miss falls back to ``WRITE`` (fail closed: a write must be isolated).
 _FALLBACK_EFFECTS: dict[str, str] = {
+    # These are explicit W21 extension contracts. Their catalogued canonical
+    # counterparts have their own operation ids and effects.
+    "stage.state_transfer": "COMPUTE",
+    "optimization.bounded_run": "COMPUTE",
     "parameter.list": "READ",
     "parameter.get": "READ",
     "parameter.set": "WRITE",
@@ -93,6 +98,7 @@ _FALLBACK_EFFECTS: dict[str, str] = {
     "result.evaluate": "EVALUATE",
     "result.at_points": "EVALUATE",
     "result.sample_path": "EVALUATE",
+    "result.mode_overlap": "EVALUATE",
     "result.numerical_manage": "DYNAMIC",
     "result.table_manage": "DYNAMIC",
     "result.field_export": "FILE_WRITE",
@@ -166,9 +172,10 @@ def _effect_sources() -> tuple[dict[str, str], dict[str, str]]:
     effects: dict[str, str] = {}
     sources: dict[str, str] = {}
     for operation_id in sorted(DISPATCH):
-        # W21 run/transfer now execute a real solve, whereas the historical
-        # design catalogue classified configuration-only placeholders WRITE.
-        if operation_id in {"study.sweep_manage", "solver.solution_transfer"}:
+        # The grid sweep is W21 compute. Canonical solution transfer is a
+        # selector write (no hidden study.run); legacy stage transfer remains
+        # an explicitly named COMPUTE extension below.
+        if operation_id == "study.sweep_manage":
             effects[operation_id] = "COMPUTE"
             sources[operation_id] = "w21_native_execution"
             continue

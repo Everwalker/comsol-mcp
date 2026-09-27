@@ -7,9 +7,9 @@ import json
 from pathlib import Path
 from typing import Any
 
-import comsol_mcp._server as _srv
+from comsol_mcp._server import session_server as _srv
 from comsol_mcp._state import (
-    _run_tool, _now_iso, _resolve_output_path, OUTPUTS_DIR,
+    _run_tool, _now_iso, _resolve_output_path, _runtime_output_dir,
     _read_workflow_state, _write_workflow_state, _append_operation,
     _sanitize_snapshot_label, _workflow_snapshot_path,
     _safe_model_label, _safe_model_path, _safe_model_tag,
@@ -162,7 +162,7 @@ def commit_current_main_model(snapshot_label: str = "") -> str:
         current_main = str(workflow.get("current_main_model_path", "") or "").strip()
         if not current_main:
             raise RuntimeError("No current main model path is configured in workflow_state.json.")
-        resolved_main = _resolve_output_path(current_main, OUTPUTS_DIR / "current_main_model.mph")
+        resolved_main = _resolve_output_path(current_main, _runtime_output_dir() / "current_main_model.mph")
         resolved_main_label = Path(resolved_main).name
         label = _sanitize_snapshot_label(snapshot_label.strip() or "update")
         snapshot_path = _workflow_snapshot_path(label, workflow)

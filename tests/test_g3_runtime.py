@@ -240,8 +240,13 @@ def inspect(worker: FakeWorker, *, runtime_id: str = "macos-arm64/comsol6.4",
 
 
 class TestPublishing:
-    def test_both_operations_are_published(self):
-        assert set(runtime.OPERATIONS) == {"runtime.license_inspect", "runtime.capabilities"}
+    def test_runtime_operations_are_published(self):
+        assert set(runtime.OPERATIONS) == {
+            "runtime.discover", "runtime.inspect", "runtime.doctor",
+            "runtime.license_inspect", "runtime.capabilities",
+            "runtime.compatibility_report", "runtime.license_checkout",
+            "runtime.render_probe",
+        }
         for operation_id, function in runtime.OPERATIONS.items():
             assert callable(function), operation_id
             assert DISPATCH[operation_id] is function
@@ -249,15 +254,22 @@ class TestPublishing:
             assert OPERATION_ORIGINS[operation_id] == "_g3_runtime"
             assert is_implemented(operation_id)
 
-    def test_effects_are_catalogue_reads_and_need_no_isolation(self):
+    def test_effects_match_the_runtime_control_boundary(self):
         assert EFFECTS["runtime.license_inspect"] == "READ"
         assert EFFECTS["runtime.capabilities"] == "READ"
         assert "runtime.license_inspect" not in REQUIRES_ISOLATION
         assert "runtime.capabilities" not in REQUIRES_ISOLATION
+        assert EFFECTS["runtime.license_checkout"] == "HOST_CONTROL"
+        assert EFFECTS["runtime.render_probe"] == "COMPUTE"
+        assert "runtime.render_probe" in REQUIRES_ISOLATION
 
     @pytest.mark.parametrize("operation_id, required, optional", [
         ("runtime.license_inspect", ["runtime_id"], {"runtime_id", "products"}),
         ("runtime.capabilities", [], {"runtime_id", "refresh"}),
+        ("runtime.license_checkout", ["authorization_ref", "idempotency_key", "products", "runtime_id"],
+         {"authorization_ref", "idempotency_key", "products", "runtime_id", "request_id"}),
+        ("runtime.render_probe", ["idempotency_key", "runtime_id"],
+         {"idempotency_key", "mode", "runtime_id", "request_id"}),
     ])
     def test_published_schema_matches_the_enforced_fields(self, operation_id, required, optional):
         described = operation_describe(operation_id)["data"]
@@ -833,6 +845,15 @@ class TestWorkerAllowlistProvenance:
         assert runtime.WORKER_NODE_METHODS_ALLOWLIST <= node_methods
         assert "getUsedProducts" in node_methods
         assert "getComsolVersion" in node_methods
+        assert "checkoutLicense" not in runtime.WORKER_MODELUTIL_ALLOWLIST
+
+    def test_seat_consuming_checkout_has_a_separate_typed_worker_command(self):
+        source = JAVA_WORKER.read_text(encoding="utf-8")
+        assert '"license_checkout".equals(type)' in source
+        assert '"license_checkout".equals(type)) result = licenseCheckout(request);' in source
+        assert 'ModelUtil.class.getMethod("checkoutLicense", String[].class)' in source
+        assert '"checkout_scope", "current_client_session"' in source
+        assert '"disconnect".equals(type)' in source
 
     def test_probe_reachability_matches_the_allowlist_it_cites(self):
         for api, row in runtime.LICENSE_API_PROVENANCE.items():

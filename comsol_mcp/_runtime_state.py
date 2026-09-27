@@ -13,10 +13,19 @@ class RuntimeStateError(RuntimeError): pass
 
 
 def _put(store: Any, table: str, key: str, value: dict[str, Any]) -> None:
+    if hasattr(store, "merge_metadata_fields"):
+        store.merge_metadata_fields(table, key, value)
+        return
+    # Keep lightweight test/compatibility stores coherent too. Production
+    # OperationStore performs this merge under one SQLite transaction.
+    existing = _get(store, table, key) or {}
+    if not isinstance(existing, dict):
+        raise RuntimeStateError(f"persisted {table} metadata is malformed")
+    merged = {**existing, **value}
     if hasattr(store, "put_metadata"):
-        store.put_metadata(table, key, value)
+        store.put_metadata(table, key, merged)
     else:
-        store.save_metadata(table, key, value)
+        store.save_metadata(table, key, merged)
 
 
 def _get(store: Any, table: str, key: str) -> dict[str, Any] | None:

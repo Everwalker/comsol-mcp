@@ -1,0 +1,578 @@
+{
+  "$defs": {
+    "captureRatio": {
+      "additionalProperties": false,
+      "properties": {
+        "denominator": {
+          "$ref": "#/$defs/incidentPowerResult"
+        },
+        "numerator": {
+          "$ref": "#/$defs/numerator"
+        },
+        "region": {
+          "additionalProperties": false,
+          "properties": {
+            "aperture_id": {
+              "type": "string"
+            },
+            "plane_id": {
+              "type": "string"
+            },
+            "sample_indices": {
+              "items": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "aperture_id",
+            "plane_id",
+            "sample_indices"
+          ],
+          "type": "object"
+        },
+        "unit": {
+          "const": "1"
+        },
+        "value": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "value",
+        "unit",
+        "region",
+        "numerator",
+        "denominator"
+      ],
+      "type": "object"
+    },
+    "complexEigenvalue": {
+      "additionalProperties": false,
+      "properties": {
+        "imag": {
+          "type": "number"
+        },
+        "real": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "real",
+        "imag"
+      ],
+      "type": "object"
+    },
+    "complexValue": {
+      "additionalProperties": false,
+      "properties": {
+        "imag": {
+          "type": "number"
+        },
+        "real": {
+          "type": "number"
+        },
+        "unit": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "real",
+        "imag",
+        "unit"
+      ],
+      "type": "object"
+    },
+    "fieldIdentity": {
+      "additionalProperties": false,
+      "properties": {
+        "field_id": {
+          "type": "string"
+        },
+        "mode": {
+          "$ref": "#/$defs/mode"
+        },
+        "phasor_convention": {
+          "$ref": "#/$defs/phasorConvention"
+        },
+        "source": {
+          "$ref": "#/$defs/source"
+        }
+      },
+      "required": [
+        "field_id",
+        "source",
+        "phasor_convention"
+      ],
+      "type": "object"
+    },
+    "incidentPowerResult": {
+      "additionalProperties": false,
+      "properties": {
+        "input_plane_id": {
+          "type": "string"
+        },
+        "phasor_convention": {
+          "$ref": "#/$defs/phasorConvention"
+        },
+        "reference_id": {
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/source"
+        },
+        "unit": {
+          "enum": [
+            "W",
+            "W/m"
+          ]
+        },
+        "value": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "reference_id",
+        "value",
+        "unit",
+        "input_plane_id",
+        "source",
+        "phasor_convention"
+      ],
+      "type": "object"
+    },
+    "mode": {
+      "additionalProperties": false,
+      "properties": {
+        "eigenvalue": {
+          "$ref": "#/$defs/complexEigenvalue"
+        },
+        "eigenvalue_unit": {
+          "type": "string"
+        },
+        "mode_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "mode_id",
+        "eigenvalue",
+        "eigenvalue_unit"
+      ],
+      "type": "object"
+    },
+    "numerator": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "normal": {
+          "$ref": "#/$defs/vector3"
+        },
+        "region_id": {
+          "type": "string"
+        },
+        "unit": {
+          "enum": [
+            "W",
+            "W/m"
+          ]
+        },
+        "value": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "name",
+        "value",
+        "unit",
+        "region_id",
+        "normal"
+      ],
+      "type": "object"
+    },
+    "phasorConvention": {
+      "additionalProperties": false,
+      "properties": {
+        "complex_field_representation": {
+          "const": "full_physical_complex_phasor_including_reconstructed_envelope_phase"
+        },
+        "time_dependence": {
+          "enum": [
+            "exp(-i omega t)",
+            "exp(+i omega t)"
+          ]
+        }
+      },
+      "required": [
+        "time_dependence",
+        "complex_field_representation"
+      ],
+      "type": "object"
+    },
+    "planarityRoundoff": {
+      "additionalProperties": false,
+      "properties": {
+        "maximum_sample_bound_m": {
+          "minimum": 0,
+          "type": "number"
+        },
+        "policy_id": {
+          "const": "coordinate_local_difference_dot_ulp_64_v1"
+        },
+        "safety_factor": {
+          "const": 64
+        }
+      },
+      "required": [
+        "policy_id",
+        "safety_factor",
+        "maximum_sample_bound_m"
+      ],
+      "type": "object"
+    },
+    "power": {
+      "additionalProperties": false,
+      "properties": {
+        "normal": {
+          "$ref": "#/$defs/vector3"
+        },
+        "region_id": {
+          "type": "string"
+        },
+        "unit": {
+          "enum": [
+            "W",
+            "W/m"
+          ]
+        },
+        "value": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "value",
+        "unit",
+        "region_id",
+        "normal"
+      ],
+      "type": "object"
+    },
+    "rangeDiagnostic": {
+      "additionalProperties": false,
+      "properties": {
+        "clamped": {
+          "const": false
+        },
+        "declared_tolerance": {
+          "minimum": 0,
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "effective_upper_bound": {
+          "minimum": 1,
+          "type": "number"
+        },
+        "raw_eta_mode": {
+          "type": "number"
+        },
+        "reference_upper_bound": {
+          "const": 1.0
+        },
+        "status": {
+          "enum": [
+            "NOT_ASSESSED",
+            "WITHIN_DECLARED_UPPER_BOUND",
+            "EXCEEDS_DECLARED_UPPER_BOUND"
+          ]
+        }
+      },
+      "required": [
+        "status",
+        "reference_upper_bound",
+        "declared_tolerance",
+        "raw_eta_mode",
+        "clamped"
+      ],
+      "type": "object"
+    },
+    "ratio": {
+      "additionalProperties": false,
+      "properties": {
+        "denominator": {
+          "$ref": "#/$defs/incidentPowerResult"
+        },
+        "numerator": {
+          "$ref": "#/$defs/numerator"
+        },
+        "region": {
+          "additionalProperties": false,
+          "properties": {
+            "measure": {
+              "enum": [
+                "area",
+                "line_per_unit_depth"
+              ]
+            },
+            "plane_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "plane_id",
+            "measure"
+          ],
+          "type": "object"
+        },
+        "unit": {
+          "const": "1"
+        },
+        "value": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "value",
+        "unit",
+        "region",
+        "numerator",
+        "denominator"
+      ],
+      "type": "object"
+    },
+    "source": {
+      "additionalProperties": false,
+      "properties": {
+        "dataset_id": {
+          "type": "string"
+        },
+        "frequency_hz": {
+          "exclusiveMinimum": 0,
+          "type": "number"
+        },
+        "model_ref": {
+          "type": "string"
+        },
+        "model_revision": {
+          "type": "string"
+        },
+        "plane_id": {
+          "type": "string"
+        },
+        "solution_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "model_ref",
+        "model_revision",
+        "dataset_id",
+        "solution_id",
+        "frequency_hz",
+        "plane_id"
+      ],
+      "type": "object"
+    },
+    "vector3": {
+      "items": {
+        "type": "number"
+      },
+      "maxItems": 3,
+      "minItems": 3,
+      "type": "array"
+    }
+  },
+  "$id": "urn:comsol-mcp:result.mode_overlap:result:1.2.0",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "algorithm_id": {
+      "const": "reciprocal_lossless_forward_planar_v1"
+    },
+    "applicability_profile": {
+      "const": "reciprocal_lossless_forward_nondegenerate_planar_v1"
+    },
+    "eta_capture": {
+      "$ref": "#/$defs/captureRatio"
+    },
+    "eta_mode": {
+      "$ref": "#/$defs/ratio"
+    },
+    "eta_mode_range_diagnostic": {
+      "$ref": "#/$defs/rangeDiagnostic"
+    },
+    "evidence_status": {
+      "additionalProperties": false,
+      "properties": {
+        "input_boundary": {
+          "const": "CALLER_SUPPLIED_ARRAYS_NOT_NATIVE_EVIDENCE"
+        },
+        "native_status": {
+          "const": "NOT_RUN"
+        },
+        "scope": {
+          "const": "SOFTWARE_ONLY"
+        }
+      },
+      "required": [
+        "scope",
+        "native_status",
+        "input_boundary"
+      ],
+      "type": "object"
+    },
+    "identities": {
+      "additionalProperties": false,
+      "properties": {
+        "reference_mode": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/fieldIdentity"
+            },
+            {
+              "required": [
+                "mode"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "signal": {
+          "$ref": "#/$defs/fieldIdentity"
+        }
+      },
+      "required": [
+        "signal",
+        "reference_mode"
+      ],
+      "type": "object"
+    },
+    "incident_reference_power": {
+      "$ref": "#/$defs/incidentPowerResult"
+    },
+    "normalization_power_floor": {
+      "additionalProperties": false,
+      "properties": {
+        "unit": {
+          "enum": [
+            "W",
+            "W/m"
+          ]
+        },
+        "value": {
+          "exclusiveMinimum": 0,
+          "type": "number"
+        }
+      },
+      "required": [
+        "value",
+        "unit"
+      ],
+      "type": "object"
+    },
+    "normalized_overlap": {
+      "type": "number"
+    },
+    "operation_id": {
+      "const": "result.mode_overlap"
+    },
+    "overlap_amplitude": {
+      "$ref": "#/$defs/complexValue"
+    },
+    "phasor_convention": {
+      "$ref": "#/$defs/phasorConvention"
+    },
+    "projected_mode_power": {
+      "$ref": "#/$defs/power"
+    },
+    "reference_mode_power": {
+      "$ref": "#/$defs/power"
+    },
+    "schema_version": {
+      "const": "1.2.0"
+    },
+    "signal_power": {
+      "$ref": "#/$defs/power"
+    },
+    "surface": {
+      "additionalProperties": false,
+      "properties": {
+        "coordinate_unit": {
+          "const": "m"
+        },
+        "geometry_dimension": {
+          "enum": [
+            2,
+            3
+          ]
+        },
+        "integration_measure": {
+          "enum": [
+            "area",
+            "line_per_unit_depth"
+          ]
+        },
+        "normal": {
+          "$ref": "#/$defs/vector3"
+        },
+        "planarity_roundoff": {
+          "$ref": "#/$defs/planarityRoundoff"
+        },
+        "plane_id": {
+          "type": "string"
+        },
+        "quadrature_weight_unit": {
+          "enum": [
+            "m^2",
+            "m"
+          ]
+        },
+        "sample_count": {
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "plane_id",
+        "geometry_dimension",
+        "integration_measure",
+        "coordinate_unit",
+        "quadrature_weight_unit",
+        "normal",
+        "sample_count",
+        "planarity_roundoff"
+      ],
+      "type": "object"
+    },
+    "unnormalized_overlap_numerator": {
+      "$ref": "#/$defs/complexValue"
+    }
+  },
+  "required": [
+    "schema_version",
+    "operation_id",
+    "algorithm_id",
+    "applicability_profile",
+    "phasor_convention",
+    "evidence_status",
+    "identities",
+    "surface",
+    "signal_power",
+    "reference_mode_power",
+    "normalization_power_floor",
+    "unnormalized_overlap_numerator",
+    "overlap_amplitude",
+    "normalized_overlap",
+    "projected_mode_power",
+    "incident_reference_power",
+    "eta_mode",
+    "eta_mode_range_diagnostic"
+  ],
+  "title": "result.mode_overlap result v1.2.0",
+  "type": "object"
+}

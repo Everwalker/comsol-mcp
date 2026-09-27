@@ -8,14 +8,14 @@ import threading
 import logging
 from typing import Any
 
-import comsol_mcp._server as _srv
+from comsol_mcp._server import session_server as _srv
 from comsol_mcp._state import (
     _run_tool, _run_tool_readonly, _json, _now_iso, _resolve_path, _resolve_output_path,
     _read_workflow_state, _write_workflow_state,
     _append_operation, _status_payload, _setup_logging,
     _port_is_open, _server_missing_guidance, _mark_awaiting_manual_server,
     _safe_model_label, _safe_model_path, _safe_model_tag,
-    _resolved_model_file_path, OUTPUTS_DIR, OPERATIONS_FILE, SERVER_LOG,
+    _resolved_model_file_path, _runtime_output_dir, _runtime_setting,
     _create_background_job, _update_background_job, _read_background_job,
     _sanitize_snapshot_label,
 )
@@ -56,7 +56,7 @@ def configure_single_main_workflow(
     def _impl() -> dict[str, Any]:
         current_main = _resolve_output_path(
             current_main_model_path,
-            OUTPUTS_DIR / "current_main_model.mph",
+            _runtime_output_dir() / "current_main_model.mph",
         )
         snapshot_root = ""
         if str(snapshot_dir or "").strip():
@@ -272,8 +272,8 @@ def _run_study_on_model(model, study_tag: str = "") -> None:
 # Orchestration helpers (internal, not registered as tools)
 # ---------------------------------------------------------------------------
 def _start_visible_main_workflow_payload(
-    host: str = _srv.DEFAULT_HOST,
-    port: int = _srv.DEFAULT_PORT,
+    host: str | None = None,
+    port: int | None = None,
     path: str = "",
     *,
     action: str,
@@ -282,7 +282,7 @@ def _start_visible_main_workflow_payload(
     from comsol_mcp._tools_connection import server_connect
 
     requested_host = host or _srv.DEFAULT_HOST
-    requested_port = int(port)
+    requested_port = int(_srv.DEFAULT_PORT if port is None else port)
     if not _port_is_open(requested_host, requested_port):
         workflow = _mark_awaiting_manual_server(requested_host, requested_port, action)
         return {**_server_missing_guidance(requested_host, requested_port), "workflow": workflow}
@@ -372,8 +372,8 @@ def _start_visible_main_workflow_payload(
 
 
 def start_visible_main_workflow(
-    host: str = _srv.DEFAULT_HOST,
-    port: int = _srv.DEFAULT_PORT,
+    host: str | None = None,
+    port: int | None = None,
     path: str = "",
 ) -> str:
     """Fixed visible workflow entrypoint: check port, connect, load MPH, then instruct Desktop import."""
@@ -385,8 +385,8 @@ def start_visible_main_workflow(
 
 
 def start_visible_main_workflow_async(
-    host: str = _srv.DEFAULT_HOST,
-    port: int = _srv.DEFAULT_PORT,
+    host: str | None = None,
+    port: int | None = None,
     path: str = "",
 ) -> str:
     """Start visible-main loading in a background job so large MPH loads do not hit tool timeouts."""
@@ -394,7 +394,7 @@ def start_visible_main_workflow_async(
     def _impl() -> dict[str, Any]:
         payload = {
             "host": host or _srv.DEFAULT_HOST,
-            "port": int(port),
+            "port": int(_srv.DEFAULT_PORT if port is None else port),
             "path": path,
         }
         job_id = _create_background_job("visible_main_workflow", payload)
@@ -469,8 +469,8 @@ def visible_main_workflow_status(job_id: str = "") -> str:
                 "workflow": _read_workflow_state(),
             },
             "error": "" if success else "No visible-main workflow job found.",
-            "log_path": str(SERVER_LOG),
-            "operations_path": str(OPERATIONS_FILE),
+            "log_path": str(_runtime_setting("SERVER_LOG")),
+            "operations_path": str(_runtime_setting("OPERATIONS_FILE")),
         }
     )
 

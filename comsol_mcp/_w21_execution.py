@@ -38,6 +38,23 @@ def successful(result):
                  else status in {'PASS', 'COMPLETED', 'SUCCEEDED', 'APPLIED', 'VERIFIED'}))
 
 
+def _execution_is_unknown(value):
+    if not isinstance(value, dict):
+        return False
+    status = value.get('status')
+    code = value.get('code')
+    error = value.get('error')
+    return (value.get('execution_state_unknown') is True
+            or status in {'UNKNOWN', 'EXECUTION_STATE_UNKNOWN', 'ENGINE_STATE_UNKNOWN'}
+            or code in {'EXECUTION_STATE_UNKNOWN', 'ENGINE_UNRESPONSIVE'}
+            or isinstance(error, dict) and error.get('code') in {'EXECUTION_STATE_UNKNOWN', 'ENGINE_UNRESPONSIVE'})
+
+
+def _exception_is_unknown(exc):
+    code = getattr(exc, 'code', None)
+    return code in {'EXECUTION_STATE_UNKNOWN', 'ENGINE_UNRESPONSIVE', 'WORKER_TIMEOUT'}
+
+
 def key_for(kind, tag, name):
     return kind + ':' + digest([current_context()['model_ref'], tag, name])
 
@@ -251,6 +268,12 @@ def execute_case(worker, tag, study, definition, values, budget, case_id):
     try:
         result['parameter_readback'] = apply_parameters(worker, tag, values, units)
         result['solve'] = study_run(worker, tag, {'study': {'segments': [{'collection': 'study', 'tag': study}]}})
+        if _execution_is_unknown(result['solve']):
+            budget.cases_failed += 1
+            budget.total_failures += 1
+            result.update(status='UNKNOWN', error='Study execution state is unknown; reconcile before another case')
+            persist('w21result', key_for('w21result', tag, [ctx['producer'], case_id]), {'result': result})
+            return result
         require(successful(result['solve']), 'Solve failed or remains unverified')
         sample = result_at_points(worker, tag, definition['sample'])
         require(successful(sample), 'W17 sampling failed')
@@ -270,7 +293,7 @@ def execute_case(worker, tag, study, definition, values, budget, case_id):
     except Exception as exc:
         budget.cases_failed += 1
         budget.total_failures += 1
-        result.update(status='FAILED', error=str(exc))
+        result.update(status='UNKNOWN' if _exception_is_unknown(exc) else 'FAILED', error=str(exc))
     persist('w21result', key_for('w21result', tag, [ctx['producer'], case_id]), {'result': result})
     return result
 
@@ -289,15 +312,17 @@ def op_study_sweep_manage(worker, model_tag, arguments):
         case = execute_case(worker, model_tag, study, definition, values, budget, f'case-{index}')
         case['case_ordinal'] = index
         cases.append(case)
-        if case['status'] in {'FAILED', 'NOT_RUN'}:
+        if case['status'] in {'FAILED', 'UNKNOWN', 'NOT_RUN'}:
             break
+    unknown = any(c['status'] == 'UNKNOWN' for c in cases)
     failed = any(c['status'] == 'FAILED' for c in cases)
     budget_stopped = any(c['status'] == 'NOT_RUN' for c in cases)
     # A bounded scheduler completed its request when it stops before dispatch.
     # Calling this PARTIAL would poison the shared revision ledger despite the
     # known completed case and explicitly unstarted remainder.
-    return {'status': 'FAILED' if failed else 'COMPLETE',
-            'completion_status': 'CASE_FAILED' if failed else 'BUDGET_EXHAUSTED' if budget_stopped else 'ALL_CASES_COMPLETED',
+    return {'status': 'EXECUTION_STATE_UNKNOWN' if unknown else 'FAILED' if failed else 'COMPLETE',
+            'execution_state_unknown': unknown,
+            'completion_status': 'EXECUTION_STATE_UNKNOWN' if unknown else 'CASE_FAILED' if failed else 'BUDGET_EXHAUSTED' if budget_stopped else 'ALL_CASES_COMPLETED',
             'cases': cases, 'index_table': {'cases': [{'case_id': c['case_id'], 'case_ordinal': c['case_ordinal'],
             'parameters': c.get('parameters'), 'solution': c.get('sample', {}).get('solution'),
             'axes': c.get('sample', {}).get('field_array')} for c in cases]},
@@ -315,14 +340,383 @@ def op_optimization_bounded_run(worker, model_tag, arguments):
     # Optimizer owns candidate budget, executor owns compute count. Cache hits
     # do not consume the compute budget; both figures are returned.
     compute_budget = ComputationBudget(max_cases=budget.max_cases, max_wall_time_s=budget.max_wall_time_s)
+    unknown_case = {'result': None}
     def evaluate(params):
-        return execute_case(worker, model_tag, study, definition, params, compute_budget, 'opt-' + str(len(optimizer.history)+1))
+        result = execute_case(worker, model_tag, study, definition, params, compute_budget, 'opt-' + str(len(optimizer.history)+1))
+        if result.get('status') == 'UNKNOWN':
+            unknown_case['result'] = result
+        return result
     result = optimizer.run_bounded_search(arguments.get('grid_points_per_dim',3), evaluate)
     result['search_status'] = result['status']
-    result['status'] = 'COMPLETE'
+    if unknown_case['result'] is not None:
+        result['status'] = 'EXECUTION_STATE_UNKNOWN'
+        result['execution_state_unknown'] = True
+        result['stopped_case'] = unknown_case['result']
+    else:
+        result['status'] = 'COMPLETE'
     result['compute_budget'] = compute_budget.status()
     result['optimality'] = 'BEST_VERIFIED_FEASIBLE_SO_FAR' if result['best_candidate'] else 'NO_FEASIBLE_FOUND'
     return result
+
+
+def _strict_grid_design(worker, model_tag, definition):
+    """Validate the intentionally narrow, predeclared W21 experiment profile."""
+    require(isinstance(definition, dict), 'definition must be an object')
+    allowed = {'study', 'sample', 'metrics', 'times', 'validation', 'parameters', 'units', 'sampling', 'budget'}
+    require(set(definition) == allowed, 'Supported experiment definition fields are: ' + ', '.join(sorted(allowed)))
+    require(definition.get('sampling') == {'kind': 'cartesian_grid'},
+            'Only an explicitly declared cartesian_grid sampling profile is supported')
+    validate_definition(worker, model_tag, definition['study'], definition)
+    parameters, units = definition.get('parameters'), definition.get('units')
+    require(isinstance(parameters, dict) and parameters and isinstance(units, dict)
+            and set(parameters) == set(units), 'Grid parameter names and units must match exactly')
+    for name, values in parameters.items():
+        require(isinstance(name, str) and name, 'Parameter names must be nonempty strings')
+        require(isinstance(values, list) and values, f'Grid values for {name!r} must be a nonempty array')
+        require(all(isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v) for v in values),
+                f'Grid values for {name!r} must be finite numbers')
+        require(len({float(v) for v in values}) == len(values), f'Grid values for {name!r} must be unique')
+        require(isinstance(units[name], str) and units[name], f'Unit for {name!r} is required')
+    first = {name: float(values[0]) for name, values in parameters.items()}
+    validate_parameters(worker, model_tag, first, units)
+    budget = definition.get('budget')
+    require(isinstance(budget, dict) and set(budget) == {'max_cases', 'max_wall_time_s'},
+            'A frozen budget with max_cases and max_wall_time_s is required')
+    max_cases, max_wall = budget.get('max_cases'), budget.get('max_wall_time_s')
+    require(type(max_cases) is int and 1 <= max_cases <= 500, 'budget.max_cases must be an integer in [1, 500]')
+    require(isinstance(max_wall, (int, float)) and not isinstance(max_wall, bool)
+            and math.isfinite(max_wall) and 0 < max_wall <= 86400,
+            'budget.max_wall_time_s must be finite and in (0, 86400]')
+    points = list(itertools.product(*(parameters[name] for name in parameters)))
+    require(len(points) <= 500, 'Cartesian design exceeds the 500-case definition limit')
+    cases = []
+    for ordinal, point in enumerate(points, 1):
+        cases.append({'case_id': f'case-{ordinal:04d}',
+                      'parameters': {name: float(value) for name, value in zip(parameters, point)}})
+    return cases
+
+
+def op_solver_solution_transfer(worker, model_tag, arguments):
+    """Configure one exact stored solution as a target Variables initial value.
+
+    COMSOL 6.4 Variables Table 6-80 documents ``initsol`` as a solution
+    object, ``initsoluse=manual`` with ``initsolusesolnum`` as the outer
+    selector, and ``solnum=manual``/``manualsolnum`` as the inner selector.
+    A time Quantity is accepted only when the exact SolutionInfo pair reports
+    that time parameter and unit. No solve is issued here. Variable remapping,
+    mesh compatibility, interpolation, conservation and history continuity are
+    outside this partial profile and requests that need them are refused.
+    """
+    require(isinstance(arguments, dict) and set(arguments) == {'source', 'target', 'mapping'},
+            'This partial profile accepts only source, target, and mapping; mesh/history verification and interpolation are unsupported')
+    source = arguments.get('source')
+    require(isinstance(source, dict) and set(source).issubset({'dataset', 'solution', 'inner', 'outer', 'time'})
+            and {'dataset', 'outer'}.issubset(source),
+            'source must identify dataset and outer; this profile refuses frequency, parameter-map, and other selectors')
+    dataset, solution = source.get('dataset'), source.get('solution')
+    inner, outer = source.get('inner'), source.get('outer')
+    require(isinstance(dataset, str) and dataset,
+            'An explicit source dataset tag is required')
+    require(solution is None or (isinstance(solution, str) and solution),
+            'source.solution must be a nonempty solver-sequence tag when provided')
+    require(type(outer) is int and outer >= 1,
+            'source.outer must be a positive integer index')
+    require(inner is None or (type(inner) is int and inner >= 1),
+            'source.inner must be a positive integer index when provided')
+    requested_time = None
+    if 'time' in source:
+        time_items = source['time']
+        require(isinstance(time_items, list) and len(time_items) == 1,
+                'source.time must contain exactly one explicit Quantity')
+        requested_time = time_items[0]
+        require(isinstance(requested_time, dict) and set(requested_time) == {'value', 'unit'}
+                and isinstance(requested_time.get('value'), (int, float))
+                and not isinstance(requested_time.get('value'), bool)
+                and math.isfinite(requested_time['value'])
+                and isinstance(requested_time.get('unit'), str) and requested_time['unit'],
+                'source.time requires one finite value with an explicit unit')
+    require(inner is not None or requested_time is not None,
+            'Select one exact source.inner index or one exact source.time Quantity')
+    mapping = arguments.get('mapping')
+    require(isinstance(mapping, dict), 'mapping must be an object')
+    require(not mapping,
+            'Nonempty variable mappings are refused: this adapter cannot yet verify source/target variables or apply a mapping')
+    target = arguments.get('target')
+    require(isinstance(target, dict) and set(target) == {'segments'} and isinstance(target['segments'], list)
+            and len(target['segments']) == 2, 'target must be sol:<tag>/feature:<Variables-tag>')
+    solver_segment, feature_segment = target['segments']
+    require(isinstance(solver_segment, dict)
+            and solver_segment == {'collection': 'sol', 'tag': solver_segment.get('tag')}
+            and isinstance(solver_segment.get('tag'), str) and solver_segment['tag'],
+            'target must begin with an explicit solver sequence')
+    require(isinstance(feature_segment, dict)
+            and feature_segment == {'collection': 'feature', 'tag': feature_segment.get('tag')}
+            and isinstance(feature_segment.get('tag'), str) and feature_segment['tag'],
+            'target must end with one explicit solver feature')
+    indices = dataset_solution_indices(worker, model_tag, {'path': dataset})
+    source_solution = indices.get('solution')
+    require(indices.get('binding_complete') is True and indices.get('dataset') == dataset
+            and isinstance(source_solution, str) and source_solution
+            and (solution is None or indices.get('solution') == solution),
+            'Dataset does not prove the requested source solution binding: ' + str(indices))
+    candidates = [row for row in indices.get('solnum_pairs', [])
+                  if isinstance(row, dict) and row.get('outer') == outer
+                  and (inner is None or row.get('inner') == inner)]
+
+    def pair_time(row):
+        """Return a typed time value only when SolutionInfo bound it to this pair."""
+        if indices.get('parameters_complete') is not True:
+            return None
+        by_pair = (indices.get('parameters') or {}).get('by_pair')
+        if not isinstance(by_pair, dict):
+            return None
+        pair_data = by_pair.get(f"{row.get('outer')}:{row.get('inner')}")
+        if not isinstance(pair_data, dict):
+            return None
+        names, values, units = pair_data.get('names'), pair_data.get('values'), pair_data.get('units')
+        if not (isinstance(names, list) and isinstance(values, list) and isinstance(units, list)
+                and len(names) == len(values) == len(units)):
+            return None
+        matches = []
+        for name, value, unit in zip(names, values, units):
+            if isinstance(name, str) and name.lower() in {'t', 'time'}:
+                if (isinstance(value, (int, float)) and not isinstance(value, bool)
+                        and math.isfinite(value) and isinstance(unit, str) and unit):
+                    matches.append({'name': name, 'value': float(value), 'unit': unit})
+                else:
+                    return None
+        return matches[0] if len(matches) == 1 else None
+
+    if requested_time is not None:
+        candidates = [row for row in candidates
+                      if (bound_time := pair_time(row)) is not None
+                      and bound_time['unit'] == requested_time['unit']
+                      and math.isclose(float(requested_time['value']), bound_time['value'], rel_tol=1e-12, abs_tol=1e-15)]
+    pairs = candidates
+    require(len(pairs) == 1 and type(pairs[0].get('solnum')) is int and pairs[0]['solnum'] >= 1,
+            'Dataset metadata does not uniquely resolve the requested exact outer/inner or time-bound solution')
+    selected_pair = pairs[0]
+    time_binding = pair_time(selected_pair)
+    if requested_time is not None:
+        require(time_binding is not None,
+                'source.time cannot be proven from complete, unit-bearing SolutionInfo metadata for this exact pair')
+    model = bound_model(worker, model_tag)
+    sol_list = _call(model, 'sol')
+    solver_tags = tag_list(sol_list)
+    target_solver_tag = solver_segment['tag']
+    require(source_solution in solver_tags and target_solver_tag in solver_tags,
+            'Source and target solver sequences must exist in the bound model')
+    require(target_solver_tag != source_solution, 'Target must be a distinct solver sequence from its source solution')
+    source_node = _call(model, 'sol', source_solution)
+    source_study = _call(source_node, 'study')
+    require(isinstance(source_study, str) and source_study,
+            'Source solver sequence study association is unavailable')
+    target_solver = _call(model, 'sol', target_solver_tag)
+    feature_list = _call(target_solver, 'feature')
+    require(feature_segment['tag'] in tag_list(feature_list),
+            'Target solver feature does not exist')
+    variables = _call(feature_list, 'get', feature_segment['tag'])
+    require(_call(variables, 'getType') == 'Variables',
+            'Target solver feature must be COMSOL Variables')
+    selected_solnum = selected_pair['solnum']
+    requested = {
+        'useinitsol': 'on',
+        'initmethod': 'sol',
+        'initsol': source_solution,
+        'initsoluse': 'manual',
+        'initsolusesolnum': outer,
+        'solnum': 'manual',
+        'manualsolnum': selected_solnum,
+    }
+    for prop in ('useinitsol', 'initmethod', 'initsol', 'initsoluse', 'solnum'):
+        _call(variables, 'set', prop, requested[prop])
+    for prop in ('initsolusesolnum', 'manualsolnum'):
+        _call(variables, 'set', prop, requested[prop])
+    readback = {prop: _call(variables, 'getString', prop)
+                for prop in ('useinitsol', 'initmethod', 'initsol', 'initsoluse', 'solnum')}
+    readback.update({prop: _call(variables, 'getInt', prop)
+                     for prop in ('initsolusesolnum', 'manualsolnum')})
+    require(readback == requested,
+            'COMSOL Variables initial-solution selector did not read back exactly: ' + str(readback))
+    return {
+        'status': 'APPLIED',
+        'coverage_status': 'PARTIAL',
+        'contract': 'solver.solution_transfer/v1',
+        'profile': 'exact-selected-solution-initial-value-selector-only',
+        'source': {'dataset': dataset, 'solution': source_solution, 'study': source_study,
+                   'outer': outer, 'inner': selected_pair['inner'], 'manualsolnum': selected_solnum,
+                   'selection_mode': 'time_quantity' if requested_time is not None else 'solution_index',
+                   'time_binding': time_binding,
+                   'dataset_binding_source': indices.get('binding_source')},
+        'target': target,
+        'mapping': {},
+        'variable_mapping_applied': False,
+        'initialization_readback': readback,
+        'solve_dispatched': False,
+        'verification': {
+            'status': 'CONFIGURED_ONLY',
+            'mesh_compatibility': 'UNVERIFIED',
+            'state_continuity': 'NOT_RUN',
+            'history_preserved': False,
+            'geometry_framework': 'UNSUPPORTED',
+            'interpolation': 'UNSUPPORTED',
+            'conservation_error': 'NOT_COMPUTED',
+            'limitation': 'This partial profile only selects an exact source solution as the Variables initialization source. It does not map variables, verify source/target fields or mesh identity, interpolate across meshes, measure conservation error, or preserve/verify history. Requests needing those guarantees are unsupported.',
+        },
+        'api_basis': {
+            'title': 'COMSOL 6.4 Variables, Table 6-80',
+            'doc_id': 4652,
+            'chunk_id': 17614,
+            'sha256': '1b86563b282f32a7c7d506b43dbba1a310e9509a2bd605c40d9a1f8108094466',
+        },
+    }
+
+
+def op_experiment_design(worker, model_tag, arguments):
+    ctx = current_context()
+    require(isinstance(ctx.get('project_id'), str) and ctx['project_id'],
+            'Managed project identity is required for durable experiment design')
+    require(isinstance(ctx.get('model_ref'), dict) and ctx['model_ref'],
+            'Managed ModelRef is required for durable experiment design')
+    definition = arguments.get('definition')
+    cases = _strict_grid_design(worker, model_tag, definition)
+    design_id = 'exp_' + uuid.uuid4().hex
+    record = {
+        'schema_version': 1,
+        'kind': 'w21experiment',
+        'experiment_id': design_id,
+        'project_id': ctx['project_id'],
+        'model_ref': copy.deepcopy(ctx['model_ref']),
+        # STATE_WRITE completes after this callback; bind the record to the
+        # resulting revision so experiment.run cannot start against a stale model.
+        'model_revision': ctx['revision'] + 1,
+        'producer': ctx['producer'],
+        'study': definition['study'],
+        'sampling_profile': 'cartesian_grid',
+        'definition': copy.deepcopy(definition),
+        'definition_sha256': digest(definition),
+        'cases': cases,
+        'budget': copy.deepcopy(definition['budget']),
+        'model_binding_scope': 'project_id+ModelRef+managed_revision',
+        'external_change_detection_scope': 'managed_execution_ledger; not a full-model external CAS guarantee',
+    }
+    record['sha256'] = digest(record)
+    key = 'w21experiment:' + design_id
+    existing = ctx['store'].register_artifact_if_absent(key, record)
+    require(existing is None, 'Experiment identifier collision; existing design was preserved')
+    return copy.deepcopy(record)
+
+
+def _resolved_experiment(ctx, experiment_id):
+    require(isinstance(experiment_id, str) and experiment_id.startswith('exp_'),
+            'experiment_id must name a registered W21 experiment')
+    key = 'w21experiment:' + experiment_id
+    record = ctx['store'].get_metadata('artifacts', key)
+    require(isinstance(record, dict) and record.get('kind') == 'w21experiment'
+            and record.get('experiment_id') == experiment_id,
+            'Registered experiment design was not found')
+    require(record.get('sha256') == digest({k: v for k, v in record.items() if k != 'sha256'}),
+            'Experiment design integrity check failed')
+    require(record.get('project_id') == ctx.get('project_id'),
+            'Experiment belongs to a different project')
+    require(record.get('model_ref') == ctx.get('model_ref'),
+            'Experiment belongs to a different ModelRef')
+    require(type(record.get('model_revision')) is int and ctx.get('revision') == record['model_revision'],
+            'Model revision changed since experiment design; create a fresh design after reconciling')
+    require(record.get('definition_sha256') == digest(record.get('definition')),
+            'Experiment definition hash mismatch')
+    return record
+
+
+def _experiment_resources(record, arguments):
+    frozen = record['budget']
+    requested = arguments.get('resources')
+    require(requested is None or isinstance(requested, dict), 'resources override must be an object')
+    requested = {} if requested is None else requested
+    require(set(requested).issubset({'max_cases', 'max_wall_time_s'}),
+            'resources supports only max_cases and max_wall_time_s scheduler budgets')
+    max_cases = frozen['max_cases']
+    if 'max_cases' in requested:
+        max_cases = requested['max_cases']
+        require(type(max_cases) is int and 1 <= max_cases <= frozen['max_cases'],
+                'resources.max_cases may only lower the predeclared case budget')
+    max_wall = float(frozen['max_wall_time_s'])
+    if 'max_wall_time_s' in requested:
+        max_wall = requested['max_wall_time_s']
+        require(isinstance(max_wall, (int, float)) and not isinstance(max_wall, bool)
+                and math.isfinite(max_wall) and 0 < max_wall <= frozen['max_wall_time_s'],
+                'resources.max_wall_time_s must be finite, positive, and cannot exceed the frozen wall budget')
+        max_wall = float(max_wall)
+    timeout = arguments.get('timeout_s')
+    if timeout is not None:
+        require(isinstance(timeout, (int, float)) and not isinstance(timeout, bool)
+                and math.isfinite(timeout) and 0 < timeout <= frozen['max_wall_time_s'],
+                'timeout_s must be positive and cannot exceed the frozen wall budget')
+        max_wall = min(float(max_wall), float(timeout))
+    return {'max_cases': max_cases, 'max_wall_time_s': float(max_wall)}
+
+
+def op_experiment_run(worker, model_tag, arguments):
+    from ._g3_w21 import ComputationBudget
+    ctx = current_context()
+    experiment = _resolved_experiment(ctx, arguments.get('experiment_id'))
+    effective_budget = _experiment_resources(experiment, arguments)
+    run_key = 'w21experimentrun:' + experiment['experiment_id']
+    run_id = 'run_' + uuid.uuid4().hex
+    run_record = {
+        'schema_version': 1,
+        'kind': 'w21experiment_run',
+        'run_id': run_id,
+        'experiment_id': experiment['experiment_id'],
+        'project_id': ctx['project_id'],
+        'model_ref': copy.deepcopy(ctx['model_ref']),
+        'design_sha256': experiment['sha256'],
+        'producer': ctx['producer'],
+        'status': 'RUNNING',
+        'effective_budget': effective_budget,
+        'timeout_semantics': 'scheduler_admission_budget; timeout does not cancel an in-flight COMSOL call',
+        'cases': [],
+    }
+    run_record['sha256'] = digest(run_record)
+    existing = ctx['store'].register_artifact_if_absent(run_key, run_record)
+    require(existing is None, 'Experiment already has a run claim; inspect or reconcile its persisted run state before retrying')
+    budget = ComputationBudget(max_cases=effective_budget['max_cases'],
+                               max_wall_time_s=effective_budget['max_wall_time_s'])
+    cases = []
+    terminal = None
+    for row in experiment['cases']:
+        if not budget.can_evaluate():
+            terminal = 'BUDGET_EXHAUSTED'
+            break
+        result = execute_case(worker, model_tag, experiment['study'], experiment['definition'],
+                              row['parameters'], budget, experiment['experiment_id'] + ':' + row['case_id'])
+        result['case_id'] = row['case_id']
+        result['case_ordinal'] = int(row['case_id'].split('-')[-1])
+        cases.append(result)
+        case_key = 'w21experimentcase:' + experiment['experiment_id'] + ':' + row['case_id']
+        persist('w21experiment_case', case_key, {'experiment_id': experiment['experiment_id'],
+                'run_id': run_id, 'case': result})
+        if result.get('status') == 'UNKNOWN':
+            terminal = 'EXECUTION_STATE_UNKNOWN'
+            break
+        if result.get('status') == 'FAILED':
+            terminal = 'CASE_FAILED'
+            break
+    if terminal is None:
+        terminal = 'ALL_CASES_COMPLETED'
+    if terminal == 'EXECUTION_STATE_UNKNOWN':
+        status = 'EXECUTION_STATE_UNKNOWN'
+    elif terminal == 'CASE_FAILED':
+        status = 'FAILED'
+    elif terminal == 'BUDGET_EXHAUSTED':
+        status = 'PARTIAL'
+    else:
+        status = 'COMPLETE'
+    run_record.update(status=status, completion_status=terminal, cases=cases, budget=budget.status(),
+                      execution_state_unknown=(terminal == 'EXECUTION_STATE_UNKNOWN'))
+    run_record['sha256'] = digest({k: v for k, v in run_record.items() if k != 'sha256'})
+    ctx['store'].persist_artifact(run_key, run_record)
+    return copy.deepcopy(run_record)
 
 
 def op_stage_checkpoint_create(worker, model_tag, arguments):

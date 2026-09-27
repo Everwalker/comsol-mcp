@@ -29,6 +29,7 @@ from typing import Any, Mapping
 import pytest
 
 from comsol_mcp._execution_contract import ExecutionContractError
+from comsol_mcp._domain_outcome import domain_envelope
 
 from comsol_mcp import _g3_w14 as w14
 from comsol_mcp._g3_ops import DISPATCH, EFFECTS, IMPLEMENTED_OPERATIONS, REQUIRES_ISOLATION
@@ -153,6 +154,10 @@ class FSelection:
             self.dimension = int(args[0])
             return None
         return self.dimension
+
+    def init(self, *args: Any) -> None:
+        self.calls.append(("init", args))
+        self.dimension = int(args[0]) if args else None
 
     def set(self, *args: Any) -> None:
         self.calls.append(("set", args))
@@ -1635,9 +1640,204 @@ class TestImport:
         assert result["ok"] is True
         assert result["artifact_id"] == engine_path
         assert result["artifact_path_verbatim"] is True
+        assert result["import_type_readback"] is None
+        assert result["import_type_probe"]["status"] == "NOT_READ_UNTIL_SUCCESSFUL_BUILD"
         assert geom.feature_list.items["imp1"].values["filename"] == engine_path
         assert result["license"]["status"] == "UNVERIFIED"
         assert result["local_probe"] is None
+
+    def test_documented_import_filename_string_fallback_writes_and_reads_back(self):
+        geom = geometry("geom1")
+
+        def factory(tag, *args):
+            node = FNode(tag=tag, type_id=str(args[0]),
+                         value_types={"filename": "String", "type": "String"},
+                         values={"filename": "", "type": "native"})
+            # This COMSOL build exposes the documented property and String
+            # getter/setter but has no dynamic getValueType metadata for it.
+            node.getValueType = lambda name: None
+            return node
+
+        geom.feature_list.factory = factory
+        worker, _, _ = world(geometries={"geom1": geom})
+        engine_path = "/tmp/managed import/part.mphtxt"
+        result = call("geometry.import", worker, {
+            "geometry": geom_path("geom1"), "tag": "imp1", "artifact_id": engine_path,
+        })
+        assert result["ok"] is True
+        assert result["property_source"] == "documented_import_filename_string_metadata_fallback"
+        assert result["applied"][0]["value"] == {
+            "kind": "string", "shape": [], "data": engine_path, "java_signature": "java.lang.String",
+        }
+        assert result["applied"][0]["readback"]["data"] == engine_path
+        assert result["applied"][0]["readback_match"] is True
+        assert geom.feature_list.items["imp1"].values["filename"] == engine_path
+
+    def test_import_file_metadata_uses_exact_documented_string_adapter_and_reads_options_back(self):
+        geom = geometry("geom1")
+
+        def factory(tag, *args):
+            node = FNode(tag=tag, type_id=str(args[0]),
+                         value_types={"filename": "String", "type": "String", "includevirtual": "Boolean"},
+                         values={"filename": "", "type": "native", "includevirtual": True})
+            ordinary_get_value_type = node.getValueType
+            # Native COMSOL 6.4 readback for Import.filename is exactly "File";
+            # its documented set(String)/getString API is exercised by the adapter.
+            node.getValueType = lambda name: "File" if name == "filename" else ordinary_get_value_type(name)
+            return node
+
+        geom.feature_list.factory = factory
+        worker, _, _ = world(geometries={"geom1": geom})
+        engine_path = "/private/tmp/managed geometry/part.mphtxt"
+        result = call("geometry.import", worker, {
+            "geometry": geom_path("geom1"), "tag": "imp1", "artifact_id": engine_path,
+            "options": {"includevirtual": False},
+        })
+        feature = geom.feature_list.items["imp1"]
+        assert result["ok"] is True
+        assert result["property_source"] == "documented_import_filename_file_type_string_adapter"
+        rows = {row["name"]: row for row in result["applied"]}
+        assert rows["filename"]["value"]["comsol_value_type_readback"] == "File"
+        assert rows["filename"]["readback"]["data"] == engine_path
+        assert rows["filename"]["readback_match"] is True
+        assert rows["includevirtual"]["readback"]["data"] is False
+        assert rows["includevirtual"]["readback_match"] is True
+        assert feature.values["filename"] == engine_path
+        assert feature.values["includevirtual"] is False
+        assert [(method, args) for method, args in feature.calls
+                if method in {"set", "getString", "getBoolean"}] == [
+                    ("set", ("filename", engine_path)),
+                    ("getString", ("filename",)),
+                    ("set", ("includevirtual", {"kind": "boolean", "shape": [], "data": False,
+                                                  "java_signature": "boolean"})),
+                    ("getBoolean", ("includevirtual",)),
+                ]
+
+    def test_filename_write_failure_preserves_partial_feature_and_skips_build(self):
+        geom = geometry("geom1")
+
+        def factory(tag, *args):
+            node = FNode(tag=tag, type_id=str(args[0]),
+                         value_types={"filename": "String"}, values={"filename": ""},
+                         errors={"filename": FakeEngineError("filename setter rejected the path")})
+            node.getValueType = lambda name: None
+            return node
+
+        geom.feature_list.factory = factory
+        worker, _, _ = world(geometries={"geom1": geom})
+        result = call("geometry.import", worker, {
+            "geometry": geom_path("geom1"), "tag": "imp1", "artifact_id": "/tmp/part.mphtxt",
+            "options": {"build": True},
+        })
+        assert result["ok"] is False
+        assert result["status"] == "EXECUTION_STATE_UNKNOWN"
+        assert result["created"] is True
+        assert result["partial_change"] is True
+        assert result["failed"][0]["name"] == "filename"
+        assert "filename setter rejected" in result["failed"][0]["error"]
+        assert result["build"]["status"] == "NOT_EXECUTED"
+        assert result["build"]["built"] is False
+        assert geom.run_log == []
+
+    def test_unobserved_filename_metadata_probe_stops_without_setter_or_build(self):
+        geom = geometry("geom1")
+
+        class UnobservedProbeTimeout(RuntimeError):
+            execution_state_unknown = True
+
+        def factory(tag, *args):
+            node = FNode(tag=tag, type_id=str(args[0]), value_types={"filename": "String"},
+                         values={"filename": ""})
+            node.getValueType = lambda name: (_ for _ in ()).throw(UnobservedProbeTimeout("RPC timed out"))
+            return node
+
+        geom.feature_list.factory = factory
+        worker, _, _ = world(geometries={"geom1": geom})
+        result = call("geometry.import", worker, {
+            "geometry": geom_path("geom1"), "tag": "imp1", "artifact_id": "/tmp/part.mphtxt",
+            "options": {"build": True},
+        })
+        feature = geom.feature_list.items["imp1"]
+        assert result["ok"] is False
+        assert result["status"] == "EXECUTION_STATE_UNKNOWN"
+        assert result["execution_state_unknown"] is True
+        assert result["created"] is True
+        assert result["failed"][0]["code"] == "EXECUTION_STATE_UNKNOWN"
+        assert not [name for name, _ in feature.calls if name in {"set", "getString"}]
+        assert geom.run_log == []
+
+    def test_terminal_metadata_only_worker_failure_allows_documented_fallback(self):
+        geom = geometry("geom1")
+
+        class TerminalMetadataFailure(RuntimeError):
+            reply = {"status": "FAILED", "failure": {
+                "message": "filename value type metadata unavailable", "execution_state_unknown": False,
+            }}
+            execution_state_unknown = False
+
+        def factory(tag, *args):
+            node = FNode(tag=tag, type_id=str(args[0]), value_types={"filename": "String"},
+                         values={"filename": ""})
+            node.getValueType = lambda name: (_ for _ in ()).throw(
+                TerminalMetadataFailure("terminal metadata read failure")
+            )
+            return node
+
+        geom.feature_list.factory = factory
+        worker, _, _ = world(geometries={"geom1": geom})
+        result = call("geometry.import", worker, {
+            "geometry": geom_path("geom1"), "tag": "imp1", "artifact_id": "/tmp/part.mphtxt",
+        })
+        assert result["ok"] is True
+        assert result["property_source"] == "documented_import_filename_string_metadata_fallback"
+        assert geom.feature_list.items["imp1"].values["filename"] == "/tmp/part.mphtxt"
+
+    def test_unrelated_terminal_worker_failure_does_not_enable_filename_fallback(self):
+        geom = geometry("geom1")
+
+        class UnrelatedTerminalFailure(RuntimeError):
+            reply = {"status": "FAILED", "failure": {
+                "message": "COMSOL connection rejected request", "execution_state_unknown": False,
+            }}
+            execution_state_unknown = False
+
+        def factory(tag, *args):
+            node = FNode(tag=tag, type_id=str(args[0]), value_types={"filename": "String"},
+                         values={"filename": ""})
+            node.getValueType = lambda name: (_ for _ in ()).throw(
+                UnrelatedTerminalFailure("terminal API failure")
+            )
+            return node
+
+        geom.feature_list.factory = factory
+        worker, _, _ = world(geometries={"geom1": geom})
+        result = call("geometry.import", worker, {
+            "geometry": geom_path("geom1"), "tag": "imp1", "artifact_id": "/tmp/part.mphtxt",
+            "options": {"build": True},
+        })
+        assert result["ok"] is False
+        assert result["status"] == "FAILED"
+        assert result["execution_state_unknown"] is False
+        assert result["failed"][0]["code"] == "ENGINE_CALL_FAILED"
+        assert result["build"]["status"] == "NOT_EXECUTED"
+        assert not [name for name, _ in geom.feature_list.items["imp1"].calls if name == "set"]
+        assert geom.run_log == []
+
+    def test_build_failure_is_reflected_in_the_geometry_import_result(self):
+        geom = geometry("geom1", build_error=FakeEngineError("native geometry build rejected"))
+        geom.feature_list.factory = lambda tag, *args: FNode(
+            tag=tag, type_id=str(args[0]), value_types={"filename": "String"}, values={"filename": ""},
+        )
+        worker, _, _ = world(geometries={"geom1": geom})
+        result = call("geometry.import", worker, {
+            "geometry": geom_path("geom1"), "tag": "imp1", "artifact_id": "/tmp/part.mphtxt",
+            "options": {"build": True},
+        })
+        assert result["build"]["ok"] is False
+        assert result["ok"] is False
+        assert result["status"] == "EXECUTION_STATE_UNKNOWN"
+        assert result["execution_state_unknown"] is True
+        assert result["failed"][-1]["stage"] == "geometry_build"
 
     def test_local_path_check_reports_a_missing_file_before_the_write(self, tmp_path):
         geom = geometry("geom1")
@@ -1686,16 +1886,88 @@ class TestImport:
 
     def test_build_option_runs_the_sequence(self):
         geom = geometry("geom1")
-        geom.feature_list.factory = lambda tag, *args: FNode(
-            tag=tag, type_id=str(args[0]), value_types={"filename": "String"}, values={"filename": ""},
-        )
+        events = []
+        original_run = geom.run
+
+        def tracked_run(*args):
+            events.append(("run", args))
+            return original_run(*args)
+
+        geom.run = tracked_run
+
+        def factory(tag, *args):
+            node = FNode(
+                tag=tag, type_id=str(args[0]),
+                value_types={"filename": "String", "type": "String"},
+                values={"filename": "", "type": "native"},
+            )
+            original_get_string = node.getString
+
+            def tracked_get_string(name):
+                events.append(("getString", (name,)))
+                return original_get_string(name)
+
+            node.getString = tracked_get_string
+            return node
+
+        geom.feature_list.factory = factory
         worker, _, _ = world(geometries={"geom1": geom})
         result = call("geometry.import", worker, {
             "geometry": geom_path("geom1"), "tag": "imp1", "artifact_id": "/tmp/a.dxf",
             "options": {"build": True},
         })
+        feature = geom.feature_list.items["imp1"]
         assert result["build"]["built"] is True
+        assert result["import_type_probe"] == {
+            "status": "READ", "method": "getString", "property": "type",
+            "ok": True, "value": "native", "error": None,
+        }
+        assert result["import_type_readback"] == "native"
+        assert not [call for call in feature.calls if call[0] == "set" and call[1][0] == "type"]
+        assert events.index(("run", ())) < events.index(("getString", ("type",)))
         assert geom.run_log == [()]
+
+    def test_import_type_readback_error_fails_after_successful_build(self):
+        geom = geometry("geom1")
+        node_holder = {}
+
+        def factory(tag, *args):
+            node = FNode(
+                tag=tag, type_id=str(args[0]),
+                value_types={"filename": "String", "type": "String"},
+                values={"filename": "", "type": "native"},
+            )
+            original_get_string = node.getString
+
+            def failing_get_string(name):
+                if name == "type":
+                    node.calls.append(("getString", (name,)))
+                    raise FakeEngineError("COMSOL rejected Import.type readback")
+                return original_get_string(name)
+
+            node.getString = failing_get_string
+            node_holder["node"] = node
+            return node
+
+        geom.feature_list.factory = factory
+        worker, _, _ = world(geometries={"geom1": geom})
+        result = call("geometry.import", worker, {
+            "geometry": geom_path("geom1"), "tag": "imp1", "artifact_id": "/tmp/a.dxf",
+            "options": {"build": True},
+        })
+        feature = node_holder["node"]
+        assert result["build"]["ok"] is True
+        assert result["ok"] is False
+        assert result["status"] == "PARTIAL_FAILURE"
+        assert result["partial_change"] is True
+        assert result["execution_state_unknown"] is False
+        assert result["import_type_readback"] is None
+        assert result["import_type_probe"]["status"] == "READ_FAILED"
+        assert result["import_type_probe"]["error"]["code"] == "ENGINE_CALL_FAILED"
+        assert result["failed"][-1]["stage"] == "import_type_readback"
+        assert result["failed"][-1]["code"] == "ENGINE_CALL_FAILED"
+        assert not [call for call in feature.calls if call[0] == "set" and call[1][0] == "type"]
+        assert [call for call in feature.calls if call == ("getString", ("type",))]
 
 
 # ---------------------------------------------------------------------------
@@ -1744,6 +2016,72 @@ class TestMeasure:
         })
         assert result["entities"] == [2]
 
+    def test_requested_metric_failure_is_partial_and_preserves_engine_cause(self, monkeypatch):
+        geom = geometry("geom1", sdim=2)
+        worker, _, _ = world(geometries={"geom1": geom})
+
+        def fail_area(_measure):
+            raise FakeEngineError("EngineCallFailed: FlException: Unsupported dimension")
+
+        monkeypatch.setattr(FMeasure, "getArea", fail_area)
+        result = call("geometry.measure", worker, {
+            "geometry": geom_path("geom1"),
+            "query": {"mode": "objects", "all": True, "metrics": ["area", "bounding_box"]},
+        })
+        assert result["ok"] is False
+        assert result["status"] == "PARTIAL_FAILURE"
+        assert result["execution_state_unknown"] is False
+        assert result["metrics"]["area"]["value"] is None
+        assert result["metrics"]["bounding_box"]["value"] == [0.0, 1.0, 0.0, 1.0, 0.0, 1.0]
+        assert result["failed"][0]["metric"] == "area"
+        assert result["failed"][0]["error"]["code"] == "ENGINE_CALL_FAILED"
+        assert "FlException: Unsupported dimension" in result["failed"][0]["error"]["message"]
+        envelope = domain_envelope(
+            "geometry.measure", result,
+            witness={"mutation_issued": True, "mutation_method": "all", "engine_calls": 2,
+                     "dispatches": [{"is_mutation": True}, {"is_mutation": False}]},
+        )
+        assert envelope["success"] is False
+        assert envelope["domain_outcome"]["state"] != "succeeded"
+
+    def test_unknown_metric_stops_all_later_measurement_and_state_probes(self, monkeypatch):
+        geom = geometry("geom1", sdim=2)
+        worker, _, _ = world(geometries={"geom1": geom})
+        getter_calls: list[str] = []
+
+        def fail_area(_measure):
+            getter_calls.append("getArea")
+            raise FakeEngineError("Worker lost track of engine state", code="EXECUTION_STATE_UNKNOWN")
+
+        def later_bounding_box(_measure):
+            getter_calls.append("getBoundingBox")
+            return [0.0, 1.0, 0.0, 1.0, 0.0, 1.0]
+
+        monkeypatch.setattr(FMeasure, "getArea", fail_area)
+        monkeypatch.setattr(FMeasure, "getBoundingBox", later_bounding_box)
+        result = call("geometry.measure", worker, {
+            "geometry": geom_path("geom1"),
+            "query": {"mode": "objects", "objects": ["r1"],
+                      "metrics": ["area", "bounding_box", "n_entities"]},
+        })
+
+        assert getter_calls == ["getArea"]
+        assert result["status"] == "EXECUTION_STATE_UNKNOWN"
+        assert result["execution_state_unknown"] is True
+        assert result["metrics"]["area"]["error"]["execution_state_unknown"] is True
+        assert result["metrics"]["bounding_box"]["status"] == "NOT_EXECUTED"
+        assert result["metrics"]["n_entities"]["status"] == "NOT_EXECUTED"
+        assert {row["probe"] for row in result["not_executed"] if "probe" in row} == {"entities", "lengthUnit"}
+        assert result["length_unit_probe"]["status"] == "NOT_EXECUTED"
+        assert not [row for row in geom.calls if row[0] == "lengthUnit"]
+        envelope = domain_envelope(
+            "geometry.measure", result,
+            witness={"mutation_issued": True, "mutation_method": "all", "engine_calls": 2,
+                     "dispatches": [{"is_mutation": True}, {"is_mutation": False}]},
+        )
+        assert envelope["success"] is False
+        assert envelope["domain_outcome"]["state"] == "unknown"
+
     def test_unknown_metric_is_refused_before_any_engine_call(self):
         geom = geometry("geom1")
         worker, _, _ = world(geometries={"geom1": geom})
@@ -1766,6 +2104,8 @@ class TestMeasure:
 class TestValidate:
     def test_all_supported_expectations_pass(self):
         geom = geometry("geom1", features={"r1": rectangle_feature("r1"), "wp1": workplane_feature("wp1")})
+        measure = FMeasure(geom, mesh_selection=False)
+        geom.collections["measure"] = measure
         worker, _, _ = world(geometries={"geom1": geom})
         result = call("geometry.validate", worker, {
             "geometry": geom_path("geom1"),
@@ -1787,6 +2127,9 @@ class TestValidate:
             "bounding_box", "feature_tags.present", "feature_tags.absent", "volume", "area",
         ]
         assert result["check_count"] == 9
+        assert measure._selection.calls == [
+            ("init", (3,)), ("all", ()), ("init", (2,)), ("all", ()),
+        ]
 
     def test_failed_checks_are_reported_without_an_exception(self):
         geom = geometry("geom1", features={"r1": rectangle_feature("r1")})
@@ -1800,6 +2143,51 @@ class TestValidate:
         assert set(result["failed_checks"]) == {"entity_counts[3]", "feature_tags.absent", "bounding_box"}
         box = [row for row in result["checks"] if row["name"] == "bounding_box"][0]
         assert box["detail"]["max_abs_delta"] == 1.0
+
+    def test_unknown_metric_stops_later_checks_and_final_state_probes(self, monkeypatch):
+        geom = geometry("geom1", sdim=3)
+        measure = FMeasure(geom, mesh_selection=False)
+        geom.collections["measure"] = measure
+        worker, _, _ = world(geometries={"geom1": geom})
+        getter_calls: list[str] = []
+
+        def fail_volume(_measure):
+            getter_calls.append("getVolume")
+            raise FakeEngineError("Worker lost track of engine state", code="EXECUTION_STATE_UNKNOWN")
+
+        def later_area(_measure):
+            getter_calls.append("getArea")
+            return 0.25
+
+        monkeypatch.setattr(FMeasure, "getVolume", fail_volume)
+        monkeypatch.setattr(FMeasure, "getArea", later_area)
+        result = call("geometry.validate", worker, {
+            "geometry": geom_path("geom1"),
+            "expectations": {"volume": {"value": 1.0}, "area": {"value": 0.25}},
+        })
+
+        assert getter_calls == ["getVolume"]
+        assert result["status"] == "EXECUTION_STATE_UNKNOWN"
+        assert result["execution_state_unknown"] is True
+        assert result["ok"] is False
+        assert result["checks"][0]["error"]["execution_state_unknown"] is True
+        assert result["checks"][1]["status"] == "NOT_EXECUTED"
+        assert result["not_executed"] == [
+            {"stage": "measurement", "check": "area", "getter": "getArea"},
+            {"stage": "geometry_state", "probe": "getSDim"},
+            {"stage": "geometry_state", "probe": "lengthUnit"},
+        ]
+        assert result["geometry_state"]["dimension_probe"]["status"] == "NOT_EXECUTED"
+        assert result["geometry_state"]["length_unit_probe"]["status"] == "NOT_EXECUTED"
+        assert not [row for row in geom.calls if row[0] in {"getSDim", "lengthUnit"}]
+        assert measure._selection.calls == [("init", (3,)), ("all", ())]
+        envelope = domain_envelope(
+            "geometry.validate", result,
+            witness={"mutation_issued": True, "mutation_method": "all", "engine_calls": 2,
+                     "dispatches": [{"is_mutation": True}, {"is_mutation": False}]},
+        )
+        assert envelope["success"] is False
+        assert envelope["domain_outcome"]["state"] == "unknown"
 
     def test_design_spacing_is_refused_before_any_engine_call(self):
         geom = geometry("geom1")

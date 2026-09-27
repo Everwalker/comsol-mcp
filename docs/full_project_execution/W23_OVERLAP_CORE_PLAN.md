@@ -1,0 +1,31 @@
+# W23 bounded overlap core work unit
+
+Status: PLANNED. This work unit supports result.mode_overlap; it does not itself implement native field extraction or certify T014/T046. Read W23_MAIN_MODEL_PLAN.md for the physical scope and reference evidence.
+
+## Ownership and integration
+
+Use only new comsol_mcp/_mode_overlap.py, tests/test_mode_overlap.py, and docs/full_project_execution/w23_overlap/**. Do not edit the shared registry/backend/results modules, pyproject/lock or main state. The main executor will wire the precise definition contract to managed native field extraction and truthful capability status. Inspect existing complex-result and ResultContext conventions to avoid an incompatible duplicate representation. Do not add dependencies merely for small vector quadrature; use existing declared dependencies or the standard library.
+
+The frozen action accepts definition:object and requires a domain output schema before implementation closes. Define a versioned, explicit first supported profile: reciprocal, lossless, forward propagating, nondegenerate modes on a common registered planar transverse sampling surface. General lossy/leaky/degenerate and arbitrary curved surfaces require separate treatment and must not silently use this formula.
+
+## Numerical kernel
+
+For full complex E and H vectors, oriented unit normal n, and positive physical quadrature weights, calculate P_i = 0.5 Re integral[(E_i cross conjugate(H_i)) dot n]. With positive forward powers, calculate a = integral[(E_signal cross conjugate(H_mode) + conjugate(E_mode) cross H_signal) dot n] / (4 sqrt(P_signal P_mode)). Preserve complex amplitude and phase convention, the unnormalized numerator and both powers. Do not replace this with a scalar L2 dot product or discard imaginary components.
+
+Crucially, abs(a)^2 is normalized modal overlap, not automatically input-to-output coupling efficiency. Return it as normalized_overlap. The projected mode power is abs(a)^2 times P_signal; eta_mode is projected_mode_power / explicitly supplied incident_reference_power. Require that reference's units and input-plane identity. Otherwise signal attenuation would disappear under self-normalization: identical outgoing mode shapes at half the incident field amplitude have normalized_overlap=1 but eta_mode=0.25 for fixed incident power. Do not silently use P_signal as incident power. Reference-mode rescaling leaves projected mode power unchanged; signal rescaling changes it quadratically.
+
+Require explicit field units, sample coordinates, vector component ordering, surface orientation, quadrature measure and dimensionality. Three-dimensional surface area weights produce W; a two-dimensional transverse line with invariant out-of-plane depth produces W/m and must be identified as per-unit-depth. Reject mismatched coordinates, planes, units, dimensions, invalid normals, nonfinite values, unequal shapes and nonpositive modal power. Zero imaginary values are legitimate; absent imaginary data or silently dropping nonzero imaginary values is different. Do not clamp an efficiency outside a registered numerical tolerance to make it pass.
+
+Main review found that merely matching coordinate arrays and a plane label did not enforce the planar profile. Check each displacement from the first sample against the given unit normal, without fitting or projecting. Use a declared floating-point error bound based on input-coordinate and displacement ULPs (fixed conservative safety factor, e.g.64), and echo the bound. A fixed 1nm geometric tolerance is not an acceptable substitute for floating-point error on a micrometer-scale optical section. Test a 0.5nm departure on that scale as a rejection and legitimate rigid transforms as accepted; reject nonfinite differences or bounds. The native adapter must separately ensure the coordinate representation is precise enough for its registered physical tolerances.
+
+The definition, fields and reference provenance must explicitly declare a common phasor time convention and full physical field representation, including any reconstructed envelope phase. The initial implementation rejects unknown/missing/mixed conventions rather than silently converting. Echo these declarations without claiming the pure numerical kernel authenticated them.
+
+Keep eta_capture separate: signed signal Poynting flux over an explicitly declared aperture divided by explicitly bound incident reference power, with compatible units and orientation. An overlap integral is not aperture capture. Report each metric's denominator and region independently.
+
+The public managed adapter must obtain field/solution/mode identity and provenance from backend observations, not accept caller arrays or claimed provenance as evidence of a COMSOL solution. This module may accept arrays internally for numerical calculation and independent recomputation, but must not advertise those arrays as native execution. Specify the required adapter inputs and trust boundary in the integration note.
+
+## Software tests and deliverables
+
+Use analytically checkable vector fields for identical modes, independent scaling, independent global phase rotation, orthogonal polarization, and a deliberately displaced/mismatched profile. Test normalized overlap separately from reference-power coupling, including the fixed-input half-amplitude case eta_mode=0.25 despite normalized_overlap=1. Check known powers and overlap directly, not by calling the same kernel to construct expected values. Include failures for missing imaginary representation, mismatched plane/coordinate units, reversed or nonunit normal, zero/negative power and malformed/nonfinite shapes. A test that drops a nonzero imaginary component must show disagreement with the correct reference; do not reject physically real fields as a shortcut. Cover separate aperture capture and dimensional W versus W/m accounting.
+
+Publish the definition/result schema, calculation and applicability notes, test output/JUnit and an integration contract. Label all this SOFTWARE_ONLY and native gates NOT_RUN. No COMSOL/GUI invocation, no physical parameter calibration claim, and no changes to frozen acceptance thresholds. The later native work must export actual complex fields, independently recompute a normal and displaced case, check mesh/power balance and reopen the saved same-version model.

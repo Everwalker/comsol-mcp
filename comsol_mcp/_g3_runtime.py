@@ -134,6 +134,7 @@ from ._g3_common import (
     error_code_of,
     operation_arguments,
     require_bool,
+    require_mapping,
     require_string,
     require_string_array,
 )
@@ -338,7 +339,13 @@ _ALLOWLIST_REFUSAL_CODES = frozenset({"METHOD_REJECTED", "MODEL_UTIL_METHOD_REJE
 
 #: Argument names the two operations accept, beyond the control-plane envelope.
 _LICENSE_INSPECT_FIELDS = ("runtime_id", "products")
+_LICENSE_CHECKOUT_FIELDS = ("runtime_id", "products", "authorization_ref", "idempotency_key", "request_id")
+_RENDER_PROBE_FIELDS = ("runtime_id", "mode", "idempotency_key", "request_id")
 _CAPABILITIES_FIELDS = ("runtime_id", "refresh")
+_RUNTIME_DISCOVER_FIELDS = ("roots",)
+_RUNTIME_INSPECT_FIELDS = ("runtime_id",)
+_RUNTIME_DOCTOR_FIELDS = ("runtime_id", "checks")
+_RUNTIME_COMPATIBILITY_FIELDS = ("runtime_ids", "requirements")
 
 
 #: The Java signature of the varargs parameter ``ModelUtil.hasProduct(String...)``
@@ -696,6 +703,118 @@ def _requested_products(payload: Mapping[str, Any]) -> list[str]:
     return products
 
 
+def runtime_discover(_worker: Any, _model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+    """Read a bounded, one-directory-deep installation inventory.
+
+    The helper only reads known COMSOL metadata and native executable headers;
+    it does not launch a binary, connect to an engine, or probe a license.
+    """
+    payload = operation_arguments(arguments, _RUNTIME_DISCOVER_FIELDS)
+    roots = None
+    if payload.get("roots") is not None:
+        roots = require_string_array(payload["roots"], "roots", allow_empty=True)
+        if len(roots) > 32:
+            raise ExecutionContractError("INVALID_REQUEST", "roots must contain no more than 32 paths")
+    from ._runtime_installation import RuntimeInstallationError, discover_installations
+    try:
+        return discover_installations(roots)
+    except RuntimeInstallationError as exc:
+        raise ExecutionContractError("INVALID_REQUEST", str(exc)) from exc
+
+
+def runtime_inspect(_worker: Any, _model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+    """Read one canonical local installation's metadata without starting it."""
+    payload = operation_arguments(arguments, _RUNTIME_INSPECT_FIELDS, required=("runtime_id",))
+    runtime_id = _runtime_id(payload)
+    from ._runtime_installation import RuntimeInstallationError, inspect_installation
+    try:
+        return inspect_installation(runtime_id)
+    except (RuntimeInstallationError, OSError) as exc:
+        raise ExecutionContractError("RUNTIME_NOT_FOUND", "the requested installation could not be inspected") from exc
+
+
+def runtime_doctor(_worker: Any, _model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+    """Run static installation checks and leave live license/port/render checks NOT_RUN."""
+    payload = operation_arguments(arguments, _RUNTIME_DOCTOR_FIELDS)
+    runtime_id = _runtime_id(payload) if payload.get("runtime_id") is not None else None
+    checks = None
+    if payload.get("checks") is not None:
+        checks = require_string_array(payload["checks"], "checks", allow_empty=False)
+        if len(checks) > 11 or len(set(checks)) != len(checks):
+            raise ExecutionContractError("INVALID_REQUEST", "checks must be unique and contain no more than 11 names")
+    from ._runtime_installation import RuntimeInstallationError, doctor_installation
+    try:
+        return doctor_installation(runtime_id, checks)
+    except RuntimeInstallationError as exc:
+        raise ExecutionContractError("INVALID_REQUEST", str(exc)) from exc
+
+
+def runtime_compatibility_report(_worker: Any, _model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+    """Compare observed install metadata to a deliberately finite requirement schema."""
+    payload = operation_arguments(
+        arguments, _RUNTIME_COMPATIBILITY_FIELDS, required=("runtime_ids", "requirements")
+    )
+    runtime_ids = require_string_array(payload["runtime_ids"], "runtime_ids", allow_empty=True)
+    if len(runtime_ids) > 32:
+        raise ExecutionContractError("INVALID_REQUEST", "runtime_ids must contain no more than 32 ids")
+    requirements = require_mapping(payload["requirements"], "requirements")
+    if len(requirements) > 16:
+        raise ExecutionContractError("INVALID_REQUEST", "requirements must contain no more than 16 fields")
+    from ._runtime_installation import RuntimeInstallationError, compatibility_report
+    try:
+        return compatibility_report(runtime_ids, requirements)
+    except RuntimeInstallationError as exc:
+        raise ExecutionContractError("INVALID_REQUEST", str(exc)) from exc
+
+
+def runtime_license_checkout(worker: Any, _model_tag: str, arguments: Mapping[str, Any], *,
+                             execution: Mapping[str, Any], backend: Any,
+                             event_callback: Any = None) -> dict[str, Any]:
+    """Request one authorized, seat-consuming checkout on the existing session."""
+    payload = operation_arguments(
+        arguments, _LICENSE_CHECKOUT_FIELDS,
+        required=("runtime_id", "products", "authorization_ref", "idempotency_key"),
+    )
+    runtime_id = _runtime_id(payload)
+    products = _requested_products(payload)
+    if not products:
+        raise ExecutionContractError("INVALID_REQUEST", "license checkout requires at least one product token")
+    if len(set(products)) != len(products):
+        raise ExecutionContractError("INVALID_REQUEST", "license checkout products must be unique")
+    authorization_ref = require_string(payload["authorization_ref"], "authorization_ref", max_length=512)
+    if not authorization_ref.strip() or any(ord(char) < 32 for char in authorization_ref):
+        raise ExecutionContractError("INVALID_REQUEST", "authorization_ref must be nonempty and contain no control characters")
+    if backend is None:
+        raise ExecutionContractError("RUNTIME_CONFIGURATION_REQUIRED", "managed checkout control is unavailable")
+    from ._runtime_control import license_checkout
+    return license_checkout(
+        worker, backend, runtime_id=runtime_id, products=products,
+        authorization_ref=authorization_ref, execution=execution,
+    )
+
+
+def runtime_render_probe(worker: Any, _model_tag: str, arguments: Mapping[str, Any], *,
+                         execution: Mapping[str, Any], backend: Any,
+                         event_callback: Any = None,
+                         isolation_proof: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    """Run the fixed disposable geometry recipe and validate its PNG output."""
+    payload = operation_arguments(
+        arguments, _RENDER_PROBE_FIELDS, required=("runtime_id", "idempotency_key"),
+    )
+    runtime_id = _runtime_id(payload)
+    mode = require_string(payload.get("mode", "geometry"), "mode", max_length=32)
+    authorization_ref = require_string(execution.get("authorization_ref"), "execution.authorization_ref", max_length=512)
+    if not authorization_ref.strip() or any(ord(char) < 32 for char in authorization_ref):
+        raise ExecutionContractError("INVALID_REQUEST", "execution.authorization_ref must be nonempty and contain no control characters")
+    if backend is None or not isinstance(isolation_proof, Mapping):
+        raise ExecutionContractError("ISOLATION_PROOF_REQUIRED", "render probe requires the managed owned-server isolation gate")
+    from ._runtime_control import render_probe
+    return render_probe(
+        worker, backend, runtime_id=runtime_id, mode=mode, execution=execution,
+        authorization_ref=authorization_ref,
+    )
+
+
 def _product_rows(worker: Any, products: Sequence[str],
                   log: "_CallLog | None" = None) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """One non-checkout license query per product; unresolved rows are returned.
@@ -1050,8 +1169,14 @@ def capabilities(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> d
 # ---------------------------------------------------------------------------
 
 OPERATIONS: dict[str, Callable[[Any, str, dict], dict]] = {
+    "runtime.discover": runtime_discover,
+    "runtime.inspect": runtime_inspect,
+    "runtime.doctor": runtime_doctor,
     "runtime.capabilities": capabilities,
     "runtime.license_inspect": license_inspect,
+    "runtime.compatibility_report": runtime_compatibility_report,
+    "runtime.license_checkout": runtime_license_checkout,
+    "runtime.render_probe": runtime_render_probe,
 }
 
 __all__ = ["OPERATIONS"]

@@ -9,6 +9,8 @@ import os
 import socket
 import time
 from collections.abc import Mapping
+from contextlib import contextmanager
+from contextvars import ContextVar
 from datetime import datetime
 from pathlib import Path
 from uuid import uuid4
@@ -22,7 +24,16 @@ from comsol_mcp._server import (
     _ensure_dirs, _setup_logging,
     _get_mph, _get_mph_error,
 )
-import comsol_mcp._server as _srv
+from comsol_mcp._server import session_server as _srv
+
+
+# A managed project operation gets an independent workflow state file inside
+# its authoritative project workspace.  Unscoped legacy calls retain the
+# process-level WORKFLOW_FILE and no environment/global path is changed.
+_PROJECT_WORKFLOW_ROOT: ContextVar[Path | None] = ContextVar(
+    "comsol_project_workflow_root", default=None,
+)
+_PROJECT_WORKFLOW_DIRNAME = ".comsol_mcp"
 
 
 # ---------------------------------------------------------------------------
@@ -34,6 +45,17 @@ def _json(data: dict[str, Any]) -> str:
 
 def _now_iso() -> str:
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _runtime_setting(name: str):
+    """Use ContextVar-bound paths/settings without breaking legacy monkeypatches."""
+    if _srv.active_runtime_context() is None:
+        return globals()[name]
+    return _srv.runtime_setting(name)
+
+
+def _runtime_output_dir() -> Path:
+    return Path(_runtime_setting("OUTPUTS_DIR"))
 
 
 # ---------------------------------------------------------------------------
@@ -121,14 +143,122 @@ def _default_workflow_state() -> dict[str, Any]:
     }
 
 
+@contextmanager
+def project_workflow_state_scope(project_root: str | Path):
+    """Scope legacy workflow reads and writes to one registered project."""
+    from ._execution_contract import ExecutionContractError
+
+    try:
+        candidate = Path(project_root).expanduser().resolve(strict=True)
+    except (OSError, RuntimeError, ValueError) as exc:
+        raise ExecutionContractError(
+            "PERMISSION_DENIED", "project workflow root is unavailable",
+        ) from exc
+    if not candidate.is_dir():
+        raise ExecutionContractError("PERMISSION_DENIED", "project workflow root is not a directory")
+    token = _PROJECT_WORKFLOW_ROOT.set(candidate)
+    try:
+        yield candidate
+    finally:
+        _PROJECT_WORKFLOW_ROOT.reset(token)
+
+
+def _project_scoped_path(root: Path, path: Path) -> Path:
+    """Canonicalize a scoped state path and refuse all symlink aliases."""
+    from ._execution_contract import ExecutionContractError, canonical_project_path
+
+    if path.is_symlink():
+        raise ExecutionContractError("PERMISSION_DENIED", "project workflow state cannot use symlink paths")
+    resolved = canonical_project_path(root, path)
+    if resolved != path:
+        raise ExecutionContractError("PERMISSION_DENIED", "project workflow state path is not canonical")
+    return resolved
+
+
+def _workflow_state_file() -> Path:
+    """Return the active workflow file, checking project containment before I/O."""
+    root = _PROJECT_WORKFLOW_ROOT.get()
+    session = _srv.active_runtime_context()
+    if session is not None:
+        from ._execution_contract import ExecutionContractError
+
+        if root is not None:
+            try:
+                active_project_root = root.resolve(strict=True)
+                registered_project_root = session.project_root.resolve(strict=True)
+            except (OSError, RuntimeError, ValueError) as exc:
+                raise ExecutionContractError(
+                    "PERMISSION_DENIED", "session project root is unavailable",
+                ) from exc
+            if active_project_root != registered_project_root:
+                raise ExecutionContractError(
+                    "PROJECT_IDENTITY_MISMATCH",
+                    "session workflow context does not match the active registered project",
+                )
+        paths = session.paths
+        workflow_file = paths.workflow_file
+        session_root = paths.root
+        try:
+            if session_root.is_symlink() or workflow_file.is_symlink():
+                raise ExecutionContractError(
+                    "PERMISSION_DENIED", "session workflow path cannot use symlinks",
+                )
+            if workflow_file.parent.resolve() != session_root.resolve():
+                raise ExecutionContractError(
+                    "PERMISSION_DENIED", "session workflow path escapes its session state directory",
+                )
+            session_root.mkdir(mode=0o700, parents=True, exist_ok=True)
+            if session_root.is_symlink() or workflow_file.is_symlink():
+                raise ExecutionContractError(
+                    "PERMISSION_DENIED", "session workflow path changed during creation",
+                )
+            if workflow_file.parent.resolve() != session_root.resolve():
+                raise ExecutionContractError(
+                    "PERMISSION_DENIED", "session workflow path changed during creation",
+                )
+        except ExecutionContractError:
+            raise
+        except (OSError, RuntimeError, ValueError) as exc:
+            raise ExecutionContractError(
+                "PERMISSION_DENIED", "session workflow state is unavailable",
+            ) from exc
+        return workflow_file
+
+    if root is None:
+        return Path(_runtime_setting("WORKFLOW_FILE"))
+
+    from ._execution_contract import ExecutionContractError
+
+    try:
+        root = root.resolve(strict=True)
+    except (OSError, RuntimeError, ValueError) as exc:
+        raise ExecutionContractError("PERMISSION_DENIED", "project workflow root is unavailable") from exc
+
+    state_dir = _project_scoped_path(root, root / _PROJECT_WORKFLOW_DIRNAME)
+    if state_dir.exists() and not state_dir.is_dir():
+        raise ExecutionContractError("PERMISSION_DENIED", "project workflow state directory is not a directory")
+    if not state_dir.exists():
+        # Validate before creation, then revalidate after creation so an
+        # existing link or path substitution cannot redirect state I/O.
+        state_dir.mkdir(mode=0o700)
+        state_dir = _project_scoped_path(root, state_dir)
+
+    workflow_file = _project_scoped_path(root, state_dir / "workflow_state.json")
+    if workflow_file.exists() and not workflow_file.is_file():
+        raise ExecutionContractError("PERMISSION_DENIED", "project workflow state is not a regular file")
+    return workflow_file
+
+
 def _read_workflow_state() -> dict[str, Any]:
-    _ensure_dirs()
-    if not WORKFLOW_FILE.exists():
+    workflow_file = _workflow_state_file()
+    if _PROJECT_WORKFLOW_ROOT.get() is None:
+        _ensure_dirs()
+    if not workflow_file.exists():
         state = _default_workflow_state()
-        WORKFLOW_FILE.write_text(_json(state), encoding="utf-8")
+        workflow_file.write_text(_json(state), encoding="utf-8")
         return state
     try:
-        data = json.loads(WORKFLOW_FILE.read_text(encoding="utf-8"))
+        data = json.loads(workflow_file.read_text(encoding="utf-8"))
     except Exception:
         data = {}
     state = _default_workflow_state()
@@ -138,12 +268,22 @@ def _read_workflow_state() -> dict[str, Any]:
 
 
 def _write_workflow_state(update: dict[str, Any]) -> dict[str, Any]:
+    workflow_file = _workflow_state_file()
     state = _read_workflow_state()
     state.update(update)
     state["updated_at"] = _now_iso()
-    tmp_path = WORKFLOW_FILE.with_suffix(".json.tmp")
+    tmp_path = workflow_file.with_suffix(".json.tmp")
+    root = _PROJECT_WORKFLOW_ROOT.get()
+    session = _srv.active_runtime_context()
+    if session is not None:
+        session_root = session.paths.root
+        if tmp_path.is_symlink() or tmp_path.parent.resolve() != session_root.resolve():
+            from ._execution_contract import ExecutionContractError
+            raise ExecutionContractError("PERMISSION_DENIED", "session workflow temporary path escapes its state directory")
+    elif root is not None:
+        _project_scoped_path(root.resolve(strict=True), tmp_path)
     tmp_path.write_text(_json(state), encoding="utf-8")
-    os.replace(tmp_path, WORKFLOW_FILE)
+    os.replace(tmp_path, workflow_file)
     return state
 
 
@@ -151,21 +291,33 @@ def _write_workflow_state(update: dict[str, Any]) -> dict[str, Any]:
 # Status and operations logging
 # ---------------------------------------------------------------------------
 def _status_payload(extra: dict[str, Any] | None = None) -> dict[str, Any]:
-    connected = bool(_srv._client_connected)
+    connected = bool(_srv.runtime_value("_client_connected"))
     server_running = False
     server_port = None
-    if _srv._server is not None:
+    server = _srv.runtime_value("_server")
+    connected_port = _srv.runtime_value("_connected_port")
+    connected_host = _srv.runtime_value("_connected_host")
+    server_started_by_mcp = _srv.runtime_value("_server_started_by_mcp")
+    current_model = _srv.runtime_value("_current_model")
+    current_model_path = _srv.runtime_value("_current_model_path")
+    last_command = _srv.runtime_value("_last_command")
+    last_error = _srv.runtime_value("_last_error")
+    if server is not None:
         try:
-            server_running = bool(_srv._server.running())
-            server_port = getattr(_srv._server, "port", None)
+            server_running = bool(server.running())
+            server_port = getattr(server, "port", None)
         except Exception:
             server_running = False
-            server_port = getattr(_srv._server, "port", None)
+            server_port = getattr(server, "port", None)
     elif connected:
-        server_port = _srv._connected_port
+        server_port = connected_port
 
-    attached_to_existing_server = bool(connected and not _srv._server_started_by_mcp)
-    server_host = _srv._connected_host or DEFAULT_HOST
+    attached_to_existing_server = bool(connected and not server_started_by_mcp)
+    server_host = connected_host or _runtime_setting("DEFAULT_HOST")
+    comsol_root = _runtime_setting("COMSOL_ROOT")
+    mcp_home = _runtime_setting("COMSOL_SERVER_MCP_HOME")
+    logs_dir = _runtime_setting("LOGS_DIR")
+    outputs_dir = _runtime_setting("OUTPUTS_DIR")
 
     payload = {
         "version": VERSION,
@@ -173,7 +325,7 @@ def _status_payload(extra: dict[str, Any] | None = None) -> dict[str, Any]:
         "datetime": _now_iso(),
         "status": "ready" if connected else "disconnected",
         "server_running": server_running,
-        "server_started_by_mcp": _srv._server_started_by_mcp,
+        "server_started_by_mcp": server_started_by_mcp,
         "attached_to_existing_server": attached_to_existing_server,
         "server_host": server_host,
         "server_port": server_port,
@@ -183,15 +335,15 @@ def _status_payload(extra: dict[str, Any] | None = None) -> dict[str, Any]:
             else ""
         ),
         "desktop_client_role": "visual-client",
-        "comsol_root": str(COMSOL_ROOT),
-        "mcp_home": str(COMSOL_SERVER_MCP_HOME),
-        "logs_dir": str(LOGS_DIR),
-        "outputs_dir": str(OUTPUTS_DIR),
-        "current_model_label": _safe_model_label(_srv._current_model),
-        "current_model_path": _srv._current_model_path or _safe_model_path(_srv._current_model),
-        "current_model_origin": _srv._current_model_origin,
-        "last_command": _srv._last_command,
-        "last_error": _srv._last_error,
+        "comsol_root": str(comsol_root),
+        "mcp_home": str(mcp_home),
+        "logs_dir": str(logs_dir),
+        "outputs_dir": str(outputs_dir),
+        "current_model_label": _safe_model_label(current_model),
+        "current_model_path": current_model_path or _safe_model_path(current_model),
+        "current_model_origin": _srv.runtime_value("_current_model_origin"),
+        "last_command": last_command,
+        "last_error": last_error,
         "recommended_desktop_flow": RECOMMENDED_DESKTOP_FLOW,
         "desktop_should_connect": {
             "host": server_host,
@@ -207,9 +359,10 @@ def _status_payload(extra: dict[str, Any] | None = None) -> dict[str, Any]:
 def _write_status(extra: dict[str, Any] | None = None) -> None:
     _ensure_dirs()
     payload = _status_payload(extra)
-    tmp_path = STATUS_FILE.with_suffix(".json.tmp")
+    status_file = Path(_runtime_setting("STATUS_FILE"))
+    tmp_path = status_file.with_suffix(".json.tmp")
     tmp_path.write_text(_json(payload), encoding="utf-8")
-    os.replace(tmp_path, STATUS_FILE)
+    os.replace(tmp_path, status_file)
 
 
 def _append_operation(event: dict[str, Any]) -> None:
@@ -219,7 +372,7 @@ def _append_operation(event: dict[str, Any]) -> None:
         "datetime": _now_iso(),
         **event,
     }
-    with OPERATIONS_FILE.open("a", encoding="utf-8") as handle:
+    with Path(_runtime_setting("OPERATIONS_FILE")).open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(payload, ensure_ascii=False, default=str) + "\n")
 
 
@@ -228,8 +381,10 @@ def _append_operation(event: dict[str, Any]) -> None:
 # ---------------------------------------------------------------------------
 def _create_background_job(kind: str, payload: dict[str, Any]) -> str:
     job_id = f"{kind}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid4().hex[:8]}"
-    with _background_jobs_lock:
-        _background_jobs[job_id] = {
+    jobs_lock = _srv.background_jobs_lock()
+    jobs = _srv.runtime_value("_background_jobs")
+    with jobs_lock:
+        jobs[job_id] = {
             "job_id": job_id,
             "kind": kind,
             "status": "running",
@@ -243,33 +398,40 @@ def _create_background_job(kind: str, payload: dict[str, Any]) -> str:
 
 
 def _update_background_job(job_id: str, **update: Any) -> dict[str, Any]:
-    with _background_jobs_lock:
-        job = _background_jobs.setdefault(job_id, {"job_id": job_id})
+    jobs_lock = _srv.background_jobs_lock()
+    jobs = _srv.runtime_value("_background_jobs")
+    with jobs_lock:
+        job = jobs.setdefault(job_id, {"job_id": job_id})
         job.update(update)
         job["updated_at"] = _now_iso()
         return dict(job)
 
 
 def _read_background_job(job_id: str = "") -> dict[str, Any]:
-    with _background_jobs_lock:
+    jobs_lock = _srv.background_jobs_lock()
+    jobs = _srv.runtime_value("_background_jobs")
+    with jobs_lock:
         if job_id:
-            return dict(_background_jobs.get(job_id, {}))
-        if not _background_jobs:
+            return dict(jobs.get(job_id, {}))
+        if not jobs:
             return {}
         latest_id = max(
-            _background_jobs,
-            key=lambda key: str(_background_jobs[key].get("updated_at", "")),
+            jobs,
+            key=lambda key: str(jobs[key].get("updated_at", "")),
         )
-        return dict(_background_jobs[latest_id])
+        return dict(jobs[latest_id])
 
 
 # ---------------------------------------------------------------------------
 # Path and port utilities
 # ---------------------------------------------------------------------------
-def _resolve_path(value: str, *, base: Path = WORKSPACE_ROOT, must_exist: bool = True) -> Path:
+def _resolve_path(value: str, *, base: Path | None = None, must_exist: bool = True) -> Path:
     raw = str(value or "").strip()
     if not raw:
         raise ValueError("Path is required.")
+    if base is None:
+        context = _srv.active_runtime_context()
+        base = context.project_root if context is not None else WORKSPACE_ROOT
     path = Path(raw).expanduser()
     if not path.is_absolute():
         path = base / path
@@ -325,7 +487,9 @@ def _resolve_output_path(value: str, default_path: Path) -> Path:
     else:
         path = Path(raw).expanduser()
         if not path.is_absolute():
-            path = WORKSPACE_ROOT / path
+            context = _srv.active_runtime_context()
+            base = context.project_root if context is not None else WORKSPACE_ROOT
+            path = base / path
     path = path.resolve()
     path.parent.mkdir(parents=True, exist_ok=True)
     return path
@@ -386,11 +550,11 @@ def _workflow_snapshot_path(label: str, workflow: dict[str, Any] | None = None) 
     template = str(state.get("snapshot_name_template", "") or "").strip() or "{prefix}_{label}_{timestamp}.mph"
 
     if snapshot_dir:
-        base_dir = _resolve_output_path(snapshot_dir, OUTPUTS_DIR).resolve()
+            base_dir = _resolve_output_path(snapshot_dir, _runtime_output_dir()).resolve()
     elif current_main:
         base_dir = Path(current_main).expanduser().resolve().parent
     else:
-        base_dir = OUTPUTS_DIR.resolve()
+        base_dir = _runtime_output_dir().resolve()
     base_dir.mkdir(parents=True, exist_ok=True)
 
     if not prefix:
@@ -493,8 +657,8 @@ def _merge_exception_data(data: Mapping[str, Any] | None, exc: BaseException) ->
 
 
 def _tool_result(tool: str, success: bool, data: dict[str, Any] | None = None, error: str = "") -> str:
-    _srv._last_command = tool
-    _srv._last_error = error
+    _srv.set_runtime_value("_last_command", tool)
+    _srv.set_runtime_value("_last_error", error)
     payload = {
         "success": success,
         "tool": tool,
@@ -503,8 +667,8 @@ def _tool_result(tool: str, success: bool, data: dict[str, Any] | None = None, e
         "server": _status_payload(),
         "data": data or {},
         "error": error,
-        "log_path": str(SERVER_LOG),
-        "operations_path": str(OPERATIONS_FILE),
+        "log_path": str(_runtime_setting("SERVER_LOG")),
+        "operations_path": str(_runtime_setting("OPERATIONS_FILE")),
     }
     _append_operation(
         {
@@ -540,7 +704,8 @@ def _run_tool_readonly(tool: str, callback) -> str:
 
 def _run_tool(tool: str, callback) -> str:
     _setup_logging()
-    acquired = _runtime_lock.acquire(timeout=120.0)
+    lock = _srv.runtime_lock()
+    acquired = lock.acquire(timeout=120.0)
     if not acquired:
         err_msg = (
             f"Tool {tool} could not acquire the runtime lock within 120s. "
@@ -560,4 +725,4 @@ def _run_tool(tool: str, callback) -> str:
             logging.exception("Tool %s failed", tool)
             return _tool_result(tool, False, data=_merge_exception_data(None, exc), error=str(exc))
     finally:
-        _runtime_lock.release()
+        lock.release()

@@ -82,7 +82,7 @@ def test_stage_alias_does_not_replace_w12_checkpoint():
     from comsol_mcp._g3_ops import DISPATCH
     assert 'checkpoint.create' not in DISPATCH
     assert ALIASES['stage_checkpoint_create']=='stage.checkpoint_create'
-    assert ALIASES['optimization.bounded_run']=='experiment.run'
+    assert ALIASES['optimization_bounded_run']=='optimization.bounded_run'
 
 
 def test_w13_applied_change_is_not_partial_failure():

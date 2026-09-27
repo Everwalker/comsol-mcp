@@ -1,0 +1,135 @@
+{
+  "success": true,
+  "data": {
+    "source_sha256": "18ed05da44b22c5c3448f7aaf792ef73d4b12a3808f089cf2d6f3e69dc1847a3",
+    "entrypoint": "NativeArtifactGeometryFixture#run",
+    "worker": {
+      "ok": true,
+      "request_id": "09fc9316-fe66-4c51-830f-0039289d718f",
+      "type": "code_execute",
+      "status": "SUCCEEDED",
+      "queued_at_ms": "1790414054416",
+      "started_at_ms": "1790414054416",
+      "completed_at_ms": "1790414054860",
+      "result": {
+        "executed": true,
+        "model_tag": "mcp1",
+        "source_sha256": "18ed05da44b22c5c3448f7aaf792ef73d4b12a3808f089cf2d6f3e69dc1847a3",
+        "entrypoint": "NativeArtifactGeometryFixture#run",
+        "readback": {
+          "phase": "target",
+          "target_dimension": 2,
+          "target_length_unit": "m"
+        }
+      }
+    },
+    "before": {
+      "tag": "mcp1",
+      "model_tag": "mcp1",
+      "fingerprint": "604905f80cecc99d6936f4a72bc9235a4472ab68d915b06468a89bb32e1f097f",
+      "fingerprint_scope": [
+        "tag",
+        "label",
+        "file_path",
+        "time_modified",
+        "parameters"
+      ],
+      "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+      "external_event_counter": 0,
+      "changed_tags": [],
+      "server_instance_id": "127.0.0.1:62609",
+      "worker_instance_id": "833a7fb1-8ffe-4f89-8023-57b0cb9fd4bc",
+      "instance_id": "833a7fb1-8ffe-4f89-8023-57b0cb9fd4bc",
+      "generation": 2
+    },
+    "after": {
+      "tag": "mcp1",
+      "model_tag": "mcp1",
+      "fingerprint": "604905f80cecc99d6936f4a72bc9235a4472ab68d915b06468a89bb32e1f097f",
+      "fingerprint_scope": [
+        "tag",
+        "label",
+        "file_path",
+        "time_modified",
+        "parameters"
+      ],
+      "cas_limit": "control-plane revision plus observed change events; not COMSOL atomic CAS",
+      "external_event_counter": 0,
+      "changed_tags": [],
+      "server_instance_id": "127.0.0.1:62609",
+      "worker_instance_id": "833a7fb1-8ffe-4f89-8023-57b0cb9fd4bc",
+      "instance_id": "833a7fb1-8ffe-4f89-8023-57b0cb9fd4bc",
+      "generation": 2
+    },
+    "readback": {
+      "executed": true,
+      "model_tag": "mcp1",
+      "source_sha256": "18ed05da44b22c5c3448f7aaf792ef73d4b12a3808f089cf2d6f3e69dc1847a3",
+      "entrypoint": "NativeArtifactGeometryFixture#run",
+      "readback": {
+        "phase": "target",
+        "target_dimension": 2,
+        "target_length_unit": "m"
+      }
+    },
+    "execution_success": true,
+    "domain_state": "succeeded",
+    "verification_status": "NOT_APPLICABLE",
+    "execution_state_unknown": false,
+    "partial_change": false,
+    "cleanup_failed": false,
+    "dispatch_stage": "post_dispatch",
+    "operation": "code.execute_java",
+    "effect": "project_write",
+    "domain_outcome": {
+      "operation": "",
+      "state": "succeeded",
+      "verification_status": "NOT_APPLICABLE",
+      "cleanup_failed": false,
+      "execution_state_unknown": false,
+      "dispatch_stage": "post_dispatch"
+    },
+    "isolation_proof": {
+      "verified": true,
+      "receipt": "/private/tmp/comsol-mcp-native-artifact-geometry-20260926T0913Z-04/isolation_receipt.json",
+      "pid": 27803,
+      "birth": "Sat Sep 26 17:14:08 2026",
+      "endpoint": "127.0.0.1:62609",
+      "listener": {
+        "pid": 27803,
+        "endpoint": "127.0.0.1:62609",
+        "local_endpoint": "127.0.0.1:62609",
+        "remote_endpoint": null,
+        "state": "LISTEN",
+        "raw": "java    27803 everwalker   59u  IPv6 0xe5e75aa16c6a46b6      0t0  TCP 127.0.0.1:62609 (LISTEN)"
+      },
+      "worker_pid": 27932,
+      "established_client_pids": [
+        27803,
+        27932
+      ],
+      "proof_scope": "owned process identity + exact IPv4 loopback listener + connected-client observation"
+    }
+  },
+  "error": null,
+  "execution": {
+    "session_id": "session-8c63317914c0a7620b3e76ae",
+    "model_ref": {
+      "schema_version": 1,
+      "session_id": "session-8c63317914c0a7620b3e76ae",
+      "server_instance_id": "bb1614b460a94d44184f62e1e61ca6718b2365c0b7d74a2f0f971624abafc3c2",
+      "model_tag": "mcp1",
+      "generation": 1
+    },
+    "revision": 1,
+    "dirty": false,
+    "server_ownership": "shared",
+    "model_ownership": "mcp_owned",
+    "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+    "request_id": "native-geometry-target_geometry_prepare-21a1729b-5099-4726-8ff7-76697985640d",
+    "operation_id": "09fc9316-fe66-4c51-830f-0039289d718f",
+    "request_hash": "6b3b68d53521f30a87601662cdd9d6f46aefb885df76107e16eae57cb89093ae",
+    "idempotency_key": "native-geometry-target_geometry_prepare-5385cda9-2545-40e4-abb4-f29f8d16ed9b",
+    "job_id": "08b47329-a292-4e46-a729-ae6b8c63c9c3"
+  }
+}

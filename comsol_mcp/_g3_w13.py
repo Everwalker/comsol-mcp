@@ -98,10 +98,13 @@ path must be supplied in ``layout``).
 
 from __future__ import annotations
 
+import math
+import re
 from collections.abc import Iterable
 from typing import Any, Callable, Mapping, Sequence
 
-from ._g2_contract import ExecutionContractError, typed_value_from_engine
+from ._g2_contract import ExecutionContractError, engine_value_spec, typed_value_from_engine
+from ._execution_contract import PreWriteRefusal
 from ._g2_engine import (
     _call,
     _cursor_context,
@@ -1361,57 +1364,541 @@ def function_data_reload(worker: Any, model_tag: str, arguments: Mapping[str, An
     }
 
 
+_FUNCTION_EVALUATE_IDENTIFIER = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\Z")
+_FUNCTION_EVALUATE_UNIT_TOKEN = re.compile(r"[-+]?\d+|[A-Za-z_µμ][A-Za-z0-9_µμ]*|[*/^()]")
+
+
+def _function_evaluate_number(value: Any, label: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ExecutionContractError("INVALID_REQUEST", f"{label} must be a finite number")
+    try:
+        number = float(value)
+    except (OverflowError, TypeError, ValueError) as exc:
+        raise ExecutionContractError("INVALID_REQUEST", f"{label} must be a finite number") from exc
+    if not math.isfinite(number):
+        raise ExecutionContractError("INVALID_REQUEST", f"{label} must be a finite number")
+    return number
+
+
+def _function_evaluate_unit_is_safe(value: str) -> bool:
+    """Small unit-only grammar; COMSOL remains authoritative for unit names."""
+    if value == "":
+        return True
+    tokens: list[str] = []
+    position = 0
+    while position < len(value):
+        match = _FUNCTION_EVALUATE_UNIT_TOKEN.match(value, position)
+        if match is None:
+            return False
+        tokens.append(match.group(0))
+        position = match.end()
+    cursor = 0
+
+    def factor() -> bool:
+        nonlocal cursor
+        if cursor >= len(tokens):
+            return False
+        token = tokens[cursor]
+        if token == "(":
+            cursor += 1
+            if not product() or cursor >= len(tokens) or tokens[cursor] != ")":
+                return False
+            cursor += 1
+        elif token == "1" or re.fullmatch(r"[A-Za-z_µμ][A-Za-z0-9_µμ]*", token):
+            cursor += 1
+        else:
+            return False
+        if cursor < len(tokens) and tokens[cursor] == "^":
+            cursor += 1
+            if cursor >= len(tokens) or re.fullmatch(r"[-+]?\d+", tokens[cursor]) is None:
+                return False
+            cursor += 1
+        return True
+
+    def product() -> bool:
+        nonlocal cursor
+        if not factor():
+            return False
+        while cursor < len(tokens) and tokens[cursor] in {"*", "/"}:
+            cursor += 1
+            if not factor():
+                return False
+        return True
+
+    return bool(tokens) and product() and cursor == len(tokens)
+
+
+def _function_evaluate_unit(value: Any, label: str) -> str:
+    if not isinstance(value, str) or len(value) > 64 or not _function_evaluate_unit_is_safe(value):
+        raise ExecutionContractError("INVALID_REQUEST", f"{label} must use the supported unit-only grammar")
+    return value
+
+
+_FUNCTION_EVALUATE_PENDING_STATUSES = frozenset({
+    "QUEUED", "RUNNING", "PENDING", "STARTING", "IN_FLIGHT", "UNKNOWN", "EXECUTION_STATE_UNKNOWN",
+})
+
+
+def _function_evaluate_unobserved_worker_state(
+    method: str, *, error: BaseException | None = None, value: Any = None,
+) -> tuple[bool, dict[str, Any]]:
+    """Detect only unobserved/unknown Worker replies for this read-only path.
+
+    The shared ``call_probe`` intentionally provides a small, generic probe
+    shape. This local wrapper keeps the protocol fields that decide whether a
+    Java call completed, without changing that common helper.
+    """
+    from ._java_worker import JavaWorkerError, JavaWorkerTimeout
+
+    reply = getattr(error, "reply", None) if error is not None else value
+    if not isinstance(reply, Mapping):
+        reply = {}
+    failure = reply.get("failure")
+    if not isinstance(failure, Mapping):
+        failure = getattr(error, "failure", None) if error is not None else None
+    if not isinstance(failure, Mapping):
+        failure = {}
+    status = reply.get("status")
+    if not isinstance(status, str):
+        status = failure.get("status")
+    status = status.upper() if isinstance(status, str) else ""
+    failure_code = failure.get("code", reply.get("code", getattr(error, "code", None)))
+    explicitly_unknown = (
+        getattr(error, "execution_state_unknown", False) is True
+        or reply.get("execution_state_unknown") is True
+        or failure.get("execution_state_unknown") is True
+        or (isinstance(value, Mapping) and value.get("execution_state_unknown") is True)
+        or (isinstance(failure_code, str) and failure_code.upper() == "EXECUTION_STATE_UNKNOWN")
+    )
+    timed_out = isinstance(error, (JavaWorkerTimeout, TimeoutError))
+    pending = status in _FUNCTION_EVALUATE_PENDING_STATUSES
+    unobserved_worker_error = (
+        isinstance(error, JavaWorkerError)
+        and not (reply.get("ok") is False and status == "FAILED")
+    )
+    unknown = timed_out or explicitly_unknown or pending or unobserved_worker_error
+    details: dict[str, Any] = {"method": method}
+    if status:
+        details["worker_status"] = status
+    for key, target in (("request_id", "worker_request_id"), ("reason", "worker_reason")):
+        field = reply.get(key)
+        if isinstance(field, (str, int)):
+            details[target] = field
+    if error is not None:
+        details["worker_error_type"] = type(error).__name__
+    if failure:
+        details["worker_failure"] = {
+            key: failure[key] for key in ("code", "message", "execution_state_unknown", "post_dispatch", "serialization_failed")
+            if key in failure
+        }
+    if timed_out:
+        details["worker_reason"] = "rpc_timeout_may_still_be_running"
+    elif pending:
+        details["worker_reason"] = "worker_reply_not_terminal"
+    elif explicitly_unknown:
+        details["worker_reason"] = "worker_marked_execution_state_unknown"
+    elif unobserved_worker_error:
+        details["worker_reason"] = "worker_error_has_no_terminal_failure_reply"
+    return unknown, details
+
+
+def _function_evaluate_worker_failure_raw(reply: Any, method: str) -> dict[str, Any]:
+    """Preserve the Worker-owned terminal failure fields without changing state semantics."""
+    if method != "evaluateComplex" or not isinstance(reply, Mapping) or reply.get("status") != "FAILED":
+        return {}
+    failure = reply.get("failure")
+    if not isinstance(failure, Mapping) or failure.get("code") != "FUNCTION_EVALUATION_ERROR":
+        return {}
+    # The Worker has already made the narrow typed-API classification. Keep
+    # its structured evidence verbatim; this helper never downgrades UNKNOWN.
+    raw: dict[str, Any] = {"worker_failure_raw": dict(failure)}
+    request_id = reply.get("request_id")
+    if isinstance(request_id, (str, int)):
+        raw["worker_request_id"] = request_id
+    return raw
+
+
+def _function_evaluate_probe(node: Any, method: str, *args: Any) -> dict[str, Any]:
+    """Narrow accessor wrapper that never converts a Worker UNKNOWN into data."""
+    try:
+        value = getattr(node, method)(*args)
+    except Exception as exc:  # noqa: BLE001 - preserve the Worker outcome shape
+        unknown, details = _function_evaluate_unobserved_worker_state(method, error=exc)
+        if unknown:
+            raise ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN",
+                f"function.evaluate could not observe completion of COMSOL {method}()",
+                details=details,
+            ) from exc
+        error = describe_engine_failure(exc, method)
+        error.update(_function_evaluate_worker_failure_raw(getattr(exc, "reply", None), method))
+        return {"ok": False, "value": None, "error": error}
+
+    unknown, details = _function_evaluate_unobserved_worker_state(method, value=value)
+    if unknown:
+        raise ExecutionContractError(
+            "EXECUTION_STATE_UNKNOWN",
+            f"function.evaluate received an unobserved Worker reply for COMSOL {method}()",
+            details=details,
+        )
+    if isinstance(value, Mapping) and value.get("ok") is False and value.get("status") == "FAILED":
+        failure = value.get("failure") if isinstance(value.get("failure"), Mapping) else value
+        error = {
+            "code": failure.get("code", "ENGINE_CALL_FAILED"),
+            "message": failure.get("message", f"COMSOL {method}() completed with FAILED status"),
+            "execution_state_unknown": False,
+        }
+        error.update(_function_evaluate_worker_failure_raw(value, method))
+        return {
+            "ok": False,
+            "value": None,
+            "error": error,
+        }
+    return {"ok": True, "value": value, "error": None}
+
+
+def _function_evaluate_read_property(node: Any, name: str) -> dict[str, Any]:
+    """Read through COMSOL's advertised PropFeature value type; do not guess getters."""
+    present = _function_evaluate_probe(node, "hasProperty", name)
+    if not present["ok"] or not isinstance(present["value"], bool):
+        return {"ok": False, "error": present.get("error") or {"code": "INVALID_METADATA", "message": "hasProperty did not return bool"}}
+    if not present["value"]:
+        return {"ok": False, "error": {"code": "PROPERTY_ABSENT", "message": f"property {name!r} is absent"}}
+    type_probe = _function_evaluate_probe(node, "getValueType", name)
+    if not type_probe["ok"] or not isinstance(type_probe["value"], str):
+        return {"ok": False, "error": type_probe.get("error") or {"code": "INVALID_METADATA", "message": "getValueType did not return a string"}}
+    spec = engine_value_spec(type_probe["value"])
+    if spec is None:
+        return {"ok": False, "error": {"code": "UNKNOWN_VALUE_TYPE", "message": f"unsupported value type {type_probe['value']!r}"}}
+    value_probe = _function_evaluate_probe(node, spec["getter"], name)
+    if not value_probe["ok"]:
+        return {"ok": False, "error": value_probe["error"]}
+    return {"ok": True, "value": value_probe["value"], "value_type": type_probe["value"], "getter": spec["getter"]}
+
+
+def _function_evaluate_arity(node: Any, type_id: str) -> int:
+    if type_id == "Analytic":
+        probe = _function_evaluate_read_property(node, "args")
+        if not probe["ok"] or probe.get("value_type") != "StringArray":
+            raise ExecutionContractError("API_UNSUPPORTED", f"function.evaluate Analytic arity needs readable StringArray args metadata: {probe.get('error')}")
+        raw = probe["value"]
+        if not isinstance(raw, (list, tuple)) or not raw or any(not isinstance(item, str) or not item for item in raw):
+            raise ExecutionContractError("API_UNSUPPORTED", "function.evaluate Analytic args metadata is not a non-empty string array")
+        return len(raw)
+    if type_id == "Interpolation":
+        probe = _function_evaluate_read_property(node, "nargs")
+        if probe["ok"]:
+            if probe.get("value_type") != "Int":
+                raise PreWriteRefusal(
+                    "API_UNSUPPORTED",
+                    f"function.evaluate Interpolation.nargs has unsupported value type {probe.get('value_type')!r}",
+                )
+            value = probe["value"]
+            if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+                raise PreWriteRefusal("API_UNSUPPORTED", "function.evaluate Interpolation.nargs is not a positive integer")
+            return value
+
+        # COMSOL 6.4 documents `nargs` as the number of arguments only for
+        # spreadsheet/file and result-table layouts, and a source=table node
+        # may not advertise it at runtime. For the documented local-table
+        # layout (Nx2 point/value pairs), fall back to the node's own per-
+        # argument unit metadata. Never derive arity from table dimensions or
+        # from caller coordinates. Other source layouts remain fail-closed.
+        error = probe.get("error") or {}
+        if error.get("code") == "PROPERTY_ABSENT":
+            source = _function_evaluate_read_property(node, "source")
+            units: dict[str, Any] = {"ok": False, "error": {"code": "NOT_READ", "message": "source is not eligible for argunit fallback"}}
+            if source.get("ok") and source.get("value_type") == "String" and source.get("value") == "table":
+                units = _function_evaluate_read_property(node, "argunit")
+                raw_units = units.get("value")
+                if (units.get("ok") and units.get("value_type") == "StringArray"
+                        and isinstance(raw_units, (list, tuple)) and len(raw_units) == 1
+                        and isinstance(raw_units[0], str)):
+                    return 1
+            raise PreWriteRefusal(
+                "API_UNSUPPORTED",
+                "function.evaluate: Interpolation.nargs is absent and the documented "
+                "source=table fallback requires exactly one readable StringArray argunit; "
+                f"observed nargs={error}, source={source.get('error') if not source.get('ok') else source.get('value')!r}, "
+                f"argunit={units.get('error') if not units.get('ok') else units.get('value')!r}",
+            )
+        raise PreWriteRefusal(
+            "API_UNSUPPORTED",
+            "function.evaluate: no readable arity metadata is available for "
+            f"Interpolation.nargs; observed {error}",
+        )
+    raise ExecutionContractError("API_UNSUPPORTED", f"function.evaluate does not support type {type_id!r}; expected Analytic or Interpolation")
+
+
+def _function_evaluate_scope(path: Mapping[str, Any], name: str) -> tuple[str, str]:
+    if _FUNCTION_EVALUATE_IDENTIFIER.fullmatch(name) is None:
+        raise ExecutionContractError("API_UNSUPPORTED", "functionNames() returned a name outside the safe identifier grammar")
+    segments = path.get("segments")
+    if not isinstance(segments, list) or not segments:
+        raise ExecutionContractError("INVALID_REQUEST", "path must resolve to a function node")
+    if len(segments) == 1 and segments[0].get("collection") == "func":
+        return "global", f"root.{name}"
+    if len(segments) == 2 and segments[0].get("collection") == "component" and segments[1].get("collection") == "func":
+        component = segments[0].get("tag")
+        if not isinstance(component, str) or _FUNCTION_EVALUATE_IDENTIFIER.fullmatch(component) is None:
+            raise ExecutionContractError("API_UNSUPPORTED", "resolved component tag is outside the safe identifier grammar")
+        return "component", f"root.{component}.{name}"
+    raise ExecutionContractError("API_UNSUPPORTED", "function.evaluate supports only global or component-local function paths")
+
+
+def _function_evaluate_arg_units(node: Any, arity: int) -> list[str]:
+    probe = _function_evaluate_read_property(node, "argunit")
+    if not probe["ok"]:
+        raise ExecutionContractError("API_UNSUPPORTED", f"omitted sample units require readable argunit metadata: {probe.get('error')}")
+    raw = probe["value"]
+    if isinstance(raw, str) and arity == 1:
+        units = [raw]
+    elif isinstance(raw, (list, tuple)) and len(raw) == arity and all(isinstance(item, str) for item in raw):
+        units = list(raw)
+    else:
+        raise ExecutionContractError("API_UNSUPPORTED", f"argunit readback must provide one unit string per argument (arity={arity})")
+    try:
+        return [_function_evaluate_unit(unit, f"argunit[{index}]") for index, unit in enumerate(units)]
+    except ExecutionContractError as exc:
+        raise ExecutionContractError("API_UNSUPPORTED", f"argunit readback is not safe to bind: {exc}") from exc
+
+
+def _function_evaluate_json_safe(value: Any) -> Any:
+    if isinstance(value, float) and not math.isfinite(value):
+        return "NaN" if math.isnan(value) else ("+Infinity" if value > 0 else "-Infinity")
+    if isinstance(value, Mapping):
+        return {str(key): _function_evaluate_json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_function_evaluate_json_safe(item) for item in value]
+    return value
+
+
+def _function_evaluate_raw_range(node: Any, type_id: str) -> dict[str, Any]:
+    if type_id != "Interpolation":
+        return {"status": "UNAVAILABLE", "reason": "no range property is read for this function type"}
+    properties: dict[str, Any] = {}
+    for name in ("argrange", "extrap"):
+        probe = _function_evaluate_read_property(node, name)
+        properties[name] = (
+            {"status": "RAW_READ", "value_type": probe["value_type"], "getter": probe["getter"], "value": _function_evaluate_json_safe(probe["value"])}
+            if probe["ok"] else {"status": "UNAVAILABLE", "error": probe["error"]}
+        )
+    return {
+        "status": "RAW_METADATA_NOT_NATIVELY_VERIFIED",
+        "interpretation": "recorded for audit only; it does not determine range_status",
+        "properties": properties,
+    }
+
+
+def _function_evaluate_complex_pair(value: Any) -> tuple[float, float] | None:
+    if not isinstance(value, (list, tuple)) or len(value) != 2:
+        return None
+    result: list[float] = []
+    for item in value:
+        if isinstance(item, bool) or not isinstance(item, (int, float)):
+            return None
+        try:
+            number = float(item)
+        except (OverflowError, TypeError, ValueError):
+            return None
+        if not math.isfinite(number):
+            return None
+        result.append(number)
+    return result[0], result[1]
+
+
 def function_evaluate(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
     args = operation_arguments(arguments, ("path", "arguments", "derivative"), ("path", "arguments"))
-    path, node = resolve_path(worker, model_tag, args["path"], label="path")
     samples = args["arguments"]
     if not isinstance(samples, Sequence) or isinstance(samples, (str, bytes, Mapping)) or not samples:
         raise ExecutionContractError("INVALID_REQUEST", "arguments must be a non-empty array of sample objects")
+
+    # Caller-controlled data is limited to finite scalar literals and strict
+    # unit tokens. No request field is treated as expression or function name.
+    normalized: list[dict[str, Any]] = []
     for index, sample in enumerate(samples):
         row = require_mapping(sample, f"arguments[{index}]")
-        unknown = sorted(set(row) - {"coordinate", "value", "unit"})
+        unknown = sorted(set(row) - {"coordinate", "value", "unit", "units"})
         if unknown:
             raise ExecutionContractError("INVALID_REQUEST", f"arguments[{index}] has unsupported fields: {unknown}")
-        if "coordinate" in row:
-            coordinates = row["coordinate"]
-            if not isinstance(coordinates, Sequence) or isinstance(coordinates, (str, bytes, Mapping)):
-                raise ExecutionContractError(
-                    "INVALID_REQUEST", f"arguments[{index}].coordinate must be an array of numbers"
-                )
-            for position, value in enumerate(coordinates):
-                if isinstance(value, bool) or not isinstance(value, (int, float)):
-                    raise ExecutionContractError(
-                        "INVALID_REQUEST", f"arguments[{index}].coordinate[{position}] must be a number"
-                    )
-        elif "value" in row:
-            value = row["value"]
-            if isinstance(value, bool) or not isinstance(value, (int, float)):
-                raise ExecutionContractError("INVALID_REQUEST", f"arguments[{index}].value must be a number")
+        has_coordinate, has_value = "coordinate" in row, "value" in row
+        if has_coordinate == has_value:
+            raise ExecutionContractError("INVALID_REQUEST", f"arguments[{index}] requires exactly one of coordinate or value")
+        if has_coordinate:
+            raw_coordinates = row["coordinate"]
+            if not isinstance(raw_coordinates, Sequence) or isinstance(raw_coordinates, (str, bytes, Mapping)):
+                raise ExecutionContractError("INVALID_REQUEST", f"arguments[{index}].coordinate must be an array of finite numbers")
+            coordinates = [_function_evaluate_number(item, f"arguments[{index}].coordinate[{position}]") for position, item in enumerate(raw_coordinates)]
         else:
-            raise ExecutionContractError(
-                "INVALID_REQUEST", f"arguments[{index}] requires coordinate (array) or value (number)"
-            )
-        if row.get("unit") is not None:
-            require_string(row["unit"], f"arguments[{index}].unit", max_length=64)
-    if args.get("derivative") is not None:
-        derivative = require_mapping(args["derivative"], "derivative")
+            coordinates = [_function_evaluate_number(row["value"], f"arguments[{index}].value")]
+        if "unit" in row and "units" in row:
+            raise ExecutionContractError("INVALID_REQUEST", f"arguments[{index}] cannot contain both unit and units")
+        explicit_units: list[str] | None = None
+        source: str | None = None
+        if "unit" in row:
+            explicit_units = [_function_evaluate_unit(row["unit"], f"arguments[{index}].unit")]
+            source = "sample.unit"
+        elif "units" in row:
+            raw_units = row["units"]
+            if not isinstance(raw_units, Sequence) or isinstance(raw_units, (str, bytes, Mapping)):
+                raise ExecutionContractError("INVALID_REQUEST", f"arguments[{index}].units must be an array of unit strings")
+            explicit_units = [_function_evaluate_unit(item, f"arguments[{index}].units[{position}]") for position, item in enumerate(raw_units)]
+            source = "sample.units"
+        normalized.append({"coordinates": coordinates, "has_coordinate": has_coordinate, "units": explicit_units, "unit_source": source})
+
+    derivative = args.get("derivative")
+    if derivative is not None:
+        derivative = require_mapping(derivative, "derivative")
         unknown = sorted(set(derivative) - {"order", "argument_index"})
         if unknown:
             raise ExecutionContractError("INVALID_REQUEST", f"derivative has unsupported fields: {unknown}")
-        if derivative.get("order") is not None:
-            require_int(derivative["order"], "derivative.order", minimum=1, maximum=2)
-        if derivative.get("argument_index") is not None:
-            require_int(derivative["argument_index"], "derivative.argument_index", minimum=0, maximum=2)
-    names = call_probe(node, "functionNames")
-    raise ExecutionContractError(
-        "API_UNSUPPORTED",
-        "function.evaluate: no offline-verified COMSOL 6.4 API samples a function object at arbitrary "
-        "coordinates.  The function node exposes functionNames() only (verified), and the documented data "
-        "paths (an Evaluation or Grid dataset feeding an evaluation node) belong to the results domain, "
-        "which is outside W13; sampling was therefore refused before any engine call rather than guessed. "
-        f"Requested {len(samples)} sample point(s) for a function with "
-        f"functionNames()={names['value'] if names['ok'] else 'unavailable'}.",
-    )
+        if "order" not in derivative or "argument_index" not in derivative:
+            raise ExecutionContractError("INVALID_REQUEST", "derivative requires order and argument_index")
+        derivative_order = require_int(derivative["order"], "derivative.order", minimum=1, maximum=2)
+        derivative_index = require_int(derivative["argument_index"], "derivative.argument_index", minimum=0, maximum=2)
+
+    path, node = resolve_path(worker, model_tag, args["path"], label="path")
+    type_probe = _function_evaluate_probe(node, "getType")
+    type_id = str(type_probe["value"]) if type_probe["ok"] and type_probe["value"] is not None else None
+    if type_id not in {"Analytic", "Interpolation"}:
+        raise ExecutionContractError("API_UNSUPPORTED", f"function.evaluate supports Analytic and Interpolation; node type is {type_id!r}")
+    names = _function_evaluate_probe(node, "functionNames")
+    if not names["ok"] or not isinstance(names["value"], (list, tuple)) or not all(isinstance(item, str) for item in names["value"]):
+        raise ExecutionContractError("API_UNSUPPORTED", f"function.evaluate requires readable functionNames(): {names.get('error')}")
+    if not names["value"]:
+        raise ExecutionContractError("API_UNSUPPORTED", "function.evaluate node returned no functionNames() entries")
+    if len(names["value"]) > 1:
+        raise PreWriteRefusal("AMBIGUOUS_FUNCTION", f"function.evaluate requires exactly one functionNames() entry; node returned {len(names['value'])}")
+    function_name = names["value"][0]
+    scope, qualified_function = _function_evaluate_scope(path, function_name)
+    arity = _function_evaluate_arity(node, type_id)
+    if derivative is not None:
+        if derivative_index >= arity:
+            raise ExecutionContractError("INVALID_REQUEST", "derivative.argument_index must identify an existing function argument")
+        raise PreWriteRefusal(
+            "API_UNSUPPORTED",
+            f"function.evaluate derivative order {derivative_order} remains unsupported until a symbolic "
+            "argument-binding API is proven; constant differentiation and finite differences are not used",
+        )
+
+    for index, row in enumerate(normalized):
+        if row["has_coordinate"] and len(row["coordinates"]) != arity:
+            raise ExecutionContractError("INVALID_REQUEST", f"arguments[{index}].coordinate length must equal arity {arity}")
+        if not row["has_coordinate"] and arity != 1:
+            raise ExecutionContractError("INVALID_REQUEST", f"arguments[{index}].value is supported only for unary functions")
+        if row["units"] is not None:
+            if row["unit_source"] == "sample.unit" and arity != 1:
+                raise ExecutionContractError("INVALID_REQUEST", f"arguments[{index}].unit is unary-only; use units[] for multivariate functions")
+            if len(row["units"]) != arity:
+                raise ExecutionContractError("INVALID_REQUEST", f"arguments[{index}].units length must equal arity {arity}")
+
+    needs_defaults = any(row["units"] is None for row in normalized)
+    defaults = _function_evaluate_arg_units(node, arity) if needs_defaults else None
+    range_evidence = _function_evaluate_raw_range(node, type_id)
+    model = bound_model(worker, model_tag)
+    param_probe = _function_evaluate_probe(model, "param")
+    if not param_probe["ok"] or param_probe["value"] is None:
+        raise ExecutionContractError("API_UNSUPPORTED", f"function.evaluate could not resolve model.param(): {param_probe.get('error')}")
+    param = param_probe["value"]
+
+    unit_cache: dict[str, dict[str, Any]] = {}
+    results: list[dict[str, Any]] = []
+    failed: list[dict[str, Any]] = []
+    evaluated_count = 0
+    for index, sample in enumerate(normalized):
+        units = list(sample["units"] if sample["units"] is not None else defaults or [])
+        unit_source = sample["unit_source"] or "function_argunit_readback"
+        terms = [repr(number) if unit in {"", "1"} else f"{repr(number)}[{unit}]" for number, unit in zip(sample["coordinates"], units)]
+        expression = f"{qualified_function}({','.join(terms)})"
+        result: dict[str, Any] = {
+            "index": index,
+            "coordinates": list(sample["coordinates"]),
+            "argument_units": units,
+            "argument_units_source": unit_source,
+            "expression": expression,
+            "range_status": "UNKNOWN",
+            "value_status": "NOT_EVALUATED",
+            "unit_status": "NOT_EVALUATED",
+            "argument_unit_status": "NOT_CHECKED",
+            "value": None,
+            "unit": None,
+            "errors": [],
+        }
+        preflight_error: dict[str, Any] | None = None
+        for unit in units:
+            if unit not in unit_cache:
+                if unit in {"", "1"}:
+                    unit_cache[unit] = {"ok": True, "readback": None}
+                else:
+                    unit_probe = _function_evaluate_probe(param, "evaluateUnit", f"1[{unit}]")
+                    if unit_probe["ok"] and isinstance(unit_probe["value"], str) and unit_probe["value"]:
+                        unit_cache[unit] = {"ok": True, "readback": unit_probe["value"]}
+                    elif unit_probe["ok"]:
+                        unit_cache[unit] = {"ok": False, "error": {"code": "UNIT_UNVERIFIED", "message": "evaluateUnit did not return a concrete unit string"}}
+                    else:
+                        unit_cache[unit] = {"ok": False, "error": unit_probe["error"]}
+            if not unit_cache[unit]["ok"]:
+                preflight_error = {"code": unit_cache[unit]["error"].get("code", "UNIT_UNVERIFIED"),
+                                   "message": unit_cache[unit]["error"].get("message", "unit verification failed"), "unit": unit}
+                break
+        if preflight_error is not None:
+            result["argument_unit_status"] = "INVALID_OR_UNVERIFIED"
+            result["errors"].append({"stage": "argument_unit_validation", **preflight_error})
+            results.append(result)
+            failed.append({"index": index, "code": preflight_error["code"], "message": preflight_error["message"]})
+            continue
+        result["argument_unit_status"] = "VERIFIED_BY_EVALUATE_UNIT" if any(unit not in {"", "1"} for unit in units) else "DIMENSIONLESS_OR_EMPTY"
+        evaluated_count += 1
+        value_probe = _function_evaluate_probe(param, "evaluateComplex", expression)
+        unit_probe = _function_evaluate_probe(param, "evaluateUnit", expression)
+        pair = _function_evaluate_complex_pair(value_probe["value"]) if value_probe["ok"] else None
+        if pair is not None:
+            result["value"] = {"real": pair[0], "imag": pair[1]}
+            result["value_status"] = "OK"
+        else:
+            error = value_probe["error"] if not value_probe["ok"] else {"code": "INVALID_COMPLEX_RESULT", "message": "evaluateComplex must return exactly two finite numeric values"}
+            result["value_status"] = "EVALUATION_ERROR"
+            result["errors"].append({"stage": "evaluateComplex", **error})
+        if unit_probe["ok"] and (unit_probe["value"] is None or isinstance(unit_probe["value"], str)):
+            result["unit"] = unit_probe["value"]
+            result["unit_status"] = "OK"
+        else:
+            error = unit_probe["error"] if not unit_probe["ok"] else {"code": "INVALID_UNIT_RESULT", "message": "evaluateUnit must return a string or null"}
+            result["unit_status"] = "EVALUATION_ERROR"
+            result["errors"].append({"stage": "evaluateUnit", **error})
+        results.append(result)
+        if result["value_status"] != "OK" or result["unit_status"] != "OK":
+            error = result["errors"][0]
+            failed.append({"index": index, "code": error.get("code", "EVALUATION_ERROR"), "message": error.get("message", "sample evaluation failed")})
+
+    successful_count = len(results) - len(failed)
+    sample_completion = "PARTIAL_FAILURE" if successful_count and failed else ("FAILED" if failed else "SUCCEEDED")
+    # A sample batch is one read operation.  Any incomplete batch fails as a
+    # whole at the execution boundary, while sample_completion preserves the
+    # useful distinction between mixed and all-failed rows without claiming
+    # that part of the model changed.
+    operation_status = "FAILED" if failed else "OBSERVED"
+    return {
+        "schema_version": "comsol-mcp.function-evaluate/1.0.0",
+        "path": path,
+        "function_type": type_id,
+        "function_name": function_name,
+        "scope": scope,
+        "arity": arity,
+        "range_status": "UNKNOWN",
+        "range_evidence": range_evidence,
+        "results": results,
+        "evaluated_count": evaluated_count,
+        "successful_count": successful_count,
+        "sample_failure_count": len(failed),
+        "sample_failures": failed,
+        "sample_completion": sample_completion,
+        "ok": not failed,
+        "status": operation_status,
+        "partial_change": False,
+        "execution_state_unknown": False,
+        "derivative_support": "API_UNSUPPORTED",
+    }
 
 
 def _local_sha256(path: str) -> dict[str, Any]:

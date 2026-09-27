@@ -244,6 +244,19 @@ def is_mutation_call(method: str, args: Sequence[Any] = (), command: str = "call
     if method in OVERLOADED_SETTER_METHODS:
         return len(args) > 0
 
+    # FunctionFeature metadata accessors.  Treat only the verified getter
+    # signatures as reads; other arities and argument types remain fail-closed.
+    if method == "functionNames":
+        return len(args) != 0
+    if method == "hasProperty":
+        return not (len(args) == 1 and isinstance(args[0], str))
+    if method in {"getValueType", "evaluateComplex", "evaluateUnit"}:
+        return not (len(args) == 1 and isinstance(args[0], str))
+    # PropFeature's typed matrix accessors are queries only for the documented
+    # property-name signature; do not classify other overloads as reads.
+    if method in {"getDoubleMatrix", "getStringMatrix"}:
+        return not (len(args) == 1 and isinstance(args[0], str))
+
     # Special handling for geom:
     # selection.geom(dim, entities) or selection.geom(dim) sets selection geometry.
     # component.geom("geom1") or model.geom() navigates geometry.

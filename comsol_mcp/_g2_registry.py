@@ -63,12 +63,34 @@ CATALOG_PATH = _select_catalog_path()
 # this surface through ``is_implemented`` below.
 IMPLEMENTED_OPERATIONS = frozenset({
     "registry.list", "registry.describe", "registry.search", "registry.call", "registry.manifest",
+    "model.adopt", "model.inspect", "job.resume", "artifact.register",
+    "desktop.status",
     "node.inspect", "node.children", "node.find", "node.property_schema", "node.property_get",
     "node.property_set", "node.property_index_set", "node.property_entry_set",
     "code.describe_java", "code.compile_java", "code.execute_java", "code.inspect_run",
     "checkpoint.create", "checkpoint.list", "checkpoint.inspect", "checkpoint.restore",
     "transaction.preview", "transaction.trial", "transaction.apply", "transaction.verify", "transaction.recover",
     "docs.index", "docs.search", "docs.get", "docs.examples", "docs.error_search",
+})
+
+# These catalog actions are implemented by ControlDaemon's cached operation
+# store.  They deliberately bypass ManagedBackend and the serial engine queue;
+# adding them here advertises that bounded control-plane route without
+# implying that any COMSOL solver capability is available.
+CONTROL_IMPLEMENTED_OPERATIONS = frozenset({
+    "job.list", "job.status", "job.log", "job.result", "job.reconcile",
+    "job.wait", "job.cancel", "job.cleanup",
+    "project.create", "project.inspect", "project.contract_set",
+    "project.policy_set", "project.permissions", "project.state_export",
+})
+
+# The durable coordinator owns admission, authorization, idempotency, and
+# deterministic refusal for these Desktop controls. Their host/native control
+# adapters remain unavailable, so these routes are schema-validatable but are
+# deliberately not advertised as executable catalog capabilities.
+DESKTOP_COORDINATOR_ONLY_OPERATIONS = frozenset({
+    "desktop.bind", "desktop.show_model", "desktop.select_node", "desktop.capture",
+    "desktop.action", "desktop.shell_execute", "desktop.migrate_standalone",
 })
 
 
@@ -80,7 +102,7 @@ def is_implemented(operation_id: str) -> bool:
     importable while G2-only deployments exist and to avoid an import cycle
     (``_g3_ops`` reads the catalog through this module).
     """
-    if operation_id in IMPLEMENTED_OPERATIONS:
+    if operation_id in IMPLEMENTED_OPERATIONS or operation_id in CONTROL_IMPLEMENTED_OPERATIONS:
         return True
     try:
         from ._g3_ops import IMPLEMENTED_OPERATIONS as g3_implemented
@@ -178,7 +200,7 @@ _PROFILE_ALWAYS_TOOLS = frozenset({
     "registry_list", "registry_describe", "registry_search", "registry_manifest", "registry_call",
     "operation_describe", "operation_call", "session_health", "model_inspect", "model_adopt",
     "job_list", "job_status", "job_log", "job_result", "job_wait", "job_cancel", "job_reconcile",
-    "mcp_tool_audit", "server_info", "check_server_port",
+    "mcp_tool_audit", "server_info", "check_server_port", "desktop_status",
 })
 _PROFILE_DOMAIN_TOOLS = frozenset({
     "workflow_info", "visible_main_workflow_status", "verify_visible_main_session", "model_tree", "get_parameters",
@@ -234,7 +256,7 @@ class ActionEntry:
     def as_dict(self) -> dict[str, Any]:
         catalog_schema = dict(self.input_schema)
         effective_schema = _effective_input_schema(catalog_schema, self.operation_id)
-        return {
+        result = {
             "operation_id": self.operation_id,
             "mcp_tool_name": self.mcp_tool_name,
             "domain": self.domain,
@@ -258,6 +280,97 @@ class ActionEntry:
             "notes": self.notes,
             "executable": is_implemented(self.operation_id) or self.operation_id in LEGACY_FALLBACK_NAMES,
         }
+        if self.operation_id in CONTROL_IMPLEMENTED_OPERATIONS:
+            result["runtime_dispatch_contract"] = {
+                "handler": ("ControlDaemon project authority over the durable operation store"
+                             if self.operation_id.startswith("project.") else "ControlDaemon cached operation store"),
+                "entrypoints": [self.operation_id, "registry_call", "operation_call"],
+                "engine_queue": "bypassed; project actions remain usable without a COMSOL connection" if self.operation_id.startswith("project.") else "bypassed",
+                "nested_identity": "model/session/revision/idempotency/request identifiers are not nested action fields and are never copied from the outer execution envelope",
+                "verification_scope": "control-plane software behavior only; no COMSOL solver capability implied",
+            }
+            if self.operation_id.startswith("project."):
+                result["runtime_dispatch_contract"].update({
+                    "workspace": "created below the explicitly configured project root and revalidated on every access",
+                    "permissions": "daemon-start host grant ceiling intersected with current service grants and project policy",
+                    "project_policy": "permissions and scheduler timeout caps only; unsupported resource/data policy fields are refused",
+                    "model_attribution": "explicit outer execution.project_id at model create/adopt; legacy untagged revisions remain UNATTRIBUTED",
+                })
+            if self.operation_id in {"job.list", "job.log"}:
+                result["runtime_dispatch_contract"]["cursor"] = (
+                    "Base-10, zero-based offset encoded as a string; cursor is mutually exclusive with offset"
+                    if self.operation_id == "job.list"
+                    else "Base-10, zero-based event offset encoded as a string"
+                )
+            if self.operation_id == "job.list":
+                result["runtime_dispatch_contract"]["filter_fields"] = ["status", "project_id"]
+            if self.operation_id == "job.cleanup":
+                result["runtime_dispatch_contract"].update({
+                    "scope": "explicit job_ids only; every selected job must be terminal and have no linked job dependency",
+                    "project_scope": "when outer execution.project_id is supplied it must match each selected job's recorded project_id",
+                    "purged": "job-row request/cache metadata only",
+                    "preserved": ["operation and idempotency record", "result", "job event audit", "formal artifacts", "checkpoints"],
+                })
+                result["output_contract"] = "ActionResult data: cleaned_job_ids:string[], cleaned_count:integer; a repeated cleanup is an idempotent no-op."
+                result["data_schema"] = {
+                    "type": "object",
+                    "required": ["cleaned_job_ids", "cleaned_count"],
+                    "properties": {
+                        "cleaned_job_ids": {"type": "array", "items": {"type": "string"}},
+                        "cleaned_count": {"type": "integer", "minimum": 0},
+                    },
+                    "additionalProperties": False,
+                }
+        if self.operation_id == "desktop.status":
+            result["runtime_dispatch_contract"] = {
+                "handler": "ControlDaemon DesktopCoordinator read-only status route",
+                "entrypoints": ["desktop_status", self.operation_id, "registry_call", "operation_call"],
+                "engine_queue": "bypassed",
+                "verification_scope": "platform metadata observer source only; current native window observation remains NOT_RUN; unsupported controls do not mint write handles",
+            }
+        if self.operation_id in {"model.adopt", "model.inspect"}:
+            result["runtime_dispatch_contract"] = {
+                "handler": "ManagedBackend model adapter",
+                "entrypoints": [self.operation_id, "registry_call", "operation_call"],
+                "engine_queue": "serialized_worker_queue",
+                "identity": "session_id and model_ref are supplied only in the outer execution envelope",
+                "model_adopt": ("server_model_tag is adapted exactly to the existing model_tag adoption callback; requires project_write and returns the newly bound ModelRef." if self.operation_id == "model.adopt" else None),
+                "model_inspect": ("returns managed identity/revision, COMSOL model structure, solution tags and Model.FileResourceList tags; external runtime dependencies outside that public inventory remain unverified." if self.operation_id == "model.inspect" else None),
+                "verification_scope": "managed API route; native COMSOL readback evidence is reported separately",
+            }
+            result["runtime_dispatch_contract"] = {
+                key: value for key, value in result["runtime_dispatch_contract"].items()
+                if value is not None
+            }
+        if self.operation_id == "job.resume":
+            result["runtime_dispatch_contract"] = {
+                "handler": "ControlDaemon durable resume claim plus serialized ManagedBackend restore-and-run",
+                "entrypoints": ["job.resume", "registry_call", "operation_call"],
+                "admission": "atomically creates one child study.run job per failed source job and caller idempotency key",
+                "engine_queue": "serialized_worker_queue",
+                "restart_semantics": "load the SHA-bound pre-run Model snapshot into a fresh server tag and execute study.run again from its beginning; this is not solver-internal iteration continuation",
+                "allowlist": ["study.run with recovery_policy.mode=restart_from_checkpoint", "no pre-existing solution tags", "no Model.FileResourceList dependencies"],
+                "source_state": "source must be terminal FAILED with all submitted Worker request IDs observed SUCCEEDED or FAILED; UNKNOWN/RUNNING/unobserved requests are refused",
+                "preserved": ["parent failure result and audit", "formal checkpoint", "parent-child link", "single-use claim"],
+                "verification_scope": "software route; COMSOL solution/snapshot readback remains a separate native evidence gate",
+            }
+        if self.operation_id == "result.mode_overlap":
+            from ._w23_results import NATIVE_RESULT_SCHEMA
+            result["runtime_dispatch_contract"] = {
+                "handler": "managed W23 native numerical integration adapter",
+                "entrypoints": [self.operation_id, "registry_call", "operation_call"],
+                "effect": "catalog EVALUATE; ordinary managed evaluate permission, isolation, revision and callback gates apply",
+                "engine_queue": "serialized_worker_queue",
+                "provenance": "native dataset/solution/mode selectors and named integration surfaces are read back; field values and quadrature are evaluated by COMSOL IntLine/IntSurface features",
+                "caller_arrays": "not accepted by this route; the separate _mode_overlap kernel remains SOFTWARE_ONLY",
+                "verification_scope": "native numerical integration plumbing only; independent quadrature benchmark and full W23 physical/model acceptance remain separate gates",
+            }
+            result["data_schema"] = json.loads(json.dumps(NATIVE_RESULT_SCHEMA))
+            result["output_contract"] = (
+                "ActionResult data: native COMSOL raw signal/mode/overlap/incident integrals and normalized eta_mode; "
+                "integration cleanup and source/surface identity are included, while physical acceptance is not implied."
+            )
+        return result
 
 
 _ACTION_RESULT_SCHEMA: dict[str, Any] = {
@@ -328,6 +441,32 @@ def _effective_input_schema(catalog_schema: Mapping[str, Any], operation_id: str
     if operation_id == "docs.index" and isinstance(properties, dict):
         properties.setdefault("version", {"type": "string"})
         properties.setdefault("product", {"type": "string"})
+    if operation_id in {"model.adopt", "model.inspect"} and isinstance(properties, dict):
+        # These identities are carried by the outer execution envelope on the
+        # managed wire.  The historical design catalogue placed some of them
+        # in the operation body, so publish the actual arguments accepted by
+        # direct and registry fallback calls.
+        for name in ("project_id", "session_id", "model_ref", "idempotency_key", "request_id"):
+            properties.pop(name, None)
+        effective["required"] = [
+            "server_model_tag" if operation_id == "model.adopt" else name
+            for name in effective.get("required", [])
+            if name not in {"project_id", "session_id", "model_ref", "idempotency_key", "request_id"}
+        ]
+        if operation_id == "model.inspect":
+            properties["detail"] = {
+                "type": "string", "enum": ["summary", "structure", "dependencies"],
+                "description": "summary includes identity, structure counts, solutions and dependency scope; structure and dependencies return their corresponding detailed inventory.",
+            }
+    if operation_id == "result.mode_overlap" and isinstance(properties, dict):
+        # Managed identities live in the outer execution envelope. Replace
+        # the catalog's historical unconstrained definition object with the
+        # native source/surface contract consumed by W23.
+        from ._w23_results import NATIVE_DEFINITION_SCHEMA
+        for name in ("project_id", "session_id", "model_ref", "expected_revision", "idempotency_key", "request_id"):
+            properties.pop(name, None)
+        properties["definition"] = json.loads(json.dumps(NATIVE_DEFINITION_SCHEMA))
+        effective["required"] = ["definition"]
     if operation_id == "transaction.preview":
         # Static planning never enters the engine or requires a bound model.
         # Identity remains optional context, unlike apply/trial/restore.
@@ -344,6 +483,57 @@ def _effective_input_schema(catalog_schema: Mapping[str, Any], operation_id: str
         })
     if operation_id == "node.find":
         properties.setdefault("cursor", {"type": "string", "description": "Continuation cursor returned by a truncated search."})
+    if operation_id == "job.list" and isinstance(properties, dict):
+        properties["cursor"] = {
+            "type": "string", "pattern": "^(0|[1-9][0-9]*)$",
+            "description": "Zero-based decimal offset cursor; mutually exclusive with offset.",
+        }
+        properties["filter"] = {
+            "type": "object",
+            "properties": {"status": {"type": "string"}, "project_id": {"type": "string"}},
+            "additionalProperties": False,
+        }
+        effective["allOf"] = [{"not": {"required": ["cursor", "offset"]}}]
+    if operation_id == "job.log" and isinstance(properties, dict):
+        properties["cursor"] = {
+            "type": "string", "pattern": "^(0|[1-9][0-9]*)$",
+            "description": "Zero-based decimal event offset cursor.",
+        }
+    if operation_id == "job.cleanup" and isinstance(properties, dict):
+        properties["job_ids"] = {
+            "type": "array", "minItems": 1,
+            "items": {"type": "string", "minLength": 1},
+            "description": "Explicit terminal job identifiers; bulk selection is not supported.",
+        }
+        properties["policy"] = {
+            "type": "object",
+            "properties": {"metadata_only": {"type": "boolean", "const": True}},
+            "additionalProperties": False,
+            "description": "Only the job-row request/cache metadata may be compacted; audit, results and artifacts are retained.",
+        }
+        effective["required"] = list(dict.fromkeys([*effective.get("required", []), "job_ids"]))
+    if operation_id == "job.resume" and isinstance(properties, dict):
+        properties["authorization_ref"] = {
+            "type": "string", "minLength": 1,
+            "description": "Required only when the source model is dirty or its revision advanced after the failed run; records explicit restore authorization.",
+        }
+        # job_id and checkpoint_id are the only nested action arguments.  The
+        # model identity/revision, session, authorization and idempotency key
+        # live in the outer execution contract.
+        for name in ("session_id", "model_ref", "expected_revision", "idempotency_key", "request_id", "project_id"):
+            properties.pop(name, None)
+        effective["required"] = ["job_id"]
+    if operation_id == "study.run" and isinstance(properties, dict):
+        for name in ("project_id", "session_id", "model_ref", "idempotency_key", "request_id"):
+            properties.pop(name, None)
+        effective["required"] = ["study"]
+        properties["recovery_policy"] = {
+            "type": "object",
+            "properties": {"mode": {"type": "string", "enum": ["restart_from_checkpoint"]}},
+            "required": ["mode"],
+            "additionalProperties": False,
+            "description": "Opt in to a pre-run Model save so a terminal FAILED job may be replayed from the start; this does not continue solver iterations.",
+        }
     if operation_id == "definition.component_manage":
         # The catalogue's flat ``required`` list names ``tag`` unconditionally;
         # the operation's own per-action contract does not (see
@@ -531,7 +721,8 @@ def registry_manifest(profile: str | None = None) -> dict[str, Any]:
     }
 
 
-def validate_call(operation_id: str, arguments: Any, *, allow_unbound_identity: bool = False) -> ActionEntry:
+def validate_call(operation_id: str, arguments: Any, *, allow_unbound_identity: bool = False,
+                  allow_coordinator_only: bool = False) -> ActionEntry:
     """Validate a catalog operation before it reaches a control/engine call.
 
     Published registry calls carry identity and idempotency in the managed
@@ -540,11 +731,14 @@ def validate_call(operation_id: str, arguments: Any, *, allow_unbound_identity: 
     entries are deliberately an exception: their outer transaction supplies
     the identity and gate, while each inner action is only a static plan row.
     Callers for that internal path must opt in explicitly with
-    ``allow_unbound_identity=True``.
+    ``allow_unbound_identity=True``. ``allow_coordinator_only`` admits the
+    seven Desktop controls to the durable coordinator for permission/idempotency
+    checks while preserving their not-executable catalog status.
     """
     legacy = _legacy_entry(operation_id)
     entry = legacy if legacy is not None else _entry(operation_id)
-    if legacy is None and not is_implemented(entry.operation_id):
+    if (legacy is None and not is_implemented(entry.operation_id)
+            and not (allow_coordinator_only and entry.operation_id in DESKTOP_COORDINATOR_ONLY_OPERATIONS)):
         raise ExecutionContractError("UNSUPPORTED_OPERATION", f"operation is cataloged but not executable in this build: {operation_id}")
     if not isinstance(arguments, Mapping):
         raise ExecutionContractError("INVALID_REQUEST", "registry call arguments must be an object")
@@ -650,8 +844,24 @@ def _validate_operation_shape(operation_id: str, arguments: Mapping[str, Any]) -
     path_operations = {
         "node.inspect", "node.children", "node.property_schema", "node.property_get",
         "node.property_set", "node.property_index_set", "node.property_entry_set",
+        "desktop.select_node",
     }
-    if operation_id in path_operations:
+    if operation_id == "model.adopt":
+        value = arguments.get("server_model_tag")
+        if not isinstance(value, str) or not value.strip():
+            raise ExecutionContractError("INVALID_REQUEST", "server_model_tag must be a non-empty string")
+    elif operation_id == "model.inspect":
+        detail = arguments.get("detail", "summary")
+        if detail not in {"summary", "structure", "dependencies"}:
+            raise ExecutionContractError("INVALID_REQUEST", "detail must be summary, structure, or dependencies")
+    elif operation_id == "result.mode_overlap":
+        from ._w23_results import validate_request_shape
+        validate_request_shape(arguments)
+    elif operation_id == "study.run" and "recovery_policy" in arguments:
+        policy = arguments.get("recovery_policy")
+        if not isinstance(policy, Mapping) or set(policy) != {"mode"} or policy.get("mode") != "restart_from_checkpoint":
+            raise ExecutionContractError("INVALID_REQUEST", "recovery_policy must be {mode: restart_from_checkpoint}")
+    elif operation_id in path_operations:
         NodePath.from_wire(arguments.get("path"))
     if operation_id == "node.inspect":
         if "include_values" in arguments and type(arguments["include_values"]) is not bool:

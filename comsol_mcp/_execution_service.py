@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
+from contextlib import contextmanager
+from contextvars import ContextVar
 from pathlib import Path
 from typing import Any, Protocol
 import json
@@ -31,6 +33,53 @@ def _outcome_error(data: Mapping[str, Any], outcome: Any = None) -> dict[str, An
     if getattr(record, "success", False):
         return None
     return record.error_envelope()
+    return None
+
+
+def _function_evaluate_read_ticket_proven(tool_name: str, effect: str | None,
+                                          data: Mapping[str, Any], outcome: str,
+                                          engine_changed: bool) -> bool:
+    """Prove the one built-in function-evaluation ticket made no model change.
+
+    Function evaluation retains the ordinary permission check, serialized write
+    ticket, revision preflight, and before/after engine snapshots.  Only after
+    that full path succeeds may a server-created domain witness certify its
+    exact read-only Java dispatches and suppress the success ticket's default
+    revision increment.  No caller-provided read-only flag participates.
+    """
+    if tool_name != "function_evaluate" or effect != "evaluate" or engine_changed or outcome != "succeeded":
+        return False
+    if data.get("effect") != "evaluate" or data.get("success") is not True:
+        return False
+    domain = data.get("domain_outcome")
+    if not isinstance(domain, Mapping) or domain.get("operation") != "function.evaluate" or domain.get("state") != "succeeded":
+        return False
+    witness = domain.get("witness")
+    if not isinstance(witness, Mapping):
+        return False
+    calls = witness.get("engine_calls")
+    dispatches = witness.get("dispatches")
+    if (isinstance(calls, bool) or not isinstance(calls, int) or calls < 1
+            or not isinstance(dispatches, list) or len(dispatches) != calls
+            or witness.get("mutation_issued") is not False
+            or witness.get("mutation_method") is not None):
+        return False
+    if any(not isinstance(row, Mapping) or row.get("is_mutation") is not False for row in dispatches):
+        return False
+    detail = data.get("data")
+    if not isinstance(detail, Mapping):
+        return False
+    return (
+        detail.get("schema_version") == "comsol-mcp.function-evaluate/1.0.0"
+        and detail.get("status") == "OBSERVED"
+        and detail.get("ok") is True
+        and detail.get("sample_completion") == "SUCCEEDED"
+        and detail.get("sample_failure_count") == 0
+        and detail.get("partial_change") is False
+        and detail.get("execution_state_unknown") is False
+        and domain.get("cleanup_failed") is False
+        and domain.get("execution_state_unknown") is False
+    )
 
 
 class SnapshotAdapter(Protocol):
@@ -50,7 +99,27 @@ class ExecutionService:
         self.ledger = ledger
         self.adapter = adapter
         self.project_root = Path(project_root)
+        self._project_root_context = ContextVar(f"execution_project_root_{id(self)}", default=None)
         self.on_state_change = on_state_change or (lambda _event: None)
+
+    @property
+    def project_root(self) -> Path:
+        scoped = self._project_root_context.get(None)
+        return scoped if scoped is not None else self._base_project_root
+
+    @project_root.setter
+    def project_root(self, value: str | Path) -> None:
+        self._base_project_root = Path(value)
+
+    @contextmanager
+    def project_root_scope(self, root: str | Path):
+        """Thread-local project path scope used only by one serialized operation."""
+        candidate = Path(root).resolve(strict=True)
+        token = self._project_root_context.set(candidate)
+        try:
+            yield candidate
+        finally:
+            self._project_root_context.reset(token)
 
     def bind_model(self, model_tag: str, *, ownership: str = "user_owned") -> dict[str, Any]:
         snapshot = self._snapshot(model_tag)
@@ -120,6 +189,8 @@ class ExecutionService:
                 # the session's runtime, so an unbound call is a valid request and
                 # must reach the probe instead of being refused for having no model.
                 "runtime_capabilities", "runtime_license_inspect",
+                "runtime_discover", "runtime_inspect", "runtime_doctor", "runtime_compatibility_report",
+                "runtime_license_checkout", "runtime_render_probe",
                 "validate_report", "validate.report",
             }:
                 raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "a selected model_ref is required")
@@ -217,6 +288,8 @@ class ExecutionService:
         changed_engine = (after["fingerprint"] != snapshot["fingerprint"]
                           or after["external_event_counter"] != snapshot["external_event_counter"])
         outcome, changed = final_state(data, engine_changed=changed_engine)
+        if _function_evaluate_read_ticket_proven(tool_name, effect, data, outcome, changed_engine):
+            changed = False
         result = self.ledger.finish(ticket, outcome=outcome, changed=changed, fingerprint=after["fingerprint"])
         self._emit("finished", model_ref, operation_id=ticket.operation_id)
         outcome_record = classify_envelope(data, engine_changed=changed_engine)

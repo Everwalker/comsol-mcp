@@ -19,13 +19,17 @@ import base64
 import csv
 import errno
 import hashlib
+import ipaddress
 import json
 import math
 import os
+import re
+import socket
 import stat
 import sys
 import tempfile
 from pathlib import Path
+from pathlib import PurePosixPath
 from typing import Any, Iterator, Mapping, Sequence
 
 from ._execution_contract import ExecutionContractError
@@ -96,6 +100,376 @@ def trusted_project_root(worker: Any) -> Path:
             f"site-packages is not an authorized project root: {root!r}",
         )
     return root
+
+
+def local_artifact_host_identity() -> str:
+    """Return a stable, non-reversible identifier for this artifact host.
+
+    This is provenance metadata, not an authentication token. A changed host
+    name intentionally makes old project registrations fail closed.
+    """
+    host = socket.gethostname().strip().casefold()
+    if not host:
+        raise _contract_error("ARTIFACT_HOST_UNVERIFIED", "local artifact host identity is unavailable")
+    return hashlib.sha256(host.encode("utf-8")).hexdigest()
+
+
+def project_root_identity(project_root: str | Path) -> str:
+    """Hash a normalized absolute project root without publishing its path."""
+    try:
+        root = Path(project_root).expanduser().resolve(strict=True)
+    except (OSError, TypeError, ValueError) as exc:
+        raise _contract_error("RUNTIME_CONFIGURATION_REQUIRED", "project root could not be resolved") from exc
+    if not root.is_dir() or root.is_symlink():
+        raise _contract_error("RUNTIME_CONFIGURATION_REQUIRED", "project root must be an existing directory")
+    normalized = os.path.normcase(os.path.normpath(str(root)))
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+
+
+def local_engine_host_identity(endpoint: Any) -> str:
+    """Prove that a COMSOL endpoint is loopback-local before using local files."""
+    if not isinstance(endpoint, str) or not endpoint.strip():
+        raise _contract_error("ARTIFACT_HOST_UNVERIFIED", "COMSOL endpoint identity is unavailable")
+    value = endpoint.strip()
+    if value.startswith("["):
+        end = value.find("]")
+        host = value[1:end] if end > 0 else ""
+    else:
+        host = value.rsplit(":", 1)[0] if ":" in value else value
+    if host.casefold() == "localhost":
+        return local_artifact_host_identity()
+    try:
+        address = ipaddress.ip_address(host)
+    except ValueError as exc:
+        raise _contract_error(
+            "ARTIFACT_HOST_UNVERIFIED",
+            "only a literal loopback COMSOL endpoint can use this local project artifact route",
+        ) from exc
+    if not address.is_loopback:
+        raise _contract_error(
+            "ARTIFACT_HOST_UNVERIFIED",
+            "COMSOL endpoint is not loopback-local; project file visibility on a remote engine is unverified",
+        )
+    return local_artifact_host_identity()
+
+
+def _hash_regular_artifact(path: Path) -> tuple[str, dict[str, int]]:
+    handle, before = _open_pinned_artifact(path)
+    digest = hashlib.sha256()
+    try:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+        after = os.fstat(handle.fileno())
+        _assert_pinned_artifact_stable(path, before, after)
+    finally:
+        handle.close()
+    identity = {
+        "device": int(before.st_dev),
+        "inode": int(before.st_ino),
+        "size": int(before.st_size),
+        "mtime_ns": int(getattr(before, "st_mtime_ns", int(before.st_mtime * 1_000_000_000))),
+    }
+    return digest.hexdigest(), identity
+
+
+def register_project_artifact(
+    project_root: str | Path,
+    operation_store: Any,
+    source_relative_path: Any,
+    *,
+    project_id: str,
+    role: str,
+    classification: str,
+    host_identity: str,
+    engine_host_identity: str,
+    request_id: str,
+    registering_operation_id: str,
+) -> dict[str, Any]:
+    """Copy and register a project-local ordinary file without widening access."""
+    if not isinstance(project_id, str) or not project_id.strip():
+        raise _contract_error("PROJECT_IDENTITY_MISMATCH", "project_id is required")
+    if not isinstance(role, str) or not role.strip() or len(role) > 96:
+        raise _contract_error("INVALID_REQUEST", "role must be a non-empty string of at most 96 characters")
+    if not isinstance(classification, str) or not classification.strip() or len(classification) > 96:
+        raise _contract_error("INVALID_REQUEST", "classification must be a non-empty string of at most 96 characters")
+    if not isinstance(source_relative_path, str) or not source_relative_path.strip():
+        raise _contract_error("INVALID_REQUEST", "path must be a project-relative file path")
+    source_lexical = Path(source_relative_path)
+    if source_lexical.is_absolute() or any(part == ".." for part in source_lexical.parts):
+        raise _contract_error("ACCESS_VIOLATION", "artifact.register accepts only project-relative paths without traversal")
+    try:
+        root = Path(project_root).expanduser().resolve(strict=True)
+    except (OSError, TypeError, ValueError) as exc:
+        raise _contract_error("RUNTIME_CONFIGURATION_REQUIRED", "trusted project root could not be resolved") from exc
+    store = ArtifactStore(root)
+    source = store.resolve_safe_path(source_relative_path, allow_overwrite=True)
+    if not source.is_file():
+        raise _contract_error("ARTIFACT_NOT_FOUND", "project-local source is not an existing regular file")
+    _assert_no_symlink_components(source, field="artifact.register source")
+    digest, source_identity = _hash_regular_artifact(source)
+    suffix = source.suffix.lower()
+    if suffix and not re.fullmatch(r"\.[a-z0-9]{1,16}", suffix):
+        raise _contract_error("INVALID_REQUEST", "artifact suffix is outside the supported safe filename vocabulary")
+    relative_destination = Path("g2_artifacts") / "registered" / f"{digest}{suffix}"
+    destination = store.resolve_safe_path(relative_destination.as_posix(), allow_overwrite=True)
+    root_id = project_root_identity(root)
+    existing = operation_store.get_metadata("artifacts", digest)
+    if existing is not None:
+        expected_origin = {
+            "schema_version": 2,
+            "artifact_id": digest,
+            "sha256": digest,
+            "path": relative_destination.as_posix(),
+            "project_id": project_id,
+            "project_root_identity": root_id,
+            "host_identity": host_identity,
+            "engine_host_identity": engine_host_identity,
+            "role": role,
+            "classification": classification,
+        }
+        if not isinstance(existing, Mapping) or any(existing.get(key) != value for key, value in expected_origin.items()):
+            raise _contract_error("ARTIFACT_REGISTRATION_CONFLICT", "this digest is already registered with different identity or classification")
+        provenance = existing.get("provenance")
+        if not isinstance(provenance, Mapping) or provenance.get("source_project_relative_path") != source_relative_path:
+            raise _contract_error("ARTIFACT_REGISTRATION_CONFLICT", "this digest was registered from a different project path")
+        resolved = resolve_registered_artifact(
+            root, operation_store, digest, project_id=project_id,
+            current_host_identity=host_identity, current_engine_host_identity=engine_host_identity,
+            current_server_instance_id="",
+        )
+        return {**dict(existing), "resolved_path": resolved["path"], "reused": True}
+
+    # Check before mkdir as well: if an attacker replaced an ancestor with a
+    # symlink, recursive mkdir could otherwise create a directory outside the
+    # project before the later post-create check rejected the path.
+    _assert_no_symlink_components(destination.parent, field="registered artifact directory")
+    destination.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    _assert_no_symlink_components(destination.parent, field="registered artifact directory")
+    created_destination = False
+    if destination.exists():
+        existing_digest, destination_identity = _hash_regular_artifact(destination)
+        if existing_digest != digest:
+            raise _contract_error("ARTIFACT_REGISTRATION_CONFLICT", "content-addressed destination exists with different bytes")
+    else:
+        fd, temp_name = tempfile.mkstemp(prefix=f".{digest}.", suffix=".partial", dir=str(destination.parent))
+        temp_path = Path(temp_name)
+        try:
+            output = os.fdopen(fd, "wb", closefd=True)
+            source_handle, source_before = _open_pinned_artifact(source)
+            copied = hashlib.sha256()
+            try:
+                with output:
+                    while True:
+                        chunk = source_handle.read(1024 * 1024)
+                        if not chunk:
+                            break
+                        copied.update(chunk)
+                        output.write(chunk)
+                    output.flush()
+                    os.fsync(output.fileno())
+                _assert_pinned_artifact_stable(source, source_before, os.fstat(source_handle.fileno()))
+            finally:
+                source_handle.close()
+            if copied.hexdigest() != digest:
+                raise _contract_error("ARTIFACT_CHANGED", "project source changed between hash and copy")
+            _assert_no_symlink_components(destination.parent, field="registered artifact directory")
+            try:
+                os.link(temp_path, destination)
+            except FileExistsError:
+                raced_digest, _ = _hash_regular_artifact(destination)
+                if raced_digest != digest:
+                    raise _contract_error("ARTIFACT_REGISTRATION_CONFLICT", "content-addressed destination appeared with different bytes")
+            except OSError:
+                # Some supported project volumes do not implement hard links.
+                # Reserve the name exclusively, then atomically replace only
+                # our own placeholder with the already verified temporary file.
+                try:
+                    placeholder_fd = os.open(os.fspath(destination), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+                except FileExistsError as exc:
+                    raced_digest, _ = _hash_regular_artifact(destination)
+                    if raced_digest != digest:
+                        raise _contract_error("ARTIFACT_REGISTRATION_CONFLICT", "content-addressed destination appeared with different bytes") from exc
+                else:
+                    os.close(placeholder_fd)
+                    os.replace(temp_path, destination)
+                    created_destination = True
+            else:
+                created_destination = True
+        finally:
+            try:
+                temp_path.unlink(missing_ok=True)
+            except OSError:
+                pass
+    registered_digest, destination_identity = _hash_regular_artifact(destination)
+    if registered_digest != digest:
+        raise _contract_error("ARTIFACT_HASH_MISMATCH", "published project artifact failed digest readback")
+    if destination_identity["size"] != source_identity["size"]:
+        raise _contract_error("ARTIFACT_IDENTITY_MISMATCH", "registered file size changed during publication")
+    record = {
+        "schema_version": 2,
+        "artifact_id": digest,
+        "sha256": digest,
+        "path": relative_destination.as_posix(),
+        "size": destination_identity["size"],
+        "file_identity": destination_identity,
+        "project_id": project_id,
+        "project_root_identity": root_id,
+        "host_identity": host_identity,
+        "engine_host_identity": engine_host_identity,
+        "role": role,
+        "classification": classification,
+        "provenance": {
+            "source_project_relative_path": source_relative_path,
+            "request_id": request_id,
+            "registering_operation_id": registering_operation_id,
+            "source_sha256": digest,
+        },
+    }
+    # Insert without upsert.  The hash-addressed data file may be shared by a
+    # simultaneous registration; leaving an unreferenced immutable file after
+    # a database error is safer than unlinking a file another successful row
+    # may already reference.
+    prior = operation_store.register_artifact_if_absent(digest, record)
+    if prior is not None:
+        expected_origin = {
+            "schema_version": 2,
+            "artifact_id": digest,
+            "sha256": digest,
+            "path": relative_destination.as_posix(),
+            "project_id": project_id,
+            "project_root_identity": root_id,
+            "host_identity": host_identity,
+            "engine_host_identity": engine_host_identity,
+            "role": role,
+            "classification": classification,
+        }
+        if not isinstance(prior, Mapping) or any(prior.get(key) != value for key, value in expected_origin.items()):
+            raise _contract_error("ARTIFACT_REGISTRATION_CONFLICT", "this digest was concurrently registered with different identity or classification")
+        prior_provenance = prior.get("provenance")
+        if not isinstance(prior_provenance, Mapping) or prior_provenance.get("source_project_relative_path") != source_relative_path:
+            raise _contract_error("ARTIFACT_REGISTRATION_CONFLICT", "this digest was concurrently registered from a different project path")
+        resolved = resolve_registered_artifact(
+            root, operation_store, digest, project_id=project_id,
+            current_host_identity=host_identity, current_engine_host_identity=engine_host_identity,
+            current_server_instance_id="",
+        )
+        return {**dict(prior), "resolved_path": resolved["path"], "reused": True}
+    return {**record, "resolved_path": destination, "reused": not created_destination}
+
+
+def resolve_registered_artifact(
+    project_root: str | Path,
+    operation_store: Any,
+    artifact_id: Any,
+    *,
+    project_id: str,
+    current_host_identity: str,
+    current_engine_host_identity: str,
+    current_server_instance_id: str,
+) -> dict[str, Any]:
+    """Resolve and verify one project-scoped artifact registration.
+
+    New records are stable across Worker restarts and bind to the managed
+    project and local host. Older saved-model records are accepted only in the
+    exact Worker connection epoch that created them. The returned absolute
+    path is for the immediate engine call; callers should publish only the
+    relative path and digest.
+    """
+    if not isinstance(artifact_id, str) or not re.fullmatch(r"[0-9a-f]{64}", artifact_id):
+        raise _contract_error("ARTIFACT_NOT_FOUND", "artifact_id must be a registered lowercase SHA-256 identifier")
+    if not isinstance(project_id, str) or not project_id.strip():
+        raise _contract_error("PROJECT_IDENTITY_MISMATCH", "a project_id is required to resolve an artifact")
+    try:
+        root = Path(project_root).expanduser().resolve(strict=True)
+    except (OSError, TypeError, ValueError) as exc:
+        raise _contract_error("RUNTIME_CONFIGURATION_REQUIRED", "trusted project root could not be resolved") from exc
+    if not root.is_dir() or root.is_symlink():
+        raise _contract_error("RUNTIME_CONFIGURATION_REQUIRED", "trusted project root must be an existing directory")
+    root_id = project_root_identity(root)
+    record = operation_store.get_metadata("artifacts", artifact_id)
+    if not isinstance(record, Mapping):
+        raise _contract_error("ARTIFACT_NOT_FOUND", "artifact_id has no registration in the current managed project store")
+    if record.get("artifact_id", artifact_id) != artifact_id or record.get("sha256") != artifact_id:
+        raise _contract_error("ARTIFACT_IDENTITY_MISMATCH", "artifact store key and registered digest do not match")
+
+    schema_version = record.get("schema_version", 1)
+    if type(schema_version) is int and schema_version == 2:
+        if (record.get("project_id") != project_id
+                or record.get("project_root_identity") != root_id
+                or record.get("host_identity") != current_host_identity
+                or record.get("engine_host_identity") != current_engine_host_identity):
+            raise _contract_error("ARTIFACT_SCOPE_MISMATCH", "artifact registration belongs to a different project or host")
+        relative = record.get("path")
+        if not isinstance(relative, str) or not relative:
+            raise _contract_error("ARTIFACT_IDENTITY_MISMATCH", "registered project artifact path must be relative")
+        portable_path = PurePosixPath(relative)
+        if portable_path.is_absolute() or portable_path.as_posix() != relative:
+            raise _contract_error("ARTIFACT_IDENTITY_MISMATCH", "registered project artifact path is not canonical relative POSIX syntax")
+        if any(part in {"", ".", ".."} for part in portable_path.parts):
+            raise _contract_error("ARTIFACT_IDENTITY_MISMATCH", "registered project artifact path contains traversal")
+        if len(portable_path.parts) != 3 or portable_path.parts[:2] != ("g2_artifacts", "registered"):
+            raise _contract_error("ARTIFACT_IDENTITY_MISMATCH", "registered artifact path is outside the managed content-addressed directory")
+        if re.fullmatch(re.escape(artifact_id) + r"(?:\.[a-z0-9]{1,16})?", portable_path.name) is None:
+            raise _contract_error("ARTIFACT_IDENTITY_MISMATCH", "registered artifact filename does not match its content address")
+        path = ArtifactStore(root).resolve_safe_path(relative, allow_overwrite=True)
+    elif schema_version is None or (type(schema_version) is int and schema_version == 1):
+        model_ref = record.get("model_ref")
+        if (not isinstance(model_ref, Mapping)
+                or not isinstance(model_ref.get("server_instance_id"), str)
+                or not model_ref.get("server_instance_id")
+                or model_ref.get("server_instance_id") != current_server_instance_id):
+            raise _contract_error(
+                "ARTIFACT_SCOPE_MISMATCH",
+                "legacy saved-model artifacts are limited to the Worker connection epoch that created them",
+            )
+        raw_path = record.get("path")
+        if not isinstance(raw_path, str) or not raw_path:
+            raise _contract_error("ARTIFACT_IDENTITY_MISMATCH", "legacy artifact record has no path")
+        path = ArtifactStore(root).resolve_safe_path(raw_path, allow_overwrite=True)
+    else:
+        raise _contract_error("ARTIFACT_IDENTITY_MISMATCH", "unsupported artifact record schema")
+
+    _assert_no_symlink_components(path, field="registered artifact")
+    try:
+        handle, before = _open_pinned_artifact(path)
+    except ExecutionContractError:
+        raise
+    digest = hashlib.sha256()
+    try:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+        after = os.fstat(handle.fileno())
+        _assert_pinned_artifact_stable(path, before, after)
+    finally:
+        handle.close()
+    actual_identity = {
+        "device": int(before.st_dev),
+        "inode": int(before.st_ino),
+        "size": int(before.st_size),
+        "mtime_ns": int(getattr(before, "st_mtime_ns", int(before.st_mtime * 1_000_000_000))),
+    }
+    if digest.hexdigest() != artifact_id:
+        raise _contract_error("ARTIFACT_HASH_MISMATCH", "registered artifact bytes no longer match artifact_id")
+    recorded_size = record.get("size")
+    if recorded_size is not None and (isinstance(recorded_size, bool) or recorded_size != actual_identity["size"]):
+        raise _contract_error("ARTIFACT_IDENTITY_MISMATCH", "registered artifact size changed")
+    recorded_identity = record.get("file_identity")
+    if recorded_identity is not None:
+        if not isinstance(recorded_identity, Mapping) or any(
+            recorded_identity.get(key) != value for key, value in actual_identity.items()
+        ):
+            raise _contract_error("ARTIFACT_IDENTITY_MISMATCH", "registered artifact file identity changed")
+    return {
+        "artifact_id": artifact_id,
+        "path": path,
+        "relative_path": path.relative_to(root).as_posix(),
+        "sha256": artifact_id,
+        "size": actual_identity["size"],
+        "file_identity": actual_identity,
+        "role": record.get("role"),
+        "classification": record.get("classification"),
+        "record_schema_version": schema_version,
+    }
 
 
 def _reject_nonfinite(value: Any, *, path: str = "value") -> None:

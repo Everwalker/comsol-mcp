@@ -241,6 +241,7 @@ _G3_CATALOG_EFFECTS: dict[str, str] = {
     "EVALUATE": "evaluate",
     "COMPUTE": "compute",
     "TRUSTED_CODE": "trusted_code",
+    "HOST_CONTROL": "host_control",
     "DYNAMIC": "project_write",
 }
 

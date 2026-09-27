@@ -747,6 +747,29 @@ def test_modelnode_navigation_is_read_but_creation_remains_mutating():
     assert is_mutation_call("unverifiedMethod", ())
 
 
+def test_function_feature_metadata_reads_require_the_verified_signature():
+    from comsol_mcp._domain_outcome import is_mutation_call
+    assert not is_mutation_call("functionNames", ())
+    assert is_mutation_call("functionNames", ("unexpected",))
+    assert not is_mutation_call("hasProperty", ("nargs",))
+    assert is_mutation_call("hasProperty", ())
+    assert is_mutation_call("hasProperty", (1,))
+    assert is_mutation_call("hasProperty", ("nargs", "extra"))
+    for method in ("getValueType", "evaluateComplex", "evaluateUnit"):
+        assert not is_mutation_call(method, ("root.f(1)",))
+        assert is_mutation_call(method, ())
+        assert is_mutation_call(method, (1,))
+        assert is_mutation_call(method, ("root.f(1)", "1"))
+    assert not is_mutation_call("getDoubleMatrix", ("argrange",))
+    assert is_mutation_call("getDoubleMatrix", ())
+    assert is_mutation_call("getDoubleMatrix", (1,))
+    assert is_mutation_call("getDoubleMatrix", ("argrange", "unexpected"))
+    assert not is_mutation_call("getStringMatrix", ("argrange",))
+    assert is_mutation_call("getStringMatrix", ())
+    assert is_mutation_call("getStringMatrix", (1,))
+    assert is_mutation_call("getStringMatrix", ("argrange", "unexpected"))
+
+
 def test_domain_outcome_star_exports_are_defined() -> None:
     namespace: dict[str, object] = {}
     exec("from comsol_mcp._domain_outcome import *", namespace)

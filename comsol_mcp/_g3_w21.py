@@ -421,10 +421,18 @@ class BoundedOptimizer:
                 break
             idx += 1
             cand_params = {dims[i]: pt[i] for i in range(len(dims))}
-            self.evaluate_candidate(f"opt-case-{idx:03d}", cand_params, eval_fn)
+            candidate = self.evaluate_candidate(f"opt-case-{idx:03d}", cand_params, eval_fn)
+            if candidate.raw_results.get("execution_state_unknown") is True or candidate.raw_results.get("status") in {
+                "UNKNOWN", "EXECUTION_STATE_UNKNOWN", "ENGINE_STATE_UNKNOWN",
+            }:
+                break
 
         feas_status = "FEASIBLE_FOUND" if self.best_candidate is not None else "NO_FEASIBLE_FOUND"
-        if not self.budget.can_evaluate():
+        if any(c.raw_results.get("execution_state_unknown") is True
+               or c.raw_results.get("status") in {"UNKNOWN", "EXECUTION_STATE_UNKNOWN", "ENGINE_STATE_UNKNOWN"}
+               for c in self.history):
+            feas_status = "EXECUTION_STATE_UNKNOWN"
+        elif not self.budget.can_evaluate():
             feas_status = "BUDGET_EXHAUSTED"
 
         return {
@@ -607,23 +615,28 @@ _GLOBAL_STATE_XFER = StageStateTransferManager()
 # intentionally late so the reusable containers above remain import-light.
 from ._w21_execution import (
     op_parameter_case_manage, op_study_sweep_manage,
+    op_solver_solution_transfer, op_experiment_design, op_experiment_run,
     op_stage_state_transfer, op_optimization_bounded_run, op_stage_checkpoint_create,
 )
 
 OPERATIONS = {
     "parameter.case_manage": op_parameter_case_manage,
     "study.sweep_manage": op_study_sweep_manage,
-    "solver.solution_transfer": op_stage_state_transfer,
+    "solver.solution_transfer": op_solver_solution_transfer,
     "stage.checkpoint_create": op_stage_checkpoint_create,
-    "experiment.run": op_optimization_bounded_run,
+    "stage.state_transfer": op_stage_state_transfer,
+    "optimization.bounded_run": op_optimization_bounded_run,
+    "experiment.design": op_experiment_design,
+    "experiment.run": op_experiment_run,
 }
 
 ALIASES = {
     "parameter_case_manage": "parameter.case_manage",
     "study_sweep_manage": "study.sweep_manage",
-    "optimization.bounded_run": "experiment.run",
-    "optimization_bounded_run": "experiment.run",
-    "stage.state_transfer": "solver.solution_transfer",
-    "stage_state_transfer": "solver.solution_transfer",
+    "solver_solution_transfer": "solver.solution_transfer",
+    "experiment_design": "experiment.design",
+    "experiment_run": "experiment.run",
+    "optimization_bounded_run": "optimization.bounded_run",
+    "stage_state_transfer": "stage.state_transfer",
     "stage_checkpoint_create": "stage.checkpoint_create",
 }

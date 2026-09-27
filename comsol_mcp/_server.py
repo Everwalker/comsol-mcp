@@ -35,6 +35,147 @@ def _get_mph_error() -> str:
     _get_mph()
     return _mph_import_error
 
+
+# Runtime adapters used by the legacy tool modules.  Unscoped legacy calls
+# retain the process-level state below; managed dispatch selects a
+# SessionRuntimeContext and reads/writes the same names through that context.
+_SESSION_STATE_FIELDS = {
+    "_server": "server_handle",
+    "_client": "client",
+    "_remote_client_factory": "remote_client_factory",
+    "_client_connected": "client_connected",
+    "_connected_host": "connected_host",
+    "_connected_port": "connected_port",
+    "_current_model": "current_model",
+    "_current_model_origin": "current_model_origin",
+    "_current_model_path": "current_model_path",
+    "_server_started_by_mcp": "server_started_by_mcp",
+    "_last_command": "last_command",
+    "_last_error": "last_error",
+    "_mcp_owned_model_tags": "owned_model_tags",
+    "_background_jobs": "background_jobs",
+}
+
+
+def active_runtime_context():
+    """Return the ContextVar-selected session, or ``None`` for legacy calls."""
+    from ._session_context import active_session_context
+
+    return active_session_context()
+
+
+def runtime_value(name: str):
+    """Read a legacy runtime field from the active session or fallback globals."""
+    context = active_runtime_context()
+    field_name = _SESSION_STATE_FIELDS.get(name)
+    if context is not None and field_name is not None:
+        return getattr(context, field_name)
+    return globals()[name]
+
+
+def set_runtime_value(name: str, value):
+    """Write a legacy runtime field in the active session or fallback globals."""
+    context = active_runtime_context()
+    field_name = _SESSION_STATE_FIELDS.get(name)
+    if context is not None and field_name is not None:
+        setattr(context, field_name, value)
+    else:
+        globals()[name] = value
+
+
+def runtime_lock():
+    """Return the engine lock for the selected session."""
+    context = active_runtime_context()
+    return context.lock if context is not None else _runtime_lock
+
+
+def background_jobs_lock():
+    """Return the job-state lock for the selected session."""
+    context = active_runtime_context()
+    return context.background_jobs_lock if context is not None else _background_jobs_lock
+
+
+def runtime_setting(name: str):
+    """Resolve host/runtime defaults without swapping process environment."""
+    context = active_runtime_context()
+    if context is None:
+        return globals()[name]
+    if name == "COMSOL_ROOT":
+        return context.runtime.installation_root
+    if name == "COMSOL_SERVER_MCP_HOME":
+        return context.paths.root
+    if name == "OUTPUTS_DIR":
+        return context.project_root / "outputs"
+    if name == "DEFAULT_HOST":
+        return context.endpoint.host
+    if name == "DEFAULT_PORT":
+        return context.endpoint.port
+    path_names = {
+        "LOGS_DIR": "logs_dir",
+        "OUTPUTS_DIR": "outputs_dir",
+        "STATUS_FILE": "status_file",
+        "WORKFLOW_FILE": "workflow_file",
+        "OPERATIONS_FILE": "operations_file",
+        "SERVER_LOG": "server_log",
+    }
+    if name in path_names:
+        paths = context.paths
+        if name == "LOGS_DIR":
+            return paths.server_log.parent
+        if name == "OUTPUTS_DIR":
+            return paths.outputs_dir
+        return getattr(paths, path_names[name])
+    return globals()[name]
+
+
+class _SessionServerProxy:
+    """Compatibility facade routing legacy state attributes by ContextVar.
+
+    Tool modules historically imported this module and accessed fields such as
+    ``_client`` directly.  The facade preserves those call sites while making
+    their state session-local whenever managed dispatch has selected a context.
+    Constants that are runtime/session scoped are resolved dynamically too.
+    """
+
+    _DYNAMIC_SETTINGS = frozenset({
+        "COMSOL_ROOT", "COMSOL_SERVER_MCP_HOME", "DEFAULT_HOST", "DEFAULT_PORT",
+        "LOGS_DIR", "OUTPUTS_DIR", "STATUS_FILE", "WORKFLOW_FILE",
+        "OPERATIONS_FILE", "SERVER_LOG",
+    })
+
+    def __getattr__(self, name: str):
+        if name in _SESSION_STATE_FIELDS:
+            return runtime_value(name)
+        if name == "_runtime_lock":
+            return runtime_lock()
+        if name == "_background_jobs_lock":
+            return background_jobs_lock()
+        if name in self._DYNAMIC_SETTINGS:
+            return runtime_setting(name)
+        return globals()[name]
+
+    def __setattr__(self, name: str, value):
+        if name in _SESSION_STATE_FIELDS:
+            set_runtime_value(name, value)
+            return
+        if name == "_runtime_lock":
+            if active_runtime_context() is not None:
+                raise RuntimeError("session runtime lock is owned by its context")
+            globals()[name] = value
+            return
+        if name == "_background_jobs_lock":
+            if active_runtime_context() is not None:
+                raise RuntimeError("session job lock is owned by its context")
+            globals()[name] = value
+            return
+        if name in self._DYNAMIC_SETTINGS:
+            if active_runtime_context() is not None:
+                raise RuntimeError(f"session-scoped setting {name} cannot be mutated in place")
+        globals()[name] = value
+
+
+session_server = _SessionServerProxy()
+
 VERSION = "0.1.9"
 WORKSPACE_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_COMSOL_ROOT = Path(r"C:\Program Files\COMSOL\COMSOL63\Multiphysics")
@@ -76,6 +217,7 @@ _server_started_by_mcp = False
 _last_command = ""
 _last_error = ""
 _logger_ready = False
+_context_file_handler: logging.Handler | None = None
 _background_jobs: dict[str, dict[str, Any]] = {}
 _background_jobs_lock = threading.RLock()
 # Tags created or loaded by this MCP process.  Unknown loaded models are
@@ -145,21 +287,47 @@ RESTRICTED_TOOLS = {
 # ---------------------------------------------------------------------------
 # Basic infrastructure
 # ---------------------------------------------------------------------------
+class _ContextFileHandler(logging.Handler):
+    """Write each log record to the active session's private log file."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._write_lock = threading.RLock()
+
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            path = Path(runtime_setting("SERVER_LOG"))
+            path.parent.mkdir(parents=True, exist_ok=True)
+            if path.is_symlink():
+                raise OSError("session log path cannot be a symlink")
+            message = self.format(record)
+            with self._write_lock, path.open("a", encoding="utf-8") as handle:
+                handle.write(message + "\n")
+        except Exception:
+            self.handleError(record)
+
+
 def _ensure_dirs() -> None:
-    for directory in (COMSOL_SERVER_MCP_HOME, LOGS_DIR, OUTPUTS_DIR):
+    home = runtime_setting("COMSOL_SERVER_MCP_HOME")
+    logs = runtime_setting("LOGS_DIR")
+    outputs = runtime_setting("OUTPUTS_DIR")
+    for directory in (home, logs, outputs):
         directory.mkdir(parents=True, exist_ok=True)
 
 
 def _setup_logging() -> None:
-    global _logger_ready
+    global _logger_ready, _context_file_handler
     if _logger_ready:
         return
     _ensure_dirs()
-    logging.basicConfig(
-        level=logging.INFO,
-        format="[%(asctime)s] %(levelname)s: %(message)s",
-        handlers=[
-            logging.FileHandler(SERVER_LOG, encoding="utf-8"),
-        ],
-    )
+    root_logger = logging.getLogger()
+    if _context_file_handler is None:
+        _context_file_handler = _ContextFileHandler()
+        _context_file_handler.setFormatter(
+            logging.Formatter("[%(asctime)s] %(levelname)s: %(message)s")
+        )
+    if _context_file_handler not in root_logger.handlers:
+        root_logger.addHandler(_context_file_handler)
+    if root_logger.level > logging.INFO:
+        root_logger.setLevel(logging.INFO)
     _logger_ready = True

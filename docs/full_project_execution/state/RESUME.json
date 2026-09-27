@@ -1,0 +1,920 @@
+{
+  "schema_version": 1,
+  "phase": "W24_SETUP_PREBIRTH_PROJECT_INSPECT_FAILURE_AND_OFFLINE_REPAIR",
+  "task": "W24_CURE_HISTORY_SETUP_PREFLIGHT_AND_SCIENCE_EXECUTOR",
+  "status": "IN_PROGRESS_OFFLINE_PROJECT_INSPECT_CONTRACT_REPAIR_AFTER_ZERO_BIRTH_FAILURE",
+  "candidate_source": "W24 0841Z setup-only freeze SHA-256 c5eac2b9f2f23067443d26242f9cb4fadad084dfd71fc2ca9c4125aed1dca4af was invoked once at 0857Z and failed before any engine/Worker birth: project.create succeeded, project.inspect failed INVALID_REQUEST because execution.idempotency_key was injected into strict project domain args. Preserve FAIL_OR_INCOMPLETE; 0 birth/0 solve. Offline runner now omits the unnecessary inspect envelope key, and release fixed production envelope/domain separation. Real ControlDaemon create→inspect regression 2/2 passed; receipt docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_runner_regression_receipt.json. The old freeze is stale; F04 shared runtime integration is still in progress.",
+  "completed_work": [
+    "PIN source restoration completed and verified: 10832 files, zero missing LFS backing objects; repository HEAD matches pinned commit/tree.",
+    "tools/init_completion.py --repo repository completed; frozen inventory: 26 work packages, 272 actions, 60 tests x 6 targets = 360 test cells.",
+    "Read MASTER_GOAL, FULL_PLAN, CONTINUATION, TEAM_PROTOCOL, workpack AGENTS and repository AGENTS.",
+    "Main-agent resource inventory confirms macOS arm64, COMSOL 6.4 launcher, external Amazon Corretto Java 11.0.31; Windows host 192.168.100.2 independently confirmed reachable by main agent; versions/build/modules remain to be rediscovered.",
+    "No COMSOL solve/job was started in this execution; prior process inventory found no active COMSOL engine; existing Python services are protected.",
+    "Bounded job-control route gap assessed: seven cached job actions had direct ControlDaemon routes but were omitted from registry fallback; job.resume and job.cleanup have no production route in the scanned implementation surfaces.",
+    "Implemented strict registry_call/operation_call cached job-control routing, documented decimal paging/filter contract, and added a ManagedBackend guard against accidental model-queue routing.",
+    "Added tests/test_registry_job_control_fallback.py and ran 44 targeted daemon, queue and registry tests successfully; raw output and JUnit retained under evidence/luna_control_fallback. These are software-only test-double results, not native COMSOL acceptance.",
+    "Updated ACTION_COVERAGE for job actions, attached partial supplementary evidence to T012/T057 without changing their NOT_RUN acceptance cells, and recorded the bounded findings in P0_GAP_ASSESSMENT.md.",
+    "Main agent repaired Git metadata by relocating real metadata to APFS; recovery receipt: evidence/git_metadata_relocation.json. 22 AppleDouble sidecars and originals are preserved in the designated backup; no Git write action was run by this executor.",
+    "Fixed the independent main-agent pagination reproducer: canonical dotted job.list/job.log and both registry fallback calls share strict cursor conversion; direct nonzero cursor returns the same page as fallback. Original and retest records are preserved.",
+    "Implemented conservative job.cleanup with explicit terminal job IDs, known dependency refusal, optional project identity match, job-row cache compaction only, durable cleanup event, and preservation of the operation/idempotency record, result, audit, artifact and checkpoint rows.",
+    "Latest combined targeted suite: 47 passed; run-named raw output/JUnit in evidence/luna_job_cleanup_v4. Cleanup tests operate only on temporary SQLite databases; no COMSOL engine was started.",
+    "Main agent independently confirmed nonzero page parity across all three entrypoints; evidence evidence/main_pagination_retest.json.",
+    "Git metadata relocation receipt verified at evidence/git_metadata_relocation.json; source Git writes remain owned by main agent.",
+    "Current combined targeted suite has 47 passing tests for cached job-control, page parity, and conservative cleanup; evidence is run-scoped under evidence/luna_job_cleanup_v4.",
+    "COMSOL desktop GUI verification is NOT_RUN/BLOCKED_PERMISSION after CUA access was denied; user prefers avoiding Computer Use. No further CUA attempt; use CLI/API/SSH evidence only.",
+    "Checkpoint evidence correction from main agent: solution scope is included_by_COMSOL_save_unverified; requested include_solution is metadata only until real COMSOL save/reopen readback. Do not claim solution was lost or included.",
+    "COMSOL 6.4 mphserver -help was run successfully with elevated launcher permissions; help confirms random free port (-port 0) and portfile options. Raw stdout/stderr plus comm-only prelaunch engine inventory are retained at evidence/luna_native_resume_smoke/launcher_help_and_prelaunch_processes.json.",
+    "Frozen native restart-smoke fixture was recorded before any native server or solver start: tools/java/NativeResumePDEFixture.java SHA-256 675e8e900ea64a7dbdc9b8f7a5904086e74d1a7372da2b04e9c0fdaf9c1d2d4f; exact model, nine sample points, thresholds, 180-second budget and solve cap are in evidence/luna_native_resume_smoke/FIXTURE_FREEZE.md.",
+    "Native smoke currently has no started server or solve. Prelaunch process inventory showed no COMSOL/java engine process; many pre-existing Python MCP/KB services remain untouched. Server configuration will be staged as a task-private shadow of COMSOL 6.4 and bound to IPv4 loopback before Worker connection.",
+    "run08 audit correction: the frozen 2-D point arrays failed the public result.at_points object schema; catalog and parser confirm x/y keys. 57 targeted software tests and py_compile pass after conversion; original run08 remains FAIL_OR_INCOMPLETE, and exactly 2/2 native study.run calls are consumed. Durable solved MPH hash verified for a separate zero-solve readback supplement.",
+    "Native saved-MPH supplemental attempt 1 preserved: Worker A real sampling succeeded and public execution revision advanced 0→1; imaginary sample submitted stale revision 0 and was rejected before Worker submission. Exact failure, ledger state, Worker events, and owned server cleanup are in supplement_20260926T072145Z_readback_only/revision_conflict_reconciliation.json. This prompted a caller-side revision handoff fix only; no solver call was made.",
+    "Native saved-MPH supplemental attempt 2 passed outside the original 180s budget: 6.4.0.293 task-owned loopback server, distinct Worker PIDs 81311/81365, same saved artifact hash, marker/sol1/dset1 and nine-point samples. Each EVALUATE response revision 0→1→2 matched the ledger; real max error 2.223e-13, imaginary 0, cross-Worker delta 0, protected study/solver calls 0. Evidence is supplement_20260926T072825Z_readback_only/supplement_summary.json; run08 remains FAIL_OR_INCOMPLETE and solve budget is 2/2.",
+    "Main-agent independently recomputed the two raw read-only SQLite result rows from each saved-MPH Worker and found matching nine-point coordinates bound to comp1/geom1/sol1/dset1: real max error 2.2226664952995634e-13, imaginary max 0, cross-Worker real/imag difference 0, cleanup verified_removed, public success true. This independently confirms the supplementary readback values; it does not change run08's FAIL_OR_INCOMPLETE status, the original 180 s run budget result, or W23/W24 acceptance.",
+    "Implemented artifact.register and the strict geometry.import registered-ID adapter using the existing OperationStore.artifacts table; direct/registry_call/operation_call registration paths, direct/registry_call geometry argument mapping, compare-and-insert race, reopened-store/new-Worker epoch, tamper/symlink/host/project checks pass in 245 software tests. Evidence: docs/full_project_execution/evidence/luna_f10_artifact_import/run_20260926T081842Z/run_summary.json. Native geometry import and all six target cells remain NOT_RUN/UNASSESSED.",
+    "Native F10 native campaign: frozen 2x1 m rectangle exported by COMSOL 6.4.0.293, production artifact.register succeeded with matching schema-v2 store/project copy hash, and fresh target model preparation Worker action succeeded; raw parser regression fixed offline (22 targeted tests pass). The same fixed native window was closed before geometry.import/build/measurement because the response parser needed correction and only about one minute remained; these operations stay NOT_RUN. All four run attempts, exact server/Worker cleanup and zero study/solver submissions are preserved under evidence/luna_f10_artifact_import/native_geometry; summary CAMPAIGN_STATUS.json. Do not extend that deadline or report native geometry import PASS.",
+    "F10 revised native candidate 2026-09-26 run_20260926T0924Z: fresh COMSOL 6.4.0.293 Engine/session/model successfully reused the same project-scoped registered artifact and prepared a new geometry target; geometry.import failed on Import.filename metadata, then the pre-fix handler incorrectly proceeded to build. Raw action and cleanup evidence are retained; all Worker requests reached terminal status, idle proof passed, owned server PID stopped.",
+    "Fixed Import.filename narrowly using the COMSOL 6.4 documented String contract, strict String setter/getString readback, fail-closed unresolved metadata handling, and build failure propagation. W14 plus artifact resolver regression: 159 passed; receipt and JUnit are run-scoped. Corrected source has NOT been native-retested because the fixed 600-second deadline elapsed.",
+    "Canonical W21 follow-up: solver.solution_transfer now records an explicit PARTIAL selector-only profile; exact outer/inner or a single unit-bearing time Quantity must resolve uniquely from complete dataset/SolutionInfo pair metadata. Nonempty variable maps and requests requiring mesh/history, geometry-frame, interpolation, or conservation guarantees fail closed; selector readback remains CONFIGURED_ONLY with no implicit solve.",
+    "Canonical experiment.run independently validates each supplied resource and timeout against its frozen budget before taking the lower value; budget exhaustion returns PARTIAL/BUDGET_EXHAUSTED. Unknown and failed cases stop further dispatch and preserve the durable run claim.",
+    "Combined software regression after these corrections: 64 passed across registry packaging, stdio gateway, existing W21 and canonical tests; py_compile passed. Run-scoped evidence: docs/full_project_execution/evidence/luna_w21_canonical/run_20260926T103600Z_r2/.",
+    "Authoritative task state was reconciled: W21/W23/W25/W26 have PARTIAL implementation evidence; W24 remains UNASSESSED with the main-agent plan only. W22 prior scoped approval and all native target/T021/T047 acceptance cells are unchanged.",
+    "W24 setup-only runner and Java fixture implemented; 10 focused offline tests, py_compile, and javac 11.0.31 passed. These are software-only checks. The 900-second, zero-study-run native preflight has not started; the later 3600-second/10-solve/2-Worker campaign remains unfrozen pending native readback.",
+    "The first elevated W24 runner invocation failed before inventory/engine birth because CLI helper imports lacked repository-root sys.path; exact traceback preserved. Corrected CLI import/path regression, 11 focused tests, py_compile, and javac passed; no native budget consumed.",
+    "W24 setup-only native attempt: owned COMSOL 6.4.0.293 server PID 29444 born 2026-09-27T01:24:00Z; Worker request terminal FAILED with Unknown_property intbnd, execution state UNKNOWN and durable build job remains UNKNOWN. Full paginated reconciliation found 5/5 Worker requests terminal, 0 pending, 0 active jobs, 0 study.run submissions. Exact PID/birth cleanup and 50711/50720 listener absence were verified within the 900-second budget; current exact recheck and stale F10 PID/port checks are clear. Offline correction uses explicit documented Union.intbnd; COMSOL 6.4 javac and 15 focused software tests pass, not native acceptance.",
+    "2026-09-27 02:23Z checkpoint: W23 candidate05 native API preflight FAILED on Port selection dimension; root-confirmed cleanup at 02:17:48Z (server 40900, child 40969, Worker 41010, exact PIDs and ports absent, elapsed 856.844s/900s). Durable job 0e09e3d7-a4f6-457d-925d-5a2bf2e1487b and operation 1e9dd459-0a64-445c-aeae-e7c43c312739 remain UNKNOWN with execution_state_unknown=true and safe_retry=false; no solve or acceptance. W24 offline science acceptance regression now requires full one-to-one alignment of energy samples and every stored accepted time, including exact 0..1500s coverage; 24 focused software tests pass. Evidence: docs/full_project_execution/evidence/main_w23_candidate05_cleanup_review.json and docs/full_project_execution/w24/evidence/science_runner_development_20260927T0223Z/offline_tests.json. No new native launch.",
+    {
+      "at_utc": "2026-09-27T03:33:26Z",
+      "scope": "W24 offline setup candidate implementation/freeze and independent cleanup/readback hardening",
+      "evidence": "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0330Z/offline_candidate_freeze.json",
+      "candidate_sha256": "c645acb360b4107f4a2ac56853040240571bc3a780bd9974d0d6ec7f04d98ab1",
+      "offline_result": "COMSOL 6.4 javac exit 0; Python compile exit 0; 36 focused software tests passed; 94-source closure; no native engine/solve",
+      "acceptance": "SOFTWARE_AND_SOURCE_FREEZE_ONLY; native setup NOT_RUN; macOS 6.3 both architectures USER_REQUESTED_SKIP"
+    },
+    "W24 setup-only native candidate 0330Z actually started COMSOL 6.4.0.293 PID 90771 at 2026-09-27T03:34:03Z, connected one Worker, then failed before model/API construction with ModuleNotFoundError: mcp because the invocation used Python 3.14. Zero model mutations and zero study/solver submissions; exact server/Worker/child PID and port cleanup plus global quiescence verified in native_run_20260927T0334Z/summary.json. This candidate failure remains unchanged.",
+    "W24 new distinct offline candidate 0346Z binds /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python (CPython 3.12.13), 38 installed package versions and distribution-list SHA-256 2d33bfc15fee3df5eddddf5fce2d74d6f5c68829f0fcbf498d2613a2635046e5; read-only pip check PASS; actual production collect_legacy_registry returned 58 entries; actual ControlDaemon constructed/closed with worker=None/service=None and scratch removed. JDK11 compile, py_compile and 37 focused tests passed; source closure has 94 files. This is offline/software evidence only; no native acceptance.",
+    "2026-09-27 W24 setup candidate 0510Z native attempt failed at ExternalStrain creation with Unknown_feature_ID_X#ExternalStrain; COMSOL 6.4.0.293, Worker FAILED, durable job UNKNOWN, execution_state_unknown=true, safe_retry=false, 0 study/solver submissions. Root-confirmed exact cleanup removed server PID 42334, Worker PID 42446/child 42404 and listeners 57512/57520; elapsed 14.322s. Offline COMSOL 6.4 docs and an installed 6.4 saved model support External Strain under solid.lemm1. Evidence: docs/full_project_execution/w24/evidence/root_cause_external_strain_20260927T0523Z.json.",
+    "2026-09-27T07:26:09Z: W24 Worker-transition source now compares ModelRef Worker epochs instead of logical session IDs, safely permitting the same endpoint session on Worker 2 while rejecting retired server_instance_id values. The runner fsyncs Worker 2 start intent and records observed Popen births separately from successful connected Worker sessions, without retries; Worker connection receipts are copied per Worker. py_compile and 39 focused tests passed; durable receipt is docs/full_project_execution/evidence/w24_worker_epoch_transition_20260927T072244Z/run_receipt.json, independently reviewed in docs/full_project_execution/evidence/main_w24_worker_epoch_transition_integrity_review.json. No engine/solve started.",
+    "W24 retirement integration checkpoint 2026-09-27T08:29Z: public ControlDaemon quiescence readback validation now matches the released schema (Worker instance and connection epoch; COMSOL server epoch remains separately bound through ModelRefs). Worker transition and final cleanup hold worker_retirement_guard from the fresh cross-project ledger/direct-RPC readback through exact owned cleanup and Popen exit confirmation. Actual ControlDaemon + fake Worker tests cover cross-project RUNNING work, work racing after an observational snapshot, admission refusal under RETIRING, and confirmed retirement. Exact Python 3.12.13 py_compile passed; 37 focused tests passed in the immutable capsule; an expanded W24-focused suite passed 83 tests. Receipt: docs/full_project_execution/w24/evidence/worker_retirement_integration_20260927T0829Z/run_receipt.json (SHA-256 e9a99f8dd8df1fcc327e633b53a419174f73d98a2d3b07f41c972b615758c244). Native status NOT_RUN; no COMSOL process or solve was launched, and no old FAIL/UNKNOWN state changed."
+  ],
+  "next_action": "Continue W24 science executor and phasefield implementation offline while release finishes F04 shared runtime integration. After release provides a stable handoff, refresh the complete W24 dependency/source closure, run exact Python 3.12.13 production/no-engine gates, JDK11 compile and focused tests, then submit a new candidate for root review. Do not reuse or relaunch the 0841Z freeze. Preserve this prebirth failure and the 0517Z ExternalStrain UNKNOWN/FAIL. The W24 10-solve science campaign remains NOT_FROZEN/NOT_STARTED. Continue all P0/W01-W26 work without a phase stop. Windows COMSOL 6.3 remains required and UNASSESSED; only macOS COMSOL 6.3 arm64/x86_64 are USER_REQUESTED_SKIP.",
+  "active_jobs": [],
+  "blockers": [
+    "W24 setup attempt 0841Z/0857Z ended FAIL_OR_INCOMPLETE before engine birth: project.create SUCCEEDED and project.inspect FAILED on injected idempotency_key. Preserve original receipt; do not replay this freeze. Offline helper fix and focused production test pass, but a new complete closure and root review are required before another setup launch.",
+    "Release is still integrating F04 shared runtime routes, so no coherent new W24 closure can be frozen yet. W24 science template has no accepted native setup receipt; the 10-solve executor remains NOT_FROZEN/NOT_STARTED.",
+    "The earlier 0517Z ExternalStrain failure and durable UNKNOWN/safe_retry=false remain unchanged; full cure/reference-state/viscoelastic/static-shape acceptance is open."
+  ],
+  "review_round": 0,
+  "external_state_missing": true,
+  "protected_MPH_integrity_verified": true,
+  "resume_recovery_audit": {
+    "checked_at_utc": "2026-09-26T21:58:33+00:00",
+    "missing_external_state": [
+      "/private/tmp/comsol-mcp-native-resume-smoke-20260926T070024Z_08",
+      "/private/tmp/comsol-mcp-native-resume-readback-20260926T072825Z_r2"
+    ],
+    "old_tmp_artifact_or_operation_store_files": "NOT_FOUND_IN_SCOPED_SEARCH",
+    "protected_mph": {
+      "path": "docs/full_project_execution/evidence/luna_native_resume_smoke/run_20260926T070024Z_08/protected_artifacts/native_resume_child.mph",
+      "size_bytes": 617475,
+      "expected_sha256": "9999608757cff08cfe052b398c3de24b1e2e0603dc375db3d0cc5928f77c6346",
+      "observed_sha256": "9999608757cff08cfe052b398c3de24b1e2e0603dc375db3d0cc5928f77c6346",
+      "integrity": "VERIFIED"
+    },
+    "original_run_status": "FAIL_OR_INCOMPLETE_POINT_SCHEMA_FAILURE; SOLVED_CHILD_ARTIFACT_DURABLE; SOLVE_BUDGET_EXHAUSTED; SEPARATE_SAVED_MPH_READBACK_PASS",
+    "native_solve_budget_remaining": 0,
+    "evidence": "docs/full_project_execution/evidence/luna_process_reconciliation/mac_readonly_snapshot_20260926T2152Z.json"
+  },
+  "updated_at": "2026-09-27T09:09:28Z",
+  "note": "Continuous authorized execution through W26. OpenViking task-detail retrieval was denied by auto-review because it would disclose internal roadmap identifiers externally; no workaround. Use current frozen workpack and read-only local memory only. Do not rerun bootstrap/init on resume. Source files now contain executor edits; do not rerun bootstrap/init. Git metadata is an APFS pointer managed by main agent; migration requires bundle/source transfer, not copying only the repository pointer. Git metadata migration is documented by evidence/git_metadata_relocation.json and owned by the main agent; do not copy the APFS git pointer to another machine without source bundle/archive. GUI permission boundary and checkpoint solution-scope caveat recorded. This executor has one W24 native setup-only failure with exact cleanup verified; the durable operation/job UNKNOWN records remain unchanged. No W24 solver submission occurred. Saved-MPH readback supplement uses separate time/evidence and zero study/solver calls; run08 remains FAIL_OR_INCOMPLETE. Root raw SQLite recomputation is linked under native_resume_saved_artifact_supplement.raw_recomputation_evidence; original run08 remains FAIL_OR_INCOMPLETE and no solve budget is restored. Latest checkpoint 2026-09-27T03:50:43Z: W24 0334Z setup run failed pre-model due Python 3.14 missing mcp, with exact cleanup; 0346Z candidate pins the validated 3.12.13 environment and passes a production no-engine registry/daemon preflight. Native setup remains pending root review; science implementation continues offline. Latest checkpoint 2026-09-27T09:09:28Z: W24 0841Z candidate was invoked once at 0857Z and failed before any engine/Worker birth because project.inspect received an injected idempotency_key; project.create persisted successfully. Exact read-only SQLite hash and operation result are in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_contract_diagnostic.json. The runner now omits the unnecessary inspect key; actual ControlDaemon focused regression is 2/2 PASS in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_runner_regression_receipt.json. No native retry or acceptance is claimed; release F04 runtime integration is active, so refresh closure and root review are required before another launch. Windows COMSOL 6.3 remains required/unassessed; only macOS 6.3 is USER_REQUESTED_SKIP.",
+  "native_resume_smoke": {
+    "status": "FAIL_OR_INCOMPLETE_POINT_SCHEMA_FAILURE; SOLVED_CHILD_ARTIFACT_DURABLE; SOLVE_BUDGET_EXHAUSTED; SEPARATE_SAVED_MPH_READBACK_PASS",
+    "run_id": "run_20260926T070024Z_08",
+    "evidence_dir": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/docs/full_project_execution/evidence/luna_native_resume_smoke/run_20260926T070024Z_08",
+    "work_dir": "/private/tmp/comsol-mcp-native-resume-smoke-20260926T070024Z_08",
+    "server_pid": 66628,
+    "port": 61596,
+    "listener_verified": true,
+    "worker_state": "CONNECTED",
+    "native_solve_count": 1,
+    "prior_native_solve_calls": 1,
+    "total_native_solve_calls": 2,
+    "max_real_solve_calls": 1,
+    "max_total_native_solve_calls": 2,
+    "wall_clock_budget_s": 180.0,
+    "fixture_sha256": "675e8e900ea64a7dbdc9b8f7a5904086e74d1a7372da2b04e9c0fdaf9c1d2d4f",
+    "engine_version": "COMSOL Multiphysics 6.4 (开发版本: 293)",
+    "engine_version_identity": {
+      "raw": "COMSOL Multiphysics 6.4 (开发版本: 293)",
+      "frozen_target": "COMSOL Multiphysics 6.4.0.293",
+      "normalized_identity": "6.4.0.293",
+      "version_family_match": true,
+      "build_293_match": true,
+      "matches_frozen_target": true,
+      "normalization_basis": "localized/English 6.4 family plus explicit build 293 marker"
+    },
+    "worker_pid": 66726,
+    "frozen_source_hashes": {
+      "fixture": [
+        "NativeResumePDEFixture.java",
+        "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/tools/java/NativeResumePDEFixture.java",
+        "675e8e900ea64a7dbdc9b8f7a5904086e74d1a7372da2b04e9c0fdaf9c1d2d4f"
+      ],
+      "runner": [
+        "run_native_resume_smoke.py",
+        "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/tools/run_native_resume_smoke.py",
+        "5700677873cb5490c249f85573bce8f89ccf8fe478a7ff1f67d6f36170cc8f02"
+      ],
+      "managed_backend": [
+        "_managed_backend.py",
+        "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/comsol_mcp/_managed_backend.py",
+        "d0823b52cd24841c0f958b1368119b75f25d3e6587c8f8ec0c21126ffa6014e7"
+      ],
+      "control_daemon": [
+        "_control_daemon.py",
+        "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/comsol_mcp/_control_daemon.py",
+        "e45b8439698c7ca0d7395cce1b0fda4b56ddeddaf2afe314438a3d95a13bf1d7"
+      ],
+      "worker": [
+        "_java_worker.py",
+        "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/comsol_mcp/_java_worker.py",
+        "56271a8a07f85e190aabbea01867cd3532968e6c9db800c429823043b64c58f3"
+      ],
+      "result_adapter": [
+        "_g3_results.py",
+        "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/comsol_mcp/_g3_results.py",
+        "53f14fab41eed17835641bade8f0d40a2605836b8c41b28004040cb5dcface87"
+      ]
+    },
+    "source_model_ref": {
+      "schema_version": 1,
+      "session_id": "session-f8236681eef044451e566c70",
+      "server_instance_id": "1f1d9c6565159e5b523bd89dedc0244efdeeef04e6550617d6493f8a58e24d29",
+      "model_tag": "mcp1",
+      "generation": 1
+    },
+    "source_revision": 1,
+    "source_snapshot_revision": 1,
+    "source_current_revision": 2,
+    "source_model_dirty_authorized": true,
+    "authorization_ref_sha256": "9cfd601253c1a4d368ff497c29c9a0f5d691db15778d39987a3da19e24da29f8",
+    "source_job_id": "98b7de13-ffdd-4200-9112-5422956c73eb",
+    "checkpoint_sha256": "73f9cf3ec16cbec4a5c22ceaf707fa170352d3b797ddf1995842928f0cd2ad7b",
+    "child_job_id": "131ff34c-9eb9-4ccd-ae2b-7c6859fc2c33",
+    "solved_model_path": "/private/tmp/comsol-mcp-native-resume-smoke-20260926T070024Z_08/project/native_resume_child.mph",
+    "solved_model_sha256": "9999608757cff08cfe052b398c3de24b1e2e0603dc375db3d0cc5928f77c6346",
+    "last_error": {
+      "type": "RuntimeError",
+      "message": "result.at_points/real failed: {\"success\": false, \"data\": {}, \"error\": {\"code\": \"INVALID_REQUEST\", \"message\": \"result.at_points.points[0] must be an object\", \"safe_retry\": false}, \"execution\": {\"request_id\": \"resume-real-30a85312-7ea3-4dc0-be58-34d6343f0186\", \"operation_id\": \"c2deb726-7fe8-40e4-98c6-100f06accdc6\", \"request_hash\": \"3151b5adf1d00a31eab39abac6bf73edfac1c351f1f17b0d9eeb5938325fe7ba\", \"idempotency_key\": \"resume-real-bf5b271d-d1a0-49b7-843d-5b23a5704eab\", \"job_id\": \"035150ff-6ddb-42d8-82e6-195267795199\"}}"
+    },
+    "elapsed_s": 10.271,
+    "active_jobs": [],
+    "point_schema_reconciliation": "docs/full_project_execution/evidence/luna_native_resume_smoke/run_20260926T070024Z_08/run08_point_schema_reconciliation.json",
+    "supplement_no_solve_budget_remaining": 0,
+    "targeted_regression": {
+      "status": "PASS",
+      "passed": 57,
+      "evidence": "docs/full_project_execution/evidence/luna_native_resume_smoke/software_regressions_20260926T072145Z_supplement/summary.json"
+    },
+    "supplement_readback_evidence": "docs/full_project_execution/evidence/luna_native_resume_smoke/supplement_20260926T072825Z_readback_only/supplement_summary.json",
+    "original_180s_budget": "run08 failed within budget; separate 12.04s read-only verification is not folded into run08 status",
+    "solve_budget_remaining": 0,
+    "protected_saved_artifact": "docs/full_project_execution/evidence/luna_native_resume_smoke/run_20260926T070024Z_08/protected_artifacts/native_resume_child.mph"
+  },
+  "native_resume_smoke_attempts": [
+    {
+      "run_id": "run_20260926T061009Z_04",
+      "status": "UNKNOWN_CHECKPOINT_KEY_ERROR_RECONCILED",
+      "native_solve_count": 0,
+      "evidence_dir": "docs/full_project_execution/evidence/luna_native_resume_smoke/run_20260926T061009Z_04",
+      "evidence": "post_failure_quiescence.json; checkpoint key mismatch; no study.run request."
+    },
+    {
+      "run_id": "run_20260926T062300Z_05",
+      "status": "FAILED_REVISION_CONFLICT_NO_SOLVE",
+      "native_solve_count": 0,
+      "evidence_dir": "docs/full_project_execution/evidence/luna_native_resume_smoke/run_20260926T062300Z_05",
+      "evidence": "failure.json; snapshot revision 1/current revision 2; then corrected using scoped authorization_ref."
+    },
+    {
+      "run_id": "run_20260926T062500Z_06",
+      "status": "FAILED_NODEPATH_VALIDATION_NO_SOLVE",
+      "native_solve_count": 0,
+      "evidence_dir": "docs/full_project_execution/evidence/luna_native_resume_smoke/run_20260926T062500Z_06",
+      "evidence": "run06_solve_count_reconciliation.json; domain witness engine_calls=0."
+    },
+    {
+      "run_id": "run_20260926T064659Z_07",
+      "status": "CHILD_SUCCEEDED_HARNESS_STOPPED_BEFORE_READBACKS",
+      "native_solve_count": 1,
+      "evidence_dir": "docs/full_project_execution/evidence/luna_native_resume_smoke/run_20260926T064659Z_07",
+      "evidence": "run07_solve_count_reconciliation.json; actual successful method witness; server and worker stopped."
+    },
+    {
+      "run_id": "run_20260926T070024Z_08",
+      "status": "FAIL_OR_INCOMPLETE",
+      "evidence_dir": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/docs/full_project_execution/evidence/luna_native_resume_smoke/run_20260926T070024Z_08",
+      "work_dir": "/private/tmp/comsol-mcp-native-resume-smoke-20260926T070024Z_08",
+      "native_solve_count": 1,
+      "prior_native_solve_calls": 1,
+      "total_native_solve_calls": 2,
+      "max_real_solve_calls": 1,
+      "max_total_native_solve_calls": 2,
+      "wall_clock_budget_s": 180.0,
+      "source_job_id": "98b7de13-ffdd-4200-9112-5422956c73eb",
+      "child_job_id": "131ff34c-9eb9-4ccd-ae2b-7c6859fc2c33",
+      "solved_model_path": "/private/tmp/comsol-mcp-native-resume-smoke-20260926T070024Z_08/project/native_resume_child.mph",
+      "solved_model_sha256": "9999608757cff08cfe052b398c3de24b1e2e0603dc375db3d0cc5928f77c6346",
+      "elapsed_s": 10.271,
+      "last_error": {
+        "type": "RuntimeError",
+        "message": "result.at_points/real failed: {\"success\": false, \"data\": {}, \"error\": {\"code\": \"INVALID_REQUEST\", \"message\": \"result.at_points.points[0] must be an object\", \"safe_retry\": false}, \"execution\": {\"request_id\": \"resume-real-30a85312-7ea3-4dc0-be58-34d6343f0186\", \"operation_id\": \"c2deb726-7fe8-40e4-98c6-100f06accdc6\", \"request_hash\": \"3151b5adf1d00a31eab39abac6bf73edfac1c351f1f17b0d9eeb5938325fe7ba\", \"idempotency_key\": \"resume-real-bf5b271d-d1a0-49b7-843d-5b23a5704eab\", \"job_id\": \"035150ff-6ddb-42d8-82e6-195267795199\"}}"
+      }
+    }
+  ],
+  "native_resume_saved_artifact_supplement": {
+    "supplement_id": "saved_mph_readback_20260926T072915Z_ef90f6",
+    "status": "PASS_READ_ONLY_SAVED_MPH_REOPEN_ZERO_SOLVES",
+    "evidence_dir": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/docs/full_project_execution/evidence/luna_native_resume_smoke/supplement_20260926T072825Z_readback_only",
+    "work_dir": "/private/tmp/comsol-mcp-native-resume-readback-20260926T072825Z_r2",
+    "source_run_id": "run_20260926T070024Z_08",
+    "source_run_status": "FAIL_OR_INCOMPLETE",
+    "saved_artifact_sha256": "9999608757cff08cfe052b398c3de24b1e2e0603dc375db3d0cc5928f77c6346",
+    "solve_calls_allowed": 0,
+    "study_solver_methods_blocked": [
+      "run",
+      "runAll",
+      "runFromTo",
+      "runFromToNoGen",
+      "runNoGen"
+    ],
+    "active_jobs": [],
+    "server_pid": 81149,
+    "port": 65208,
+    "listener_verified": true,
+    "worker_a_pid": 81311,
+    "engine_version_identity": {
+      "raw": "COMSOL Multiphysics 6.4 (开发版本: 293)",
+      "frozen_target": "COMSOL Multiphysics 6.4.0.293",
+      "normalized_identity": "6.4.0.293",
+      "version_family_match": true,
+      "build_293_match": true,
+      "matches_frozen_target": true,
+      "normalization_basis": "localized/English 6.4 family plus explicit build 293 marker"
+    },
+    "worker_a_readback_signature": "e3b99e4dde2b48f8a7255fae111a794a43c1dd698cb0648dc15c89e6ba23043e",
+    "solution_dataset_identity": {
+      "datasets": [
+        "dset1"
+      ],
+      "solutions": [
+        "sol1"
+      ]
+    },
+    "worker_b_pid": 81365,
+    "worker_b_readback_signature": "e3b99e4dde2b48f8a7255fae111a794a43c1dd698cb0648dc15c89e6ba23043e",
+    "completed_at_utc": "2026-09-26T07:29:27.968519+00:00",
+    "elapsed_s": 12.04,
+    "worker_pids": [
+      81311,
+      81365
+    ],
+    "artifact_sha256_after": "9999608757cff08cfe052b398c3de24b1e2e0603dc375db3d0cc5928f77c6346",
+    "solve_calls_observed": 0,
+    "summary": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/docs/full_project_execution/evidence/luna_native_resume_smoke/supplement_20260926T072825Z_readback_only/supplement_summary.json",
+    "raw_recomputation_evidence": {
+      "status": "PASS_ROOT_RAW_SQLITE_NUMERICAL_RECOMPUTATION",
+      "file": "docs/full_project_execution/evidence/main_saved_mph_raw_recomputation.json",
+      "scope": "Read-only independent recomputation from both Worker operation result rows in operations.sqlite3; nine frozen points, comp1/geom1/sol1/dset1, success and cleanup readback.",
+      "not_claimed": [
+        "run08 original harness PASS",
+        "original 180-second end-to-end budget PASS",
+        "W23 optical acceptance",
+        "W24 cure-history acceptance",
+        "six-target closure"
+      ]
+    }
+  },
+  "native_resume_saved_artifact_supplement_attempts": [
+    {
+      "supplement_id": "saved_mph_readback_20260926T072406Z_7a8258",
+      "status": "FAIL_OR_INCOMPLETE_READ_ONLY_SUPPLEMENT",
+      "evidence_dir": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/docs/full_project_execution/evidence/luna_native_resume_smoke/supplement_20260926T072145Z_readback_only",
+      "work_dir": "/private/tmp/comsol-mcp-native-resume-readback-20260926T072145Z",
+      "source_run_id": "run_20260926T070024Z_08",
+      "source_run_status": "FAIL_OR_INCOMPLETE",
+      "saved_artifact_sha256": "9999608757cff08cfe052b398c3de24b1e2e0603dc375db3d0cc5928f77c6346",
+      "solve_calls_allowed": 0,
+      "elapsed_s": 9.053,
+      "last_error": {
+        "type": "RuntimeError",
+        "message": "result.at_points/imag failed: {\"success\": false, \"data\": {}, \"error\": {\"code\": \"REVISION_CONFLICT\", \"message\": \"requested revision 0 does not match managed revision 1\", \"safe_retry\": false}, \"execution\": {\"request_id\": \"worker_a-imag-8b497898-49a9-4b8a-a64f-c86c306552c2\", \"operation_id\": \"4a68a4f0-1a47-4574-85c2-2cba3fb6c7c2\", \"request_hash\": \"df6ed991dee47871cf5a97241e29b0506d1a9ff9b31c085aec1c68f21d8fbdde\", \"idempotency_key\": \"worker_a-imag-6117a654-9cd2-4c6d-a6a8-9aec71c0f46b\", \"job_id\": \"c3e7117d-1fd3-4653-a70f-8a811e2e5048\"}}"
+      },
+      "reconciliation_evidence": "docs/full_project_execution/evidence/luna_native_resume_smoke/supplement_20260926T072145Z_readback_only/revision_conflict_reconciliation.json"
+    },
+    {
+      "supplement_id": "saved_mph_readback_20260926T072915Z_ef90f6",
+      "status": "PASS_READ_ONLY_SAVED_MPH_REOPEN_ZERO_SOLVES",
+      "evidence_dir": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/docs/full_project_execution/evidence/luna_native_resume_smoke/supplement_20260926T072825Z_readback_only",
+      "work_dir": "/private/tmp/comsol-mcp-native-resume-readback-20260926T072825Z_r2",
+      "source_run_id": "run_20260926T070024Z_08",
+      "source_run_status": "FAIL_OR_INCOMPLETE",
+      "saved_artifact_sha256": "9999608757cff08cfe052b398c3de24b1e2e0603dc375db3d0cc5928f77c6346",
+      "solve_calls_allowed": 0,
+      "server_pid": 81149,
+      "port": 65208,
+      "worker_a_pid": 81311,
+      "worker_b_pid": 81365,
+      "elapsed_s": 12.04
+    }
+  ],
+  "native_geometry_probe": {
+    "status": "FAIL_OR_INCOMPLETE",
+    "evidence_dir": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/docs/full_project_execution/evidence/luna_f10_artifact_import/native_geometry/run_20260926T2351Z_f10_type_readback_reuse02",
+    "updated_at": "2026-09-27T00:04:51Z",
+    "scope": "COMSOL 6.4 artifact.register to native MPHTXT geometry import/build/readback; zero study/solver calls"
+  },
+  "native_artifact_geometry_campaign": {
+    "status": "PARTIAL_NATIVE_ARTIFACT_REGISTER_OBSERVED_IMPORT_NOT_RUN",
+    "fixture_freeze": "docs/full_project_execution/evidence/luna_f10_artifact_import/native_geometry/FIXTURE_FREEZE.md",
+    "campaign_budget_origin": "docs/full_project_execution/evidence/luna_f10_artifact_import/native_geometry/CAMPAIGN_BUDGET_ORIGIN.json",
+    "fixed_deadline_utc": "2026-09-26T09:18:01Z",
+    "native_export": {
+      "status": "OBSERVED_SUCCESS",
+      "run": "run_20260926T090417Z_macos64",
+      "engine": "COMSOL Multiphysics 6.4.0.293",
+      "source_sha256": "a2a88b2a0859661c69a81598903bed6717753d0cf9178b9f5a697797fa75551e",
+      "dimension": 2,
+      "domains": 1,
+      "bbox_m": [
+        0.0,
+        2.0,
+        0.0,
+        1.0
+      ]
+    },
+    "artifact_register": {
+      "status": "OBSERVED_SUCCESS",
+      "run": "run_20260926T0913Z_macos64",
+      "artifact_id": "a2a88b2a0859661c69a81598903bed6717753d0cf9178b9f5a697797fa75551e",
+      "readback": "project content-addressed copy and schema-v2 OperationStore record matched SHA; project/host scope recorded",
+      "evidence": "docs/full_project_execution/evidence/luna_f10_artifact_import/native_geometry/run_20260926T0913Z_macos64/artifact_registration_receipt.json"
+    },
+    "target_model_prepare": {
+      "status": "OBSERVED_WORKER_SUCCESS_BUT_INITIAL_HARNESS_PARSE_FAIL",
+      "raw": "docs/full_project_execution/evidence/luna_f10_artifact_import/native_geometry/run_20260926T0913Z_macos64/action_03_target_geometry_prepare.json",
+      "parser_fix": "_java_action_readback now handles the real nested managed/Worker/Java response; raw-response regression passes"
+    },
+    "geometry_import_build_measure_validate": {
+      "status": "FAIL_NATIVE_IMPORT_AND_BUILD; MEASURE_VALIDATE_NOT_RUN",
+      "raw_action": "docs/full_project_execution/evidence/luna_f10_artifact_import/native_geometry/run_20260926T0924Z_revised_candidate/action_03_geometry_import_build.json",
+      "failure": "The source candidate saw unavailable Import.filename metadata, returned property failure, then incorrectly invoked build and received missing-filename engine error. Raw failure was preserved unchanged.",
+      "software_fix_receipt": "docs/full_project_execution/evidence/luna_f10_artifact_import/native_geometry/import_filename_failure_gate_repair_20260926T0942Z.json",
+      "corrected_source_sha256": "3bb56d704dedcc81ca8aee0c3194579578dd514a6ffdb2b5adbc16ce999ed2e8",
+      "software_tests": "159 passed",
+      "corrected_source_native_status": "NOT_RUN",
+      "retry_disposition": "No retry: fixed 600-second revised-candidate deadline elapsed at 2026-09-26T09:38:12Z; no additional Engine started."
+    },
+    "study_solver_submissions": 0,
+    "active_jobs": [],
+    "attempts": [
+      {
+        "run": "run_20260926T085742Z_macos64",
+        "status": "FAILED_JAVA_COMPILE_BEFORE_FIXTURE",
+        "evidence": "failure.json"
+      },
+      {
+        "run": "run_20260926T090417Z_macos64",
+        "status": "EXPORT_SUCCESS_RUNNER_PARSE_FAILURE",
+        "evidence": "action_02_native_geometry_export.json"
+      },
+      {
+        "run": "run_20260926T0912Z_macos64",
+        "status": "REGISTER_REJECTED_IDENTITY_MISMATCH_NO_SIDE_EFFECT",
+        "evidence": "action_02_artifact_register.json"
+      },
+      {
+        "run": "run_20260926T0913Z_macos64",
+        "status": "REGISTER_SUCCESS_TARGET_WORKER_SUCCESS_RUNNER_PARSE_FAILURE",
+        "evidence": "artifact_registration_receipt.json; action_03_target_geometry_prepare.json; cleanup.json"
+      }
+    ],
+    "offline_tests": {
+      "status": "PASS",
+      "tests": 22,
+      "suite": "tests/test_native_artifact_geometry_runner.py tests/test_artifact_registration_import.py",
+      "log": "docs/full_project_execution/evidence/luna_f10_artifact_import/native_geometry/software_regression_20260926T0917Z.log"
+    },
+    "scope_note": "Observed success is limited to native MPHTXT export, production artifact.register and target model preparation on macOS 27.0 (unlisted by COMSOL 6.4 vendor OS table); it is not vendor-certified. Geometry import/build/measure/validate, Desktop, and W23/W24 are not accepted by this probe.",
+    "revised_candidate": {
+      "status": "FAIL_NATIVE_IMPORT_BUILD; SOFTWARE_CORRECTION_READY_NATIVE_RETEST_REQUIRED",
+      "freeze_file": "docs/full_project_execution/evidence/luna_f10_artifact_import/native_geometry/REVISED_CANDIDATE_FREEZE_20260926T0924Z.json",
+      "candidate_id": "run_20260926T0924Z_revised_candidate",
+      "budget_seconds": 600,
+      "max_engine_starts": 2,
+      "native_exports": 0,
+      "artifact_registrations": 0,
+      "study_solver_calls": 0,
+      "same_project_store_reuse": true,
+      "prior_registration_receipt_sha256": "bda3c69108c89b684d0e22b96218d9031c94e1ca2bcfbb4f2f2ab0b7a539936f",
+      "source_manifest_sha256": "ecd1bfb9be0f6b620e67b00581af2dc787a787b45312d7b622b3cbbf8dca6483",
+      "active_jobs": [],
+      "attempted_run": "run_20260926T0924Z_revised_candidate",
+      "attempted_run_raw_action": "docs/full_project_execution/evidence/luna_f10_artifact_import/native_geometry/run_20260926T0924Z_revised_candidate/action_03_geometry_import_build.json",
+      "attempted_run_status": "FAIL",
+      "failure_gate_software_fix_receipt": "docs/full_project_execution/evidence/luna_f10_artifact_import/native_geometry/import_filename_failure_gate_repair_20260926T0942Z.json",
+      "corrected_source_sha256": "3bb56d704dedcc81ca8aee0c3194579578dd514a6ffdb2b5adbc16ce999ed2e8",
+      "software_regression_passed": 159,
+      "corrected_source_native_retest": "NOT_RUN_DEADLINE_EXPIRED",
+      "fixed_deadline_utc": "2026-09-26T09:38:12Z"
+    }
+  },
+  "effective_scope_decisions": [
+    {
+      "id": "USER_SCOPE_WAIVER_MACOS_COMSOL63_20260926",
+      "effective_disposition": "USER_REQUESTED_SKIP",
+      "user_instruction": "跳过mac 6.3验证",
+      "scope": [
+        "macos-arm64/comsol6.3",
+        "macos-x86_64/comsol6.3"
+      ],
+      "applies_to": "Mac native COMSOL 6.3 validation for both Apple Silicon and Intel targets",
+      "does_not_apply_to": [
+        "windows-x64/comsol6.3",
+        "windows-x64/comsol6.4",
+        "macos-arm64/comsol6.4",
+        "macos-x86_64/comsol6.4"
+      ],
+      "original_contract_preserved": true,
+      "status_handling": "Keep existing target status NOT_RUN (or preserve an already-recorded historical status); do not convert to PASS or NOT_APPLICABLE.",
+      "claims_prohibited": [
+        "macOS Apple Silicon COMSOL 6.3 compatibility verified",
+        "macOS Intel COMSOL 6.3 compatibility verified"
+      ],
+      "recorded_at": "2026-09-26T09:26:38Z"
+    }
+  ],
+  "notes": [
+    "User-requested Mac COMSOL 6.3 scope waiver recorded across ACCEPTANCE_MATRIX, ACTION_COVERAGE and TASKS. Original required contract unchanged; target cells remain NOT_RUN with USER_REQUESTED_SKIP metadata; no Mac 6.3 compatibility claim.",
+    "Current execution moved to the canonical W21 solution-transfer/experiment-run schema corrections. The F10 native import attempt remains FAIL; the post-fix native result is NOT_RUN, not PASS. Mac 6.3 USER_REQUESTED_SKIP metadata remains in force.",
+    "2026-09-26 F10 geometry round remains native FAIL on frozen pre-fix candidate; do not upgrade after-source software regression to native pass. Original 1045 pre-engine directory collision evidence is preserved; retest02 uses unique private per-round paths. Worker cache/source hash are recorded in worker_connection.json and freeze."
+  ],
+  "w21_canonical_scope": {
+    "status": "PARTIAL_IMPLEMENTATION",
+    "transfer_profile": "exact-selected-solution-initial-value-selector-only",
+    "transfer_guarantees": {
+      "variable_mapping": "NOT_IMPLEMENTED_AND_NONEMPTY_REQUESTS_REFUSED",
+      "mesh_compatibility": "UNVERIFIED",
+      "geometry_framework": "UNSUPPORTED",
+      "interpolation": "UNSUPPORTED",
+      "conservation_error": "NOT_COMPUTED",
+      "history_preserved": false,
+      "implicit_solve": false
+    },
+    "experiment_profile": "durable_project_model_revision_bound_cartesian_grid_using_bounded_W21_executor",
+    "budget_exhaustion": "PARTIAL_BUDGET_EXHAUSTED",
+    "software_evidence": "docs/full_project_execution/evidence/luna_w21_canonical/run_20260926T103600Z_r2/pytest.log",
+    "native_acceptance": "NOT_RUN",
+    "frozen_scope_reference": "docs/full_project_execution/contract/00_FULL_SPEC.md:278"
+  },
+  "root_checkpoint": {
+    "at": "2026-09-27T03:33:26Z",
+    "previous_next_action": "W24 science runner offline implementation; setup birth previously failed and consumed.",
+    "scope": "W24 setup-only offline candidate frozen for root review; no native start this turn. Continue full science executor implementation and broader W01-W26 work.",
+    "candidate_freeze": "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0330Z/offline_candidate_freeze.json",
+    "candidate_sha256": "c645acb360b4107f4a2ac56853040240571bc3a780bd9974d0d6ec7f04d98ab1",
+    "w23_latest_native_review": "docs/full_project_execution/evidence/main_w23_candidate06_native_review.json",
+    "last_root_observation": "W23 candidate06 API-only no-solve preflight and exact cleanup passed; it does not establish optical acceptance. W24 setup candidate is offline only and requires root native-slot coordination."
+  },
+  "w24_setup_only_preflight": {
+    "status": "LATEST_SETUP_FAIL_OR_INCOMPLETE_UNKNOWN_EXTERNAL_STRAIN_CLEANUP_VERIFIED",
+    "runner": "tools/run_native_w24_cure_preflight.py",
+    "fixture": "tools/java/W24CureCouponFixture.java",
+    "proposal": "docs/full_project_execution/w24/W24_CURE_FIXTURE_PROPOSAL.md",
+    "offline_evidence": "docs/full_project_execution/w24/evidence/root_cause_external_strain_20260927T0523Z.json",
+    "offline_scope": "Offline ExternalStrain hierarchy fix in progress; correct 6.4 child location/type supported by official documentation and installed saved model. StrainInput/dV require actual native getter readback; no native reattempt.",
+    "native_engine_births_this_checkpoint": 1,
+    "native_study_run_submissions_this_checkpoint": 0,
+    "preflight_budget": {
+      "owned_servers": 1,
+      "max_seconds_from_exact_birth_including_cleanup": 900,
+      "study_run_submissions": 0,
+      "worker_sessions": 1
+    },
+    "following_solver_campaign": {
+      "status": "NOT_FROZEN_BY_SETUP_PREFLIGHT",
+      "separate_birth_budget_seconds": 3600,
+      "max_solve_submissions": 10,
+      "max_sequential_worker_sessions": 2
+    },
+    "invocation_attempts": [
+      {
+        "evidence": "docs/full_project_execution/w24/evidence/setup_only_candidate_20260927T0117Z/attempt_20260927T0121Z_cli_import_failure.json",
+        "status": "FAILED_BEFORE_INVENTORY_OR_BIRTH",
+        "engine_births": 0,
+        "study_run_submissions": 0,
+        "root_cause": "CLI did not add repository root to sys.path before importing tools.run_native_resume_smoke; corrected and covered by CLI guard regression."
+      },
+      {
+        "evidence": "docs/full_project_execution/w24/evidence/setup_only_candidate_20260927T0117Z/native_run_20260927T0121Z/events.jsonl",
+        "status": "FAIL_OR_INCOMPLETE_UNKNOWN_PROPERTY_CLEANUP_VERIFIED",
+        "engine_births": 1,
+        "server_pid": 29444,
+        "worker_pid": 29531,
+        "server_birth_utc": "2026-09-27T01:24:00Z",
+        "worker_birth_utc": "2026-09-27T01:24:04Z",
+        "server_port": 50711,
+        "worker_port": 50720,
+        "worker_terminal": "FAILED",
+        "execution_state_unknown": true,
+        "durable_job_status": "UNKNOWN",
+        "failure": "Unknown_property intbnd on fin finalization feature",
+        "study_run_submissions": 0,
+        "cleanup": "docs/full_project_execution/w24/evidence/setup_only_candidate_20260927T0117Z/native_run_20260927T0121Z/exact_owned_cleanup_retry1.json",
+        "budget_seconds_from_birth_to_server_signal": 809.032745,
+        "source_freeze_sha256": "cec5a2a5671f1d46f946289962965102a1788c17ce273d00bde919522512169e"
+      },
+      {
+        "evidence": "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0510Z/native_run_20260927T0517Z/summary.json",
+        "candidate_freeze": "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0510Z/offline_candidate_freeze.json",
+        "candidate_freeze_sha256": "17a79db2b70e34498a2cf403e3709c3f3f54a2f8e0a72c781f5e637e7d4dce73",
+        "status": "FAIL_OR_INCOMPLETE_UNKNOWN_CLEANUP_VERIFIED",
+        "engine": "COMSOL 6.4.0.293",
+        "server_pid": 42334,
+        "server_birth_raw_local": "Sun Sep 27 13:13:38 2026",
+        "server_port": 57512,
+        "worker_pid": 42446,
+        "worker_port": 57520,
+        "worker_child_pid": 42404,
+        "worker_status": "FAILED",
+        "execution_state_unknown": true,
+        "durable_job_status": "UNKNOWN",
+        "safe_retry": false,
+        "failure": "InvocationTargetException: null (cause: FlException: Unknown_feature_ID_X#ExternalStrain)",
+        "study_solver_submissions": 0,
+        "cleanup": "Exact server/Worker/child identities and both listeners absent; global process/listener inventory quiescent; 14.322 seconds from birth. See docs/full_project_execution/w24/evidence/setup_candidate_20260927T0510Z/native_run_20260927T0517Z/exact_owned_cleanup_receipt.json.",
+        "root_cause_evidence": "docs/full_project_execution/w24/evidence/root_cause_external_strain_20260927T0523Z.json"
+      }
+    ],
+    "setup_budget_state": "The 0510Z candidate used its authorized single setup-server birth and terminated after a native feature-creation failure; exact cleanup took 14.322s. The historical durable UNKNOWN is preserved. No repeat birth is authorized by this checkpoint.",
+    "native_attempt_evidence": "docs/full_project_execution/w24/evidence/setup_only_candidate_20260927T0117Z/native_run_20260927T0121Z/worker_job_reconciliation_paged_v3.json",
+    "cleanup_evidence": "docs/full_project_execution/w24/evidence/setup_only_candidate_20260927T0117Z/native_run_20260927T0121Z/exact_owned_cleanup_retry1.json",
+    "current_process_recheck": "docs/full_project_execution/w24/evidence/setup_only_candidate_20260927T0117Z/native_run_20260927T0121Z/cleanup_current_recheck_20260927T0141Z.json",
+    "stale_f10_process_recheck": "docs/full_project_execution/w24/evidence/setup_only_candidate_20260927T0117Z/native_run_20260927T0121Z/process_state_reconciliation_20260927T0147Z.json",
+    "failure": {
+      "exception": "COMSOL Unknown_property: intbnd set on fin finalization feature",
+      "worker_status": "FAILED",
+      "execution_state_unknown": true,
+      "durable_job_id": "d7b85731-1d67-4891-8de6-4e2ebad7536e",
+      "durable_operation_id": "e8e59a85-eca9-499d-99b6-bab5989e28760",
+      "durable_request_id": "w24-build-request-0798b179-bce1-4a17-8338-2f719dbde50e",
+      "durable_status": "UNKNOWN",
+      "safe_retry": false,
+      "partial_changes": true
+    },
+    "worker_reconciliation": {
+      "status": "ALL_WORKER_REQUESTS_TERMINAL",
+      "submitted": 5,
+      "observed": 5,
+      "pending": 0,
+      "orphan_observed": 0,
+      "nonterminal": 0,
+      "active_jobs": 0,
+      "study_run_submissions": 0
+    },
+    "corrected_source_sha256": "8f19e193074005a2bf0ac367d8580ed9157a8bca00ff291ce9575c8d3d9621b5",
+    "offline_test_receipt": "docs/full_project_execution/w24/evidence/setup_only_candidate_20260927T0117Z/offline_intbnd_pytest.json",
+    "offline_compile_receipt": "docs/full_project_execution/w24/evidence/setup_only_candidate_20260927T0117Z/offline_intbnd_javac.json",
+    "blockers": [
+      "0517Z native setup failed at root-level ExternalStrain creation; preserve durable UNKNOWN and FAIL_OR_INCOMPLETE; exact cleanup verified.",
+      "Corrected child hierarchy has not yet been natively verified; no further birth is authorized by this checkpoint.",
+      "Science campaign remains incomplete, not frozen, not started; no solve submissions."
+    ],
+    "offline_science_acceptance": {
+      "receipt": "docs/full_project_execution/w24/evidence/science_runner_development_20260927T0223Z/offline_tests.json",
+      "result": "24 passed; offline software tests only",
+      "correction": "energy samples must match the complete stored accepted-time vector exactly within 1e-12 s and cover 0..1500 s",
+      "native_claim": "NONE"
+    },
+    "latest_offline_candidate": {
+      "status": "OFFLINE_HIERARCHY_CORRECTION_IN_PROGRESS_NOT_FROZEN",
+      "root_cause_evidence": "docs/full_project_execution/w24/evidence/root_cause_external_strain_20260927T0523Z.json",
+      "native_status": "NOT_AUTHORIZED_NOT_RUN",
+      "changed_sources": [
+        "tools/java/W24CureCouponFixture.java",
+        "tools/java/W24CureScienceFixture.java",
+        "tests/test_w24_cure_coupon_fixture.py"
+      ],
+      "next_gate": "COMSOL 6.4/JDK11 compile + focused tests + complete current source-closure freeze + root review",
+      "property_scope": "Future native readback must verify actual feature type, selection, StrainInput and dV. The current evidence does not verify W24 StrainInput/dV values."
+    },
+    "latest_native_failure": {
+      "evidence": "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0510Z/native_run_20260927T0517Z/summary.json",
+      "status": "FAIL_OR_INCOMPLETE_UNKNOWN_CLEANUP_VERIFIED",
+      "worker_status": "FAILED",
+      "execution_state_unknown": true,
+      "durable_job_status": "UNKNOWN",
+      "safe_retry": false,
+      "failure": "InvocationTargetException: null (cause: FlException: Unknown_feature_ID_X#ExternalStrain)",
+      "study_solver_submissions": 0,
+      "cleanup": "Exact server/Worker/child identities and both listeners absent; global process/listener inventory quiescent; 14.322 seconds from birth. See docs/full_project_execution/w24/evidence/setup_candidate_20260927T0510Z/native_run_20260927T0517Z/exact_owned_cleanup_receipt.json."
+    },
+    "latest_worker_reconciliation": "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0510Z/native_run_20260927T0517Z/worker_ledger_reconciliation.json",
+    "latest_cleanup_evidence": "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0510Z/native_run_20260927T0517Z/exact_owned_cleanup_receipt.json"
+  },
+  "active_jobs_reconciliation": {
+    "checked_at_utc": "2026-09-27T09:09:28Z",
+    "scope": "Exact W24 0841Z candidate invocation and its durable operation records; no global post-run process inventory claimed.",
+    "known_active_jobs": 0,
+    "native_births_in_attempt": 0,
+    "worker_births_in_attempt": 0,
+    "solve_submissions_in_attempt": 0,
+    "attempt_summary": "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/summary.json",
+    "project_inspect_diagnostic": "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_contract_diagnostic.json",
+    "cleanup": "NOT_STARTED because no owned COMSOL process was created",
+    "other_agent_status": "Release runtime hold was released; F04 shared runtime integration resumed."
+  },
+  "w23_candidate05_native_preflight": {
+    "status": "FAILED_NATIVE_API_PREFLIGHT_UNKNOWN_EFFECT_CLEANUP_CONFIRMED",
+    "candidate_id": "W23-TE-PORT-API-READBACK-05",
+    "evidence_dir": "docs/full_project_execution/w23_overlap/evidence/managed_api_freeze_candidate_20260927_05/native_execute_20260927T0203Z",
+    "root_cleanup_review": "docs/full_project_execution/evidence/main_w23_candidate05_cleanup_review.json",
+    "server_birth_utc": "2026-09-27T02:03:32Z",
+    "server_pid": 40900,
+    "worker_pid": 41010,
+    "server_port": 53861,
+    "worker_port": 53867,
+    "elapsed_seconds_from_birth": 856.844,
+    "birth_budget_seconds": 900,
+    "failure": "LocalSelection.named rejected a Port feature selection at entity level 2",
+    "solve_submissions": 0,
+    "durable_job_id": "0e09e3d7-a4f6-457d-925d-5a2bf2e1487b",
+    "durable_operation_id": "1e9dd459-0a64-445c-aeae-e7c43c312739",
+    "durable_job_status": "UNKNOWN",
+    "worker_status": "FAILED",
+    "execution_state_unknown": true,
+    "safe_retry": false,
+    "cleanup_status": "CLEANUP_CONFIRMED_RUNTIME_FREEZE_RELEASED",
+    "cleanup_utc": "2026-09-27T02:17:48Z",
+    "postcheck": "root review: server/child/Worker PIDs absent, server and Worker listeners absent, global engine/worker inventory quiescent",
+    "acceptance": "NOT_ACCEPTED",
+    "server_child_pid": 40969
+  },
+  "w24_science_runner": {
+    "status": "OFFLINE_IMPLEMENTATION_IN_PROGRESS_WORKER_TRANSITION_GATE_REQUIRED",
+    "acceptance_module": "tools/w24_science_acceptance.py",
+    "focused_tests": [
+      "tests/test_w24_science_acceptance.py",
+      "tests/test_w24_cure_coupon_fixture.py",
+      "tests/test_w24_cure_preflight_runner.py"
+    ],
+    "offline_test_receipt": "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0330Z/offline_candidate_receipt.json",
+    "offline_test_result": "36 passed; software-only focused tests",
+    "native_engine_births_for_science_runner": 0,
+    "study_solver_submissions": 0,
+    "campaign_budget": {
+      "max_birth_seconds": 3600,
+      "max_study_run_submissions": 10,
+      "max_sequential_workers": 2,
+      "status": "NOT_FROZEN_NOT_STARTED"
+    },
+    "precondition": "must require a successful native configured-template receipt with verified bytes and native solver readbacks before any new server birth",
+    "remaining": "Complete fail-closed first-to-second Worker transition proof, exact worker lifecycle, and managed model reloads for every post-transition case; then cohesive offline tests and science executor completion. No native solve or birth in this checkpoint.",
+    "science_runner": "tools/run_native_w24_cure_science.py",
+    "science_fixture": "tools/java/W24CureScienceFixture.java",
+    "equation_view": "setup candidate captures full native raw table; stress candidates remain DOCUMENTED_NOT_EVALUATED until solved benchmark expression/units and component mapping gates",
+    "transition_review": "docs/full_project_execution/evidence/main_w24_worker_transition_review.json"
+  },
+  "w23_candidate06_native_preflight": {
+    "status": "NATIVE_API_ONLY_PREFLIGHT_PASS_CLEANUP_VERIFIED_NOT_OPTICAL_ACCEPTANCE",
+    "candidate_id": "W23-TE-PORT-API-READBACK-06",
+    "evidence": "docs/full_project_execution/evidence/main_w23_candidate06_native_review.json",
+    "engine_identity": "COMSOL 6.4.0.293",
+    "fixture_count": 1,
+    "native_solves": 0,
+    "native_api_result": "PortNumeric accepted and selected IDs matched",
+    "server_birth_utc": "2026-09-27T02:56:50Z",
+    "cleanup_utc": "2026-09-27T02:56:59.849Z",
+    "elapsed_seconds": 9.849,
+    "cleanup": "exact PID and ports absent; global COMSOL/Worker inventory quiescent",
+    "scope": "API-only evidence; no optical, numerical, or physical acceptance"
+  },
+  "recent_checkpoint": {
+    "at_utc": "2026-09-27T09:09:28Z",
+    "scope": "W24 0841Z setup-only candidate prebirth outcome, exact read-only project.inspect diagnosis, and offline W24 runner correction. No native engine was born.",
+    "w24": {
+      "status": "FAIL_OR_INCOMPLETE_PREBIRTH_PROJECT_INSPECT_CONTRACT_MISMATCH; OFFLINE_FIX_TESTED",
+      "candidate_sha256": "c5eac2b9f2f23067443d26242f9cb4fadad084dfd71fc2ca9c4125aed1dca4af",
+      "native_births_this_checkpoint": 0,
+      "study_solver_submissions": 0,
+      "diagnostic": "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_contract_diagnostic.json",
+      "offline_regression_receipt": "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_runner_regression_receipt.json",
+      "offline_regression_tests": "2 passed using real ControlDaemon; software only",
+      "prior_0517_failure_preserved": "ExternalStrain failure, durable UNKNOWN/safe_retry=false; exact cleanup verified; no solve",
+      "science_campaign": "10-solve/3600s/2 sequential Worker plan remains NOT_FROZEN/NOT_STARTED",
+      "next": "Continue science executor and phasefield offline; after release stable handoff refresh source closure and submit a new setup candidate for root review; do not rerun 0841Z freeze."
+    },
+    "w23_candidate09": {
+      "status": "FAILED_NATIVE_PATH_ADMISSION_0_SOLVES_CLEANUP_REVIEWED",
+      "evidence": "docs/full_project_execution/evidence/main_w23_candidate09_native_failure_review.json"
+    },
+    "f03": {
+      "status": "INTEGRATION_VERIFIED",
+      "tests": 96,
+      "acceptance": "production integration only; native F03 acceptance NOT_RUN"
+    },
+    "f04": {
+      "status": "IN_PROGRESS_SHARED_RUNTIME_INTEGRATION",
+      "acceptance": "native NOT_RUN"
+    },
+    "windows_readonly_query": "Existing user-authorized redacted receipt verified; not repeated.",
+    "windows_comsol63": "REQUIRED_UNASSESSED",
+    "macos_comsol63": {
+      "arm64": "USER_REQUESTED_SKIP",
+      "x86_64": "USER_REQUESTED_SKIP"
+    }
+  },
+  "root_resume_summary_correction": {
+    "at": "2026-09-27T05:10:40.509110+00:00",
+    "reason": "Prevent stale0346 relaunch from oldtop-level recovery summary; historical evidence retained",
+    "previous_summary": {
+      "phase": "W24_SETUP_RUNTIME_ENV_GUARD_FROZEN_AND_SCIENCE_CONTINUATION",
+      "task": "W24_CURE_HISTORY_SETUP_PREFLIGHT_AND_SCIENCE_EXECUTOR",
+      "status": "IN_PROGRESS_NEW_SETUP_CANDIDATE_REVIEW_PENDING",
+      "candidate_source": "W24 setup-only candidate 0346Z is frozen at docs/full_project_execution/w24/evidence/setup_candidate_20260927T0346Z/offline_candidate_freeze.json SHA-256 387366fe4671b854bdd201cacfd315c992eb66d41f976297d08829b85856836f; 94 source hashes pinned; runtime Python is the absolute W25 CPython 3.12.13 venv with exact installed distribution inventory, read-only pip check, production collect_legacy_registry and no-engine ControlDaemon construction/close passing; COMSOL 6.4 javac, Python compile, and 37 focused software tests pass. The 0330Z native attempt FAILED before model construction because Python 3.14 lacked mcp; exact cleanup verified; this is preserved failure, not native acceptance."
+    }
+  },
+  "checkpoint_history": [
+    {
+      "at_utc": "2026-09-27T05:26:25Z",
+      "scope": "W24 0510Z reviewed setup candidate native outcome, exact cleanup, and offline ExternalStrain hierarchy root-cause correction.",
+      "native_latest": {
+        "candidate": "0510Z",
+        "status": "FAIL_OR_INCOMPLETE",
+        "engine_births": 1,
+        "server_pid": 42334,
+        "server_birth_raw_local": "Sun Sep 27 13:13:38 2026",
+        "server_port": 57512,
+        "worker_pid": 42446,
+        "worker_child_pid": 42404,
+        "worker_port": 57520,
+        "cause": "Unknown_feature_ID_X#ExternalStrain from creating ExternalStrain at Solid Mechanics physics root rather than below Linear Elastic Material lemm1.",
+        "worker_status": "FAILED",
+        "durable_job_status": "UNKNOWN",
+        "execution_state_unknown": true,
+        "safe_retry": false,
+        "study_solver_submissions": 0,
+        "cleanup": "Exact server/Worker/child PIDs and both listeners absent; global inventory quiescent; elapsed14.322s.",
+        "receipt": "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0510Z/native_run_20260927T0517Z/summary.json",
+        "cleanup_receipt": "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0510Z/native_run_20260927T0517Z/exact_owned_cleanup_receipt.json",
+        "worker_reconciliation": "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0510Z/native_run_20260927T0517Z/worker_ledger_reconciliation.json"
+      },
+      "offline_correction": {
+        "status": "IN_PROGRESS_NOT_FROZEN",
+        "evidence": "docs/full_project_execution/w24/evidence/root_cause_external_strain_20260927T0523Z.json",
+        "source_paths": [
+          "tools/java/W24CureCouponFixture.java",
+          "tools/java/W24CureScienceFixture.java",
+          "tests/test_w24_cure_coupon_fixture.py"
+        ],
+        "next": "COMSOL 6.4/JDK11 compile, focused tests, complete source freeze and root review; no native retry authorized."
+      },
+      "w24_science": {
+        "status": "OFFLINE_IMPLEMENTATION_IN_PROGRESS_EXECUTOR_INCOMPLETE",
+        "native_solve_submissions": 0,
+        "campaign": "NOT_FROZEN_NOT_STARTED"
+      },
+      "macos_comsol63": {
+        "arm64": "USER_REQUESTED_SKIP",
+        "x86_64": "USER_REQUESTED_SKIP"
+      },
+      "evidence": [
+        "docs/full_project_execution/w24/evidence/root_cause_external_strain_20260927T0523Z.json",
+        "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0510Z/native_run_20260927T0517Z/summary.json",
+        "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0510Z/native_run_20260927T0517Z/exact_owned_cleanup_receipt.json",
+        "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0510Z/native_run_20260927T0517Z/worker_ledger_reconciliation.json"
+      ]
+    },
+    {
+      "phase": "W24_WORKER_TRANSITION_GATE_AND_SCIENCE_EXECUTOR_IMPLEMENTATION",
+      "status": "IN_PROGRESS_OFFLINE_WORKER_TRANSITION_RECONCILIATION",
+      "candidate_source": "W24 0510Z setup freeze was used once at 0517Z and failed at ExternalStrain hierarchy, 0 study/solver submissions, durable UNKNOWN/safe_retry=false; exact cleanup verified and original failure is immutable. Offline ExternalStrain hierarchy correction remains in source but no native retry is authorized. Root transition review evidence evidence/main_w24_worker_transition_review.json requires ledger/direct-RPC/idle/project/Worker identity gates and fresh managed loads after Worker switch. W23 candidate09 separately failed model_create path admission after one birth, 0 solve; exact cleanup was root-reviewed in evidence/main_w23_candidate09_native_failure_review.json. W24 science remains offline, not frozen/not started.",
+      "updated_at": "2026-09-27T07:00:23Z",
+      "next_action": "Implement and test the W24 Worker-transition gate before any Worker close: verify the immutable registered project identity/workspace, fully paged project jobs and Worker request events, complete direct-RPC journal, daemon queue/running idle state, and exact current Worker process identity. On a safe transition, retire first-Worker ModelRefs and managed-load every remaining case into Worker 2. Continue completing and testing the native science executor offline. No W24 science native birth is authorized by this checkpoint; preserve prior FAIL/UNKNOWN. Then continue all remaining W01-W26 requirements and independent overall review; macOS COMSOL 6.3 both architectures remain USER_REQUESTED_SKIP.",
+      "blockers": [
+        "The 0517Z W24 setup-only candidate failed on Unknown_feature_ID_X#ExternalStrain; durable project job/operation remains UNKNOWN and execution_state_unknown=true. Exact cleanup passed; no study/solver submission occurred. Preserve the original result.",
+        "The offline hierarchy correction is in progress and requires compile, focused regression, source closure freeze, and root review. No further native birth is authorized in this checkpoint.",
+        "The W24 science executor remains incomplete and no scientific native solves have run; full gel/reference-state/viscoelastic/static-shape acceptance remains open."
+      ]
+    },
+    {
+      "at_utc": "2026-09-27T09:09:28Z",
+      "scope": "W24 0841Z setup candidate native invocation failed prebirth at project.inspect; root cause diagnosed read-only; offline runner fix and real ControlDaemon regression completed.",
+      "native_attempt": {
+        "status": "FAIL_OR_INCOMPLETE_PREBIRTH",
+        "engine_births": 0,
+        "worker_births": 0,
+        "study_solver_submissions": 0,
+        "summary": "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/summary.json",
+        "diagnostic": "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_contract_diagnostic.json"
+      },
+      "root_cause": "Outer execution.idempotency_key was copied into project.inspect domain args; exact INVALID_REQUEST unsupported project argument.",
+      "offline_fix": {
+        "source": "tools/run_native_w24_cure_preflight.py",
+        "tests": "tests/test_w24_cure_preflight_runner.py",
+        "receipt": "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_runner_regression_receipt.json",
+        "result": "2 passed"
+      },
+      "source_race": "Release F04 shared runtime integration resumed; no W24 freeze made."
+    }
+  ],
+  "windows_readonly_summary": {
+    "status": "ALREADY_EXECUTED_AND_VERIFIED_NO_REPEAT",
+    "evidence": "docs/full_project_execution/evidence/luna_w26_release_foundation/windows_process_summary_root_authorized.json",
+    "at_utc": "2026-09-27T00:38:20.112821+00:00",
+    "authorized_scope": "read-only process PID/name and executable/command-field presence only; no process/file mutation",
+    "result": {
+      "exit_code": 0,
+      "process_count": 320,
+      "missing_executable_path": 19,
+      "missing_command_line": 19
+    }
+  },
+  "w24_worker_epoch_transition": {
+    "status": "SOFTWARE_REGRESSION_PASS_NATIVE_NOT_RUN",
+    "receipt": "docs/full_project_execution/evidence/w24_worker_epoch_transition_20260927T072244Z/run_receipt.json",
+    "receipt_sha256": "721bcf398b4995a38d40d7c2910230a61cadc75a739bbe9b9cbadf2cae8541ee",
+    "independent_review": "docs/full_project_execution/evidence/main_w24_worker_epoch_transition_integrity_review.json",
+    "focused_tests": 39,
+    "py_compile": "PASS",
+    "native_engine_births_this_checkpoint": 0,
+    "native_solve_submissions_this_checkpoint": 0,
+    "source_path": "tools/run_native_w24_cure_science.py",
+    "test_path": "tests/test_w24_worker_transition.py",
+    "worker_ref_policy": "Retire exact (session_id, server_instance_id, generation) ModelRef tuples and old server_instance_id values; permit stable logical session_id on a new Worker epoch.",
+    "worker_birth_policy": "Fsync Worker 2 start intent before start_worker; Popen PID birth is recorded even if startup raises/exits; do not retry; successful connected sessions are counted separately."
+  },
+  "progress_index_checkpoint": {
+    "path": "docs/full_project_execution/state/ACTION_COVERAGE.json",
+    "action_rows": 272,
+    "f01_operations": "Six reviewed implementation rows mapped SOFTWARE_IMPLEMENTED_NATIVE_NOT_RUN; 128 focused + 4 synthetic fixture tests; native checkout/render NOT_RUN.",
+    "f03_operations": "Six project authority implementation rows mapped SOFTWARE_IMPLEMENTED_NATIVE_NOT_RUN; 96 focused software tests; native acceptance NOT_RUN.",
+    "target_statuses_changed": false
+  },
+  "windows_process_summary": {
+    "status": "ALREADY_EXECUTED_AND_VERIFIED_NO_REPEAT",
+    "receipt": "docs/full_project_execution/evidence/luna_w26_release_foundation/windows_process_summary_root_authorized.json",
+    "exit_code": 0,
+    "process_count": 320,
+    "missing_executable_path": 19,
+    "missing_command_line": 19
+  },
+  "mac_comsol63_targets": {
+    "macos-arm64/comsol6.3": "USER_REQUESTED_SKIP",
+    "macos-x86_64/comsol6.3": "USER_REQUESTED_SKIP"
+  },
+  "acceptance_cells_changed": false,
+  "current_execution_checkpoint": {
+    "at_utc": "2026-09-27T09:09:28Z",
+    "status": "W24_0841_SETUP_ATTEMPT_FAILED_PREBIRTH_ZERO_ENGINE_ZERO_SOLVES; OFFLINE_PROJECT_INSPECT_FIX_TESTED",
+    "candidate_freeze": "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/offline_candidate_freeze.json",
+    "candidate_sha256": "c5eac2b9f2f23067443d26242f9cb4fadad084dfd71fc2ca9c4125aed1dca4af",
+    "native_summary": "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/summary.json",
+    "diagnostic": "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_contract_diagnostic.json",
+    "offline_regression_receipt": "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_runner_regression_receipt.json",
+    "verification": {
+      "focused_production_path_tests": "2 passed",
+      "native": "FAIL_OR_INCOMPLETE before birth",
+      "engine_births": 0,
+      "worker_births": 0,
+      "study_solver_submissions": 0
+    },
+    "source_sha256": {
+      "tools/run_native_w24_cure_preflight.py": "dbc83fc52d3bec58e93058a8f43bf688a4ef96c57d84bfa238c9a6fca7a06a28",
+      "tests/test_w24_cure_preflight_runner.py": "693c287607c018ccc1bee4ef724b5c3273073c1fc75e9fcf578e05c99d2df2e8",
+      "comsol_mcp/_control_daemon.py": "e85067d318eaf7c24488c6dbdb45a78a516df24bd3568a48d0da7c7afba4d9ea"
+    },
+    "source_window": "Release still integrating F04; these are a focused software regression snapshot, not a frozen W24 closure."
+  },
+  "w24_setup_candidate_0841z_native_attempt": {
+    "candidate_id": "W24-CURE-HIST-AXISYM-01",
+    "candidate_freeze": "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/offline_candidate_freeze.json",
+    "candidate_sha256": "c5eac2b9f2f23067443d26242f9cb4fadad084dfd71fc2ca9c4125aed1dca4af",
+    "status": "FAIL_OR_INCOMPLETE_PREBIRTH_PROJECT_INSPECT_CONTRACT_MISMATCH",
+    "runner": "tools/run_native_w24_cure_preflight.py",
+    "run_directory": "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z",
+    "summary": "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/summary.json",
+    "diagnostic": "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_contract_diagnostic.json",
+    "engine_births": 0,
+    "worker_births": 0,
+    "study_solver_submissions": 0,
+    "cleanup": "NOT_STARTED; owned COMSOL process was never created",
+    "root_cause": "project.inspect received an outer idempotency_key merged into domain arguments; ProjectAuthority._inspect rejected it. project.create succeeded and persisted the project.",
+    "read_only_database_sha256": "b3ae41765e4421fb13be3d7c5b69573a9e77789b9fdf288675e6580e43bc299e",
+    "offline_fix": "Runner omits unnecessary inspect idempotency key; release separated project execution envelope identity from domain arguments.",
+    "offline_regression_receipt": "docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_runner_regression_receipt.json",
+    "offline_regression_tests": 2,
+    "offline_regression_result": "PASS software only; real ControlDaemon create/inspect + explicit envelope-key route; no native engine or solve",
+    "candidate_reusable": false,
+    "next": "Wait for stable F04 runtime handoff; refresh closure and submit a new candidate for root review. No automatic rerun."
+  }
+}

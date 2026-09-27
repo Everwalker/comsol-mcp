@@ -15,8 +15,9 @@ from ._execution_contract import PreWriteRefusal
 _context = ContextVar('observation_context', default=None)
 
 @contextmanager
-def observation_context(store, model_ref, revision, producer):
-    token = _context.set(dict(store=store, model_ref=model_ref, revision=revision, producer=producer))
+def observation_context(store, model_ref, revision, producer, project_id=None):
+    token = _context.set(dict(store=store, model_ref=model_ref, revision=revision,
+                              producer=producer, project_id=project_id))
     try:
         yield
     finally:
