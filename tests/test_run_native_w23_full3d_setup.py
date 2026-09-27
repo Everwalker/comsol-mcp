@@ -10,6 +10,7 @@ import types
 import importlib
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 import pytest
 
@@ -37,6 +38,7 @@ from tools.run_native_w23_full3d_setup import (
     _stop_owned_process,
     _resource_ownership_receipt,
     _source_inventory,
+    export_published_archive,
     build_disconnect_request,
     _finalize_science_counters,
     _json_hash,
@@ -216,6 +218,72 @@ def test_candidate_freeze_binds_bma_mapping_profile_budget_policy_and_api_eviden
     with pytest.raises(CandidateError, match="budget or route allowlist"):
         verify_candidate(repo=tmp_path, evidence=evidence,
                          reviewed_sha256=mutated["candidate_sha256"])
+
+
+def test_source_closure_rejects_missing_required_v2_runtime_and_test_dependencies(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from tools import run_native_w23_full3d_setup as runner
+
+    required_base_dependencies = {
+        "tools/w23_mode_basis_v2.py",
+        "tools/w23_mode_basis_v2_native_plan.py",
+        "tests/test_w23_mode_basis_v2_results.py",
+        "tests/test_w23_mode_basis_v2_native_plan.py",
+    }
+    required_candidate_overlay = {"tests/test_w23_mode_basis_v2.py"}
+    assert required_base_dependencies <= runner.EXTRA_CLOSURE_PATHS
+    assert required_candidate_overlay <= runner.OVERLAY_PATHS
+    monkeypatch.setattr(runner, "OVERLAY_PATHS", set())
+    for relative in sorted(required_base_dependencies):
+        monkeypatch.setattr(runner, "EXTRA_CLOSURE_PATHS", {relative})
+        with pytest.raises(CandidateError, match="source closure is incomplete") as exc:
+            runner._closure_paths(tmp_path)
+        assert relative in str(exc.value)
+    monkeypatch.setattr(runner, "EXTRA_CLOSURE_PATHS", set())
+    for relative in sorted(required_candidate_overlay):
+        monkeypatch.setattr(runner, "OVERLAY_PATHS", {relative})
+        with pytest.raises(CandidateError, match="source closure is incomplete") as exc:
+            runner._closure_paths(tmp_path)
+        assert relative in str(exc.value)
+
+
+def test_isolated_source_manifest_rejects_missing_required_v2_dependency(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from tools import run_native_w23_full3d_setup as runner
+
+    required = {
+        "tools/w23_mode_basis_v2.py",
+        "tools/w23_mode_basis_v2_native_plan.py",
+        "tests/test_w23_mode_basis_v2_results.py",
+        "tests/test_w23_mode_basis_v2_native_plan.py",
+    }
+    overlay = {"candidate_overlay.py", "tests/test_w23_mode_basis_v2.py"}
+    monkeypatch.setattr(runner, "OVERLAY_PATHS", overlay)
+    monkeypatch.setattr(runner, "EXTRA_CLOSURE_PATHS", required)
+    monkeypatch.setattr(runner, "_closure_paths", lambda _repo: sorted(required | overlay))
+
+    base_files = {
+        relative: {"bytes": 0, "sha256": "0" * 64}
+        for relative in sorted(required - {"tools/w23_mode_basis_v2.py"})
+    }
+    manifest = {
+        "schema_version": 1,
+        "status": "EXACT_GIT_ARCHIVE_SOURCE_ONLY",
+        "base_commit": "a" * 40,
+        "published_origin_main_at_export": "b" * 40,
+        "checkout_head_at_export": "b" * 40,
+        "source_files": base_files,
+        "test_support_files": sorted(runner.TEST_SUPPORT_PATHS),
+        "source_closure_sha256": runner._json_hash(base_files),
+    }
+    manifest["manifest_sha256"] = runner._json_hash(manifest)
+    (tmp_path / ".w23_published_archive_manifest.json").write_text(
+        json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(CandidateError, match="exact expected published closure"):
+        runner._source_inventory(tmp_path, manifest["base_commit"])
 
 
 def test_science_finalization_preserves_success_unknown_and_preflight_evidence() -> None:
@@ -969,7 +1037,31 @@ def _run_fresh_control_daemon_public_dispatch_smoke(
 def test_real_control_daemon_public_dispatch_binds_exact_popen_without_comsol(
     tmp_path: Any,
 ) -> None:
-    archive_root = Path.cwd().resolve()
+    repository = Path.cwd().resolve()
+    manifest_path = repository / ".w23_published_archive_manifest.json"
+    archive_was_created = not manifest_path.is_file()
+    if archive_was_created:
+        published = subprocess.run(["git", "rev-parse", "origin/main"], cwd=repository,
+                                   capture_output=True, text=True, check=False, timeout=20)
+        assert published.returncode == 0, published.stderr
+        archive_root = Path("/private/tmp") / f"comsol-mcp-w23-full3d-smoke-{uuid4().hex}"
+        archive_export = export_published_archive(
+            repo=repository, destination=archive_root, base_commit=published.stdout.strip())
+    else:
+        # A no-.git candidate archive is already the reviewed source boundary.
+        # Reuse it directly so this smoke is runnable from the frozen archive.
+        from tools import run_native_w23_full3d_setup as runner
+        archive_root = repository
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        source_binding = _source_inventory(archive_root, manifest["base_commit"])
+        assert source_binding["archive_manifest_sha256"] == manifest["manifest_sha256"]
+        archive_export = {
+            "base_commit": manifest["base_commit"],
+            "archive_manifest_sha256": manifest["manifest_sha256"],
+            "source_closure_sha256": manifest["source_closure_sha256"],
+            "source_files": len(manifest["source_files"]),
+            "overlay_files": sorted(runner.OVERLAY_PATHS),
+        }
     env = dict(os.environ)
     env.pop("COMSOL_SERVER_MCP_HOME", None)
     env.pop("COMSOL_PROJECT_ROOT", None)
@@ -983,18 +1075,43 @@ def test_real_control_daemon_public_dispatch_binds_exact_popen_without_comsol(
         "module._run_fresh_control_daemon_public_dispatch_smoke("
         "pathlib.Path(sys.argv[2]), pathlib.Path(sys.argv[3]))"
     )
-    completed = subprocess.run(
-        [str(EXPECTED_PYTHON), "-B", "-S", "-c", script,
-         str(Path(__file__).resolve()), str(tmp_path), str(archive_root)],
-        cwd=archive_root, env=env, capture_output=True, text=True,
-        timeout=60, check=False)
     receipt_path = Path(tmp_path) / "no_comsol_control_daemon_smoke_receipt.json"
-    assert completed.returncode == 0, (completed.stdout + "\n" + completed.stderr)[-8000:]
-    assert receipt_path.is_file()
-    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
-    assert receipt["status"] == "PASS", receipt
-    assert receipt["comsol_engine_started"] is False
-    assert receipt["control_home_observed_before_public_dispatch"] == receipt["expected_control_home"]
+    try:
+        completed = subprocess.run(
+            [str(EXPECTED_PYTHON), "-B", "-S", "-c", script,
+             str(archive_root / "tests/test_run_native_w23_full3d_setup.py"),
+             str(tmp_path), str(archive_root)],
+            cwd=archive_root, env=env, capture_output=True, text=True,
+            timeout=60, check=False)
+        assert completed.returncode == 0, (completed.stdout + "\n" + completed.stderr)[-8000:]
+        assert receipt_path.is_file()
+        receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+        assert receipt["status"] == "PASS", receipt
+        assert receipt["comsol_engine_started"] is False
+        assert receipt["control_home_observed_before_public_dispatch"] == receipt["expected_control_home"]
+        assert receipt["control_daemon_cwd"] == str(archive_root)
+        assert receipt["archive_manifest_sha256"]
+        manifest = json.loads(
+            (archive_root / ".w23_published_archive_manifest.json").read_text(encoding="utf-8"))
+        assert archive_export["base_commit"] == receipt["archive_base_commit"]
+        assert archive_export["archive_manifest_sha256"] == receipt["archive_manifest_sha256"]
+        receipt["archive_origin_main_at_export"] = manifest["published_origin_main_at_export"]
+        receipt["archive_source_overlay_files"] = archive_export["overlay_files"]
+        receipt["archive_source_overlay_hashes"] = {
+            relative: hashlib.sha256((archive_root / relative).read_bytes()).hexdigest()
+            for relative in archive_export["overlay_files"]}
+        receipt["archive_export_source_closure_sha256"] = archive_export["source_closure_sha256"]
+        receipt["archive_export_source_file_count"] = archive_export["source_files"]
+        receipt_path.write_text(json.dumps(receipt, indent=2, ensure_ascii=False,
+                                           allow_nan=False) + "\n", encoding="utf-8")
+        assert receipt["archive_source_overlay_files"]
+        assert set(receipt["archive_source_overlay_hashes"]) == set(receipt["archive_source_overlay_files"])
+    finally:
+        import shutil
+        if archive_was_created:
+            shutil.rmtree(archive_root, ignore_errors=True)
+
+
 def test_job_ledger_pages_real_public_control_daemon_sqlite_route(tmp_path: Path) -> None:
     from comsol_mcp._control_daemon import ControlDaemon
 

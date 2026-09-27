@@ -43,9 +43,9 @@ EXPECTED_PYTHON = Path("/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/pyt
 EXPLICIT_SITE_PACKAGES = (EXPECTED_PYTHON.parent.parent / "lib" /
                           f"python{sys.version_info.major}.{sys.version_info.minor}" / "site-packages")
 
-# Hash the whole Python package plus its action schemas. The final two files
-# are this reviewed candidate's overlay; the Java fixture and old server helper
-# are frozen implementation inputs. WIP elsewhere in the repo is irrelevant.
+# Hash the whole Python package plus the exact published implementation and
+# test-support dependencies. Candidate-specific science, fixture, and test
+# changes are explicit overlays; unrelated worktree changes stay outside.
 OVERLAY_PATHS = {
     "tools/run_native_w23_full3d_setup.py",
     "tests/test_run_native_w23_full3d_setup.py",
@@ -53,13 +53,22 @@ OVERLAY_PATHS = {
     "tools/w23_full3d_science.py",
     "tests/test_w23_full3d_science.py",
     "tests/test_w23_full3d.py",
+    "tests/test_w23_mode_basis_v2.py",
 }
 EXTRA_CLOSURE_PATHS = {
     "tools/run_native_resume_smoke.py",
     "tools/w23_full3d.py",
     "tools/w23_full3d_science.py",
+    "tools/w23_mode_basis_v2.py",
+    "tools/w23_mode_basis_v2_native_plan.py",
     "tools/java/NativeW23Full3DFixture.java",
+    "tests/test_w23_mode_basis_v2_results.py",
+    "tests/test_w23_mode_basis_v2_native_plan.py",
     "docs/comsol_mcp_design_v1/02_ACTION_CATALOG.json",
+}
+TEST_SUPPORT_PATHS = {
+    "tests/test_w23_mode_basis_v2_results.py",
+    "tests/test_w23_mode_basis_v2_native_plan.py",
 }
 
 SETUP_BUDGET = {
@@ -278,8 +287,10 @@ def _execute_bma_basis_mapping_stage(
     route: Callable[[Mapping[str, Any], str, int], dict[str, Any]], *,
     result: dict[str, Any], project_id: str, model: Mapping[str, Any],
     source_artifact: str, preparation: Mapping[str, Any],
-    producer_evidence: Mapping[str, Any], apply_readback: Mapping[str, Any],
-    baseline_case: Mapping[str, Any],
+    producer_evidence: Mapping[str, Any], producer_route_evidence: Mapping[str, Any],
+    apply_readback: Mapping[str, Any],
+    baseline_case: Mapping[str, Any], staged_source_proof: Mapping[str, Any],
+    execution_owner: Mapping[str, Any],
 ) -> dict[str, Any]:
     """Read both exact SolutionInfo tuples and sample their paired native fields once."""
     from tools.w23_full3d_science import (
@@ -290,6 +301,7 @@ def _execute_bma_basis_mapping_stage(
         resolve_full3d_bma_basis_sources, resolve_full3d_bma_receiver_plane,
         validate_full3d_bma_mapping_route_result,
         validate_full3d_bma_basis_mapping_samples,
+        validate_full3d_sampling_cohort_revision_chain,
     )
 
     stage = result.setdefault("bma_basis_mapping", {
@@ -303,6 +315,7 @@ def _execute_bma_basis_mapping_stage(
     result.setdefault("field_sample_calls", 0)
     result.setdefault("field_sample_readbacks_validated", 0)
     model_state = dict(model)
+    starting_revision = model_state.get("revision")
 
     def call(label: str, cap: int, request: Mapping[str, Any], *,
              expected_revision_delta: int) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
@@ -331,6 +344,14 @@ def _execute_bma_basis_mapping_stage(
         route_record.update({"status": "TERMINAL_ROUTE_VERIFIED",
                              "route_result": copy.deepcopy(observed),
                              "validated_binding": bound})
+        data = response.get("data")
+        if label in {"bma_basis_fields_ordinal1", "bma_basis_fields_ordinal2"}:
+            route_record["readback"] = copy.deepcopy(
+                _java_action_readback(response, f"{label} native Interp readback"))
+        elif isinstance(data, Mapping):
+            route_record["readback"] = copy.deepcopy(dict(data))
+        else:
+            raise CandidateError(f"{label} terminal response omitted its readback data object")
         return dict(observed), dict(response), bound
 
     def response_data(response: Mapping[str, Any], label: str) -> dict[str, Any]:
@@ -426,10 +447,23 @@ def _execute_bma_basis_mapping_stage(
 
     diagnostics = validate_full3d_bma_basis_mapping_samples(
         contracts, raw_readbacks, quadratures)
+    route_rows = [{"label": label, **row} for label, row in stage["routes"].items()]
+    sample_rows = [{"label": f"bma_basis_fields_ordinal{ordinal}",
+                    "contract": contracts[ordinal - 1],
+                    "quadrature": quadratures[ordinal - 1],
+                    "readback": raw_readbacks[ordinal - 1]}
+                   for ordinal in (1, 2)]
+    cohort_chain = validate_full3d_sampling_cohort_revision_chain(
+        route_rows, sample_rows, project_id=project_id, model_ref=model["model_ref"],
+        start_revision=starting_revision, source_artifact=source_artifact,
+        staged_source_proof=staged_source_proof, execution_owner=execution_owner,
+        producer_evidence=producer_evidence,
+        producer_route_evidence=producer_route_evidence)
     result["field_sample_readbacks_validated"] = \
         result.get("field_sample_readbacks_validated", 0) + len(raw_readbacks)
     stage.update({"status": "TWO_RAW_BMA_BASIS_SAMPLES_VALIDATED_MAPPING_UNVERIFIED",
                   "diagnostics": diagnostics,
+                  "source_cohort_revision_chain": cohort_chain,
                   "field_mapping_status": "UNVERIFIED",
                   "basis_ordinal_mapping": "UNVERIFIED_NATIVE_FIELD_MAPPING_REQUIRED",
                   "numeric_port_mode_field_mapping": "UNVERIFIED",
@@ -601,6 +635,7 @@ def export_published_archive(*, repo: Path, destination: Path, base_commit: str)
     manifest = {"schema_version": 1, "status": "EXACT_GIT_ARCHIVE_SOURCE_ONLY",
                 "base_commit": base_commit, "published_origin_main_at_export": remote,
                 "checkout_head_at_export": head, "source_files": base_files,
+                "test_support_files": sorted(TEST_SUPPORT_PATHS),
                 "source_closure_sha256": _json_hash(base_files)}
     manifest["manifest_sha256"] = _json_hash(manifest)
     _write_json(destination / ".w23_published_archive_manifest.json", manifest)
@@ -632,6 +667,8 @@ def _source_inventory(repo: Path, base_commit: str) -> dict[str, Any]:
         base_files = manifest.get("source_files")
         if not isinstance(base_files, Mapping):
             raise CandidateError("isolated source archive manifest omitted source file hashes")
+        if manifest.get("test_support_files") != sorted(TEST_SUPPORT_PATHS):
+            raise CandidateError("isolated source archive manifest misclassified or omitted test-support files")
         if manifest.get("source_closure_sha256") != _json_hash(base_files):
             raise CandidateError("isolated source archive closure digest is invalid")
         expected_base = set(paths) - OVERLAY_PATHS
@@ -2183,8 +2220,20 @@ def execute_candidate(*, repo: Path, evidence: Path, reviewed_sha256: str,
                 mapping = _execute_bma_basis_mapping_stage(
                     route, result=result, project_id=project["project_id"], model=model,
                     source_artifact=staged["source_artifact"], preparation=preparation,
-                    producer_evidence=producer_proof, apply_readback=apply_readback,
-                    baseline_case=baseline_rows[0])
+                    producer_evidence=producer_proof,
+                    producer_route_evidence={
+                        "preparation": preparation, "request": run_request,
+                        "route_result": bma_run_result, "readback": bma_run_readback},
+                    apply_readback=apply_readback,
+                    baseline_case=baseline_rows[0], staged_source_proof=staged,
+                    execution_owner={
+                        "candidate_owned_server": True, "gui_attached": False,
+                        "project_id": project["project_id"],
+                        "server_process_identity": server_identity,
+                        "listener": server_listener,
+                        "session_identity": session,
+                        "model_ref": model["model_ref"],
+                    })
                 model = mapping["model"]
                 result.update({"model": model,
                     "native_scientific_result": "BMA_TWO_BASIS_FIELDS_SAMPLED_FULL3D_OVERLAP_NOT_EVALUATED",

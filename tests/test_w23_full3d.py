@@ -83,6 +83,18 @@ def test_full3d_java_builder_has_rotation_and_local_section_readback_but_no_stud
     mesh_update = java.index('mesh("mesh3d").run();', apply_start)
     assert geometry_update < selection_update < mesh_update
     assert 'study_or_solver_invoked", false' in java
+    build = java[java.index("private static Map<String, Object> build"):
+                 java.index("private static Map<String, Object> applyCase")]
+    assert "requestedMeshLevel(args)" in build
+    assert 'size.set("hmax", (String) meshLevel.get("hmax_expression"))' in build
+    assert 'size.set("hmin", (String) meshLevel.get("hmin_expression"))' in build
+    assert 'propertyReadback(size, new String[]{"custom", "hmax", "hmin"})' in build
+    assert 'meshReadback.put("mesh_level_id", meshLevel.get("mesh_level_id"))' in build
+    mesh_level = java[java.index("private static Map<String, Object> requestedMeshLevel"):
+                      java.index("private static String exactPropertyString")]
+    assert '"mesh1".equals(level) && Double.compare(scale, 1.0) == 0' in mesh_level
+    assert '"mesh2".equals(level) && Double.compare(scale, 0.8) == 0' in mesh_level
+    assert '"mesh3".equals(level) && Double.compare(scale, 0.64) == 0' in mesh_level
     assert '.study("std3d").run' not in java
     assert 'model.sol().run' not in java
 

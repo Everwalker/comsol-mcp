@@ -1,0 +1,206 @@
+{
+  "schema_version": 1,
+  "stage": "W23 bound source-cohort and mesh stability software",
+  "status": "PASS_SCOPED_SOFTWARE",
+  "native_acceptance": "NOT_RUN",
+  "candidate": {
+    "archive_dir": "/private/tmp/comsol-mcp-w23-full3d-mesh-convergence-20260928d",
+    "base_commit": "81fcc73784e1a7e36197ae433c862fd1f4f9c621",
+    "published_origin_main_at_export": "81fcc73784e1a7e36197ae433c862fd1f4f9c621",
+    "checkout_head_at_export": "81fcc73784e1a7e36197ae433c862fd1f4f9c621",
+    "base_source_file_count": 103,
+    "base_source_closure_sha256": "8da92c7b9f08a27678e2b0c2cc9c9be094f0676f3c7cce17cf86b5270dfe183b",
+    "archive_manifest_sha256": "b20961517fca8b5d2f388e4e3456ec31f0c932217a2fb96cd759c1ba5aaab7a1",
+    "candidate_source_file_count": 110,
+    "candidate_source_closure_sha256": "815e75718c4cec402523730d7b1b0ec56ca5103328ae06b0ba7a25ac536d53b3",
+    "test_support_files": [
+      "tests/test_w23_mode_basis_v2_native_plan.py",
+      "tests/test_w23_mode_basis_v2_results.py"
+    ],
+    "direct_added_dependencies": {
+      "tests/test_w23_mode_basis_v2_native_plan.py": {
+        "role": "test_support",
+        "sha256": "c4533af999942d425745684a2b096e223dc0e9a2de36ec360e40788184f9de1f",
+        "bytes": 11331
+      },
+      "tests/test_w23_mode_basis_v2_results.py": {
+        "role": "test_support",
+        "sha256": "7aff1c31542a1068efbd690eda44cdaf55cf71dd51c4a720645abe5cb6066066",
+        "bytes": 22918
+      },
+      "tools/w23_mode_basis_v2.py": {
+        "role": "published_tool_source",
+        "sha256": "9813d54d407d0f5a99fde0d9ef1b6589a608fe4c25d2996b616dd6f57b943902",
+        "bytes": 55726
+      },
+      "tools/w23_mode_basis_v2_native_plan.py": {
+        "role": "published_tool_source",
+        "sha256": "3d6eac812d812c62722e5e1e240bde2acfcef1f680610432abfe70e356c9fde3",
+        "bytes": 21224
+      }
+    },
+    "overlay_files": {
+      "tests/test_run_native_w23_full3d_setup.py": "6d30dd18bcf3a824bf5f76a0d423cb4d332edcb40a7c119cf4238eb939df0195",
+      "tests/test_w23_full3d.py": "df9c605035193f38b8152075284bd833dafb9bdb5cf75ef506377867dfc71868",
+      "tests/test_w23_full3d_science.py": "5e7d9968ddd0bafc310458d0faab1ba88ac68f25243148907385f18002e253b6",
+      "tests/test_w23_mode_basis_v2.py": "d8d44668c81f8d622297059419942c2d5eba28e7bc7132f76c32112988a450af",
+      "tools/java/NativeW23Full3DFixture.java": "882dfe530e704671e2f884663bcdcd142102beb618ffd70d90e4b83d527db0ca",
+      "tools/run_native_w23_full3d_setup.py": "ff3c1688e9e6e8bf6e1a6f59c8160173a49fd1511732acb1918756109aa43230",
+      "tools/w23_full3d_science.py": "efa0ad56c99084c23a072fbe605028971f06eb7bf500bae59d162bb837cade54"
+    },
+    "published_dependencies_are_hash_bound": true,
+    "all_test_support_files_classified_separately": true
+  },
+  "capabilities": [
+    "Bind immutable stored-solution sampling to exact producer/public request/job and source snapshots",
+    "Three frozen mesh levels require pre-solve fixture setup/readback -> Study revision -> matching post-solve mesh -> registered v2 integral routes",
+    "Recompute projection and signed-power changes from exact terminal terms; basis Gram diagonals diagnostic only",
+    "Refuse detached readbacks, replayed identities, mesh drift and stale model revisions"
+  ],
+  "tests": {
+    "isolated_archive": {
+      "path": "/private/tmp/w23_mesh_convergence_archive_overlay_closure_final.xml",
+      "sha256": "2ab990e14e925304afef0455fcb755025cedb7a8489e8415662c4acfbd9c85a5",
+      "tests": 222,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "command": "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -B -S /private/tmp/run_w23_archive_overlay_closure.py",
+      "cwd": "/private/tmp/comsol-mcp-w23-full3d-mesh-convergence-20260928d",
+      "python_sys_flags_no_site": true,
+      "site_module_loaded": false,
+      "editable_fallback_surfaces": [],
+      "audit_path": "/private/tmp/w23_mesh_convergence_archive_overlay_import_audit.json",
+      "audit_sha256": "1694bef30861c6a90708979af0f86cb02efd12aca13682b5953978931a93da9a",
+      "audit_project_module_count": 75,
+      "audit_test_namespace_module_count": 4,
+      "all_project_and_test_imports_from_archive": true,
+      "collect_only_tests": 222,
+      "collect_only_status": "PASS"
+    },
+    "superseded_archive_result_with_published_helper": {
+      "path": "/private/tmp/w23_mesh_convergence_archive_closure_final.xml",
+      "sha256": "843050599a4eca658372a11c9cd5945eef0567908ffb0641cc301215475fdba2",
+      "tests": 190,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "candidate_validation": false,
+      "reason": "This earlier 190-test archive contained the published helper, not the modified helper now included as an overlay; superseded by the 222-test current candidate run."
+    },
+    "preserved_prior_failures": [
+      {
+        "path": "/private/tmp/w23_mesh_convergence_archive_closure.xml",
+        "sha256": "5b6eb432d91a50c08c3623d31a535216ec11f47089432c5f37f89004560d34cf",
+        "tests": 190,
+        "failures": 16,
+        "errors": 0,
+        "skipped": 0,
+        "resolution": "The first archive omitted the nested native-plan helper and its smoke assumed .git; both were fixed in the final archive. Original JUnit retained."
+      },
+      {
+        "path": "/private/tmp/w23_cohort_convergence_closure_initial.xml",
+        "sha256": "186e0c21565fd876fcd176361992d92e0f66b76186314291ddea118af62e4e85",
+        "tests": 236,
+        "failures": 10,
+        "errors": 0,
+        "skipped": 0,
+        "resolution": "Earlier sandbox-restricted live checkout closure retained as historical failure. It is not used as isolated candidate acceptance. Original JUnit retained."
+      }
+    ],
+    "no_comsol_control_daemon_smoke": {
+      "junit": {
+        "path": "/private/tmp/w23_mesh_convergence_smoke_overlay_single.xml",
+        "sha256": "9f4af11b9fa263e884e0442b56aa4cf02cace86c775ff115ba2253de513ef932",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "command": "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -B -S /private/tmp/run_w23_archive_overlay_smoke_single.py",
+      "receipt_path": "/private/tmp/w23_mesh_convergence_overlay_archive_no_comsol_smoke_receipt.json",
+      "receipt_sha256": "04fdceb00cac48143fe6e3c6fd5718ed6b9363440a62f7418d2e6f4b0a7274ea",
+      "status": "PASS",
+      "comsol_engine_started": false,
+      "cwd": "/private/tmp/comsol-mcp-w23-full3d-mesh-convergence-20260928d",
+      "archive_base_commit": "81fcc73784e1a7e36197ae433c862fd1f4f9c621",
+      "archive_manifest_sha256": "b20961517fca8b5d2f388e4e3456ec31f0c932217a2fb96cd759c1ba5aaab7a1",
+      "popen_pid": 51709,
+      "endpoint": {
+        "port": 65118,
+        "pid": 51709,
+        "process_start_epoch_ms": 1790549750978
+      },
+      "cleanup": {
+        "status": "STOPPED_AND_REAPED",
+        "pid": 51709,
+        "start_epoch_ms": 1790549750978,
+        "child_exit_confirmed": true,
+        "child_reaped": true,
+        "listener_absent": true,
+        "return_code": -15
+      }
+    }
+  },
+  "java_compile": {
+    "status": "PASS",
+    "command": "/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home/bin/javac -cp /Applications/COMSOL64/Multiphysics/apiplugins/com.comsol.api_1.0.0.jar -d /private/tmp/w23_mesh_convergence_javac_final tools/java/NativeW23Full3DFixture.java",
+    "source_path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/tools/java/NativeW23Full3DFixture.java",
+    "source_sha256": "882dfe530e704671e2f884663bcdcd142102beb618ffd70d90e4b83d527db0ca",
+    "api_jar": "/Applications/COMSOL64/Multiphysics/apiplugins/com.comsol.api_1.0.0.jar",
+    "api_jar_sha256": "9bdc47a9e320be5721956336f44f5afa4cb06a20cfa887bc7d32d1a837483a67",
+    "outputs": {
+      "/private/tmp/w23_mesh_convergence_javac_final/NativeW23Full3DFixture.class": "197cabd5a968380f18c96a044349f82eb3a87cf2c94f4392aa8c02a727337ccf",
+      "/private/tmp/w23_mesh_convergence_javac_final/NativeW23Full3DFixture$PortFrame.class": "6989fe20c828aecaf887523938463d9e472ee0f548d60643640712808f48cc32"
+    }
+  },
+  "main_review": {
+    "base_files_verified": 103,
+    "overlay_files_verified": 7,
+    "candidate_source_files": 110,
+    "isolated_import_origins_verified": 75,
+    "root_retest": {
+      "passed": 16,
+      "deselected": 96,
+      "junit": "/private/tmp/w23_mesh_cohort_root_final.xml",
+      "sha256": "10e3111f9b185c752cfe17022293223cdca289812e78148fe4075633cc5028a6"
+    },
+    "fixed_findings": [
+      "Detached source snapshot now must match exact original Java response",
+      "Gauge-dependent Gram diagonal power removed from convergence gate",
+      "Modified mode-basis test helper now included in seven-file overlay and isolated222P closure"
+    ],
+    "original_detached_counterexample": {
+      "path": "/private/tmp/w23_cohort_detached_readback_reproducer.json",
+      "sha256": "7f7339610f0fae55e126e11ddae8630835021f5405f5417187cfbc76cea1462d"
+    },
+    "detached_retest": {
+      "path": "/private/tmp/w23_cohort_detached_readback_retest.json",
+      "sha256": "81f3fd114cc28ea6d9ed1a26ed7091b19f460686aaa3140aca51ffc9d11c11f0"
+    }
+  },
+  "supersedes": {
+    "receipt_path": "/private/tmp/w23_mesh_convergence_software_candidate_receipt.json",
+    "receipt_sha256": "50941a7a331cf2ee3b41200951ddc0ae3962935f1820b717f54ea6df3769510e",
+    "reason": "The prior source archive used the published tests/test_w23_mode_basis_v2.py; this candidate overlays and hashes the modified helper and reruns its dependency closure."
+  },
+  "native_and_science_boundaries": {
+    "comsol_process_started": false,
+    "study_run_calls": 0,
+    "solver_calls": 0,
+    "native_mesh_convergence": "NOT_RUN",
+    "producer_step_solution_lineage": "UNVERIFIED",
+    "numeric_port_field_mapping": "UNVERIFIED",
+    "eta_capture": "NOT_RUN",
+    "quadrature_convergence": "NOT_RUN",
+    "power_balance": "NOT_RUN",
+    "full_scientific_acceptance": "NOT_RUN",
+    "radiation_geometry_changes": "OUT_OF_SCOPE_FOR_THIS_STAGE"
+  },
+  "local_full_receipt": {
+    "path": "/private/tmp/w23_mesh_convergence_overlay_software_candidate_receipt.json",
+    "sha256": "46d420ce66ee8fa6f090d7c7bd755d8b596c860dbe3469c6027387ce5331b7b1"
+  },
+  "replay": "Recover committed source and use Python3.12 project dependencies. Selected closure: tests/test_run_native_w23_full3d_setup.py, tests/test_w23_full3d.py, tests/test_w23_full3d_science.py, tests/test_w23_mode_basis_v2.py. No-COMSOL loopback test requires local socket permission. Java compile uses JDK11 and local licensed COMSOL6.4 API only; no solve is implied. Isolated archive recipe and original commands are in tests and local receipt.",
+  "next_action": "Implement versioned radiation geometry with homogeneous material-preserving longitudinal PML backing and closed physical control-volume readbacks; complete capture/quadrature/power-balance software and native resource admission, then actual W23 optical/scientific acceptance."
+}

@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import math
 
 import pytest
 
 from tools.w23_full3d_science import (
     FULL3D_COMPARISON_POLICY,
+    FULL3D_CONVERGENCE_POLICY,
     Full3DScienceError,
     ManagedRouteOutcomeError,
     bind_full3d_connection_response,
@@ -18,6 +20,8 @@ from tools.w23_full3d_science import (
     build_full3d_bma_probe_run_dispatch,
     build_full3d_bma_basis_mapping_contracts,
     build_full3d_bma_basis_mapping_dispatch,
+    build_full3d_convergence_recipe,
+    build_full3d_mesh_level_fixture_dispatch,
     build_full3d_model_create_request,
     build_full3d_model_load_request,
     build_full3d_mode_overlap_definition,
@@ -37,7 +41,9 @@ from tools.w23_full3d_science import (
     resolve_full3d_native_sources,
     resolve_full3d_bma_basis_sources,
     rectangular_port_quadrature,
+    recompute_full3d_mesh_stability_from_registered_routes,
     validate_native_field_readback,
+    validate_native_source_cohort_snapshot,
     validate_full3d_bma_probe_preparation,
     validate_full3d_bma_probe_run_readback,
     validate_full3d_bma_basis_mapping_samples,
@@ -103,6 +109,90 @@ def _solution_dataset(tag, solution, *, names, values, units, outer=1, inner=1, 
                     "names": names, "values": values, "units": units, "solnum": solnum}}}}
 
 
+def _cohort_snapshot(contract):
+    source = contract["source"]
+    sequence = source["solution_id"]
+    tuple_row = {"outer_index": source["outer_index"],
+                 "inner_index": source["inner_index"],
+                 "solnum": source["solnum"],
+                 "solver_sequence_tag": sequence}
+    solution_pairs = [tuple_row]
+    if contract.get("role") == "bma_basis_mapping_pair":
+        solution_pairs = [{"outer_index": source["outer_index"], "inner_index": inner,
+                           "solnum": inner, "solver_sequence_tag": sequence}
+                          for inner in (1, 2)]
+
+    def props(values):
+        return {name: {"has_property_exact": True, "string_readback": value}
+                for name, value in values.items()}
+
+    config = {
+        "schema_id": "urn:comsol-mcp:w23:fixture-explicit-config:1.0.0",
+        "fixture_id": "w23_full3d_fiber_ball_lens_vector_pml_v1",
+        "parameters": {name: "1" for name in (
+            "lambda0", "f0", "w23Ncore", "w23Nclad", "w23Nlens", "w23CoreR",
+            "w23CladR", "w23LensR", "w23AirHalfY", "w23AirHalfZ", "w23PmlT",
+            "w23XIn", "w23XInEnd", "w23XOutStart", "w23XOut", "w23XDomainMax",
+            "w23OutDy", "w23OutDz", "w23ThetaY", "w23ThetaZ")},
+        "geometry": {"dimension": 3, "length_unit": "um", "domain_count": 8,
+                     "bounding_box": [[-20.0, -8.0, -8.0], [21.0, 8.0, 8.0]]},
+        "mesh": {"tag": "mesh3d", "geometry": "geom3d", "elements": 1024,
+                 "size_properties": {"requested_properties": props({
+                     "custom": "on", "hmax": "lambda0/(5*w23Nlens)",
+                     "hmin": "lambda0/(12*w23Nlens)"})}},
+        "materials": [{"tag": tag, "selection_tag": selection_tag,
+                       "domain_ids": [domain_id],
+                       "relative_permittivity": [["1", "0", "0"], ["0", "1", "0"], ["0", "0", "1"]],
+                       "relative_permeability": [["1", "0", "0"], ["0", "1", "0"], ["0", "0", "1"]]}
+                      for tag, selection_tag, domain_id in (
+                          ("matCore3d", "geom3d_coreIn_dom", 1),
+                          ("matCoreOut3d", "geom3d_rotCoreOutZ_dom", 2),
+                          ("matCladIn3d", "geom3d_cladShellIn_dom", 3),
+                          ("matCladOut3d", "geom3d_rotCladShellOutZ_dom", 4),
+                          ("matLens3d", "geom3d_lensBall_dom", 5),
+                          ("matAir3d", "geom3d_airRemainder_dom", 6),
+                          ("matPmlAir3d", "geom3d_pmlShell_dom", 7))],
+        "physics": {"tag": "ewfd", "feature_type": "ElectromagneticWaves", "features": [
+            {"tag": "portIn3d", "feature_type": "Port", "selection_tag": "sel3dInputPort",
+             "selection_dimension": 2, "selection_ids": [11],
+             "port_properties": {"requested_properties": props({
+                 "PortType": "Numeric", "PortName": "1", "PortModeNumber": "1",
+                 "PortOrientation": "ForwardPort"})}},
+            {"tag": "portOut3d", "feature_type": "Port", "selection_tag": "sel3dOutputPort",
+             "selection_dimension": 2, "selection_ids": [22],
+             "port_properties": {"requested_properties": props({
+                 "PortType": "Numeric", "PortName": "2", "PortModeNumber": "1",
+                 "PortOrientation": "ForwardPort"})}}]},
+        "pml": {"requested_properties": props({
+            "ScalingType": "Cartesian", "stretchingType": "polynomial",
+            "typicalWavelength": "lambda0"})},
+        "selections": {
+            "sel3dInputPort": {"entity_dimension": 2, "entity_ids": [11]},
+            "sel3dOutputPort": {"entity_dimension": 2, "entity_ids": [22]},
+            "sel3dOutputCoreCapture": {"entity_dimension": 2, "entity_ids": [22]},
+            contract["plane"]["selection_tag"]: {
+                "entity_dimension": 2,
+                "entity_ids": [11] if contract["plane"]["selection_tag"] == "sel3dInputPort" else [22]},
+        },
+        "study_steps": {"study_" + sequence: [{"tag": "step"}]},
+    }
+    snapshot = {
+        "dataset": {"tag": source["dataset_id"], "feature_type": "Solution",
+                    "properties": {"solution": sequence}},
+        "stored_solution": {
+            "solution_tag": sequence, "study_tag": "study_" + sequence,
+            "computation_date_ms": 100, "computation_version": "6.4.0.293",
+            "parameter_axis": [{"name": "f0", "value": 193.414489032258e12}],
+            "solution_info": {"is_valid": True, "solver_sequence_is_empty": False,
+                              "solution_pairs": solution_pairs},
+            "selected_tuple": tuple_row},
+        "fixture_explicit_configuration": config,
+    }
+    return {"schema_id": "urn:comsol-mcp:w23:source-cohort-snapshot:1.0.0",
+            "native_result": "COMSOL_NATIVE_SOURCE_COHORT_SNAPSHOTS",
+            "before": snapshot, "after": copy.deepcopy(snapshot)}
+
+
 def _raw(contract, quadrature, electric, magnetic):
     normal_sign = contract["plane"]["native_normal_sign"]
     coordinates = quadrature["coordinates_m"]
@@ -130,9 +220,12 @@ def _raw(contract, quadrature, electric, magnetic):
             real, imag = pair.real, pair.imag
         else:
             real, imag = pair
+        unit_row = next((group_name, group) for group_name, group in contract["unit_groups"].items()
+                        if name in group["expressions"])
         expressions.append({"expression": name,
                             "real": [real] * len(coordinates),
-                            "imag": [imag] * len(coordinates)})
+                            "imag": [imag] * len(coordinates),
+                            "unit_group": unit_row[0], "unit": unit_row[1]["unit"]})
     return {"native_result": "COMSOL_NATIVE_RAW", "study_or_solver_invoked": False,
             "complex_readback": True, "contract_id": contract["contract_id"],
             "quadrature_sha256": contract["quadrature_sha256"],
@@ -140,7 +233,13 @@ def _raw(contract, quadrature, electric, magnetic):
             "sample_count": len(coordinates),
             "coordinates_m": [[point[axis] for point in coordinates] for axis in range(3)],
             "expressions": expressions,
-            "cleanup": {"created": True, "removed": True, "cleanup_failed": False}}
+            "units_preserved": True,
+            "unit_readback": {key: row["unit"] for key, row in contract["unit_groups"].items()},
+            "cleanup": {"created_count": 3, "expected_count": 3,
+                        "removed": True, "cleanup_failed": False,
+                        "tags": ["w23rf" + contract["contract_id"][:10] + suffix
+                                 for suffix in ("e", "h", "n")], "error": ""},
+            "source_cohort": _cohort_snapshot(contract)}
 
 
 def _synthetic_native_records():
@@ -209,6 +308,30 @@ def test_full3d_independent_complex_power_and_reciprocity_match_hand_calculation
     assert comparison["status"] == "SOFTWARE_NATIVE_VS_INDEPENDENT_FULL3D_COMPARISON_VALID"
     assert comparison["native_result"] == "NOT_RUN"
     assert comparison["comparison_policy"] == FULL3D_COMPARISON_POLICY
+
+
+def test_full3d_mesh_level_dispatch_binds_the_frozen_setup_before_any_study_run():
+    recipe = build_full3d_convergence_recipe(canonical_full3d_recipe())
+    for level in recipe["mesh_levels"]:
+        request = build_full3d_mesh_level_fixture_dispatch(
+            recipe, mesh_level_id=level["level_id"], mesh_scale_factor=level["scale_factor"],
+            source_artifact="NativeW23Full3DFixture.java", project_id="project-1",
+            model_ref=MODEL_REF, model_tag="M1", revision=0,
+            request_id=f"build-{level['level_id']}", idempotency_key=f"build-idem-{level['level_id']}")
+        java_args = request["arguments"]["arguments"]["arguments"]
+        assert java_args["phase"] == "build"
+        assert java_args["recipe_sha256"] == canonical_full3d_recipe()["recipe_sha256"]
+        assert java_args["mesh_level_id"] == level["level_id"]
+        assert java_args["mesh_scale_factor"] == level["scale_factor"]
+        assert request["execution"]["expected_revision"] == 0
+        assert request["native_result"] == "NOT_RUN"
+        assert request["study_or_solver_invoked"] is False
+    with pytest.raises(Full3DScienceError, match="mesh-level setup ID and factor"):
+        build_full3d_mesh_level_fixture_dispatch(
+            recipe, mesh_level_id="mesh2", mesh_scale_factor=0.9,
+            source_artifact="NativeW23Full3DFixture.java", project_id="project-1",
+            model_ref=MODEL_REF, model_tag="M1", revision=0,
+            request_id="bad-build", idempotency_key="bad-build-idem")
 
 
 def test_full3d_zero_and_near_zero_overlap_use_frozen_power_normalized_absolute_floor():
@@ -289,6 +412,39 @@ def test_full3d_input_normal_is_outward_minus_x_but_integrated_forward_plus_x():
     bad["expressions"][6]["real"] = [1] * bad["sample_count"]
     with pytest.raises(Full3DScienceError, match="outward along"):
         validate_native_field_readback(incident, bad, expected_quadrature=quadratures[2])
+
+
+def test_native_source_cohort_snapshot_is_bound_to_exact_solution_and_pre_after_config():
+    (signal, _mode, _incident, _capture), (signal_q, _mode_q, _incident_q, _capture_q) = _contracts()
+    raw = _raw(signal, signal_q, (0j, 2 + 1j, 0j), (0j, 0j, 1 + 0j))
+    checked = validate_native_source_cohort_snapshot(signal, raw)
+    assert checked["status"] == "NATIVE_SOURCE_COHORT_SNAPSHOT_VALIDATED"
+    assert checked["computation_version"] == "6.4.0.293"
+    assert checked["selected_tuple"]["inner_index"] == signal["source"]["inner_index"]
+    assert checked["fixture_explicit_configuration_sha256"]
+
+    changed = copy.deepcopy(raw)
+    changed["source_cohort"]["after"]["fixture_explicit_configuration"]["mesh"]["elements"] += 1
+    with pytest.raises(Full3DScienceError, match="changed during"):
+        validate_native_source_cohort_snapshot(signal, changed)
+
+    wrong_binding = copy.deepcopy(raw)
+    wrong_binding["source_cohort"]["before"]["dataset"]["properties"]["solution"] = "foreign-sol"
+    wrong_binding["source_cohort"]["after"] = copy.deepcopy(wrong_binding["source_cohort"]["before"])
+    with pytest.raises(Full3DScienceError, match="dataset/solution"):
+        validate_native_source_cohort_snapshot(signal, wrong_binding)
+
+    missing_storage = copy.deepcopy(raw)
+    missing_storage["source_cohort"]["before"]["stored_solution"]["computation_date_ms"] = 0
+    missing_storage["source_cohort"]["after"] = copy.deepcopy(missing_storage["source_cohort"]["before"])
+    with pytest.raises(Full3DScienceError, match="computation date/version"):
+        validate_native_source_cohort_snapshot(signal, missing_storage)
+
+    wrong_tuple = copy.deepcopy(raw)
+    wrong_tuple["source_cohort"]["before"]["stored_solution"]["selected_tuple"]["solnum"] += 1
+    wrong_tuple["source_cohort"]["after"] = copy.deepcopy(wrong_tuple["source_cohort"]["before"])
+    with pytest.raises(Full3DScienceError, match="selected tuple"):
+        validate_native_source_cohort_snapshot(signal, wrong_tuple)
 
 
 def test_full3d_managed_field_readback_dispatch_binds_registered_native_contract():
@@ -465,11 +621,11 @@ def _bma_probe_run_readback(preparation):
     }
 
 
-def _bma_probe_run_request(preparation):
+def _bma_probe_run_request(preparation, *, revision=9):
     return build_full3d_bma_probe_run_dispatch(
         source_artifact="fixture-source",
         solver_sequence_tag=preparation["solver_sequence"]["tag"],
-        project_id="project-1", model_ref=MODEL_REF, model_tag="M1", revision=9,
+        project_id="project-1", model_ref=MODEL_REF, model_tag="M1", revision=revision,
         request_id="bma-run-request", idempotency_key="bma-run-idempotency")
 
 
@@ -477,6 +633,11 @@ def _bma_probe_public_route_result(readback, request):
     from comsol_mcp._execution_contract import canonical_request_hash
 
     submitted_request = copy.deepcopy(request)
+    logical_execution = submitted_request["execution"]
+    request_id = logical_execution["request_id"]
+    idempotency_key = logical_execution["idempotency_key"]
+    operation_instance_id = "op-bma-run"
+    job_id = "job-bma-run"
     submitted_execution = {**submitted_request["execution"],
         "execution_timeout_s": 600.0, "queue_timeout_s": 60.0, "rpc_timeout_s": 30.0}
     submitted_request["execution"] = submitted_execution
@@ -492,11 +653,12 @@ def _bma_probe_public_route_result(readback, request):
     operation_response = {
         "success": True,
         "execution": {"session_id": "session-1", "model_ref": dict(MODEL_REF),
-            "revision": 10, "dirty": False, "server_ownership": "mcp_managed",
+            "revision": logical_execution["expected_revision"] + 1,
+            "dirty": False, "server_ownership": "mcp_managed",
             "model_ownership": "mcp_owned", "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
-            "request_id": "bma-run-request",
-            "idempotency_key": "bma-run-idempotency", "operation_id": "op-bma-run",
-            "request_hash": request_hash, "job_id": "job-bma-run"},
+            "request_id": request_id,
+            "idempotency_key": idempotency_key, "operation_id": operation_instance_id,
+            "request_hash": request_hash, "job_id": job_id},
         "error": None,
         "data": {
             "worker": {"ok": True, "status": "SUCCEEDED",
@@ -504,22 +666,21 @@ def _bma_probe_public_route_result(readback, request):
             "readback": {"executed": True, "readback": copy.deepcopy(readback)},
         },
     }
-    job_id = "job-bma-run"
     return {
         "outcome": "SUCCEEDED", "retry_forbidden": True, "job_id": job_id,
         "submitted_request": submitted_request,
         "dispatch_response": {"success": True, "data": {"job_id": job_id, "status": "QUEUED"},
-            "execution": {"request_id": "bma-run-request",
-                "idempotency_key": "bma-run-idempotency", "operation_id": "op-bma-run",
+            "execution": {"request_id": request_id,
+                "idempotency_key": idempotency_key, "operation_id": operation_instance_id,
                 "request_hash": request_hash, "job_id": job_id}},
         "job_wait_responses": [{"success": True, "data": {
-            "job_id": job_id, "operation_id": "op-bma-run", "status": "SUCCEEDED",
+            "job_id": job_id, "operation_id": operation_instance_id, "status": "SUCCEEDED",
             "metadata": {"operation": "operation_call", "arguments": {}, "execution": {}},
             "effective_timeouts": {"queue_timeout_s": 60.0, "execution_timeout_s": 600.0,
                                    "rpc_timeout_s": 30.0, "no_progress_warning_s": None},
             "result": operation_response, "operation": {
-                "operation_id": "op-bma-run", "request_id": "bma-run-request",
-                "idempotency_key": "bma-run-idempotency", "request_hash": request_hash,
+                "operation_id": operation_instance_id, "request_id": request_id,
+                "idempotency_key": idempotency_key, "request_hash": request_hash,
                 "operation": "operation_call", "status": "SUCCEEDED",
                 "metadata": {"operation": "operation_call", "arguments": {}, "execution": {}},
                 "effective_timeouts": {"queue_timeout_s": 60.0, "execution_timeout_s": 600.0,
@@ -805,8 +966,11 @@ def _bma_basis_raw(contract, quadrature, *, basis_e, basis_h,
                            for axis in range(3)],
         "unit_readback": {key: value["unit"] for key, value in contract["unit_groups"].items()},
         "expressions": rows,
-        "cleanup": {"created": True, "created_count": 3, "expected_count": 3,
-                    "removed": True, "cleanup_failed": False, "tags": ["owned-e", "owned-h", "owned-n"]},
+        "source_cohort": _cohort_snapshot(contract),
+        "cleanup": {"created_count": 3, "expected_count": 3,
+                    "removed": True, "cleanup_failed": False,
+                    "tags": ["w23bm" + contract["contract_id"][:10] + suffix
+                             for suffix in ("e", "h", "n")], "error": ""},
         "field_mapping_status": "UNVERIFIED",
         "basis_ordinal_mapping": "UNVERIFIED_NATIVE_FIELD_MAPPING_REQUIRED",
         "numeric_port_mode_field_mapping": "UNVERIFIED"}
@@ -866,6 +1030,174 @@ def _bma_mapping_route_result(request, *, label, response_data, revision_delta):
             "job_wait_responses": [{"success": True, "data": job}], "response": response}
 
 
+def _mesh_stability_route_bundle(monkeypatch):
+    import copy as copy_module
+
+    from comsol_mcp._w23_basis_v2_results import build_definition
+    from tests.test_w23_mode_basis_v2 import _request as base_v2_request
+    from tests.test_w23_mode_basis_v2_results import (
+        _install_native_test_doubles, _invoke,
+    )
+    from tools.w23_full3d_science import (
+        build_full3d_convergence_recipe, build_full3d_study_run_dispatch,
+    )
+    from tools.w23_mode_basis_v2 import build_two_mode_basis_request
+
+    recipe = build_full3d_convergence_recipe(canonical_full3d_recipe())
+    preparation, _producer, _binding, contracts, quadratures = _bma_basis_mapping_bundle()
+    template = base_v2_request()
+    frame_id = template["coordinate_frame"]
+    frequency_hz = template["frequency_hz"]
+    mesh_runs = []
+    native_results = []
+    for level_index, level in enumerate(recipe["mesh_levels"], start=1):
+        model_ref = {**MODEL_REF, "model_tag": f"M{level_index}", "generation": level_index}
+        project_id = "project-1"
+        model_tag = model_ref["model_tag"]
+
+        def source(template_source, *, dataset, solution, port, inner=1, solnum=1,
+                   mode_index=None):
+            result = copy_module.deepcopy(template_source)
+            result.update({
+                "dataset_id": dataset, "solution_id": solution, "outer_index": 1,
+                "inner_index": inner, "solnum": solnum, "port_id": port,
+                "project_id": project_id, "model_ref": dict(model_ref),
+                "model_revision": 3, "geometry_revision": 0,
+                "coordinate_frame": frame_id, "frequency_hz": frequency_hz,
+            })
+            if mode_index is not None:
+                result["mode_index"] = mode_index
+            else:
+                result.pop("mode_index", None)
+            return result
+
+        basis_request = build_two_mode_basis_request(
+            basis_id="w23-two-eigensolution-test-basis", case=CASE,
+            project_id=project_id, model_ref=model_ref, model_revision=3,
+            geometry_revision=0, frequency_hz=frequency_hz,
+            coordinate_frame=frame_id,
+            output_surface=copy_module.deepcopy(template["output_surface"]),
+            input_surface=copy_module.deepcopy(template["input_surface"]),
+            signal_source=source(template["signal_source"], dataset="dset_std3d_freq",
+                                 solution="sol3dStdFrequency", port="2"),
+            mode_sources=[
+                {"mode_id": "bma-eigensolution-1", "mode_index": 1,
+                 "source": source(template["basis_modes"][0]["source"],
+                     dataset="dset_bma_probe", solution="sol3dBmaProbe", port="2",
+                     inner=1, solnum=1, mode_index=1)},
+                {"mode_id": "bma-eigensolution-2", "mode_index": 2,
+                 "source": source(template["basis_modes"][1]["source"],
+                     dataset="dset_bma_probe", solution="sol3dBmaProbe", port="2",
+                     inner=2, solnum=2, mode_index=2)},
+            ],
+            incident_source=source(template["incident_source"], dataset="dset_std3d_input",
+                                   solution="sol3dStdInput", port="1"),
+            applicability=template["applicability"],
+            radial_intervals=4, angular_points=8,
+        )
+        definition = build_definition(basis_request, [
+            {"mode_id": row["mode_id"], "parameter": "lambda"}
+            for row in basis_request["basis_modes"]])
+        _install_native_test_doubles(monkeypatch, basis_request)
+        native_result = _invoke(
+            basis_request, definition, model_tag=model_tag, project_id=project_id,
+            model_ref=model_ref, revision=3)
+        native_results.append(native_result)
+
+        fixture_recipe = canonical_full3d_recipe()
+        build_request = build_full3d_mesh_level_fixture_dispatch(
+            recipe, source_artifact="NativeW23Full3DFixture.java",
+            project_id=project_id, model_ref=model_ref, model_tag=model_tag,
+            revision=0, request_id=f"{level['level_id']}-build-request",
+            idempotency_key=f"{level['level_id']}-build-idem",
+            mesh_level_id=level["level_id"], mesh_scale_factor=level["scale_factor"])
+        elements = 1024 * level_index
+        size_properties = {"properties": ["custom", "hmax", "hmin"],
+            "requested_properties": {
+                "custom": {"has_property_exact": True, "string_readback": "on"},
+                "hmax": {"has_property_exact": True,
+                         "string_readback": level["hmax_expression"]},
+                "hmin": {"has_property_exact": True,
+                         "string_readback": level["hmin_expression"]},
+            }}
+        build_readback = {
+            "fixture_id": "w23_full3d_fiber_ball_lens_vector_pml_v1",
+            "recipe_sha256": fixture_recipe["recipe_sha256"],
+            "status": "BUILT_CONFIGURED_NOT_SOLVED", "native_result": "NOT_RUN",
+            "study_or_solver_invoked": False,
+            "managed_identity": {"project_id": project_id, "model_ref": dict(model_ref),
+                "model_tag": model_tag, "expected_revision": 0},
+            "mesh": {"tag": "mesh3d", "geometry": "geom3d",
+                "mesh_level_id": level["level_id"], "mesh_scale_factor": level["scale_factor"],
+                "hmax": level["hmax_expression"], "hmin": level["hmin_expression"],
+                "elements": elements, "size_properties": size_properties},
+        }
+        build_response_data = {
+            "worker": {"ok": True, "status": "SUCCEEDED",
+                       "result": {"readback": copy_module.deepcopy(build_readback)}},
+            "readback": {"executed": True, "readback": copy_module.deepcopy(build_readback)},
+        }
+        build_route = _bma_mapping_route_result(
+            build_request, label="fixture-build", response_data=build_response_data,
+            revision_delta=1)
+
+        study_request = build_full3d_study_run_dispatch(
+            project_id=project_id, model_ref=model_ref, model_tag=model_tag,
+            revision=1, request_id=f"{level['level_id']}-study-request",
+            idempotency_key=f"{level['level_id']}-study-idem", timeout_s=600)
+        study_route = _bma_mapping_route_result(
+            study_request, label="std3d", response_data={"status": "SUCCEEDED"}, revision_delta=1)
+        field_request = build_full3d_bma_basis_mapping_dispatch(
+            contracts[0], source_artifact="NativeW23Full3DFixture.java",
+            quadrature=quadratures[0], project_id=project_id, model_ref=model_ref,
+            model_tag=model_tag, revision=2,
+            request_id=f"{level['level_id']}-field-request",
+            idempotency_key=f"{level['level_id']}-field-idem")
+        field_readback = _bma_basis_raw(
+            contracts[0], quadratures[0], basis_e=(0j, 1 + 0j, 0j),
+            basis_h=(0j, 0j, 1 + 0j))
+        mesh = field_readback["source_cohort"]["before"]["fixture_explicit_configuration"]["mesh"]
+        mesh["elements"] = elements
+        properties = mesh["size_properties"]["requested_properties"]
+        properties["hmax"]["string_readback"] = level["hmax_expression"]
+        properties["hmin"]["string_readback"] = level["hmin_expression"]
+        field_readback["source_cohort"]["after"] = copy_module.deepcopy(
+            field_readback["source_cohort"]["before"])
+        field_response_data = {
+            "worker": {"ok": True, "status": "SUCCEEDED",
+                       "result": {"readback": copy_module.deepcopy(field_readback)}},
+            "readback": {"executed": True, "readback": copy_module.deepcopy(field_readback)},
+        }
+        field_route = _bma_mapping_route_result(
+            field_request, label="mesh-probe", response_data=field_response_data, revision_delta=1)
+
+        overlap_request = {
+            "operation": "operation_call",
+            "arguments": {"operation_id": "result.mode_overlap_basis_v2",
+                          "arguments": {"definition": definition}},
+            "execution": {"project_id": project_id, "session_id": model_ref["session_id"],
+                          "model_ref": dict(model_ref), "expected_revision": 3,
+                          "request_id": f"{level['level_id']}-overlap-request",
+                          "idempotency_key": f"{level['level_id']}-overlap-idem"},
+        }
+        overlap_route = _bma_mapping_route_result(
+            overlap_request, label="registered-overlap", response_data=native_result,
+            revision_delta=0)
+        mesh_runs.append({
+            "mesh_level_id": level["level_id"],
+            "build_request": build_request, "build_route_result": build_route,
+            "build_max_execution_timeout_s": 180,
+            "study_request": study_request, "study_route_result": study_route,
+            "study_max_execution_timeout_s": 180,
+            "mesh_probe_request": field_request, "mesh_probe_route_result": field_route,
+            "mesh_probe_max_execution_timeout_s": 180,
+            "overlap_request": overlap_request, "overlap_route_result": overlap_route,
+            "overlap_max_execution_timeout_s": 180,
+            "caller_delta": -999, "caller_status": "PASS",
+        })
+    return recipe, mesh_runs, native_results
+
+
 def _bma_receiver_readback():
     section = {
         "evidence_scope": "COMSOL_NATIVE_GEOMETRY_READBACK", "tag": "sel3dOutputPort",
@@ -881,6 +1213,155 @@ def _bma_receiver_readback():
     return {"receiver_port_section": section,
             "receiver_transform": {"axis_xyz": [1.0, 0.0, 0.0],
                                    "center_xyz_um": [20.0, 0.0, 0.0]}}
+
+
+def test_full3d_mesh_stability_recipe_recomputes_metrics_from_terminal_managed_routes(monkeypatch):
+    recipe, mesh_runs, _native_results = _mesh_stability_route_bundle(monkeypatch)
+
+    result = recompute_full3d_mesh_stability_from_registered_routes(recipe, mesh_runs)
+
+    assert [row["hmax_expression"] for row in recipe["mesh_levels"]] == [
+        "lambda0/(5*w23Nlens)",
+        "(lambda0/(5*w23Nlens))*0.8",
+        "(lambda0/(5*w23Nlens))*0.64",
+    ]
+    assert [row["hmin_expression"] for row in recipe["mesh_levels"]] == [
+        "lambda0/(12*w23Nlens)",
+        "(lambda0/(12*w23Nlens))*0.8",
+        "(lambda0/(12*w23Nlens))*0.64",
+    ]
+    assert recipe["study_or_solver_invoked"] is False
+    assert result["caller_metrics_or_deltas_accepted"] is False
+    assert result["basis_and_signed_power_thresholds"] == "WITHIN_LIMITS"
+    assert result["adjacent_deltas"][0]["eta_basis_absolute_delta"] == pytest.approx(0)
+    assert result["adjacent_deltas"][0]["signed_signal_power_over_pin_absolute_delta"] == pytest.approx(0)
+    assert result["adjacent_deltas"][0]["basis_diagonal_power_used_as_gate"] is False
+    assert result["basis_diagonal_power_diagnostic"].startswith(
+        "G00_AND_G11_OVER_PIN_ARE_GAUGE_DEPENDENT")
+    assert result["eta_capture_convergence"] == "NOT_RUN_MISSING_ROUTE_BOUND_CORE_CAPTURE_INTEGRALS"
+    assert result["quadrature_convergence"] == "NOT_RUN_MISSING_ROUTE_BOUND_THREE_LEVEL_RAW_FIELD_SERIES"
+    assert result["power_balance"] == "NOT_RUN_MISSING_NATIVE_CLOSED_CONTROL_VOLUME_READBACK"
+    assert result["producer_step_solution_lineage"] == "UNVERIFIED"
+    assert result["numeric_port_mode_field_mapping"] == "UNVERIFIED"
+    assert result["native_convergence_status"] == "NOT_RUN"
+    assert result["scientific_acceptance"] == "NOT_RUN"
+
+
+def test_full3d_mesh_stability_gate_is_invariant_to_independent_basis_rescaling(monkeypatch):
+    recipe, mesh_runs, native_results = _mesh_stability_route_bundle(monkeypatch)
+    route = mesh_runs[1]["overlap_route_result"]
+    result = route["response"]["data"]
+    terms = result["native_integrals"]["terms"]
+    scales = (10.0 + 0j, 0.1 + 0j)
+    for i in range(2):
+        for j in range(2):
+            term = terms[f"G{i}{j}"]
+            value = complex(term["real"], term["imag"]) * scales[i].conjugate() * scales[j]
+            term["real"], term["imag"] = value.real, value.imag
+        term = terms[f"b{i}"]
+        value = complex(term["real"], term["imag"]) * scales[i].conjugate()
+        term["real"], term["imag"] = value.real, value.imag
+    result["native_integrals"]["gram_matrix"] = [
+        [copy.deepcopy(terms["G00"]), copy.deepcopy(terms["G01"])],
+        [copy.deepcopy(terms["G10"]), copy.deepcopy(terms["G11"])],
+    ]
+    result["native_integrals"]["coupling_vector"] = [
+        copy.deepcopy(terms["b0"]), copy.deepcopy(terms["b1"])]
+    route["job_wait_responses"][0]["data"]["result"]["data"] = copy.deepcopy(result)
+
+    recomputed = recompute_full3d_mesh_stability_from_registered_routes(recipe, mesh_runs)
+
+    assert recomputed["basis_and_signed_power_thresholds"] == "WITHIN_LIMITS"
+    assert recomputed["adjacent_deltas"][0]["eta_basis_absolute_delta"] == pytest.approx(0, abs=1e-12)
+    diagnostic = recomputed["adjacent_deltas"][0][
+        "basis_diagonal_power_over_pin_gauge_dependent_diagnostic_deltas"]
+    assert max(diagnostic) > 1.0
+
+
+def test_full3d_mesh_stability_recomputes_signed_power_delta_from_terminal_terms(monkeypatch):
+    recipe, mesh_runs, _native_results = _mesh_stability_route_bundle(monkeypatch)
+    route = mesh_runs[1]["overlap_route_result"]
+    result = route["response"]["data"]
+    signal_term = result["native_integrals"]["terms"]["P_signal"]
+    signal_term["real"] *= 1.02
+    result["native_integrals"]["signal_power"] = copy.deepcopy(signal_term)
+    route["job_wait_responses"][0]["data"]["result"]["data"] = copy.deepcopy(result)
+
+    checked = recompute_full3d_mesh_stability_from_registered_routes(recipe, mesh_runs)
+
+    assert checked["adjacent_deltas"][0]["signed_signal_power_over_pin_absolute_delta"] > 1e-3
+    assert checked["basis_and_signed_power_thresholds"] == "LIMIT_EXCEEDED"
+    assert checked["native_convergence_status"] == "NOT_RUN"
+
+
+@pytest.mark.parametrize("mutation", [
+    "study_revision_skip", "probe_on_stale_revision", "mesh_expression_mismatch",
+    "mesh_setup_scale_mismatch", "mesh_setup_revision_skip", "study_after_setup_stale",
+    "mesh_setup_property_unreadable", "postsolve_mesh_drift", "foreign_study_selection",
+    "duplicate_model_ref", "foreign_overlap_model", "caller_fake_deltas",
+])
+def test_full3d_mesh_stability_route_chain_rejects_detached_or_inconsistent_sources(monkeypatch, mutation):
+    recipe, mesh_runs, _native_results = _mesh_stability_route_bundle(monkeypatch)
+    rows = copy.deepcopy(mesh_runs)
+    if mutation == "study_revision_skip":
+        rows[0]["study_route_result"]["response"]["execution"]["revision"] += 1
+        rows[0]["study_route_result"]["job_wait_responses"][0]["data"]["result"] = copy.deepcopy(
+            rows[0]["study_route_result"]["response"])
+    elif mutation == "probe_on_stale_revision":
+        rows[1]["mesh_probe_request"]["execution"]["expected_revision"] = 0
+    elif mutation == "mesh_expression_mismatch":
+        response_data = rows[2]["mesh_probe_route_result"]["response"]["data"]
+        changed = response_data["readback"]["readback"]
+        for phase in ("before", "after"):
+            changed["source_cohort"][phase]["fixture_explicit_configuration"]["mesh"][
+                "size_properties"]["requested_properties"]["hmax"]["string_readback"] = "lambda0/(9*w23Nlens)"
+        response_data["worker"]["result"]["readback"] = copy.deepcopy(changed)
+        rows[2]["mesh_probe_route_result"]["job_wait_responses"][0]["data"]["result"] = copy.deepcopy(
+            rows[2]["mesh_probe_route_result"]["response"])
+    elif mutation == "mesh_setup_scale_mismatch":
+        rows[1]["build_request"]["arguments"]["arguments"]["arguments"]["mesh_scale_factor"] = 0.7
+    elif mutation == "mesh_setup_revision_skip":
+        rows[0]["build_route_result"]["response"]["execution"]["revision"] += 1
+        rows[0]["build_route_result"]["job_wait_responses"][0]["data"]["result"] = copy.deepcopy(
+            rows[0]["build_route_result"]["response"])
+    elif mutation == "study_after_setup_stale":
+        rows[1]["study_request"]["execution"]["expected_revision"] = 0
+    elif mutation == "mesh_setup_property_unreadable":
+        response_data = rows[1]["build_route_result"]["response"]["data"]
+        readback = response_data["readback"]["readback"]
+        readback["mesh"]["size_properties"]["requested_properties"]["hmin"]["has_property_exact"] = False
+        response_data["worker"]["result"]["readback"] = copy.deepcopy(readback)
+        rows[1]["build_route_result"]["job_wait_responses"][0]["data"]["result"] = copy.deepcopy(
+            rows[1]["build_route_result"]["response"])
+    elif mutation == "postsolve_mesh_drift":
+        response_data = rows[1]["mesh_probe_route_result"]["response"]["data"]
+        readback = response_data["readback"]["readback"]
+        for phase in ("before", "after"):
+            readback["source_cohort"][phase]["fixture_explicit_configuration"]["mesh"][
+                "size_properties"]["requested_properties"]["hmin"]["string_readback"] = "lambda0/(12*w23Nlens)"
+        response_data["worker"]["result"]["readback"] = copy.deepcopy(readback)
+        rows[1]["mesh_probe_route_result"]["job_wait_responses"][0]["data"]["result"] = copy.deepcopy(
+            rows[1]["mesh_probe_route_result"]["response"])
+    elif mutation == "foreign_study_selection":
+        rows[2]["study_request"]["arguments"]["arguments"]["study"] = {
+            "segments": [{"collection": "study", "tag": "std3dBmaOutputProbe"}]}
+    elif mutation == "duplicate_model_ref":
+        rows[2]["study_request"]["execution"]["model_ref"] = copy.deepcopy(
+            rows[1]["study_request"]["execution"]["model_ref"])
+    elif mutation == "foreign_overlap_model":
+        rows[1]["overlap_request"]["execution"]["model_ref"]["generation"] += 1
+    elif mutation == "caller_fake_deltas":
+        for row in rows:
+            row["eta_basis_delta"] = 0.0
+            row["signal_power_delta"] = 0.0
+            row["status"] = "PASS"
+        # Caller assertions do not become inputs, so the route-bound result remains computed.
+        checked = recompute_full3d_mesh_stability_from_registered_routes(recipe, rows)
+        assert checked["caller_metrics_or_deltas_accepted"] is False
+        assert checked["adjacent_deltas"][0]["eta_basis_absolute_delta"] == pytest.approx(0)
+        return
+    with pytest.raises(Full3DScienceError):
+        recompute_full3d_mesh_stability_from_registered_routes(recipe, rows)
 
 
 def test_bma_basis_mapping_keeps_numeric_port_and_eigensolution_axes_separate_and_unverified():
@@ -1095,12 +1576,36 @@ def test_bma_mapping_route_binding_uses_real_durable_request_and_job_identity(mu
         validate_full3d_bma_mapping_route_result(request, route, **kwargs)
 
 
-def test_bma_mapping_stage_integrates_two_basis_samples_after_exact_dataset_routes():
+def test_bma_mapping_stage_integrates_two_basis_samples_after_exact_dataset_routes(tmp_path):
     from tools.run_native_w23_full3d_setup import _execute_bma_basis_mapping_stage
 
-    preparation, producer, _binding, _contracts, _quadratures = _bma_basis_mapping_bundle()
+    preparation = _validated_bma_probe_preparation()
+    producer_readback = _bma_probe_run_readback(preparation)
+    producer_readback["managed_identity"]["expected_revision"] = 19
+    producer_request = _bma_probe_run_request(preparation, revision=19)
+    producer_route = _bma_probe_public_route_result(producer_readback, producer_request)
+    producer = validate_full3d_bma_probe_run_readback(
+        producer_readback, preparation=preparation, project_id="project-1", model_tag="M1",
+        model_ref=MODEL_REF, run_request=producer_request, route_result=producer_route)
+    producer_route_evidence = {"preparation": preparation, "request": producer_request,
+        "route_result": producer_route, "readback": producer_readback}
     baseline = {**CASE, "factor": "baseline", "receiver_transform": {
         "axis_xyz": [1.0, 0.0, 0.0], "center_xyz_um": [20.0, 0.0, 0.0]}}
+    source_path = tmp_path / "NativeW23Full3DFixture.java"
+    source_path.write_bytes(b"synthetic frozen fixture source")
+    source_hash = hashlib.sha256(source_path.read_bytes()).hexdigest()
+    staged_source = {"status": "PROJECT_LOCAL_SOURCE_STAGED",
+        "source_artifact": source_path.name, "workspace": str(tmp_path),
+        "path": str(source_path), "sha256": source_hash}
+    owner = {"candidate_owned_server": True, "gui_attached": False,
+        "project_id": "project-1", "server_process_identity": {
+            "pid": 77123, "start_epoch_ms": 1790000000000},
+        "listener": {"status": "LOOPBACK_LISTENER_VERIFIED_BEFORE_WORKER",
+                     "pid": 77123, "port": 55991, "endpoint": "127.0.0.1:55991"},
+        "session_identity": {"project_id": "project-1", "session_id": "session-1",
+            "server_instance_id": "worker-epoch-1", "worker_instance_id": "worker-1",
+            "worker_epoch": 1, "endpoint": "127.0.0.1:55991"},
+        "model_ref": dict(MODEL_REF)}
     apply_readback = _bma_receiver_readback()
     result = {"field_sample_readbacks_validated": 0}
     model = {"model_ref": dict(MODEL_REF), "model_tag": "M1", "revision": 20}
@@ -1159,8 +1664,10 @@ def test_bma_mapping_stage_integrates_two_basis_samples_after_exact_dataset_rout
     finished = _execute_bma_basis_mapping_stage(
         route, result=result, project_id="project-1", model=model,
         source_artifact="NativeW23Full3DFixture.java", preparation=preparation,
-        producer_evidence=producer, apply_readback=apply_readback,
-        baseline_case=baseline)
+        producer_evidence=producer, producer_route_evidence=producer_route_evidence,
+        apply_readback=apply_readback,
+        baseline_case=baseline, staged_source_proof=staged_source,
+        execution_owner=owner)
     assert [label for label, _, _ in calls] == [
         "bma_basis_dataset_list", "bma_basis_dataset_solution_indices",
         "bma_basis_fields_ordinal1", "bma_basis_fields_ordinal2"]
@@ -1177,6 +1684,98 @@ def test_bma_mapping_stage_integrates_two_basis_samples_after_exact_dataset_rout
     assert finished["evidence"]["status"] == "TWO_RAW_BMA_BASIS_SAMPLES_VALIDATED_MAPPING_UNVERIFIED"
     assert finished["evidence"]["field_mapping_status"] == "UNVERIFIED"
     assert finished["evidence"]["study_or_solver_invoked_by_sampling"] is False
+    cohort_chain = finished["evidence"]["source_cohort_revision_chain"]
+    assert cohort_chain["status"] == "CONTROLLED_SAMPLING_COHORT_CHAIN_VALIDATED"
+    assert cohort_chain["revision_start"] == 20 and cohort_chain["revision_end"] == 22
+    assert cohort_chain["offline_stored_solution_cohort"] == "ELIGIBLE_FOR_INDEPENDENT_SCIENCE_COMPARISON"
+    assert cohort_chain["scientific_acceptance"] == "UNVERIFIED_PENDING_NATIVE_ARTIFACT_AND_REVIEW"
+
+    from tools.w23_full3d_science import validate_full3d_sampling_cohort_revision_chain
+    route_rows = [{"label": label, **copy.deepcopy(row)}
+                  for label, row in finished["evidence"]["routes"].items()]
+    stage_contracts = finished["evidence"]["contracts"]
+    stage_quadratures = [circular_port_quadrature(
+        contract["plane"]["center_xyz_m"], contract["plane"]["axis_xyz"],
+        contract["plane"]["sample_radius_m"], radial_intervals=32, angular_points=64)
+        for contract in stage_contracts]
+    sample_rows = [{"label": f"bma_basis_fields_ordinal{ordinal}",
+                    "contract": stage_contracts[ordinal - 1],
+                    "quadrature": stage_quadratures[ordinal - 1],
+                    "readback": copy.deepcopy(samples[ordinal - 1]["readback"])}
+                   for ordinal in (1, 2)]
+    cohort_args = {"project_id": "project-1", "model_ref": MODEL_REF,
+        "start_revision": 20, "source_artifact": "NativeW23Full3DFixture.java",
+        "staged_source_proof": staged_source, "execution_owner": owner,
+        "producer_evidence": producer,
+        "producer_route_evidence": producer_route_evidence}
+    broken_revision = copy.deepcopy(route_rows)
+    broken_revision[3]["request"]["execution"]["expected_revision"] = 22
+    with pytest.raises(Full3DScienceError, match="revision chain"):
+        validate_full3d_sampling_cohort_revision_chain(
+            broken_revision, sample_rows, **cohort_args)
+    foreign_worker = copy.deepcopy(route_rows)
+    foreign_worker[2]["request"]["execution"]["model_ref"]["server_instance_id"] = "foreign-worker"
+    with pytest.raises(Full3DScienceError, match="exact project/Worker/ModelRef"):
+        validate_full3d_sampling_cohort_revision_chain(
+            foreign_worker, sample_rows, **cohort_args)
+    bad_cleanup = copy.deepcopy(sample_rows)
+    bad_cleanup[1]["readback"]["cleanup"]["removed"] = False
+    with pytest.raises(Full3DScienceError, match="sample readback"):
+        validate_full3d_sampling_cohort_revision_chain(
+            route_rows, bad_cleanup, **cohort_args)
+    cleanup_route_failure = copy.deepcopy(route_rows)
+    cleanup_route = cleanup_route_failure[3]
+    cleanup_response = cleanup_route["route_result"]["response"]
+    cleanup_raw = cleanup_response["data"]["readback"]["readback"]
+    cleanup_raw["cleanup"]["removed"] = False
+    cleanup_raw["cleanup"]["cleanup_failed"] = True
+    cleanup_response["data"]["worker"]["result"]["readback"] = copy.deepcopy(cleanup_raw)
+    cleanup_route["readback"] = copy.deepcopy(cleanup_raw)
+    cleanup_route["route_result"]["job_wait_responses"][-1]["data"]["result"] = \
+        copy.deepcopy(cleanup_response)
+    with pytest.raises(Full3DScienceError, match="sample readback"):
+        validate_full3d_sampling_cohort_revision_chain(
+            cleanup_route_failure, sample_rows, **cohort_args)
+    detached_source = copy.deepcopy(sample_rows)
+    detached_source[0]["readback"]["source_cohort"]["before"]["stored_solution"][
+        "computation_date_ms"] += 12345
+    with pytest.raises(Full3DScienceError, match="sample readback"):
+        validate_full3d_sampling_cohort_revision_chain(
+            route_rows, detached_source, **cohort_args)
+    detached_complex = copy.deepcopy(sample_rows)
+    detached_complex[0]["readback"]["expressions"][0]["real"][0] += 0.125
+    with pytest.raises(Full3DScienceError, match="sample readback"):
+        validate_full3d_sampling_cohort_revision_chain(
+            route_rows, detached_complex, **cohort_args)
+    detached_dataset = copy.deepcopy(route_rows)
+    detached_dataset[0]["readback"]["datasets"][0]["solution"] = "foreign-solution"
+    with pytest.raises(Full3DScienceError):
+        validate_full3d_sampling_cohort_revision_chain(
+            detached_dataset, sample_rows, **cohort_args)
+    detached_indices = copy.deepcopy(route_rows)
+    detached_indices[1]["readback"]["solnum_pairs"][0]["solnum"] = 99
+    with pytest.raises(Full3DScienceError):
+        validate_full3d_sampling_cohort_revision_chain(
+            detached_indices, sample_rows, **cohort_args)
+    detached_producer_summary = copy.deepcopy(cohort_args)
+    detached_producer_summary["producer_evidence"]["managed_job_id"] = "foreign-job"
+    with pytest.raises(Full3DScienceError, match="producer summary"):
+        validate_full3d_sampling_cohort_revision_chain(
+            route_rows, sample_rows, **detached_producer_summary)
+    detached_producer_snapshot = copy.deepcopy(cohort_args)
+    detached_producer_snapshot["producer_route_evidence"]["readback"][
+        "post_solve_solution_state"]["solution_pairs"][0]["solnum"] = 7
+    with pytest.raises(Full3DScienceError):
+        validate_full3d_sampling_cohort_revision_chain(
+            route_rows, sample_rows, **detached_producer_snapshot)
+    changed_source_bytes = source_path.read_bytes()
+    source_path.write_bytes(changed_source_bytes + b"changed")
+    try:
+        with pytest.raises(Full3DScienceError, match="frozen staged hash"):
+            validate_full3d_sampling_cohort_revision_chain(
+                route_rows, sample_rows, **cohort_args)
+    finally:
+        source_path.write_bytes(changed_source_bytes)
 
     failure_label = "bma_basis_fields_ordinal2"
     current_revision = 20
@@ -1189,8 +1788,10 @@ def test_bma_mapping_stage_integrates_two_basis_samples_after_exact_dataset_rout
         _execute_bma_basis_mapping_stage(
             route, result=partial, project_id="project-1", model=model,
             source_artifact="NativeW23Full3DFixture.java", preparation=preparation,
-            producer_evidence=producer, apply_readback=apply_readback,
-            baseline_case=baseline)
+            producer_evidence=producer, producer_route_evidence=producer_route_evidence,
+            apply_readback=apply_readback,
+            baseline_case=baseline, staged_source_proof=staged_source,
+            execution_owner=owner)
     from tools.run_native_w23_full3d_setup import _finalize_science_counters
     _finalize_science_counters(partial, "bma_mapping_probe")
     assert partial["field_sample_attempts"] == 2

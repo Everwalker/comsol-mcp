@@ -77,6 +77,7 @@ public final class NativeW23Full3DFixture {
 
     private static Map<String, Object> build(Model model, Map<String, Object> args) {
         Map<String, Object> managedIdentity = verifyManagedIdentity(model, args);
+        Map<String, Object> meshLevel = requestedMeshLevel(args);
         String recipeSha = requiredSha256(args.get("recipe_sha256"), "recipe_sha256");
         if (!FIXTURE_ID.equals(args.get("fixture_id")))
             throw new IllegalArgumentException("registered full-3D fixture id differs");
@@ -209,9 +210,10 @@ public final class NativeW23Full3DFixture {
         frequency.set("plist", "f0");
 
         model.component(COMPONENT).mesh().create("mesh3d", GEOMETRY);
-        model.component(COMPONENT).mesh("mesh3d").feature("size").set("custom", "on");
-        model.component(COMPONENT).mesh("mesh3d").feature("size").set("hmax", "lambda0/(5*w23Nlens)");
-        model.component(COMPONENT).mesh("mesh3d").feature("size").set("hmin", "lambda0/(12*w23Nlens)");
+        PropFeature size = model.component(COMPONENT).mesh("mesh3d").feature("size");
+        size.set("custom", "on");
+        size.set("hmax", (String) meshLevel.get("hmax_expression"));
+        size.set("hmin", (String) meshLevel.get("hmin_expression"));
         model.component(COMPONENT).mesh("mesh3d").run();
 
         Map<String, Object> result = new LinkedHashMap<>();
@@ -262,10 +264,71 @@ public final class NativeW23Full3DFixture {
                 "native_port_selection_readback", portSectionReadback(model, outputPortSelection,
                         new double[]{1.0, 0.0, 0.0}, new double[]{20.0, 0.0, 0.0},
                         2.5, PORT_SELECTION_RADIAL_MARGIN_UM)));
-        result.put("mesh", Map.of("tag", "mesh3d", "hmax", "lambda0/(5*w23Nlens)",
-                "hmin", "lambda0/(12*w23Nlens)",
-                "elements", model.component(COMPONENT).mesh("mesh3d").getNumElem()));
+        Map<String, Object> meshReadback = new LinkedHashMap<>();
+        meshReadback.put("tag", "mesh3d");
+        meshReadback.put("geometry", GEOMETRY);
+        Map<String, Object> sizeReadback = propertyReadback(size, new String[]{"custom", "hmax", "hmin"});
+        meshReadback.put("size_properties", sizeReadback);
+        @SuppressWarnings("unchecked") Map<String, Object> requestedSize =
+                (Map<String, Object>) sizeReadback.get("requested_properties");
+        @SuppressWarnings("unchecked") Map<String, Object> customReadback =
+                (Map<String, Object>) requestedSize.get("custom");
+        @SuppressWarnings("unchecked") Map<String, Object> hmaxReadback =
+                (Map<String, Object>) requestedSize.get("hmax");
+        @SuppressWarnings("unchecked") Map<String, Object> hminReadback =
+                (Map<String, Object>) requestedSize.get("hmin");
+        String observedCustom = exactPropertyString(customReadback, "mesh custom");
+        String observedHmax = exactPropertyString(hmaxReadback, "mesh hmax");
+        String observedHmin = exactPropertyString(hminReadback, "mesh hmin");
+        if (!"on".equals(observedCustom)
+                || !observedHmax.equals(meshLevel.get("hmax_expression"))
+                || !observedHmin.equals(meshLevel.get("hmin_expression")))
+            throw new IllegalStateException("native mesh-size property readback differs from the requested frozen level");
+        meshReadback.put("hmax", observedHmax);
+        meshReadback.put("hmin", observedHmin);
+        meshReadback.put("elements", model.component(COMPONENT).mesh("mesh3d").getNumElem());
+        if (meshLevel.get("mesh_level_id") instanceof String) {
+            meshReadback.put("mesh_level_id", meshLevel.get("mesh_level_id"));
+            meshReadback.put("mesh_scale_factor", meshLevel.get("mesh_scale_factor"));
+        }
+        result.put("mesh", meshReadback);
         return result;
+    }
+
+    private static Map<String, Object> requestedMeshLevel(Map<String, Object> args) {
+        Object rawLevel = args.get("mesh_level_id");
+        Object rawScale = args.get("mesh_scale_factor");
+        if (rawLevel == null && rawScale == null) {
+            return Map.of("hmax_expression", "lambda0/(5*w23Nlens)",
+                    "hmin_expression", "lambda0/(12*w23Nlens)");
+        }
+        if (!(rawLevel instanceof String) || !(rawScale instanceof Number)
+                || rawScale instanceof Boolean) {
+            throw new IllegalArgumentException("mesh convergence identity requires exact level ID and numeric scale");
+        }
+        String level = (String) rawLevel;
+        double scale = ((Number) rawScale).doubleValue();
+        if (!Double.isFinite(scale))
+            throw new IllegalArgumentException("mesh convergence scale must be finite");
+        String scaleText;
+        if ("mesh1".equals(level) && Double.compare(scale, 1.0) == 0) scaleText = null;
+        else if ("mesh2".equals(level) && Double.compare(scale, 0.8) == 0) scaleText = "0.8";
+        else if ("mesh3".equals(level) && Double.compare(scale, 0.64) == 0) scaleText = "0.64";
+        else throw new IllegalArgumentException("mesh convergence level/scale is outside the frozen W23 sequence");
+        String hmax = scaleText == null ? "lambda0/(5*w23Nlens)"
+                : "(lambda0/(5*w23Nlens))*" + scaleText;
+        String hmin = scaleText == null ? "lambda0/(12*w23Nlens)"
+                : "(lambda0/(12*w23Nlens))*" + scaleText;
+        return Map.of("mesh_level_id", level, "mesh_scale_factor", scale,
+                "hmax_expression", hmax, "hmin_expression", hmin);
+    }
+
+    private static String exactPropertyString(Map<String, Object> row, String label) {
+        Object value = row == null ? null : row.get("string_readback");
+        if (row == null || !Boolean.TRUE.equals(row.get("has_property_exact"))
+                || !(value instanceof String) || ((String) value).trim().isEmpty())
+            throw new IllegalStateException(label + " lacks an exact native String property readback");
+        return (String) value;
     }
 
     private static Map<String, Object> applyCase(Model model, Map<String, Object> args) {
@@ -887,6 +950,9 @@ public final class NativeW23Full3DFixture {
         if (solutionState.get("is_valid") != Boolean.TRUE || !exactTupleFound)
             throw new IllegalStateException("requested dataset tuple is not present in exact live SolutionInfo readback");
 
+        Map<String, Object> cohortBefore = rawSourceCohortSnapshot(
+                model, datasetTag, solutionTag, outer, inner, solnum, selectionTag);
+
         if (!Arrays.asList(model.component(COMPONENT).selection().tags()).contains(selectionTag))
             throw new IllegalStateException("requested output Port boundary selection is absent");
         SelectionFeature selection = model.component(COMPONENT).selection(selectionTag);
@@ -1077,6 +1143,14 @@ public final class NativeW23Full3DFixture {
         result.put("coordinates_m", sharedCoordinateReadback);
         result.put("unit_readback", unitReadback);
         result.put("expressions", rows);
+        Map<String, Object> cohortAfter = rawSourceCohortSnapshot(
+                model, datasetTag, solutionTag, outer, inner, solnum, selectionTag);
+        if (!cohortBefore.equals(cohortAfter))
+            throw new IllegalStateException("native source-cohort identity/configuration changed during read-only field sampling");
+        result.put("source_cohort", Map.of(
+                "schema_id", "urn:comsol-mcp:w23:source-cohort-snapshot:1.0.0",
+                "native_result", "COMSOL_NATIVE_SOURCE_COHORT_SNAPSHOTS",
+                "before", cohortBefore, "after", cohortAfter));
         result.put("cleanup", cleanup);
         result.put("field_mapping_status", "UNVERIFIED");
         result.put("basis_ordinal_mapping", "UNVERIFIED_NATIVE_FIELD_MAPPING_REQUIRED");
@@ -1116,6 +1190,8 @@ public final class NativeW23Full3DFixture {
         if (selection.getInt("entitydim") != 2 || selection.entities(2).length == 0)
             throw new IllegalStateException("requested named port selection is not a nonempty 2-D boundary selection");
 
+        Map<String, Object> cohortBefore = rawSourceCohortSnapshot(
+                model, datasetTag, solutionTag, outer, inner, solnum, selectionTag);
         List<?> rawCoordinates = (List<?>) args.get("coordinates_m");
         if (rawCoordinates.isEmpty()) throw new IllegalArgumentException("raw field quadrature must not be empty");
         double[][] coordinates = new double[3][rawCoordinates.size()];
@@ -1136,100 +1212,352 @@ public final class NativeW23Full3DFixture {
             }
         }
         String contractId = requiredSha256(contract.get("contract_id"), "contract_id");
-        String tag = "w23rf" + contractId.substring(0, 10);
-        if (containsNumerical(model, tag))
-            throw new IllegalStateException("request-owned Interp tag already exists; refusing replacement");
-        NumericalFeature interp = null;
+        String baseTag = "w23rf" + contractId.substring(0, 10);
+        Map<String, List<String>> expressionsByGroup = new LinkedHashMap<>();
+        expressionsByGroup.put("electric", new ArrayList<>());
+        expressionsByGroup.put("magnetic", new ArrayList<>());
+        expressionsByGroup.put("normal", new ArrayList<>());
+        for (String expression : expressions) {
+            if (expression.startsWith("ewfd.E")) expressionsByGroup.get("electric").add(expression);
+            else if (expression.startsWith("ewfd.H")) expressionsByGroup.get("magnetic").add(expression);
+            else if (Arrays.asList("nx", "ny", "nz").contains(expression))
+                expressionsByGroup.get("normal").add(expression);
+            else throw new IllegalArgumentException("raw-field expression is outside the frozen E/H/normal groups");
+        }
+        Map<String, String> expectedUnits = new LinkedHashMap<>();
+        expectedUnits.put("electric", "V/m");
+        expectedUnits.put("magnetic", "A/m");
+        expectedUnits.put("normal", "1");
+        Map<?, ?> rawUnitGroups = requireMap(contract.get("unit_groups"), "unit_groups");
+        for (String groupName : expressionsByGroup.keySet()) {
+            Map<?, ?> group = requireMap(rawUnitGroups.get(groupName), "unit_groups." + groupName);
+            if (expressionsByGroup.get(groupName).isEmpty()
+                    || !expectedUnits.get(groupName).equals(group.get("unit"))
+                    || !expressionsByGroup.get(groupName).equals(group.get("expressions")))
+                throw new IllegalArgumentException("raw-field SI unit group differs from the frozen contract");
+        }
+        List<String> tags = Arrays.asList(baseTag + "e", baseTag + "h", baseTag + "n");
+        for (String ownedTag : tags)
+            if (containsNumerical(model, ownedTag))
+                throw new IllegalStateException("request-owned raw-field Interp tag already exists: " + ownedTag);
+        List<NumericalFeature> created = new ArrayList<>();
+        List<Map<String, Object>> rows = new ArrayList<>();
+        List<List<Double>> sharedCoordinates = null;
+        Map<String, String> unitReadback = new LinkedHashMap<>();
         Throwable operationFailure = null;
         Throwable cleanupFailure = null;
-        Map<String, Object> result = new LinkedHashMap<>();
         try {
-            interp = model.result().numerical().create(tag, "Interp");
-            interp.set("data", datasetTag);
-            interp.set("expr", expressions.toArray(new String[0]));
-            interp.set("solnum", Integer.toString(solnum));
-            interp.set("outersolnum", outer);
-            interp.set("coorderr", "on");
-            interp.set("matherr", "on");
-            interp.set("ext", 0.0);
-            interp.setInterpolationCoordinates(coordinates);
-            interp.selection().named(selectionTag);
-            if (!datasetTag.equals(interp.getString("data"))
-                    || !Arrays.equals(expressions.toArray(new String[0]), interp.getStringArray("expr"))
-                    || !Integer.toString(solnum).equals(interp.getString("solnum"))
-                    || !Integer.toString(outer).equals(interp.getString("outersolnum"))
-                    || !interp.getBoolean("coorderr") || !interp.getBoolean("matherr")
-                    || interp.getDouble("ext") != 0.0
-                    || !selectionTag.equals(interp.selection().named())
-                    || interp.selection().dim() != 2
-                    || !Arrays.equals(selection.entities(2), interp.selection().entities()))
-                throw new IllegalStateException("temporary native Interp configuration or selection readback differs");
-            interp.run();
-            double[][][] real = interp.getData();
-            double[][][] imaginary = interp.getImagData();
-            double[][] coordinateReadback = interp.getCoordinates();
-            if (!interp.isComplex() || real == null || imaginary == null
-                    || real.length != expressions.size() || imaginary.length != expressions.size()
-                    || coordinateReadback == null || coordinateReadback.length != 3)
-                throw new IllegalStateException("native Interp did not return the complete complex 3-D expression/coordinate result");
-            for (int axis = 0; axis < 3; axis++)
-                if (coordinateReadback[axis] == null || coordinateReadback[axis].length != rawCoordinates.size())
-                    throw new IllegalStateException("native Interp coordinate readback differs from the frozen point count");
-            List<Map<String, Object>> rows = new ArrayList<>();
-            for (int expr = 0; expr < expressions.size(); expr++) {
-                if (real[expr] == null || imaginary[expr] == null || real[expr].length != 1
-                        || imaginary[expr].length != 1 || real[expr][0].length != rawCoordinates.size()
-                        || imaginary[expr][0].length != rawCoordinates.size())
-                    throw new IllegalStateException("native Interp solution/point axes differ from the bound contract");
-                List<Double> realValues = new ArrayList<>(), imaginaryValues = new ArrayList<>();
-                for (int point = 0; point < rawCoordinates.size(); point++) {
-                    for (int axis = 0; axis < 3; axis++)
-                        if (Math.abs(coordinateReadback[axis][point] - coordinates[axis][point]) > 2e-12)
-                            throw new IllegalStateException("native Interp coordinates differ from the frozen SI-metre quadrature");
-                    double rv = real[expr][0][point], iv = imaginary[expr][0][point];
-                    if (!Double.isFinite(rv) || !Double.isFinite(iv))
-                        throw new IllegalStateException("native field sample is nonfinite/outside the solution domain");
-                    realValues.add(rv);
-                    imaginaryValues.add(iv);
+            int groupIndex = 0;
+            for (String groupName : expressionsByGroup.keySet()) {
+                List<String> groupExpressions = expressionsByGroup.get(groupName);
+                String requestedUnit = expectedUnits.get(groupName);
+                String ownedTag = tags.get(groupIndex++);
+                NumericalFeature interp = model.result().numerical().create(ownedTag, "Interp");
+                created.add(interp);
+                interp.set("data", datasetTag);
+                interp.set("expr", groupExpressions.toArray(new String[0]));
+                interp.set("unit", requestedUnit);
+                interp.set("solnum", Integer.toString(solnum));
+                interp.set("outersolnum", outer);
+                interp.set("coorderr", "on");
+                interp.set("matherr", "on");
+                interp.set("ext", 0.0);
+                interp.setInterpolationCoordinates(coordinates);
+                interp.selection().named(selectionTag);
+                if (!datasetTag.equals(interp.getString("data"))
+                        || !Arrays.equals(groupExpressions.toArray(new String[0]), interp.getStringArray("expr"))
+                        || !requestedUnit.equals(interp.getString("unit"))
+                        || !Integer.toString(solnum).equals(interp.getString("solnum"))
+                        || !Integer.toString(outer).equals(interp.getString("outersolnum"))
+                        || !interp.getBoolean("coorderr") || !interp.getBoolean("matherr")
+                        || interp.getDouble("ext") != 0.0
+                        || !selectionTag.equals(interp.selection().named())
+                        || interp.selection().dim() != 2
+                        || !Arrays.equals(selection.entities(2), interp.selection().entities()))
+                    throw new IllegalStateException("raw-field Interp configuration/unit/selection readback differs");
+                interp.run();
+                double[][][] real = interp.getData();
+                double[][][] imaginary = interp.getImagData();
+                double[][] coordinateReadback = interp.getCoordinates();
+                boolean complexGroup = interp.isComplex();
+                if ("normal".equals(groupName) ? complexGroup : (!complexGroup || imaginary == null))
+                    throw new IllegalStateException("raw-field complex/readback kind differs for " + groupName);
+                if (real == null || real.length != groupExpressions.size()
+                        || coordinateReadback == null || coordinateReadback.length != 3)
+                    throw new IllegalStateException("raw-field Interp omitted expression/coordinate axes");
+                List<List<Double>> coordinateRows = new ArrayList<>();
+                for (int axis = 0; axis < 3; axis++) {
+                    if (coordinateReadback[axis] == null
+                            || coordinateReadback[axis].length != rawCoordinates.size())
+                        throw new IllegalStateException("raw-field coordinate axis differs from the frozen point count");
+                    List<Double> coordinateValues = new ArrayList<>();
+                    for (int point = 0; point < rawCoordinates.size(); point++) {
+                        double observed = coordinateReadback[axis][point];
+                        if (!Double.isFinite(observed)
+                                || Math.abs(observed - coordinates[axis][point]) > 2e-12
+                                || (sharedCoordinates != null
+                                    && Math.abs(observed - sharedCoordinates.get(axis).get(point)) > 2e-12))
+                            throw new IllegalStateException("raw E/H/normal groups differ from the exact SI coordinate grid");
+                        coordinateValues.add(observed);
+                    }
+                    coordinateRows.add(coordinateValues);
                 }
-                rows.add(Map.of("expression", expressions.get(expr), "real", realValues, "imag", imaginaryValues));
+                if (sharedCoordinates == null) sharedCoordinates = coordinateRows;
+                unitReadback.put(groupName, interp.getString("unit"));
+                for (int expressionIndex = 0; expressionIndex < groupExpressions.size(); expressionIndex++) {
+                    if (real[expressionIndex] == null || real[expressionIndex].length != 1
+                            || real[expressionIndex][0].length != rawCoordinates.size()
+                            || (imaginary != null && (imaginary.length != groupExpressions.size()
+                                || imaginary[expressionIndex] == null
+                                || imaginary[expressionIndex].length != 1
+                                || imaginary[expressionIndex][0].length != rawCoordinates.size())))
+                        throw new IllegalStateException("raw-field solution/point axes differ from their contract");
+                    List<Double> realValues = new ArrayList<>(), imaginaryValues = new ArrayList<>();
+                    for (int point = 0; point < rawCoordinates.size(); point++) {
+                        double rv = real[expressionIndex][0][point];
+                        double iv = imaginary == null ? 0.0 : imaginary[expressionIndex][0][point];
+                        if (!Double.isFinite(rv) || !Double.isFinite(iv)
+                                || ("normal".equals(groupName) && Math.abs(iv) > 1e-10))
+                            throw new IllegalStateException("raw field is nonfinite or its surface normal is complex");
+                        realValues.add(rv);
+                        imaginaryValues.add(iv);
+                    }
+                    Map<String, Object> row = new LinkedHashMap<>();
+                    row.put("expression", groupExpressions.get(expressionIndex));
+                    row.put("real", realValues);
+                    row.put("imag", imaginaryValues);
+                    row.put("unit_group", groupName);
+                    row.put("unit", interp.getString("unit"));
+                    rows.add(row);
+                }
             }
-            List<List<Double>> coordinateRows = new ArrayList<>();
-            for (int axis = 0; axis < 3; axis++) {
-                List<Double> values = new ArrayList<>();
-                for (int point = 0; point < rawCoordinates.size(); point++) values.add(coordinateReadback[axis][point]);
-                coordinateRows.add(values);
-            }
-            result.put("native_result", "COMSOL_NATIVE_RAW");
-            result.put("study_or_solver_invoked", false);
-            result.put("complex_readback", true);
-            result.put("contract_id", contractId);
-            result.put("quadrature_sha256", contract.get("quadrature_sha256"));
-            result.put("source", source);
-            result.put("plane", plane);
-            result.put("sample_count", rawCoordinates.size());
-            result.put("coordinates_m", coordinateRows);
-            result.put("expressions", rows);
         } catch (Throwable error) {
             operationFailure = error;
         } finally {
-            try {
-                if (containsNumerical(model, tag)) model.result().numerical().remove(tag);
-                if (containsNumerical(model, tag))
-                    throw new IllegalStateException("request-owned raw-field Interp remains after cleanup");
-            } catch (Throwable error) {
-                cleanupFailure = error;
+            for (String ownedTag : tags) {
+                try {
+                    if (containsNumerical(model, ownedTag)) model.result().numerical().remove(ownedTag);
+                    if (containsNumerical(model, ownedTag))
+                        throw new IllegalStateException("request-owned raw-field Interp remains after cleanup: " + ownedTag);
+                } catch (Throwable error) {
+                    if (cleanupFailure == null) cleanupFailure = error;
+                    else cleanupFailure.addSuppressed(error);
+                }
             }
         }
-        Map<String, Object> cleanup = Map.of("created", interp != null,
-                "removed", cleanupFailure == null, "cleanup_failed", cleanupFailure != null,
-                "tags", List.of(tag), "error", cleanupFailure == null ? "" : cleanupFailure.toString());
+        Map<String, Object> cleanup = new LinkedHashMap<>();
+        cleanup.put("created_count", created.size());
+        cleanup.put("expected_count", tags.size());
+        cleanup.put("removed", cleanupFailure == null);
+        cleanup.put("cleanup_failed", cleanupFailure != null);
+        cleanup.put("tags", tags);
+        cleanup.put("error", cleanupFailure == null ? "" : cleanupFailure.toString());
         if (operationFailure != null)
             throw new IllegalStateException("native raw field extraction failed; cleanup=" + cleanup, operationFailure);
         if (cleanupFailure != null)
-            throw new IllegalStateException("native raw field Interp cleanup failed", cleanupFailure);
+            throw new IllegalStateException("native raw-field Interp cleanup failed", cleanupFailure);
+        Map<String, Object> cohortAfter = rawSourceCohortSnapshot(
+                model, datasetTag, solutionTag, outer, inner, solnum, selectionTag);
+        if (!cohortBefore.equals(cohortAfter))
+            throw new IllegalStateException("native source-cohort identity/configuration changed during read-only field sampling");
+        if (sharedCoordinates == null || unitReadback.size() != 3 || rows.size() != expressions.size())
+            throw new IllegalStateException("native E/H/normal unit groups are incomplete");
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("native_result", "COMSOL_NATIVE_RAW");
+        result.put("study_or_solver_invoked", false);
+        result.put("complex_readback", true);
+        result.put("units_preserved", true);
+        result.put("contract_id", contractId);
+        result.put("quadrature_sha256", contract.get("quadrature_sha256"));
+        result.put("source", source);
+        result.put("plane", plane);
+        result.put("sample_count", rawCoordinates.size());
+        result.put("coordinates_m", sharedCoordinates);
+        result.put("unit_readback", unitReadback);
+        result.put("expressions", rows);
+        result.put("source_cohort", Map.of(
+                "schema_id", "urn:comsol-mcp:w23:source-cohort-snapshot:1.0.0",
+                "native_result", "COMSOL_NATIVE_SOURCE_COHORT_SNAPSHOTS",
+                "before", cohortBefore, "after", cohortAfter));
         result.put("cleanup", cleanup);
         return result;
+    }
+
+    private static Map<String, Object> rawSourceCohortSnapshot(
+            Model model, String datasetTag, String solutionTag, int outer, int inner,
+            int solnum, String selectionTag) {
+        if (!Arrays.asList(model.result().dataset().tags()).contains(datasetTag)
+                || !Arrays.asList(model.sol().tags()).contains(solutionTag))
+            throw new IllegalStateException("native source cohort dataset or solver sequence is absent");
+        PropFeature dataset = model.result().dataset(datasetTag);
+        if (!"Solution".equals(dataset.getType()) || !dataset.hasProperty("solution")
+                || !solutionTag.equals(dataset.getString("solution")))
+            throw new IllegalStateException("native source cohort dataset-to-solution identity is incomplete");
+        Map<String, Object> datasetIdentity = new LinkedHashMap<>();
+        datasetIdentity.put("tag", datasetTag);
+        datasetIdentity.put("feature_type", dataset.getType());
+        Map<String, String> datasetProperties = new LinkedHashMap<>();
+        for (String property : new String[]{"solution", "data", "solnum", "outersolnum"})
+            if (dataset.hasProperty(property)) datasetProperties.put(property, dataset.getString(property));
+        datasetIdentity.put("properties", datasetProperties);
+
+        SolverSequence sequence = model.sol(solutionTag);
+        String studyTag = sequence.study();
+        if (studyTag == null || studyTag.trim().isEmpty()
+                || !Arrays.asList(model.study().tags()).contains(studyTag))
+            throw new IllegalStateException("native stored solution does not resolve to its producer Study");
+        Study producerStudy = model.study(studyTag);
+        long computationDate = producerStudy.getLastComputationDate();
+        String computationVersion = producerStudy.getLastComputationVersion();
+        if (computationDate <= 0 || computationVersion == null || computationVersion.trim().isEmpty())
+            throw new IllegalStateException("native stored solution computation date/version identity is unavailable");
+        Map<String, Object> solutionReadback = solutionState(sequence, solutionTag);
+        Object rawPairs = solutionReadback.get("solution_pairs");
+        Map<String, Object> selectedTuple = null;
+        if (rawPairs instanceof List) {
+            for (Object rawPair : (List<?>) rawPairs) {
+                if (!(rawPair instanceof Map)) continue;
+                Map<?, ?> pair = (Map<?, ?>) rawPair;
+                if (Integer.valueOf(outer).equals(pair.get("outer_index"))
+                        && Integer.valueOf(inner).equals(pair.get("inner_index"))
+                        && Integer.valueOf(solnum).equals(pair.get("solnum"))
+                        && solutionTag.equals(pair.get("solver_sequence_tag")))
+                    selectedTuple = new LinkedHashMap<>((Map<String, Object>) rawPair);
+            }
+        }
+        if (solutionReadback.get("is_valid") != Boolean.TRUE
+                || solutionReadback.get("solver_sequence_is_empty") != Boolean.FALSE
+                || selectedTuple == null)
+            throw new IllegalStateException("native source cohort lacks the exact selected SolutionInfo tuple");
+        String[] parameterNames = sequence.getPNames();
+        double[] parameterValues = sequence.getPVals();
+        if (parameterNames == null || parameterValues == null || parameterNames.length != parameterValues.length)
+            throw new IllegalStateException("native stored-solution parameter axes are unavailable or inconsistent");
+        List<Map<String, Object>> parameterAxis = new ArrayList<>();
+        for (int index = 0; index < parameterNames.length; index++) {
+            if (parameterNames[index] == null || parameterNames[index].trim().isEmpty()
+                    || !Double.isFinite(parameterValues[index]))
+                throw new IllegalStateException("native stored-solution parameter axis is malformed");
+            parameterAxis.add(Map.of("name", parameterNames[index], "value", parameterValues[index]));
+        }
+        Map<String, Object> storedSolution = new LinkedHashMap<>();
+        storedSolution.put("solution_tag", solutionTag);
+        storedSolution.put("study_tag", studyTag);
+        storedSolution.put("computation_date_ms", computationDate);
+        storedSolution.put("computation_version", computationVersion);
+        storedSolution.put("parameter_axis", parameterAxis);
+        storedSolution.put("solution_info", solutionReadback);
+        storedSolution.put("selected_tuple", selectedTuple);
+
+        String[] parameterTags = {"lambda0", "f0", "w23Ncore", "w23Nclad", "w23Nlens",
+            "w23CoreR", "w23CladR", "w23LensR", "w23AirHalfY", "w23AirHalfZ", "w23PmlT",
+            "w23XIn", "w23XInEnd", "w23XOutStart", "w23XOut", "w23XDomainMax",
+            "w23OutDy", "w23OutDz", "w23ThetaY", "w23ThetaZ"};
+        Map<String, String> parameters = new LinkedHashMap<>();
+        for (String parameter : parameterTags) {
+            String value = model.param().get(parameter);
+            if (value == null || value.trim().isEmpty())
+                throw new IllegalStateException("explicit fixture parameter readback is missing: " + parameter);
+            parameters.put(parameter, value);
+        }
+        GeomSequence geometry = model.component(COMPONENT).geom(GEOMETRY);
+        Map<String, Object> geometryReadback = new LinkedHashMap<>();
+        geometryReadback.put("dimension", 3);
+        geometryReadback.put("length_unit", geometry.lengthUnit());
+        geometryReadback.put("domain_count", geometry.getNDomains());
+        geometryReadback.put("bounding_box", boxed(geometry.getBoundingBox()));
+
+        if (!Arrays.asList(model.component(COMPONENT).mesh().tags()).contains("mesh3d"))
+            throw new IllegalStateException("fixture mesh3d is missing from source-cohort snapshot");
+        PropFeature size = model.component(COMPONENT).mesh("mesh3d").feature("size");
+        Map<String, Object> meshReadback = new LinkedHashMap<>();
+        meshReadback.put("tag", "mesh3d");
+        meshReadback.put("geometry", GEOMETRY);
+        meshReadback.put("elements", model.component(COMPONENT).mesh("mesh3d").getNumElem());
+        meshReadback.put("size_properties", propertyReadback(size, new String[]{"custom", "hmax", "hmin"}));
+
+        List<Map<String, Object>> materials = new ArrayList<>();
+        String[] materialTags = model.material().tags();
+        Arrays.sort(materialTags);
+        for (String tag : materialTags) {
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("tag", tag);
+            row.put("feature_type", model.material(tag).getType());
+            row.put("selection_tag", model.material(tag).selection().named());
+            row.put("domain_ids", intList(model.material(tag).selection().entities(3)));
+            row.put("relative_permittivity", stringMatrixRows(
+                    model.material(tag).propertyGroup("def").getStringMatrix("relpermittivity")));
+            row.put("relative_permeability", stringMatrixRows(
+                    model.material(tag).propertyGroup("def").getStringMatrix("relpermeability")));
+            materials.add(row);
+        }
+        Physics physics = model.component(COMPONENT).physics("ewfd");
+        List<Map<String, Object>> physicsFeatures = new ArrayList<>();
+        for (String tag : physics.feature().tags()) {
+            PhysicsFeature feature = physics.feature(tag);
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("tag", tag);
+            row.put("feature_type", feature.getType());
+            row.put("selection_tag", feature.selection().named());
+            row.put("selection_dimension", feature.selection().dim());
+            row.put("selection_ids", intList(feature.selection().entities()));
+            row.put("property_names", Arrays.asList(feature.properties()));
+            if ("Port".equals(feature.getType()))
+                row.put("port_properties", propertyReadback(feature, new String[]{"PortType", "PortName",
+                    "PortExcitation", "PortModeNumber", "Pin", "Thetap", "PortOrientation"}));
+            physicsFeatures.add(row);
+        }
+
+        Map<String, Object> selections = new LinkedHashMap<>();
+        for (String tag : new String[]{"sel3dInputPort", "sel3dOutputPort", "sel3dOutputCoreCapture",
+                "geom3d_coreIn_dom", "geom3d_rotCoreOutZ_dom", "geom3d_cladShellIn_dom",
+                "geom3d_rotCladShellOutZ_dom", "geom3d_lensBall_dom", "geom3d_airRemainder_dom",
+                "geom3d_pmlShell_dom"}) {
+            if (!Arrays.asList(model.component(COMPONENT).selection().tags()).contains(tag))
+                throw new IllegalStateException("fixture selection is missing from source-cohort snapshot: " + tag);
+            SelectionFeature item = model.component(COMPONENT).selection(tag);
+            int dimension = item.getInt("entitydim");
+            selections.put(tag, Map.of("entity_dimension", dimension,
+                    "entity_ids", intList(item.entities(dimension))));
+        }
+        Map<String, Object> studies = new LinkedHashMap<>();
+        String[] studyTags = model.study().tags();
+        Arrays.sort(studyTags);
+        for (String tag : studyTags) studies.put(tag, studyStepReadback(model, tag));
+        Map<String, Object> pml = propertyReadback(
+                model.component(COMPONENT).coordSystem("pmlYZ"),
+                new String[]{"ScalingType", "stretchingType", "typicalWavelength"});
+
+        Map<String, Object> fixtureConfiguration = new LinkedHashMap<>();
+        fixtureConfiguration.put("schema_id", "urn:comsol-mcp:w23:fixture-explicit-config:1.0.0");
+        fixtureConfiguration.put("fixture_id", FIXTURE_ID);
+        fixtureConfiguration.put("parameters", parameters);
+        fixtureConfiguration.put("geometry", geometryReadback);
+        fixtureConfiguration.put("mesh", meshReadback);
+        fixtureConfiguration.put("materials", materials);
+        fixtureConfiguration.put("physics", Map.of("tag", "ewfd", "feature_type", physics.getType(),
+                "features", physicsFeatures));
+        fixtureConfiguration.put("pml", pml);
+        fixtureConfiguration.put("selections", selections);
+        fixtureConfiguration.put("study_steps", studies);
+        return Map.of("dataset", datasetIdentity, "stored_solution", storedSolution,
+                "fixture_explicit_configuration", fixtureConfiguration);
+    }
+
+    private static List<List<String>> stringMatrixRows(String[][] values) {
+        if (values == null) throw new IllegalStateException("material matrix readback is unavailable");
+        List<List<String>> rows = new ArrayList<>();
+        for (String[] row : values) {
+            if (row == null) throw new IllegalStateException("material matrix contains a missing row");
+            List<String> cells = new ArrayList<>();
+            for (String value : row) {
+                if (value == null || value.trim().isEmpty())
+                    throw new IllegalStateException("material matrix contains an empty value");
+                cells.add(value);
+            }
+            rows.add(cells);
+        }
+        return rows;
     }
 
     private static Map<String, Object> save(Model model, Map<String, Object> args) {

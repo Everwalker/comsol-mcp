@@ -7,6 +7,7 @@ status from NOT_RUN to PASS.
 """
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import math
@@ -69,6 +70,31 @@ FULL3D_COMPARISON_POLICY = {
     "capture_flux_absolute_normalized_tolerance": 1e-5,
 }
 
+# Frozen W23 convergence recipe. These are engineering stability thresholds,
+# not a COMSOL physical law, a fitted convergence order, or full acceptance.
+FULL3D_CONVERGENCE_POLICY = {
+    "schema_id": "urn:comsol-mcp:w23:full3d-convergence-recipe:1.0.0",
+    "policy_id": "w23.full3d.mesh-and-quadrature-stability.v1",
+    "mesh_scale_factors": [1.0, 0.8, 0.64],
+    "quadrature_levels": [
+        {"level_id": "q32x64", "radial_intervals": 32, "angular_points": 64},
+        {"level_id": "q64x128", "radial_intervals": 64, "angular_points": 128},
+        {"level_id": "q128x256", "radial_intervals": 128, "angular_points": 256},
+    ],
+    "adjacent_eta_absolute_delta_limit": 1e-3,
+    "adjacent_signed_power_over_pin_absolute_delta_limit": 1e-3,
+    "normalized_power_unit": "1",
+    "mesh_levels_require_distinct_study_producers": True,
+    "mesh_levels_require_distinct_models": True,
+    "same_mesh_quadrature_levels_reuse_one_stored_solution_cohort": True,
+    "power_balance_status": "NOT_RUN_MISSING_NATIVE_CLOSED_CONTROL_VOLUME_READBACK",
+    "receiver_radiation_status": "UNVERIFIED_MISSING_LONGITUDINAL_PML_DOMAIN_BACKED_PORT_READBACK",
+    "native_convergence_status": "NOT_RUN",
+    "scientific_acceptance": "NOT_RUN",
+    "convergence_order_or_error_bound": "NOT_CLAIMED",
+    "phase_or_degenerate_coefficient_comparison": "NOT_USED",
+}
+
 # This is a narrow engineering identity-probe threshold, not a COMSOL physical
 # law or full scientific acceptance limit. It reuses the already frozen
 # dimensionless absolute/relative tolerances without tuning against native data.
@@ -111,6 +137,19 @@ _BMA_PAIR_UNIT_GROUPS = {
 }
 
 
+def _field_unit_groups(expressions: Sequence[str]) -> dict[str, dict[str, Any]]:
+    rows = list(expressions)
+    groups = {
+        "electric": {"unit": "V/m", "expressions": [row for row in rows if row.startswith("ewfd.E")]},
+        "magnetic": {"unit": "A/m", "expressions": [row for row in rows if row.startswith("ewfd.H")]},
+        "normal": {"unit": "1", "expressions": [row for row in rows if row in _NORMAL_FIELDS]},
+    }
+    if (any(not group["expressions"] for group in groups.values())
+            or sum(len(group["expressions"]) for group in groups.values()) != len(rows)):
+        _fail("full-3D raw sample requires exact nonempty E/H/normal SI unit groups")
+    return groups
+
+
 def _fail(message: str) -> None:
     raise Full3DScienceError(message)
 
@@ -119,6 +158,530 @@ def _sha256(value: Any) -> str:
     raw = json.dumps(value, sort_keys=True, separators=(",", ":"),
                      ensure_ascii=False, allow_nan=False).encode("utf-8")
     return hashlib.sha256(raw).hexdigest()
+
+
+def build_full3d_convergence_recipe(fixture_recipe: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    """Freeze the approved W23 mesh/quadrature levels without claiming a solve.
+
+    The geometric and optical inputs remain sourced from the published
+    ``canonical_full3d_recipe``.  Only the two existing mesh size expressions
+    are scaled; geometry, materials, physics, solver and PML settings are
+    represented by the exact fixture-recipe digest and remain fixed.
+    """
+    if fixture_recipe is None:
+        from tools.w23_full3d import canonical_full3d_recipe, verify_recipe
+
+        fixture_recipe = canonical_full3d_recipe()
+    else:
+        from tools.w23_full3d import verify_recipe
+    if not isinstance(fixture_recipe, Mapping):
+        _fail("the published canonical full-3D fixture recipe is required")
+    optics = fixture_recipe.get("optics")
+    materials = fixture_recipe.get("materials")
+    if not isinstance(optics, Mapping) or not isinstance(materials, Mapping):
+        _fail("the canonical fixture recipe omitted frozen optics/materials")
+    wavelength_um = _finite_number(optics.get("vacuum_wavelength_um"), "vacuum wavelength")
+    lens = materials.get("lens")
+    lens_index = _finite_number(lens.get("refractive_index"), "lens refractive index") \
+        if isinstance(lens, Mapping) else math.nan
+    if wavelength_um <= 0.0 or lens_index <= 0.0:
+        _fail("positive baseline wavelength and lens index are required for the mesh recipe")
+    fixture_digest = verify_recipe(fixture_recipe)["recipe_sha256"]
+    levels = []
+    for index, scale in enumerate(FULL3D_CONVERGENCE_POLICY["mesh_scale_factors"], start=1):
+        hmax_um = wavelength_um / (5.0 * lens_index) * scale
+        hmin_um = wavelength_um / (12.0 * lens_index) * scale
+        if not math.isfinite(hmax_um) or not math.isfinite(hmin_um) or hmin_um <= 0 or hmax_um < hmin_um:
+            _fail("derived mesh sizes are non-finite or inconsistent")
+        levels.append({
+            "level_id": f"mesh{index}", "level_index": index,
+            "scale_factor": scale,
+            "hmax_expression": "lambda0/(5*w23Nlens)" if scale == 1.0
+                else f"(lambda0/(5*w23Nlens))*{scale:g}",
+            "hmin_expression": "lambda0/(12*w23Nlens)" if scale == 1.0
+                else f"(lambda0/(12*w23Nlens))*{scale:g}",
+            "hmax_um_expected": hmax_um, "hmin_um_expected": hmin_um,
+            "status": "PLANNED_NOT_RUN", "native_result": "NOT_RUN",
+        })
+    identity = {
+        "schema_id": FULL3D_CONVERGENCE_POLICY["schema_id"],
+        "policy": dict(FULL3D_CONVERGENCE_POLICY),
+        "fixture_id": fixture_recipe.get("fixture_id"),
+        "fixture_recipe_sha256": fixture_digest,
+        "fixture_settings_frozen": {
+            "geometry": fixture_recipe.get("geometry"),
+            "materials": fixture_recipe.get("materials"),
+            "optics": fixture_recipe.get("optics"),
+            "mode_basis": fixture_recipe.get("mode_basis"),
+        },
+        "mesh_levels": levels,
+        "quadrature_levels": [dict(row) for row in FULL3D_CONVERGENCE_POLICY["quadrature_levels"]],
+        "power_balance": {
+            "status": FULL3D_CONVERGENCE_POLICY["power_balance_status"],
+            "required_control_volume": "explicit closed physical-domain boundary excluding PML",
+            "required_terms": ["signed outward Poynting flux in W", "native Q_abs volume integral in W",
+                               "positive native incident Pin in W"],
+            "formula": "R=(closed physical-domain outward flux + volume integral Q_abs)/Pin",
+            "count_boundary_once": True,
+            "never_double_count_receiver_flux_and_downstream_pml_absorption": True,
+        },
+        "receiver_radiation": {
+            "status": FULL3D_CONVERGENCE_POLICY["receiver_radiation_status"],
+            "existing_fixture_observation": (
+                "transverse y-z PML shell only; output port is x=20 um, domain ends x=21 um, "
+                "and no verified longitudinal PML/backed receiver segment is present"),
+        },
+        "resource_gate": {
+            "status": "NOT_FROZEN",
+            "required_before_native_solve": [
+                "actual mesh element and solver DOF readback",
+                "memory/resource ceiling compatible with the authorized host",
+                "wall budget including exact cleanup reserve",
+            ],
+        },
+        "native_result": "NOT_RUN",
+        "scientific_acceptance": "NOT_RUN",
+        "study_or_solver_invoked": False,
+    }
+    return {**identity, "recipe_sha256": _sha256(identity)}
+
+
+def build_full3d_mesh_level_fixture_dispatch(
+    convergence_recipe: Mapping[str, Any], *, mesh_level_id: str,
+    mesh_scale_factor: float, source_artifact: str, project_id: str,
+    model_ref: Mapping[str, Any], model_tag: str, revision: int,
+    request_id: str, idempotency_key: str,
+) -> dict[str, Any]:
+    """Build one exact no-solve fixture route at a frozen pre-solve mesh level."""
+    from tools.w23_full3d import build_full3d_fixture_dispatch, canonical_full3d_recipe
+
+    fixture_recipe = canonical_full3d_recipe()
+    expected_recipe = build_full3d_convergence_recipe(fixture_recipe)
+    if not isinstance(convergence_recipe, Mapping) or dict(convergence_recipe) != expected_recipe:
+        _fail("mesh-level setup requires the exact frozen canonical W23 convergence recipe")
+    level = next((row for row in expected_recipe["mesh_levels"]
+                  if row["level_id"] == mesh_level_id), None)
+    if (not isinstance(level, Mapping) or isinstance(mesh_scale_factor, bool)
+            or not isinstance(mesh_scale_factor, (int, float))
+            or not math.isfinite(float(mesh_scale_factor))
+            or float(mesh_scale_factor) != level["scale_factor"]):
+        _fail("mesh-level setup ID and factor must match one frozen W23 convergence level")
+    request = build_full3d_fixture_dispatch(
+        fixture_recipe, source_artifact=source_artifact,
+        project_id=project_id, model_ref=model_ref, model_tag=model_tag,
+        revision=revision, request_id=request_id, idempotency_key=idempotency_key)
+    bounded = copy.deepcopy(request)
+    java_args = bounded["arguments"]["arguments"]["arguments"]
+    java_args["mesh_level_id"] = mesh_level_id
+    java_args["mesh_scale_factor"] = float(mesh_scale_factor)
+    bounded["dispatch_scope"] = (
+        f"one managed Java fixture build at frozen {mesh_level_id} mesh scale; "
+        "no Study.run or solver call")
+    return bounded
+
+
+def recompute_full3d_mesh_stability_from_registered_routes(
+    recipe: Mapping[str, Any], mesh_runs: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Recompute mesh-series metrics only from exact managed terminal routes.
+
+    Each row is one no-solve fixture build with a predeclared mesh level, one
+    std3d solve, a source-cohort probe routed after that solve, and the
+    registered v2 IntSurface operation. The function derives powers and the
+    two-mode projection from terminal native terms; caller-supplied
+    metrics/deltas/status fields are ignored. Capture
+    aperture, independent raw-field quadrature, full producer lineage, and
+    power-balance gates stay explicitly NOT_RUN/UNVERIFIED here.
+    """
+    from jsonschema import validate as validate_jsonschema
+    from comsol_mcp._w23_basis_v2_results import NATIVE_RESULT_SCHEMA, validate_request_shape
+    from tools.w23_mode_basis_v2 import _basis_reference_identity, compute_two_mode_basis_projection
+
+    if not isinstance(recipe, Mapping) or not isinstance(mesh_runs, Sequence) \
+            or isinstance(mesh_runs, (str, bytes)) or len(mesh_runs) != 3:
+        _fail("three frozen mesh-level route records are required for W23 stability recomputation")
+    from tools.w23_full3d import canonical_full3d_recipe
+
+    expected_recipe = build_full3d_convergence_recipe(canonical_full3d_recipe())
+    if dict(recipe) != expected_recipe:
+        _fail("convergence recipe differs from the frozen canonical W23 policy or fixture digest")
+
+    def managed_binding(request: Mapping[str, Any], route_result: Mapping[str, Any], *,
+                        revision_delta: int, cap: Any, label: str) -> dict[str, Any]:
+        return validate_full3d_bma_mapping_route_result(
+            request, route_result, expected_revision_delta=revision_delta,
+            max_execution_timeout_s=cap)
+
+    def required_route(row: Mapping[str, Any], request_key: str, result_key: str,
+                       cap_key: str, *, revision_delta: int, label: str) -> tuple[Mapping[str, Any], Mapping[str, Any], dict[str, Any]]:
+        request, result, cap = row.get(request_key), row.get(result_key), row.get(cap_key)
+        if not isinstance(request, Mapping) or not isinstance(result, Mapping):
+            _fail(f"{label} requires its original public request and terminal job result")
+        binding = managed_binding(request, result, revision_delta=revision_delta,
+                                  cap=cap, label=label)
+        return request, result, binding
+
+    outputs = []
+    model_refs: list[dict[str, Any]] = []
+    study_jobs: list[str] = []
+    request_ids: list[str] = []
+    operation_ids: list[str] = []
+    job_ids: list[str] = []
+    explicit_configs: list[dict[str, Any]] = []
+    basis_layouts: list[dict[str, Any]] = []
+    expected_levels = recipe["mesh_levels"]
+    for index, (run, level) in enumerate(zip(mesh_runs, expected_levels), start=1):
+        if not isinstance(run, Mapping) or run.get("mesh_level_id") != level["level_id"]:
+            _fail("mesh route records are missing, reordered, or detached from the frozen level IDs")
+        build_request, build_route, build_binding = required_route(
+            run, "build_request", "build_route_result", "build_max_execution_timeout_s",
+            revision_delta=1, label=f"{level['level_id']} fixture/mesh setup")
+        build_args = build_request.get("arguments")
+        build_java = build_args.get("arguments") if isinstance(build_args, Mapping) else None
+        build_payload = build_java.get("arguments") if isinstance(build_java, Mapping) else None
+        build_exec = build_request.get("execution")
+        if (not isinstance(build_args, Mapping)
+                or build_args.get("operation_id") != "code.execute_java"
+                or not isinstance(build_java, Mapping)
+                or build_java.get("entrypoint") != "NativeW23Full3DFixture#run"
+                or build_java.get("mode") != "trusted"
+                or not isinstance(build_payload, Mapping)
+                or build_payload.get("phase") != "build"
+                or build_payload.get("fixture_id") != "w23_full3d_fiber_ball_lens_vector_pml_v1"
+                or build_payload.get("recipe_sha256") != recipe["fixture_recipe_sha256"]
+                or build_payload.get("mesh_level_id") != level["level_id"]
+                or build_payload.get("mesh_scale_factor") != level["scale_factor"]
+                or build_payload.get("native_result") != "NOT_RUN"
+                or build_payload.get("study_or_solver_invoked") is not False
+                or not isinstance(build_exec, Mapping)):
+            _fail(f"{level['level_id']} setup is not the exact frozen no-solve fixture build route")
+        build_response = build_route.get("response")
+        build_readback = _java_action_readback(build_response, f"{level['level_id']} setup readback") \
+            if isinstance(build_response, Mapping) else None
+        expected_build_identity = {
+            "project_id": build_exec.get("project_id"), "model_ref": build_exec.get("model_ref"),
+            "model_tag": build_exec.get("model_ref", {}).get("model_tag")
+                if isinstance(build_exec.get("model_ref"), Mapping) else None,
+            "expected_revision": build_exec.get("expected_revision"),
+        }
+        build_mesh = build_readback.get("mesh") if isinstance(build_readback, Mapping) else None
+        build_size = build_mesh.get("size_properties") if isinstance(build_mesh, Mapping) else None
+        build_props = build_size.get("requested_properties") if isinstance(build_size, Mapping) else None
+
+        def build_string_property(properties: Any, key: str) -> Any:
+            item = properties.get(key) if isinstance(properties, Mapping) else None
+            return item.get("string_readback") if isinstance(item, Mapping) \
+                and item.get("has_property_exact") is True else None
+
+        if (not isinstance(build_readback, Mapping)
+                or build_readback.get("fixture_id") != "w23_full3d_fiber_ball_lens_vector_pml_v1"
+                or build_readback.get("recipe_sha256") != recipe["fixture_recipe_sha256"]
+                or build_readback.get("status") != "BUILT_CONFIGURED_NOT_SOLVED"
+                or build_readback.get("native_result") != "NOT_RUN"
+                or build_readback.get("study_or_solver_invoked") is not False
+                or build_readback.get("managed_identity") != expected_build_identity
+                or not isinstance(build_mesh, Mapping)
+                or build_mesh.get("tag") != "mesh3d" or build_mesh.get("geometry") != "geom3d"
+                or build_mesh.get("mesh_level_id") != level["level_id"]
+                or build_mesh.get("mesh_scale_factor") != level["scale_factor"]
+                or build_mesh.get("hmax") != level["hmax_expression"]
+                or build_mesh.get("hmin") != level["hmin_expression"]
+                or build_string_property(build_props, "custom") != "on"
+                or build_string_property(build_props, "hmax") != level["hmax_expression"]
+                or build_string_property(build_props, "hmin") != level["hmin_expression"]
+                or type(build_mesh.get("elements")) is not int or build_mesh["elements"] <= 0):
+            _fail(f"{level['level_id']} terminal build result does not prove its actual pre-solve mesh setting")
+        study_request, study_result, study_binding = required_route(
+            run, "study_request", "study_route_result", "study_max_execution_timeout_s",
+            revision_delta=1, label=f"{level['level_id']} std3d solve")
+        study_args = study_request.get("arguments")
+        study_operation_args = study_args.get("arguments") if isinstance(study_args, Mapping) else None
+        study_exec = study_request.get("execution")
+        if (not isinstance(study_args, Mapping) or study_args.get("operation_id") != "study.run"
+                or not isinstance(study_operation_args, Mapping)
+                or study_operation_args.get("study") != {"segments": [{"collection": "study", "tag": "std3d"}]}
+                or isinstance(study_operation_args.get("timeout_s"), bool)
+                or not isinstance(study_operation_args.get("timeout_s"), (int, float))
+                or not math.isfinite(float(study_operation_args["timeout_s"]))
+                or study_operation_args["timeout_s"] <= 0.0
+                or not isinstance(study_exec, Mapping)
+                or study_exec.get("expected_revision") != build_binding["revision_after"]
+                or study_exec.get("project_id") != build_exec.get("project_id")
+                or study_exec.get("model_ref") != build_exec.get("model_ref")):
+            _fail(f"{level['level_id']} producer route is not the complete frozen std3d Study.run")
+
+        probe_request, probe_route, probe_binding = required_route(
+            run, "mesh_probe_request", "mesh_probe_route_result", "mesh_probe_max_execution_timeout_s",
+            revision_delta=1, label=f"{level['level_id']} source-cohort mesh readback")
+        probe_exec = probe_request.get("execution")
+        probe_args = probe_request.get("arguments")
+        java_args = probe_args.get("arguments") if isinstance(probe_args, Mapping) else None
+        raw_args = java_args.get("arguments") if isinstance(java_args, Mapping) else None
+        contract = raw_args.get("contract") if isinstance(raw_args, Mapping) else None
+        if (not isinstance(probe_exec, Mapping)
+                or probe_exec.get("expected_revision") != study_binding["revision_after"]
+                or probe_exec.get("model_ref") != study_exec.get("model_ref")
+                or probe_exec.get("project_id") != study_exec.get("project_id")
+                or not isinstance(probe_args, Mapping)
+                or probe_args.get("operation_id") != "code.execute_java"
+                or not isinstance(java_args, Mapping)
+                or java_args.get("entrypoint") != "NativeW23Full3DFixture#run"
+                or java_args.get("mode") != "trusted"
+                or not isinstance(raw_args, Mapping)
+                or raw_args.get("phase") != "bma_basis_fields"
+                or raw_args.get("study_or_solver_invoked") is not False
+                or not isinstance(contract, Mapping)
+                or contract.get("role") != "bma_basis_mapping_pair"
+                or contract.get("provenance_schema") != "w23.full3d.numeric_port_bma_basis_pair.v1"):
+            _fail(f"{level['level_id']} mesh snapshot is not a public post-solve BMA-basis sample")
+        probe_response = probe_route.get("response")
+        raw_probe = _java_action_readback(probe_response, f"{level['level_id']} mesh source-cohort readback") \
+            if isinstance(probe_response, Mapping) else None
+        if not isinstance(raw_probe, Mapping):
+            _fail(f"{level['level_id']} mesh probe omitted its terminal Java readback")
+        source_snapshot = validate_native_source_cohort_snapshot(contract, raw_probe)
+        config = raw_probe["source_cohort"]["before"]["fixture_explicit_configuration"]
+        mesh = config.get("mesh") if isinstance(config, Mapping) else None
+        size = mesh.get("size_properties") if isinstance(mesh, Mapping) else None
+        props = size.get("requested_properties") if isinstance(size, Mapping) else None
+        expected_hmax = level["hmax_expression"]
+        expected_hmin = level["hmin_expression"]
+
+        def string_property(properties: Any, key: str) -> Any:
+            item = properties.get(key) if isinstance(properties, Mapping) else None
+            return item.get("string_readback") if isinstance(item, Mapping) \
+                and item.get("has_property_exact") is True else None
+
+        element_count = mesh.get("elements") if isinstance(mesh, Mapping) else None
+        if (not isinstance(mesh, Mapping) or mesh.get("tag") != "mesh3d"
+                or mesh.get("geometry") != "geom3d" or type(element_count) is not int or element_count <= 0
+                or element_count != build_mesh.get("elements")
+                or string_property(props, "custom") != "on"
+                or string_property(props, "hmax") != expected_hmax
+                or string_property(props, "hmin") != expected_hmin):
+            _fail(f"{level['level_id']} post-solve mesh differs from its pre-solve setup readback")
+
+        overlap_request, overlap_route, overlap_binding = required_route(
+            run, "overlap_request", "overlap_route_result", "overlap_max_execution_timeout_s",
+            revision_delta=0, label=f"{level['level_id']} registered v2 overlap")
+        overlap_exec = overlap_request.get("execution")
+        overlap_args = overlap_request.get("arguments")
+        operation_args = overlap_args.get("arguments") if isinstance(overlap_args, Mapping) else None
+        definition = operation_args.get("definition") if isinstance(operation_args, Mapping) else None
+        if (not isinstance(overlap_exec, Mapping)
+                or overlap_exec.get("expected_revision") != probe_binding["revision_after"]
+                or overlap_exec.get("model_ref") != probe_exec.get("model_ref")
+                or overlap_exec.get("project_id") != probe_exec.get("project_id")
+                or not isinstance(operation_args, Mapping)
+                or overlap_args.get("operation_id") != "result.mode_overlap_basis_v2"
+                or not isinstance(definition, Mapping)):
+            _fail(f"{level['level_id']} v2 result is not the current-model registered public operation")
+        try:
+            validate_request_shape({"definition": dict(definition)})
+        except Exception as exc:
+            raise Full3DScienceError(f"{level['level_id']} v2 definition failed its published schema") from exc
+        basis_request = definition["basis_request"]
+        if (basis_request.get("project_id") != overlap_exec.get("project_id")
+                or basis_request.get("model_ref") != overlap_exec.get("model_ref")
+                or basis_request.get("model_revision") != overlap_exec.get("expected_revision")):
+            _fail(f"{level['level_id']} v2 definition is detached from its live project/ModelRef/revision")
+        native_route_response = overlap_route.get("response")
+        native_result = native_route_response.get("data") if isinstance(native_route_response, Mapping) else None
+        if not isinstance(native_result, Mapping):
+            _fail(f"{level['level_id']} registered v2 route omitted its native result object")
+        try:
+            validate_jsonschema(instance=dict(native_result), schema=NATIVE_RESULT_SCHEMA)
+        except Exception as exc:
+            raise Full3DScienceError(f"{level['level_id']} terminal v2 result failed its published schema") from exc
+        expected_identity = {
+            "basis_id": basis_request["basis_id"], "case": dict(basis_request["case"]),
+            "project_id": basis_request["project_id"], "model_ref": dict(basis_request["model_ref"]),
+            "model_tag": basis_request["model_ref"]["model_tag"],
+            "model_revision": basis_request["model_revision"],
+            "geometry_revision": basis_request["geometry_revision"],
+            "frequency_hz": basis_request["frequency_hz"],
+            "coordinate_frame": basis_request["coordinate_frame"],
+            "mode_ids": [row["mode_id"] for row in basis_request["basis_modes"]],
+            "mode_indices": [row["mode_index"] for row in basis_request["basis_modes"]],
+        }
+        if (native_result.get("basis_request_id") != basis_request.get("request_id")
+                or native_result.get("definition_sha256") != definition.get("definition_sha256")
+                or native_result.get("identity") != expected_identity
+                or native_result.get("managed_execution_binding") != {
+                    "project_id": overlap_exec["project_id"], "model_ref": dict(overlap_exec["model_ref"]),
+                    "model_revision": overlap_exec["expected_revision"],
+                    "source": "managed_observation_context"}):
+            _fail(f"{level['level_id']} terminal v2 result is detached from its registered source request")
+        native_provenance = native_result.get("native_mode_provenance")
+        if (not isinstance(native_provenance, Mapping)
+                or native_provenance.get("configuration_and_solution_lineage_status") != "UNVERIFIED"
+                or native_provenance.get("field_variable_to_eigensolution_mapping_status")
+                != "UNVERIFIED_NATIVE_FIELD_SAMPLE_REQUIRED"):
+            _fail("mesh trend cannot upgrade unresolved BMA/field lineage")
+        mode_sources = [row["source"] for row in basis_request["basis_modes"]]
+        probe_source = contract.get("source")
+        if not any(all(probe_source.get(key) == source.get(key) for key in
+                       ("dataset_id", "solution_id", "outer_index", "inner_index", "solnum"))
+                     for source in mode_sources):
+            _fail(f"{level['level_id']} source-cohort mesh probe is not one of the registered v2 basis solutions")
+
+        terms = native_result["native_integrals"]["terms"]
+
+        def complex_term(term_id: str) -> complex:
+            record = terms.get(term_id)
+            cleanup = record.get("cleanup") if isinstance(record, Mapping) else None
+            if (not isinstance(record, Mapping) or record.get("unit") != "W"
+                    or record.get("feature_type") != "IntSurface"
+                    or not isinstance(cleanup, Mapping) or cleanup.get("removed") is not True
+                    or cleanup.get("cleanup_failed") is not False):
+                _fail(f"{level['level_id']} {term_id} lacks raw W integral/temporary cleanup evidence")
+            return complex(_finite_number(record.get("real"), term_id + ".real"),
+                           _finite_number(record.get("imag"), term_id + ".imag"))
+
+        gram = [[complex_term("G00"), complex_term("G01")],
+                [complex_term("G10"), complex_term("G11")]]
+        coupling = [complex_term("b0"), complex_term("b1")]
+        signal_power = complex_term("P_signal")
+        incident_power = complex_term("P_incident")
+        if (abs(signal_power.imag) > 1e-10 * max(abs(signal_power.real), 1e-30)
+                or abs(incident_power.imag) > 1e-10 * max(abs(incident_power.real), 1e-30)
+                or signal_power.real <= 0.0 or incident_power.real <= 0.0):
+            _fail(f"{level['level_id']} native signed powers must be finite, real, and Pin positive")
+        projection = compute_two_mode_basis_projection(
+            gram, coupling, signal_power_w=signal_power.real,
+            incident_power_w=incident_power.real,
+            source_identity=_basis_reference_identity(basis_request))
+        native_integrals = native_result["native_integrals"]
+        if (native_integrals.get("gram_matrix") != [[terms["G00"], terms["G01"]],
+                                                      [terms["G10"], terms["G11"]]]
+                or native_integrals.get("coupling_vector") != [terms["b0"], terms["b1"]]
+                or native_integrals.get("signal_power") != terms["P_signal"]
+                or native_integrals.get("incident_reference_power") != terms["P_incident"]):
+            _fail(f"{level['level_id']} v2 term summary differs from its exact raw term table")
+
+        model_ref = dict(overlap_exec["model_ref"])
+        if (build_exec.get("model_ref") != model_ref
+                or study_exec.get("model_ref") != model_ref
+                or probe_exec.get("model_ref") != model_ref
+                or build_exec.get("project_id") != overlap_exec.get("project_id")):
+            _fail(f"{level['level_id']} mesh setup, solve, sample, and overlap do not share one managed model")
+        model_refs.append(model_ref)
+        study_jobs.append(study_result["job_id"])
+        request_ids.extend([build_request["execution"]["request_id"],
+                            study_request["execution"]["request_id"],
+                            probe_request["execution"]["request_id"],
+                            overlap_request["execution"]["request_id"]])
+        operation_ids.extend([build_binding["operation_instance_id"],
+                              study_binding["operation_instance_id"],
+                              probe_binding["operation_instance_id"],
+                              overlap_binding["operation_instance_id"]])
+        job_ids.extend([build_binding["job_id"], study_binding["job_id"],
+                        probe_binding["job_id"], overlap_binding["job_id"]])
+        explicit_configs.append(dict(config))
+        layout = dict(basis_request)
+        for name in ("request_id", "model_ref", "model_revision"):
+            layout.pop(name, None)
+        for role in ("signal_source", "incident_source"):
+            layout[role] = {key: value for key, value in basis_request[role].items()
+                            if key not in {"model_ref", "model_revision"}}
+        layout["basis_modes"] = [
+            {**{key: value for key, value in mode.items() if key != "source"},
+             "source": {key: value for key, value in mode["source"].items()
+                        if key not in {"model_ref", "model_revision"}}}
+            for mode in basis_request["basis_modes"]]
+        integral_plan = layout.get("native_integral_plan")
+        if isinstance(integral_plan, Mapping) and isinstance(integral_plan.get("terms"), list):
+            normalized_plan = dict(integral_plan)
+            normalized_terms = []
+            for term in integral_plan["terms"]:
+                normalized_term = dict(term)
+                for source_key in ("a_source", "b_source"):
+                    source = normalized_term.get(source_key)
+                    if isinstance(source, Mapping):
+                        normalized_term[source_key] = {
+                            key: value for key, value in source.items()
+                            if key not in {"model_ref", "model_revision"}}
+                normalized_terms.append(normalized_term)
+            normalized_plan["terms"] = normalized_terms
+            layout["native_integral_plan"] = normalized_plan
+        basis_layouts.append(layout)
+        outputs.append({"mesh_level_id": level["level_id"],
+            "model_ref": model_ref, "revision": overlap_binding["revision_after"],
+            "mesh_setup_readback": dict(build_mesh),
+            "mesh_readback": dict(mesh), "source_cohort_status": source_snapshot["status"],
+            "source_cohort_sha256": _sha256(source_snapshot),
+            "native_basis_result_sha256": _sha256(dict(native_result)),
+            "eta_basis_from_registered_terms": projection["eta_basis_raw"],
+            "signal_power_w": signal_power.real, "incident_pin_w": incident_power.real,
+            "signed_signal_power_over_pin": signal_power.real / incident_power.real,
+            "basis_diagonal_power_over_pin_gauge_dependent": [
+                complex_term("G00").real / incident_power.real,
+                complex_term("G11").real / incident_power.real],
+            "v2_field_mapping": "UNVERIFIED",
+            "producer_step_solution_lineage": "UNVERIFIED"})
+
+    if (len({json.dumps(row, sort_keys=True) for row in model_refs}) != 3
+            or len(set(study_jobs)) != 3
+            or len(set(request_ids)) != len(request_ids)
+            or len(set(operation_ids)) != len(operation_ids)
+            or len(set(job_ids)) != len(job_ids)):
+        _fail("three mesh levels require distinct ModelRefs and non-replayed producer/sample/integral jobs")
+    base_config = dict(explicit_configs[0])
+    base_config.pop("mesh", None)
+    for config in explicit_configs[1:]:
+        fixed = dict(config)
+        fixed.pop("mesh", None)
+        if fixed != base_config:
+            _fail("mesh levels changed frozen non-mesh W23 fixture configuration readbacks")
+    if any(layout != basis_layouts[0] for layout in basis_layouts[1:]):
+        differing_keys = sorted({key for layout in basis_layouts[1:]
+            for key in set(layout) | set(basis_layouts[0])
+            if layout.get(key) != basis_layouts[0].get(key)})
+        _fail("mesh levels do not share the exact frozen optics/source/surface/basis definition: "
+              f"different top-level fields={differing_keys}")
+    element_counts = [row["mesh_readback"]["elements"] for row in outputs]
+    if len(set(element_counts)) != 3:
+        _fail("each frozen mesh scale must read back a distinct actual finite-element count")
+
+    adjacent = []
+    within_limits = True
+    limit = float(FULL3D_CONVERGENCE_POLICY["adjacent_eta_absolute_delta_limit"])
+    power_limit = float(FULL3D_CONVERGENCE_POLICY["adjacent_signed_power_over_pin_absolute_delta_limit"])
+    for index in range(1, len(outputs)):
+        previous, current = outputs[index - 1], outputs[index]
+        eta_delta = abs(current["eta_basis_from_registered_terms"]
+                         - previous["eta_basis_from_registered_terms"])
+        signal_delta = abs(current["signed_signal_power_over_pin"]
+                           - previous["signed_signal_power_over_pin"])
+        basis_diagonal_diagnostic_deltas = [
+            abs(current["basis_diagonal_power_over_pin_gauge_dependent"][axis]
+                - previous["basis_diagonal_power_over_pin_gauge_dependent"][axis])
+            for axis in range(2)]
+        row = {"from_mesh": previous["mesh_level_id"], "to_mesh": current["mesh_level_id"],
+               "eta_basis_absolute_delta": eta_delta,
+               "signed_signal_power_over_pin_absolute_delta": signal_delta,
+               "basis_diagonal_power_over_pin_gauge_dependent_diagnostic_deltas":
+                   basis_diagonal_diagnostic_deltas,
+               "basis_diagonal_power_used_as_gate": False,
+               "source": "recomputed_from_exact_terminal_registered_v2_integral_terms"}
+        adjacent.append(row)
+        within_limits = within_limits and eta_delta <= limit and signal_delta <= power_limit
+    return {"status": "SOFTWARE_MESH_SERIES_RECOMPUTED_CAPTURE_AND_QUADRATURE_PENDING",
+        "evidence_scope": "exact public request/operation/job chains and route-returned registered v2 integrals",
+        "mesh_runs": outputs, "adjacent_deltas": adjacent,
+        "basis_and_signed_power_thresholds": "WITHIN_LIMITS" if within_limits else "LIMIT_EXCEEDED",
+        "basis_diagonal_power_diagnostic": (
+            "G00_AND_G11_OVER_PIN_ARE_GAUGE_DEPENDENT_AND_EXCLUDED_FROM_CONVERGENCE_GATE"),
+        "eta_capture_convergence": "NOT_RUN_MISSING_ROUTE_BOUND_CORE_CAPTURE_INTEGRALS",
+        "quadrature_convergence": "NOT_RUN_MISSING_ROUTE_BOUND_THREE_LEVEL_RAW_FIELD_SERIES",
+        "power_balance": "NOT_RUN_MISSING_NATIVE_CLOSED_CONTROL_VOLUME_READBACK",
+        "producer_step_solution_lineage": "UNVERIFIED",
+        "numeric_port_mode_field_mapping": "UNVERIFIED",
+        "native_convergence_status": "NOT_RUN",
+        "scientific_acceptance": "NOT_RUN",
+        "convergence_order_or_error_bound": "NOT_CLAIMED",
+        "caller_metrics_or_deltas_accepted": False,
+        "recipe_sha256": recipe["recipe_sha256"]}
 
 
 def _finite_number(value: Any, label: str) -> float:
@@ -306,15 +869,17 @@ def build_raw_field_contract(
             u_intervals=radial_intervals, v_intervals=angular_points)
     else:
         _fail("native plane must bind a registered circular or rectangular aperture")
+    field_names = list(_VECTOR_FIELDS[role] + _NORMAL_FIELDS)
+    unit_groups = _field_unit_groups(field_names)
     identity = {"case_id": case["case_id"], "case_identity_sha256": case.get("case_identity_sha256"),
                 "role": role, "source": {key: source[key] for key in required_source},
                 "plane": frame, "quadrature_sha256": quadrature["quadrature_sha256"],
-                "expressions": list(_VECTOR_FIELDS[role] + _NORMAL_FIELDS)}
+                "expressions": field_names, "unit_groups": unit_groups}
     return {"schema_version": 1, "contract_id": _sha256(identity), **identity,
             "quadrature": {key: quadrature[key] for key in (
                 "profile", "radial_intervals", "angular_points", "sample_count",
                 "quadrature_sha256", "coordinate_unit", "measure_unit") if key in quadrature},
-            "field_names": list(_VECTOR_FIELDS[role] + _NORMAL_FIELDS),
+            "field_names": field_names,
             "native_result": "NOT_RUN", "study_or_solver_invoked": False}
 
 
@@ -837,6 +1402,289 @@ def validate_full3d_bma_mapping_route_result(
             "job_id": job_id, "revision_before": logical_execution["expected_revision"],
             "revision_after": response_execution["revision"],
             "revision_delta": expected_revision_delta, "retry_forbidden": True}
+
+
+def validate_full3d_sampling_cohort_revision_chain(
+    route_records: Sequence[Mapping[str, Any]], sample_records: Sequence[Mapping[str, Any]], *,
+    project_id: str, model_ref: Mapping[str, Any], start_revision: int,
+    source_artifact: str, staged_source_proof: Mapping[str, Any],
+    execution_owner: Mapping[str, Any], producer_evidence: Mapping[str, Any],
+    producer_route_evidence: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Validate the narrow no-solve route segment that samples one stored solution.
+
+    The result may support an offline immutable-solution cohort only after the
+    actual public route envelopes, task-owned process/session identities,
+    frozen source bytes, native before/after source snapshots and temporary
+    Interp cleanup all agree. It is not a full-model immutability proof and
+    does not change the public routes' live ModelRef/revision requirements.
+    """
+    if (not isinstance(route_records, Sequence) or isinstance(route_records, (str, bytes))
+            or len(route_records) != 4 or not isinstance(sample_records, Sequence)
+            or isinstance(sample_records, (str, bytes)) or len(sample_records) != 2
+            or not isinstance(project_id, str) or not project_id.strip()
+            or not isinstance(model_ref, Mapping) or set(model_ref) != _MODEL_REF_KEYS
+            or type(start_revision) is not int or start_revision < 0):
+        _fail("one exact dataset-list/index plus two field-sampling route records are required")
+    producer_pairs = producer_evidence.get("eigensolution_solution_pairs") \
+        if isinstance(producer_evidence, Mapping) else None
+    if (not isinstance(producer_evidence, Mapping)
+            or producer_evidence.get("status") != "VERIFIED_CONTROLLED_SINGLE_BMA_PRODUCER"
+            or producer_evidence.get("managed_operation_id") != "code.execute_java"
+            or producer_evidence.get("managed_model_revision_after") != start_revision
+            or not isinstance(producer_evidence.get("managed_request_id"), str)
+            or not isinstance(producer_evidence.get("managed_idempotency_key"), str)
+            or not isinstance(producer_evidence.get("managed_operation_instance_id"), str)
+            or not isinstance(producer_evidence.get("managed_job_id"), str)
+            or not isinstance(producer_evidence.get("managed_request_hash"), str)
+            or re.fullmatch(r"[0-9a-f]{64}", producer_evidence["managed_request_hash"]) is None
+            or not isinstance(producer_pairs, list) or len(producer_pairs) != 2):
+        _fail("paired field cohort does not continue the exact verified two-row BMA producer revision")
+    if not isinstance(producer_route_evidence, Mapping):
+        _fail("source-cohort chain omits the original producer request, route, and Java readback")
+    preparation = producer_route_evidence.get("preparation")
+    producer_request = producer_route_evidence.get("request")
+    producer_route = producer_route_evidence.get("route_result")
+    producer_readback = producer_route_evidence.get("readback")
+    if (not isinstance(preparation, Mapping) or not isinstance(producer_request, Mapping)
+            or not isinstance(producer_route, Mapping) or not isinstance(producer_readback, Mapping)):
+        _fail("original producer route evidence is incomplete")
+    reparsed_producer = validate_full3d_bma_probe_run_readback(
+        producer_readback, preparation=preparation, project_id=project_id,
+        model_tag=model_ref.get("model_tag"), model_ref=model_ref,
+        run_request=producer_request, route_result=producer_route)
+    if dict(reparsed_producer) != dict(producer_evidence):
+        _fail("producer summary is detached from its original terminal Java response")
+    expected_labels = ("bma_basis_dataset_list", "bma_basis_dataset_solution_indices",
+                       "bma_basis_fields_ordinal1", "bma_basis_fields_ordinal2")
+    expected_deltas = (0, 0, 1, 1)
+    expected_cap = (90, 90, 180, 180)
+    if tuple(row.get("label") if isinstance(row, Mapping) else None for row in route_records) != expected_labels:
+        _fail("source-cohort route segment contains a missing, reordered, or foreign managed operation")
+
+    source_hash = staged_source_proof.get("sha256") if isinstance(staged_source_proof, Mapping) else None
+    source_path = staged_source_proof.get("path") if isinstance(staged_source_proof, Mapping) else None
+    source_workspace = staged_source_proof.get("workspace") if isinstance(staged_source_proof, Mapping) else None
+    if (not isinstance(staged_source_proof, Mapping)
+            or staged_source_proof.get("status") != "PROJECT_LOCAL_SOURCE_STAGED"
+            or staged_source_proof.get("source_artifact") != source_artifact
+            or not isinstance(source_hash, str) or re.fullmatch(r"[0-9a-f]{64}", source_hash) is None
+            or not isinstance(source_path, str) or not isinstance(source_workspace, str)):
+        _fail("source-cohort segment lacks its exact staged fixture and frozen source hash")
+    try:
+        staged_path = Path(source_path)
+        workspace_path = Path(source_workspace).resolve(strict=True)
+        if (staged_path.is_symlink() or staged_path.resolve(strict=True).parent != workspace_path
+                or staged_path.name != source_artifact or not staged_path.is_file()
+                or hashlib.sha256(staged_path.read_bytes()).hexdigest() != source_hash):
+            _fail("project-local Java source no longer matches its frozen staged hash")
+    except Full3DScienceError:
+        raise
+    except (OSError, RuntimeError, ValueError) as exc:
+        raise Full3DScienceError("project-local frozen Java source cannot be revalidated") from exc
+
+    owner = execution_owner
+    server = owner.get("server_process_identity") if isinstance(owner, Mapping) else None
+    listener = owner.get("listener") if isinstance(owner, Mapping) else None
+    session = owner.get("session_identity") if isinstance(owner, Mapping) else None
+    owner_model_ref = owner.get("model_ref") if isinstance(owner, Mapping) else None
+    pid = server.get("pid") if isinstance(server, Mapping) else None
+    birth = server.get("start_epoch_ms") if isinstance(server, Mapping) else None
+    port = listener.get("port") if isinstance(listener, Mapping) else None
+    endpoint = listener.get("endpoint") if isinstance(listener, Mapping) else None
+    if (not isinstance(owner, Mapping) or owner.get("candidate_owned_server") is not True
+            or owner.get("gui_attached") is not False or owner.get("project_id") != project_id
+            or not isinstance(server, Mapping) or type(pid) is not int or pid <= 1
+            or type(birth) is not int or birth <= 0
+            or not isinstance(listener, Mapping)
+            or listener.get("status") != "LOOPBACK_LISTENER_VERIFIED_BEFORE_WORKER"
+            or type(port) is not int or not 1 <= port <= 65535
+            or endpoint != f"127.0.0.1:{port}" or listener.get("pid") != pid
+            or not isinstance(session, Mapping) or not isinstance(owner_model_ref, Mapping)
+            or session.get("project_id") != project_id
+            or session.get("endpoint") not in (endpoint, {"host": "127.0.0.1", "port": port})
+            or not isinstance(session.get("session_id"), str) or not session["session_id"]
+            or not isinstance(session.get("server_instance_id"), str)
+            or not isinstance(session.get("worker_instance_id"), str)
+            or type(session.get("worker_epoch")) is not int or session["worker_epoch"] < 1
+            or dict(owner_model_ref) != dict(model_ref)
+            or model_ref.get("session_id") != session.get("session_id")
+            or model_ref.get("server_instance_id") != session.get("server_instance_id")):
+        _fail("source-cohort segment lacks one private owned server, one connected Worker, and the exact ModelRef")
+
+    validated_routes = []
+    next_revision = start_revision
+    route_by_label: dict[str, dict[str, Any]] = {}
+    for index, row in enumerate(route_records):
+        label = expected_labels[index]
+        request = row.get("request")
+        route_result = row.get("route_result")
+        cap = row.get("max_execution_timeout_s")
+        if cap != expected_cap[index] or not isinstance(request, Mapping):
+            _fail(f"{label} does not preserve its approved operation wait cap/request")
+        execution = request.get("execution")
+        if (not isinstance(execution, Mapping) or execution.get("project_id") != project_id
+                or execution.get("model_ref") != dict(model_ref)
+                or execution.get("expected_revision") != next_revision):
+            _fail(f"{label} does not continue the exact project/Worker/ModelRef revision chain")
+        operation = request.get("arguments")
+        operation_id = operation.get("operation_id") if isinstance(operation, Mapping) else None
+        operation_args = operation.get("arguments") if isinstance(operation, Mapping) else None
+        if index == 0:
+            valid_operation = operation_id == "dataset.list"
+        elif index == 1:
+            valid_operation = operation_id == "dataset.solution_indices"
+        else:
+            user_args = operation_args.get("arguments") if isinstance(operation_args, Mapping) else None
+            expected_ordinal = index - 1
+            valid_operation = (operation_id == "code.execute_java"
+                and isinstance(operation_args, Mapping)
+                and operation_args.get("source_artifact") == source_artifact
+                and operation_args.get("entrypoint") == "NativeW23Full3DFixture#run"
+                and operation_args.get("mode") == "trusted"
+                and isinstance(user_args, Mapping)
+                and user_args.get("phase") == "bma_basis_fields"
+                and user_args.get("study_or_solver_invoked") is False
+                and isinstance(user_args.get("contract"), Mapping)
+                and user_args["contract"].get("basis_axis", {}).get("ordinal") == expected_ordinal)
+        if not valid_operation:
+            _fail(f"{label} operation is outside the read-only dataset/paired-field cohort allowlist")
+        binding = validate_full3d_bma_mapping_route_result(
+            request, route_result, expected_revision_delta=expected_deltas[index],
+            max_execution_timeout_s=expected_cap[index])
+        if binding.get("revision_before") != next_revision:
+            _fail(f"{label} public route has a discontinuous before revision")
+        terminal_response = route_result.get("response")
+        if not isinstance(terminal_response, Mapping) or terminal_response.get("success") is not True:
+            _fail(f"{label} omitted its successful terminal response body")
+        terminal_data = terminal_response.get("data")
+        if index < 2:
+            route_readback = row.get("readback")
+            if (not isinstance(terminal_data, Mapping) or not isinstance(route_readback, Mapping)
+                    or dict(route_readback) != dict(terminal_data)):
+                _fail(f"{label} cached readback differs from the exact terminal public response data")
+        else:
+            actual_readback = _java_action_readback(terminal_response, label)
+            route_readback = row.get("readback")
+            if not isinstance(route_readback, Mapping) or actual_readback != dict(route_readback):
+                _fail(f"{label} cached Java readback differs from the exact terminal public Worker response")
+        next_revision = binding["revision_after"]
+        validated_routes.append({"label": label, **binding})
+        route_by_label[label] = dict(row)
+
+    dataset_listing = route_by_label["bma_basis_dataset_list"].get("readback")
+    dataset_indices = route_by_label["bma_basis_dataset_solution_indices"].get("readback")
+    dataset_rows = dataset_listing.get("datasets") if isinstance(dataset_listing, Mapping) else None
+    dataset_tag = dataset_indices.get("dataset") if isinstance(dataset_indices, Mapping) else None
+    if (not isinstance(dataset_rows, list) or not isinstance(dataset_indices, Mapping)
+            or not isinstance(dataset_tag, str) or not dataset_tag
+            or dataset_indices.get("solution") != producer_evidence.get("solver_sequence_tag")):
+        _fail("terminal dataset/index readbacks do not expose one complete producer-bound solution dataset")
+    dataset_binding = resolve_full3d_bma_basis_sources(
+        dataset_rows, {dataset_tag: dataset_indices}, producer_evidence=producer_evidence)
+    expected_basis_sources = dataset_binding.get("basis_sources")
+    if (dataset_binding.get("native_result") != "NOT_RUN"
+            or not isinstance(expected_basis_sources, list) or len(expected_basis_sources) != 2):
+        _fail("terminal dataset/index readbacks do not resolve the exact two producer SolutionInfo rows")
+
+    snapshots = []
+    sample_tuples = []
+    for index, sample in enumerate(sample_records, start=1):
+        label = f"bma_basis_fields_ordinal{index}"
+        if not isinstance(sample, Mapping) or sample.get("label") != label:
+            _fail("paired native sample labels do not bind the two ordered basis rows")
+        route_row = route_by_label[label]
+        raw_request_args = route_row["request"]["arguments"]["arguments"]["arguments"]
+        contract = raw_request_args.get("contract")
+        raw = sample.get("readback")
+        quadrature = sample.get("quadrature")
+        route_readback = route_row.get("readback")
+        if (not isinstance(contract, Mapping) or not isinstance(raw, Mapping)
+                or not isinstance(quadrature, Mapping)
+                or not isinstance(route_readback, Mapping)
+                or dict(raw) != dict(route_readback)
+                or raw_request_args.get("contract") != sample.get("contract")
+                or raw_request_args.get("coordinates_m") != quadrature.get("coordinates_m")):
+            _fail("paired sample readback, contract, or coordinates are detached from the exact public route")
+        _reconstruct_contract_quadrature(contract, quadrature)
+        expected_basis = expected_basis_sources[index - 1]
+        basis_axis = contract.get("basis_axis")
+        expected_source = dict(expected_basis["source"])
+        expected_source.pop("solver_sequence_tag", None)
+        if (contract.get("source") != expected_source
+                or not isinstance(basis_axis, Mapping)
+                or basis_axis.get("ordinal") != index
+                or basis_axis.get("axis") != expected_basis.get("basis_axis")
+                or any(basis_axis.get(name) != expected_basis["source"].get(source_name)
+                       for name, source_name in (("outer_index", "outer_index"),
+                                                 ("inner_index", "inner_index"),
+                                                 ("solnum", "solnum"),
+                                                 ("solution_id", "solution_id"),
+                                                 ("solver_sequence_tag", "solver_sequence_tag")))
+                or basis_axis.get("native_parameter_readback")
+                != expected_basis.get("native_parameter_readback")):
+            _fail("field sample contract is detached from terminal dataset/index and producer readbacks")
+        validate_native_field_readback(contract, raw, expected_quadrature=quadrature)
+        cohort = raw.get("source_cohort")
+        snapshot = cohort.get("before") if isinstance(cohort, Mapping) else None
+        if not isinstance(snapshot, Mapping):
+            _fail("paired sample lacks its native before/after stored-solution snapshot")
+        snapshots.append(snapshot)
+        source = contract.get("source")
+        selected = snapshot.get("stored_solution", {}).get("selected_tuple") \
+            if isinstance(snapshot.get("stored_solution"), Mapping) else None
+        if (not isinstance(source, Mapping) or not isinstance(selected, Mapping)
+                or any(source.get(key) != selected.get(key)
+                       for key in ("outer_index", "inner_index", "solnum"))
+                or source.get("solution_id") != selected.get("solver_sequence_tag")
+                or selected.get("solver_sequence_tag") != source.get("solution_id")
+                or snapshot.get("dataset", {}).get("tag") != source.get("dataset_id")):
+            _fail("native paired sample tuple does not match its dispatched SolutionInfo source identity")
+        sample_tuples.append((source["dataset_id"], source["solution_id"], selected["outer_index"],
+                              selected["inner_index"], selected["solnum"]))
+    if sample_tuples[0][0:3] != sample_tuples[1][0:3] or sample_tuples[0] == sample_tuples[1] \
+            or sample_tuples[0][3] == sample_tuples[1][3] or sample_tuples[0][4] == sample_tuples[1][4]:
+        _fail("paired BMA samples must share one solution/dataset/outer tuple and have distinct inner/solnum rows")
+    expected_producer_pairs = sorted(
+        (row.get("outer_index"), row.get("inner_index"), row.get("solnum"), row.get("solver_sequence_tag"))
+        for row in producer_pairs if isinstance(row, Mapping))
+    observed_producer_pairs = sorted(
+        (row[2], row[3], row[4], row[1]) for row in sample_tuples)
+    if (len(expected_producer_pairs) != 2 or expected_producer_pairs != observed_producer_pairs
+            or producer_evidence.get("solver_sequence_tag") != sample_tuples[0][1]):
+        _fail("paired samples are not the exact distinct SolutionInfo tuples returned by the verified BMA producer")
+
+    def cohort_projection(snapshot: Mapping[str, Any]) -> dict[str, Any]:
+        solution = dict(snapshot["stored_solution"])
+        solution.pop("selected_tuple", None)
+        return {"dataset": dict(snapshot["dataset"]), "stored_solution": solution,
+                "fixture_explicit_configuration": dict(snapshot["fixture_explicit_configuration"])}
+
+    if cohort_projection(snapshots[0]) != cohort_projection(snapshots[1]):
+        _fail("paired native tuples do not share the same stored computation/configuration identity")
+    try:
+        if hashlib.sha256(Path(source_path).read_bytes()).hexdigest() != source_hash:
+            _fail("frozen Java source changed during the paired sampling segment")
+    except OSError as exc:
+        raise Full3DScienceError("frozen Java source could not be rechecked after paired sampling") from exc
+    return {"status": "CONTROLLED_SAMPLING_COHORT_CHAIN_VALIDATED",
+            "native_result": "STRUCTURAL_ROUTE_AND_SOURCE_SNAPSHOT_EVIDENCE_ONLY",
+            "offline_stored_solution_cohort": "ELIGIBLE_FOR_INDEPENDENT_SCIENCE_COMPARISON",
+            "scientific_acceptance": "UNVERIFIED_PENDING_NATIVE_ARTIFACT_AND_REVIEW",
+            "source_artifact": source_artifact, "source_sha256": source_hash,
+            "project_id": project_id, "model_ref": dict(model_ref),
+            "server_identity": {"pid": pid, "start_epoch_ms": birth, "port": port},
+            "session_identity": dict(session), "revision_start": start_revision,
+            "revision_end": next_revision, "routes": validated_routes,
+            "producer_identity": {key: producer_evidence[key] for key in (
+                "managed_request_id", "managed_idempotency_key", "managed_operation_instance_id",
+                "managed_job_id", "managed_request_hash", "managed_model_revision_before",
+                "managed_model_revision_after", "solver_sequence_tag")},
+            "sample_tuples": [list(value) for value in sample_tuples],
+            "stored_solution_identity_sha256": _sha256(cohort_projection(snapshots[0])),
+            "fixture_explicit_configuration_sha256": _sha256(
+                snapshots[0]["fixture_explicit_configuration"]),
+            "temporary_interps_removed_before_route_completion": True}
 
 
 def _managed_route_binding(*, project_id: str, model_ref: Mapping[str, Any], model_tag: str,
@@ -1998,6 +2846,212 @@ def _readback_coordinates(raw: Mapping[str, Any], expected: Sequence[Sequence[fl
                 _fail("native Interp coordinate readback differs from the independently reconstructed local plane grid")
 
 
+def validate_native_source_cohort_snapshot(
+    contract: Mapping[str, Any], raw: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Validate before/after native stored-solution and explicit fixture identity.
+
+    This is deliberately a fixture-scoped identity check. It does not claim
+    arbitrary COMSOL model immutability or override live ModelRef/revision
+    checks in the public managed routes.
+    """
+    source = contract.get("source") if isinstance(contract, Mapping) else None
+    cohort = raw.get("source_cohort") if isinstance(raw, Mapping) else None
+    if (not isinstance(source, Mapping) or not isinstance(cohort, Mapping)
+            or cohort.get("schema_id") != "urn:comsol-mcp:w23:source-cohort-snapshot:1.0.0"
+            or cohort.get("native_result") != "COMSOL_NATIVE_SOURCE_COHORT_SNAPSHOTS"):
+        _fail("native field sample lacks the versioned before/after source-cohort readback")
+    before, after = cohort.get("before"), cohort.get("after")
+    if not isinstance(before, Mapping) or not isinstance(after, Mapping) or dict(before) != dict(after):
+        _fail("native dataset, stored solution, or explicit fixture configuration changed during field sampling")
+    dataset = before.get("dataset")
+    solution = before.get("stored_solution")
+    fixture = before.get("fixture_explicit_configuration")
+    if (not isinstance(dataset, Mapping) or dataset.get("tag") != source.get("dataset_id")
+            or dataset.get("feature_type") != "Solution"
+            or not isinstance(dataset.get("properties"), Mapping)
+            or dataset["properties"].get("solution") != source.get("solution_id")
+            or not isinstance(solution, Mapping)
+            or solution.get("solution_tag") != source.get("solution_id")
+            or not isinstance(fixture, Mapping)
+            or fixture.get("schema_id") != "urn:comsol-mcp:w23:fixture-explicit-config:1.0.0"
+            or fixture.get("fixture_id") != "w23_full3d_fiber_ball_lens_vector_pml_v1"):
+        _fail("native field sample cohort is not bound to its exact dataset/solution and W23 fixture")
+    selected = solution.get("selected_tuple")
+    expected_tuple = {"outer_index": source.get("outer_index"),
+                      "inner_index": source.get("inner_index"),
+                      "solnum": source.get("solnum"),
+                      "solver_sequence_tag": source.get("solution_id")}
+    if selected != expected_tuple:
+        _fail("native stored-solution selected tuple differs from the raw-field contract")
+    computation_date = solution.get("computation_date_ms")
+    computation_version = solution.get("computation_version")
+    parameter_axis = solution.get("parameter_axis")
+    solution_info = solution.get("solution_info")
+    if (type(computation_date) is not int or computation_date <= 0
+            or not isinstance(computation_version, str) or not computation_version.strip()
+            or not isinstance(parameter_axis, list) or not isinstance(solution_info, Mapping)
+            or solution_info.get("is_valid") is not True
+            or solution_info.get("solver_sequence_is_empty") is not False
+            or not isinstance(solution_info.get("solution_pairs"), list)):
+        _fail("native stored computation date/version or SolutionInfo identity is missing")
+    pair_rows = solution_info["solution_pairs"]
+    if selected not in pair_rows:
+        _fail("selected native source tuple is absent from the complete SolutionInfo pair readback")
+    seen_parameters: set[str] = set()
+    for row in parameter_axis:
+        if (not isinstance(row, Mapping) or not isinstance(row.get("name"), str)
+                or not row["name"].strip() or row["name"] in seen_parameters):
+            _fail("native stored-solution parameter axis is malformed or duplicated")
+        value = _finite_number(row.get("value"), "native stored-solution parameter value")
+        seen_parameters.add(row["name"])
+        if not math.isfinite(value):
+            _fail("native stored-solution parameter axis contains a nonfinite value")
+
+    parameters = fixture.get("parameters")
+    expected_parameter_tags = {
+        "lambda0", "f0", "w23Ncore", "w23Nclad", "w23Nlens", "w23CoreR", "w23CladR",
+        "w23LensR", "w23AirHalfY", "w23AirHalfZ", "w23PmlT", "w23XIn", "w23XInEnd",
+        "w23XOutStart", "w23XOut", "w23XDomainMax", "w23OutDy", "w23OutDz",
+        "w23ThetaY", "w23ThetaZ",
+    }
+    if (not isinstance(parameters, Mapping) or not expected_parameter_tags.issubset(parameters)
+            or any(not isinstance(parameters.get(key), str) or not parameters[key].strip()
+                   for key in expected_parameter_tags)):
+        _fail("native explicit W23 geometry/frequency parameter readback is incomplete")
+    geometry = fixture.get("geometry")
+    bbox = geometry.get("bounding_box") if isinstance(geometry, Mapping) else None
+    bbox_values = [item for row in bbox for item in row] if (
+        isinstance(bbox, list) and bbox and all(isinstance(row, list) for row in bbox)) else (
+            bbox if isinstance(bbox, list) else [])
+    if (not isinstance(geometry, Mapping) or geometry.get("dimension") != 3
+            or geometry.get("length_unit") != "um"
+            or type(geometry.get("domain_count")) is not int or geometry["domain_count"] <= 0
+            or not isinstance(bbox, list) or len(bbox_values) != 6
+            or any(isinstance(item, bool) or not isinstance(item, (int, float))
+                   or not math.isfinite(float(item)) for item in bbox_values)):
+        _fail("native explicit W23 geometry readback is incomplete")
+    mesh = fixture.get("mesh")
+    size_properties = mesh.get("size_properties") if isinstance(mesh, Mapping) else None
+    requested_size = size_properties.get("requested_properties") if isinstance(size_properties, Mapping) else None
+    if (not isinstance(mesh, Mapping) or mesh.get("tag") != "mesh3d"
+            or mesh.get("geometry") != "geom3d"
+            or type(mesh.get("elements")) is not int or mesh["elements"] <= 0
+            or not isinstance(requested_size, Mapping)):
+        _fail("native explicit fixture mesh tag/element readback is incomplete")
+    for key in ("custom", "hmax", "hmin"):
+        row = requested_size.get(key)
+        if (not isinstance(row, Mapping) or row.get("has_property_exact") is not True
+                or not isinstance(row.get("string_readback"), str)
+                or not row["string_readback"].strip()):
+            _fail(f"native fixture mesh {key} setting lacks actual readback")
+
+    materials = fixture.get("materials")
+    if (not isinstance(materials, list) or not materials
+            or any(not isinstance(row, Mapping) or not isinstance(row.get("tag"), str)
+                   or not isinstance(row.get("selection_tag"), str)
+                   or not isinstance(row.get("domain_ids"), list) or not row["domain_ids"]
+                   or not isinstance(row.get("relative_permittivity"), list)
+                   or not isinstance(row.get("relative_permeability"), list)
+                   or len(row["relative_permittivity"]) != 3
+                   or len(row["relative_permeability"]) != 3
+                   or any(not isinstance(matrix_row, list) or len(matrix_row) != 3
+                          or any(not isinstance(cell, str) or not cell.strip() for cell in matrix_row)
+                          for matrix_row in [*row["relative_permittivity"], *row["relative_permeability"]])
+                   for row in materials)
+            or {row["tag"] for row in materials} != {
+                "matCore3d", "matCoreOut3d", "matCladIn3d", "matCladOut3d",
+                "matLens3d", "matAir3d", "matPmlAir3d"}):
+        _fail("native explicit W23 material/selection/matrix readback is incomplete")
+    physics = fixture.get("physics")
+    features = physics.get("features") if isinstance(physics, Mapping) else None
+    if (not isinstance(physics, Mapping) or physics.get("tag") != "ewfd"
+            or physics.get("feature_type") != "ElectromagneticWaves"
+            or not isinstance(features, list)
+            or not {"portIn3d", "portOut3d"}.issubset(
+                {row.get("tag") for row in features if isinstance(row, Mapping)})):
+        _fail("native explicit EWFD feature/Port configuration readback is incomplete")
+    ports_by_tag: dict[str, Mapping[str, Any]] = {}
+    for row in features:
+        if not isinstance(row, Mapping) or not isinstance(row.get("tag"), str) \
+                or not isinstance(row.get("feature_type"), str) \
+                or not isinstance(row.get("selection_ids"), list):
+            _fail("native explicit EWFD feature inventory is malformed")
+        if row.get("feature_type") == "Port":
+            port_properties = row.get("port_properties")
+            requested = port_properties.get("requested_properties") if isinstance(port_properties, Mapping) else None
+            if not isinstance(requested, Mapping):
+                _fail("native Numeric Port feature properties are not read back")
+            for name in ("PortType", "PortName", "PortModeNumber", "PortOrientation"):
+                prop = requested.get(name)
+                if (not isinstance(prop, Mapping) or prop.get("has_property_exact") is not True
+                        or not isinstance(prop.get("string_readback"), str)
+                        or not prop["string_readback"].strip()):
+                    _fail(f"native Port {name} lacks actual configuration readback")
+            ports_by_tag[row["tag"]] = requested
+    for tag, port_name in (("portIn3d", "1"), ("portOut3d", "2")):
+        port = ports_by_tag.get(tag)
+        if (not isinstance(port, Mapping)
+                or port["PortType"].get("string_readback") != "Numeric"
+                or port["PortName"].get("string_readback") != port_name
+                or port["PortModeNumber"].get("string_readback") != "1"):
+            _fail("native Numeric Port 1/2 mode configuration differs from frozen fixture")
+
+    selections = fixture.get("selections")
+    selection = selections.get(contract["plane"].get("selection_tag")) if isinstance(selections, Mapping) else None
+    if (not isinstance(selection, Mapping) or selection.get("entity_dimension") != 2
+            or not isinstance(selection.get("entity_ids"), list) or not selection["entity_ids"]
+            or any(type(item) is not int or item < 1 for item in selection["entity_ids"])
+            or len(set(selection["entity_ids"])) != len(selection["entity_ids"])):
+        _fail("native source-cohort snapshot omits the exact nonempty sampled boundary identity")
+    if isinstance(contract["plane"].get("boundary_ids"), list) \
+            and sorted(selection["entity_ids"]) != sorted(contract["plane"]["boundary_ids"]):
+        _fail("native source-cohort sampled boundary IDs differ from the frozen plane contract")
+    plane_tag = contract["plane"].get("selection_tag")
+    if plane_tag == "sel3dInputPort":
+        expected_port_ids = next((row["selection_ids"] for row in features
+                                  if isinstance(row, Mapping) and row.get("tag") == "portIn3d"), None)
+        if not isinstance(expected_port_ids, list) or sorted(expected_port_ids) != sorted(selection["entity_ids"]):
+            _fail("native input sample selection differs from the configured Numeric Port 1 boundaries")
+    elif plane_tag == "sel3dOutputPort":
+        expected_port_ids = next((row["selection_ids"] for row in features
+                                  if isinstance(row, Mapping) and row.get("tag") == "portOut3d"), None)
+        if not isinstance(expected_port_ids, list) or sorted(expected_port_ids) != sorted(selection["entity_ids"]):
+            _fail("native output sample selection differs from the configured Numeric Port 2 boundaries")
+    elif plane_tag == "sel3dOutputCoreCapture":
+        output_port_ids = next((row["selection_ids"] for row in features
+                                 if isinstance(row, Mapping) and row.get("tag") == "portOut3d"), None)
+        if not isinstance(output_port_ids, list) or not set(selection["entity_ids"]).issubset(output_port_ids):
+            _fail("native core-capture selection is not contained in the configured Numeric Port 2 boundaries")
+
+    study_steps = fixture.get("study_steps")
+    study_tag = solution.get("study_tag")
+    if not isinstance(study_steps, Mapping) or study_tag not in study_steps \
+            or not isinstance(study_steps[study_tag], list) or not study_steps[study_tag]:
+        _fail("native stored-solution producer Study configuration is not in the fixture snapshot")
+    pml = fixture.get("pml")
+    pml_requested = pml.get("requested_properties") if isinstance(pml, Mapping) else None
+    if not isinstance(pml_requested, Mapping):
+        _fail("native explicit PML configuration readback is incomplete")
+    for key in ("ScalingType", "stretchingType", "typicalWavelength"):
+        row = pml_requested.get(key)
+        if (not isinstance(row, Mapping) or row.get("has_property_exact") is not True
+                or not isinstance(row.get("string_readback"), str)
+                or not row["string_readback"].strip()):
+            _fail(f"native PML {key} setting lacks actual readback")
+    fixture_digest = _sha256(dict(fixture))
+    storage_digest = _sha256(dict(solution))
+    return {
+        "status": "NATIVE_SOURCE_COHORT_SNAPSHOT_VALIDATED",
+        "scope": "explicit W23 fixture configuration and exact stored solution; not arbitrary model immutability",
+        "dataset_tag": dataset["tag"], "solution_tag": solution["solution_tag"],
+        "study_tag": study_tag, "selected_tuple": dict(selected),
+        "computation_date_ms": computation_date, "computation_version": computation_version,
+        "fixture_explicit_configuration_sha256": fixture_digest,
+        "stored_solution_identity_sha256": storage_digest,
+    }
+
+
 def validate_native_field_readback(
     contract: Mapping[str, Any], raw: Mapping[str, Any], *,
     expected_quadrature: Mapping[str, Any],
@@ -2012,12 +3066,32 @@ def validate_native_field_readback(
     if raw.get("native_result") != "COMSOL_NATIVE_RAW":
         _fail("software or mock field values cannot be promoted to native readback")
     cleanup = raw.get("cleanup")
-    if not isinstance(cleanup, Mapping) or cleanup.get("created") is not True \
-            or cleanup.get("removed") is not True or cleanup.get("cleanup_failed") is not False:
-        _fail("temporary Interp node cleanup must be fully observed")
+    prefix = "w23bm" if contract.get("provenance_schema") == "w23.full3d.numeric_port_bma_basis_pair.v1" else "w23rf"
+    contract_id = contract.get("contract_id")
+    expected_cleanup_tags = ([prefix + contract_id[0:10] + suffix for suffix in ("e", "h", "n")]
+                             if isinstance(contract_id, str) and re.fullmatch(r"[0-9a-f]{64}", contract_id)
+                             else [])
+    if (not isinstance(cleanup, Mapping)
+            or cleanup.get("created_count") != 3 or cleanup.get("expected_count") != 3
+            or cleanup.get("removed") is not True or cleanup.get("cleanup_failed") is not False
+            or cleanup.get("tags") != expected_cleanup_tags or cleanup.get("error") != ""):
+        _fail("all three request-owned SI Interp tags must have exact successful native cleanup readback")
     if raw.get("sample_count") != contract["quadrature"]["sample_count"]:
         _fail("native field readback sample count differs from contract")
+    expected_units = _field_unit_groups(contract.get("field_names", []))
+    if (contract.get("unit_groups") != expected_units or raw.get("units_preserved") is not True
+            or raw.get("unit_readback") != {key: value["unit"] for key, value in expected_units.items()}):
+        _fail("native field readback does not prove the separate SI E/H/normal unit groups")
+    unit_by_expression = {expression: (group, values["unit"])
+                          for group, values in expected_units.items()
+                          for expression in values["expressions"]}
+    rows = raw.get("expressions")
+    if (not isinstance(rows, list) or any(not isinstance(row, Mapping)
+            or unit_by_expression.get(row.get("expression")) != (row.get("unit_group"), row.get("unit"))
+            for row in rows)):
+        _fail("native field expression rows omit or alter their unit-group readback")
     _readback_coordinates(raw, expected_quadrature["coordinates_m"])
+    cohort_validation = validate_native_source_cohort_snapshot(contract, raw)
     fields = _expression_map(raw, contract)
     axis = _vector3(contract["plane"]["axis_xyz"], "expected plane axis")
     sign = contract["plane"]["native_normal_sign"]
@@ -2036,6 +3110,7 @@ def validate_native_field_readback(
             "contract_id": expected_id, "source": dict(contract["source"]),
             "plane": dict(contract["plane"]), "sample_count": contract["quadrature"]["sample_count"],
             "field_names": list(contract["field_names"]), "cleanup": dict(cleanup),
+            "source_cohort": cohort_validation,
             "coordinate_sha256": _sha256(expected_quadrature["coordinates_m"]),
             "normal_orientation": "native normals match the measured outward sign; declared sign maps to physical propagation direction"}
 
@@ -2643,14 +3718,19 @@ def compare_native_mode_overlap(
 
 __all__ = [
     "Full3DScienceError", "ManagedRouteOutcomeError", "FULL3D_COMPARISON_POLICY",
+    "FULL3D_CONVERGENCE_POLICY", "build_full3d_convergence_recipe",
+    "build_full3d_mesh_level_fixture_dispatch",
+    "recompute_full3d_mesh_stability_from_registered_routes",
     "BMA_FIELD_MAPPING_POLICY", "COMSOL_PORT_MODE_FIELD_KB_EVIDENCE",
     "COMSOL_INTERP_UNIT_KB_EVIDENCE",
     "build_raw_field_contract", "build_raw_field_dispatch",
     "resolve_full3d_bma_basis_sources", "build_full3d_bma_basis_mapping_contracts",
     "build_full3d_bma_basis_mapping_dispatch", "validate_full3d_bma_basis_mapping_samples",
     "resolve_full3d_bma_receiver_plane", "validate_full3d_bma_mapping_route_result",
+    "validate_full3d_sampling_cohort_revision_chain",
     "circular_port_quadrature", "rectangular_port_quadrature", "compare_native_mode_overlap",
     "independent_mode_overlap_integrals", "validate_native_field_readback",
+    "validate_native_source_cohort_snapshot",
     "build_full3d_study_run_dispatch", "build_full3d_solution_inventory_dispatch",
     "build_full3d_bma_probe_prepare_dispatch", "build_full3d_bma_probe_run_dispatch",
     "validate_full3d_bma_probe_preparation", "validate_full3d_bma_probe_run_readback",

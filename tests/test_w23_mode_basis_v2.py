@@ -106,6 +106,73 @@ def _combine(first, second, a, b):
             for key in ("E", "H")}
 
 
+def _cohort_snapshot(contract):
+    source = contract["source"]
+    sequence = source["solution_id"]
+    selected = {"outer_index": source["outer_index"],
+                "inner_index": source["inner_index"], "solnum": source["solnum"],
+                "solver_sequence_tag": sequence}
+
+    def props(values):
+        return {key: {"has_property_exact": True, "string_readback": value}
+                for key, value in values.items()}
+
+    identity = [["1", "0", "0"], ["0", "1", "0"], ["0", "0", "1"]]
+    tags = ("matCore3d", "matCoreOut3d", "matCladIn3d", "matCladOut3d",
+            "matLens3d", "matAir3d", "matPmlAir3d")
+    selections = ("geom3d_coreIn_dom", "geom3d_rotCoreOutZ_dom",
+                  "geom3d_cladShellIn_dom", "geom3d_rotCladShellOutZ_dom",
+                  "geom3d_lensBall_dom", "geom3d_airRemainder_dom", "geom3d_pmlShell_dom")
+    configuration = {
+        "schema_id": "urn:comsol-mcp:w23:fixture-explicit-config:1.0.0",
+        "fixture_id": "w23_full3d_fiber_ball_lens_vector_pml_v1",
+        "parameters": {key: "1" for key in (
+            "lambda0", "f0", "w23Ncore", "w23Nclad", "w23Nlens", "w23CoreR",
+            "w23CladR", "w23LensR", "w23AirHalfY", "w23AirHalfZ", "w23PmlT",
+            "w23XIn", "w23XInEnd", "w23XOutStart", "w23XOut", "w23XDomainMax",
+            "w23OutDy", "w23OutDz", "w23ThetaY", "w23ThetaZ")},
+        "geometry": {"dimension": 3, "length_unit": "um", "domain_count": 8,
+                     "bounding_box": [-20.0, -8.0, -8.0, 21.0, 8.0, 8.0]},
+        "mesh": {"tag": "mesh3d", "geometry": "geom3d", "elements": 1024,
+                 "size_properties": {"requested_properties": props({
+                     "custom": "on", "hmax": "lambda0/(5*w23Nlens)",
+                     "hmin": "lambda0/(12*w23Nlens)"})}},
+        "materials": [{"tag": tag, "selection_tag": selection, "domain_ids": [index],
+                       "relative_permittivity": identity, "relative_permeability": identity}
+                      for index, (tag, selection) in enumerate(zip(tags, selections), start=1)],
+        "physics": {"tag": "ewfd", "feature_type": "ElectromagneticWaves", "features": [
+            {"tag": "portIn3d", "feature_type": "Port", "selection_tag": "sel3dInputPort",
+             "selection_dimension": 2, "selection_ids": [11], "port_properties": {
+                 "requested_properties": props({"PortType": "Numeric", "PortName": "1",
+                     "PortModeNumber": "1", "PortOrientation": "ForwardPort"})}},
+            {"tag": "portOut3d", "feature_type": "Port", "selection_tag": "sel3dOutputPort",
+             "selection_dimension": 2, "selection_ids": [22], "port_properties": {
+                 "requested_properties": props({"PortType": "Numeric", "PortName": "2",
+                     "PortModeNumber": "1", "PortOrientation": "ForwardPort"})}}]},
+        "pml": {"requested_properties": props({"ScalingType": "Cartesian",
+             "stretchingType": "polynomial", "typicalWavelength": "lambda0"})},
+        "selections": {"sel3dInputPort": {"entity_dimension": 2, "entity_ids": [11]},
+            "sel3dOutputPort": {"entity_dimension": 2, "entity_ids": [22]},
+            "sel3dOutputCoreCapture": {"entity_dimension": 2, "entity_ids": [22]},
+            contract["plane"]["selection_tag"]: {
+                "entity_dimension": 2,
+                "entity_ids": ([11] if contract["plane"]["selection_tag"] == "sel3dInputPort"
+                               else [22])}},
+        "study_steps": {"study_" + sequence: [{"tag": "step"}]},
+    }
+    snapshot = {"dataset": {"tag": source["dataset_id"], "feature_type": "Solution",
+                            "properties": {"solution": sequence}},
+        "stored_solution": {"solution_tag": sequence, "study_tag": "study_" + sequence,
+            "computation_date_ms": 100, "computation_version": "6.4.0.293",
+            "parameter_axis": [{"name": "freq", "value": 193.414489032258e12}],
+            "solution_info": {"is_valid": True, "solver_sequence_is_empty": False,
+                              "solution_pairs": [selected]}, "selected_tuple": selected},
+        "fixture_explicit_configuration": configuration}
+    return {"schema_id": "urn:comsol-mcp:w23:source-cohort-snapshot:1.0.0",
+            "native_result": "COMSOL_NATIVE_SOURCE_COHORT_SNAPSHOTS",
+            "before": snapshot, "after": copy.deepcopy(snapshot)}
+
+
 def _raw_readback(contract, quadrature, fields):
     role = contract["role"]
     suffix = "" if role == "signal" else ("_1" if role == "incident_reference" else "_2")
@@ -121,9 +188,13 @@ def _raw_readback(contract, quadrature, fields):
             axis_name = expression[-1] if not suffix else expression[-len(suffix)-1]
             axis = {"x": 0, "y": 1, "z": 2}[axis_name]
             samples = [fields[component][0][axis]] * len(quadrature["coordinates_m"])
+        unit_group = ("normal" if expression in {"nx", "ny", "nz"}
+                      else "electric" if expression.startswith("ewfd.E") else "magnetic")
+        unit = {"normal": "1", "electric": "V/m", "magnetic": "A/m"}[unit_group]
         values[expression] = {"expression": expression,
                               "real": [v.real for v in samples],
-                              "imag": [v.imag for v in samples]}
+                              "imag": [v.imag for v in samples],
+                              "unit_group": unit_group, "unit": unit}
     coordinates = [[point[axis] for point in quadrature["coordinates_m"]] for axis in range(3)]
     return {
         "contract_id": contract["contract_id"],
@@ -131,9 +202,14 @@ def _raw_readback(contract, quadrature, fields):
         "source": copy.deepcopy(contract["source"]),
         "plane": copy.deepcopy(contract["plane"]),
         "native_result": "COMSOL_NATIVE_RAW", "study_or_solver_invoked": False,
-        "complex_readback": True, "cleanup": {"created": True, "removed": True,
-                                                  "cleanup_failed": False},
+        "complex_readback": True, "units_preserved": True,
+        "unit_readback": {"electric": "V/m", "magnetic": "A/m", "normal": "1"},
+        "cleanup": {"created_count": 3, "expected_count": 3, "removed": True,
+                    "cleanup_failed": False,
+                    "tags": ["w23rf" + contract["contract_id"][:10] + suffix
+                             for suffix in ("e", "h", "n")], "error": ""},
         "synthetic_test_fixture_only": True,
+        "source_cohort": _cohort_snapshot(contract),
         "sample_count": len(coordinates[0]), "coordinates_m": coordinates,
         "expressions": list(values.values()),
     }
