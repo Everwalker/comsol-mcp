@@ -132,7 +132,7 @@
     "native_solve_budget_remaining": 0,
     "evidence": "docs/full_project_execution/evidence/luna_process_reconciliation/mac_readonly_snapshot_20260926T2152Z.json"
   },
-  "updated_at": "2026-09-27T21:20:31.752880+00:00",
+  "updated_at": "2026-09-27T21:44:15.486310+00:00",
   "note": "Continuous authorized execution through W26. OpenViking task-detail retrieval was denied by auto-review because it would disclose internal roadmap identifiers externally; no workaround. Use current frozen workpack and read-only local memory only. Do not rerun bootstrap/init on resume. Source files now contain executor edits; do not rerun bootstrap/init. Git metadata is an APFS pointer managed by main agent; migration requires bundle/source transfer, not copying only the repository pointer. Git metadata migration is documented by evidence/git_metadata_relocation.json and owned by the main agent; do not copy the APFS git pointer to another machine without source bundle/archive. GUI permission boundary and checkpoint solution-scope caveat recorded. This executor has one W24 native setup-only failure with exact cleanup verified; the durable operation/job UNKNOWN records remain unchanged. No W24 solver submission occurred. Saved-MPH readback supplement uses separate time/evidence and zero study/solver calls; run08 remains FAIL_OR_INCOMPLETE. Root raw SQLite recomputation is linked under native_resume_saved_artifact_supplement.raw_recomputation_evidence; original run08 remains FAIL_OR_INCOMPLETE and no solve budget is restored. Latest checkpoint 2026-09-27T03:50:43Z: W24 0334Z setup run failed pre-model due Python 3.14 missing mcp, with exact cleanup; 0346Z candidate pins the validated 3.12.13 environment and passes a production no-engine registry/daemon preflight. Native setup remains pending root review; science implementation continues offline. Latest checkpoint 2026-09-27T09:09:28Z: W24 0841Z candidate was invoked once at 0857Z and failed before any engine/Worker birth because project.inspect received an injected idempotency_key; project.create persisted successfully. Exact read-only SQLite hash and operation result are in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_contract_diagnostic.json. The runner now omits the unnecessary inspect key; actual ControlDaemon focused regression is 2/2 PASS in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_runner_regression_receipt.json. No native retry or acceptance is claimed; release F04 runtime integration is active, so refresh closure and root review are required before another launch. Windows COMSOL 6.3 remains required/unassessed; only macOS 6.3 is USER_REQUESTED_SKIP.",
   "native_resume_smoke": {
     "status": "FAIL_OR_INCOMPLETE_POINT_SCHEMA_FAILURE; SOLVED_CHILD_ARTIFACT_DURABLE; SOLVE_BUDGET_EXHAUSTED; SEPARATE_SAVED_MPH_READBACK_PASS",
@@ -970,7 +970,7 @@
   },
   "acceptance_cells_changed": false,
   "current_execution_checkpoint": {
-    "path": "docs/full_project_execution/project_session/EXPERIMENT_READS_SOFTWARE_CHECKPOINT.json",
+    "path": "docs/full_project_execution/w24/CURE_LAW_V2_SOFTWARE_CHECKPOINT.json",
     "status": "PASS_SCOPED_SOFTWARE_NATIVE_NOT_RUN"
   },
   "w24_setup_candidate_0841z_native_attempt": {
@@ -996,10 +996,10 @@
     "next": "Wait for stable F04 runtime handoff; refresh closure and submit a new candidate for root review. No automatic rerun."
   },
   "verified_git_sync": {
-    "head": "f056b76301a220cf39c2edb8d540079d29fc1ef3",
-    "origin_main": "f056b76301a220cf39c2edb8d540079d29fc1ef3",
+    "head": "785c7513951ab08bc1312adfb1deda653a83710b",
+    "origin_main": "785c7513951ab08bc1312adfb1deda653a83710b",
     "verified_after_push": true,
-    "at": "2026-09-27T21:09:39.386067+00:00"
+    "at": "2026-09-27T21:21:11.568455+00:00"
   },
   "w24_static_shape_science_admission_repair": {
     "status": "SCOPED_SOFTWARE_REPAIR_ACCEPTED_NATIVE_NOT_RUN",
@@ -1059,21 +1059,24 @@
     }
   },
   "latest_owned_resource_observation": {
-    "observed_at": "2026-09-27T20:06:34.472372+00:00",
-    "method": "lsof exact TCP listening ports only; no signals",
-    "server": {
-      "pid": 75272,
-      "port": 56183,
-      "listener": "PRESENT"
-    },
-    "control_daemon": {
-      "pid": 75260,
-      "port": 56174,
-      "listener": "PRESENT"
-    },
-    "ps": "SANDBOX_DENIED",
-    "identity_and_quiescence": "NOT_REVALIDATED",
-    "cleanup": "NOT_ATTEMPTED_PENDING_EXPLICIT_AUTHORIZATION"
+    "checked_at": "2026-09-27T21:50:24.373098+00:00",
+    "method": "read-only lsof on exact two pending cleanup ports",
+    "status": "PRESENT",
+    "listeners": [
+      {
+        "pid": 75260,
+        "port": 56174,
+        "command_name": "Python"
+      },
+      {
+        "pid": 75272,
+        "port": 56183,
+        "command_name": "java"
+      }
+    ],
+    "birth_identity_and_quiescence": "NOT_REVALIDATED",
+    "signals_sent": [],
+    "authorization": "original explicit local cleanup question remains pending; no cleanup or competing native launch"
   },
   "intel_mac64_availability": {
     "status": "AWAITING_USER_INFORMATION",
@@ -1082,12 +1085,25 @@
     "native_acceptance": "NOT_RUN"
   },
   "w23_radiation_power_balance_gap": {
-    "status": "IMPLEMENTATION_AND_NATIVE_EVIDENCE_REQUIRED",
+    "status": "IMPLEMENTATION_REQUIRED_NATIVE_NOT_RUN",
     "source_commit": "dc25955309947b909d160e0b93a04f2a7f164736",
     "finding": "Current probe has transverse Y/Z PML only and receiver internal Port without explicit verified slit/homogeneous backing. Full frequency-domain radiation and closed-control-volume power balance not established.",
     "current_probe_acceptance": "SCOPED_SOFTWARE_PASS_UNCHANGED",
     "native_power_balance": "NOT_RUN",
-    "next_action": "Inspect same-version API evidence; propose minimal receiver/backing correction and exact physical control volume before native science."
+    "next_action": "Finish current cohort/convergence software candidate, then version receiver/source homogeneous backing and longitudinal PML, BMA aperture and source-free closed control-volume readbacks; no native budget granted.",
+    "static_slit_enum_evidence": {
+      "path": "/Applications/COMSOL64/Multiphysics/data/completion/physics.xml",
+      "sha256": "efb2d0e44a5ea4d2f72aa3b22ba15026f7eaf8a4e39b267c6e036c1701d47d28",
+      "PortSlit": [
+        "1",
+        "0"
+      ],
+      "SlitType": [
+        "DomainBacked",
+        "PECBacked"
+      ],
+      "native_readback": "NOT_RUN"
+    }
   },
   "f16_current_review": {
     "status": "PASS_SCOPED_SOFTWARE",
@@ -1096,8 +1112,8 @@
     "native_acceptance": "NOT_RUN"
   },
   "w24_next_implementation": {
-    "scope": "versioned cure-law v2 spatial UV dose, first-gel reference and full one-branch Maxwell history",
-    "status": "IMPLEMENTING_SOFTWARE",
+    "scope": "Bind exact public route producer/model/solution/unit/hash evidence to v2 captures; implement full native history and continuous/staged/reopen controls; freeze resource/solve budget before native execution.",
+    "status": "IMPLEMENTING_NATIVE_CAPTURE_AND_HISTORY_SOFTWARE",
     "decision": "docs/full_project_execution/MAIN_ACCEPTANCE_PLAN.md#W24-cure-law-v2-implementation-decision-software-only",
     "native_acceptance": "NOT_RUN",
     "native_budget": "NOT_FROZEN_NOT_AUTHORIZED"
@@ -1121,5 +1137,55 @@
       "case_result exact immutable recoverable case model plus raw result"
     ],
     "next_action": "Continue current metric implementation; then close original experiment summary/model-association requirements without replacing prior scoped-read evidence."
+  },
+  "w23_cohort_current_review": {
+    "status": "SPECIFIC_FINDING_FIXED_FULL_CANDIDATE_REVIEW_PENDING",
+    "finding": "Detached sample readback source snapshots accepted without equality to bound original Java response",
+    "reproducer": "/private/tmp/w23_cohort_detached_readback_reproducer.json",
+    "sha256": "7f7339610f0fae55e126e11ddae8630835021f5405f5417187cfbc76cea1462d",
+    "observed": "Same original successful routes, substituted computation_date_ms 100->12445, returned ELIGIBLE_FOR_INDEPENDENT_SCIENCE_COMPARISON",
+    "next_action": "Finish convergence implementation and complete frozen candidate software replay; retain original failing evidence; no native acceptance.",
+    "native_acceptance": "NOT_RUN",
+    "retest": {
+      "path": "/private/tmp/w23_cohort_detached_readback_retest.json",
+      "sha256": "81f3fd114cc28ea6d9ed1a26ed7091b19f460686aaa3140aca51ffc9d11c11f0",
+      "result": "Clean sample accepted; modified detached source snapshot refused with Full3DScienceError",
+      "source_sha256": "44cf3ebf0828635eb6e2db09d2d78d0afea684fcb37b70242e657c5e66b71211"
+    }
+  },
+  "w23_convergence_in_progress_review": {
+    "status": "CHANGE_REQUIRED_IN_UNFROZEN_CANDIDATE",
+    "at": "2026-09-27T22:05:42.541160+00:00",
+    "finding": "Per-basis Gram diagonal powers G00/Pin and G11/Pin were included in cross-mesh threshold gate; these depend on arbitrary basis scaling/rotation.",
+    "source": "tools/w23_full3d_science.py mesh-series adjacent basis_power_over_pin_absolute_deltas and within_limits",
+    "required_fix": "Retain Gram diagonals only as gauge-dependent diagnostics; gate basis-invariant total projected power/Pin and physical signed powers; test equivalent rescaled/rotated basis representations.",
+    "native_acceptance": "NOT_RUN",
+    "next_action": "Luna repairs and freezes final candidate; main verifies invariant negative control before stage publication.",
+    "intermediate_test": {
+      "status": "IN_PROGRESS_TEST_FAILURE_NOT_FROZEN",
+      "passed": 5,
+      "failed": 3,
+      "deselected": 96,
+      "junit": "/private/tmp/w23_mesh_invariance_root_retest.xml",
+      "sha256": "246aaa000322c7e1b7b3824e583b925a1a074f01c9eab4f821609a0aa03441ff",
+      "reason": "Positive route fixture fails BMA sample structure check before invariant assertion; sent to executing Luna.",
+      "next_action": "Await executor frozen candidate and rerun actual invariant test."
+    }
+  },
+  "w24_cure_v2_current_review": {
+    "status": "PASS_SCOPED_SOFTWARE",
+    "finding": "Gel stress-free numerical comparison accepted an arbitrary zero stress component without the required full 3D stress tensor.",
+    "reproducer": "/private/tmp/w24_gel_component_completeness_review.json",
+    "sha256": "4faebb99f53c07d80a3480596f60a9b641c1fe4080aed0eabfccd883059b54c7",
+    "scope": "Synthetic comparison helper only; no native execution or authentication.",
+    "next_action": "Bind exact public route producer/model/solution/unit/hash evidence to v2 captures; implement full native history and continuous/staged/reopen controls; freeze resource/solve budget before native execution.",
+    "native_acceptance": "NOT_RUN",
+    "retest": {
+      "path": "/private/tmp/w24_gel_component_completeness_retest.json",
+      "sha256": "48fb3a9630417809cc68f1b915eaaf6b036d2c49dcc4dd1492b6d2192484f6e3",
+      "source_sha256": "8c7857c9ce4ef50cf2d6d4ea47a22b9d12ef5e5cd257b866fc2ffad218d73035",
+      "result": "Original arbitrary-component counterexample refused; complete six-component zero control accepted as unauthenticated numerical comparison."
+    },
+    "checkpoint": "docs/full_project_execution/w24/CURE_LAW_V2_SOFTWARE_CHECKPOINT.json"
   }
 }

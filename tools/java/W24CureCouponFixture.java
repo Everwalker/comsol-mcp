@@ -5,6 +5,7 @@ import com.comsol.model.Study;
 import com.comsol.model.StudyFeature;
 import com.comsol.model.SolverSequence;
 import com.comsol.model.SolverFeature;
+import com.comsol.model.Expr;
 import com.comsol.model.physics.PhysicsFeature;
 import com.comsol.model.physics.Physics;
 import com.comsol.model.physics.FeatureInfo;
@@ -39,6 +40,8 @@ public final class W24CureCouponFixture {
     private static final String COMPONENT = "comp1";
     private static final String GEOMETRY = "geom1";
     private static final double TOL = 1.0e-9;
+    private static final double ADHESIVE_Z_MIN_M = 510.0e-6;
+    private static final double ADHESIVE_Z_SURFACE_M = 550.0e-6;
     private static final double[] EXPECTED_VOLUMES = {
         9.81747704247e-11, 3.14159265359e-13,
         1.25663706144e-12, 6.13592315154e-12
@@ -78,6 +81,8 @@ public final class W24CureCouponFixture {
 
     public static Object run(Model model, Map<String, Object> args) {
         String phase = String.valueOf(args.getOrDefault("phase", "build"));
+        if ("build_v2".equals(phase)) return buildV2(model, args);
+        if ("readback_v2".equals(phase)) return readbackV2(model);
         if ("readback".equals(phase)) return readback(model);
         if ("expression_inventory".equals(phase)) return expressionInventory(model, args);
         if ("save".equals(phase)) {
@@ -91,7 +96,8 @@ public final class W24CureCouponFixture {
             return Map.of("status", "SAVED", "path", path, "solver_submissions", 0);
         }
         if (!"build".equals(phase)) {
-            throw new IllegalArgumentException("phase must be build, readback, expression_inventory, or save");
+            throw new IllegalArgumentException(
+                "phase must be build, build_v2, readback, readback_v2, expression_inventory, or save");
         }
         if (model.component().tags().length != 0 || model.geom().tags().length != 0) {
             throw new IllegalStateException("W24 build requires a fresh empty model");
@@ -110,6 +116,275 @@ public final class W24CureCouponFixture {
         result.put("status", "BUILT_NOT_SOLVED");
         result.put("native_study_run_calls", 0);
         return result;
+    }
+
+    /**
+     * Additive cure-law v2 build path. The original "build" path above remains
+     * behavior-compatible as the historical v1 fixture. This
+     * path reuses only its pre-solve geometry, material and thermal/mesh setup,
+     * then replaces the spatial cure source and adds dose/gel/Maxwell features
+     * before any study sequence is created. It never submits a solve.
+     */
+    private static Map<String, Object> buildV2(Model model, Map<String, Object> args) {
+        if (model.component().tags().length != 0 || model.geom().tags().length != 0) {
+            throw new IllegalStateException("W24 cure-law v2 build requires a fresh empty model");
+        }
+        double muScale = requestedMuScale(args);
+        addParameters(model);
+        addV2Parameters(model, muScale);
+        buildGeometry(model);
+        createSelections(model);
+        addVariables(model);
+        configureV2ExposureVariables(model);
+        addMaterials(model);
+        configureV2LongTermAdhesiveMaterial(model);
+        addPhysics(model);
+        addDoseOde(model);
+        addV2ActivationAndMaxwell(model);
+        addMesh(model);
+        addStudies(model);
+        configureV2DoseSolverTolerance(model);
+        Map<String, Object> result = readbackV2(model);
+        result.put("status", "BUILT_NOT_SOLVED");
+        result.put("native_study_run_calls", 0);
+        result.put("native_semantics", "UNVERIFIED_FAIL_CLOSED");
+        result.put("module_license", "UNVERIFIED_FAIL_CLOSED");
+        return result;
+    }
+
+    private static double requestedMuScale(Map<String, Object> args) {
+        Object raw = args.getOrDefault("mu_scale", 1.0);
+        double scale;
+        try {
+            scale = Double.parseDouble(String.valueOf(raw));
+        } catch (NumberFormatException exception) {
+            throw new IllegalArgumentException("mu_scale must be a frozen numeric variant", exception);
+        }
+        if (!Double.isFinite(scale) || (scale != 0.5 && scale != 1.0 && scale != 2.0)) {
+            throw new IllegalArgumentException("mu_scale must be exactly one of 0.5, 1.0, or 2.0");
+        }
+        return scale;
+    }
+
+    private static void addV2Parameters(Model model, double muScale) {
+        model.param().set("zUVSurface", "550[um]");
+        model.param().set("muScale", Double.toString(muScale));
+        model.param().set("muUV", "muScale/(40[um])");
+        model.param().set("Einf", "0.5[GPa]");
+        model.param().set("Ebranch", "1.5[GPa]");
+        model.param().set("nuVisco", "0.35");
+        model.param().set("tauMaxwell", "300[s]");
+        model.param().set("Kinf", "Einf/(3*(1-2*nuVisco))");
+        model.param().set("Ginf", "Einf/(2*(1+nuVisco))");
+        model.param().set("Kbranch", "Ebranch/(3*(1-2*nuVisco))");
+        model.param().set("Gbranch", "Ebranch/(2*(1+nuVisco))");
+    }
+
+    private static void configureV2ExposureVariables(Model model) {
+        model.component(COMPONENT).variable("v1").set("rate", "(kUV*Irel+kT)*(1-alpha)");
+        model.component(COMPONENT).variable().create("vUVAdh");
+        model.component(COMPONENT).variable("vUVAdh").selection().named("sel_adhesive");
+        model.component(COMPONENT).variable("vUVAdh").set("S_uv", "if(t<120[s],1,0)");
+        model.component(COMPONENT).variable("vUVAdh").set("Irel",
+            "S_uv*exp(-muUV*(zUVSurface-z))");
+    }
+
+    private static void configureV2LongTermAdhesiveMaterial(Model model) {
+        model.material("matAdh").propertyGroup("def").set("youngsmodulus", "Einf");
+        model.material("matAdh").propertyGroup("def").set("poissonsratio", "nuVisco");
+    }
+
+    private static void addDoseOde(Model model) {
+        model.component(COMPONENT).physics().create("odeDose", "DomainODE", GEOMETRY,
+            new String[]{"Duv_rel"});
+        Physics dose = model.physics("odeDose");
+        dose.selection().named("sel_adhesive");
+        dose.prop("Units").set("DependentVariableQuantity", "time");
+        dose.prop("Units").set("CustomDependentVariableUnit", "s");
+        dose.prop("Units").set("SourceTermQuantity", "dimensionless");
+        dose.prop("Units").set("CustomSourceTermUnit", "1");
+        PhysicsFeature equation = dose.feature("dodeq1");
+        equation.set("ea", "0");
+        equation.set("da", "1");
+        equation.set("f", "Irel");
+        dose.feature("init1").set("Duv_rel", "0[s]");
+    }
+
+    private static void addV2ActivationAndMaxwell(Model model) {
+        PhysicsFeature parent = linearElasticMaterial(model);
+        PhysicsFeature activation = parent.feature().create("actGel", "Activation", 2);
+        activation.selection().named("sel_adhesive");
+        activation.set("activation_expression", "alpha>=alpha_gel || solid.wasactive");
+        // Keep COMSOL's documented default actfac untouched; readback below is
+        // a pre-solve fail-closed gate and must report exactly 1e-5.
+
+        PhysicsFeature visco = parent.feature().create("vis1", "Viscoelasticity", 2);
+        visco.selection().named("sel_adhesive");
+        visco.set("MaterialModel", "GeneralizedMaxwell");
+        visco.set("deformationModel", "full");
+        // These parallel arrays are one ordered Maxwell branch: K, G, and tau
+        // at index 0 must always refer to the same branch.
+        visco.set("Kvm_v", new String[]{"Kbranch"});
+        visco.set("Gvm", new String[]{"Gbranch"});
+        visco.set("tauvm", new String[]{"tauMaxwell"});
+    }
+
+    private static void configureV2DoseSolverTolerance(Model model) {
+        String field = "comp1_Duv_rel";
+        for (String studyTag : new String[]{"stdUV", "stdBake", "stdCool"}) {
+            String[] attached = model.study(studyTag).getSolverSequences("SolverSequence");
+            if (attached.length != 1) {
+                throw new IllegalStateException("v2 dose solver must have one attached sequence: " + studyTag);
+            }
+            SolverFeature time = findUniqueTimeFeature(model.sol(attached[0]), studyTag);
+            Set<String> entryKeys = new HashSet<>();
+            for (String entry : time.getEntryKeys("atolmethod")) entryKeys.add(entry);
+            if (!entryKeys.contains(field)) {
+                throw new IllegalStateException("v2 dose field is absent from generated solver tolerances: " + field);
+            }
+            time.setEntry("atolmethod", field, "unscaled");
+            time.setEntry("atolvaluemethod", field, "manual");
+            time.setEntry("atol", field, "1e-8");
+            if (!"unscaled".equals(time.getString("atolmethod", field)) ||
+                !"manual".equals(time.getString("atolvaluemethod", field)) ||
+                Math.abs(Double.parseDouble(time.getString("atol", field)) - 1e-8) > 1e-20) {
+                throw new IllegalStateException("v2 relative-dose absolute tolerance readback mismatch");
+            }
+        }
+    }
+
+    private static Map<String, Object> readbackV2(Model model) {
+        Map<String, Object> result = readback(model);
+        if (!Arrays.asList(model.physics().tags()).contains("odeDose")) {
+            throw new IllegalStateException("cure-law v2 readback requires the relative-dose Domain ODE");
+        }
+        int[] adhesive = model.component(COMPONENT).selection("sel_adhesive").entities();
+        if (adhesive.length != 1) throw new IllegalStateException("v2 adhesive selection is not unique");
+        model.component(COMPONENT).measure().selection().geom(GEOMETRY, 2).set(adhesive);
+        double[] adhesiveBounds = model.component(COMPONENT).measure().getBoundingBox();
+        if (adhesiveBounds == null || adhesiveBounds.length < 4 ||
+            Math.abs(adhesiveBounds[2] - ADHESIVE_Z_MIN_M) > 1e-12 ||
+            Math.abs(adhesiveBounds[3] - ADHESIVE_Z_SURFACE_M) > 1e-12 ||
+            !"550[um]".equals(model.param().get("zUVSurface"))) {
+            throw new IllegalStateException("v2 Beer-Lambert surface must match the adhesive geometry top at z=550 um");
+        }
+
+        Physics dose = model.physics("odeDose");
+        PhysicsFeature doseEquation = dose.feature("dodeq1");
+        PhysicsFeature doseInitial = dose.feature("init1");
+        if (!sameEntitySet(adhesive, dose.selection().entities()) ||
+            !"time".equals(dose.prop("Units").getString("DependentVariableQuantity")) ||
+            !"s".equals(dose.prop("Units").getString("CustomDependentVariableUnit")) ||
+            !"dimensionless".equals(dose.prop("Units").getString("SourceTermQuantity")) ||
+            !"1".equals(dose.prop("Units").getString("CustomSourceTermUnit")) ||
+            !"Irel".equals(doseEquation.getString("f")) ||
+            !"0[s]".equals(doseInitial.getString("Duv_rel"))) {
+            throw new IllegalStateException("relative-dose domain, units, source, or zero initial state readback mismatch");
+        }
+
+        Expr exposure = model.component(COMPONENT).variable("vUVAdh");
+        if (!sameEntitySet(adhesive, exposure.selection().entities(2)) ||
+            !"S_uv*exp(-muUV*(zUVSurface-z))".equals(exposure.get("Irel")) ||
+            !"if(t<120[s],1,0)".equals(exposure.get("S_uv")) ||
+            !"(kUV*Irel+kT)*(1-alpha)".equals(model.component(COMPONENT).variable("v1").get("rate"))) {
+            throw new IllegalStateException("spatial UV rate must be defined only on the adhesive selection");
+        }
+
+        PhysicsFeature parent = linearElasticMaterial(model);
+        PhysicsFeature activation = parent.feature("actGel");
+        PhysicsFeature visco = parent.feature("vis1");
+        if (!"Activation".equals(activation.getType()) ||
+            !"Viscoelasticity".equals(visco.getType()) ||
+            !sameEntitySet(adhesive, activation.selection().entities()) ||
+            !sameEntitySet(adhesive, visco.selection().entities()) ||
+            !"alpha>=alpha_gel || solid.wasactive".equals(activation.getString("activation_expression")) ||
+            Math.abs(Double.parseDouble(activation.getString("actfac")) - 1e-5) > 1e-15 ||
+            Math.abs(model.param().evaluate("alpha_gel") - 0.5) > 1e-12 ||
+            Math.abs(model.param().evaluate("zUVSurface") - ADHESIVE_Z_SURFACE_M) > 1e-12 ||
+            !Arrays.asList(0.5, 1.0, 2.0).contains(model.param().evaluate("muScale")) ||
+            Math.abs(model.param().evaluate("muUV") - model.param().evaluate("muScale") / 40.0e-6) > 1e-9 ||
+            Math.abs(model.param().evaluate("Einf") - 0.5e9) > 1e-3 ||
+            Math.abs(model.param().evaluate("Ebranch") - 1.5e9) > 1e-3 ||
+            Math.abs(model.param().evaluate("nuVisco") - 0.35) > 1e-12 ||
+            Math.abs(model.param().evaluate("tauMaxwell") - 300.0) > 1e-12 ||
+            !"GeneralizedMaxwell".equals(visco.getString("MaterialModel")) ||
+            !"full".equals(visco.getString("deformationModel")) ||
+            !Arrays.equals(new String[]{"Kbranch"}, visco.getStringArray("Kvm_v")) ||
+            !Arrays.equals(new String[]{"Gbranch"}, visco.getStringArray("Gvm")) ||
+            !Arrays.equals(new String[]{"tauMaxwell"}, visco.getStringArray("tauvm"))) {
+            throw new IllegalStateException("adhesive Activation/default or ordered full-Maxwell branch readback mismatch");
+        }
+        if (!"Einf".equals(model.material("matAdh").propertyGroup("def").getString("youngsmodulus")) ||
+            !"nuVisco".equals(model.material("matAdh").propertyGroup("def").getString("poissonsratio"))) {
+            throw new IllegalStateException("v2 adhesive long-term modulus material readback mismatch");
+        }
+
+        result.put("cure_law_version", "W24_CURE_LAW_V2");
+        result.put("relative_exposure_dose", Map.of(
+            "field", "Duv_rel", "unit", "s", "dependent_variable_quantity", "time",
+            "source", "Irel", "source_term_quantity", "dimensionless", "initial", "0[s]",
+            "selection", boxed(adhesive), "source_scope", "adhesive_only"));
+        result.put("spatial_uv_readback", Map.of(
+            "synthetic_estimated", true, "absolute_irradiance", false,
+            "z_surface_m", ADHESIVE_Z_SURFACE_M, "adhesive_bounds_m", boxed(adhesiveBounds),
+            "mu_scale", model.param().evaluate("muScale"),
+            "mu_expression", model.param().get("muUV"),
+            "intensity_expression", exposure.get("Irel"),
+            "envelope_expression", exposure.get("S_uv"),
+            "selection", boxed(exposure.selection().entities(2))));
+        result.put("activation_readback", Map.of(
+            "feature_type", activation.getType(), "selection", boxed(activation.selection().entities()),
+            "expression", activation.getString("activation_expression"),
+            "alpha_gel", model.param().get("alpha_gel"),
+            "actfac", activation.getString("actfac"), "actfac_was_set", false,
+            "state", "NATIVE_ACTIVATION_SEMANTICS_UNVERIFIED_FAIL_CLOSED"));
+        Map<String, Object> viscoReadback = new LinkedHashMap<>();
+        viscoReadback.put("feature_type", visco.getType());
+        viscoReadback.put("selection", boxed(visco.selection().entities()));
+        viscoReadback.put("material_model", visco.getString("MaterialModel"));
+        viscoReadback.put("deformation_model", visco.getString("deformationModel"));
+        viscoReadback.put("E_long_term", "0.5[GPa]");
+        viscoReadback.put("E_branch_0", "1.5[GPa]");
+        viscoReadback.put("nu", "0.35");
+        viscoReadback.put("tau_branch_0", "300[s]");
+        viscoReadback.put("K_long_term", model.param().get("Kinf"));
+        viscoReadback.put("G_long_term", model.param().get("Ginf"));
+        viscoReadback.put("K_branch_0", model.param().get("Kbranch"));
+        viscoReadback.put("G_branch_0", model.param().get("Gbranch"));
+        viscoReadback.put("Kvm_v", Arrays.asList(visco.getStringArray("Kvm_v")));
+        viscoReadback.put("Gvm", Arrays.asList(visco.getStringArray("Gvm")));
+        viscoReadback.put("tauvm", Arrays.asList(visco.getStringArray("tauvm")));
+        viscoReadback.put("branch_order_binding", "same ordered index across Kvm_v/Gvm/tauvm");
+        viscoReadback.put("branch_reference_state", "NATIVE_REFERENCE_STATE_UNVERIFIED_FAIL_CLOSED");
+        result.put("viscoelastic_readback", viscoReadback);
+        result.put("dose_solver_tolerance_readbacks", readbackV2DoseSolverTolerance(model));
+        result.put("native_study_run_calls", 0);
+        result.put("native_semantics", "UNVERIFIED_FAIL_CLOSED");
+        result.put("module_license", "UNVERIFIED_FAIL_CLOSED");
+        return result;
+    }
+
+    private static Map<String, Object> readbackV2DoseSolverTolerance(Model model) {
+        Map<String, Object> readbacks = new LinkedHashMap<>();
+        String field = "comp1_Duv_rel";
+        for (String studyTag : new String[]{"stdUV", "stdBake", "stdCool"}) {
+            String[] attached = model.study(studyTag).getSolverSequences("SolverSequence");
+            if (attached.length != 1) {
+                throw new IllegalStateException("v2 dose solver must have one attached sequence: " + studyTag);
+            }
+            SolverFeature time = findUniqueTimeFeature(model.sol(attached[0]), studyTag);
+            Set<String> entryKeys = new HashSet<>();
+            for (String entry : time.getEntryKeys("atolmethod")) entryKeys.add(entry);
+            if (!entryKeys.contains(field) ||
+                !"unscaled".equals(time.getString("atolmethod", field)) ||
+                !"manual".equals(time.getString("atolvaluemethod", field)) ||
+                Math.abs(Double.parseDouble(time.getString("atol", field)) - 1e-8) > 1e-20) {
+                throw new IllegalStateException("v2 relative-dose absolute tolerance readback mismatch: " + studyTag);
+            }
+            readbacks.put(studyTag, Map.of("field", field, "scale", time.getString("atolmethod", field),
+                "method", time.getString("atolvaluemethod", field), "absolute_tolerance", time.getString("atol", field)));
+        }
+        return readbacks;
     }
 
     /**
@@ -758,6 +1033,27 @@ public final class W24CureCouponFixture {
                     ", expected=" + java.util.Arrays.toString(expected));
             }
         }
+    }
+
+    private static boolean sameEntitySet(int[] left, int[] right) {
+        if (left == null || right == null || left.length != right.length) return false;
+        int[] a = left.clone();
+        int[] b = right.clone();
+        Arrays.sort(a);
+        Arrays.sort(b);
+        return Arrays.equals(a, b);
+    }
+
+    private static List<Integer> boxed(int[] values) {
+        List<Integer> out = new ArrayList<>();
+        for (int value : values) out.add(value);
+        return out;
+    }
+
+    private static List<Double> boxed(double[] values) {
+        List<Double> out = new ArrayList<>();
+        for (double value : values) out.add(value);
+        return out;
     }
 
     private static Map<String, Object> odeReadbacks(Model model) {

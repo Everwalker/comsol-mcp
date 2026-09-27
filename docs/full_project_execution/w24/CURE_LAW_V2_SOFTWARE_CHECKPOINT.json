@@ -1,0 +1,121 @@
+{
+  "schema_version": 1,
+  "stage": "W24 cure-law v2 additive fixture and analytical controls",
+  "status": "PASS_SCOPED_SOFTWARE",
+  "native_acceptance": "NOT_RUN",
+  "scientific_acceptance": "NOT_ESTABLISHED",
+  "base_commit": "a4684f8b9a024e13fa620ae8c726c7b5a5391e13",
+  "overlay": [
+    {
+      "path": "tools/java/W24CureCouponFixture.java",
+      "sha256": "ea7cbf1237bdb9020f17acf76f481cffb68becd740c9210d9827ba2d73a8949f"
+    },
+    {
+      "path": "tools/java/W24CureLawV2ControlFixture.java",
+      "sha256": "5d45b380e5a376e5d084adadde5890ab672661748bd6d05f48bcf136b8ccb596"
+    },
+    {
+      "path": "tools/w24_cure_law_v2.py",
+      "sha256": "8c7857c9ce4ef50cf2d6d4ea47a22b9d12ef5e5cd257b866fc2ffad218d73035"
+    },
+    {
+      "path": "tests/test_w24_cure_law_v2.py",
+      "sha256": "e24cef86a89d449749505a4eb8c34ccef8c702fae4caf552e70af1a821453a5f"
+    },
+    {
+      "path": "docs/full_project_execution/w24/W24_CURE_LAW_V2_SOFTWARE_CONTRACT.md",
+      "sha256": "b2ab15bd704adb6d47ba11f01cb55b2f50276861d30bc33d2abe1c6a40e15eed"
+    }
+  ],
+  "capabilities": [
+    "Adhesive-only relative Beer-Lambert UV dose with three attenuation variants",
+    "First-gel Activation and full one-branch Maxwell build/readback path; historical v1 preserved",
+    "Independent Maxwell ramp/hold absolute-amplitude and full-six-component gel stress-free comparison",
+    "Full-DOF cure/branch/wasactive continuity numerical gates with explicit unauthenticated-source boundary"
+  ],
+  "tests": {
+    "command": "PYTHONPATH=<stage> PYTHONNOUSERSITE=1 /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -m pytest -q tests/test_w24_cure_law_v2.py tests/test_w24_cure_coupon_fixture.py tests/test_w24_cure_science_runner.py tests/test_w24_science_acceptance.py --junitxml=<stage2-junit>",
+    "exit_code": 0,
+    "passed": 45,
+    "failed": 0,
+    "errors": 0,
+    "junit_path": "/private/tmp/w24_cure_law_v2_stage2_a4684f8_20260928.junit.xml",
+    "junit_sha256": "e997ffbea2e90fc07f868974d06f829708cacdd70b63da2b4710d404dfba66a2",
+    "includes_v1_coupon_and_science_runner_regression": true
+  },
+  "java_compile": {
+    "command": "/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home/bin/javac -encoding UTF-8 -cp /Applications/COMSOL64/Multiphysics/apiplugins/* -d <fresh-classes> tools/java/W24CureCouponFixture.java tools/java/W24CureLawV2ControlFixture.java",
+    "javac_version": "11.0.31",
+    "exit_code": 0,
+    "classes": [
+      {
+        "path": "/private/tmp/w24_cure_law_v2_stage2_a4684f8_20260928_compile/classes/W24CureCouponFixture.class",
+        "sha256": "c88126e0cbab2a9df9bb3c79ad9b07f19ec7f72a0680de3ae94e90cdadcc0563"
+      },
+      {
+        "path": "/private/tmp/w24_cure_law_v2_stage2_a4684f8_20260928_compile/classes/W24CureLawV2ControlFixture.class",
+        "sha256": "355f5241649ed1da639cf8a0be14b1cbf17def618bf321b5d29ada88cc8b3226"
+      },
+      {
+        "path": "/private/tmp/w24_cure_law_v2_stage2_a4684f8_20260928_compile/classes/W24CureLawV2ControlFixture$GeometryReadback.class",
+        "sha256": "d9a739fd417256a2fb4749b1d0e148c0161f6f9ce7dd063db943897a1152efc7"
+      }
+    ],
+    "scope": "compile only; no Java fixture invocation"
+  },
+  "isolation": {
+    "base_archive": {
+      "path": "/private/tmp/w24_cure_law_v2_base_closure_a4684f8_20260928.tar",
+      "sha256": "49a6535243f328a88a632ec958a732590d0510a75e48862537afb3cf167d9c51",
+      "included_source_closure": [
+        "comsol_mcp",
+        "tests",
+        "tools",
+        "pyproject.toml",
+        "docs/full_project_execution/w24/W24_CURE_FIXTURE_PROPOSAL.md"
+      ]
+    },
+    "stage_root": "/private/tmp/w24_cure_law_v2_stage2_a4684f8_20260928",
+    "verified_base_manifest_files": 103,
+    "source_manifest_hash": "4a64c1b22bbd890a66d4e6c20ad708b681c997b937f49447f4843cf068d5c808",
+    "imports": {
+      "tools.w24_cure_law_v2": "/private/tmp/w24_cure_law_v2_stage2_a4684f8_20260928/tools/w24_cure_law_v2.py",
+      "tools.w24_science_acceptance": "/private/tmp/w24_cure_law_v2_stage2_a4684f8_20260928/tools/w24_science_acceptance.py",
+      "tools.run_native_w24_cure_science": "/private/tmp/w24_cure_law_v2_stage2_a4684f8_20260928/tools/run_native_w24_cure_science.py"
+    }
+  },
+  "main_review": {
+    "overlay_and_base_hashes": "PASS",
+    "root_tests": {
+      "passed": 12,
+      "junit_path": "/private/tmp/w24_cure_v2_root_retests.xml",
+      "sha256": "a7b7f2217fad125c406dd0e4e4c8825fdca56e8d29cde943d46307bdc5da4650"
+    },
+    "fixed_finding": "Original arbitrary stress-component capture rejected; complete six-component control accepted only as unauthenticated numerical comparison.",
+    "original_counterexample": {
+      "path": "/private/tmp/w24_gel_component_completeness_review.json",
+      "sha256": "4faebb99f53c07d80a3480596f60a9b641c1fe4080aed0eabfccd883059b54c7"
+    },
+    "retest": {
+      "path": "/private/tmp/w24_gel_component_completeness_retest.json",
+      "sha256": "48fb3a9630417809cc68f1b915eaaf6b036d2c49dcc4dd1492b6d2192484f6e3"
+    }
+  },
+  "retained_initial_isolation_attempt": {
+    "path": "/private/tmp/w24_cure_law_v2_stage_a4684f8_20260928.junit.xml",
+    "sha256": "fe142c42c80f808ae2d89d9a7c2cf4b2cd900ef89ef3083fc4ec689ff6ad768a",
+    "result": "42 passed, 3 failed because the requested closure omitted published W24_CURE_FIXTURE_PROPOSAL.md; not a source failure; preserved"
+  },
+  "local_full_receipt": {
+    "path": "/private/tmp/w24_cure_law_v2_software_stage_receipt_20260928.json",
+    "sha256": "59a5da3979756df28f534baa08cc5926e2e54be951947527f6003e1e793bccd5"
+  },
+  "limitations": [
+    "Compile is not live API or module/license acceptance",
+    "Native source authentication, Activation reference state and Maxwell internal history unverified",
+    "Full original W24 static shape, cure, sensitivity, handoff and reopen acceptance incomplete",
+    "No native solves, COMSOL start/stop, or GUI used; revised native budget not frozen"
+  ],
+  "replay": "Use committed source with Python 3.12 and project dependencies; run four test files named in tests.command. Compile the two committed Java fixtures against a licensed local COMSOL 6.4 API with JDK 11. Do not invoke native fixture/study from this software recipe.",
+  "next_action": "Bind exact public route producer/model/solution/unit/hash evidence to v2 captures; implement full native history and continuous/staged/reopen controls; freeze resource/solve budget before native execution."
+}
