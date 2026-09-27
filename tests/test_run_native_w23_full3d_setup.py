@@ -17,6 +17,9 @@ from tools.run_native_w23_full3d_setup import (
     BMA_PROBE_BUDGET,
     BMA_PROBE_ROUTE_ALLOWLIST,
     BMA_PRODUCER_API_EVIDENCE,
+    BMA_MAPPING_PROBE_BUDGET,
+    BMA_MAPPING_PROBE_ROUTE_ALLOWLIST,
+    BMA_MAPPING_PROBE_API_EVIDENCE,
     EXPLICIT_SITE_PACKAGES,
     EXPECTED_PYTHON,
     PublicDispatchAdapter,
@@ -104,6 +107,38 @@ def test_bma_probe_budget_keeps_full_sequence_run_inside_wall_and_cleanup_reserv
     }
 
 
+def test_bma_mapping_probe_budget_extends_bma_probe_without_changing_its_contract() -> None:
+    budget = BMA_MAPPING_PROBE_BUDGET
+    caps = budget["route_wait_caps_seconds"]
+    assert BMA_PROBE_BUDGET["wall_clock_seconds_from_server_birth_including_cleanup"] == 2700
+    assert BMA_MAPPING_PROBE_BUDGET["wall_clock_seconds_from_server_birth_including_cleanup"] == 3240
+    assert budget["profile"] == "w23_single_receiver_bma_basis_field_mapping_probe_v1"
+    assert budget["study_run_calls"] == 0 and budget["solver_calls"] == 1
+    assert budget["max_server_processes"] == budget["max_managed_workers"] == 1
+    assert budget["max_gui_processes"] == 0
+    assert budget["reserved_cleanup_seconds"] == 120
+    assert budget["unallocated_margin_seconds"] == 300
+    assert {name: caps[name] for name in (
+        "bma_basis_dataset_list", "bma_basis_dataset_solution_indices",
+        "bma_basis_fields_ordinal1", "bma_basis_fields_ordinal2")} == {
+            "bma_basis_dataset_list": 90,
+            "bma_basis_dataset_solution_indices": 90,
+            "bma_basis_fields_ordinal1": 180,
+            "bma_basis_fields_ordinal2": 180,
+        }
+    assert sum(caps.values()) + budget["reserved_cleanup_seconds"] \
+        + budget["unallocated_margin_seconds"] == \
+        budget["wall_clock_seconds_from_server_birth_including_cleanup"]
+    assert BMA_MAPPING_PROBE_ROUTE_ALLOWLIST.count(
+        "operation_call:code.execute_java:run_bma_output_probe:SolverSequence.runAll") == 1
+    assert BMA_MAPPING_PROBE_ROUTE_ALLOWLIST.count(
+        "operation_call:code.execute_java:bma_basis_fields_ordinal1") == 1
+    assert BMA_MAPPING_PROBE_ROUTE_ALLOWLIST.count(
+        "operation_call:code.execute_java:bma_basis_fields_ordinal2") == 1
+    assert len(BMA_MAPPING_PROBE_API_EVIDENCE) == 1
+    assert not any("Study.run" in route for route in BMA_MAPPING_PROBE_ROUTE_ALLOWLIST)
+
+
 def test_candidate_freeze_rejects_mutated_bma_probe_solver_budget(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -121,6 +156,9 @@ def test_candidate_freeze_rejects_mutated_bma_probe_solver_budget(
         "budget": BMA_PROBE_BUDGET,
         "routes": BMA_PROBE_ROUTE_ALLOWLIST,
         "bma_producer_api_evidence": BMA_PRODUCER_API_EVIDENCE,
+        "bma_mapping_api_evidence": [],
+        "field_mapping_policy": [],
+        "field_semantics_kb_evidence": [],
     }
     freeze = {**body, "candidate_sha256": _json_hash(body)}
     (evidence / "candidate_freeze.json").write_text(json.dumps(freeze), encoding="utf-8")
@@ -128,6 +166,51 @@ def test_candidate_freeze_rejects_mutated_bma_probe_solver_budget(
                             reviewed_sha256=freeze["candidate_sha256"]) == freeze
 
     body["budget"] = {**BMA_PROBE_BUDGET, "solver_calls": 0}
+    mutated = {**body, "candidate_sha256": _json_hash(body)}
+    (evidence / "candidate_freeze.json").write_text(json.dumps(mutated), encoding="utf-8")
+    with pytest.raises(CandidateError, match="budget or route allowlist"):
+        verify_candidate(repo=tmp_path, evidence=evidence,
+                         reviewed_sha256=mutated["candidate_sha256"])
+
+
+def test_candidate_freeze_binds_bma_mapping_profile_budget_policy_and_api_evidence(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from tools import run_native_w23_full3d_setup as runner
+    from tools.w23_full3d_science import (
+        BMA_FIELD_MAPPING_POLICY, COMSOL_INTERP_UNIT_KB_EVIDENCE,
+        COMSOL_PORT_MODE_FIELD_KB_EVIDENCE,
+    )
+
+    evidence = tmp_path / "evidence"
+    evidence.mkdir()
+    source = {"base_commit": "published-base", "source_closure_sha256": "a" * 64}
+    monkeypatch.setattr(runner, "_source_inventory", lambda repo, base: source)
+    field_semantics = {
+        "port_mode_suffix": dict(COMSOL_PORT_MODE_FIELD_KB_EVIDENCE),
+        "interp_units": dict(COMSOL_INTERP_UNIT_KB_EVIDENCE),
+    }
+    body = {
+        "schema_version": 1,
+        "status": "PREPARED_BMA_MAPPING_PROBE_NOT_NATIVE",
+        "campaign_profile": "bma_mapping_probe",
+        "source": source,
+        "budget": BMA_MAPPING_PROBE_BUDGET,
+        "routes": BMA_MAPPING_PROBE_ROUTE_ALLOWLIST,
+        "bma_producer_api_evidence": BMA_PRODUCER_API_EVIDENCE,
+        "bma_mapping_api_evidence": BMA_MAPPING_PROBE_API_EVIDENCE,
+        "field_mapping_policy": dict(BMA_FIELD_MAPPING_POLICY),
+        "field_semantics_kb_evidence": field_semantics,
+    }
+    freeze = {**body, "candidate_sha256": _json_hash(body)}
+    (evidence / "candidate_freeze.json").write_text(json.dumps(freeze), encoding="utf-8")
+    assert verify_candidate(repo=tmp_path, evidence=evidence,
+                            reviewed_sha256=freeze["candidate_sha256"]) == freeze
+
+    body["budget"] = {**BMA_MAPPING_PROBE_BUDGET,
+                       "route_wait_caps_seconds": {
+                           **BMA_MAPPING_PROBE_BUDGET["route_wait_caps_seconds"],
+                           "bma_basis_fields_ordinal2": 181}}
     mutated = {**body, "candidate_sha256": _json_hash(body)}
     (evidence / "candidate_freeze.json").write_text(json.dumps(mutated), encoding="utf-8")
     with pytest.raises(CandidateError, match="budget or route allowlist"):
@@ -175,6 +258,67 @@ def test_science_finalization_preserves_success_unknown_and_preflight_evidence()
     assert preflight_failure["mode_producer_lineage"] == "UNVERIFIED"
 
 
+def test_mapping_profile_finalization_preserves_paired_attempts_unknown_and_cleanup_failure() -> None:
+    paired_success = {
+        "status": "BMA_MAPPING_PROBE_COMPLETE_CLEANUP_VERIFIED_MAPPING_UNVERIFIED",
+        "solver_call_attempts": 1, "solver_calls": 1,
+        "native_scientific_result": "BMA_TWO_BASIS_FIELDS_SAMPLED_FULL3D_OVERLAP_NOT_EVALUATED",
+        "mode_producer_lineage": "VERIFIED_CONTROLLED_SINGLE_BMA_PRODUCER",
+        "field_sample_attempts": 2, "field_sample_calls": 2,
+        "field_sample_readbacks_validated": 2,
+    }
+    _finalize_science_counters(paired_success, "bma_mapping_probe")
+    assert paired_success["study_run_calls"] == 0
+    assert paired_success["solver_calls"] == 1
+    assert paired_success["field_sample_attempts"] == 2
+    assert paired_success["field_sample_calls"] == 2
+    assert paired_success["field_sample_readbacks_validated"] == 2
+    assert paired_success["field_sampling_status"] == "TWO_RAW_SAMPLES_RETURNED_MAPPING_UNVERIFIED"
+    assert paired_success["numeric_port_mode_field_mapping"] == "UNVERIFIED"
+
+    dispatched_unknown = {
+        "status": "UNKNOWN_PRESERVE_OWNED_RESOURCES", "solver_call_attempts": 1,
+        "solver_calls": 1,
+        "native_scientific_result": "BMA_TWO_BASIS_FIELDS_SAMPLED_FULL3D_OVERLAP_NOT_EVALUATED",
+        "field_sample_attempts": 1, "field_sample_calls": 0,
+        "field_sample_readbacks_validated": 0,
+    }
+    _finalize_science_counters(dispatched_unknown, "bma_mapping_probe")
+    assert dispatched_unknown["solver_calls"] == 1
+    assert dispatched_unknown["field_sample_attempts"] == 1
+    assert dispatched_unknown["field_sample_calls"] == 0
+    assert dispatched_unknown["field_sampling_status"] == "UNKNOWN_OR_PARTIAL"
+    assert dispatched_unknown["native_scientific_result"] == \
+        "BMA_TWO_BASIS_FIELDS_SAMPLED_FULL3D_OVERLAP_NOT_EVALUATED"
+
+    succeeded_then_cleanup_failed = {
+        "status": "UNKNOWN_PRESERVE_OWNED_RESOURCES", "solver_call_attempts": 1,
+        "solver_calls": 1,
+        "native_scientific_result": "BMA_TWO_BASIS_FIELDS_SAMPLED_FULL3D_OVERLAP_NOT_EVALUATED",
+        "mode_producer_lineage": "VERIFIED_CONTROLLED_SINGLE_BMA_PRODUCER",
+        "field_sample_attempts": 2, "field_sample_calls": 2,
+        "field_sample_readbacks_validated": 2,
+        "cleanup_error": {"stage": "worker_retirement"},
+    }
+    _finalize_science_counters(succeeded_then_cleanup_failed, "bma_mapping_probe")
+    assert succeeded_then_cleanup_failed["status"] == "UNKNOWN_PRESERVE_OWNED_RESOURCES"
+    assert succeeded_then_cleanup_failed["field_sample_attempts"] == 2
+    assert succeeded_then_cleanup_failed["field_sample_calls"] == 2
+    assert succeeded_then_cleanup_failed["field_sample_readbacks_validated"] == 2
+    assert succeeded_then_cleanup_failed["field_sampling_status"] == \
+        "TWO_RAW_SAMPLES_RETURNED_MAPPING_UNVERIFIED"
+    assert succeeded_then_cleanup_failed["mode_producer_lineage"] == \
+        "VERIFIED_CONTROLLED_SINGLE_BMA_PRODUCER"
+
+    preflight = {"solver_call_attempts": 0, "solver_calls": 0,
+                 "native_scientific_result": "NOT_RUN", "field_sample_attempts": 0,
+                 "field_sample_calls": 0, "field_sample_readbacks_validated": 0}
+    _finalize_science_counters(preflight, "bma_mapping_probe")
+    assert preflight["solver_calls"] == 0
+    assert preflight["field_sampling_status"] == "NOT_RUN"
+    assert preflight["native_scientific_result"] == "NOT_RUN"
+
+
 def test_bma_unknown_failure_receipt_keeps_original_request_job_and_observation() -> None:
     from tools.w23_full3d_science import ManagedRouteOutcomeError
 
@@ -193,6 +337,8 @@ def test_bma_unknown_failure_receipt_keeps_original_request_job_and_observation(
 @pytest.mark.parametrize("status,expected_exit", [
     ("BMA_PROBE_FAILED_CLEANUP_VERIFIED", 1),
     ("BMA_PROBE_COMPLETE_CLEANUP_VERIFIED_FULL3D_SCIENCE_NOT_RUN", 0),
+    ("BMA_MAPPING_PROBE_FAILED_CLEANUP_VERIFIED", 1),
+    ("BMA_MAPPING_PROBE_COMPLETE_CLEANUP_VERIFIED_MAPPING_UNVERIFIED", 0),
 ])
 def test_cli_does_not_report_failed_bma_probe_as_success_even_when_cleanup_verified(
     status: str, expected_exit: int, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
@@ -707,10 +853,10 @@ def test_comsol_package_search_path_cannot_include_live_checkout(tmp_path: Any) 
         _audit_loaded_project_modules(archive_root, {"comsol_mcp": fake})
 
 
-def test_real_control_daemon_public_dispatch_binds_exact_popen_without_comsol(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Any,
-) -> None:
-    archive_root = Path.cwd().resolve()
+def _run_fresh_control_daemon_public_dispatch_smoke(
+    tmp_path: Path, archive_root: Path,
+) -> dict[str, Any]:
+    """Run the production control-home path in an isolated fresh Python process."""
     home_root = tmp_path / "owned-mcp-home"
     project_root = tmp_path / "owned-projects"
     project_root.mkdir()
@@ -721,8 +867,9 @@ def test_real_control_daemon_public_dispatch_binds_exact_popen_without_comsol(
         "COMSOL_MCP_TRUSTED_CODE": "1",
         "PYTHONPATH": os.pathsep.join((str(archive_root), str(EXPLICIT_SITE_PACKAGES.resolve(strict=True)))),
     })
-    for key in ("COMSOL_SERVER_MCP_HOME", "COMSOL_PROJECT_ROOT", "COMSOL_MCP_TRUSTED_CODE", "PYTHONPATH"):
-        monkeypatch.setenv(key, env[key])
+    os.environ.update(env)
+    if "comsol_mcp._server" in sys.modules:
+        raise CandidateError("fresh control-home smoke unexpectedly inherited a cached server module")
 
     capture: dict[str, Any] = {}
     def on_child(proc: Any, identity: Any, endpoint: Any, stream: Any) -> None:
@@ -734,11 +881,11 @@ def test_real_control_daemon_public_dispatch_binds_exact_popen_without_comsol(
     observed_control_home: str | None = None
     assertions_completed = False
     cleanup: dict[str, Any] | None = None
+    launch: dict[str, Any] = {}
     try:
         assert proc.args == [str(EXPECTED_PYTHON), "-S", "-m",
                              "comsol_mcp._control_daemon", "--home",
                              str(home_root / "control-private")]
-        assert "comsol_mcp._server" not in sys.modules
         launch = json.loads((tmp_path / "control_daemon_launch.json").read_text(encoding="utf-8"))
         archive_manifest = json.loads(
             (archive_root / ".w23_published_archive_manifest.json").read_text(encoding="utf-8"))
@@ -796,16 +943,17 @@ def test_real_control_daemon_public_dispatch_binds_exact_popen_without_comsol(
                 "expected_control_home": str((home_root / "control-private").resolve()),
                 "control_daemon_command": list(proc.args),
                 "control_daemon_cwd": str(archive_root),
-                "archive_base_commit": launch["archive_base_commit"],
-                "archive_manifest_sha256": launch["archive_manifest_sha256"],
-                "archive_source_closure_sha256": launch["archive_source_closure_sha256"],
-                "archive_source_file_count": launch["archive_source_file_count"],
-                "control_daemon_source_sha256": launch["control_daemon_source_sha256"],
+                "archive_base_commit": launch.get("archive_base_commit"),
+                "archive_manifest_sha256": launch.get("archive_manifest_sha256"),
+                "archive_source_closure_sha256": launch.get("archive_source_closure_sha256"),
+                "archive_source_file_count": launch.get("archive_source_file_count"),
+                "control_daemon_source_sha256": launch.get("control_daemon_source_sha256"),
                 "control_daemon_pythonpath": env["PYTHONPATH"],
                 "control_daemon_no_site_switch": "-S" in proc.args,
-                "runner_path_hooks": launch["runner_path_hooks"],
-                "runner_meta_path_finders": launch["runner_meta_path_finders"],
-                "editable_fallback_surfaces": launch["editable_fallback_surfaces"],
+                "server_module_preloaded_before_owned_launch": False,
+                "runner_path_hooks": launch.get("runner_path_hooks"),
+                "runner_meta_path_finders": launch.get("runner_meta_path_finders"),
+                "editable_fallback_surfaces": launch.get("editable_fallback_surfaces"),
                 "popen_pid": proc.pid,
                 "popen_birth_identity": identity,
                 "endpoint": {key: value for key, value in endpoint.items() if key != "token"},
@@ -815,6 +963,38 @@ def test_real_control_daemon_public_dispatch_binds_exact_popen_without_comsol(
             (tmp_path / "no_comsol_control_daemon_smoke_receipt.json").write_text(
                 json.dumps(receipt, indent=2, ensure_ascii=False, allow_nan=False) + "\n",
                 encoding="utf-8")
+    return receipt
+
+
+def test_real_control_daemon_public_dispatch_binds_exact_popen_without_comsol(
+    tmp_path: Any,
+) -> None:
+    archive_root = Path.cwd().resolve()
+    env = dict(os.environ)
+    env.pop("COMSOL_SERVER_MCP_HOME", None)
+    env.pop("COMSOL_PROJECT_ROOT", None)
+    env.pop("COMSOL_MCP_TRUSTED_CODE", None)
+    env["PYTHONPATH"] = str(EXPLICIT_SITE_PACKAGES.resolve(strict=True))
+    script = (
+        "import importlib.util, pathlib, sys; "
+        "test_path=pathlib.Path(sys.argv[1]); "
+        "spec=importlib.util.spec_from_file_location('w23_setup_smoke_test_module', test_path); "
+        "module=importlib.util.module_from_spec(spec); spec.loader.exec_module(module); "
+        "module._run_fresh_control_daemon_public_dispatch_smoke("
+        "pathlib.Path(sys.argv[2]), pathlib.Path(sys.argv[3]))"
+    )
+    completed = subprocess.run(
+        [str(EXPECTED_PYTHON), "-B", "-S", "-c", script,
+         str(Path(__file__).resolve()), str(tmp_path), str(archive_root)],
+        cwd=archive_root, env=env, capture_output=True, text=True,
+        timeout=60, check=False)
+    receipt_path = Path(tmp_path) / "no_comsol_control_daemon_smoke_receipt.json"
+    assert completed.returncode == 0, (completed.stdout + "\n" + completed.stderr)[-8000:]
+    assert receipt_path.is_file()
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    assert receipt["status"] == "PASS", receipt
+    assert receipt["comsol_engine_started"] is False
+    assert receipt["control_home_observed_before_public_dispatch"] == receipt["expected_control_home"]
 def test_job_ledger_pages_real_public_control_daemon_sqlite_route(tmp_path: Path) -> None:
     from comsol_mcp._control_daemon import ControlDaemon
 

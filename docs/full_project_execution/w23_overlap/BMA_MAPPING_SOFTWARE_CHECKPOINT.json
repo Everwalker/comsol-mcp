@@ -1,0 +1,188 @@
+{
+  "schema_version": 1,
+  "scope": "W23 two-eigensolution paired field mapping probe",
+  "status": "PASS_SCOPED_SOFTWARE",
+  "native_acceptance": "NOT_RUN",
+  "scientific_acceptance": "NOT_RUN",
+  "mode_mapping": "UNVERIFIED",
+  "source": {
+    "base_commit": "b484a735b7460c3780ff6a02329d6781a1faadce",
+    "published_origin_main_at_export": "2a61e4c9c7954e0ce12dbdf9cae4792bebe65208",
+    "checkout_head_at_export": "2a61e4c9c7954e0ce12dbdf9cae4792bebe65208",
+    "archive_root": "/private/tmp/comsol-mcp-w23-full3d-bma-mapping-software-candidate-20260928d",
+    "archive_manifest_sha256": "1fc3d052fe167225a6598dda4c8068b45d2f3910ae3c96a51705a3d5113e0620",
+    "source_closure_sha256": "51426350a9e564ff4b3d7d426d25708e83b79e43bb2394c559baba80bab34e91",
+    "published_file_count": 99,
+    "overlay_hashes": {
+      "tests/test_run_native_w23_full3d_setup.py": {
+        "sha256": "df3246227a58527571b1062959b084c51f97a6faa0de5585a532a52be227192a",
+        "live_sha256": "df3246227a58527571b1062959b084c51f97a6faa0de5585a532a52be227192a",
+        "matches_live": true
+      },
+      "tests/test_w23_full3d.py": {
+        "sha256": "15eff8f2324e449c99e714aa4340a0eeb8f0d8c2ee06c26b38741e00663751ef",
+        "live_sha256": "15eff8f2324e449c99e714aa4340a0eeb8f0d8c2ee06c26b38741e00663751ef",
+        "matches_live": true
+      },
+      "tests/test_w23_full3d_science.py": {
+        "sha256": "5781196ee366314b2bd8823b821b2ef8bce21661db9c0ec16081a678d78e4062",
+        "live_sha256": "5781196ee366314b2bd8823b821b2ef8bce21661db9c0ec16081a678d78e4062",
+        "matches_live": true
+      },
+      "tools/java/NativeW23Full3DFixture.java": {
+        "sha256": "6c5e8e42e77e27a5817dcf432dc44cb7a23c306af43f5433eabaace3cf6d26ae",
+        "live_sha256": "6c5e8e42e77e27a5817dcf432dc44cb7a23c306af43f5433eabaace3cf6d26ae",
+        "matches_live": true
+      },
+      "tools/run_native_w23_full3d_setup.py": {
+        "sha256": "7a08b8c212b7e213204404a27c0265e73fac48ed5c52e4485b5277cc8bc4810a",
+        "live_sha256": "7a08b8c212b7e213204404a27c0265e73fac48ed5c52e4485b5277cc8bc4810a",
+        "matches_live": true
+      },
+      "tools/w23_full3d_science.py": {
+        "sha256": "eb1bb0d3455f46a596bc0a645ebbe6fa4fd581fa6d61a53d98a78c58410530c3",
+        "live_sha256": "eb1bb0d3455f46a596bc0a645ebbe6fa4fd581fa6d61a53d98a78c58410530c3",
+        "matches_live": true
+      }
+    }
+  },
+  "candidate": {
+    "profile": "bma_mapping_probe",
+    "status": "PREPARED_BMA_MAPPING_PROBE_NOT_NATIVE",
+    "candidate_sha256": "0fbda0a81b7b27b6c0c651177c895aa1104724063b526d1877498c4be3a4bc0d",
+    "candidate_freeze_file": "/private/tmp/comsol-mcp-w23-full3d-bma-mapping-prepare-20260928d/candidate_freeze.json",
+    "candidate_freeze_file_sha256": "fed9c418ec1d6a7b986288c9de289adc1454259bde3fe5b74df7e5532ff8dee0",
+    "prepare_evidence_dir": "/private/tmp/comsol-mcp-w23-full3d-bma-mapping-prepare-20260928d",
+    "budget_seconds": 3240,
+    "max_server_processes": 1,
+    "max_workers": 1,
+    "max_gui_processes": 0
+  },
+  "capabilities": [
+    "Resolve two distinct stored SolutionInfo inner/solnum tuples of one receiver BMA through exact dataset metadata.",
+    "Read paired full complex E/PortE, H/PortH and real surface normals in three unit-consistent Interp groups on one immutable coordinate/quadrature grid per tuple.",
+    "Preserve distinction between physical Port name/PortModeNumber and basis ordinal.",
+    "Require actual public request/job/operation/canonical-hash binding with READ revision unchanged and field extraction revision +1.",
+    "Compare unadjusted E and H normalized weighted vector RMS residuals separately; phase and subspace projections remain diagnostic only.",
+    "Separate bma_mapping_probe profile preserves existing setup_only and bma_probe histories."
+  ],
+  "frozen_mapping_policy": {
+    "policy_id": "w23.full3d.bma_port_mode_identity_probe.atol_rtol.v1",
+    "normalized_absolute_tolerance": 1e-05,
+    "relative_tolerance": 0.001,
+    "normalized_residual_limit": 0.00101,
+    "source_policy_id": "w23.full3d.native_vs_quadrature.atol_rtol.v1",
+    "scope": "engineering identity probe only; not physical or full scientific acceptance",
+    "field_mapping_status": "UNVERIFIED_UNTIL_NATIVE_REVIEW"
+  },
+  "validation": {
+    "test_run": {
+      "command": "PYTHONPATH='/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/lib/python3.12/site-packages' PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -B -S -m pytest --import-mode=importlib tests/test_w23_full3d.py tests/test_w23_full3d_science.py tests/test_run_native_w23_full3d_setup.py -q --junitxml=/private/tmp/comsol-mcp-w23-full3d-bma-mapping-software-candidate-20260928d/w23-mapping-junit.xml",
+      "cwd": "/private/tmp/comsol-mcp-w23-full3d-bma-mapping-software-candidate-20260928d",
+      "python": "/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python",
+      "python_flags": [
+        "-B",
+        "-S"
+      ],
+      "plugin_autoload_disabled": true,
+      "junit_path": "/private/tmp/comsol-mcp-w23-full3d-bma-mapping-software-candidate-20260928d/w23-mapping-junit.xml",
+      "junit_sha256": "a7f0fd7a70f9785496f520b6fcb94fc975e944c61e456b830433499a2bc4b331",
+      "counts": {
+        "tests": 171,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    "compile": {
+      "javac_version": "javac 11.0.31",
+      "javac_returncode": 0,
+      "javap_returncode": 0,
+      "source_sha256": "6c5e8e42e77e27a5817dcf432dc44cb7a23c306af43f5433eabaace3cf6d26ae",
+      "compiled_classes": {
+        "NativeW23Full3DFixture$PortFrame.class": {
+          "bytes": 596,
+          "sha256": "24f08b073291386aead4fec77263e92d286b2e1184a0cc72d70d617b5a636e7e"
+        },
+        "NativeW23Full3DFixture.class": {
+          "bytes": 77111,
+          "sha256": "fec4c864985629ff173c25da2c467822c22df86de094a07bddd5abf607efdc86"
+        }
+      }
+    },
+    "fresh_no_comsol_daemon_smoke": {
+      "receipt_path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-670/test_real_control_daemon_publi0/no_comsol_control_daemon_smoke_receipt.json",
+      "receipt_sha256": "d671262faeca9b278faa0153fd90e23ee73df35b26983ad85833ae142c6e0e98",
+      "status": "PASS",
+      "owned_pid": 17016,
+      "control_home_before_public_dispatch": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-670/test_real_control_daemon_publi0/owned-mcp-home/control-private",
+      "expected_control_home": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/pytest-of-everwalker/pytest-670/test_real_control_daemon_publi0/owned-mcp-home/control-private",
+      "endpoint": {
+        "port": 53664,
+        "pid": 17016,
+        "process_start_epoch_ms": 1790539154279
+      },
+      "cleanup": {
+        "status": "STOPPED_AND_REAPED",
+        "pid": 17016,
+        "start_epoch_ms": 1790539154279,
+        "child_exit_confirmed": true,
+        "child_reaped": true,
+        "listener_absent": true,
+        "return_code": -15
+      },
+      "comsol_engine_started": false
+    },
+    "main_review": {
+      "verdict": "PASS_SCOPED_SOFTWARE",
+      "source_files_verified": 105,
+      "published_unchanged_files_verified": 99,
+      "root_retests": {
+        "path": "/private/tmp/w23_mapping_root_retests.xml",
+        "sha256": "7c4680a285baac81df7530cc3c2f2af4e380e0c19baa76cb9ac87d71d6e053f2",
+        "result": "7 PASS / 0 FAIL / 0 ERROR / 0 SKIP",
+        "scope": "E/H unadjusted residual and request-identity negative controls"
+      }
+    }
+  },
+  "raw_receipt": {
+    "path": "/private/tmp/comsol-mcp-w23-full3d-bma-mapping-software-receipt-20260928d.json",
+    "sha256": "1e09df62164325ea884aeb2e6b1b42c037254ddbf9f00fe8ee639a7225293a6c"
+  },
+  "prepared_budget": {
+    "schema_version": 1,
+    "max_server_processes": 1,
+    "max_managed_workers": 1,
+    "max_gui_processes": 0,
+    "wall_clock_seconds_from_server_birth_including_cleanup": 3240,
+    "reserved_cleanup_seconds": 120,
+    "study_run_calls": 0,
+    "solver_calls": 1,
+    "route_wait_caps_seconds": {
+      "session.connect": 120,
+      "model_create": 120,
+      "fixture_build": 540,
+      "baseline_apply": 540,
+      "solution_inventory": 90,
+      "model_save": 90,
+      "session.disconnect.retire_worker": 90,
+      "bma_probe_prepare": 90,
+      "bma_probe_solver_sequence_runAll": 600,
+      "bma_basis_dataset_list": 90,
+      "bma_basis_dataset_solution_indices": 90,
+      "bma_basis_fields_ordinal1": 180,
+      "bma_basis_fields_ordinal2": 180
+    },
+    "unknown_policy": "preserve exact owned process handles and evidence; never replay or force-stop an unknown Worker/session",
+    "profile": "w23_single_receiver_bma_basis_field_mapping_probe_v1",
+    "unallocated_margin_seconds": 300
+  },
+  "budget_status": "PREPARATION_ONLY_NOT_NATIVE_AUTHORIZATION",
+  "replay": "Archive base b484a735, overlay the six listed files from this checkpoint commit, install Python 3.12 dependencies, and run the exact isolated test command from candidate cwd with -B -S and explicit site-packages. The fresh daemon smoke requires local loopback permission; no COMSOL is started. Run prepare --profile bma_mapping_probe with the declared Java/COMSOL API classpath to recreate the compile/freeze artifacts; do not run native without reviewed admission.",
+  "remaining": [
+    "Original local failed-setup resources await explicit cleanup authorization; no cleanup/relaunch occurred.",
+    "Real BMA solve, field mapping, overlap integral and convergence/tolerance validation remain required.",
+    "Synthetic arrays and compilation do not establish optical correctness."
+  ],
+  "next_action": "Prepare complete native optical overlap/convergence orchestration using the paired probe evidence, preserving unsupported/ambiguous mappings as UNVERIFIED. Continue other full-project work while native resource authorization is pending."
+}

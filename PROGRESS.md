@@ -4,13 +4,13 @@ Updated 2026-09-27 UTC. **Overall PARTIAL; execution continues through W26.** Th
 
 ## Current stage
 
-**W24 fourteen-model readmission and budget identity: PASS for scoped software; W24/project overall PARTIAL.** Reloaded models now bind the exact saved artifact, actual load/readback requests, durable operation/job identity and new Worker ModelRef/revision. Readmission and science share one immutable Worker birth/deadline/reserve; reload time counts against the campaign.
+**W23 paired BMA field mapping probe: PASS for scoped software; W23/project overall PARTIAL.** Two distinct eigensolution tuples are bound through dataset/SolutionInfo metadata. Each tuple reads paired complex E/H and Port fields with native normals on the same grid; unadjusted E/H residuals are checked separately. Phase/subspace diagnostics do not establish a mapping.
 
-**Actually executed:** isolated published `7c91f8c` plus three-file overlay: **100 PASS / 0 FAIL / 0 ERROR / 0 SKIP** (79 science and 21 managed-setup tests). Main review verified 77 imported sources, all overlay bytes and JUnit/receipt hashes, and reran **9 budget negative controls PASS**. [Compact evidence and replay](docs/full_project_execution/w24/READMISSION_SOFTWARE_CHECKPOINT.json).
+**Actually executed:** isolated published `b484a735` plus six-file overlay: **171 PASS / 0 FAIL / 0 ERROR / 0 SKIP**; Java API compilation/javap PASS. A fresh no-COMSOL daemon smoke confirmed private control-home identity and reaped its owned child. Main review verified 105 source files (99 unchanged published), compiled-class/receipt/JUnit identities, and reran **7 negative controls PASS**. [Compact evidence and replay](docs/full_project_execution/w23_overlap/BMA_MAPPING_SOFTWARE_CHECKPOINT.json).
 
-**Native setup/reload/solve NOT_RUN; science NOT_ESTABLISHED.** The earlier budget-reset candidate was rejected after a synthetic solve escaped an expired budget; this repair rejects before dispatch. Full production orchestration and scientific acceptance remain open.
+**Native BMA/field mapping/science NOT_RUN; mapping UNVERIFIED.** The 3240-second profile is prepared only. Synthetic field samples and the harmless daemon smoke are not COMSOL or optical acceptance. Cleanup SIGTERM for the original failed native setup was rejected by automatic approval; explicit authorization remains pending, with no cleanup/relaunch.
 
-F04 lifecycle recovery was published and post-push verified as `ebb30ce` (164 isolated tests plus one separate historical-object test). F16 durable experiment reads continue. W23 BMA producer was published as `b484a735` (134 tests); paired-field mapping continues. Automatic approval rejected local cleanup SIGTERM; explicit authorization remains pending, with no cleanup or relaunch.
+F04 lifecycle recovery was published as `ebb30ce` (164 + 1 tests); F16 durable experiment reads continue. W24 readmission/budget identity was published and post-push verified as `2a61e4c` (100 tests plus 9 main retests); its complete two-phase, single-runtime production CLI is being implemented.
 
 ## Latest accepted software baseline
 
@@ -35,6 +35,6 @@ Earlier source checkpoints and failures remain in the existing state and linked 
 
 ## Next action and recovery
 
-Continue the three Luna Max work streams: implement F16 canonical durable experiment reads; implement W23 paired-field mode mapping; complete W24 production orchestration and remaining science. Publish each accepted software stage immediately. Then freeze isolated managed native candidates, execute their reviewed scope, complete all remaining W01–W26 work, and run a fresh independent overall review with repair/retest until accepted.
+Continue the three Luna Max work streams: implement F16 canonical durable experiment reads; complete W23 optical overlap/convergence orchestration; complete W24 production orchestration and remaining science. Publish each accepted software stage immediately. Then freeze isolated managed native candidates, execute their reviewed scope, complete all remaining W01–W26 work, and run a fresh independent overall review with repair/retest until accepted.
 
-The latest focused replay is in [READMISSION_SOFTWARE_CHECKPOINT.json](docs/full_project_execution/w24/READMISSION_SOFTWARE_CHECKPOINT.json). Recover from GitHub and existing state. Last previously verified GitHub sync: `ebb30cecb48af25adc1f300b12b0aeb576952c3c`; this stage is recorded as synchronized only after post-push fetch and HEAD/origin-main equality.
+The latest focused replay is in [BMA_MAPPING_SOFTWARE_CHECKPOINT.json](docs/full_project_execution/w23_overlap/BMA_MAPPING_SOFTWARE_CHECKPOINT.json). Recover from GitHub and existing state. Last previously verified GitHub sync: `2a61e4c9c7954e0ce12dbdf9cae4792bebe65208`; this stage is recorded as synchronized only after post-push fetch and HEAD/origin-main equality.

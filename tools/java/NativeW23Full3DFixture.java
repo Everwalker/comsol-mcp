@@ -42,6 +42,21 @@ public final class NativeW23Full3DFixture {
     private static final String[] VECTOR_FIELDS = {
         "ewfd.Ex", "ewfd.Ey", "ewfd.Ez", "ewfd.Hx", "ewfd.Hy", "ewfd.Hz"
     };
+    private static final String[] BMA_PAIR_FIELDS = {
+        "ewfd.Ex", "ewfd.Ey", "ewfd.Ez", "ewfd.Hx", "ewfd.Hy", "ewfd.Hz",
+        "ewfd.Emodex_2", "ewfd.Emodey_2", "ewfd.Emodez_2",
+        "ewfd.Hmodex_2", "ewfd.Hmodey_2", "ewfd.Hmodez_2",
+        "nx", "ny", "nz"
+    };
+    private static final String[] BMA_PAIR_E_FIELDS = {
+        "ewfd.Ex", "ewfd.Ey", "ewfd.Ez",
+        "ewfd.Emodex_2", "ewfd.Emodey_2", "ewfd.Emodez_2"
+    };
+    private static final String[] BMA_PAIR_H_FIELDS = {
+        "ewfd.Hx", "ewfd.Hy", "ewfd.Hz",
+        "ewfd.Hmodex_2", "ewfd.Hmodey_2", "ewfd.Hmodez_2"
+    };
+    private static final String[] BMA_PAIR_NORMAL_FIELDS = {"nx", "ny", "nz"};
 
     private NativeW23Full3DFixture() {}
 
@@ -53,10 +68,11 @@ public final class NativeW23Full3DFixture {
         if ("solution_inventory".equals(phase)) return solutionInventory(model);
         if ("prepare_bma_output_probe".equals(phase)) return prepareBmaOutputProbe(model, args);
         if ("run_bma_output_probe".equals(phase)) return runBmaOutputProbe(model, args);
+        if ("bma_basis_fields".equals(phase)) return bmaBasisFields(model, args);
         if ("raw_fields".equals(phase)) return rawFields(model, args);
         if ("save".equals(phase)) return save(model, args);
         if ("identity".equals(phase)) return identity(model);
-        throw new IllegalArgumentException("phase must be build, apply_case, solution_inventory, raw_fields, save, or identity");
+        throw new IllegalArgumentException("phase must be build, apply_case, solution_inventory, raw_fields, bma_basis_fields, save, or identity");
     }
 
     private static Map<String, Object> build(Model model, Map<String, Object> args) {
@@ -793,6 +809,279 @@ public final class NativeW23Full3DFixture {
         }
         for (String child : feature.feature().tags())
             collectSolverFeature(feature.feature(child), path + "/" + child, tree, bindings);
+    }
+
+    /**
+     * Read the bulk BMA eigensolution fields beside Numeric Port 2's configured
+     * mode field at one exact native solution tuple. Three Interp features are
+     * used so E, H, and dimensionless normals each retain an explicit unit.
+     * This phase never invokes a Study or solver.
+     */
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> bmaBasisFields(Model model, Map<String, Object> args) {
+        if (args == null || !(args.get("contract") instanceof Map)
+                || !(args.get("coordinates_m") instanceof List))
+            throw new IllegalArgumentException("bma_basis_fields requires one bound contract and its exact coordinates");
+        Map<String, Object> contract = (Map<String, Object>) args.get("contract");
+        if (!"bma_basis_mapping_pair".equals(contract.get("role"))
+                || !"w23.full3d.numeric_port_bma_basis_pair.v1".equals(contract.get("provenance_schema"))
+                || !"NOT_RUN".equals(args.get("native_result"))
+                || !Boolean.FALSE.equals(args.get("study_or_solver_invoked")))
+            throw new IllegalArgumentException("paired BMA field extraction must use its exact read-only versioned contract");
+        List<String> allExpressions = requireStringList(contract.get("field_names"), "field_names");
+        if (!Arrays.equals(BMA_PAIR_FIELDS, allExpressions.toArray(new String[0])))
+            throw new IllegalArgumentException("paired BMA contract does not request the exact generic/Port/normal fields");
+
+        Map<String, Object> source = requireMap(contract.get("source"), "source");
+        Map<String, Object> plane = requireMap(contract.get("plane"), "plane");
+        Map<String, Object> basisAxis = requireMap(contract.get("basis_axis"), "basis_axis");
+        Map<String, Object> portAxis = requireMap(contract.get("port_mode_axis"), "port_mode_axis");
+        String datasetTag = requiredTag(source.get("dataset_id"), "dataset_id");
+        String solutionTag = requiredTag(source.get("solution_id"), "solution_id");
+        String selectionTag = requiredTag(plane.get("selection_tag"), "selection_tag");
+        int inner = requiredPositiveIndex(source.get("inner_index"), "inner_index");
+        int outer = requiredPositiveIndex(source.get("outer_index"), "outer_index");
+        int solnum = requiredPositiveIndex(source.get("solnum"), "solnum");
+        Object ordinalValue = basisAxis.get("ordinal");
+        if (!(ordinalValue instanceof Number) || ordinalValue instanceof Boolean
+                || (((Number) ordinalValue).doubleValue() != 1.0
+                    && ((Number) ordinalValue).doubleValue() != 2.0)
+                || !"ordered SolutionInfo.getSolnum(outer,true) row ordinal".equals(basisAxis.get("axis"))
+                || !solutionTag.equals(basisAxis.get("solution_id"))
+                || !solutionTag.equals(basisAxis.get("solver_sequence_tag"))
+                || !Integer.valueOf(outer).equals(basisAxis.get("outer_index"))
+                || !Integer.valueOf(inner).equals(basisAxis.get("inner_index"))
+                || !Integer.valueOf(solnum).equals(basisAxis.get("solnum")))
+            throw new IllegalArgumentException("basis ordinal is not bound to its exact SolutionInfo/source tuple");
+        if (!"portOut3d".equals(portAxis.get("feature_tag"))
+                || !"Port".equals(portAxis.get("feature_type"))
+                || !"Numeric".equals(portAxis.get("port_type"))
+                || !"2".equals(portAxis.get("port_name"))
+                || !"1".equals(portAxis.get("port_mode_number_readback"))
+                || !selectionTag.equals(portAxis.get("selection_tag"))
+                || !"sel3dOutputPort".equals(selectionTag))
+            throw new IllegalArgumentException("separate Numeric Port name/PortModeNumber readback is incomplete");
+
+        if (!Arrays.asList(model.result().dataset().tags()).contains(datasetTag))
+            throw new IllegalStateException("exact BMA solution dataset is absent: " + datasetTag);
+        PropFeature dataset = model.result().dataset(datasetTag);
+        if (!"Solution".equals(dataset.getType()) || !dataset.hasProperty("solution")
+                || !solutionTag.equals(dataset.getString("solution")))
+            throw new IllegalStateException("dataset does not bind to the exact BMA producer solver sequence");
+        if (!Arrays.asList(model.sol().tags()).contains(solutionTag))
+            throw new IllegalStateException("exact BMA producer solver sequence is absent");
+        Map<String, Object> solutionState = solutionState(model.sol(solutionTag), solutionTag);
+        Object rawPairs = solutionState.get("solution_pairs");
+        boolean exactTupleFound = false;
+        if (rawPairs instanceof List) {
+            for (Object rawPair : (List<?>) rawPairs) {
+                if (!(rawPair instanceof Map)) continue;
+                Map<?, ?> pair = (Map<?, ?>) rawPair;
+                if (Integer.valueOf(outer).equals(pair.get("outer_index"))
+                        && Integer.valueOf(inner).equals(pair.get("inner_index"))
+                        && Integer.valueOf(solnum).equals(pair.get("solnum"))
+                        && solutionTag.equals(pair.get("solver_sequence_tag")))
+                    exactTupleFound = true;
+            }
+        }
+        if (solutionState.get("is_valid") != Boolean.TRUE || !exactTupleFound)
+            throw new IllegalStateException("requested dataset tuple is not present in exact live SolutionInfo readback");
+
+        if (!Arrays.asList(model.component(COMPONENT).selection().tags()).contains(selectionTag))
+            throw new IllegalStateException("requested output Port boundary selection is absent");
+        SelectionFeature selection = model.component(COMPONENT).selection(selectionTag);
+        PhysicsFeature port = model.component(COMPONENT).physics("ewfd").feature("portOut3d");
+        int[] nativePortFaces = port.selection().entities();
+        if (!"Numeric".equals(port.getString("PortType"))
+                || !"2".equals(port.getString("PortName"))
+                || !"1".equals(port.getString("PortModeNumber"))
+                || !selectionTag.equals(port.selection().named())
+                || selection.getInt("entitydim") != 2 || selection.entities(2).length == 0
+                || selection.dim() != 2 || !sameSet(nativePortFaces, selection.entities(2))
+                || !intList(nativePortFaces).equals(portAxis.get("boundary_ids")))
+            throw new IllegalStateException("live Numeric Port 2 identity/selection differs from the prepared mode-axis evidence");
+
+        Object groupObj = contract.get("unit_groups");
+        if (!(groupObj instanceof Map)) throw new IllegalArgumentException("explicit E/H/normal unit groups are required");
+        Map<?, ?> unitGroups = (Map<?, ?>) groupObj;
+        Map<String, List<String>> expressionsByGroup = new LinkedHashMap<>();
+        expressionsByGroup.put("electric", Arrays.asList(BMA_PAIR_E_FIELDS));
+        expressionsByGroup.put("magnetic", Arrays.asList(BMA_PAIR_H_FIELDS));
+        expressionsByGroup.put("normal", Arrays.asList(BMA_PAIR_NORMAL_FIELDS));
+        Map<String, String> expectedUnits = new LinkedHashMap<>();
+        expectedUnits.put("electric", "V/m");
+        expectedUnits.put("magnetic", "A/m");
+        expectedUnits.put("normal", "1");
+        for (String groupName : expressionsByGroup.keySet()) {
+            Object rawGroup = unitGroups.get(groupName);
+            if (!(rawGroup instanceof Map))
+                throw new IllegalArgumentException("unit group is missing: " + groupName);
+            Map<?, ?> group = (Map<?, ?>) rawGroup;
+            if (!expectedUnits.get(groupName).equals(group.get("unit"))
+                    || !expressionsByGroup.get(groupName).equals(group.get("expressions")))
+                throw new IllegalArgumentException("field unit/expression group differs from the frozen SI contract");
+        }
+
+        Object rawCoordinateList = args.get("coordinates_m");
+        List<?> rawCoordinates = (List<?>) rawCoordinateList;
+        if (rawCoordinates.isEmpty()) throw new IllegalArgumentException("paired field quadrature must not be empty");
+        double[][] coordinates = new double[3][rawCoordinates.size()];
+        for (int point = 0; point < rawCoordinates.size(); point++) {
+            Object rawPoint = rawCoordinates.get(point);
+            if (!(rawPoint instanceof List) || ((List<?>) rawPoint).size() != 3)
+                throw new IllegalArgumentException("paired field coordinate must be an xyz metre triple");
+            List<?> tuple = (List<?>) rawPoint;
+            for (int axis = 0; axis < 3; axis++) {
+                Object value = tuple.get(axis);
+                if (!(value instanceof Number) || value instanceof Boolean
+                        || !Double.isFinite(((Number) value).doubleValue()))
+                    throw new IllegalArgumentException("paired field coordinates must be finite SI metres");
+                coordinates[axis][point] = ((Number) value).doubleValue();
+            }
+        }
+        String contractId = requiredSha256(contract.get("contract_id"), "contract_id");
+        String baseTag = "w23bm" + contractId.substring(0, 10);
+        List<String> tags = Arrays.asList(baseTag + "e", baseTag + "h", baseTag + "n");
+        for (String tag : tags)
+            if (containsNumerical(model, tag))
+                throw new IllegalStateException("request-owned paired-field Interp tag already exists: " + tag);
+
+        List<NumericalFeature> created = new ArrayList<>();
+        Throwable operationFailure = null;
+        Throwable cleanupFailure = null;
+        List<Map<String, Object>> rows = new ArrayList<>();
+        List<List<Double>> sharedCoordinateReadback = null;
+        Map<String, String> unitReadback = new LinkedHashMap<>();
+        int groupIndex = 0;
+        for (String groupName : expressionsByGroup.keySet()) {
+            if (operationFailure != null) break;
+            String tag = tags.get(groupIndex++);
+            List<String> expressions = expressionsByGroup.get(groupName);
+            String requestedUnit = expectedUnits.get(groupName);
+            NumericalFeature interp = null;
+            try {
+                interp = model.result().numerical().create(tag, "Interp");
+                created.add(interp);
+                interp.set("data", datasetTag);
+                interp.set("expr", expressions.toArray(new String[0]));
+                interp.set("unit", requestedUnit);
+                interp.set("solnum", Integer.toString(solnum));
+                interp.set("outersolnum", outer);
+                interp.set("coorderr", "on");
+                interp.set("matherr", "on");
+                interp.set("ext", 0.0);
+                interp.setInterpolationCoordinates(coordinates);
+                interp.selection().named(selectionTag);
+                if (!datasetTag.equals(interp.getString("data"))
+                        || !Arrays.equals(expressions.toArray(new String[0]), interp.getStringArray("expr"))
+                        || !requestedUnit.equals(interp.getString("unit"))
+                        || !Integer.toString(solnum).equals(interp.getString("solnum"))
+                        || !Integer.toString(outer).equals(interp.getString("outersolnum"))
+                        || !interp.getBoolean("coorderr") || !interp.getBoolean("matherr")
+                        || interp.getDouble("ext") != 0.0
+                        || !selectionTag.equals(interp.selection().named())
+                        || interp.selection().dim() != 2
+                        || !Arrays.equals(selection.entities(2), interp.selection().entities()))
+                    throw new IllegalStateException("paired-field Interp configuration/unit/selection readback differs");
+                interp.run();
+                double[][][] real = interp.getData();
+                double[][][] imaginary = interp.getImagData();
+                double[][] coordinateReadback = interp.getCoordinates();
+                boolean complexGroup = interp.isComplex();
+                if ("normal".equals(groupName) ? complexGroup : (!complexGroup || imaginary == null))
+                    throw new IllegalStateException("paired-field complex/readback kind differs for " + groupName);
+                if (real == null || real.length != expressions.size()
+                        || coordinateReadback == null || coordinateReadback.length != 3)
+                    throw new IllegalStateException("paired-field Interp omitted expression or coordinate axes");
+                List<List<Double>> coordinateRows = new ArrayList<>();
+                for (int axis = 0; axis < 3; axis++) {
+                    if (coordinateReadback[axis] == null || coordinateReadback[axis].length != rawCoordinates.size())
+                        throw new IllegalStateException("paired-field coordinate axis differs from the frozen point count");
+                    List<Double> axisValues = new ArrayList<>();
+                    for (int point = 0; point < rawCoordinates.size(); point++) {
+                        double observed = coordinateReadback[axis][point];
+                        if (!Double.isFinite(observed)
+                                || Math.abs(observed - coordinates[axis][point]) > 2e-12
+                                || (sharedCoordinateReadback != null
+                                    && Math.abs(observed - sharedCoordinateReadback.get(axis).get(point)) > 2e-12))
+                            throw new IllegalStateException("paired E/H/normal Interp groups do not share the exact frozen coordinates");
+                        axisValues.add(observed);
+                    }
+                    coordinateRows.add(axisValues);
+                }
+                if (sharedCoordinateReadback == null) sharedCoordinateReadback = coordinateRows;
+                unitReadback.put(groupName, interp.getString("unit"));
+                for (int expr = 0; expr < expressions.size(); expr++) {
+                    if (real[expr] == null || real[expr].length != 1
+                            || real[expr][0].length != rawCoordinates.size()
+                            || (imaginary != null && (imaginary.length != expressions.size()
+                                || imaginary[expr] == null || imaginary[expr].length != 1
+                                || imaginary[expr][0].length != rawCoordinates.size())))
+                        throw new IllegalStateException("paired field expression solution/point axes differ from its contract");
+                    List<Double> realValues = new ArrayList<>(), imaginaryValues = new ArrayList<>();
+                    for (int point = 0; point < rawCoordinates.size(); point++) {
+                        double rv = real[expr][0][point];
+                        double iv = imaginary == null ? 0.0 : imaginary[expr][0][point];
+                        if (!Double.isFinite(rv) || !Double.isFinite(iv)
+                                || ("normal".equals(groupName) && Math.abs(iv) > 1e-10))
+                            throw new IllegalStateException("paired field sample is nonfinite or a surface normal is complex");
+                        realValues.add(rv);
+                        imaginaryValues.add(iv);
+                    }
+                    Map<String, Object> row = new LinkedHashMap<>();
+                    row.put("expression", expressions.get(expr));
+                    row.put("real", realValues);
+                    row.put("imag", imaginaryValues);
+                    row.put("unit", interp.getString("unit"));
+                    row.put("unit_group", groupName);
+                    rows.add(row);
+                }
+            } catch (Throwable error) {
+                operationFailure = error;
+            }
+        }
+        for (String tag : tags) {
+            try {
+                if (containsNumerical(model, tag)) model.result().numerical().remove(tag);
+                if (containsNumerical(model, tag))
+                    throw new IllegalStateException("request-owned paired-field Interp remains after cleanup: " + tag);
+            } catch (Throwable error) {
+                if (cleanupFailure == null) cleanupFailure = error;
+                else cleanupFailure.addSuppressed(error);
+            }
+        }
+        Map<String, Object> cleanup = new LinkedHashMap<>();
+        cleanup.put("created_count", created.size());
+        cleanup.put("expected_count", tags.size());
+        cleanup.put("removed", cleanupFailure == null);
+        cleanup.put("cleanup_failed", cleanupFailure != null);
+        cleanup.put("tags", tags);
+        cleanup.put("error", cleanupFailure == null ? "" : cleanupFailure.toString());
+        if (operationFailure != null)
+            throw new IllegalStateException("paired BMA field extraction failed; cleanup=" + cleanup, operationFailure);
+        if (cleanupFailure != null)
+            throw new IllegalStateException("paired BMA field Interp cleanup failed", cleanupFailure);
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("native_result", "COMSOL_NATIVE_RAW");
+        result.put("study_or_solver_invoked", false);
+        result.put("complex_readback", true);
+        result.put("units_preserved", true);
+        result.put("contract_id", contractId);
+        result.put("quadrature_sha256", contract.get("quadrature_sha256"));
+        result.put("source", source);
+        result.put("plane", plane);
+        result.put("basis_axis", basisAxis);
+        result.put("port_mode_axis", portAxis);
+        result.put("sample_count", rawCoordinates.size());
+        result.put("coordinates_m", sharedCoordinateReadback);
+        result.put("unit_readback", unitReadback);
+        result.put("expressions", rows);
+        result.put("cleanup", cleanup);
+        result.put("field_mapping_status", "UNVERIFIED");
+        result.put("basis_ordinal_mapping", "UNVERIFIED_NATIVE_FIELD_MAPPING_REQUIRED");
+        result.put("numeric_port_mode_field_mapping", "UNVERIFIED");
+        return result;
     }
 
     /**

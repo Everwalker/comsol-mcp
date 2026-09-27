@@ -41,6 +41,10 @@ _VECTOR_FIELDS = {
     "reference_mode": tuple(f"ewfd.{prefix}{axis}_2" for prefix in ("Emode", "Hmode") for axis in _AXES),
     "incident_reference": tuple(f"ewfd.{prefix}{axis}_1" for prefix in ("Emode", "Hmode") for axis in _AXES),
     "capture_signal": tuple(f"ewfd.{prefix}{axis}" for prefix in ("E", "H") for axis in _AXES),
+    "bma_basis_mapping_pair": (
+        tuple(f"ewfd.{prefix}{axis}" for prefix in ("E", "H") for axis in _AXES)
+        + tuple(f"ewfd.{prefix}{axis}_2" for prefix in ("Emode", "Hmode") for axis in _AXES)
+    ),
 }
 _NORMAL_FIELDS = ("nx", "ny", "nz")
 _COMPONENT = "comp3d"
@@ -63,6 +67,47 @@ FULL3D_COMPARISON_POLICY = {
     "cross_absolute_normalized_tolerance": 1e-5,
     "eta_absolute_tolerance": 1e-10,
     "capture_flux_absolute_normalized_tolerance": 1e-5,
+}
+
+# This is a narrow engineering identity-probe threshold, not a COMSOL physical
+# law or full scientific acceptance limit. It reuses the already frozen
+# dimensionless absolute/relative tolerances without tuning against native data.
+BMA_FIELD_MAPPING_POLICY = {
+    "policy_id": "w23.full3d.bma_port_mode_identity_probe.atol_rtol.v1",
+    "normalized_absolute_tolerance": 1e-5,
+    "relative_tolerance": 1e-3,
+    "normalized_residual_limit": 1.01e-3,
+    "source_policy_id": FULL3D_COMPARISON_POLICY["policy_id"],
+    "scope": "engineering identity probe only; not physical or full scientific acceptance",
+    "field_mapping_status": "UNVERIFIED_UNTIL_NATIVE_REVIEW",
+}
+
+COMSOL_PORT_MODE_FIELD_KB_EVIDENCE = {
+    "manual": "COMSOL 6.4 - Port Mode Field Variables",
+    "document_path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.rf/rf_ug_modeling.05.22.html",
+    "chunk_id": 104589,
+    "source_sha256": "d568ce649f47507fb6de28d2276d7a9774a9d0073a45d72ec107ec7b6f9c0bdb",
+    "claim": "The EmodeC_K and HmodeC_K suffix K denotes the port name, not the BMA eigensolution ordinal.",
+}
+
+COMSOL_INTERP_UNIT_KB_EVIDENCE = {
+    "manual": "COMSOL 6.4 - Interp",
+    "document_path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_results.52.082.html",
+    "chunk_id": 17294,
+    "source_sha256": "156412ab29631518953b57d6948b88a0181bf5312984b1a0f9e840a6ad848421",
+    "claim": "Interp exposes a unit String property for the expressions in expr; paired sampling uses separate same-grid groups for V/m, A/m, and 1.",
+}
+
+_BMA_PAIR_E_FIELDS = tuple(f"ewfd.E{axis}" for axis in _AXES) + tuple(
+    f"ewfd.Emode{axis}_2" for axis in _AXES)
+_BMA_PAIR_H_FIELDS = tuple(f"ewfd.H{axis}" for axis in _AXES) + tuple(
+    f"ewfd.Hmode{axis}_2" for axis in _AXES)
+_BMA_PAIR_NORMAL_FIELDS = _NORMAL_FIELDS
+_BMA_PAIR_FIELD_NAMES = _BMA_PAIR_E_FIELDS + _BMA_PAIR_H_FIELDS + _BMA_PAIR_NORMAL_FIELDS
+_BMA_PAIR_UNIT_GROUPS = {
+    "electric": {"unit": "V/m", "expressions": list(_BMA_PAIR_E_FIELDS)},
+    "magnetic": {"unit": "A/m", "expressions": list(_BMA_PAIR_H_FIELDS)},
+    "normal": {"unit": "1", "expressions": list(_BMA_PAIR_NORMAL_FIELDS)},
 }
 
 
@@ -202,7 +247,7 @@ def build_raw_field_contract(
 ) -> dict[str, Any]:
     """Bind one fresh vector-field extraction to a native source and local plane."""
     if role not in _VECTOR_FIELDS:
-        _fail("raw-field role must name one registered signal/mode/capture source")
+        _fail("raw-field role must name one registered signal/mode/capture/mapping source")
     if not isinstance(case, Mapping) or not isinstance(case.get("case_id"), str):
         _fail("a registered immutable full-3D case identity is required")
     required_source = ("dataset_id", "solution_id", "outer_index", "inner_index", "solnum")
@@ -289,17 +334,509 @@ def build_raw_field_dispatch(
     binding = _managed_route_binding(
         project_id=project_id, model_ref=model_ref, model_tag=model_tag, revision=revision,
         request_id=request_id, idempotency_key=idempotency_key)
+    phase = ("bma_basis_fields" if contract.get("role") == "bma_basis_mapping_pair"
+             else "raw_fields")
     return {"operation": "operation_call",
             "arguments": {"operation_id": "code.execute_java", "arguments": {
                 "source_artifact": source_artifact,
                 "entrypoint": "NativeW23Full3DFixture#run", "mode": "trusted",
-                "arguments": {"phase": "raw_fields", "contract": dict(contract),
+                "arguments": {"phase": phase, "contract": dict(contract),
                               "coordinates_m": quadrature["coordinates_m"],
                               "native_result": "NOT_RUN", "study_or_solver_invoked": False}}},
             "execution": {key: binding[key] for key in
                           ("project_id", "session_id", "model_ref", "expected_revision",
                            "request_id", "idempotency_key")},
-            "dispatch_scope": "one managed native Interp readback; no Study.run or solver call"}
+            "dispatch_scope": ("one managed paired BMA-basis field readback using three same-grid unit groups; "
+                               "no Study.run or solver call" if phase == "bma_basis_fields"
+                               else "one managed native Interp readback; no Study.run or solver call")}
+
+
+def resolve_full3d_bma_basis_sources(
+    dataset_rows: Sequence[Mapping[str, Any]],
+    index_by_tag: Mapping[str, Mapping[str, Any]], *,
+    producer_evidence: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Bind both BMA basis rows to one exact managed Solution dataset.
+
+    ``basis_ordinal`` is assigned only from the ordered, already validated
+    SolutionInfo rows produced by the one-step BMA sequence.  It is kept apart
+    from Numeric Port ``PortModeNumber`` and from any dataset parameter whose
+    name happens to contain ``mode``.
+    """
+    if (not isinstance(producer_evidence, Mapping)
+            or producer_evidence.get("status") != "VERIFIED_CONTROLLED_SINGLE_BMA_PRODUCER"
+            or producer_evidence.get("native_result") != "COMSOL_NATIVE_BMA_PRODUCER_RUN_READBACK"
+            or producer_evidence.get("basis_ordinal_assignment")
+            != "UNVERIFIED_NATIVE_FIELD_MAPPING_REQUIRED"
+            or producer_evidence.get("numeric_port_mode_field_mapping") != "UNVERIFIED"):
+        _fail("two exact native BMA producer SolutionInfo rows are required before field sampling")
+    sequence_tag = producer_evidence.get("solver_sequence_tag")
+    pairs = producer_evidence.get("eigensolution_solution_pairs")
+    if (not isinstance(sequence_tag, str) or not _TAG.fullmatch(sequence_tag)
+            or not isinstance(pairs, list) or len(pairs) != 2):
+        _fail("producer evidence lacks the exact two-row SolutionInfo basis axis")
+    normalized_pairs: list[dict[str, Any]] = []
+    for pair in pairs:
+        if not isinstance(pair, Mapping):
+            _fail("producer SolutionInfo basis row is malformed")
+        outer, inner, solnum = pair.get("outer_index"), pair.get("inner_index"), pair.get("solnum")
+        if (type(outer) is not int or outer < 1 or type(inner) is not int or inner < 1
+                or type(solnum) is not int or solnum < 1 or solnum != inner
+                or pair.get("solver_sequence_tag") != sequence_tag):
+            _fail("producer SolutionInfo row does not map to the exact BMA sequence axes")
+        normalized_pairs.append({"outer_index": outer, "inner_index": inner,
+                                 "solnum": solnum, "solver_sequence_tag": sequence_tag})
+    if (len({row["inner_index"] for row in normalized_pairs}) != 2
+            or len({row["solnum"] for row in normalized_pairs}) != 2
+            or len({row["outer_index"] for row in normalized_pairs}) != 1):
+        _fail("BMA basis rows must share one outer index and have distinct inner/solnum axes")
+
+    candidates: list[Mapping[str, Any]] = []
+    for row in dataset_rows:
+        if not isinstance(row, Mapping):
+            _fail("native result-dataset inventory contains a malformed row")
+        if row.get("type_id") == "Solution" and row.get("solution") == sequence_tag:
+            candidates.append(row)
+    if len(candidates) != 1:
+        _fail("the exact BMA solver sequence must bind exactly one native Solution dataset")
+    dataset = candidates[0]
+    dataset_tag = dataset.get("tag")
+    if (not isinstance(dataset_tag, str) or not _TAG.fullmatch(dataset_tag)
+            or (dataset.get("component") not in {None, "", _COMPONENT})
+            or (dataset.get("geometry") not in {None, "", _GEOMETRY})):
+        _fail("BMA result dataset identity or optional component/geometry readback is inconsistent")
+    indices = index_by_tag.get(dataset_tag)
+    if (not isinstance(indices, Mapping) or indices.get("dataset") != dataset_tag
+            or indices.get("solution") != sequence_tag
+            or indices.get("binding_complete") is not True
+            or indices.get("axis_metadata_complete") is not True
+            or indices.get("pair_mapping_complete") is not True
+            or indices.get("parameters_complete") is not True
+            or indices.get("solution_count") != 2):
+        _fail("BMA Solution dataset lacks complete native SolutionInfo/index parameter readback")
+
+    expected_outer = normalized_pairs[0]["outer_index"]
+    expected_inner = {row["inner_index"] for row in normalized_pairs}
+    outer_indices, inner_indices = indices.get("outer_indices"), indices.get("inner_indices")
+    if (not isinstance(outer_indices, list) or len(outer_indices) != 1
+            or outer_indices[0] != expected_outer
+            or not isinstance(inner_indices, list) or len(inner_indices) != 2
+            or set(inner_indices) != expected_inner):
+        _fail("dataset index API and exact BMA SolutionInfo producer rows disagree")
+
+    raw_solnum_pairs = indices.get("solnum_pairs")
+    if not isinstance(raw_solnum_pairs, list) or len(raw_solnum_pairs) != 2:
+        _fail("dataset index API omitted the exact stored-solnum mapping for both producer rows")
+    indexed_pairs: dict[tuple[int, int], int] = {}
+    for row in raw_solnum_pairs:
+        if not isinstance(row, Mapping):
+            _fail("dataset stored-solnum row is malformed")
+        outer, inner, solnum = row.get("outer"), row.get("inner"), row.get("solnum")
+        if (type(outer) is not int or type(inner) is not int or type(solnum) is not int
+                or outer < 1 or inner < 1 or solnum < 1 or (outer, inner) in indexed_pairs):
+            _fail("dataset stored-solnum mapping is invalid or duplicated")
+        indexed_pairs[(outer, inner)] = solnum
+    expected_solnums = {(row["outer_index"], row["inner_index"]): row["solnum"]
+                        for row in normalized_pairs}
+    if indexed_pairs != expected_solnums:
+        _fail("dataset SolutionInfo-to-solnum mapping differs from the controlled BMA producer")
+
+    by_pair = indices.get("parameters")
+    by_pair = by_pair.get("by_pair") if isinstance(by_pair, Mapping) else None
+    if not isinstance(by_pair, Mapping):
+        _fail("dataset parameter readback lacks per-pair native axis provenance")
+    resolved: list[dict[str, Any]] = []
+    for basis_ordinal, pair in enumerate(normalized_pairs, start=1):
+        key = f"{pair['outer_index']}:{pair['inner_index']}"
+        parameter_row = by_pair.get(key)
+        if (not isinstance(parameter_row, Mapping)
+                or parameter_row.get("solnum") != pair["solnum"]):
+            _fail("per-pair native dataset parameters do not bind the exact producer solnum")
+        names, values, units = (parameter_row.get(name) for name in ("names", "values", "units"))
+        if (not isinstance(names, list) or not isinstance(values, list) or not isinstance(units, list)
+                or len(names) != len(values) or len(names) != len(units)
+                or any(not isinstance(name, str) or not name for name in names)):
+            _fail("dataset native parameter names/values/units are incomplete")
+        resolved.append({
+            "basis_ordinal": basis_ordinal,
+            "basis_axis": "ordered SolutionInfo.getSolnum(outer,true) row ordinal",
+            "source": {"dataset_id": dataset_tag, "solution_id": sequence_tag,
+                       **pair},
+            "native_parameter_readback": {"names": list(names), "values": list(values),
+                                           "units": list(units)},
+        })
+    return {"status": "SOFTWARE_BMA_BASIS_DATASET_BINDING_VALIDATED",
+            "native_result": "NOT_RUN",
+            "basis_sources": resolved,
+            "dataset_binding": {"dataset_id": dataset_tag, "solution_id": sequence_tag,
+                                "type_id": "Solution", "source": "managed dataset.list + dataset.solution_indices"},
+            "numeric_port_mode_number": "NOT_INFERRED_FROM_BASIS_ORDINAL",
+            "basis_ordinal_mapping": "UNVERIFIED_NATIVE_FIELD_MAPPING_REQUIRED",
+            "field_mapping_status": "UNVERIFIED"}
+
+
+def build_full3d_bma_basis_mapping_contracts(
+    *, case: Mapping[str, Any], preparation: Mapping[str, Any],
+    producer_evidence: Mapping[str, Any], basis_binding: Mapping[str, Any],
+    plane: Mapping[str, Any], radial_intervals: int, angular_points: int,
+) -> list[dict[str, Any]]:
+    """Create two same-grid generic/Port-field contracts, one per BMA row."""
+    port = preparation.get("receiver_port") if isinstance(preparation, Mapping) else None
+    if (not isinstance(preparation, Mapping)
+            or preparation.get("status") != "ISOLATED_BMA_SEQUENCE_PREPARED_NOT_SOLVED"
+            or preparation.get("field_mapping_status") != "UNVERIFIED"
+            or not isinstance(port, Mapping)
+            or port.get("feature_tag") != "portOut3d"
+            or port.get("feature_type") != "Port"
+            or port.get("port_type") != "Numeric"
+            or port.get("port_name") != "2"
+            or port.get("port_mode_number_readback") != "1"
+            or port.get("selection_tag") != "sel3dOutputPort"):
+        _fail("validated actual Numeric Port 2/PortModeNumber 1 preparation readback is required")
+    if (not isinstance(producer_evidence, Mapping)
+            or producer_evidence.get("status") != "VERIFIED_CONTROLLED_SINGLE_BMA_PRODUCER"
+            or producer_evidence.get("solver_sequence_tag")
+            != preparation.get("solver_sequence", {}).get("tag")
+            or producer_evidence.get("field_mapping_status") not in {None, "UNVERIFIED"}
+            or not isinstance(basis_binding, Mapping)
+            or basis_binding.get("status") != "SOFTWARE_BMA_BASIS_DATASET_BINDING_VALIDATED"
+            or basis_binding.get("field_mapping_status") != "UNVERIFIED"):
+        _fail("exact producer and independently resolved two-row dataset binding are required")
+    if not isinstance(plane, Mapping) or plane.get("selection_tag") != port.get("selection_tag"):
+        _fail("paired fields must use the actual output Port selection")
+    raw_sources = basis_binding.get("basis_sources")
+    if not isinstance(raw_sources, list) or len(raw_sources) != 2:
+        _fail("exactly two validated BMA basis source tuples are required")
+    contracts: list[dict[str, Any]] = []
+    for expected_ordinal, basis_source in enumerate(raw_sources, start=1):
+        if (not isinstance(basis_source, Mapping)
+                or basis_source.get("basis_ordinal") != expected_ordinal
+                or basis_source.get("basis_axis") != "ordered SolutionInfo.getSolnum(outer,true) row ordinal"
+                or not isinstance(basis_source.get("source"), Mapping)):
+            _fail("BMA basis source ordering or separate basis-axis identity is malformed")
+        source = basis_source["source"]
+        contract = build_raw_field_contract(
+            case=case, role="bma_basis_mapping_pair", source=source,
+            plane=plane, radial_intervals=radial_intervals, angular_points=angular_points)
+        semantic_identity = {
+            "provenance_schema": "w23.full3d.numeric_port_bma_basis_pair.v1",
+            "basis_axis": {"ordinal": expected_ordinal, "axis": basis_source["basis_axis"],
+                           "outer_index": source["outer_index"],
+                           "inner_index": source["inner_index"], "solnum": source["solnum"],
+                           "solution_id": source["solution_id"],
+                           "solver_sequence_tag": producer_evidence["solver_sequence_tag"],
+                           "native_parameter_readback": dict(basis_source["native_parameter_readback"])},
+            "port_mode_axis": {"feature_tag": port["feature_tag"],
+                               "feature_type": port["feature_type"],
+                               "port_type": port["port_type"],
+                               "port_name": port["port_name"],
+                               "port_mode_number_readback": port["port_mode_number_readback"],
+                               "selection_tag": port["selection_tag"],
+                               "boundary_ids": list(port["boundary_ids"]),
+                               "field_suffix_semantics": dict(COMSOL_PORT_MODE_FIELD_KB_EVIDENCE)},
+            "field_groups": {
+                "generic_bma_eigensolution": list(_VECTOR_FIELDS["signal"]),
+                "configured_numeric_port_mode_field": list(_VECTOR_FIELDS["reference_mode"]),
+                "shared_surface_normal": list(_NORMAL_FIELDS),
+            },
+            "unit_groups": {key: dict(value) for key, value in _BMA_PAIR_UNIT_GROUPS.items()},
+            "unit_readback_policy": {
+                "source": dict(COMSOL_INTERP_UNIT_KB_EVIDENCE),
+                "raw_real_imag_preserved": True,
+                "native_unit_property_readback_required": True,
+            },
+            "mapping_policy": dict(BMA_FIELD_MAPPING_POLICY),
+            "basis_ordinal_mapping": "UNVERIFIED_NATIVE_FIELD_MAPPING_REQUIRED",
+            "numeric_port_mode_field_mapping": "UNVERIFIED",
+        }
+        contract.update(semantic_identity)
+        identity = {key: value for key, value in contract.items()
+                    if key not in {"contract_id", "native_result", "study_or_solver_invoked"}}
+        contract["contract_id"] = _sha256(identity)
+        contracts.append(contract)
+    if (contracts[0]["quadrature_sha256"] != contracts[1]["quadrature_sha256"]
+            or contracts[0]["plane"] != contracts[1]["plane"]
+            or contracts[0]["field_names"] != contracts[1]["field_names"]):
+        _fail("both BMA basis rows must share one frozen coordinate/weight/normal field contract")
+    return contracts
+
+
+def build_full3d_bma_basis_mapping_dispatch(
+    contract: Mapping[str, Any], *, source_artifact: str,
+    quadrature: Mapping[str, Any], project_id: str,
+    model_ref: Mapping[str, Any], model_tag: str, revision: int,
+    request_id: str, idempotency_key: str,
+) -> dict[str, Any]:
+    """Dispatch one paired field sample for exactly one validated BMA basis row."""
+    if (not isinstance(contract, Mapping)
+            or contract.get("role") != "bma_basis_mapping_pair"
+            or contract.get("provenance_schema") != "w23.full3d.numeric_port_bma_basis_pair.v1"
+            or contract.get("field_names") != list(_VECTOR_FIELDS["bma_basis_mapping_pair"] + _NORMAL_FIELDS)
+            or contract.get("field_groups") != {
+                "generic_bma_eigensolution": list(_VECTOR_FIELDS["signal"]),
+                "configured_numeric_port_mode_field": list(_VECTOR_FIELDS["reference_mode"]),
+                "shared_surface_normal": list(_NORMAL_FIELDS)}
+            or contract.get("unit_groups") != _BMA_PAIR_UNIT_GROUPS
+            or not isinstance(contract.get("unit_readback_policy"), Mapping)
+            or contract["unit_readback_policy"].get("source") != COMSOL_INTERP_UNIT_KB_EVIDENCE
+            or contract.get("mapping_policy") != BMA_FIELD_MAPPING_POLICY
+            or contract.get("basis_ordinal_mapping") != "UNVERIFIED_NATIVE_FIELD_MAPPING_REQUIRED"
+            or contract.get("numeric_port_mode_field_mapping") != "UNVERIFIED"):
+        _fail("paired BMA field dispatch requires the exact versioned, still-unverified contract")
+    identity = {key: value for key, value in contract.items()
+                if key not in {"contract_id", "native_result", "study_or_solver_invoked"}}
+    if contract.get("contract_id") != _sha256(identity):
+        _fail("paired BMA field contract identity/hash is inconsistent")
+    basis_axis = contract.get("basis_axis")
+    port_axis = contract.get("port_mode_axis")
+    source = contract.get("source")
+    if (not isinstance(basis_axis, Mapping) or basis_axis.get("ordinal") not in {1, 2}
+            or not isinstance(port_axis, Mapping) or port_axis.get("port_name") != "2"
+            or port_axis.get("port_mode_number_readback") != "1"
+            or not isinstance(source, Mapping)
+            or basis_axis.get("inner_index") != source.get("inner_index")
+            or basis_axis.get("solnum") != source.get("solnum")
+            or basis_axis.get("outer_index") != source.get("outer_index")):
+        _fail("paired BMA field contract mixes the Numeric Port mode axis and basis solution axis")
+    request = build_raw_field_dispatch(
+        contract, source_artifact=source_artifact, quadrature=quadrature,
+        project_id=project_id, model_ref=model_ref, model_tag=model_tag,
+        revision=revision, request_id=request_id, idempotency_key=idempotency_key)
+    return request
+
+
+def resolve_full3d_bma_receiver_plane(
+    apply_readback: Mapping[str, Any], *, preparation: Mapping[str, Any],
+    baseline_case: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Derive the field-sampling plane only from matching live fixture readbacks."""
+    port = preparation.get("receiver_port") if isinstance(preparation, Mapping) else None
+    section = apply_readback.get("receiver_port_section") if isinstance(apply_readback, Mapping) else None
+    transform = apply_readback.get("receiver_transform") if isinstance(apply_readback, Mapping) else None
+    if (not isinstance(port, Mapping) or port.get("feature_tag") != "portOut3d"
+            or port.get("feature_type") != "Port" or port.get("port_type") != "Numeric"
+            or port.get("port_name") != "2" or port.get("port_mode_number_readback") != "1"
+            or port.get("selection_tag") != "sel3dOutputPort"
+            or port.get("entity_dimension") != 2
+            or not isinstance(section, Mapping)
+            or section.get("evidence_scope") != "COMSOL_NATIVE_GEOMETRY_READBACK"
+            or section.get("tag") != port.get("selection_tag")
+            or section.get("selection_type") != "Cylinder"
+            or section.get("entity_dimension") != 2
+            or section.get("coordinate_unit") != "um"
+            or section.get("normal_basis") != "global_xyz"
+            or not isinstance(transform, Mapping)
+            or not isinstance(baseline_case, Mapping)
+            or baseline_case.get("factor") != "baseline"):
+        _fail("baseline receiver plane must come from the actual Port-2 preparation and geometry readbacks")
+    boundary_ids = port.get("boundary_ids")
+    entity_ids = section.get("entity_ids")
+    if (not isinstance(boundary_ids, list) or not boundary_ids
+            or any(type(item) is not int or item < 1 for item in boundary_ids)
+            or len(set(boundary_ids)) != len(boundary_ids)
+            or not isinstance(entity_ids, list) or not entity_ids
+            or any(type(item) is not int or item < 1 for item in entity_ids)
+            or len(set(entity_ids)) != len(entity_ids)
+            or set(boundary_ids) != set(entity_ids)):
+        _fail("sampled plane boundary IDs must exactly equal the prepared Numeric Port selection")
+    axis = _normalize(_vector3(section.get("selection_axis_xyz"), "native receiver selection axis"),
+                      "native receiver selection axis")
+    center = _vector3(section.get("selection_center_um"), "native receiver selection center")
+    expected_axis = _normalize(_vector3(transform.get("axis_xyz"), "receiver transform axis"),
+                                "receiver transform axis")
+    expected_center = _vector3(transform.get("center_xyz_um"), "receiver transform center")
+    case_transform = baseline_case.get("receiver_transform")
+    if not isinstance(case_transform, Mapping):
+        _fail("baseline registered case lacks its expected receiver transform")
+    case_axis = _normalize(_vector3(case_transform.get("axis_xyz"), "baseline receiver axis"),
+                           "baseline receiver axis")
+    case_center = _vector3(case_transform.get("center_xyz_um"), "baseline receiver center")
+    if any(abs(axis[index] - value) > 1e-10 for index, value in enumerate(expected_axis)) \
+            or any(abs(center[index] - value) > 1e-8 for index, value in enumerate(expected_center)) \
+            or any(abs(axis[index] - value) > 1e-10 for index, value in enumerate(case_axis)) \
+            or any(abs(center[index] - value) > 1e-8 for index, value in enumerate(case_center)):
+        _fail("native receiver selection frame differs from both managed transform and registered baseline")
+    radius = _finite_number(section.get("nominal_aperture_radius_um"), "native port aperture radius")
+    selection_radius = _finite_number(section.get("selection_radius_um"), "native selection radius")
+    margin = _finite_number(section.get("selection_margin_um"), "native selection margin")
+    area = _finite_number(section.get("area_um2"), "native port area")
+    expected_area = _finite_number(section.get("expected_circle_area_um2"), "native expected port area")
+    area_error = _finite_number(section.get("area_relative_error"), "native port area error")
+    if (radius <= 0.0 or margin < 0.0 or area <= 0.0 or expected_area <= 0.0
+            or abs(selection_radius - (radius + margin)) > 1e-10
+            or not math.isclose(expected_area, math.pi * radius * radius, rel_tol=1e-12, abs_tol=1e-12)
+            or area_error < 0.0 or area_error > 0.03):
+        _fail("native circular port measure/radius readback is inconsistent with the registered aperture gate")
+    faces = section.get("faces")
+    if (not isinstance(faces, list) or len(faces) != len(entity_ids)
+            or any(not isinstance(face, Mapping) for face in faces)):
+        _fail("native selected-face outward-normal readback is incomplete")
+    face_by_id: dict[int, Mapping[str, Any]] = {}
+    for face in faces:
+        boundary_id = face.get("boundary_id")
+        if type(boundary_id) is not int or boundary_id not in entity_ids or boundary_id in face_by_id:
+            _fail("native outward-normal readback has foreign or duplicate boundary IDs")
+        normal = _normalize(_vector3(face.get("unit_normal_xyz"), "native face outward normal"),
+                            "native face outward normal")
+        observed_dot = _finite_number(face.get("axis_dot"), "native face/axis dot product")
+        expected_dot = sum(normal[index] * axis[index] for index in range(3))
+        if (not math.isclose(observed_dot, expected_dot, rel_tol=0.0, abs_tol=1e-10)
+                or abs(abs(observed_dot) - 1.0) > 1e-5):
+            _fail("native face normal does not prove a consistent actual orientation relative to the receiver frame")
+        face_by_id[boundary_id] = face
+    if set(face_by_id) != set(entity_ids):
+        _fail("native outward-normal readback does not cover every selected Port face")
+    signs = {1 if float(face["axis_dot"]) > 0.0 else -1 for face in face_by_id.values()}
+    native_sign = section.get("native_face_oriented_axis_sign")
+    if len(signs) != 1 or type(native_sign) is not int or signs != {native_sign}:
+        _fail("reported native face orientation sign disagrees with per-face direction readback")
+    return {"plane_id": "receiver_port", "component": _COMPONENT, "geometry": _GEOMETRY,
+            "selection_tag": port["selection_tag"], "entity_dimension": 2,
+            "boundary_ids": list(entity_ids), "center_xyz_um": list(center),
+            "axis_xyz": list(axis), "native_normal_sign": native_sign,
+            "aperture_shape": "circular", "sample_radius_um": radius,
+            "coordinate_unit": "um", "normal_basis": "global_xyz",
+            "area_um2": area, "area_relative_error": area_error,
+            "native_outward_normal_evidence": {
+                "source": "same-selection COMSOL GeomSequence.faceNormal readback",
+                "observed_axis_dot_by_boundary": {
+                    str(boundary_id): face_by_id[boundary_id]["axis_dot"]
+                    for boundary_id in sorted(face_by_id)},
+                "native_face_oriented_axis_sign": native_sign,
+                "requested_propagation_axis_preserved": True,
+            }}
+
+
+def validate_full3d_bma_mapping_route_result(
+    request: Mapping[str, Any], route_result: Mapping[str, Any], *,
+    expected_revision_delta: int, max_execution_timeout_s: float,
+) -> dict[str, Any]:
+    """Authenticate one exact public request/operation/job/revision chain."""
+    if (not isinstance(request, Mapping) or request.get("operation") != "operation_call"
+            or not isinstance(route_result, Mapping) or route_result.get("outcome") != "SUCCEEDED"
+            or route_result.get("retry_forbidden") is not True
+            or not isinstance(route_result.get("job_id"), str) or not route_result.get("job_id")
+            or type(expected_revision_delta) is not int or expected_revision_delta not in {0, 1}
+            or isinstance(max_execution_timeout_s, bool)
+            or not isinstance(max_execution_timeout_s, (int, float))
+            or not math.isfinite(float(max_execution_timeout_s)) or max_execution_timeout_s <= 0):
+        _fail("managed paired-field route lacks one successful, non-replayed public job")
+    logical_execution = request.get("execution")
+    nested = request.get("arguments")
+    operation_id = nested.get("operation_id") if isinstance(nested, Mapping) else None
+    operation_args = nested.get("arguments") if isinstance(nested, Mapping) else None
+    if (not isinstance(logical_execution, Mapping)
+            or not isinstance(operation_id, str) or not operation_id
+            or not isinstance(operation_args, Mapping)
+            or not isinstance(logical_execution.get("request_id"), str)
+            or not logical_execution.get("request_id")
+            or not isinstance(logical_execution.get("idempotency_key"), str)
+            or not logical_execution.get("idempotency_key")
+            or type(logical_execution.get("expected_revision")) is not int
+            or logical_execution.get("expected_revision") < 0):
+        _fail("managed paired-field logical request identity is incomplete")
+    submitted = route_result.get("submitted_request")
+    submitted_execution = submitted.get("execution") if isinstance(submitted, Mapping) else None
+    if not isinstance(submitted, Mapping) or not isinstance(submitted_execution, Mapping):
+        _fail("public route omitted its exact bounded request")
+    timeout_names = ("execution_timeout_s", "queue_timeout_s", "rpc_timeout_s")
+    timeouts = {name: submitted_execution.get(name) for name in timeout_names}
+    if (submitted.get("operation") != "operation_call"
+            or submitted.get("arguments") != nested
+            or any(submitted_execution.get(name) != logical_execution.get(name)
+                   for name in ("project_id", "session_id", "model_ref", "expected_revision",
+                                "request_id", "idempotency_key"))
+            or set(submitted_execution) != set(logical_execution) | set(timeout_names)
+            or any(isinstance(value, bool) or not isinstance(value, (int, float))
+                   or not math.isfinite(float(value)) or value <= 0.0
+                   for value in timeouts.values())
+            or timeouts["execution_timeout_s"] > max_execution_timeout_s
+            or timeouts["queue_timeout_s"] != min(60.0, timeouts["execution_timeout_s"])
+            or timeouts["rpc_timeout_s"] != min(30.0, timeouts["execution_timeout_s"])):
+        _fail("bounded public route changed the frozen managed request or exceeded its time cap")
+    if dict(submitted) != {**dict(request),
+            "execution": {**dict(logical_execution), **timeouts}}:
+        _fail("submitted managed request does not exactly equal its bounded logical request")
+    try:
+        from comsol_mcp._execution_contract import canonical_request_hash
+
+        expected_request_hash = canonical_request_hash(
+            operation_id, operation_args, logical_execution["model_ref"],
+            logical_execution["expected_revision"],
+            project_id=logical_execution["project_id"],
+            session_id=logical_execution["session_id"],
+            queue_timeout_s=timeouts["queue_timeout_s"],
+            execution_timeout_s=timeouts["execution_timeout_s"],
+            no_progress_warning_s=submitted_execution.get("no_progress_warning_s"))
+    except (KeyError, TypeError, ValueError, RuntimeError) as exc:
+        raise Full3DScienceError("canonical public mapping request hash could not be recomputed") from exc
+    if not isinstance(expected_request_hash, str) or re.fullmatch(r"[0-9a-f]{64}", expected_request_hash) is None:
+        _fail("canonical public mapping request hash is malformed")
+    job_id = route_result["job_id"]
+    initial = route_result.get("dispatch_response")
+    initial_execution = initial.get("execution") if isinstance(initial, Mapping) else None
+    waits = route_result.get("job_wait_responses")
+    operation_response = route_result.get("response")
+    response_execution = operation_response.get("execution") if isinstance(operation_response, Mapping) else None
+    if (not isinstance(initial, Mapping) or initial.get("success") is not True
+            or not isinstance(initial_execution, Mapping)
+            or _managed_job_id(initial) != job_id
+            or initial_execution.get("request_id") != logical_execution["request_id"]
+            or initial_execution.get("idempotency_key") != logical_execution["idempotency_key"]
+            or not isinstance(initial_execution.get("operation_id"), str)
+            or not initial_execution.get("operation_id")
+            or initial_execution.get("job_id") != job_id
+            or initial_execution.get("request_hash") != expected_request_hash
+            or not isinstance(waits, list) or not waits
+            or not isinstance(operation_response, Mapping)
+            or operation_response.get("success") is not True
+            or not isinstance(response_execution, Mapping)):
+        _fail("initial managed dispatch does not bind the exact request, operation and job")
+    terminal_wait = waits[-1]
+    terminal_job = terminal_wait.get("data") if isinstance(terminal_wait, Mapping) else None
+    stored_operation = terminal_job.get("operation") if isinstance(terminal_job, Mapping) else None
+    operation_instance_id = initial_execution["operation_id"]
+    identities = {"request_id": logical_execution["request_id"],
+                  "idempotency_key": logical_execution["idempotency_key"],
+                  "operation_id": operation_instance_id, "job_id": job_id,
+                  "request_hash": expected_request_hash}
+    stored_metadata = stored_operation.get("metadata") if isinstance(stored_operation, Mapping) else None
+    stored_execution = stored_metadata.get("execution") if isinstance(stored_metadata, Mapping) else None
+    stored_arguments = stored_metadata.get("arguments") if isinstance(stored_metadata, Mapping) else None
+    terminal_job_metadata = terminal_job.get("metadata") if isinstance(terminal_job, Mapping) else None
+    if (not isinstance(terminal_wait, Mapping) or terminal_wait.get("success") is not True
+            or not isinstance(terminal_job, Mapping) or terminal_job.get("job_id") != job_id
+            or terminal_job.get("status") != "SUCCEEDED"
+            or terminal_job.get("operation_id") != operation_instance_id
+            or terminal_job.get("result") != dict(operation_response)
+            or not isinstance(stored_operation, Mapping)
+            or stored_operation.get("operation") != "operation_call"
+            or any(stored_operation.get(name) != value for name, value in identities.items()
+                   if name != "job_id")
+            or not isinstance(stored_metadata, Mapping)
+            or stored_metadata.get("operation") != "operation_call"
+            or stored_arguments != dict(nested)
+            or not isinstance(stored_execution, Mapping)
+            or any(stored_execution.get(name) != logical_execution.get(name)
+                   for name in ("project_id", "session_id", "model_ref", "expected_revision",
+                                "request_id", "idempotency_key"))
+            or any(stored_execution.get(name) != timeouts[name] for name in timeout_names)
+            or not isinstance(terminal_job_metadata, Mapping)
+            or terminal_job_metadata.get("operation") != "operation_call"
+            or terminal_job_metadata.get("arguments") != dict(nested)
+            or terminal_job_metadata.get("execution") != dict(stored_execution)
+            or any(response_execution.get(name) != value for name, value in identities.items())
+            or response_execution.get("session_id") != logical_execution.get("session_id")
+            or response_execution.get("model_ref") != logical_execution.get("model_ref")
+            or response_execution.get("revision") != logical_execution["expected_revision"] + expected_revision_delta):
+        _fail("terminal managed result/job is not bound to the original request and legal revision transition")
+    return {"status": "VERIFIED_PUBLIC_MAPPING_ROUTE_BINDING",
+            "operation_type": operation_id, "request_id": logical_execution["request_id"],
+            "idempotency_key": logical_execution["idempotency_key"],
+            "request_hash": expected_request_hash, "operation_instance_id": identities["operation_id"],
+            "job_id": job_id, "revision_before": logical_execution["expected_revision"],
+            "revision_after": response_execution["revision"],
+            "revision_delta": expected_revision_delta, "retry_forbidden": True}
 
 
 def _managed_route_binding(*, project_id: str, model_ref: Mapping[str, Any], model_tag: str,
@@ -1503,6 +2040,328 @@ def validate_native_field_readback(
             "normal_orientation": "native normals match the measured outward sign; declared sign maps to physical propagation direction"}
 
 
+def _weighted_vector_inner(
+    left: Sequence[Sequence[complex]], right: Sequence[Sequence[complex]],
+    weights: Sequence[float],
+) -> complex:
+    if len(left) != 3 or len(right) != 3 or any(
+            len(left[axis]) != len(weights) or len(right[axis]) != len(weights)
+            for axis in range(3)):
+        _fail("paired vector samples and quadrature weights have inconsistent axes")
+    return sum((weights[index] * sum(
+        left[axis][index].conjugate() * right[axis][index] for axis in range(3))
+        for index in range(len(weights))), 0j)
+
+
+def _weighted_vector_rms(values: Sequence[Sequence[complex]], weights: Sequence[float]) -> float:
+    total_weight = math.fsum(weights)
+    if not math.isfinite(total_weight) or total_weight <= 0.0:
+        _fail("paired field quadrature must have positive finite total area")
+    norm2 = _weighted_vector_inner(values, values, weights).real
+    if not math.isfinite(norm2) or norm2 < 0.0:
+        _fail("paired vector field has an invalid Hermitian norm")
+    result = math.sqrt(norm2 / total_weight)
+    if not math.isfinite(result):
+        _fail("paired vector RMS norm is nonfinite")
+    return result
+
+
+def _basis_mapping_group_diagnostic(
+    bma: Sequence[Sequence[complex]], port: Sequence[Sequence[complex]],
+    weights: Sequence[float], *, group: str,
+) -> dict[str, Any]:
+    bma_rms = _weighted_vector_rms(bma, weights)
+    port_rms = _weighted_vector_rms(port, weights)
+    if bma_rms <= 0.0 or port_rms <= 0.0:
+        _fail(f"complete {group} vector field must have a positive finite RMS norm")
+    scale = max(bma_rms, port_rms)
+    difference = [[bma[axis][index] - port[axis][index]
+                   for index in range(len(weights))] for axis in range(3)]
+    residual = _weighted_vector_rms(difference, weights) / scale
+    if not math.isfinite(residual):
+        _fail(f"normalized {group} vector residual is nonfinite")
+    numerator = _weighted_vector_inner(port, bma, weights)
+    overlap = numerator / (bma_rms * port_rms * math.fsum(weights))
+    if not math.isfinite(overlap.real) or not math.isfinite(overlap.imag):
+        _fail(f"normalized {group} Hermitian overlap is nonfinite")
+    return {"group": group, "bma_vector_rms": bma_rms, "port_mode_vector_rms": port_rms,
+            "scale": scale, "unadjusted_normalized_residual": residual,
+            "normalized_hermitian_overlap": {"real": overlap.real, "imag": overlap.imag,
+                                              "magnitude": abs(overlap)},
+            "phase_corrected_or_component_permuted": False}
+
+
+def _subspace_projection_diagnostic(
+    basis: Sequence[Sequence[Sequence[complex]]], target: Sequence[Sequence[complex]],
+    weights: Sequence[float], *, group: str,
+) -> dict[str, Any]:
+    """Report a two-vector Hermitian projection without using it as a pass gate."""
+    if len(basis) != 2:
+        _fail("subspace diagnostic requires exactly two SolutionInfo basis vectors")
+    g00 = _weighted_vector_inner(basis[0], basis[0], weights).real
+    g11 = _weighted_vector_inner(basis[1], basis[1], weights).real
+    g01 = _weighted_vector_inner(basis[0], basis[1], weights)
+    b0 = _weighted_vector_inner(basis[0], target, weights)
+    b1 = _weighted_vector_inner(basis[1], target, weights)
+    target_norm2 = _weighted_vector_inner(target, target, weights).real
+    determinant = g00 * g11 - abs(g01) ** 2
+    scale = max(g00 * g11, 1e-300)
+    if (not all(math.isfinite(item) for item in
+                (g00, g11, g01.real, g01.imag, b0.real, b0.imag,
+                 b1.real, b1.imag, target_norm2, determinant))
+            or g00 <= 0.0 or g11 <= 0.0 or target_norm2 <= 0.0):
+        _fail(f"{group} subspace Gram data are nonfinite or zero")
+    if determinant <= 1e-12 * scale:
+        return {"group": group, "status": "RANK_DEFICIENT_GRAM_DIAGNOSTIC",
+                "projection_fraction": None, "gram_determinant": determinant,
+                "decision_use": "DIAGNOSTIC_ONLY_NOT_A_ONE_TO_ONE_MAPPING_GATE"}
+    x0 = (g11 * b0 - g01 * b1) / determinant
+    x1 = (-g01.conjugate() * b0 + g00 * b1) / determinant
+    projected_norm2 = (b0.conjugate() * x0 + b1.conjugate() * x1).real
+    fraction = projected_norm2 / target_norm2
+    if not math.isfinite(fraction):
+        _fail(f"{group} subspace projection diagnostic is nonfinite")
+    return {"group": group, "status": "COMPUTED_HERMITIAN_TWO_BASIS_PROJECTION",
+            "projection_fraction": fraction, "gram_determinant": determinant,
+            "decision_use": "DIAGNOSTIC_ONLY_NOT_A_ONE_TO_ONE_MAPPING_GATE"}
+
+
+def _reconstruct_contract_quadrature(
+    contract: Mapping[str, Any], observed: Mapping[str, Any],
+) -> None:
+    plane = contract.get("plane")
+    shape = plane.get("aperture_shape") if isinstance(plane, Mapping) else None
+    quadrature_metadata = contract.get("quadrature")
+    if not isinstance(plane, Mapping) or not isinstance(quadrature_metadata, Mapping):
+        _fail("paired field contract omitted its immutable local plane/quadrature definition")
+    if shape == "circular":
+        reconstructed = circular_port_quadrature(
+            plane.get("center_xyz_m"), plane.get("axis_xyz"), plane.get("sample_radius_m"),
+            radial_intervals=quadrature_metadata.get("radial_intervals"),
+            angular_points=quadrature_metadata.get("angular_points"))
+    elif shape == "rectangle":
+        reconstructed = rectangular_port_quadrature(
+            plane.get("center_xyz_m"), plane.get("axis_xyz"), plane.get("half_widths_uv_m"),
+            u_intervals=quadrature_metadata.get("u_intervals"),
+            v_intervals=quadrature_metadata.get("v_intervals"))
+    else:
+        _fail("paired field contract does not identify a supported aperture quadrature")
+    if (reconstructed.get("quadrature_sha256") != contract.get("quadrature_sha256")
+            or observed.get("quadrature_sha256") != reconstructed.get("quadrature_sha256")
+            or observed.get("coordinates_m") != reconstructed.get("coordinates_m")
+            or observed.get("weights_m2") != reconstructed.get("weights_m2")
+            or observed.get("weight_sum_m2") != reconstructed.get("weight_sum_m2")):
+        _fail("paired coordinates/weights do not exactly reconstruct from the frozen quadrature contract")
+
+
+def validate_full3d_bma_basis_mapping_samples(
+    contracts: Sequence[Mapping[str, Any]], raw_readbacks: Sequence[Mapping[str, Any]],
+    quadratures: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Validate paired native sample schemas and calculate fixed-axis diagnostics.
+
+    This software validator never authenticates the public operation envelope
+    and never promotes a mapping to VERIFIED. The caller must independently
+    retain the managed dispatch/job receipt for each raw Interp operation.
+    """
+    if (not isinstance(contracts, Sequence) or isinstance(contracts, (str, bytes))
+            or not isinstance(raw_readbacks, Sequence) or isinstance(raw_readbacks, (str, bytes))
+            or not isinstance(quadratures, Sequence) or isinstance(quadratures, (str, bytes))
+            or len(contracts) != 2 or len(raw_readbacks) != 2 or len(quadratures) != 2):
+        _fail("paired field validation requires exactly two contracts, raw readbacks, and quadratures")
+    checked: list[dict[str, Any]] = []
+    field_maps: list[dict[str, list[complex]]] = []
+    weights_by_row: list[list[float]] = []
+    basis_source_rows: list[Mapping[str, Any]] = []
+    for expected_ordinal, (contract, raw, quadrature) in enumerate(
+            zip(contracts, raw_readbacks, quadratures), start=1):
+        if (not isinstance(contract, Mapping) or not isinstance(raw, Mapping)
+                or not isinstance(quadrature, Mapping)
+                or contract.get("role") != "bma_basis_mapping_pair"
+                or contract.get("provenance_schema") != "w23.full3d.numeric_port_bma_basis_pair.v1"
+                or contract.get("field_names") != list(_VECTOR_FIELDS["bma_basis_mapping_pair"] + _NORMAL_FIELDS)
+                or contract.get("field_groups") != {
+                    "generic_bma_eigensolution": list(_VECTOR_FIELDS["signal"]),
+                    "configured_numeric_port_mode_field": list(_VECTOR_FIELDS["reference_mode"]),
+                    "shared_surface_normal": list(_NORMAL_FIELDS)}
+                or contract.get("mapping_policy") != BMA_FIELD_MAPPING_POLICY
+                or contract.get("unit_groups") != _BMA_PAIR_UNIT_GROUPS
+                or not isinstance(contract.get("unit_readback_policy"), Mapping)
+                or contract["unit_readback_policy"].get("source") != COMSOL_INTERP_UNIT_KB_EVIDENCE
+                or contract.get("basis_ordinal_mapping") != "UNVERIFIED_NATIVE_FIELD_MAPPING_REQUIRED"
+                or contract.get("numeric_port_mode_field_mapping") != "UNVERIFIED"):
+            _fail("paired BMA contract is not the exact versioned, unverified field identity probe")
+        identity = {key: value for key, value in contract.items()
+                    if key not in {"contract_id", "native_result", "study_or_solver_invoked"}}
+        if contract.get("contract_id") != _sha256(identity):
+            _fail("paired BMA contract identity/hash is inconsistent")
+        basis_axis = contract.get("basis_axis")
+        port_axis = contract.get("port_mode_axis")
+        source = contract.get("source")
+        contract_plane = contract.get("plane")
+        if (not isinstance(basis_axis, Mapping) or basis_axis.get("ordinal") != expected_ordinal
+                or basis_axis.get("axis") != "ordered SolutionInfo.getSolnum(outer,true) row ordinal"
+                or not isinstance(port_axis, Mapping)
+                or port_axis.get("feature_tag") != "portOut3d"
+                or port_axis.get("feature_type") != "Port"
+                or port_axis.get("port_type") != "Numeric"
+                or port_axis.get("port_name") != "2"
+                or port_axis.get("port_mode_number_readback") != "1"
+                or port_axis.get("selection_tag") != "sel3dOutputPort"
+                or not isinstance(contract_plane, Mapping)
+                or port_axis.get("selection_tag") != contract_plane.get("selection_tag")
+                or not isinstance(port_axis.get("boundary_ids"), list)
+                or not port_axis.get("boundary_ids")
+                or any(type(item) is not int or item < 1 for item in port_axis["boundary_ids"])
+                or len(set(port_axis["boundary_ids"])) != len(port_axis["boundary_ids"])
+                or port_axis.get("field_suffix_semantics") != COMSOL_PORT_MODE_FIELD_KB_EVIDENCE
+                or not isinstance(source, Mapping)
+                or basis_axis.get("outer_index") != source.get("outer_index")
+                or basis_axis.get("inner_index") != source.get("inner_index")
+                or basis_axis.get("solnum") != source.get("solnum")
+                or basis_axis.get("solution_id") != source.get("solution_id")
+                or basis_axis.get("solver_sequence_tag") != source.get("solution_id")):
+            _fail("basis ordinal and Numeric Port mode number axes are mixed or incomplete")
+        basis_source_rows.append(source)
+        if (contract.get("quadrature_sha256") != quadrature.get("quadrature_sha256")
+                or not isinstance(quadrature.get("coordinates_m"), list)
+                or not isinstance(quadrature.get("weights_m2"), list)
+                or len(quadrature["coordinates_m"]) != len(quadrature["weights_m2"])
+                or contract.get("plane") != contracts[0].get("plane")):
+            _fail("paired BMA field contracts do not use one exact plane/coordinate/weight grid")
+        _reconstruct_contract_quadrature(contract, quadrature)
+        weights = [_finite_number(value, "BMA mapping quadrature weight")
+                   for value in quadrature["weights_m2"]]
+        if any(value < 0.0 for value in weights) or math.fsum(weights) <= 0.0:
+            _fail("BMA mapping quadrature weights must be nonnegative with positive total area")
+        if raw.get("units_preserved") is not True:
+            _fail("paired BMA raw sample omitted explicit native unit readback")
+        if raw.get("unit_readback") != {key: value["unit"] for key, value in _BMA_PAIR_UNIT_GROUPS.items()}:
+            _fail("paired BMA unit-property readback differs from the frozen V/m, A/m, and dimensionless groups")
+        if (raw.get("basis_axis") != basis_axis or raw.get("port_mode_axis") != port_axis
+                or raw.get("basis_ordinal_mapping") != "UNVERIFIED_NATIVE_FIELD_MAPPING_REQUIRED"
+                or raw.get("numeric_port_mode_field_mapping") != "UNVERIFIED"
+                or raw.get("field_mapping_status") != "UNVERIFIED"):
+            _fail("native paired raw readback changed or omitted the separate mode/basis axis evidence")
+        rows = raw.get("expressions")
+        if not isinstance(rows, list):
+            _fail("paired BMA Interp response omitted raw expression rows")
+        expected_group = {name: ("electric", "V/m") for name in _BMA_PAIR_E_FIELDS}
+        expected_group.update({name: ("magnetic", "A/m") for name in _BMA_PAIR_H_FIELDS})
+        expected_group.update({name: ("normal", "1") for name in _BMA_PAIR_NORMAL_FIELDS})
+        for row in rows:
+            if (not isinstance(row, Mapping) or row.get("expression") not in expected_group
+                    or row.get("unit_group") != expected_group[row["expression"]][0]
+                    or row.get("unit") != expected_group[row["expression"]][1]):
+                _fail("paired BMA sample row has a missing/foreign expression or unit")
+        validation = validate_native_field_readback(
+            contract, raw, expected_quadrature=quadrature)
+        fields = _expression_map(raw, contract)
+        # Require the paired field extraction to preserve both real/imag arrays
+        # and their explicitly read-back unit group for every requested field.
+        if set(row["expression"] for row in rows) != set(expected_group) or len(rows) != len(expected_group):
+            _fail("paired BMA expression inventory is incomplete or duplicated")
+        checked.append({"basis_ordinal": expected_ordinal,
+                        "contract_id": contract["contract_id"],
+                        "source": dict(source), "readback_validation": validation,
+                        "raw_readback_sha256": _sha256(raw)})
+        field_maps.append(fields)
+        weights_by_row.append(weights)
+
+    first_source, second_source = basis_source_rows
+    if (first_source.get("dataset_id") != second_source.get("dataset_id")
+            or first_source.get("solution_id") != second_source.get("solution_id")
+            or first_source.get("outer_index") != second_source.get("outer_index")
+            or first_source.get("inner_index") == second_source.get("inner_index")
+            or first_source.get("solnum") == second_source.get("solnum")
+            or contracts[0].get("quadrature_sha256") != contracts[1].get("quadrature_sha256")
+            or weights_by_row[0] != weights_by_row[1]):
+        _fail("paired basis rows must share dataset/solution/outer/grid and use distinct inner/solnum indices")
+
+    weights = weights_by_row[0]
+    if not math.isclose(math.fsum(weights), quadratures[0].get("weight_sum_m2"),
+                        rel_tol=1e-12, abs_tol=1e-30):
+        _fail("paired field quadrature area weights differ from their frozen sum")
+    e_names_bma = tuple(f"ewfd.E{axis}" for axis in _AXES)
+    e_names_port = tuple(f"ewfd.Emode{axis}_2" for axis in _AXES)
+    h_names_bma = tuple(f"ewfd.H{axis}" for axis in _AXES)
+    h_names_port = tuple(f"ewfd.Hmode{axis}_2" for axis in _AXES)
+
+    def group(fields: Mapping[str, list[complex]], names: Sequence[str]) -> tuple[list[complex], ...]:
+        return tuple(fields[name] for name in names)
+
+    per_basis: list[dict[str, Any]] = []
+    candidate_matches: list[int] = []
+    for ordinal, fields in enumerate(field_maps, start=1):
+        electric = _basis_mapping_group_diagnostic(
+            group(fields, e_names_bma), group(fields, e_names_port), weights, group="E")
+        magnetic = _basis_mapping_group_diagnostic(
+            group(fields, h_names_bma), group(fields, h_names_port), weights, group="H")
+        electric["fixed_component_candidate_match"] = (
+            electric["unadjusted_normalized_residual"] <= BMA_FIELD_MAPPING_POLICY["normalized_residual_limit"])
+        magnetic["fixed_component_candidate_match"] = (
+            magnetic["unadjusted_normalized_residual"] <= BMA_FIELD_MAPPING_POLICY["normalized_residual_limit"])
+        matches = electric["fixed_component_candidate_match"] and magnetic["fixed_component_candidate_match"]
+        if matches:
+            candidate_matches.append(ordinal)
+        per_basis.append({"basis_ordinal": ordinal, "source": dict(basis_source_rows[ordinal - 1]),
+                          "E": electric, "H": magnetic,
+                          "fixed_component_candidate_match": matches})
+
+    # The normalized E and H correlations contribute one shared diagnostic
+    # phase; this scalar is reported, never applied to either field group.
+    phase_diagnostics = []
+    for ordinal, fields in enumerate(field_maps, start=1):
+        e_bma, e_port = group(fields, e_names_bma), group(fields, e_names_port)
+        h_bma, h_port = group(fields, h_names_bma), group(fields, h_names_port)
+        e_norm = _weighted_vector_rms(e_bma, weights) * _weighted_vector_rms(e_port, weights) * math.fsum(weights)
+        h_norm = _weighted_vector_rms(h_bma, weights) * _weighted_vector_rms(h_port, weights) * math.fsum(weights)
+        corr_e = _weighted_vector_inner(e_port, e_bma, weights) / e_norm
+        corr_h = _weighted_vector_inner(h_port, h_bma, weights) / h_norm
+        shared = corr_e + corr_h
+        shared_norm = abs(shared)
+        phase_diagnostics.append({
+            "basis_ordinal": ordinal,
+            "E_normalized_correlation": {"real": corr_e.real, "imag": corr_e.imag},
+            "H_normalized_correlation": {"real": corr_h.real, "imag": corr_h.imag},
+            "one_shared_phase_diagnostic": ({"real": shared.real / shared_norm,
+                                             "imag": shared.imag / shared_norm}
+                                            if shared_norm > 0.0 else None),
+            "E_H_phase_disagreement_magnitude": abs(corr_e - corr_h),
+            "applied_to_samples": False,
+            "decision_use": "DIAGNOSTIC_ONLY_NOT_A_FIXED_COMPONENT_PASS_GATE",
+        })
+
+    subspace = []
+    basis_e = [group(fields, e_names_bma) for fields in field_maps]
+    basis_h = [group(fields, h_names_bma) for fields in field_maps]
+    for ordinal, fields in enumerate(field_maps, start=1):
+        subspace.append({
+            "port_sample_basis_ordinal": ordinal,
+            "E": _subspace_projection_diagnostic(basis_e, group(fields, e_names_port), weights, group="E"),
+            "H": _subspace_projection_diagnostic(basis_h, group(fields, h_names_port), weights, group="H"),
+            "use": "DIAGNOSTIC_ONLY_NOT_A_ONE_TO_ONE_MAPPING_GATE",
+        })
+    return {
+        "status": "SOFTWARE_PAIRED_BMA_FIELD_SAMPLE_DIAGNOSTICS_VALID",
+        "evidence_scope": "software schema/numerical validation only; managed operation envelope must be retained separately",
+        "native_result": "NOT_RUN",
+        "field_mapping_status": "UNVERIFIED",
+        "numeric_port_mode_field_mapping": "UNVERIFIED",
+        "basis_ordinal_mapping": "UNVERIFIED_NATIVE_FIELD_MAPPING_REQUIRED",
+        "axis_separation": {"basis_axis": "SolutionInfo ordered row ordinal plus inner/solnum",
+                            "numeric_port_axis": {"port_name": "2", "PortModeNumber": 1}},
+        "policy": dict(BMA_FIELD_MAPPING_POLICY),
+        "sample_receipts": checked,
+        "per_basis_fixed_component_diagnostics": per_basis,
+        "candidate_fixed_component_basis_ordinals": candidate_matches,
+        "one_to_one_candidate_basis_ordinal": candidate_matches[0] if len(candidate_matches) == 1 else None,
+        "common_phase_diagnostics": phase_diagnostics,
+        "subspace_projection_diagnostics": subspace,
+        "phase_rotation_or_component_permutation_applied": False,
+    }
+
+
 def _cross_dot(e: Sequence[complex], h: Sequence[complex], normal: Sequence[float], *,
                conjugate_e: bool = False, conjugate_h: bool = False) -> complex:
     values_e = [value.conjugate() if conjugate_e else value for value in e]
@@ -1784,7 +2643,12 @@ def compare_native_mode_overlap(
 
 __all__ = [
     "Full3DScienceError", "ManagedRouteOutcomeError", "FULL3D_COMPARISON_POLICY",
+    "BMA_FIELD_MAPPING_POLICY", "COMSOL_PORT_MODE_FIELD_KB_EVIDENCE",
+    "COMSOL_INTERP_UNIT_KB_EVIDENCE",
     "build_raw_field_contract", "build_raw_field_dispatch",
+    "resolve_full3d_bma_basis_sources", "build_full3d_bma_basis_mapping_contracts",
+    "build_full3d_bma_basis_mapping_dispatch", "validate_full3d_bma_basis_mapping_samples",
+    "resolve_full3d_bma_receiver_plane", "validate_full3d_bma_mapping_route_result",
     "circular_port_quadrature", "rectangular_port_quadrature", "compare_native_mode_overlap",
     "independent_mode_overlap_integrals", "validate_native_field_readback",
     "build_full3d_study_run_dispatch", "build_full3d_solution_inventory_dispatch",

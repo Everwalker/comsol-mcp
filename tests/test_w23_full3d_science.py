@@ -16,6 +16,8 @@ from tools.w23_full3d_science import (
     build_full3d_dataset_list_dispatch,
     build_full3d_bma_probe_prepare_dispatch,
     build_full3d_bma_probe_run_dispatch,
+    build_full3d_bma_basis_mapping_contracts,
+    build_full3d_bma_basis_mapping_dispatch,
     build_full3d_model_create_request,
     build_full3d_model_load_request,
     build_full3d_mode_overlap_definition,
@@ -33,10 +35,12 @@ from tools.w23_full3d_science import (
     execute_full3d_managed_configuration_chain,
     independent_mode_overlap_integrals,
     resolve_full3d_native_sources,
+    resolve_full3d_bma_basis_sources,
     rectangular_port_quadrature,
     validate_native_field_readback,
     validate_full3d_bma_probe_preparation,
     validate_full3d_bma_probe_run_readback,
+    validate_full3d_bma_basis_mapping_samples,
 )
 from tools.w23_full3d import canonical_full3d_recipe
 
@@ -729,6 +733,642 @@ def test_bma_probe_run_never_promotes_configuration_or_incomplete_solution_to_pr
             readback, preparation=preparation,
             project_id="project-1", model_tag="M1", model_ref=MODEL_REF,
             run_request=request, route_result=route_result)
+
+
+def _bma_basis_mapping_bundle():
+    preparation = _validated_bma_probe_preparation()
+    readback = _bma_probe_run_readback(preparation)
+    request = _bma_probe_run_request(preparation)
+    route_result = _bma_probe_public_route_result(readback, request)
+    producer = validate_full3d_bma_probe_run_readback(
+        readback, preparation=preparation, project_id="project-1", model_tag="M1",
+        model_ref=MODEL_REF, run_request=request, route_result=route_result)
+    rows = [{"tag": "dset_bma_probe", "type_id": "Solution",
+             "solution": "sol3dBmaProbe", "component": "comp3d", "geometry": "geom3d"}]
+    index = {"dataset": "dset_bma_probe", "solution": "sol3dBmaProbe",
+        "binding_complete": True, "axis_metadata_complete": True,
+        "pair_mapping_complete": True, "parameters_complete": True,
+        "outer_indices": [1], "inner_indices": [1, 2], "solution_count": 2,
+        "solnum_pairs": [{"outer": 1, "inner": 1, "solnum": 1},
+                         {"outer": 1, "inner": 2, "solnum": 2}],
+        "parameters": {"by_pair": {
+            "1:1": {"solnum": 1, "names": ["freq", "modeIndex"],
+                    "values": [193.414489032258, 1], "units": ["THz", "1"]},
+            "1:2": {"solnum": 2, "names": ["freq", "modeIndex"],
+                    "values": [193.414489032258, 2], "units": ["THz", "1"]},
+        }}}
+    binding = resolve_full3d_bma_basis_sources(
+        rows, {"dset_bma_probe": index}, producer_evidence=producer)
+    contracts = build_full3d_bma_basis_mapping_contracts(
+        case=CASE, preparation=preparation, producer_evidence=producer,
+        basis_binding=binding, plane=OUTPUT_PLANE,
+        radial_intervals=4, angular_points=8)
+    quadratures = [circular_port_quadrature(
+        row["plane"]["center_xyz_m"], row["plane"]["axis_xyz"],
+        row["plane"]["sample_radius_m"], radial_intervals=4, angular_points=8)
+        for row in contracts]
+    return preparation, producer, binding, contracts, quadratures
+
+
+def _bma_basis_raw(contract, quadrature, *, basis_e, basis_h,
+                   port_e=(0j, 1 + 0j, 0j), port_h=(0j, 0j, 1 + 0j)):
+    count = len(quadrature["coordinates_m"])
+    normal = contract["plane"]["native_normal_sign"]
+    values = {
+        "ewfd.Ex": basis_e[0], "ewfd.Ey": basis_e[1], "ewfd.Ez": basis_e[2],
+        "ewfd.Hx": basis_h[0], "ewfd.Hy": basis_h[1], "ewfd.Hz": basis_h[2],
+        "ewfd.Emodex_2": port_e[0], "ewfd.Emodey_2": port_e[1], "ewfd.Emodez_2": port_e[2],
+        "ewfd.Hmodex_2": port_h[0], "ewfd.Hmodey_2": port_h[1], "ewfd.Hmodez_2": port_h[2],
+        "nx": complex(normal, 0), "ny": 0j, "nz": 0j,
+    }
+    unit_by_name = {
+        **{name: ("electric", "V/m") for name in (
+            "ewfd.Ex", "ewfd.Ey", "ewfd.Ez", "ewfd.Emodex_2", "ewfd.Emodey_2", "ewfd.Emodez_2")},
+        **{name: ("magnetic", "A/m") for name in (
+            "ewfd.Hx", "ewfd.Hy", "ewfd.Hz", "ewfd.Hmodex_2", "ewfd.Hmodey_2", "ewfd.Hmodez_2")},
+        **{name: ("normal", "1") for name in ("nx", "ny", "nz")},
+    }
+    rows = []
+    for name in contract["field_names"]:
+        value = values[name]
+        rows.append({"expression": name, "real": [complex(value).real] * count,
+                     "imag": [complex(value).imag] * count,
+                     "unit_group": unit_by_name[name][0], "unit": unit_by_name[name][1]})
+    return {"native_result": "COMSOL_NATIVE_RAW", "study_or_solver_invoked": False,
+        "complex_readback": True, "units_preserved": True,
+        "contract_id": contract["contract_id"],
+        "quadrature_sha256": contract["quadrature_sha256"],
+        "source": contract["source"], "plane": contract["plane"],
+        "basis_axis": contract["basis_axis"], "port_mode_axis": contract["port_mode_axis"],
+        "sample_count": count,
+        "coordinates_m": [[point[axis] for point in quadrature["coordinates_m"]]
+                           for axis in range(3)],
+        "unit_readback": {key: value["unit"] for key, value in contract["unit_groups"].items()},
+        "expressions": rows,
+        "cleanup": {"created": True, "created_count": 3, "expected_count": 3,
+                    "removed": True, "cleanup_failed": False, "tags": ["owned-e", "owned-h", "owned-n"]},
+        "field_mapping_status": "UNVERIFIED",
+        "basis_ordinal_mapping": "UNVERIFIED_NATIVE_FIELD_MAPPING_REQUIRED",
+        "numeric_port_mode_field_mapping": "UNVERIFIED"}
+
+
+def _bma_mapping_route_result(request, *, label, response_data, revision_delta):
+    """Build the durable public ControlDaemon/OperationStore envelope shape."""
+    import uuid
+    from comsol_mcp._execution_contract import canonical_request_hash
+
+    nested = copy.deepcopy(request["arguments"])
+    logical = request["execution"]
+    timeout = 90.0 if "dataset" in label else 180.0
+    bounded_execution = {**logical, "execution_timeout_s": timeout,
+                         "queue_timeout_s": min(60.0, timeout),
+                         "rpc_timeout_s": min(30.0, timeout)}
+    submitted = {**request, "arguments": nested, "execution": bounded_execution}
+    operation_id = nested["operation_id"]
+    operation_args = nested["arguments"]
+    request_hash = canonical_request_hash(
+        operation_id, operation_args, logical["model_ref"], logical["expected_revision"],
+        project_id=logical["project_id"], session_id=logical["session_id"],
+        queue_timeout_s=bounded_execution["queue_timeout_s"],
+        execution_timeout_s=bounded_execution["execution_timeout_s"],
+        no_progress_warning_s=None)
+    operation_instance_id, job_id = str(uuid.uuid4()), str(uuid.uuid4())
+    response_execution = {
+        "session_id": logical["session_id"], "model_ref": copy.deepcopy(logical["model_ref"]),
+        "revision": logical["expected_revision"] + revision_delta,
+        "dirty": False, "server_ownership": "mcp_managed", "model_ownership": "mcp_owned",
+        "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+        "request_id": logical["request_id"], "idempotency_key": logical["idempotency_key"],
+        "operation_id": operation_instance_id, "request_hash": request_hash, "job_id": job_id,
+    }
+    response = {"success": True, "data": copy.deepcopy(response_data),
+                "execution": response_execution, "error": None}
+    operation_metadata = {"operation": "operation_call", "arguments": nested,
+                          "execution": bounded_execution}
+    stored_operation = {
+        "operation_id": operation_instance_id, "request_id": logical["request_id"],
+        "idempotency_key": logical["idempotency_key"], "request_hash": request_hash,
+        "operation": "operation_call", "status": "SUCCEEDED",
+        "metadata": operation_metadata, "effective_timeouts": {
+            "execution_timeout_s": timeout, "queue_timeout_s": min(60.0, timeout),
+            "rpc_timeout_s": min(30.0, timeout), "no_progress_warning_s": None},
+    }
+    job = {"job_id": job_id, "operation_id": operation_instance_id, "status": "SUCCEEDED",
+           "metadata": copy.deepcopy(operation_metadata), "result": response,
+           "operation": stored_operation}
+    initial = {"success": True, "data": {"job_id": job_id, "status": "QUEUED"},
+               "execution": {"request_id": logical["request_id"],
+                             "idempotency_key": logical["idempotency_key"],
+                             "operation_id": operation_instance_id,
+                             "request_hash": request_hash, "job_id": job_id}}
+    return {"outcome": "SUCCEEDED", "retry_forbidden": True, "job_id": job_id,
+            "submitted_request": submitted, "dispatch_response": initial,
+            "job_wait_responses": [{"success": True, "data": job}], "response": response}
+
+
+def _bma_receiver_readback():
+    section = {
+        "evidence_scope": "COMSOL_NATIVE_GEOMETRY_READBACK", "tag": "sel3dOutputPort",
+        "selection_type": "Cylinder", "entity_dimension": 2, "coordinate_unit": "um",
+        "normal_basis": "global_xyz", "entity_ids": [17],
+        "selection_axis_xyz": [1.0, 0.0, 0.0], "selection_center_um": [20.0, 0.0, 0.0],
+        "nominal_aperture_radius_um": 2.52, "selection_radius_um": 2.52,
+        "selection_margin_um": 0.0, "area_um2": math.pi * 2.52**2,
+        "expected_circle_area_um2": math.pi * 2.52**2, "area_relative_error": 0.0,
+        "native_face_oriented_axis_sign": 1,
+        "faces": [{"boundary_id": 17, "unit_normal_xyz": [1.0, 0.0, 0.0], "axis_dot": 1.0}],
+    }
+    return {"receiver_port_section": section,
+            "receiver_transform": {"axis_xyz": [1.0, 0.0, 0.0],
+                                   "center_xyz_um": [20.0, 0.0, 0.0]}}
+
+
+def test_bma_basis_mapping_keeps_numeric_port_and_eigensolution_axes_separate_and_unverified():
+    _, producer, binding, contracts, quadratures = _bma_basis_mapping_bundle()
+    assert binding["basis_sources"][0]["basis_ordinal"] == 1
+    assert binding["basis_sources"][1]["basis_ordinal"] == 2
+    assert binding["basis_sources"][0]["source"]["inner_index"] != binding["basis_sources"][1]["source"]["inner_index"]
+    assert producer["numeric_port_mode_field_mapping"] == "UNVERIFIED"
+    assert contracts[0]["basis_axis"]["ordinal"] == 1
+    assert contracts[1]["basis_axis"]["ordinal"] == 2
+    assert all(row["port_mode_axis"]["port_name"] == "2"
+               and row["port_mode_axis"]["port_mode_number_readback"] == "1"
+               for row in contracts)
+    assert all(row["field_suffix_semantics"]["claim"].endswith("not the BMA eigensolution ordinal.")
+               for row in (contracts[0]["port_mode_axis"],))
+    assert contracts[0]["quadrature_sha256"] == contracts[1]["quadrature_sha256"]
+    assert contracts[0]["field_names"] == [
+        "ewfd.Ex", "ewfd.Ey", "ewfd.Ez", "ewfd.Hx", "ewfd.Hy", "ewfd.Hz",
+        "ewfd.Emodex_2", "ewfd.Emodey_2", "ewfd.Emodez_2",
+        "ewfd.Hmodex_2", "ewfd.Hmodey_2", "ewfd.Hmodez_2", "nx", "ny", "nz"]
+    raw = [
+        _bma_basis_raw(contracts[0], quadratures[0], basis_e=(0j, 1 + 0j, 0j), basis_h=(0j, 0j, 1 + 0j)),
+        _bma_basis_raw(contracts[1], quadratures[1], basis_e=(0j, 0j, 1 + 0j), basis_h=(0j, 1 + 0j, 0j)),
+    ]
+    checked = validate_full3d_bma_basis_mapping_samples(contracts, raw, quadratures)
+    assert checked["status"] == "SOFTWARE_PAIRED_BMA_FIELD_SAMPLE_DIAGNOSTICS_VALID"
+    assert checked["candidate_fixed_component_basis_ordinals"] == [1]
+    assert checked["one_to_one_candidate_basis_ordinal"] == 1
+    assert checked["native_result"] == "NOT_RUN"
+    assert checked["field_mapping_status"] == "UNVERIFIED"
+    assert checked["per_basis_fixed_component_diagnostics"][0]["E"]["unadjusted_normalized_residual"] == 0
+    assert checked["per_basis_fixed_component_diagnostics"][1]["fixed_component_candidate_match"] is False
+    assert checked["phase_rotation_or_component_permutation_applied"] is False
+    assert all(row["applied_to_samples"] is False for row in checked["common_phase_diagnostics"])
+    assert all(row["use"] == "DIAGNOSTIC_ONLY_NOT_A_ONE_TO_ONE_MAPPING_GATE"
+               for row in checked["subspace_projection_diagnostics"])
+
+
+@pytest.mark.parametrize("mutation", [
+    "duplicate_dataset", "wrong_dataset_solution", "incomplete_binding",
+    "foreign_inner_index", "wrong_solnum", "duplicate_solnum_pair",
+    "missing_parameter_row", "port_axis_confusion", "wrong_plane_selection",
+])
+def test_bma_basis_mapping_source_binding_rejects_ambiguous_or_axis_mixed_evidence(mutation):
+    preparation, producer, binding, _, _ = _bma_basis_mapping_bundle()
+    rows = [{"tag": "dset_bma_probe", "type_id": "Solution",
+             "solution": "sol3dBmaProbe", "component": "comp3d", "geometry": "geom3d"}]
+    index = copy.deepcopy({"dset_bma_probe": {
+        "dataset": "dset_bma_probe", "solution": "sol3dBmaProbe",
+        "binding_complete": True, "axis_metadata_complete": True,
+        "pair_mapping_complete": True, "parameters_complete": True,
+        "outer_indices": [1], "inner_indices": [1, 2], "solution_count": 2,
+        "solnum_pairs": [{"outer": 1, "inner": 1, "solnum": 1},
+                         {"outer": 1, "inner": 2, "solnum": 2}],
+        "parameters": {"by_pair": {
+            "1:1": {"solnum": 1, "names": ["freq"], "values": [193.4], "units": ["THz"]},
+            "1:2": {"solnum": 2, "names": ["freq"], "values": [193.4], "units": ["THz"]}}}}})
+    if mutation == "duplicate_dataset":
+        rows.append({**rows[0], "tag": "dset_duplicate"})
+    elif mutation == "wrong_dataset_solution":
+        rows[0]["solution"] = "solForeign"
+    elif mutation == "incomplete_binding":
+        index["dset_bma_probe"]["binding_complete"] = False
+    elif mutation == "foreign_inner_index":
+        index["dset_bma_probe"]["inner_indices"] = [1, 3]
+    elif mutation == "wrong_solnum":
+        index["dset_bma_probe"]["solnum_pairs"][1]["solnum"] = 3
+    elif mutation == "duplicate_solnum_pair":
+        index["dset_bma_probe"]["solnum_pairs"][1]["inner"] = 1
+    elif mutation == "missing_parameter_row":
+        del index["dset_bma_probe"]["parameters"]["by_pair"]["1:2"]
+    elif mutation == "port_axis_confusion":
+        preparation["receiver_port"]["port_mode_number_readback"] = "2"
+        with pytest.raises(Full3DScienceError):
+            build_full3d_bma_basis_mapping_contracts(
+                case=CASE, preparation=preparation, producer_evidence=producer,
+                basis_binding=binding, plane=OUTPUT_PLANE, radial_intervals=4, angular_points=8)
+        return
+    elif mutation == "wrong_plane_selection":
+        plane = dict(OUTPUT_PLANE, selection_tag="sel3dInputPort")
+        with pytest.raises(Full3DScienceError):
+            build_full3d_bma_basis_mapping_contracts(
+                case=CASE, preparation=preparation, producer_evidence=producer,
+                basis_binding=binding, plane=plane, radial_intervals=4, angular_points=8)
+        return
+    with pytest.raises(Full3DScienceError):
+        resolve_full3d_bma_basis_sources(rows, index, producer_evidence=producer)
+
+
+@pytest.mark.parametrize("mutation", [
+    "foreign_port_mode", "contract_hash", "quadrature", "source_tuple",
+    "basis_axis", "port_axis", "missing_expression", "duplicate_expression",
+    "wrong_unit", "missing_unit_readback", "coordinates", "zero_electric_group",
+])
+def test_bma_basis_mapping_sample_validation_fails_closed(mutation):
+    _, _, _, contracts, quadratures = _bma_basis_mapping_bundle()
+    raws = [
+        _bma_basis_raw(contracts[0], quadratures[0], basis_e=(0j, 1 + 0j, 0j), basis_h=(0j, 0j, 1 + 0j)),
+        _bma_basis_raw(contracts[1], quadratures[1], basis_e=(0j, 0j, 1 + 0j), basis_h=(0j, 1 + 0j, 0j)),
+    ]
+    contracts = copy.deepcopy(contracts)
+    raws = copy.deepcopy(raws)
+    quadratures = copy.deepcopy(quadratures)
+    if mutation == "foreign_port_mode":
+        raws[0]["port_mode_axis"]["port_mode_number_readback"] = "2"
+    elif mutation == "contract_hash":
+        contracts[0]["basis_axis"]["ordinal"] = 2
+    elif mutation == "quadrature":
+        quadratures[1]["weights_m2"][1] *= 1.01
+    elif mutation == "source_tuple":
+        raws[1]["source"]["inner_index"] = 1
+    elif mutation == "basis_axis":
+        raws[1]["basis_axis"]["ordinal"] = 1
+    elif mutation == "port_axis":
+        contracts[1]["port_mode_axis"]["port_name"] = "1"
+        identity = {key: value for key, value in contracts[1].items()
+                    if key not in {"contract_id", "native_result", "study_or_solver_invoked"}}
+        contracts[1]["contract_id"] = __import__("hashlib").sha256(
+            __import__("json").dumps(identity, sort_keys=True, separators=(",", ":"),
+                                     ensure_ascii=False, allow_nan=False).encode()).hexdigest()
+        raws[1]["port_mode_axis"] = copy.deepcopy(contracts[1]["port_mode_axis"])
+    elif mutation == "missing_expression":
+        raws[0]["expressions"].pop()
+    elif mutation == "duplicate_expression":
+        raws[0]["expressions"].append(copy.deepcopy(raws[0]["expressions"][0]))
+    elif mutation == "wrong_unit":
+        raws[0]["expressions"][0]["unit"] = "A/m"
+    elif mutation == "missing_unit_readback":
+        raws[0]["units_preserved"] = False
+    elif mutation == "coordinates":
+        raws[1]["coordinates_m"][0][0] += 1e-6
+    elif mutation == "zero_electric_group":
+        raws[0] = _bma_basis_raw(contracts[0], quadratures[0], basis_e=(0j, 0j, 0j), basis_h=(0j, 0j, 1 + 0j))
+    with pytest.raises(Full3DScienceError):
+        validate_full3d_bma_basis_mapping_samples(contracts, raws, quadratures)
+
+
+def test_bma_basis_mapping_requires_both_e_and_h_unadjusted_residuals_to_match():
+    _, _, _, contracts, quadratures = _bma_basis_mapping_bundle()
+    raws = [
+        _bma_basis_raw(contracts[0], quadratures[0], basis_e=(0j, 1 + 0j, 0j), basis_h=(1 + 0j, 0j, 0j)),
+        _bma_basis_raw(contracts[1], quadratures[1], basis_e=(0j, 0j, 1 + 0j), basis_h=(0j, 1 + 0j, 0j)),
+    ]
+    checked = validate_full3d_bma_basis_mapping_samples(contracts, raws, quadratures)
+    row = checked["per_basis_fixed_component_diagnostics"][0]
+    assert row["E"]["fixed_component_candidate_match"] is True
+    assert row["H"]["fixed_component_candidate_match"] is False
+    assert row["fixed_component_candidate_match"] is False
+    assert checked["candidate_fixed_component_basis_ordinals"] == []
+    assert checked["field_mapping_status"] == "UNVERIFIED"
+
+
+def test_bma_basis_mapping_dispatch_is_one_same_grid_paired_read_not_a_solve():
+    _, _, _, contracts, quadratures = _bma_basis_mapping_bundle()
+    route = build_full3d_bma_basis_mapping_dispatch(
+        contracts[0], source_artifact="NativeW23Full3DFixture.java",
+        quadrature=quadratures[0], project_id="project-1", model_ref=MODEL_REF,
+        model_tag="M1", revision=12, request_id="basis-fields-1",
+        idempotency_key="basis-fields-idem-1")
+    arguments = route["arguments"]["arguments"]["arguments"]
+    assert arguments["phase"] == "bma_basis_fields"
+    assert arguments["study_or_solver_invoked"] is False
+    assert arguments["contract"]["unit_groups"]["electric"]["unit"] == "V/m"
+    assert arguments["contract"]["unit_groups"]["magnetic"]["unit"] == "A/m"
+    assert arguments["contract"]["unit_groups"]["normal"]["unit"] == "1"
+    assert route["execution"]["request_id"] == "basis-fields-1"
+    assert "field_arrays" not in route["arguments"]["arguments"]
+    assert "three same-grid unit groups" in route["dispatch_scope"]
+    tampered = copy.deepcopy(contracts[0])
+    tampered["field_names"].pop()
+    with pytest.raises(Full3DScienceError):
+        build_full3d_bma_basis_mapping_dispatch(
+            tampered, source_artifact="NativeW23Full3DFixture.java",
+            quadrature=quadratures[0], project_id="project-1", model_ref=MODEL_REF,
+            model_tag="M1", revision=12, request_id="basis-fields-2",
+            idempotency_key="basis-fields-idem-2")
+
+
+@pytest.mark.parametrize("mutation", [
+    "foreign_request", "foreign_idempotency", "foreign_operation", "foreign_job",
+    "missing_request_metadata", "revision_jump",
+])
+def test_bma_mapping_route_binding_uses_real_durable_request_and_job_identity(mutation):
+    from tools.w23_full3d_science import validate_full3d_bma_mapping_route_result
+
+    _, _, _, contracts, quadratures = _bma_basis_mapping_bundle()
+    request = build_full3d_bma_basis_mapping_dispatch(
+        contracts[0], source_artifact="NativeW23Full3DFixture.java", quadrature=quadratures[0],
+        project_id="project-1", model_ref=MODEL_REF, model_tag="M1", revision=12,
+        request_id="mapping-req-1", idempotency_key="mapping-idem-1")
+    response_data = {"worker": {"ok": True, "status": "SUCCEEDED", "result": {"readback": {}}},
+                     "readback": {"executed": True, "readback": {}}}
+    route = _bma_mapping_route_result(request, label="bma_basis_fields_ordinal1",
+                                      response_data=response_data, revision_delta=1)
+    kwargs = {"expected_revision_delta": 1, "max_execution_timeout_s": 180}
+    if mutation == "foreign_request":
+        route["submitted_request"]["execution"]["request_id"] = "foreign-request"
+    elif mutation == "foreign_idempotency":
+        route["job_wait_responses"][0]["data"]["operation"]["metadata"]["execution"]["idempotency_key"] = "foreign-idem"
+        route["job_wait_responses"][0]["data"]["metadata"]["execution"]["idempotency_key"] = "foreign-idem"
+    elif mutation == "foreign_operation":
+        route["job_wait_responses"][0]["data"]["operation_id"] = "foreign-operation-instance"
+    elif mutation == "foreign_job":
+        route["job_wait_responses"][0]["data"]["job_id"] = "foreign-job"
+    elif mutation == "missing_request_metadata":
+        del route["job_wait_responses"][0]["data"]["operation"]["metadata"]["execution"]["request_id"]
+    elif mutation == "revision_jump":
+        response = route["response"]
+        response["execution"]["revision"] += 1
+        route["job_wait_responses"][0]["data"]["result"] = response
+    with pytest.raises(Full3DScienceError):
+        validate_full3d_bma_mapping_route_result(request, route, **kwargs)
+
+
+def test_bma_mapping_stage_integrates_two_basis_samples_after_exact_dataset_routes():
+    from tools.run_native_w23_full3d_setup import _execute_bma_basis_mapping_stage
+
+    preparation, producer, _binding, _contracts, _quadratures = _bma_basis_mapping_bundle()
+    baseline = {**CASE, "factor": "baseline", "receiver_transform": {
+        "axis_xyz": [1.0, 0.0, 0.0], "center_xyz_um": [20.0, 0.0, 0.0]}}
+    apply_readback = _bma_receiver_readback()
+    result = {"field_sample_readbacks_validated": 0}
+    model = {"model_ref": dict(MODEL_REF), "model_tag": "M1", "revision": 20}
+    rows = [{"tag": "dset_bma_probe", "type_id": "Solution",
+             "solution": "sol3dBmaProbe", "component": "comp3d", "geometry": "geom3d"}]
+    indices = {"dataset": "dset_bma_probe", "solution": "sol3dBmaProbe",
+        "binding_complete": True, "axis_metadata_complete": True,
+        "pair_mapping_complete": True, "parameters_complete": True,
+        "outer_indices": [1], "inner_indices": [1, 2], "solution_count": 2,
+        "solnum_pairs": [{"outer": 1, "inner": 1, "solnum": 1},
+                         {"outer": 1, "inner": 2, "solnum": 2}],
+        "parameters": {"by_pair": {
+            "1:1": {"solnum": 1, "names": ["freq", "modeIndex"],
+                    "values": [193.414489032258, 1], "units": ["THz", "1"]},
+            "1:2": {"solnum": 2, "names": ["freq", "modeIndex"],
+                    "values": [193.414489032258, 2], "units": ["THz", "1"]}}}}
+    current_revision = 20
+    calls = []
+    failure_label = None
+
+    def route(request, label, cap):
+        nonlocal current_revision
+        logical = request["execution"]
+        assert logical["expected_revision"] == current_revision
+        calls.append((label, copy.deepcopy(request), cap))
+        if label == "bma_basis_dataset_list":
+            data, delta = {"datasets": rows, "count": 1,
+                           "tags": ["dset_bma_probe"], "read_errors": []}, 0
+        elif label == "bma_basis_dataset_solution_indices":
+            data, delta = indices, 0
+        else:
+            if label == failure_label:
+                raise ManagedRouteOutcomeError(
+                    label, "UNKNOWN", "injected no-replay timeout after dispatch",
+                    job_id="unknown-job", response={"outcome": "UNKNOWN"})
+            nested = request["arguments"]["arguments"]["arguments"]
+            contract = nested["contract"]
+            assert nested["phase"] == "bma_basis_fields"
+            assert nested["study_or_solver_invoked"] is False
+            axis = contract["basis_axis"]["ordinal"]
+            quad = circular_port_quadrature(
+                contract["plane"]["center_xyz_m"], contract["plane"]["axis_xyz"],
+                contract["plane"]["sample_radius_m"], radial_intervals=32, angular_points=64)
+            basis_e = (0j, 1 + 0j, 0j) if axis == 1 else (0j, 0j, 1 + 0j)
+            basis_h = (0j, 0j, 1 + 0j) if axis == 1 else (0j, 1 + 0j, 0j)
+            raw = _bma_basis_raw(contract, quad, basis_e=basis_e, basis_h=basis_h,
+                                 port_e=basis_e, port_h=basis_h)
+            data, delta = {"worker": {"ok": True, "status": "SUCCEEDED",
+                                      "result": {"readback": raw}},
+                           "readback": {"executed": True, "readback": raw}}, 1
+        observed = _bma_mapping_route_result(
+            request, label=label, response_data=data, revision_delta=delta)
+        current_revision += delta
+        return observed
+
+    finished = _execute_bma_basis_mapping_stage(
+        route, result=result, project_id="project-1", model=model,
+        source_artifact="NativeW23Full3DFixture.java", preparation=preparation,
+        producer_evidence=producer, apply_readback=apply_readback,
+        baseline_case=baseline)
+    assert [label for label, _, _ in calls] == [
+        "bma_basis_dataset_list", "bma_basis_dataset_solution_indices",
+        "bma_basis_fields_ordinal1", "bma_basis_fields_ordinal2"]
+    assert [request["execution"]["expected_revision"] for _, request, _ in calls] == [20, 20, 20, 21]
+    assert [cap for _, _, cap in calls] == [90, 90, 180, 180]
+    samples = finished["evidence"]["field_samples"]
+    assert [sample["basis_ordinal"] for sample in samples] == [1, 2]
+    assert [sample["validated_binding"]["revision_delta"] for sample in samples] == [1, 1]
+    assert samples[0]["readback"]["source"]["inner_index"] != samples[1]["readback"]["source"]["inner_index"]
+    assert finished["model"]["revision"] == 22
+    assert result["field_sample_attempts"] == 2
+    assert result["field_sample_calls"] == 2
+    assert result["field_sample_readbacks_validated"] == 2
+    assert finished["evidence"]["status"] == "TWO_RAW_BMA_BASIS_SAMPLES_VALIDATED_MAPPING_UNVERIFIED"
+    assert finished["evidence"]["field_mapping_status"] == "UNVERIFIED"
+    assert finished["evidence"]["study_or_solver_invoked_by_sampling"] is False
+
+    failure_label = "bma_basis_fields_ordinal2"
+    current_revision = 20
+    calls.clear()
+    partial = {"solver_call_attempts": 1, "solver_calls": 1,
+        "native_scientific_result": "BMA_PRODUCER_COMPLETED_FIELD_MAPPING_UNKNOWN",
+        "field_sample_attempts": 0, "field_sample_calls": 0,
+        "field_sample_readbacks_validated": 0}
+    with pytest.raises(ManagedRouteOutcomeError):
+        _execute_bma_basis_mapping_stage(
+            route, result=partial, project_id="project-1", model=model,
+            source_artifact="NativeW23Full3DFixture.java", preparation=preparation,
+            producer_evidence=producer, apply_readback=apply_readback,
+            baseline_case=baseline)
+    from tools.run_native_w23_full3d_setup import _finalize_science_counters
+    _finalize_science_counters(partial, "bma_mapping_probe")
+    assert partial["field_sample_attempts"] == 2
+    assert partial["field_sample_calls"] == 1
+    assert partial["field_sample_readbacks_validated"] == 0
+    assert partial["field_sampling_status"] == "UNKNOWN_OR_PARTIAL"
+    assert partial["native_scientific_result"] == "BMA_PRODUCER_COMPLETED_FIELD_MAPPING_UNKNOWN"
+    assert partial["numeric_port_mode_field_mapping"] == "UNVERIFIED"
+
+
+def test_dataset_read_public_control_daemon_routes_do_not_advance_managed_revision(tmp_path):
+    from contextlib import nullcontext
+
+    from comsol_mcp._control_daemon import ControlDaemon
+    from comsol_mcp._execution_contract import SessionLedger
+    from comsol_mcp._execution_service import ExecutionService
+    from tools.w23_full3d_science import validate_full3d_bma_mapping_route_result
+
+    class Collection:
+        def __init__(self, items=None):
+            self.items = dict(items or {})
+
+        def tags(self):
+            return list(self.items)
+
+        def get(self, tag):
+            return self.items[tag]
+
+    class Dataset:
+        def getType(self):
+            return "Solution"
+
+        def properties(self):
+            return ["solution", "data", "comp", "geom"]
+
+        def getString(self, name):
+            return {"solution": "sol1", "data": "sol1",
+                    "comp": "comp1", "geom": "geom1"}.get(name)
+
+    class SolutionInfo:
+        def getOuterSolnum(self):
+            return [1]
+
+        def getSolnum(self, outer, strict):
+            assert outer == 1 and strict is True
+            return [1, 2, 3]
+
+        def getPNames(self, pairs):
+            return [["freq"] for _ in pairs]
+
+        def getPvals(self, pairs):
+            return [[193.414489032258] for _ in pairs]
+
+        def getUnits(self, pairs):
+            return [["THz"] for _ in pairs]
+
+        def getLevelNames(self):
+            return ["outer", "inner"]
+
+    class Solver:
+        def getPVals(self):
+            return [193.414489032258]
+
+        def study(self):
+            return "std1"
+
+        def getSolutioninfo(self):
+            return SolutionInfo()
+
+    class StudyFeature:
+        def getType(self):
+            return "Frequency"
+
+    class Study:
+        def feature(self):
+            return Collection({"freq": StudyFeature()})
+
+    class Geometry:
+        pass
+
+    class Component:
+        def geom(self, tag=None):
+            geometries = Collection({"geom1": Geometry()})
+            return geometries if tag is None else geometries.get(tag)
+
+    class Model:
+        def __init__(self):
+            self.datasets = Collection({"dset1": Dataset()})
+            self.solutions = Collection({"sol1": Solver()})
+            self.components = Collection({"comp1": Component()})
+            self.model_nodes = Collection({"comp1": object()})
+
+        def result(self):
+            return type("Results", (), {"dataset": lambda _self: self.datasets})()
+
+        def sol(self, tag=None):
+            return self.solutions if tag is None else self.solutions.get(tag)
+
+        def modelNode(self):
+            return self.model_nodes
+
+        def component(self, tag=None):
+            return self.components if tag is None else self.components.get(tag)
+
+        def study(self, tag):
+            assert tag == "std1"
+            return Study()
+
+    class Worker:
+        def __init__(self):
+            model = Model()
+            self._client = type("Client", (), {"model": lambda _self, _tag: model})()
+
+        def client(self):
+            return self._client
+
+    class SnapshotAdapter:
+        def model_snapshot(self, model_tag):
+            return {"model_tag": model_tag, "server_instance_id": "w23-test-server",
+                    "fingerprint": "w23-dataset-read-stable", "external_event_counter": 0}
+
+    project_root = tmp_path / "projects"
+    project_root.mkdir()
+    daemon = ControlDaemon(tmp_path / "control", project_root=project_root)
+    try:
+        project = daemon.dispatch({"operation": "project.create", "arguments": {
+            "label": "w23-dataset-read-route", "workspace": "w23-dataset-read-route",
+            "policy": {"permissions": ["inspect", "project_write", "compute"]}},
+            "execution": {"request_id": "w23-project-create", "idempotency_key": "w23-project-create"}})
+        assert project["success"] is True, project
+        project_id = project["data"]["project"]["project_id"]
+        ledger = SessionLedger("w23-dataset-session", "w23-test-server")
+        service = ExecutionService(ledger, SnapshotAdapter(), project_root=project_root)
+        model_readback = service.bind_model("M1")
+        model_ref = model_readback["execution"]["model_ref"]
+        worker = Worker()
+        worker.operation_context = lambda *_args, **_kwargs: nullcontext()
+        backend = daemon.backend
+        backend.service = service
+        backend.worker = worker
+        backend.worker_identity = {"runtime_id": "w23-test-runtime", "worker_instance_id": "w23-test-worker",
+                                  "connection_epoch": 1, "server_instance_id": "w23-test-server",
+                                  "endpoint": "127.0.0.1:52001"}
+        backend._bind_model_project(model_ref, project_id)
+        backend.persist()
+        list_request = build_full3d_dataset_list_dispatch(
+            project_id=project_id, model_ref=model_ref, model_tag="M1", revision=0,
+            request_id="w23-datasets-read", idempotency_key="w23-datasets-read")
+        list_submitted = {**list_request, "execution": {**list_request["execution"],
+            "execution_timeout_s": 10.0, "queue_timeout_s": 10.0, "rpc_timeout_s": 10.0}}
+        list_result = dispatch_public_managed_route(
+            daemon, list_submitted, label="bma_basis_dataset_list", timeout_s=10, poll_interval_s=0.01)
+        list_binding = validate_full3d_bma_mapping_route_result(
+            list_request, {**list_result, "submitted_request": {
+                **list_submitted}},
+            expected_revision_delta=0, max_execution_timeout_s=90)
+        assert list_result["response"]["data"]["count"] == 1
+        assert list_binding["revision_delta"] == 0
+        assert list_result["response"]["execution"]["revision"] == 0
+        indices_request = build_full3d_dataset_indices_dispatch(
+            "dset1", project_id=project_id, model_ref=model_ref, model_tag="M1", revision=0,
+            request_id="w23-indices-read", idempotency_key="w23-indices-read")
+        indices_submitted = {**indices_request, "execution": {**indices_request["execution"],
+            "execution_timeout_s": 10.0, "queue_timeout_s": 10.0, "rpc_timeout_s": 10.0}}
+        indices_result = dispatch_public_managed_route(
+            daemon, indices_submitted, label="bma_basis_dataset_solution_indices",
+            timeout_s=10, poll_interval_s=0.01)
+        indices_route = {**indices_result, "submitted_request": indices_submitted}
+        indices_binding = validate_full3d_bma_mapping_route_result(
+            indices_request, indices_route, expected_revision_delta=0, max_execution_timeout_s=90)
+        assert indices_result["response"]["data"]["binding_complete"] is True
+        assert indices_result["response"]["data"]["solution_count"] == 3
+        assert indices_binding["revision_delta"] == 0
+        assert indices_result["response"]["execution"]["revision"] == 0
+        assert service.ledger.revision(__import__("comsol_mcp._execution_contract", fromlist=["model_ref_from_mapping"])
+                                       .model_ref_from_mapping(model_ref)) == 0
+    finally:
+        daemon.close()
 
 
 def test_public_managed_route_waits_only_on_same_job_and_never_replays_unknown():
