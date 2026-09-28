@@ -2085,11 +2085,13 @@ class NativeScienceCampaignAdapter:
         observed = {key: verified.get(key) for key in identity_keys}
         if observed != dict(ref_id):
             raise CampaignError("V2 public action identity differs from its frozen capture reference chain")
+        if (action_ref.get("status") != verified.get("status") or
+                action_ref.get("artifact") != verified.get("artifact") or
+                action_ref.get("artifact_receipt") != verified.get("artifact_receipt") or
+                action_ref.get("capture_validation") != verified.get("capture_validation") or
+                action_ref.get("readback_data") != verified.get("readback_data")):
+            raise CampaignError("V2 public action reference differs from its authenticated original response and artifact")
         if action == "study_run":
-            if (action_ref.get("readback_data") != verified.get("readback_data") or
-                    action_ref.get("artifact") != verified.get("artifact") or
-                    action_ref.get("artifact_receipt") != verified.get("artifact_receipt")):
-                raise CampaignError("Study.run reference differs from its authenticated original save receipt")
             validation = verified.get("capture_validation", {})
             save_request_path = validation.get("save_request_path") if isinstance(validation, Mapping) else None
             save_provenance = action_ref.get("saved_artifact_provenance")
@@ -2281,19 +2283,22 @@ class NativeScienceCampaignAdapter:
         setup_ref = report.get("setup_readback")
         study_ref = report.get("study_run")
         capture_status = report.get("status")
+        equation_view_row = report.get("equation_view_capture")
+        equation_view_ref = equation_view_row.get("operation") if isinstance(equation_view_row, Mapping) else None
         snapshot_row = report.get("solution_snapshot")
         history_row = report.get("history_capture")
         snapshot_ref = snapshot_row.get("operation") if isinstance(snapshot_row, Mapping) else None
         history_ref = history_row.get("operation") if isinstance(history_row, Mapping) else None
         if not all(isinstance(value, Mapping) for value in
-                   (setup_ref, contract_ref, snapshot_ref, history_ref)):
-            raise CampaignError("v2 capture chain omitted a setup, contract, snapshot, or history operation reference")
+                   (setup_ref, contract_ref, equation_view_ref, snapshot_ref, history_ref)):
+            raise CampaignError("v2 capture chain omitted a setup, contract, Equation View, snapshot, or history operation reference")
         if capture_status == "V2_PUBLIC_CAPTURE_CHAIN_VERIFIED_NATIVE_REVIEW_REQUIRED" and not isinstance(study_ref, Mapping):
             raise CampaignError("solved v2 capture chain omitted its exact Study.run public operation reference")
         if capture_status == "V2_REOPEN_PUBLIC_CAPTURE_CHAIN_VERIFIED_NATIVE_REVIEW_REQUIRED" and study_ref is not None:
             raise CampaignError("fresh-Worker v2 reopen must reuse the original solve provenance without another Study.run")
         setup_verified = self._reauthenticate_public_java_action(setup_ref)
         contract_verified = self._reauthenticate_public_java_action(contract_ref)
+        equation_view_verified = self._reauthenticate_public_java_action(equation_view_ref)
         snapshot_verified = self._reauthenticate_public_java_action(snapshot_ref)
         history_verified = self._reauthenticate_public_java_action(history_ref)
         readback = setup_verified.get("readback_data", {})
@@ -2322,8 +2327,9 @@ class NativeScienceCampaignAdapter:
                 raise CampaignError("v2 Study.run response no longer authenticates the exact solved slot")
             if (setup_ref.get("binding_after") != contract_ref.get("binding_before") or
                     contract_ref.get("binding_after") != study_ref.get("binding_before") or
-                    study_ref.get("binding_after") != snapshot_ref.get("binding_before")):
-                raise CampaignError("v2 setup→contract→Study.run→snapshot revision chain is discontinuous")
+                    study_ref.get("binding_after") != equation_view_ref.get("binding_before") or
+                    equation_view_ref.get("binding_after") != snapshot_ref.get("binding_before")):
+                raise CampaignError("v2 setup→contract→Study.run→Equation View→snapshot revision chain is discontinuous")
             if expected_case == "staged_baseline" and expected_study == "stdCool":
                 self._validate_staged_baseline_save(
                     study_ref, saved_summary=self.staged_baseline_saved_model)
@@ -2355,6 +2361,11 @@ class NativeScienceCampaignAdapter:
             terminal_report = terminal_source.get("v2_capture") if isinstance(terminal_source, Mapping) else None
             source_terminal_study_ref = (terminal_report.get("study_run")
                                          if isinstance(terminal_report, Mapping) else None)
+            source_terminal_equation_row = (terminal_report.get("equation_view_capture")
+                                            if isinstance(terminal_report, Mapping) else None)
+            source_terminal_equation_ref = (
+                source_terminal_equation_row.get("operation")
+                if isinstance(source_terminal_equation_row, Mapping) else None)
             if isinstance(source_terminal_study_ref, Mapping):
                 producer_save_link = self._validate_staged_baseline_save(
                     source_terminal_study_ref, saved_summary=self.staged_baseline_saved_model)
@@ -2380,16 +2391,19 @@ class NativeScienceCampaignAdapter:
                     saved.get("path") != producer_save_link.get("artifact", {}).get("path") or
                     saved.get("size_bytes") != producer_save_link.get("artifact", {}).get("size_bytes") or
                     saved.get("sha256") != producer_save_link.get("artifact", {}).get("sha256") or
+                    not isinstance(source_terminal_equation_ref, Mapping) or
                     not isinstance(terminal_snapshot, Mapping) or
-                    source_terminal_study_ref.get("binding_after") != terminal_snapshot.get("binding_before") or
+                    source_terminal_study_ref.get("binding_after") != source_terminal_equation_ref.get("binding_before") or
+                    source_terminal_equation_ref.get("binding_after") != terminal_snapshot.get("binding_before") or
                     producer_verified.get("readback_data", {}).get("case_id") != expected_case or
                     producer_verified.get("readback_data", {}).get("study_tag") != "stdCool" or
                     producer_verified.get("readback_data", {}).get("study_run_calls_from_this_action") != 1 or
                     loaded.get("path") != saved.get("path") or
                     loaded.get("sha256") != saved.get("sha256") or
                     setup_ref.get("binding_after") != contract_ref.get("binding_before") or
-                    contract_ref.get("binding_after") != snapshot_ref.get("binding_before")):
-                raise CampaignError("reopened v2 saved model, terminal staged source chain, Worker load, and capture lineage is discontinuous")
+                    contract_ref.get("binding_after") != equation_view_ref.get("binding_before") or
+                    equation_view_ref.get("binding_after") != snapshot_ref.get("binding_before")):
+                raise CampaignError("reopened v2 saved model, terminal staged source chain, Worker load, and Equation View capture lineage is discontinuous")
             self._validate_worker2_reopen_prefix(
                 expected_case=expected_case, expected_study=expected_study,
                 prior_captures=model_load.get("worker2_prior_captures"),
@@ -2425,6 +2439,11 @@ class NativeScienceCampaignAdapter:
                 raise CampaignError(f"v2 {label} evidence copy differs from the authenticated source artifact bytes")
             return path
 
+        equation_view_path = verify_evidence(
+            equation_view_row, equation_view_ref, equation_view_verified, "Equation View raw tables")
+        equation_view_artifact = equation_view_verified.get("artifact_data")
+        if not isinstance(equation_view_artifact, Mapping):
+            raise CampaignError("authenticated Equation View response omitted its parsed raw source artifact")
         snapshot_path = verify_evidence(snapshot_row, snapshot_ref, snapshot_verified, "Xmesh snapshot")
         history_path = verify_evidence(history_row, history_ref, history_verified, "history capture")
         snapshot_frames = list(iter_solution_snapshot(snapshot_path))
@@ -2443,6 +2462,13 @@ class NativeScienceCampaignAdapter:
                 history_artifact.get("dataset_solution_readback") != report.get("solver_tag") or
                 history_artifact.get("dataset_type_requested") != "Solution"):
             raise CampaignError("authenticated v2 snapshot and history disagree on solver, solution dataset, or stored times")
+        equation_view_validation = equation_view_verified.get("capture_validation")
+        if (not isinstance(equation_view_validation, Mapping) or
+                equation_view_validation.get("status") != "RAW_EQUATION_VIEW_TABLES_AUTHENTICATED_NATIVE_SEMANTICS_UNVERIFIED" or
+                equation_view_artifact.get("study_tag") != expected_study or
+                equation_view_artifact.get("solver_tag") != report.get("solver_tag") or
+                equation_view_validation.get("stored_times_s") != times):
+            raise CampaignError("Equation View table capture is not bound to the exact native study/solver/stored-time series")
         snapshot_schema = validation.get("snapshot_schema")
         if capture_status == "V2_REOPEN_PUBLIC_CAPTURE_CHAIN_VERIFIED_NATIVE_REVIEW_REQUIRED":
             if (old_lineage.get("study_tag") != expected_study or
@@ -2453,6 +2479,18 @@ class NativeScienceCampaignAdapter:
             if (validation.get("complete_internal_dof_capture") is not True or
                     state_metadata.get("complete_xmesh_internal_dof_capture") is not True):
                 raise CampaignError("authenticated V3 capture does not cover all mapped internal Xmesh solution entries")
+            from tools.w24_cure_v2_capture import associate_equation_view_with_xmesh_v1
+
+            observed_association = associate_equation_view_with_xmesh_v1(
+                equation_view_artifact, state_metadata)
+            if (not isinstance(equation_view_row, Mapping) or
+                    equation_view_row.get("association") != observed_association or
+                    observed_association.get("layout_sha256") != state_metadata.get("layout_sha256")):
+                raise CampaignError("Equation View-to-Xmesh exact-cell diagnostics differ from the current authenticated layout")
+        elif (not isinstance(equation_view_row, Mapping) or
+              equation_view_row.get("association", {}).get("status") !=
+              "UNVERIFIED_LEGACY_SNAPSHOT_HAS_NO_XMESH_LAYOUT"):
+            raise CampaignError("legacy snapshot is not explicitly marked as lacking V3 Equation View association")
         persistence_comparison: dict[str, Any] | None = None
         if capture_status == "V2_REOPEN_PUBLIC_CAPTURE_CHAIN_VERIFIED_NATIVE_REVIEW_REQUIRED":
             if reopened_source_frames is None:
@@ -2538,7 +2576,7 @@ class NativeScienceCampaignAdapter:
                 isinstance(end_revision, bool) or not isinstance(end_revision, int) or
                 start_revision >= end_revision):
             raise CampaignError("v2 staged capture changes Worker epoch or has a non-increasing revision chain")
-        lineage_refs = [contract_ref, snapshot_ref, history_ref]
+        lineage_refs = [contract_ref, equation_view_ref, snapshot_ref, history_ref]
         if isinstance(lineage_study_ref, Mapping):
             lineage_refs.insert(1, lineage_study_ref)
         if capture_status == "V2_REOPEN_PUBLIC_CAPTURE_CHAIN_VERIFIED_NATIVE_REVIEW_REQUIRED":
@@ -2563,6 +2601,10 @@ class NativeScienceCampaignAdapter:
                 "COMPLETE_MAPPING_CAPTURED_NATIVE_BRANCH_IDENTITY_UNVERIFIED"
                 if snapshot_schema == "W24-DOF-SNAPSHOT-3" else "LEGACY_V2_NO_FIELD_LAYOUT_CAPTURE"),
             "persisted_state_comparison": persistence_comparison,
+            "equation_view_artifact_sha256": equation_view_verified.get("artifact", {}).get("sha256"),
+            "equation_view_association": dict(equation_view_row.get("association", {})),
+            "maxwell_branch_field_identity": "UNVERIFIED_NOT_INFERRED_FROM_FIELD_NAME",
+            "maxwell_branch_reference_state": "UNVERIFIED",
             "operation_ids": [ref["public_identity"]["operation_id"]
                               for ref in lineage_refs if isinstance(ref.get("public_identity"), Mapping)],
             "job_ids": [ref["public_identity"]["job_id"]
@@ -2589,6 +2631,7 @@ class NativeScienceCampaignAdapter:
             "case_id", "study_tag", "solver_tag", "configuration_sha256",
             "snapshot_schema", "layout_sha256", "operation_ids", "job_ids",
             "source_hashes", "stored_times_s", "snapshot_sha256",
+            "equation_view_artifact_sha256", "equation_view_association",
         )
         frame_hash_memo: dict[int, str] = {}
         registry[authentication_token] = {
@@ -3052,9 +3095,20 @@ class NativeScienceCampaignAdapter:
             _origin_frames, origin_lineage = self._authenticated_v2_capture_frames(
                 reopened_origin, expected_case=slot.case_id, expected_study=slot.study_tag)
             origin_report = dict(origin_v2)
+            origin_equation = origin_v2.get("equation_view_capture")
+            origin_equation_ref = (origin_equation.get("operation")
+                                   if isinstance(origin_equation, Mapping) else None)
+            origin_snapshot = origin_v2.get("solution_snapshot")
+            origin_snapshot_ref = (origin_snapshot.get("operation")
+                                   if isinstance(origin_snapshot, Mapping) else None)
             if (origin_lineage.get("source_identity_authenticated") is not True or
+                    not isinstance(origin_v2.get("study_run"), Mapping) or
+                    not isinstance(origin_equation_ref, Mapping) or
+                    not isinstance(origin_snapshot_ref, Mapping) or
                     origin_v2.get("study_run", {}).get("binding_after") !=
-                    origin_v2.get("solution_snapshot", {}).get("operation", {}).get("binding_before")):
+                    origin_equation_ref.get("binding_before") or
+                    origin_equation_ref.get("binding_after") !=
+                    origin_snapshot_ref.get("binding_before")):
                 raise CampaignError("original Worker solved capture does not retain its authenticated lineage")
             if not isinstance(reopened_model_load, Mapping) or self.staged_baseline_saved_model is None:
                 raise CampaignError("fresh-Worker v2 capture lacks its exact saved-model producer and model_load receipt")
@@ -3068,11 +3122,17 @@ class NativeScienceCampaignAdapter:
             terminal_report = terminal_source.get("v2_capture") if isinstance(terminal_source, Mapping) else None
             source_terminal_study_ref = (terminal_report.get("study_run")
                                          if isinstance(terminal_report, Mapping) else None)
+            source_terminal_equation_row = (terminal_report.get("equation_view_capture")
+                                            if isinstance(terminal_report, Mapping) else None)
+            source_terminal_equation_ref = (
+                source_terminal_equation_row.get("operation")
+                if isinstance(source_terminal_equation_row, Mapping) else None)
             terminal_snapshot = (terminal_report.get("solution_snapshot", {}).get("operation")
                                  if isinstance(terminal_report, Mapping) else None)
             if (not isinstance(expected_source, Mapping) or
                     expected_source.get("v2_capture") != origin_v2 or
                     not isinstance(source_terminal_study_ref, Mapping) or
+                    not isinstance(source_terminal_equation_ref, Mapping) or
                     not isinstance(terminal_snapshot, Mapping)):
                 raise CampaignError("Worker2 stage origin or terminal solve is not in the full authenticated source chain")
             saved_source = self.staged_baseline_saved_model
@@ -3092,6 +3152,8 @@ class NativeScienceCampaignAdapter:
                     saved_source.get("model_binding_after_solve") !=
                     source_terminal_study_ref.get("binding_after") or
                     source_terminal_study_ref.get("binding_after") !=
+                    source_terminal_equation_ref.get("binding_before") or
+                    source_terminal_equation_ref.get("binding_after") !=
                     terminal_snapshot.get("binding_before")):
                 raise CampaignError("saved MPH is not bound to the authenticated terminal stdCool solve revision")
             load_ref = reopened_model_load.get("public_load_reference")
@@ -3140,6 +3202,30 @@ class NativeScienceCampaignAdapter:
                 "native_acceptance": "NOT_RUN",
             }
 
+        equation_view_path = _project_path(self.workspace,
+            base.with_name(token + "_equation_view_v1.json"), must_exist=False)
+        equation_view_before = binding
+        binding, equation_view_response, equation_view_readback = self._fixture_action(
+            binding, "equation_view_readback_v1", {
+                "phase": "equation_view_readback_v1", "study_tag": slot.study_tag,
+                "solver_tag": solver_tag, "path": str(equation_view_path)},
+            timeout_s=timeout_s, source_fixture=self.coupon_fixture,
+            entrypoint="W24CureCouponFixture#run")
+        equation_view_ref = self._record_public_java_action(
+            action="equation_view_readback_v1", response=equation_view_response,
+            binding_before=equation_view_before, binding_after=binding,
+            source_fixture=self.coupon_fixture, response_dir=self.evidence / "v2_capture_responses",
+            response_label=f"{slot.case_id}_{slot.study_tag}_equation_view")
+        equation_view_verified = self._reauthenticate_public_java_action(equation_view_ref)
+        if equation_view_readback != equation_view_verified.get("artifact_receipt"):
+            raise CampaignError("Equation View Worker response differs from its durable OperationStore receipt")
+        equation_view_artifact = equation_view_verified.get("artifact_data")
+        if not isinstance(equation_view_artifact, Mapping):
+            raise CampaignError("authenticated Equation View response omitted its verified raw artifact")
+        equation_view_evidence = _evidence_copy(
+            equation_view_path, output_dir / "equation_view_raw_v1.json",
+            status="PUBLIC_EQUATION_VIEW_RAW_TABLES_NATIVE_SEMANTICS_UNVERIFIED")
+
         field_path = _project_path(self.workspace,
             base.with_name(token + "_v3_dofs.gz"), must_exist=False)
         snapshot_before = binding
@@ -3174,6 +3260,25 @@ class NativeScienceCampaignAdapter:
                           {"comp1_u", "comp1_v", "comp1_w"} if axes == 3 else set())
         if not required_dofs.issubset(dof_names):
             raise CampaignError("actual V2 complete Xmesh snapshot omits cure-law or displacement field members")
+        if (equation_view_ref.get("binding_after") != snapshot_ref.get("binding_before") or
+                equation_view_verified.get("capture_validation", {}).get("stored_times_s") != snapshot_times or
+                equation_view_artifact.get("study_tag") != slot.study_tag or
+                equation_view_artifact.get("solver_tag") != solver_tag):
+            raise CampaignError("Equation View and V3 Xmesh captures are discontinuous in model revision, study, solver, or stored times")
+        if snapshot_validation.get("snapshot_schema") == "W24-DOF-SNAPSHOT-3":
+            from tools.w24_cure_v2_capture import associate_equation_view_with_xmesh_v1
+
+            equation_view_association = associate_equation_view_with_xmesh_v1(
+                equation_view_artifact, snapshot_frames[0]["dofs"])
+            if equation_view_association.get("layout_sha256") != snapshot_frames[0]["dofs"].get("layout_sha256"):
+                raise CampaignError("Equation View association is not bound to the exact V3 Xmesh layout hash")
+        else:
+            equation_view_association = {
+                "schema": "W24_EQUATION_VIEW_XMESH_EXACT_CELL_ASSOCIATION_V1",
+                "status": "UNVERIFIED_LEGACY_SNAPSHOT_HAS_NO_XMESH_LAYOUT",
+                "maxwell_branch_field_identity": "UNVERIFIED_NOT_INFERRED_FROM_FIELD_NAME",
+                "maxwell_branch_reference_state": "UNVERIFIED", "native_acceptance": "NOT_RUN",
+            }
 
         history_path = _project_path(self.workspace,
             base.with_name(token + "_v2_history.json"), must_exist=False)
@@ -3206,13 +3311,16 @@ class NativeScienceCampaignAdapter:
             raise CampaignError("v2 snapshot/history artifacts do not share their exact study, solver, times, and revision chain")
         if snapshot_ref.get("binding_after") != history_ref.get("binding_before"):
             raise CampaignError("v2 snapshot→history ModelRef/revision transition is discontinuous")
-        if reopened_origin is None and solve_action.get("binding_after") != snapshot_ref.get("binding_before"):
-            raise CampaignError("v2 Study.run→snapshot ModelRef/revision transition is discontinuous")
+        if reopened_origin is None and (
+                solve_action.get("binding_after") != equation_view_ref.get("binding_before") or
+                equation_view_ref.get("binding_after") != snapshot_ref.get("binding_before")):
+            raise CampaignError("v2 Study.run→Equation View→snapshot ModelRef/revision transition is discontinuous")
         if reopened_origin is not None and (
                 setup_readback_ref.get("binding_after") != contract_ref.get("binding_before") or
                 contract_ref.get("binding_after") != capture_start_binding or
-                snapshot_ref.get("binding_before") != capture_start_binding):
-            raise CampaignError("v2 Worker2 prior-stage→setup→contract→snapshot revision chain is discontinuous")
+                equation_view_ref.get("binding_before") != capture_start_binding or
+                equation_view_ref.get("binding_after") != snapshot_ref.get("binding_before")):
+            raise CampaignError("v2 Worker2 prior-stage→setup→contract→Equation View→snapshot revision chain is discontinuous")
         report = {
             "status": ("V2_PUBLIC_CAPTURE_CHAIN_VERIFIED_NATIVE_REVIEW_REQUIRED" if reopened_origin is None else
                        "V2_REOPEN_PUBLIC_CAPTURE_CHAIN_VERIFIED_NATIVE_REVIEW_REQUIRED"),
@@ -3224,6 +3332,15 @@ class NativeScienceCampaignAdapter:
             "study_run": solve_action if reopened_origin is None else None,
             "reopened_from": origin_report,
             "model_load": model_load_link,
+            "equation_view_capture": {
+                "operation": equation_view_ref,
+                "evidence": equation_view_evidence,
+                "artifact_receipt": dict(equation_view_readback),
+                "capture_validation": equation_view_verified.get("capture_validation"),
+                "association": equation_view_association,
+                "maxwell_branch_field_identity": "UNVERIFIED_NOT_INFERRED_FROM_FIELD_NAME",
+                "maxwell_branch_reference_state": "UNVERIFIED",
+            },
             "solution_snapshot": {
                 "operation": snapshot_ref,
                 "evidence": snapshot_evidence,
@@ -3251,7 +3368,10 @@ class NativeScienceCampaignAdapter:
             "study_tag": slot.study_tag, "solver_tag": solver_tag,
             "model_contract": contract.get("reference"),
             "study_run": solve_action,
+            "equation_view_capture": equation_view_ref,
             "solution_snapshot": snapshot_ref, "history_capture": history_ref,
+            "equation_view_evidence": equation_view_evidence,
+            "equation_view_association": equation_view_association,
             "snapshot_evidence": snapshot_evidence,
             "history_evidence": history_evidence,
             "maxwell_branch_reference_state": report["maxwell_branch_reference_state"],

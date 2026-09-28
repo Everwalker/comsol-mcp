@@ -9,6 +9,8 @@ import com.comsol.model.Expr;
 import com.comsol.model.physics.PhysicsFeature;
 import com.comsol.model.physics.Physics;
 import com.comsol.model.physics.FeatureInfo;
+import com.comsol.model.physics.FeatureInfoList;
+import com.comsol.model.physics.EquationViewParent;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -85,6 +87,7 @@ public final class W24CureCouponFixture {
         if ("readback_v2".equals(phase)) return readbackV2(model);
         if ("readback".equals(phase)) return readback(model);
         if ("expression_inventory".equals(phase)) return expressionInventory(model, args);
+        if ("equation_view_readback_v1".equals(phase)) return equationViewReadbackV1(model, args);
         if ("save".equals(phase)) {
             String path = String.valueOf(args.getOrDefault("path", ""));
             if (path.isBlank()) throw new IllegalArgumentException("save phase requires path");
@@ -514,6 +517,323 @@ public final class W24CureCouponFixture {
         receipt.put("model_mutations", 0);
         receipt.put("study_run_calls", 0);
         return receipt;
+    }
+
+    /**
+     * Capture the exact current-model Equation View tables without solving or
+     * changing model state. The API returns cell arrays but no separate column
+     * heading API, so this artifact preserves every raw cell and row width and
+     * records that labels are not exposed instead of inventing them.
+     */
+    private static Map<String, Object> equationViewReadbackV1(Model model, Map<String, Object> args) {
+        String studyTag = safeApiToken(args.get("study_tag"), "study_tag");
+        String solverTag = safeApiToken(args.get("solver_tag"), "solver_tag");
+        String pathText = String.valueOf(args.getOrDefault("path", ""));
+        if (pathText.isBlank() || !Arrays.asList(model.study().tags()).contains(studyTag)) {
+            throw new IllegalArgumentException("equation_view_readback_v1 requires its exact attached study and output path");
+        }
+        String[] attached = model.study(studyTag).getSolverSequences("SolverSequence");
+        if (attached.length != 1 || !solverTag.equals(attached[0])) {
+            throw new IllegalStateException("Equation View readback requires the exact unique solver attached to its study");
+        }
+        SolverSequence solver = model.sol(solverTag);
+        double[] storedTimes = solver.getPVals();
+        if (!solver.isAttached() || !studyTag.equals(solver.study()) ||
+            storedTimes == null || storedTimes.length == 0) {
+            throw new IllegalStateException("Equation View readback solver is detached or has no stored solution times");
+        }
+        double previous = Double.NEGATIVE_INFINITY;
+        for (double time : storedTimes) {
+            if (!Double.isFinite(time) || time <= previous) {
+                throw new IllegalStateException("Equation View readback stored solution times are not finite/increasing");
+            }
+            previous = time;
+        }
+        String quasistatic = model.physics("solid").prop("StructuralTransientBehavior")
+            .getString("StructuralTransientBehavior");
+        if (!"Quasistatic".equals(quasistatic)) {
+            throw new IllegalStateException("Equation View capture requires actual Quasistatic Solid Mechanics readback");
+        }
+        String tlist = model.study(studyTag).feature("time1").getString("tlist");
+        if (tlist == null || tlist.isBlank()) {
+            throw new IllegalStateException("Equation View readback omitted the actual study time-list property");
+        }
+
+        String[] physicsTags = model.component(COMPONENT).physics().tags();
+        List<Object> physicsRows = new ArrayList<>();
+        List<Object> errors = new ArrayList<>();
+        int featureCount = 0;
+        int infoOwnerCount = 0;
+        int tableCount = 0;
+        int expressionRowCount = 0;
+        for (String physicsTag : physicsTags) {
+            Physics physics = model.component(COMPONENT).physics().get(physicsTag);
+            Map<String, Object> physicsRow = new LinkedHashMap<>();
+            physicsRow.put("physics_tag", physicsTag);
+            physicsRow.put("physics_type", physics.getType());
+            physicsRow.put("physics_path", COMPONENT + "/" + physicsTag);
+            List<Object> physicsInfo = equationViewOwner(
+                physics, "physics", physicsTag, COMPONENT + "/" + physicsTag, errors);
+            infoOwnerCount++;
+            tableCount += equationViewTableCount(physicsInfo);
+            expressionRowCount += equationViewExpressionRows(physicsInfo);
+            physicsRow.put("feature_info_tags", equationViewInfoTags(physicsInfo));
+            physicsRow.put("equation_view", physicsInfo);
+            List<Object> features = new ArrayList<>();
+            for (String featureTag : physics.feature().tags()) {
+                PhysicsFeature feature = physics.feature().get(featureTag);
+                String featurePath = COMPONENT + "/" + physicsTag + "/" + featureTag;
+                Map<String, Object> featureRow = equationViewFeature(
+                    feature, featureTag, featurePath, errors);
+                features.add(featureRow);
+                featureCount += equationViewNestedFeatureCount(featureRow);
+                infoOwnerCount += equationViewNestedInfoOwnerCount(featureRow);
+                tableCount += equationViewNestedTableCount(featureRow);
+                expressionRowCount += equationViewNestedExpressionRows(featureRow);
+            }
+            physicsRow.put("features", features);
+            physicsRows.add(physicsRow);
+        }
+        boolean complete = physicsTags.length > 0 && featureCount > 0 && errors.isEmpty();
+        Map<String, Object> artifact = new LinkedHashMap<>();
+        artifact.put("schema", "W24_COMSOL_EQUATION_VIEW_READBACK_V1");
+        artifact.put("status", complete ? "COMPLETE_RAW_TABLES_NOT_EVALUATED" : "INCOMPLETE_RAW_TABLES_NOT_EVALUATED");
+        artifact.put("complete", complete);
+        artifact.put("read_only", true);
+        artifact.put("model_mutations", 0);
+        artifact.put("native_study_run_calls", 0);
+        artifact.put("component_tag", COMPONENT);
+        artifact.put("component_physics_tags", Arrays.asList(physicsTags));
+        artifact.put("study_tag", studyTag);
+        artifact.put("solver_tag", solverTag);
+        artifact.put("attached_solver_sequences", Arrays.asList(attached));
+        artifact.put("study_tlist_readback", tlist);
+        artifact.put("quasistatic_readback", quasistatic);
+        artifact.put("stored_times_s", boxed(storedTimes));
+        artifact.put("equation_view_table_types", Arrays.asList("Expression", "Shape", "Weak", "Constraint"));
+        artifact.put("table_options", Arrays.asList("recursive", "all"));
+        artifact.put("table_request_source", "COMSOL 6.4 FeatureInfo.getInfoTable(String,String...) API documentation");
+        artifact.put("feature_info_tag_source", "COMSOL 6.4 EquationViewParent.featureInfo() and FeatureInfoList.tags() API");
+        artifact.put("feature_info_api_sha256", "4235da3e67011348aeed61e3ca50fcdec888068f2152ac5d659b0280c68d03a0");
+        artifact.put("equation_view_parent_api_sha256", "98f7b2c54e2a31dc52f9c0fdfae5073d343b035cb0d295130011f4b4ca0e732b");
+        artifact.put("column_labels", "API_NOT_EXPOSED_BY_FEATUREINFO_GETINFOTABLE");
+        artifact.put("raw_cells_preserved", true);
+        artifact.put("physics_count", physicsTags.length);
+        artifact.put("physics_feature_count", featureCount);
+        artifact.put("feature_info_owner_count", infoOwnerCount);
+        artifact.put("table_count", tableCount);
+        artifact.put("expression_row_count", expressionRowCount);
+        artifact.put("errors", errors);
+        artifact.put("physics", physicsRows);
+        Path output = Path.of(pathText).toAbsolutePath().normalize();
+        if (output.getParent() == null ||
+            !output.toString().startsWith("/private/tmp/comsol-mcp-w24-cure-") ||
+            !Files.isDirectory(output.getParent()) || Files.exists(output) || Files.isSymbolicLink(output)) {
+            throw new IllegalArgumentException("Equation View artifact must be a new file in the private W24 task tree");
+        }
+        byte[] bytes = (toJson(artifact) + "\n").getBytes(StandardCharsets.UTF_8);
+        writeEquationViewNewAndSync(output, bytes);
+        Map<String, Object> receipt = new LinkedHashMap<>();
+        receipt.put("status", complete ? "EQUATION_VIEW_RAW_TABLES_CAPTURED" : "EQUATION_VIEW_RAW_TABLES_INCOMPLETE");
+        receipt.put("schema", "W24_COMSOL_EQUATION_VIEW_READBACK_V1");
+        receipt.put("study_tag", studyTag);
+        receipt.put("solver_tag", solverTag);
+        receipt.put("study_tlist_readback", tlist);
+        receipt.put("quasistatic_readback", quasistatic);
+        receipt.put("stored_times_s", boxed(storedTimes));
+        receipt.put("path", output.toString());
+        receipt.put("size_bytes", bytes.length);
+        receipt.put("sha256", sha256(bytes));
+        receipt.put("complete", complete);
+        receipt.put("physics_count", physicsTags.length);
+        receipt.put("physics_feature_count", featureCount);
+        receipt.put("feature_info_owner_count", infoOwnerCount);
+        receipt.put("table_count", tableCount);
+        receipt.put("expression_row_count", expressionRowCount);
+        receipt.put("native_acceptance", "NOT_RUN");
+        return receipt;
+    }
+
+    private static Map<String, Object> equationViewFeature(PhysicsFeature feature, String tag,
+            String path, List<Object> errors) {
+        Map<String, Object> row = new LinkedHashMap<>();
+        row.put("feature_tag", tag);
+        row.put("feature_path", path);
+        row.put("feature_type", feature.getType());
+        List<Object> info = equationViewOwner(feature, "physics_feature", tag, path, errors);
+        row.put("feature_info_tags", equationViewInfoTags(info));
+        row.put("equation_view", info);
+        List<Object> children = new ArrayList<>();
+        for (String childTag : feature.feature().tags()) {
+            children.add(equationViewFeature(feature.feature().get(childTag), childTag,
+                path + "/" + childTag, errors));
+        }
+        row.put("children", children);
+        return row;
+    }
+
+    private static List<Object> equationViewOwner(EquationViewParent owner, String ownerKind,
+            String ownerTag, String ownerPath, List<Object> errors) {
+        List<Object> result = new ArrayList<>();
+        FeatureInfoList infoList = owner.featureInfo();
+        String[] infoTags = infoList.tags();
+        for (String infoTag : infoTags) {
+            FeatureInfo info = infoList.get(infoTag);
+            Map<String, Object> infoRow = new LinkedHashMap<>();
+            infoRow.put("owner_kind", ownerKind);
+            infoRow.put("owner_tag", ownerTag);
+            infoRow.put("owner_path", ownerPath);
+            infoRow.put("feature_info_tag", infoTag);
+            infoRow.put("feature_info_native_tag", info.tag());
+            infoRow.put("feature_info_name", info.name());
+            List<Object> tables = new ArrayList<>();
+            for (String tableType : new String[]{"Expression", "Shape", "Weak", "Constraint"}) {
+                Map<String, Object> tableRow = new LinkedHashMap<>();
+                tableRow.put("table_type", tableType);
+                tableRow.put("options", Arrays.asList("recursive", "all"));
+                tableRow.put("column_labels", "API_NOT_EXPOSED_BY_FEATUREINFO_GETINFOTABLE");
+                try {
+                    String[][] table = info.getInfoTable(tableType, "recursive", "all");
+                    if (table == null) throw new IllegalStateException("getInfoTable returned null");
+                    List<Object> rawRows = new ArrayList<>();
+                    List<Integer> rowWidths = new ArrayList<>();
+                    int maxWidth = 0;
+                    for (int rowIndex = 0; rowIndex < table.length; rowIndex++) {
+                        String[] nativeRow = table[rowIndex];
+                        if (nativeRow == null) {
+                            rawRows.add(null);
+                            rowWidths.add(-1);
+                            continue;
+                        }
+                        List<Object> cells = new ArrayList<>();
+                        for (String cell : nativeRow) cells.add(cell);
+                        rawRows.add(cells);
+                        rowWidths.add(nativeRow.length);
+                        maxWidth = Math.max(maxWidth, nativeRow.length);
+                    }
+                    List<Integer> columnIndices = new ArrayList<>();
+                    for (int i = 0; i < maxWidth; i++) columnIndices.add(i);
+                    tableRow.put("status", "READ");
+                    tableRow.put("row_count", table.length);
+                    tableRow.put("max_column_count", maxWidth);
+                    tableRow.put("column_indices_zero_based", columnIndices);
+                    tableRow.put("row_widths", rowWidths);
+                    tableRow.put("raw_rows", rawRows);
+                } catch (RuntimeException exception) {
+                    Map<String, Object> error = new LinkedHashMap<>();
+                    error.put("owner_path", ownerPath);
+                    error.put("feature_info_tag", infoTag);
+                    error.put("table_type", tableType);
+                    error.put("exception_type", exception.getClass().getName());
+                    error.put("message", String.valueOf(exception.getMessage()));
+                    errors.add(error);
+                    tableRow.put("status", "READ_FAILED");
+                    tableRow.put("error", error);
+                }
+                tables.add(tableRow);
+            }
+            infoRow.put("tables", tables);
+            result.add(infoRow);
+        }
+        return result;
+    }
+
+    private static List<Object> equationViewInfoTags(List<Object> infoRows) {
+        List<Object> tags = new ArrayList<>();
+        for (Object raw : infoRows) {
+            if (raw instanceof Map<?, ?>) tags.add(((Map<?, ?>) raw).get("feature_info_tag"));
+        }
+        return tags;
+    }
+
+    private static int equationViewTableCount(List<Object> infoRows) {
+        int count = 0;
+        for (Object raw : infoRows) {
+            if (raw instanceof Map<?, ?> && ((Map<?, ?>) raw).get("tables") instanceof List<?>) {
+                count += ((List<?>) ((Map<?, ?>) raw).get("tables")).size();
+            }
+        }
+        return count;
+    }
+
+    private static int equationViewExpressionRows(List<Object> infoRows) {
+        int count = 0;
+        for (Object raw : infoRows) {
+            if (!(raw instanceof Map<?, ?>) || !(((Map<?, ?>) raw).get("tables") instanceof List<?>)) continue;
+            for (Object tableRaw : (List<?>) ((Map<?, ?>) raw).get("tables")) {
+                if (tableRaw instanceof Map<?, ?> && "Expression".equals(((Map<?, ?>) tableRaw).get("table_type")) &&
+                    ((Map<?, ?>) tableRaw).get("row_count") instanceof Number) {
+                    count += ((Number) ((Map<?, ?>) tableRaw).get("row_count")).intValue();
+                }
+            }
+        }
+        return count;
+    }
+
+    private static int equationViewNestedInfoOwnerCount(Map<String, Object> feature) {
+        int count = 1;
+        Object children = feature.get("children");
+        if (children instanceof List<?>) {
+            for (Object child : (List<?>) children) if (child instanceof Map<?, ?>) {
+                count += equationViewNestedInfoOwnerCount((Map<String, Object>) child);
+            }
+        }
+        return count;
+    }
+
+    private static int equationViewNestedFeatureCount(Map<String, Object> feature) {
+        int count = 1;
+        Object children = feature.get("children");
+        if (children instanceof List<?>) {
+            for (Object child : (List<?>) children) if (child instanceof Map<?, ?>) {
+                count += equationViewNestedFeatureCount((Map<String, Object>) child);
+            }
+        }
+        return count;
+    }
+
+    private static int equationViewNestedTableCount(Map<String, Object> feature) {
+        int count = equationViewTableCount((List<Object>) feature.get("equation_view"));
+        Object children = feature.get("children");
+        if (children instanceof List<?>) {
+            for (Object child : (List<?>) children) if (child instanceof Map<?, ?>) {
+                count += equationViewNestedTableCount((Map<String, Object>) child);
+            }
+        }
+        return count;
+    }
+
+    private static int equationViewNestedExpressionRows(Map<String, Object> feature) {
+        int count = equationViewExpressionRows((List<Object>) feature.get("equation_view"));
+        Object children = feature.get("children");
+        if (children instanceof List<?>) {
+            for (Object child : (List<?>) children) if (child instanceof Map<?, ?>) {
+                count += equationViewNestedExpressionRows((Map<String, Object>) child);
+            }
+        }
+        return count;
+    }
+
+    private static String safeApiToken(Object value, String label) {
+        if (!(value instanceof String) || !((String) value).matches("[A-Za-z0-9_-]{1,64}")) {
+            throw new IllegalArgumentException(label + " must be a bounded API token");
+        }
+        return (String) value;
+    }
+
+    private static void writeEquationViewNewAndSync(Path output, byte[] bytes) {
+        Path parent = output.getParent();
+        if (parent == null || !Files.isDirectory(parent) || Files.exists(output) || Files.isSymbolicLink(output)) {
+            throw new IllegalArgumentException("Equation View artifact must be a new file in an existing private directory");
+        }
+        try (FileChannel channel = FileChannel.open(output, StandardOpenOption.CREATE_NEW,
+                StandardOpenOption.WRITE)) {
+            ByteBuffer buffer = ByteBuffer.wrap(bytes);
+            while (buffer.hasRemaining()) channel.write(buffer);
+            channel.force(true);
+        } catch (IOException exception) {
+            throw new IllegalStateException("failed to fsync raw Equation View tables", exception);
+        }
     }
 
     private static List<String> stressCandidateCues(String[] row) {

@@ -4,13 +4,13 @@ Updated 2026-09-28 UTC. **Overall PARTIAL; execution continues through W26.** Th
 
 ## Current stage
 
-**W23 control-volume power terms and source binding: PASS for scoped software; W23/project overall PARTIAL.** Managed readback routes now cover six signed surface-flux terms, six surface areas, CV volume and positive input power on one exact solution tuple. Topology/integral and field-sampling routes use distinct Java sources, each with its own source hash, entrypoint, request/job and revision evidence.
+**W24 Equation View capture and state association: PASS for scoped software; W24/project overall PARTIAL.** Read-only private capture retains actual physics/feature paths, raw table cells and shape metadata, then authenticates the operation, source, artifact, model revision and exact V3 layout. Exact-cell field associations retain all ambiguous/unmatched candidates. API column labels and Maxwell/reference semantics remain explicitly unavailable or unverified.
 
-**Actually executed:** 223 isolated and 223 main integration tests PASS. Main verified 99 manifest files and four overlays, checked separate Java offline-compile receipts, and independently confirmed the original distinct-source request is now accepted. [Compact evidence and replay](docs/full_project_execution/w23_overlap/CV_POWER_TERMS_SOFTWARE_CHECKPOINT.json). Earlier failed environments and the rejected 213-test candidate remain preserved by path/hash. No native run occurred.
+**Actually executed:** 149 isolated and 149 main integration tests PASS; main verified 114 runtime-source hashes, four overlays and the Java compile class hashes. [Compact evidence and replay](docs/full_project_execution/w24/EQUATION_VIEW_SOFTWARE_CHECKPOINT.json). Tests use actual ControlDaemon/SQLite with a synthetic Worker; no COMSOL model was started or solved. Earlier failures and their fixes remain recorded, not counted as native evidence.
 
-**Not complete:** generic Qabs interface NOT_IMPLEMENTED, authenticated absorption mapping and exact Frequency producer binding UNVERIFIED; scientific balance threshold NOT_FROZEN, native/science NOT_RUN. Area/volume tolerances are geometric diagnostics only. Next implement those missing W23 capabilities while W21 durable stage execution/state mapping and W24 Equation View/state association continue. Native cleanup authorization/platform gaps and final independent overall review remain open.
+**Next:** complete W24 physical fixtures/numerical controls and native semantic evidence; continue W21 durable stage execution and actual mapping, plus W23 Qabs and BMA→Frequency producer binding. Native cleanup authorization/platform limitations remain unresolved. Final independent overall Reviewer has not started.
 
-Latest published stage: W24 full-Xmesh state software `b4ffbc0`; prior job cursor repair `884c98e` and stage definitions `7d43f08` retain their stated scoped acceptance only.
+Latest published stage: W23 partial CV power terms `aa1ae31`, with Qabs generic interface NOT_IMPLEMENTED and native/science NOT_RUN. W24 V3 `b4ffbc0` and prior stages retain their scoped acceptance only.
 
 ## Latest accepted software baseline
 
@@ -38,4 +38,4 @@ Earlier source checkpoints and failures remain in the existing state and linked 
 
 Continue the three Luna Max work streams: complete F16 weighted native evidence and original experiment reporting/model gaps; complete W23 radiation geometry, capture/quadrature/power-balance and original optics acceptance; complete W24 UV/gel/reference/viscoelastic implementation and remaining science. Publish each accepted software stage immediately. Then freeze isolated managed native candidates, execute their reviewed scope, complete all remaining W01–W26 work, and run a fresh independent overall review with repair/retest until accepted.
 
-The latest focused replay is in [CV_POWER_TERMS_SOFTWARE_CHECKPOINT.json](docs/full_project_execution/w23_overlap/CV_POWER_TERMS_SOFTWARE_CHECKPOINT.json). Recover from GitHub and existing state. Last previously verified GitHub sync: b4ffbc02547fb5f21514b64b5c6f6c2a5dbf0f8c; this stage is recorded as synchronized only after post-push fetch and HEAD/origin-main equality.
+The latest focused replay is in [EQUATION_VIEW_SOFTWARE_CHECKPOINT.json](docs/full_project_execution/w24/EQUATION_VIEW_SOFTWARE_CHECKPOINT.json). Recover from GitHub and existing state. Last previously verified GitHub sync: aa1ae3168444c4f302eaa95c32f29447fd78b2b0; this stage is recorded as synchronized only after post-push fetch and HEAD/origin-main equality.

@@ -538,3 +538,7 @@ V3 writer/decoder, full Xmesh layout, authenticated frames and complete lineage 
 ### W23 partial CV power software closure
 
 The first 213-test candidate was rejected because it forced two independent Java classes to share one source artifact, contrary to the production single-file compiler. Fixed routes authenticate each actual source/entrypoint separately. Main verified99 manifest entries and4 overlays, reran223 tests PASS and confirmed the original distinct-source case now works. Two separate Java offline compiles passed. CV area/volume diagnostic tolerances were frozen before native execution. Qabs interface and producer-step proof remain incomplete; no total power balance or native scientific acceptance is claimed. Checkpoint: `docs/full_project_execution/w23_overlap/CV_POWER_TERMS_SOFTWARE_CHECKPOINT.json`.
+
+### W24 Equation View software closure
+
+Private read-only raw-table capture now binds physics/feature paths, source/artifact/OperationStore identities and continuous model revisions to V3 field/layout association. Main verified114 runtime-source hashes and4 overlays;149 isolated and149 main integration tests passed. Column labels are not exposed by the documented API; exact-cell matching never proves field or reference-state semantics. Native remains NOT_RUN. Checkpoint: `docs/full_project_execution/w24/EQUATION_VIEW_SOFTWARE_CHECKPOINT.json`.

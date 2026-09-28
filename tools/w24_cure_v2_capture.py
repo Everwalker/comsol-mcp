@@ -50,6 +50,7 @@ ALLOWED_PUBLIC_ACTIONS = {
     "solution_snapshot": ("W24CureScienceFixture#run", None),
     "cure_metrics_capture": ("W24CureScienceFixture#run", None),
     "cure_v2_contract_readback": ("W24CureCouponFixture#run", None),
+    "equation_view_readback_v1": ("W24CureCouponFixture#run", None),
 }
 
 
@@ -375,6 +376,245 @@ def validate_cure_law_v2_contract_readback(readback: Mapping[str, Any]) -> dict[
     }
 
 
+def validate_equation_view_readback_v1(value: Any, *, expected_study: str,
+                                       expected_solver: str) -> dict[str, Any]:
+    """Validate raw COMSOL Equation View tables without assigning semantics.
+
+    FeatureInfo.getInfoTable returns raw row arrays. The documented 6.4 API has
+    no separate header getter, so all cells and widths are retained and column
+    labels are explicitly marked unavailable rather than invented.
+    """
+    artifact = _require_mapping(value, "Equation View raw artifact")
+    table_types = ["Expression", "Shape", "Weak", "Constraint"]
+    options = ["recursive", "all"]
+    if (artifact.get("schema") != "W24_COMSOL_EQUATION_VIEW_READBACK_V1" or
+            artifact.get("status") != "COMPLETE_RAW_TABLES_NOT_EVALUATED" or
+            artifact.get("complete") is not True or artifact.get("read_only") is not True or
+            artifact.get("model_mutations") != 0 or artifact.get("native_study_run_calls") != 0 or
+            artifact.get("component_tag") != "comp1" or
+            artifact.get("study_tag") != expected_study or artifact.get("solver_tag") != expected_solver or
+            artifact.get("attached_solver_sequences") != [expected_solver] or
+            artifact.get("quasistatic_readback") != "Quasistatic" or
+            artifact.get("equation_view_table_types") != table_types or
+            artifact.get("table_options") != options or
+            artifact.get("table_request_source") != "COMSOL 6.4 FeatureInfo.getInfoTable(String,String...) API documentation" or
+            artifact.get("feature_info_tag_source") != "COMSOL 6.4 EquationViewParent.featureInfo() and FeatureInfoList.tags() API" or
+            artifact.get("feature_info_api_sha256") != "4235da3e67011348aeed61e3ca50fcdec888068f2152ac5d659b0280c68d03a0" or
+            artifact.get("equation_view_parent_api_sha256") != "98f7b2c54e2a31dc52f9c0fdfae5073d343b035cb0d295130011f4b4ca0e732b" or
+            artifact.get("column_labels") != "API_NOT_EXPOSED_BY_FEATUREINFO_GETINFOTABLE" or
+            artifact.get("raw_cells_preserved") is not True or artifact.get("errors") != []):
+        raise CaptureError("Equation View artifact is incomplete or differs from its documented read-only schema")
+    if not isinstance(artifact.get("study_tlist_readback"), str) or not artifact["study_tlist_readback"]:
+        raise CaptureError("Equation View artifact omitted the actual study time-list readback")
+    times = artifact.get("stored_times_s")
+    if (not isinstance(times, list) or not times or
+            any(isinstance(t, bool) or not isinstance(t, (int, float)) or not math.isfinite(float(t)) for t in times) or
+            any(float(right) <= float(left) for left, right in zip(times, times[1:]))):
+        raise CaptureError("Equation View artifact omitted finite increasing stored solution times")
+    physics_tags = artifact.get("component_physics_tags")
+    physics_rows = artifact.get("physics")
+    if (not isinstance(physics_tags, list) or not physics_tags or
+            any(not isinstance(tag, str) or not tag for tag in physics_tags) or
+            len(set(physics_tags)) != len(physics_tags) or
+            not isinstance(physics_rows, list) or len(physics_rows) != len(physics_tags) or
+            artifact.get("physics_count") != len(physics_tags)):
+        raise CaptureError("Equation View artifact does not preserve actual component physics tags")
+
+    observed_physics: list[str] = []
+    feature_count = info_owner_count = table_count = expression_rows = 0
+
+    def validate_info_owner(raw_info: Any, declared_tags: Any, *, owner_kind: str,
+                            owner_tag: str, owner_path: str) -> None:
+        nonlocal info_owner_count, table_count, expression_rows
+        if not isinstance(raw_info, list) or not isinstance(declared_tags, list):
+            raise CaptureError("Equation View owner omitted its native featureInfo tag list")
+        info_owner_count += 1
+        observed_tags: list[str] = []
+        for info in raw_info:
+            if not isinstance(info, Mapping):
+                raise CaptureError("Equation View featureInfo entry is malformed")
+            tag = info.get("feature_info_tag")
+            if (info.get("owner_kind") != owner_kind or info.get("owner_tag") != owner_tag or
+                    info.get("owner_path") != owner_path or not isinstance(tag, str) or not tag or
+                    info.get("feature_info_native_tag") != tag or
+                    not isinstance(info.get("feature_info_name"), (str, type(None)))):
+                raise CaptureError("Equation View featureInfo identity differs from its exact owner path/tag")
+            observed_tags.append(tag)
+            tables = info.get("tables")
+            if not isinstance(tables, list) or len(tables) != len(table_types):
+                raise CaptureError("Equation View featureInfo entry omitted one or more table types")
+            for table_type, table in zip(table_types, tables):
+                if (not isinstance(table, Mapping) or table.get("status") != "READ" or
+                        table.get("table_type") != table_type or table.get("options") != options or
+                        table.get("column_labels") != "API_NOT_EXPOSED_BY_FEATUREINFO_GETINFOTABLE"):
+                    raise CaptureError("Equation View raw table type/options/status is incomplete")
+                rows, widths = table.get("raw_rows"), table.get("row_widths")
+                max_columns, indices = table.get("max_column_count"), table.get("column_indices_zero_based")
+                if (not isinstance(rows, list) or table.get("row_count") != len(rows) or
+                        not isinstance(widths, list) or len(widths) != len(rows) or
+                        isinstance(max_columns, bool) or not isinstance(max_columns, int) or max_columns < 0 or
+                        not isinstance(indices, list) or indices != list(range(max_columns))):
+                    raise CaptureError("Equation View raw table row/column dimensions are inconsistent")
+                observed_widths: list[int] = []
+                for row in rows:
+                    if row is None:
+                        observed_widths.append(-1)
+                    elif isinstance(row, list) and all(cell is None or isinstance(cell, str) for cell in row):
+                        observed_widths.append(len(row))
+                    else:
+                        raise CaptureError("Equation View raw table contains malformed rows or non-string cells")
+                if widths != observed_widths or max(observed_widths + [0]) != max_columns:
+                    raise CaptureError("Equation View raw row widths differ from preserved native cells")
+                if table_type == "Expression":
+                    expression_rows += len(rows)
+                table_count += 1
+        if observed_tags != declared_tags or len(set(observed_tags)) != len(observed_tags):
+            raise CaptureError("Equation View featureInfo table set differs from the exact native tag enumeration")
+
+    def validate_feature(feature: Any, *, parent_path: str) -> None:
+        nonlocal feature_count
+        if not isinstance(feature, Mapping):
+            raise CaptureError("Equation View physics feature tree contains a malformed node")
+        tag, path, feature_type = (feature.get("feature_tag"), feature.get("feature_path"),
+                                   feature.get("feature_type"))
+        if (not isinstance(tag, str) or not tag or path != parent_path + "/" + tag or
+                not isinstance(feature_type, str) or not feature_type):
+            raise CaptureError("Equation View feature path/tag/type is not its exact native identity")
+        feature_count += 1
+        validate_info_owner(feature.get("equation_view"), feature.get("feature_info_tags"),
+                            owner_kind="physics_feature", owner_tag=tag, owner_path=path)
+        children = feature.get("children")
+        if not isinstance(children, list):
+            raise CaptureError("Equation View feature omitted its recursively enumerated children")
+        child_tags: set[str] = set()
+        for child in children:
+            if not isinstance(child, Mapping) or not isinstance(child.get("feature_tag"), str) or child["feature_tag"] in child_tags:
+                raise CaptureError("Equation View child feature tag list is duplicated or malformed")
+            child_tags.add(child["feature_tag"])
+            validate_feature(child, parent_path=path)
+
+    for row, expected_tag in zip(physics_rows, physics_tags):
+        if not isinstance(row, Mapping):
+            raise CaptureError("Equation View physics row is malformed")
+        tag, path = row.get("physics_tag"), f"comp1/{expected_tag}"
+        if (tag != expected_tag or row.get("physics_path") != path or
+                not isinstance(row.get("physics_type"), str) or not row.get("physics_type")):
+            raise CaptureError("Equation View physics path/type differs from actual component enumeration")
+        observed_physics.append(tag)
+        validate_info_owner(row.get("equation_view"), row.get("feature_info_tags"),
+                            owner_kind="physics", owner_tag=tag, owner_path=path)
+        features = row.get("features")
+        if not isinstance(features, list):
+            raise CaptureError("Equation View physics omitted its native feature-tag enumeration")
+        feature_tags: set[str] = set()
+        for feature in features:
+            if (not isinstance(feature, Mapping) or not isinstance(feature.get("feature_tag"), str) or
+                    feature["feature_tag"] in feature_tags):
+                raise CaptureError("Equation View physics feature-tag list is duplicated or malformed")
+            feature_tags.add(feature["feature_tag"])
+            validate_feature(feature, parent_path=path)
+    if (observed_physics != physics_tags or artifact.get("physics_feature_count") != feature_count or
+            artifact.get("feature_info_owner_count") != info_owner_count or
+            artifact.get("table_count") != table_count or artifact.get("expression_row_count") != expression_rows):
+        raise CaptureError("Equation View artifact counters differ from its recursively preserved raw tables")
+    return {
+        "status": "RAW_EQUATION_VIEW_TABLES_AUTHENTICATED_NATIVE_SEMANTICS_UNVERIFIED",
+        "study_tag": expected_study, "solver_tag": expected_solver,
+        "stored_times_s": [float(time) for time in times],
+        "component_physics_tags": list(physics_tags),
+        "physics_feature_count": feature_count,
+        "feature_info_owner_count": info_owner_count,
+        "table_count": table_count, "expression_row_count": expression_rows,
+        "column_labels": "API_NOT_EXPOSED_BY_FEATUREINFO_GETINFOTABLE",
+        "native_equation_semantics": "UNVERIFIED",
+        "maxwell_branch_field_identity": "UNVERIFIED_NOT_INFERRED_FROM_FIELD_NAME",
+        "maxwell_branch_reference_state": "UNVERIFIED", "native_acceptance": "NOT_RUN",
+    }
+
+
+def associate_equation_view_with_xmesh_v1(equation_view: Any, xmesh: Any) -> dict[str, Any]:
+    """Record exact raw-cell candidates without guessing columns or semantics."""
+    artifact = _require_mapping(equation_view, "Equation View association source")
+    metadata = _require_mapping(xmesh, "V3 Xmesh association source")
+    if (artifact.get("schema") != "W24_COMSOL_EQUATION_VIEW_READBACK_V1" or
+            artifact.get("complete") is not True or
+            metadata.get("snapshot_schema") != "W24-DOF-SNAPSHOT-3" or
+            metadata.get("complete_xmesh_internal_dof_capture") is not True):
+        raise CaptureError("Equation View association requires complete raw tables and complete V3 Xmesh layout")
+    field_names, field_counts = metadata.get("fieldNames"), metadata.get("fieldNDofs")
+    dof_names = metadata.get("dofNames")
+    if (not isinstance(field_names, list) or not field_names or
+            not isinstance(field_counts, list) or len(field_counts) != len(field_names) or
+            not isinstance(dof_names, list) or not dof_names or
+            any(not isinstance(name, str) or not name for name in field_names + dof_names) or
+            any(isinstance(count, bool) or not isinstance(count, int) or count < 0 for count in field_counts) or
+            not isinstance(metadata.get("layout_sha256"), str) or
+            not SHA256_RE.fullmatch(metadata["layout_sha256"])):
+        raise CaptureError("V3 Xmesh field/layout names are missing or malformed")
+    cells: list[dict[str, Any]] = []
+
+    def add_owner(owner: Mapping[str, Any], physics_tag: str, physics_type: str) -> None:
+        for info in owner.get("equation_view", []):
+            for table in info.get("tables", []):
+                for row_index, row in enumerate(table.get("raw_rows", [])):
+                    if row is None:
+                        continue
+                    for column_index, cell in enumerate(row):
+                        if cell is None:
+                            continue
+                        cells.append({
+                            "physics_tag": physics_tag, "physics_type": physics_type,
+                            "feature_path": owner.get("feature_path", owner.get("physics_path")),
+                            "feature_type": owner.get("feature_type", owner.get("physics_type")),
+                            "feature_info_tag": info.get("feature_info_tag"),
+                            "table_type": table.get("table_type"), "row_index": row_index,
+                            "column_index": column_index, "cell_value": cell,
+                        })
+
+    def visit(feature: Any, physics_tag: str, physics_type: str) -> None:
+        if not isinstance(feature, Mapping):
+            raise CaptureError("Equation View association encountered malformed feature data")
+        add_owner(feature, physics_tag, physics_type)
+        for child in feature.get("children", []):
+            visit(child, physics_tag, physics_type)
+
+    for physics in artifact.get("physics", []):
+        if not isinstance(physics, Mapping):
+            raise CaptureError("Equation View association encountered malformed physics data")
+        ptag, ptype = physics.get("physics_tag"), physics.get("physics_type")
+        add_owner(physics, ptag, ptype)
+        for feature in physics.get("features", []):
+            visit(feature, ptag, ptype)
+
+    def matches(name: str, kind: str, index: int, ndofs: int | None) -> dict[str, Any]:
+        exact = [dict(cell) for cell in cells if cell["cell_value"] == name]
+        state = ("EXACT_CELL_CANDIDATE_UNIQUE" if len(exact) == 1 else
+                 "EXACT_CELL_CANDIDATE_AMBIGUOUS" if len(exact) > 1 else "NO_EXACT_CELL_CANDIDATE")
+        return {"source_kind": kind, "name_index": index, "name": name,
+                "field_ndofs": ndofs, "exact_cell_match_count": len(exact),
+                "exact_cell_matches": exact, "status": state,
+                "branch_identity": "UNVERIFIED_NOT_INFERRED"}
+
+    field_rows = [matches(name, "XmeshInfo.fieldNames", index, field_counts[index])
+                  for index, name in enumerate(field_names)]
+    dof_rows = [matches(name, "XmeshInfoDofs.dofNames", index, None)
+                for index, name in enumerate(dof_names)]
+    all_unique = all(row["status"] == "EXACT_CELL_CANDIDATE_UNIQUE" for row in field_rows + dof_rows)
+    return {
+        "schema": "W24_EQUATION_VIEW_XMESH_EXACT_CELL_ASSOCIATION_V1",
+        "status": ("EXACT_CELL_CANDIDATES_RECORDED_NATIVE_SEMANTICS_UNVERIFIED" if all_unique
+                   else "CANDIDATE_ASSOCIATION_HAS_UNMATCHED_OR_AMBIGUOUS_FIELDS"),
+        "exact_equality_only": True, "normalization": "NONE", "substring_matching": False,
+        "column_label_interpretation": "NONE_API_DOES_NOT_EXPOSE_HEADERS",
+        "equation_view_schema": artifact.get("schema"),
+        "snapshot_schema": metadata.get("snapshot_schema"),
+        "layout_sha256": metadata.get("layout_sha256"),
+        "field_associations": field_rows, "dof_name_associations": dof_rows,
+        "maxwell_branch_field_identity": "UNVERIFIED_NOT_INFERRED_FROM_FIELD_NAME",
+        "maxwell_branch_reference_state": "UNVERIFIED", "native_acceptance": "NOT_RUN",
+    }
+
+
 def _verify_public_capture_record(response: Any, operation_record: Any, *, project_root: Path,
                                   source_artifact_path: Path, expected_source_sha256: str,
                                   expected_action: str, expected_project_id: str,
@@ -399,7 +639,9 @@ def _verify_public_capture_record(response: Any, operation_record: Any, *, proje
     entrypoint, _expected_case = ALLOWED_PUBLIC_ACTIONS.get(expected_action, (None, None))
     if entrypoint is None or nested.get("entrypoint") != entrypoint:
         raise CaptureError("capture Java entrypoint does not match the frozen action route")
-    if arguments.get("action") != expected_action:
+    route_action = (arguments.get("phase") if expected_action == "equation_view_readback_v1"
+                    else arguments.get("action"))
+    if route_action != expected_action:
         raise CaptureError("OperationStore record contains a different capture action")
 
     source_path = _resolve_project_file(project_root, str(source_artifact_path), "Java source", must_exist=True)
@@ -650,6 +892,45 @@ def _verify_public_capture_record(response: Any, operation_record: Any, *, proje
         raise CaptureError("Java result solver tag differs from the exact public request")
     if arguments.get("path") != artifact_receipt.get("path"):
         raise CaptureError("Java result artifact path differs from the exact public request")
+    if expected_action == "equation_view_readback_v1":
+        if (arguments.get("study_tag") != artifact_receipt.get("study_tag") or
+                artifact_receipt.get("status") != "EQUATION_VIEW_RAW_TABLES_CAPTURED" or
+                artifact_receipt.get("schema") != "W24_COMSOL_EQUATION_VIEW_READBACK_V1" or
+                artifact_receipt.get("complete") is not True or
+                artifact_receipt.get("native_acceptance") != "NOT_RUN"):
+            raise CaptureError("Equation View Worker receipt differs from the exact read-only request")
+        artifact_path = _resolve_project_file(
+            project_root, artifact_receipt.get("path"), "Equation View raw artifact", must_exist=True)
+        size = artifact_receipt.get("size_bytes")
+        expected_digest = artifact_receipt.get("sha256")
+        if (not _is_int(size) or size <= 0 or artifact_path.stat().st_size != size or
+                not isinstance(expected_digest, str) or not SHA256_RE.fullmatch(expected_digest) or
+                _sha256(artifact_path) != expected_digest):
+            raise CaptureError("Equation View artifact bytes differ from the exact Worker size/SHA-256 receipt")
+        try:
+            artifact_data = json.loads(artifact_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise CaptureError("Equation View raw artifact is not valid JSON") from exc
+        validated = validate_equation_view_readback_v1(
+            artifact_data, expected_study=str(arguments.get("study_tag")),
+            expected_solver=str(arguments.get("solver_tag")))
+        for key in ("study_tlist_readback", "quasistatic_readback", "stored_times_s"):
+            if artifact_receipt.get(key) != artifact_data.get(key):
+                raise CaptureError(f"Equation View receipt {key} differs from its raw source artifact")
+        return {
+            "status": "PUBLIC_EQUATION_VIEW_OPERATION_AND_RAW_TABLES_AUTHENTICATED_NATIVE_REVIEW_REQUIRED",
+            "source_path": str(source_path), "source_sha256": observed_source_sha,
+            "project_id": expected_project_id, "session_id": expected_session_id,
+            "model_ref": dict(expected_model_ref), "revision_before": expected_revision,
+            "revision_after": returned_revision, "request_id": record["request_id"],
+            "operation_id": record["operation_id"], "idempotency_key": record["idempotency_key"],
+            "request_hash": record["request_hash"],
+            "job_id": record["result"].get("execution", {}).get("job_id"),
+            "artifact": {"path": str(artifact_path), "size_bytes": size, "sha256": expected_digest},
+            "artifact_receipt": dict(artifact_receipt), "artifact_data": artifact_data,
+            "readback_data": dict(artifact_receipt), "capture_validation": validated,
+            "native_acceptance": "NOT_RUN",
+        }
     if expected_action in {"solution_snapshot_v2", "solution_snapshot_v3"}:
         if (arguments.get("study_tag") != artifact_receipt.get("study_tag") or
                 artifact_receipt.get("quasistatic_readback") != "Quasistatic" or

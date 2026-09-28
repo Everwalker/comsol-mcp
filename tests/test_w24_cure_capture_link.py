@@ -17,7 +17,9 @@ from comsol_mcp._execution_contract import SessionLedger
 from comsol_mcp._execution_service import ExecutionService
 from tools import run_native_w24_cure_science as runner
 from tools.w24_cure_v2_capture import (
-    CaptureError, HISTORY_EXPRESSIONS, HISTORY_UNITS, verify_public_model_load,
+    CaptureError, HISTORY_EXPRESSIONS, HISTORY_UNITS,
+    associate_equation_view_with_xmesh_v1, validate_equation_view_readback_v1,
+    verify_public_model_load,
 )
 
 
@@ -109,6 +111,72 @@ def _history_artifact(study_tag: str, solver_tag: str, times: list[float]) -> di
         "feature_readback": feature, "native_study_run_calls": 0,
         "maxwell_branch_state": "UNVERIFIED_NO_PUBLIC_REFERENCE_STATE_CAPTURE",
     }
+
+
+def _equation_view_artifact(study_tag: str, solver_tag: str, times: list[float]) -> dict:
+    names = ["comp1_T", "comp1_alpha", "comp1_alpha_iso", "comp1_Duv_rel",
+             "comp1_qpost", "comp1_u", "comp1_w"]
+    table_types = ["Expression", "Shape", "Weak", "Constraint"]
+    options = ["recursive", "all"]
+
+    def owner(kind: str, tag: str, path: str, rows: list[list[str]] | None = None):
+        rows = rows or []
+        tables = []
+        for table_type in table_types:
+            table_rows = rows if table_type == "Expression" else []
+            widths = [len(row) for row in table_rows]
+            max_width = max(widths + [0])
+            tables.append({
+                "status": "READ", "table_type": table_type, "options": options,
+                "column_labels": "API_NOT_EXPOSED_BY_FEATUREINFO_GETINFOTABLE",
+                "row_count": len(table_rows), "max_column_count": max_width,
+                "column_indices_zero_based": list(range(max_width)),
+                "row_widths": widths, "raw_rows": table_rows,
+            })
+        return [{
+            "owner_kind": kind, "owner_tag": tag, "owner_path": path,
+            "feature_info_tag": "info", "feature_info_native_tag": "info",
+            "feature_info_name": "synthetic raw fixture", "tables": tables,
+        }]
+
+    physics_path = "comp1/solid"
+    lemm_path = f"{physics_path}/lemm1"
+    visco_path = f"{lemm_path}/vis1"
+    activation_path = f"{lemm_path}/actGel"
+    visco_rows = {"feature_tag": "vis1", "feature_path": visco_path,
+                  "feature_type": "Viscoelasticity", "feature_info_tags": ["info"],
+                  "equation_view": owner("physics_feature", "vis1", visco_path), "children": []}
+    activation_rows = {"feature_tag": "actGel", "feature_path": activation_path,
+                      "feature_type": "Activation", "feature_info_tags": ["info"],
+                      "equation_view": owner("physics_feature", "actGel", activation_path), "children": []}
+    lemm_rows = {"feature_tag": "lemm1", "feature_path": lemm_path,
+                 "feature_type": "LinearElasticModel", "feature_info_tags": ["info"],
+                 "equation_view": owner("physics_feature", "lemm1", lemm_path,
+                                         [[name, "synthetic exact cell"] for name in names]),
+                 "children": [visco_rows, activation_rows]}
+    artifact = {
+        "schema": "W24_COMSOL_EQUATION_VIEW_READBACK_V1",
+        "status": "COMPLETE_RAW_TABLES_NOT_EVALUATED", "complete": True,
+        "read_only": True, "model_mutations": 0, "native_study_run_calls": 0,
+        "component_tag": "comp1", "component_physics_tags": ["solid"],
+        "study_tag": study_tag, "solver_tag": solver_tag,
+        "attached_solver_sequences": [solver_tag], "study_tlist_readback": "fixture tlist",
+        "quasistatic_readback": "Quasistatic", "stored_times_s": list(times),
+        "equation_view_table_types": table_types, "table_options": options,
+        "table_request_source": "COMSOL 6.4 FeatureInfo.getInfoTable(String,String...) API documentation",
+        "feature_info_tag_source": "COMSOL 6.4 EquationViewParent.featureInfo() and FeatureInfoList.tags() API",
+        "feature_info_api_sha256": "4235da3e67011348aeed61e3ca50fcdec888068f2152ac5d659b0280c68d03a0",
+        "equation_view_parent_api_sha256": "98f7b2c54e2a31dc52f9c0fdfae5073d343b035cb0d295130011f4b4ca0e732b",
+        "column_labels": "API_NOT_EXPOSED_BY_FEATUREINFO_GETINFOTABLE",
+        "raw_cells_preserved": True, "physics_count": 1, "physics_feature_count": 3,
+        "feature_info_owner_count": 4, "table_count": 12, "expression_row_count": len(names),
+        "errors": [],
+        "physics": [{
+            "physics_tag": "solid", "physics_type": "SolidMechanics", "physics_path": physics_path,
+            "feature_info_tags": [], "equation_view": [], "features": [lemm_rows],
+        }],
+    }
+    return artifact
 
 
 def _contract_readback() -> dict:
@@ -248,6 +316,26 @@ class _AuthenticatedLinkWorker:
             }
         elif action == "cure_v2_contract_readback":
             readback = getattr(self, "contract_readback", _contract_readback())
+        elif action == "equation_view_readback_v1":
+            path = Path(arguments["path"])
+            path.parent.mkdir(parents=True, exist_ok=True)
+            artifact = _equation_view_artifact(study_tag, solver_tag, self.times)
+            raw = (json.dumps(artifact, sort_keys=True, separators=(",", ":")) + "\n").encode()
+            path.write_bytes(raw)
+            readback = {
+                "status": "EQUATION_VIEW_RAW_TABLES_CAPTURED",
+                "schema": artifact["schema"], "study_tag": study_tag, "solver_tag": solver_tag,
+                "study_tlist_readback": artifact["study_tlist_readback"],
+                "quasistatic_readback": artifact["quasistatic_readback"],
+                "stored_times_s": list(self.times), "path": str(path),
+                "size_bytes": len(raw), "sha256": hashlib.sha256(raw).hexdigest(),
+                "complete": True, "native_acceptance": "NOT_RUN",
+                "physics_count": artifact["physics_count"],
+                "physics_feature_count": artifact["physics_feature_count"],
+                "feature_info_owner_count": artifact["feature_info_owner_count"],
+                "table_count": artifact["table_count"],
+                "expression_row_count": artifact["expression_row_count"],
+            }
         elif action == "study_run":
             self.study_runs += 1
             ledger_path = arguments.get("ledger_path")
@@ -502,6 +590,25 @@ def _make_authenticated_capture(adapter, binding, study_tag: str, times: list[fl
             adapter.slot_study_run_actions[state_key] = study_ref
 
     (adapter.workspace / "native").mkdir(exist_ok=True)
+    equation_view_path = adapter.workspace / f"native/{response_token}-equation-view.json"
+    equation_view_before = binding
+    binding, equation_view_response, equation_view_receipt = adapter._fixture_action(
+        binding, "equation_view_readback_v1", {
+            "phase": "equation_view_readback_v1", "study_tag": study_tag,
+            "solver_tag": "sol-v2", "path": str(equation_view_path)},
+        timeout_s=10.0, source_fixture=adapter.coupon_fixture,
+        entrypoint="W24CureCouponFixture#run")
+    equation_view_ref = adapter._record_public_java_action(
+        action="equation_view_readback_v1", response=equation_view_response,
+        binding_before=equation_view_before, binding_after=binding,
+        source_fixture=adapter.coupon_fixture,
+        response_dir=adapter.evidence / "responses", response_label=f"{response_token}-equation-view")
+    equation_view_verified = adapter._reauthenticate_public_java_action(equation_view_ref)
+    equation_view_artifact = equation_view_verified["artifact_data"]
+    equation_view_evidence = runner._evidence_copy(
+        equation_view_path, adapter.evidence / f"{response_token}-equation-view.json",
+        status="PUBLIC_EQUATION_VIEW_RAW_TABLES_NATIVE_SEMANTICS_UNVERIFIED")
+
     snapshot_path = adapter.workspace / f"native/{response_token}-snapshot.gz"
     snapshot_before = binding
     binding, snapshot_response, snapshot_receipt = adapter._fixture_action(
@@ -517,6 +624,9 @@ def _make_authenticated_capture(adapter, binding, study_tag: str, times: list[fl
     snapshot_evidence = runner._evidence_copy(
         snapshot_path, adapter.evidence / f"{response_token}-snapshot.gz",
         status="V3_PUBLIC_FULL_XMESH_SNAPSHOT_NATIVE_REVIEW_REQUIRED")
+    snapshot_frames = list(runner.iter_solution_snapshot(snapshot_evidence["path"]))
+    association = associate_equation_view_with_xmesh_v1(
+        equation_view_artifact, snapshot_frames[0]["dofs"])
 
     history_path = adapter.workspace / f"native/{response_token}-history.json"
     history_before = binding
@@ -543,6 +653,14 @@ def _make_authenticated_capture(adapter, binding, study_tag: str, times: list[fl
             "case_id": slot.case_id, "study_tag": study_tag, "solver_tag": "sol-v2",
             "model_contract": {"reference": contract["reference"]},
             "setup_readback": setup_ref, "study_run": study_ref,
+            "equation_view_capture": {
+                "operation": equation_view_ref, "evidence": equation_view_evidence,
+                "artifact_receipt": equation_view_receipt,
+                "capture_validation": equation_view_verified["capture_validation"],
+                "association": association,
+                "maxwell_branch_field_identity": "UNVERIFIED_NOT_INFERRED_FROM_FIELD_NAME",
+                "maxwell_branch_reference_state": "UNVERIFIED",
+            },
             "solution_snapshot": {
                 "operation": snapshot_ref, "evidence": snapshot_evidence,
                 "artifact_receipt": snapshot_receipt,
@@ -626,15 +744,130 @@ def test_production_capture_pair_tracks_actual_revision_steps_and_reauthenticate
         capture = {"cure_law_capture_mode": "V2_PUBLIC_AUTHENTICATED", "v2_capture": report}
         frames, lineage = adapter._authenticated_v2_capture_frames(
             capture, expected_case=slot.case_id, expected_study=slot.study_tag)
+        equation_view_ref = report["equation_view_capture"]["operation"]
         snapshot_ref = report["solution_snapshot"]["operation"]
         history_ref = report["history_capture"]["operation"]
-        assert snapshot_ref["binding_before"]["revision"] == study_ref["binding_after"]["revision"]
+        assert study_ref["binding_after"]["revision"] == equation_view_ref["binding_before"]["revision"]
+        assert equation_view_ref["binding_after"]["revision"] == snapshot_ref["binding_before"]["revision"]
         assert snapshot_ref["binding_after"]["revision"] == history_ref["binding_before"]["revision"]
+        assert report["equation_view_capture"]["capture_validation"]["native_equation_semantics"] == "UNVERIFIED"
+        assert report["equation_view_capture"]["association"]["exact_equality_only"] is True
+        assert report["equation_view_capture"]["association"]["substring_matching"] is False
+        assert lineage["maxwell_branch_field_identity"] == "UNVERIFIED_NOT_INFERRED_FROM_FIELD_NAME"
         assert report["model_binding_after_history"]["revision"] == binding.revision
         assert lineage["source_identity_authenticated"] is True
         assert lineage["native_acceptance"] == "NOT_RUN"
         assert worker.study_runs == 1
         assert len(frames) == 2
+    finally:
+        daemon.close()
+
+
+def test_equation_view_raw_table_validation_and_exact_cell_candidates_remain_unverified():
+    artifact = _equation_view_artifact("stdUV", "sol-v2", [0.0, 1.0])
+    validation = validate_equation_view_readback_v1(
+        artifact, expected_study="stdUV", expected_solver="sol-v2")
+    assert validation["column_labels"] == "API_NOT_EXPOSED_BY_FEATUREINFO_GETINFOTABLE"
+    assert validation["native_equation_semantics"] == "UNVERIFIED"
+    assert validation["maxwell_branch_field_identity"] == "UNVERIFIED_NOT_INFERRED_FROM_FIELD_NAME"
+    features = artifact["physics"][0]["features"]
+    assert [(row["feature_path"], row["feature_type"]) for row in features] == [
+        ("comp1/solid/lemm1", "LinearElasticModel")]
+    assert [row["feature_path"] for row in features[0]["children"]] == [
+        "comp1/solid/lemm1/vis1", "comp1/solid/lemm1/actGel"]
+    metadata = {
+        "snapshot_schema": "W24-DOF-SNAPSHOT-3",
+        "complete_xmesh_internal_dof_capture": True,
+        "fieldNames": ["comp1_T", "comp1_alpha", "comp1_alpha_iso", "comp1_Duv_rel",
+                       "comp1_qpost", "comp1_u", "comp1_w"],
+        "fieldNDofs": [1] * 7,
+        "dofNames": ["comp1_T", "comp1_alpha", "comp1_alpha_iso", "comp1_Duv_rel",
+                     "comp1_qpost", "comp1_u", "comp1_w"],
+        "layout_sha256": "a" * 64,
+    }
+    association = associate_equation_view_with_xmesh_v1(artifact, metadata)
+    assert association["status"] == "EXACT_CELL_CANDIDATES_RECORDED_NATIVE_SEMANTICS_UNVERIFIED"
+    assert association["layout_sha256"] == metadata["layout_sha256"]
+    assert association["exact_equality_only"] is True
+    assert association["substring_matching"] is False
+    assert all(row["status"] == "EXACT_CELL_CANDIDATE_UNIQUE"
+               for row in association["field_associations"] + association["dof_name_associations"])
+    assert association["maxwell_branch_field_identity"] == "UNVERIFIED_NOT_INFERRED_FROM_FIELD_NAME"
+    assert association["native_acceptance"] == "NOT_RUN"
+
+    duplicate = copy.deepcopy(artifact)
+    expression_table = duplicate["physics"][0]["features"][0]["equation_view"][0]["tables"][0]
+    expression_table["raw_rows"].append(["comp1_Duv_rel", "duplicate exact candidate"])
+    expression_table["row_widths"].append(2)
+    expression_table["row_count"] += 1
+    duplicate["expression_row_count"] += 1
+    validate_equation_view_readback_v1(
+        duplicate, expected_study="stdUV", expected_solver="sol-v2")
+    ambiguous = associate_equation_view_with_xmesh_v1(duplicate, metadata)
+    duv = next(row for row in ambiguous["field_associations"] if row["name"] == "comp1_Duv_rel")
+    assert duv["status"] == "EXACT_CELL_CANDIDATE_AMBIGUOUS"
+    assert duv["exact_cell_match_count"] == 2
+    assert ambiguous["status"] == "CANDIDATE_ASSOCIATION_HAS_UNMATCHED_OR_AMBIGUOUS_FIELDS"
+    assert "PASS" not in ambiguous["status"]
+
+    cross_table_duplicate = copy.deepcopy(artifact)
+    shape_table = cross_table_duplicate["physics"][0]["features"][0]["equation_view"][0]["tables"][1]
+    shape_table["raw_rows"] = [["comp1_Duv_rel", "shape table exact candidate"]]
+    shape_table["row_widths"] = [2]
+    shape_table["row_count"] = 1
+    shape_table["max_column_count"] = 2
+    shape_table["column_indices_zero_based"] = [0, 1]
+    validate_equation_view_readback_v1(
+        cross_table_duplicate, expected_study="stdUV", expected_solver="sol-v2")
+    cross_table_candidates = associate_equation_view_with_xmesh_v1(cross_table_duplicate, metadata)
+    cross_table_duv = next(row for row in cross_table_candidates["field_associations"]
+                           if row["name"] == "comp1_Duv_rel")
+    assert cross_table_duv["status"] == "EXACT_CELL_CANDIDATE_AMBIGUOUS"
+    assert {row["table_type"] for row in cross_table_duv["exact_cell_matches"]} == {
+        "Expression", "Shape"}
+
+    malformed = copy.deepcopy(artifact)
+    malformed["physics"][0]["features"][0]["equation_view"][0]["tables"][0]["row_widths"][0] = 99
+    with pytest.raises(CaptureError, match="raw row widths"):
+        validate_equation_view_readback_v1(
+            malformed, expected_study="stdUV", expected_solver="sol-v2")
+
+    missing_layout = {**metadata, "complete_xmesh_internal_dof_capture": False}
+    with pytest.raises(CaptureError, match="complete raw tables and complete V3 Xmesh layout"):
+        associate_equation_view_with_xmesh_v1(artifact, missing_layout)
+    no_layout_hash = {key: value for key, value in metadata.items() if key != "layout_sha256"}
+    with pytest.raises(CaptureError, match="field/layout names"):
+        associate_equation_view_with_xmesh_v1(artifact, no_layout_hash)
+
+
+@pytest.mark.parametrize("mutation", [
+    "operation_id", "job_id", "request_hash", "binding_after", "source_sha256",
+    "response_hash", "artifact_hash",
+])
+def test_authenticated_equation_view_route_rejects_mutated_public_identity(tmp_path, monkeypatch, mutation):
+    daemon, _worker, adapter, binding = _real_daemon_adapter(
+        tmp_path, monkeypatch, [0.0, 1.0])
+    try:
+        binding, slot, capture = _make_authenticated_capture(
+            adapter, binding, "stdUV", [0.0, 1.0], tmp_path)
+        reference = capture["v2_capture"]["equation_view_capture"]["operation"]
+        assert reference["action"] == "equation_view_readback_v1"
+        tampered = copy.deepcopy(capture)
+        target = tampered["v2_capture"]["equation_view_capture"]["operation"]
+        if mutation in {"operation_id", "job_id", "request_hash"}:
+            target["public_identity"][mutation] = (
+                "0" * 64 if mutation == "request_hash" else "foreign-" + mutation)
+        elif mutation == "binding_after":
+            target[mutation]["revision"] += 1
+        elif mutation == "source_sha256":
+            target[mutation] = "0" * 64
+        elif mutation == "response_hash":
+            target["response_evidence"]["sha256"] = "0" * 64
+        else:
+            target["artifact_receipt"]["sha256"] = "0" * 64
+        with pytest.raises(runner.CampaignError):
+            adapter._authenticated_v2_capture_frames(
+                tampered, expected_case=slot.case_id, expected_study=slot.study_tag)
     finally:
         daemon.close()
 

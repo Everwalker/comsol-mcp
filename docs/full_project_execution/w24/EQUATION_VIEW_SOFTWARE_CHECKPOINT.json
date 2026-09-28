@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "status": "PASS_SCOPED_SOFTWARE",
+  "work_package_status": "PARTIAL",
+  "capability": {
+    "association": "exact raw cell equality candidates against authenticated V3 fieldNames/dofNames and layout hash; all matches including ambiguity retained; no column or field semantics inferred",
+    "capture": "real OperationStore/Job/response/ModelRef/revision/source/artifact path/hash reauthentication in tests; Java read-only capture of native featureInfo tags/types/paths/raw Expression/Shape/Weak/Constraint rows and actual study/solver/quasistatic/stored-time readback",
+    "column_labels": "API_NOT_EXPOSED_BY_FEATUREINFO_GETINFOTABLE",
+    "maxwell_branch_identity": "UNVERIFIED",
+    "maxwell_branch_reference_state": "UNVERIFIED",
+    "native_acceptance": "NOT_RUN",
+    "route": "public code.execute_java -> W24CureCouponFixture#run phase=equation_view_readback_v1"
+  },
+  "receipt": {
+    "path": "/private/tmp/w24_equation_view_readback_884c98_receipt.json",
+    "sha256": "c4088cc93f11d658720e793936ab8a67ee4700283e9fd235b1a59f945ed21b06"
+  },
+  "files": [
+    {
+      "base_copy_exists": true,
+      "base_copy_sha256": "ea7cbf1237bdb9020f17acf76f481cffb68becd740c9210d9827ba2d73a8949f",
+      "path": "tools/java/W24CureCouponFixture.java",
+      "sha256": "382328877f190aace1af3e25d98828fadea55cd9a5b7c0694aa046206442f247",
+      "status": "modified"
+    },
+    {
+      "base_copy_exists": true,
+      "base_copy_sha256": "8ee80719397b13d2f9eb9201a9a9d1b7a6fabaeec3d6b696a415fee3b045d4d8",
+      "path": "tools/w24_cure_v2_capture.py",
+      "sha256": "3eaf879f3647373301ef7a7b967880b41babe35d8e3d6303c7659de88e66fb35",
+      "status": "modified"
+    },
+    {
+      "base_copy_exists": true,
+      "base_copy_sha256": "a508e8de51bb0ebfaa687c73e27b1897fd30130bbc76c56573821a93986bb486",
+      "path": "tools/run_native_w24_cure_science.py",
+      "sha256": "cc6fc21fe9be32ba64637d049c1adc0ab44330bc7f0b721d33a1ca112ab01483",
+      "status": "modified"
+    },
+    {
+      "base_copy_exists": true,
+      "base_copy_sha256": "19f723105e3c4eb0c9a875d7dd1771844f63c3daf64fd0d8a41e618816cfff2e",
+      "path": "tests/test_w24_cure_capture_link.py",
+      "sha256": "952e86cccddfa0f144e0febfd660d2d285d2f0a412cf254e363f24d8fe5e08d5",
+      "status": "modified"
+    }
+  ],
+  "dependency_manifest": {
+    "path": "/private/tmp/w24_equation_view_readback_884c98_source_manifest.json",
+    "sha256": "1a3cfbd129e3625a76cfc91bb348244a5ba1950955e632f3c0faa68ddd6ddf7a",
+    "verified_entries": 114
+  },
+  "main_integrity": {
+    "path": "/private/tmp/w24-equation-main-integrity.json",
+    "sha256": "855f0cbba4d5da05143cacc1300399204fe3c02f7fc9d3ed6768f8ca6b396364"
+  },
+  "isolated_tests": {
+    "command": "/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -m pytest -q --junitxml=/private/tmp/w24_equation_view_readback_884c98/junit-equation-view-7modules.xml tests/test_w24_cure_capture_link.py tests/test_w24_cure_v2_capture.py tests/test_w24_maxwell_branch_state.py tests/test_w24_cure_coupon_fixture.py tests/test_w24_cure_law_v2.py tests/test_w24_cure_science_runner.py tests/test_w24_science_acceptance.py",
+    "junit_path": "/private/tmp/w24_equation_view_readback_884c98/junit-equation-view-7modules.xml",
+    "junit_sha256": "a0bcaff79c17b7c3e5c20a4273d2f811e4e50627b9829f6fcaae549d8c2ad90c",
+    "result": "149 passed, 0 failed"
+  },
+  "main_integration_tests": {
+    "base": "aa1ae3168444c4f302eaa95c32f29447fd78b2b0",
+    "passed": 149,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "junit": "/private/tmp/w24-equation-main-junit.xml",
+    "sha256": "fcd8ddc8ed3be1821c1c5ba75692679da2c306bf020016b67a68d6615c6dff32"
+  },
+  "java_compile": {
+    "class_outputs": [
+      {
+        "path": "W24CureCouponFixture.class",
+        "sha256": "3d1919f7beaa5bb3d8d7876d65570aec833ec7d40be52ad3e220bb8b896ba097"
+      },
+      {
+        "path": "W24CureLawV2ControlFixture$GeometryReadback.class",
+        "sha256": "fd68b69f38d4b99ddb5e54b89686bf9a88103111115fe829dee154ce2334743e"
+      },
+      {
+        "path": "W24CureLawV2ControlFixture.class",
+        "sha256": "a931081e2b4ca80d2ce9e084cf2579e24f069f4de9c5a1c93787984e3eee9c35"
+      },
+      {
+        "path": "W24CureScienceFixture$NumericalValues.class",
+        "sha256": "dd8fb324ba7e4c1e5c93e4a7b8fa167aca40957d6890bb6bc1820330066c8956"
+      },
+      {
+        "path": "W24CureScienceFixture.class",
+        "sha256": "78928ab65da6265cc1d37fd54d3be62e74f05f4b524ac93a0b8d57f770c6126f"
+      }
+    ],
+    "command": "/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home/bin/javac -cp /Applications/COMSOL64/Multiphysics/plugins/*:/Applications/COMSOL64/Multiphysics/apiplugins/* -encoding UTF-8 -d /private/tmp/w24_eqv_javac_final_20260928 tools/java/W24CureScienceFixture.java tools/java/W24CureLawV2ControlFixture.java tools/java/W24CureCouponFixture.java",
+    "compiler": "/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home/bin/javac",
+    "return_code": 0
+  },
+  "failed_attempt_note": "Initial capture-link run reported3 failures; return placement and new revision transitions were repaired. Initial closure lacked unchanged proposal dependency, then restored byte-identical published source. Those early runs had no JUnit/log file and survive only in session tool output; no file path/hash is claimed and no failure is rerun as a substitute. Final149P JUnit and receipt are retained.",
+  "limitations": [
+    "Java API compilation and synthetic Worker/ControlDaemon+SQLite tests do not establish native COMSOL behavior.",
+    "No native process was started or solved."
+  ],
+  "next_action": "Complete remaining original W24 physical fixtures and numerical controls; establish native field/reference semantics under a fresh reviewed coupon/budget when resource authorization permits. Full W01-W26 and overall independent review remain pending."
+}
