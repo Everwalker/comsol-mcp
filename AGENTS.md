@@ -151,3 +151,10 @@ Current user instructions (2026-09-27) supersede older phase-stop and progress-f
 - Push with `git push origin HEAD:main`; never force-push or rewrite remote history. If branch protection requires a PR, use it and report pending merge. Preserve local commits if authentication, network or protection blocks delivery.
 - After pushing, run `git fetch origin main`, `git rev-parse HEAD` and `git rev-parse origin/main`. Only matching hashes justify reporting GitHub synchronization complete.
 - Continue the next authorized work immediately after synchronization. Do not publish unexecuted checks as PASS or mark the full project complete while required work, true blockers or final review remain.
+
+## Efficient test execution
+
+- Follow `docs/full_project_execution/TEST_EXECUTION.md`: fixed candidate baseline, offline preflight, focused tests, then required regression. Use compact summaries first; inspect raw evidence only when needed.
+- Keep implementation/debugging with one Luna Max executor per coherent unit. Main handles architecture and final diff/acceptance review; avoid duplicate step-by-step analysis.
+- Use deterministic scripts for hashing, JUnit aggregation and routine checks. Do not change acceptance thresholds, skip required native evidence or relabel historical results as fresh PASS to save model usage.
+- New temporary outputs belong on external SSD with verified filesystem semantics. Preserve occupied historical runtimes until separately authorized cleanup.

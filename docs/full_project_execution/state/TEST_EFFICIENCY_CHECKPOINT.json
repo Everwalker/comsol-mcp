@@ -1,0 +1,79 @@
+{
+  "schema": "TEST_EFFICIENCY_SOFTWARE_CHECKPOINT_V1",
+  "status": "PASS_SCOPED_OFFLINE_TOOLING",
+  "project_status": "PARTIAL",
+  "capabilities": [
+    "Config-driven fixed baseline and 99-file source closure; explicit overlay and historical Git fixture checks",
+    "Interpreter/import identity, external APFS scratch write/read/mode/symlink/enumeration preflight",
+    "Explicit focus and required regression; nonzero/invalid/missing/contradictory JUnit, zero/skipped execution and changed fingerprint cannot pass",
+    "Omitted configured required regression returns PARTIAL/nonzero; no required nodes is NOT_CONFIGURED",
+    "Stdout bounded to 2 KiB; full logs and JUnit preserved on external SSD"
+  ],
+  "tests": {
+    "executor_focused_passed": 8,
+    "executor_integrated_focus_passed": 8,
+    "executor_integrated_registration_passed": 1,
+    "main_independent_junit_negatives_passed": 3,
+    "main_source_manifest_files_verified": 99,
+    "main_artifact_hashes_verified": true
+  },
+  "candidate_fingerprint": "b1e3dca981f83a1fe847a6b8fb2517a8070a4d96f015f5f3b372c46fd712e412",
+  "runner_sha256": "17cbf0c2c3443d326686c44f92b848666d137d21baf0d1e4a4cb89b0f80d4148",
+  "baseline_commit": "e750e43eab57fcb4b8876e2485be2aec15bdc38b",
+  "receipt": {
+    "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/20260928T085002Z-580f0720.summary.json",
+    "sha256": "51b802c5c713d2204cbb27626a6146ea3381bf35feff692b733a707bcd2d3591"
+  },
+  "main_review": {
+    "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/main-counterexamples/main-retest-final.json",
+    "sha256": "9d653b8cc6e9cdd4e4ed78d2936799751b7fb727d18c96217daba8f01a3985e0",
+    "counterexamples": [
+      {
+        "name": "root_failure_contradiction",
+        "xml": "<testsuites tests=\"1\" failures=\"1\" errors=\"0\"><testsuite tests=\"1\" failures=\"0\" errors=\"0\"><testcase classname=\"x\" name=\"ok\"/></testsuite></testsuites>",
+        "expected_count": 1,
+        "actual_status": "FAIL"
+      },
+      {
+        "name": "suite_level_error",
+        "xml": "<testsuite tests=\"1\" failures=\"0\" errors=\"1\"><error message=\"setup failed\"/><testcase classname=\"x\" name=\"ok\"/></testsuite>",
+        "expected_count": 1,
+        "actual_status": "FAIL"
+      },
+      {
+        "name": "malformed_counter",
+        "xml": "<testsuite tests=\"NaN\" failures=\"0\" errors=\"0\"><testcase classname=\"x\" name=\"ok\"/></testsuite>",
+        "expected_count": 1,
+        "actual_status": "FAIL"
+      }
+    ]
+  },
+  "source_files": [
+    "tools/run_bounded_tests.py",
+    "tools/test_efficiency_baseline.json",
+    "tests/test_bounded_test_runner.py"
+  ],
+  "replay": "python3 -B tools/run_bounded_tests.py --baseline tools/test_efficiency_baseline.json --with-required-regression",
+  "workflow": "docs/full_project_execution/TEST_EXECUTION.md",
+  "environment": {
+    "image": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/te-apfs-20260928-01.sparseimage",
+    "mount": "/Volumes/CTestEff",
+    "setup_receipt": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/environment_setup.json",
+    "new_outputs": "EXTERNAL_SSD",
+    "old_occupied_runtime": "RETAINED_PENDING_SEPARATE_CLEANUP_PERMISSION"
+  },
+  "failures_preserved": [
+    "Initial overlay parsing error and fixture correction in executor record",
+    "20260928T083843Z-009f9af8.summary.json: overbroad AppleDouble output check",
+    "20260928T084055Z-47a17536.summary.json: optional xattr API unavailable"
+  ],
+  "limitations": [
+    "Native COMSOL NOT_RUN",
+    "Java compilation NOT_RUN",
+    "Extended attributes NOT_RUN_optional",
+    "APFS preflight is macOS-specific; checked-in baseline is host snapshot",
+    "No measured percentage of GPT quota savings",
+    "Project W01-W26 gaps and final independent review remain open"
+  ],
+  "next_action": "Use same Luna executor to repair frozen W24 non-finite actfac validation, preserve original failure, and review/integrate physical-controls candidate using explicit next-stage test selection; then continue MASTER_GOAL without stage pauses"
+}
