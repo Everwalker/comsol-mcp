@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "phase": "W21_STRICT_FIELD_ACCEPTED_STAGE_BACKEND_NEXT",
+  "phase": "W21_ACTUAL_STAGE_BACKEND_IMPLEMENTATION",
   "task": "W01_W26_CONTINUOUS_IMPLEMENTATION",
   "status": "PARTIAL_EXECUTION_CONTINUING_NATIVE_UNVERIFIED",
   "candidate_source": "docs/full_project_execution/project_session/EXPERIMENT_READS_SOFTWARE_CHECKPOINT.json",
@@ -990,10 +990,10 @@
     "next": "Wait for stable F04 runtime handoff; refresh closure and submit a new candidate for root review. No automatic rerun."
   },
   "verified_git_sync": {
-    "head": "7b85a27ee8206886763ca442061c8e3f9deb0a3f",
-    "origin_main": "7b85a27ee8206886763ca442061c8e3f9deb0a3f",
+    "head": "e22cb62c298c17dc639b44b5ddbfe3c29205ded7",
+    "origin_main": "e22cb62c298c17dc639b44b5ddbfe3c29205ded7",
     "status": "VERIFIED_EQUAL_AFTER_PUSH",
-    "stage": "W23_QABS_FREQUENCY_SOFTWARE"
+    "stage": "W21_STRICT_FIELD_SOFTWARE"
   },
   "w24_static_shape_science_admission_repair": {
     "status": "SCOPED_SOFTWARE_REPAIR_ACCEPTED_NATIVE_NOT_RUN",
@@ -2062,8 +2062,8 @@
     "github_sync": "3ce18d796170b6b35c782e41cb17898a6a33c7ab"
   },
   "w21_next_backend_plan": {
-    "status": "CURRENT_SOURCE_RECHECKED_IMPLEMENTATION_PENDING",
-    "review_base": "3ce18d796170b6b35c782e41cb17898a6a33c7ab",
+    "status": "BACKEND_SOURCE_PRESENT_CONTRACT_REPAIR_AND_TESTS_PENDING",
+    "review_base": "e22cb62c298c17dc639b44b5ddbfe3c29205ded7",
     "source_hashes": {
       "comsol_mcp/_w21_execution.py": "b6adf435729acbecbd2767f46516657ecfac61faf4914e1ef712e1c5db9a466d",
       "comsol_mcp/_control_daemon.py": "e13bdba091eac414ae10cc9cdc49b98a19608e37c4006c6791c937580bb13fdc",
@@ -2077,7 +2077,7 @@
       "Exercise actual successful supported path and negative/unknown/partial-save cases; retain native and W24 hidden-history acceptance separately"
     ],
     "acceptance_warning": "Selector roundtrip, declarations, and synthetic tests cannot establish actual stage/history transfer",
-    "next_after": "Current W23 candidate integration",
+    "next_after": "Review cohesive backend unit, scoped regression and stage GitHub sync; continue original MASTER_GOAL",
     "current_unit": {
       "status": "ACCEPTED_SCOPED_SOFTWARE",
       "api_investigation": "Executor reports COMSOL6.4 SolutionInfo.getISol(outer,inner) to SolverSequence.getMesh(geom,iMulti) association; exact method/docs evidence to be reviewed with candidate",
@@ -2091,7 +2091,7 @@
         "Adapted or multi-object profiles must follow verified indexing or refuse",
         "No native execution or actual stage solve accepted yet"
       ],
-      "next": "Implement/test/compile bounded unit, review/publish, then continue actual stage backend",
+      "next": "Strict field software accepted and published e22cb62; actual stage pipeline is now implementing",
       "architecture_decision": {
         "entrypoint": "W21-private strict-field path reusing _g3_results SolutionBinding and selector evidence; public result.evaluate semantics unchanged",
         "max_numeric_scalars": 65536,
@@ -2154,11 +2154,97 @@
         "issue": "Known Worker FIELD_READBACK_LIMIT_EXCEEDED/INVALID_NUMERIC/INVALID_SHAPE converted to generic UNAVAILABLE",
         "required_fix": "Preserve known deterministic codes with bounded non-array details; unknown transport failures remain unavailable; add Python consumer regression"
       }
+    },
+    "backend_architecture": {
+      "route": "ControlDaemon stage_run -> existing session_scheduler -> backend.invoke -> ManagedBackend -> existing persistent Worker",
+      "target_intrinsic_unit": "UNVERIFIED: local COMSOL 6.4 Field/PhysicsField docs expose no generic intrinsic-unit getter; ParamBase evaluateUnit and requested Eval unit are insufficient",
+      "admission": "Missing or contradictory target field/unit/topology/frame evidence must prevent dispatch; caller-supplied proof cannot authorize native execution",
+      "crash_safety": "Persistent intent before dispatch; response loss or incomplete output/check/save remains UNKNOWN or non-accepted, never implicit retry",
+      "native_status": "NOT_RUN; existing resource gate remains",
+      "execution_agent": "/root/luna_test_efficiency",
+      "acceptance": "Exact binding/effect authorization, negative proof tests, injected failures at dispatch and save boundaries, exact output tuple and artifact hash before acceptance",
+      "identity_alternative_review": "Current source readback lacks source-solve dependent-field definition fingerprint; managed revision explicitly excludes full external CAS. Same variable name/current revision alone cannot prove intrinsic units. Future supported identity admission needs authenticated source-definition and target-definition comparison plus check dimensions.",
+      "main_contract_review": {
+        "status": "CHANGES_REQUIRED_IN_PROGRESS",
+        "findings": [
+          "Output must bind exact attempt/model/revision/plan/source identity",
+          "Resolve selection DSL to exact output tuple rather than compare first/last/list selectors with scalar indexes",
+          "Reject duplicate/missing check IDs and bind frozen definitions; do not accept PASS labels without finite numeric evidence and frozen-threshold evaluation"
+        ],
+        "scope": "Early source review only; no runtime acceptance",
+        "executor": "Same Luna repairs as part of cohesive implementation"
+      },
+      "next_platform_handoff_constraint": "Before future Windows transfer, use a reviewed source allowlist/frozen source manifest: current windows_handoff_snapshot.selected_paths uses git ls-files -co, and its root evidence/ exclusion does not exclude docs/full_project_execution/evidence. Do not archive the current mixed worktree wholesale. No transfer performed by this review."
     }
   },
   "w21_strict_field_checkpoint": {
     "status": "PASS_SCOPED_SOFTWARE",
     "path": "docs/full_project_execution/project_session/STRICT_FIELD_READBACK_SOFTWARE_CHECKPOINT.json",
-    "native_acceptance": "NOT_RUN"
+    "native_acceptance": "NOT_RUN",
+    "github_sync": "e22cb62c298c17dc639b44b5ddbfe3c29205ded7"
+  },
+  "active_execution_units": [
+    {
+      "stage": "W21",
+      "agent": "/root/luna_test_efficiency",
+      "status": "IMPLEMENTING_AND_TESTING",
+      "scope": "Native-admission-gated existing-Worker stage dispatch/check/save with durable no-replay transitions",
+      "acceptance": "PENDING; native NOT_RUN"
+    },
+    {
+      "stage": "W26_WINDOWS_HANDOFF",
+      "agent": "/root/luna_handoff_scope",
+      "status": "ACCEPTED_SCOPED_SOFTWARE",
+      "scope": "Explicit source-manifest archive selection and scoped patch; source-hash validation; synthetic create/verify/extract tests",
+      "owned_files": [
+        "tools/windows_handoff_snapshot.py",
+        "tests/test_windows_handoff_snapshot.py"
+      ],
+      "acceptance": "88 unique PASS; source/artifact hashes verified; Windows/native NOT_RUN",
+      "review": {
+        "status": "REPAIRED_VERIFIED",
+        "manifest_binding_finding": "REPAIRED; source and tests reviewed; all six JUnit histories/hash receipts independently verified, final 43 pass",
+        "finding": "safe_member_path accepts Windows-forbidden punctuation/control characters; exact manifest can select unextractable Windows filenames",
+        "reproducer": [
+          "src/a?.py",
+          "src/a*.py",
+          "src/a|b.py",
+          "src/a<b.py",
+          "src/a\\x01b.py"
+        ],
+        "required_test": "Reject forbidden Windows characters/control codes before archive publish and extraction destination creation",
+        "receipt_43": "/Volumes/SSD/Comsol-MCP/execution-scratch/windows-handoff-scope/20260928T1151Z-f8d1a2-final-review2/receipt.json",
+        "receipt_sha256": "b7ed9b3ddb3be1bc0e2c431b24f433784decee2f4e96b2cf9f9f41f213580a13",
+        "final_checkpoint": "docs/full_project_execution/release/WINDOWS_HANDOFF_SOURCE_CHECKPOINT.json"
+      },
+      "next_action": "Prepare exact reviewed source handoff after GitHub synchronization"
+    }
+  ],
+  "windows_readonly_connection_observation": {
+    "checked_at": "2026-09-28T11:45:02.034709+00:00",
+    "host": "everwalker@192.168.100.2",
+    "status": "READ_ONLY_SSH_QUERY_SUCCEEDED",
+    "query_scope": "COMSOL/java/python process names and PID; booleans only for missing path/command-line",
+    "matched_processes": 14,
+    "matched_names": [
+      "python.exe"
+    ],
+    "missing_path_count": 0,
+    "missing_command_line_count": 0,
+    "comsol_java_matches": 0,
+    "limitations": [
+      "This filtered observation does not identify Python process ownership",
+      "No native engine/build/license or platform acceptance established",
+      "No processes started/stopped; no files uploaded or deleted"
+    ],
+    "earlier_attempt": "PowerShell quoting ParserError; corrected by UTF-16LE EncodedCommand with same read-only query",
+    "next_action": "After reviewed source snapshot and scoped platform admission, perform required Windows tests without interfering with unrelated processes"
+  },
+  "windows_handoff_source_checkpoint": {
+    "status": "ACCEPTED_SCOPED_SOFTWARE",
+    "checkpoint": "docs/full_project_execution/release/WINDOWS_HANDOFF_SOURCE_CHECKPOINT.json",
+    "tests": 88,
+    "native": "NOT_RUN",
+    "git_sync": "PENDING_POST_PUSH_VERIFICATION"
   }
 }

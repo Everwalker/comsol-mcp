@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "stage": "W26 Windows source-handoff selection",
+  "status": "PASS_SCOPED_SOFTWARE",
+  "overall_W26": "PARTIAL",
+  "reviewed_at": "2026-09-28T12:12:19.586860+00:00",
+  "base_head": "e22cb62c298c17dc639b44b5ddbfe3c29205ded7",
+  "source_files": [
+    {
+      "path": "tools/windows_handoff_snapshot.py",
+      "sha256": "2d26523215002042d5ff0441dee428de7644dab93ce2f2834f92ac4abd83ad02"
+    },
+    {
+      "path": "tests/test_windows_handoff_snapshot.py",
+      "sha256": "8fccf4e403063c02f7a48e515083a14698c0e3a7b7eb86de1be809cf5c01e7aa"
+    }
+  ],
+  "capabilities": [
+    "Explicit reviewed source manifest binds exact HEAD, selected paths and SHA-256 through archive creation",
+    "Default tracked-source selection excludes known runtime/evidence/cache/key/secret-like paths; no universal content-secret detection claim",
+    "WORKTREE.patch restricted to selected literal paths; ambiguous rename/deletion refused",
+    "Archive preflight checks bytes, manifest, patch and new-file list before no-overwrite publication",
+    "Windows forbidden filename characters, control characters, unsafe paths, symlinks and duplicate-case paths rejected"
+  ],
+  "tests": {
+    "unique_passed": 88,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "environment": "macOS; Python 3.12.13; pytest 9.1.1; synthetic Git repos on external-SSD-backed APFS",
+    "junit": {
+      "path": "/Volumes/CTestEff/windows-handoff-scope-20260928T1151Z-f8d1a2-winchars20260928-93a6.xml",
+      "sha256": "e44fd55fcd3a463b6de8114b0ce6100e65bf0ec6f87716930dddec6a8c0dbc20"
+    },
+    "command": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/windows-handoff-scope/20260928T1151Z-f8d1a2-winchars20260928-93a6/command.txt",
+      "sha256": "4b5772245e0656fe947ea2f83967f4c8fd3b50639ffca45b8aa755537c4304cf"
+    },
+    "stdout": {
+      "path": "/Volumes/CTestEff/windows-handoff-scope-20260928T1151Z-f8d1a2-winchars20260928-93a6.stdout.log",
+      "sha256": "9475217c7d1fceafb73f10ebc746e4aba95b1666ed12e09549eff5d0786c2b68"
+    }
+  },
+  "main_review": {
+    "status": "ACCEPTED_SCOPED_SOFTWARE",
+    "source_and_artifact_hashes": "VERIFIED",
+    "actual_junit_counts": "VERIFIED",
+    "findings_closed": [
+      "Frozen manifest hashes/HEAD must not be replaced by later snapshot values",
+      "Windows-invalid punctuation/control characters must reject before output creation"
+    ],
+    "additional_recheck": "Five previously accepted invalid filenames now reject; subset of 88 tests, not added to unique count"
+  },
+  "receipt": {
+    "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/windows-handoff-scope/20260928T1151Z-f8d1a2-winchars20260928-93a6/receipt.json",
+    "sha256": "04c992950f1af1405e44aefc76ea5f540213621d1edaf357635ef30cd81b4bb6"
+  },
+  "earlier_failures_and_superseded_runs": {
+    "receipt": "/Volumes/SSD/Comsol-MCP/execution-scratch/windows-handoff-scope/20260928T1151Z-f8d1a2-final-review2/receipt.json",
+    "sha256": "b7ed9b3ddb3be1bc0e2c431b24f433784decee2f4e96b2cf9f9f41f213580a13",
+    "note": "Contains original failed attempts and superseded 33/40/43-test results; retained locally, not summed"
+  },
+  "replay": "python -B -m pytest -q -p no:cacheprovider --basetemp=<external-APFS-scratch> --junitxml=<external-SSD-result.xml> tests/test_windows_handoff_snapshot.py",
+  "manifest_format": {
+    "schema_version": 1,
+    "source_head": "<full reviewed HEAD>",
+    "files": [
+      {
+        "path": "<exact repo-relative source file>",
+        "sha256": "<reviewed SHA-256>"
+      }
+    ]
+  },
+  "limits": [
+    "No Windows execution, transfer, native COMSOL, platform matrix or final release acceptance",
+    "Known-name exclusions do not inspect all file contents for secrets",
+    "Selected deletion/rename ambiguity is refused, not supported"
+  ],
+  "next_action": "Prepare reviewed source manifest for required Windows handoff; continue W21 backend and original W01-W26 requirements"
+}

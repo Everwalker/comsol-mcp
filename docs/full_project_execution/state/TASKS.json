@@ -841,17 +841,20 @@
       "implementation_paths": [
         "tools/full_project_release.py",
         "tests/test_full_project_release.py",
-        "docs/full_project_execution/release/"
+        "docs/full_project_execution/release/",
+        "tools/windows_handoff_snapshot.py",
+        "tests/test_windows_handoff_snapshot.py"
       ],
       "evidence": [
         "docs/full_project_execution/release/RESUME.json",
         "docs/full_project_execution/release/windows_t034_chinese_path_20260926_01/windows_t034_verification.json",
         "docs/full_project_execution/release/source_recovery_candidate_20260926_01/evidence/source_rebuild/representative-tests.json",
         "docs/full_project_execution/release/status-supersession-cryptography-x86-assessment.json",
-        "docs/full_project_execution/release/campaign_state_snapshot_supersession_20260926_01.json"
+        "docs/full_project_execution/release/campaign_state_snapshot_supersession_20260926_01.json",
+        "docs/full_project_execution/release/WINDOWS_HANDOFF_SOURCE_CHECKPOINT.json"
       ],
       "blockers": [],
-      "note": "Preliminary release tooling and local-only campaign recovery are implemented. Windows CPython 3.12 no-index install/doctor and T034 Chinese-path software restore passed; Windows native engine/rebinding/network isolation, Intel-host install, current-source final bundles, final six-combination verification and final acceptance remain open."
+      "note": "Preliminary release tooling and local-only campaign recovery are implemented. Windows CPython 3.12 no-index install/doctor and T034 Chinese-path software restore passed; Windows native engine/rebinding/network isolation, Intel-host install, current-source final bundles, final six-combination verification and final acceptance remain open. Source-manifest-bound Windows handoff packaging accepted as scoped software: 88 synthetic-repository tests PASS; no Windows/native acceptance. Exact manifest and selected patch prevent bulk historical/runtime inclusion."
     }
   ],
   "effective_scope_decisions": [
