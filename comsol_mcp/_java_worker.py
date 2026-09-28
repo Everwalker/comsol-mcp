@@ -51,6 +51,103 @@ class JavaWorkerTimeout(JavaWorkerError):
     """The controller stopped waiting; the worker request may still run."""
 
 
+def _atomic_export_file(destination: str | Path, save_callback: Callable[[Path], Any],
+                        project_root: str | Path, *, overwrite: bool) -> dict[str, Any]:
+    """Atomically publish a Java/M source export without treating it as MPH."""
+    from ._execution_contract import canonical_project_path
+    from ._atomic_save import _fsync_file, _fsync_parent
+
+    target = canonical_project_path(project_root, destination)
+    parent = target.parent
+    canonical_project_path(project_root, parent)
+    existed = target.exists()
+    if existed and not overwrite:
+        raise JavaWorkerError("Source export destination exists and overwrite is disabled")
+    if not parent.is_dir():
+        raise JavaWorkerError("Source export parent directory does not exist")
+    # COMSOL's Java/M save overload may generate a public Java class or an
+    # M-file function from the export filename. Keep the final basename while
+    # isolating the candidate in a unique child directory on the same volume.
+    temporary_directory = parent / f".comsol-export-{uuid.uuid4().hex}.tmp"
+    temporary = temporary_directory / target.name
+    try:
+        canonical_project_path(project_root, temporary_directory)
+        temporary_directory.mkdir(mode=0o700, exist_ok=False)
+        if temporary_directory.is_symlink() or not temporary_directory.is_dir():
+            raise ValueError("source export temporary directory is not a regular staging directory")
+        if canonical_project_path(project_root, temporary_directory) != temporary_directory.resolve(strict=True):
+            raise ValueError("source export temporary directory changed during creation")
+        save_callback(temporary)
+        if (temporary_directory.is_symlink() or not temporary_directory.is_dir()
+                or temporary.is_symlink() or not temporary.is_file()):
+            raise ValueError("COMSOL did not create a regular source export")
+        if canonical_project_path(project_root, temporary) != temporary.resolve(strict=False):
+            raise ValueError("source export temporary path changed during save")
+        if temporary.name != target.name or temporary.parent != temporary_directory:
+            raise ValueError("source export candidate basename differs from its destination")
+        size = temporary.stat().st_size
+        if size <= 0:
+            raise ValueError("COMSOL created an empty source export")
+        if {entry.name for entry in temporary_directory.iterdir()} != {target.name}:
+            raise ValueError("COMSOL created unsupported companion files for the source export")
+        # Reuse the MPH publisher's writable-handle fsync helper. Windows
+        # FlushFileBuffers requires a writable handle; opening in r+b does not
+        # truncate the exported source.
+        _fsync_file(temporary)
+        temporary_directory_fsync = _fsync_parent(temporary)
+        digest = hashlib.sha256()
+        with temporary.open("rb") as handle:
+            for block in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(block)
+        file_sha256 = digest.hexdigest()
+        canonical_project_path(project_root, parent)
+        if temporary_directory.is_symlink() or not temporary_directory.is_dir():
+            raise ValueError("source export temporary directory changed before publication")
+        if canonical_project_path(project_root, temporary) != temporary.resolve(strict=False):
+            raise ValueError("source export candidate changed before publication")
+        if overwrite:
+            os.replace(temporary, target)
+            publish_mode = "atomic_replace"
+        else:
+            os.link(temporary, target)
+            publish_mode = "atomic_no_clobber"
+        parent_fsync = _fsync_parent(target)
+        temporary_file_removed = not temporary.exists()
+        if temporary.exists():
+            try:
+                temporary.unlink()
+                temporary_file_removed = True
+            except OSError:
+                temporary_file_removed = False
+        temporary_directory_removed = False
+        if temporary_file_removed:
+            try:
+                temporary_directory.rmdir()
+            except OSError:
+                temporary_directory_removed = False
+            else:
+                temporary_directory_removed = True
+                # Persist both the destination publication and removal of its
+                # temporary directory entry where directory fsync is supported.
+                parent_fsync = _fsync_parent(target)
+        artifact = {"path": str(target), "size": size, "sha256": file_sha256, "verified": True}
+        return {**artifact, "artifact": artifact,
+                "checkpoint": {**artifact, "publish_mode": publish_mode,
+                               "source_basename": target.name,
+                               "temporary_basename_matches": temporary.name == target.name,
+                               "temporary_directory_fsync": temporary_directory_fsync,
+                               "temporary_directory_removed": temporary_directory_removed,
+                               "parent_fsync": parent_fsync}}
+    except Exception as exc:
+        # Keep a partial candidate for inspection, just as the MPH publisher
+        # does; never replace the previous destination on a callback failure.
+        evidence_path = temporary if temporary.exists() else temporary_directory
+        message = f"COMSOL source export was not published: {exc}; temporary evidence retained at {evidence_path}"
+        if isinstance(exc, JavaWorkerError):
+            raise type(exc)(message, reply=exc.reply) from exc
+        raise JavaWorkerError(message) from exc
+
+
 @dataclass(frozen=True)
 class JavaWorkerPaths:
     comsol_root: Path
@@ -618,23 +715,44 @@ class RemoteModel(RemoteJava):
             raise JavaWorkerError("study label did not resolve to exactly one study tag")
         return self._call("study", matched[0], **kwargs)._call("run", **kwargs)
 
-    def _raw_save(self, path: str, **kwargs: Any) -> Any:
+    def _raw_save(self, path: str, *, save_copy: bool = True, **kwargs: Any) -> Any:
         """Engine save used only by the atomic publisher's temporary callback."""
         if not path:
             raise JavaWorkerError("raw save requires the atomic publisher's temporary path")
-        return self._call("save", path, True, **kwargs)
+        return self._call("save", path, save_copy, **kwargs)
 
-    def save(self, path: str = "", copy: bool = True, **kwargs: Any) -> Any:
-        # Both explicit and implicit (current-file) saves publish only after a
-        # complete candidate has been verified. `copy` is accepted for MPh
-        # compatibility but never opens an in-place overwrite bypass.
+    def save(self, path: str = "", copy: bool | str = True, *, overwrite: bool = True,
+             **kwargs: Any) -> Any:
+        if not isinstance(overwrite, bool):
+            raise JavaWorkerError("overwrite must be boolean")
+        if isinstance(copy, str):
+            if copy not in {"java", "m"}:
+                raise JavaWorkerError("source export type must be 'java' or 'm'")
+            if not path:
+                raise JavaWorkerError("source export requires an explicit project-relative filename")
+            from comsol_mcp._execution_contract import canonical_project_path
+            target = canonical_project_path(self._worker.paths.resolved_project_root, path)
+            return _atomic_export_file(
+                target,
+                lambda temporary: self._call("save", str(temporary), copy, **kwargs),
+                self._worker.paths.resolved_project_root,
+                overwrite=overwrite,
+            )
+        if not isinstance(copy, bool):
+            raise JavaWorkerError("saveCopy must be boolean or an explicit source file type")
         saved_path = str(self._call("getFilePath", **kwargs) or "").strip() if not path else str(path)
         if not saved_path:
             raise JavaWorkerError("model has no file path; an explicit project-relative save path is required")
+        # Preserve the existing managed-adapter contract: bool ``copy`` is an
+        # accepted MPh compatibility argument, while the managed publisher
+        # always uses COMSOL saveCopy=true to keep its temporary file from
+        # becoming the model's remembered save location. ``overwrite`` is a
+        # separate local publication policy and never enters the Java call.
         target = Path(saved_path)
         from comsol_mcp._atomic_save import atomic_save
-        return atomic_save(target, lambda temporary: self._raw_save(str(temporary), **kwargs),
-                           project_root=self._worker.paths.resolved_project_root)
+        return atomic_save(target, lambda temporary: self._raw_save(str(temporary), save_copy=True, **kwargs),
+                           project_root=self._worker.paths.resolved_project_root,
+                           overwrite=overwrite)
 
 
 class RemoteClient:

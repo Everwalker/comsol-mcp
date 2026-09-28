@@ -719,6 +719,45 @@ class ControlDaemon:
         return "UNKNOWN"
 
     @staticmethod
+    def _experiment_failure_summary(status: str, record: Mapping[str, Any] | None) -> dict[str, Any]:
+        failure_states = {"FAILED", "UNKNOWN", "EXECUTION_STATE_UNKNOWN", "CANCELLED", "EXPIRED", "LOST"}
+        if status not in failure_states:
+            return {"state": "NOT_APPLICABLE", "code": None, "message": None}
+        sources: list[Any] = []
+        if isinstance(record, Mapping):
+            sources.extend(record.get(key) for key in ("error", "failure_reason"))
+            result = record.get("result")
+            if isinstance(result, Mapping):
+                sources.append(result.get("error"))
+                job_metadata = record.get("job_metadata")
+                if isinstance(job_metadata, Mapping):
+                    sources.append(job_metadata.get("error"))
+            sources.append(record.get("completion_status"))
+        for value in sources:
+            if isinstance(value, str) and value.strip():
+                return {"state": "REPORTED", "code": None, "message": value.strip()}
+            if isinstance(value, Mapping):
+                code = value.get("code") if isinstance(value.get("code"), str) else None
+                message = value.get("message") if isinstance(value.get("message"), str) else None
+                if code or message:
+                    return {"state": "REPORTED", "code": code, "message": message}
+        return {"state": "NOT_RECORDED", "code": None, "message": None}
+
+    @staticmethod
+    def _experiment_cache_summary(case_data: Mapping[str, Any] | None) -> dict[str, Any]:
+        if not isinstance(case_data, Mapping):
+            return {"state": "NOT_RECORDED", "hit": None, "policy": None}
+        hit = case_data.get("cache_hit")
+        if type(hit) is not bool:
+            return {"state": "UNKNOWN", "hit": None, "policy": None}
+        policy = case_data.get("cache_policy")
+        return {
+            "state": "HIT" if hit else "MISS",
+            "hit": hit,
+            "policy": policy if isinstance(policy, str) else None,
+        }
+
+    @staticmethod
     def _experiment_parameters_match(actual: Any, planned: Any) -> bool:
         """Match W21's flat finite-number grid values without Python bool coercion."""
         if not isinstance(actual, Mapping) or not isinstance(planned, Mapping) or not planned:
@@ -1187,6 +1226,506 @@ class ControlDaemon:
         if len(matching_rows) != 1 or matching_rows[0] != case_data:
             raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "case artifact differs from the run producer's persisted case association")
 
+    def _verify_experiment_case_model_artifact(
+        self,
+        *,
+        snapshot: Mapping[str, Any],
+        project_id: str,
+        project_workspace: str,
+        experiment_id: str,
+        case_id: str,
+        design: Mapping[str, Any],
+        run: Mapping[str, Any] | None,
+        run_producer: Mapping[str, Any] | None,
+        case_record: Mapping[str, Any] | None,
+        case_data: Mapping[str, Any],
+        expected_ordinal: int,
+        planned_parameters: Mapping[str, Any],
+    ) -> dict[str, Any]:
+        """Verify saved case MPH bytes and exact attempt binding on public reads."""
+        artifact = case_data.get("case_model_artifact")
+        if artifact is None:
+            return {"status": "NOT_AVAILABLE", "reason_code": "NO_SAME_WORKER_MODEL_COPY",
+                    "restore_status": "NOT_AVAILABLE"}
+
+        def refuse() -> ExecutionContractError:
+            return ExecutionContractError(
+                "EXPERIMENT_STATE_UNKNOWN",
+                "durable case model artifact failed project, attempt, solution, type, or byte hash verification",
+            )
+
+        try:
+            from ._artifact_store import ArtifactStore, MAX_CHUNK_BYTES, _read_pinned_chunk
+
+            if not isinstance(artifact, Mapping) or not isinstance(run, Mapping):
+                raise refuse()
+            attempt = snapshot.get("attempts", {}).get(case_id)
+            if not isinstance(attempt, Mapping):
+                raise refuse()
+            attempt_id = attempt.get("attempt_id")
+            attempt_sha = self._experiment_record_sha256(attempt)
+            if (attempt.get("kind") != "w21experiment_case_attempt"
+                    or not isinstance(attempt_id, str) or re.fullmatch(r"att_[0-9a-f]{32}", attempt_id) is None
+                    or attempt.get("experiment_id") != experiment_id
+                    or attempt.get("run_id") != run.get("run_id")
+                    or attempt.get("case_id") != case_id
+                    or type(attempt.get("case_ordinal")) is not int
+                    or attempt.get("case_ordinal") != expected_ordinal
+                    or attempt.get("project_id") != project_id
+                    or attempt.get("session_id") != run.get("session_id")
+                    or attempt.get("model_ref") != run.get("model_ref")
+                    or attempt.get("model_revision") != run.get("model_revision")
+                    or attempt.get("producer") != run.get("producer")
+                    or attempt.get("design_sha256") != design.get("sha256")
+                    or not self._experiment_parameters_match(attempt.get("parameters"), planned_parameters)
+                    or attempt.get("sha256") != attempt_sha
+                    or case_data.get("case_attempt_id") != attempt_id):
+                raise refuse()
+
+            expected_metric_refs = [
+                {key: row[key] for key in ("metric_id", "version", "definition_sha256")}
+                for row in design.get("metric_definition_snapshots", [])
+                if isinstance(row, Mapping)
+            ]
+            if (attempt.get("metric_definition_refs") != expected_metric_refs
+                    or (case_record is not None and (
+                        case_record.get("project_id") != project_id
+                        or case_record.get("session_id") != run.get("session_id")
+                        or case_record.get("model_ref") != run.get("model_ref")
+                        or case_record.get("model_revision") != run.get("model_revision")
+                        or case_record.get("producer") != run.get("producer")))):
+                raise refuse()
+
+            producer_status = self._experiment_operation_status(run_producer)
+            if producer_status == "SUCCEEDED":
+                run_result = self._find_operation_result_payload(run_producer, run.get("run_id"))
+                rows = run_result.get("cases") if isinstance(run_result, Mapping) else None
+                matching = ([row for row in rows if isinstance(row, Mapping) and row.get("case_id") == case_id]
+                            if isinstance(rows, list) else [])
+                if (not isinstance(run_result, Mapping)
+                        or run_result.get("sha256") != run.get("sha256")
+                        or self._experiment_record_sha256(run_result) != run.get("sha256")
+                        or len(matching) != 1 or dict(matching[0]) != dict(case_data)):
+                    raise refuse()
+            elif run.get("status") != "RUNNING":
+                raise refuse()
+
+            common = {
+                "schema_version": 1,
+                "kind": "w21_experiment_case_model_artifact",
+                "project_id": project_id,
+                "experiment_id": experiment_id,
+                "run_id": run.get("run_id"),
+                "case_id": case_id,
+                "case_ordinal": expected_ordinal,
+                "attempt_id": attempt_id,
+                "attempt_sha256": attempt_sha,
+                "producer": run.get("producer"),
+                "session_id": run.get("session_id"),
+                "model_ref": run.get("model_ref"),
+                "model_revision": run.get("model_revision"),
+                "design_sha256": design.get("sha256"),
+                "study": design.get("study"),
+                "parameters": planned_parameters,
+                "units": attempt.get("units"),
+                "revision_scope": "run_admission_revision; exact case solution is separately bound below",
+                "format": "mph",
+                "save_copy": True,
+                "save_api": "RemoteModel.save(path, saveCopy=True)",
+                "verification": "ATOMIC_MPH_ZIP_CRC_AND_SHA256",
+            }
+            if any(artifact.get(key) != value for key, value in common.items()):
+                raise refuse()
+
+            if artifact.get("status") == "SAVE_FAILED":
+                reason_code = artifact.get("reason_code")
+                stage = artifact.get("stage")
+                if (not isinstance(reason_code, str) or not reason_code
+                        or artifact.get("restore_status") != "NOT_AVAILABLE"
+                        or stage is not None and not isinstance(stage, str)
+                        or "relative_path" in artifact or "file_sha256" in artifact
+                        or "file_size" in artifact):
+                    raise refuse()
+                return {"status": "SAVE_FAILED", "reason_code": reason_code,
+                        "stage": stage, "restore_status": "NOT_AVAILABLE"}
+
+            if artifact.get("status") != "SAVED_HASH_VERIFIED_RELOAD_UNVERIFIED":
+                raise refuse()
+            if artifact.get("restore_status") != "NOT_RELOAD_VERIFIED":
+                raise refuse()
+            sample = case_data.get("sample")
+            solve = case_data.get("solve")
+            parameter_readback = case_data.get("parameter_readback")
+            solution_indices = case_data.get("solution_indices")
+            identity = artifact.get("solution_identity")
+            identity_sha = artifact.get("solution_identity_sha256")
+            if (not isinstance(sample, Mapping) or not isinstance(solve, Mapping)
+                    or not isinstance(parameter_readback, Mapping)
+                    or not isinstance(solution_indices, Mapping)
+                    or not isinstance(identity, Mapping)
+                    or not isinstance(identity_sha, str)
+                    or re.fullmatch(r"[0-9a-f]{64}", identity_sha) is None
+                    or identity_sha != self._experiment_payload_sha256(identity)
+                    or identity != case_data.get("case_solution_identity")
+                    or identity_sha != case_data.get("case_solution_identity_sha256")
+                    or identity.get("solution") != sample.get("solution")
+                    or identity.get("study") != attempt.get("study")
+                    or sample.get("case_attempt_id") != attempt_id
+                    or sample.get("dataset") != artifact.get("dataset")
+                    or sample.get("solution") != artifact.get("solution")
+                    or artifact.get("solution_indices") != solution_indices
+                    or solution_indices.get("binding_complete") is not True
+                    or solution_indices.get("solution") != sample.get("solution")
+                    or solve.get("case_attempt_id") != attempt_id
+                    or parameter_readback.get("case_attempt_id") != attempt_id
+                    or artifact.get("parameter_readback_sha256") != self._experiment_payload_sha256(parameter_readback)
+                    or artifact.get("parameters") != attempt.get("parameters")
+                    or artifact.get("units") != attempt.get("units")):
+                raise refuse()
+
+            source_ref = artifact.get("sample_observation_ref")
+            case_ref = case_data.get("observation_ref")
+            observation = (
+                snapshot.get("observations", {}).get(source_ref.get("observation_id"))
+                if isinstance(source_ref, Mapping) else None
+            )
+            if (not isinstance(source_ref, Mapping) or source_ref != case_ref
+                    or not isinstance(observation, Mapping)
+                    or observation.get("kind") != "w17_observation"
+                    or observation.get("project_id") != project_id
+                    or observation.get("producer") != run.get("producer")
+                    or observation.get("model_ref") != run.get("model_ref")
+                    or observation.get("dataset") != sample.get("dataset")
+                    or observation.get("solution") != sample.get("solution")
+                    or observation.get("source_identity") != identity):
+                raise refuse()
+            self._verify_experiment_observation_artifact(
+                project_workspace=project_workspace,
+                project_id=project_id,
+                observation=observation,
+                reference=source_ref,
+                attempt_id=attempt_id,
+                solution_identity_sha256=None,
+            )
+
+            run_id = run.get("run_id")
+            relative_path = f"w21/experiment_cases/{experiment_id}/{run_id}/{case_id}/{attempt_id}.mph"
+            file_sha = artifact.get("file_sha256")
+            file_size = artifact.get("file_size")
+            if (artifact.get("relative_path") != relative_path
+                    or not isinstance(file_sha, str)
+                    or re.fullmatch(r"[0-9a-f]{64}", file_sha) is None
+                    or type(file_size) is not int or file_size <= 0):
+                raise refuse()
+            store = ArtifactStore(Path(project_workspace))
+            expected_path = store.resolve_safe_path(relative_path, allow_overwrite=True)
+            pinned = _read_pinned_chunk(expected_path, offset=0,
+                                        length=min(MAX_CHUNK_BYTES, file_size))
+            if (pinned.get("whole_file_sha256") != file_sha
+                    or pinned.get("file_size") != file_size
+                    or len(pinned.get("data_bytes", b"")) != min(MAX_CHUNK_BYTES, file_size)
+                    or not pinned.get("data_bytes", b"").startswith(b"PK\x03\x04")):
+                raise refuse()
+            return {
+                "status": "SAVED_HASH_VERIFIED_RELOAD_UNVERIFIED",
+                "relative_path": relative_path,
+                "file_sha256": file_sha,
+                "file_size": file_size,
+                "format": "mph",
+                "restore_status": "NOT_RELOAD_VERIFIED",
+                "solution_identity_sha256": identity_sha,
+            }
+        except ExecutionContractError as exc:
+            if exc.code == "EXPERIMENT_STATE_UNKNOWN":
+                raise
+            raise refuse() from exc
+        except (OSError, TypeError, ValueError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise refuse() from exc
+
+    @staticmethod
+    def _verified_experiment_metric_value(
+        evaluation: Mapping[str, Any] | None,
+        metric_record: Mapping[str, Any],
+        metric_ref: Mapping[str, Any],
+        tuple_ref: Mapping[str, Any],
+        requested_unit: str,
+    ) -> dict[str, Any] | None:
+        """Resolve one exact real projected metric tuple from its durable evaluation."""
+        if not isinstance(evaluation, Mapping):
+            return None
+        definition = metric_record.get("definition")
+        expected_ref = {key: metric_record.get(key) for key in ("metric_id", "version", "definition_sha256")}
+        if (metric_ref != expected_ref
+                or not isinstance(definition, Mapping)
+                or definition.get("complex_mode") not in {"real", "imag", "abs"}
+                or requested_unit != definition.get("expected_unit")):
+            return None
+        items = evaluation.get("items")
+        if not isinstance(items, list):
+            return None
+        matching_items = [item for item in items if isinstance(item, Mapping)
+                          and item.get("metric_id") == metric_ref.get("metric_id")]
+        if len(matching_items) != 1:
+            return None
+        item = matching_items[0]
+        if (item.get("definition_version") != metric_ref.get("version")
+                or item.get("definition_sha256") != metric_ref.get("definition_sha256")
+                or item.get("definition") != definition
+                or item.get("complex_mode") != definition.get("complex_mode")
+                or item.get("unit") != requested_unit):
+            return None
+        values = item.get("values")
+        if not isinstance(values, list):
+            return None
+        selected = [row for row in values if isinstance(row, Mapping)
+                    and type(row.get("outer")) is int and row.get("outer") == tuple_ref.get("outer")
+                    and type(row.get("inner")) is int and row.get("inner") == tuple_ref.get("inner")]
+        if len(selected) != 1:
+            return None
+        row = selected[0]
+        value = row.get("value")
+        solnum = row.get("solnum")
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or type(solnum) is not int or solnum < 1:
+            return None
+        try:
+            projected_value = float(value)
+        except (OverflowError, TypeError, ValueError):
+            return None
+        if not math.isfinite(projected_value):
+            return None
+        return {
+            "metric_id": metric_ref["metric_id"],
+            "version": metric_ref["version"],
+            "definition_sha256": metric_ref["definition_sha256"],
+            "evaluation_id": evaluation.get("evaluation_id"),
+            "evaluation_sha256": evaluation.get("sha256"),
+            "tuple": {"outer": row["outer"], "inner": row["inner"], "solnum": solnum},
+            "value": projected_value,
+            "unit": requested_unit,
+        }
+
+    @classmethod
+    def _experiment_best_feasible_summary(
+        cls,
+        *,
+        design: Mapping[str, Any],
+        planned_case_ids: list[str],
+        case_rows: list[Mapping[str, Any]],
+        evaluations: Mapping[str, Any],
+    ) -> dict[str, Any]:
+        definition = design.get("definition")
+        if not isinstance(definition, Mapping) or ("objective" not in definition and "constraints" not in definition):
+            return {"status": "NOT_DEFINED", "reason_code": "NO_FROZEN_OBJECTIVE_AND_CONSTRAINTS",
+                    "case_id": None}
+        objective = definition.get("objective")
+        constraints = definition.get("constraints")
+        references = definition.get("metric_evaluations")
+        metric_records = design.get("metric_definition_snapshots")
+        if (not isinstance(objective, Mapping) or not isinstance(constraints, list)
+                or not isinstance(references, list) or not isinstance(metric_records, list)):
+            return {"status": "UNVERIFIED", "reason_code": "FROZEN_OBJECTIVE_CONTRACT_INVALID",
+                    "case_id": None}
+
+        def valid_metric_ref(value):
+            return (isinstance(value, Mapping)
+                    and set(value) == {"metric_id", "version", "definition_sha256"}
+                    and isinstance(value.get("metric_id"), str) and bool(value.get("metric_id"))
+                    and type(value.get("version")) is int and value["version"] >= 1
+                    and isinstance(value.get("definition_sha256"), str)
+                    and re.fullmatch(r"[0-9a-f]{64}", value["definition_sha256"]) is not None)
+
+        def valid_tuple(value):
+            return (isinstance(value, Mapping) and set(value) == {"outer", "inner"}
+                    and type(value.get("outer")) is int and value["outer"] >= 1
+                    and type(value.get("inner")) is int and value["inner"] >= 1)
+
+        if (set(objective) != {"metric_ref", "tuple", "direction", "unit"}
+                or not valid_metric_ref(objective.get("metric_ref"))
+                or not valid_tuple(objective.get("tuple"))
+                or objective.get("direction") not in {"minimize", "maximize"}
+                or not isinstance(objective.get("unit"), str) or not objective["unit"]):
+            return {"status": "UNVERIFIED", "reason_code": "FROZEN_OBJECTIVE_CONTRACT_INVALID",
+                    "case_id": None}
+        seen_constraint_ids: set[str] = set()
+        for constraint in constraints:
+            if (not isinstance(constraint, Mapping)
+                    or set(constraint) != {"constraint_id", "metric_ref", "tuple", "relation", "value", "unit"}
+                    or not isinstance(constraint.get("constraint_id"), str)
+                    or not constraint["constraint_id"] or constraint["constraint_id"] in seen_constraint_ids
+                    or not valid_metric_ref(constraint.get("metric_ref"))
+                    or not valid_tuple(constraint.get("tuple"))
+                    or constraint.get("relation") not in {"<", "<=", ">", ">="}
+                    or isinstance(constraint.get("value"), bool)
+                    or not isinstance(constraint.get("value"), (int, float))
+                    or not isinstance(constraint.get("unit"), str) or not constraint["unit"]):
+                return {"status": "UNVERIFIED", "reason_code": "FROZEN_OBJECTIVE_CONTRACT_INVALID",
+                        "case_id": None}
+            try:
+                if not math.isfinite(float(constraint["value"])):
+                    return {"status": "UNVERIFIED", "reason_code": "FROZEN_OBJECTIVE_CONTRACT_INVALID",
+                            "case_id": None}
+            except (OverflowError, TypeError, ValueError):
+                return {"status": "UNVERIFIED", "reason_code": "FROZEN_OBJECTIVE_CONTRACT_INVALID",
+                        "case_id": None}
+            seen_constraint_ids.add(constraint["constraint_id"])
+        if (not references or any(not valid_metric_ref(row) for row in references)
+                or any(not isinstance(row, Mapping) for row in metric_records)):
+            return {"status": "UNVERIFIED", "reason_code": "FROZEN_METRIC_REFERENCE_MISMATCH",
+                    "case_id": None}
+
+        reference_keys = {(row["metric_id"], row["version"], row["definition_sha256"])
+                          for row in references}
+        records_by_ref = {(row.get("metric_id"), row.get("version"), row.get("definition_sha256")): row
+                          for row in metric_records}
+        if len(reference_keys) != len(references) or set(records_by_ref) != reference_keys:
+            return {"status": "UNVERIFIED", "reason_code": "FROZEN_METRIC_REFERENCE_MISMATCH",
+                    "case_id": None}
+
+        def resolve_metric_value(evaluation, metric_ref, tuple_ref, unit):
+            if not isinstance(metric_ref, Mapping) or not isinstance(tuple_ref, Mapping):
+                return None
+            key = (metric_ref.get("metric_id"), metric_ref.get("version"), metric_ref.get("definition_sha256"))
+            if key not in reference_keys:
+                return None
+            return cls._verified_experiment_metric_value(
+                evaluation, records_by_ref[key], metric_ref, tuple_ref, unit,
+            )
+
+        by_case = {row.get("case_id"): row for row in case_rows if isinstance(row, Mapping)}
+        candidates: list[dict[str, Any]] = []
+        infeasible_count = 0
+        unresolved_count = 0
+        not_run_count = 0
+        failed_count = 0
+        verified_completed_count = 0
+        terminal_statuses = {"COMPLETED", "FAILED", "UNKNOWN", "EXECUTION_STATE_UNKNOWN",
+                             "CANCELLED", "EXPIRED", "LOST"}
+        all_terminal = len(case_rows) == len(planned_case_ids)
+        for case_id in planned_case_ids:
+            case = by_case.get(case_id)
+            if not isinstance(case, Mapping):
+                unresolved_count += 1
+                not_run_count += 1
+                all_terminal = False
+                continue
+            status = case.get("status")
+            if status not in terminal_statuses:
+                all_terminal = False
+            if status == "FAILED":
+                failed_count += 1
+            if status in {"NOT_RUN", "NOT_RECORDED"}:
+                not_run_count += 1
+            if status != "COMPLETED" or not isinstance(case.get("metric_evaluation"), Mapping):
+                unresolved_count += 1
+                continue
+            association = case["metric_evaluation"]
+            evaluation_id = association.get("evaluation_id")
+            evaluation = evaluations.get(case_id)
+            if (not isinstance(evaluation, Mapping)
+                    or evaluation.get("evaluation_id") != evaluation_id
+                    or evaluation.get("sha256") != association.get("sha256")):
+                unresolved_count += 1
+                continue
+            verified_completed_count += 1
+            constraint_results = []
+            constraint_unknown = False
+            any_failed = False
+            for constraint in constraints:
+                if not isinstance(constraint, Mapping):
+                    constraint_unknown = True
+                    break
+                evidence = resolve_metric_value(
+                    evaluation, constraint.get("metric_ref"), constraint.get("tuple"), constraint.get("unit"),
+                )
+                if evidence is None:
+                    constraint_unknown = True
+                    constraint_results.append({"constraint_id": constraint.get("constraint_id"),
+                                               "status": "UNVERIFIED"})
+                    continue
+                relation, bound = constraint.get("relation"), constraint.get("value")
+                if isinstance(bound, bool) or not isinstance(bound, (int, float)) or not math.isfinite(float(bound)):
+                    constraint_unknown = True
+                    continue
+                passed = {"<": evidence["value"] < float(bound), "<=": evidence["value"] <= float(bound),
+                          ">": evidence["value"] > float(bound), ">=": evidence["value"] >= float(bound)}.get(relation)
+                if not isinstance(passed, bool):
+                    constraint_unknown = True
+                    continue
+                any_failed = any_failed or not passed
+                constraint_results.append({
+                    "constraint_id": constraint.get("constraint_id"),
+                    "status": "PASS" if passed else "FAIL",
+                    "relation": relation,
+                    "bound": float(bound),
+                    "unit": constraint["unit"],
+                    "metric_value": evidence,
+                })
+            if constraint_unknown:
+                unresolved_count += 1
+                continue
+            if any_failed:
+                infeasible_count += 1
+                continue
+            objective_evidence = resolve_metric_value(
+                evaluation, objective.get("metric_ref"), objective.get("tuple"), objective.get("unit"),
+            )
+            if objective_evidence is None:
+                unresolved_count += 1
+                continue
+            candidates.append({
+                "case_id": case_id,
+                "case_ordinal": case.get("case_ordinal"),
+                "objective": objective_evidence,
+                "constraints": constraint_results,
+            })
+
+        total = len(planned_case_ids)
+        ranking_complete = unresolved_count == 0 and len(candidates) + infeasible_count == total
+        comparison_counts = {
+            "total_cases": total,
+            "verified_completed_cases": verified_completed_count,
+            "feasible_cases": len(candidates),
+            "infeasible_cases": infeasible_count,
+            "unresolved_cases": unresolved_count,
+            "not_run_cases": not_run_count,
+            "failed_cases": failed_count,
+        }
+        if candidates:
+            reverse = objective.get("direction") == "maximize"
+            candidates.sort(key=lambda row: ((-row["objective"]["value"] if reverse
+                                               else row["objective"]["value"]),
+                                              row["case_ordinal"]))
+            best = candidates[0]
+            return {
+                "status": "FOUND",
+                "reason_code": "BEST_VERIFIED_FEASIBLE_CASE",
+                "case_id": best["case_id"],
+                "objective": best["objective"],
+                "constraints": best["constraints"],
+                "comparison_scope": "verified_completed_cases",
+                "ranking_complete": ranking_complete,
+                "tie_break": "case_ordinal_ascending",
+                "counts": comparison_counts,
+            }
+        if (all_terminal and total > 0 and infeasible_count == total
+                and unresolved_count == 0 and not candidates):
+            return {
+                "status": "NONE_FEASIBLE",
+                "reason_code": "ALL_TERMINAL_CASES_HAVE_VERIFIED_CONSTRAINT_FAILURES",
+                "case_id": None,
+                "comparison_scope": "all_planned_terminal_cases",
+                "ranking_complete": True,
+                "counts": comparison_counts,
+            }
+        return {
+            "status": "UNKNOWN",
+            "reason_code": "NO_VERIFIED_FEASIBLE_CASE_WITH_UNRESOLVED_CASES",
+            "case_id": None,
+            "comparison_scope": "verified_completed_cases",
+            "ranking_complete": False,
+            "counts": comparison_counts,
+        }
+
     @staticmethod
     def _planned_experiment_cases(
         design_cases: Any,
@@ -1435,6 +1974,8 @@ class ControlDaemon:
             case_record = snapshot.get("cases", {}).get(case_id)
             case_data: dict[str, Any] | None = None
             record_source = None
+            model_artifact_summary = {"status": "NOT_AVAILABLE", "reason_code": "NO_SAME_WORKER_MODEL_COPY",
+                                      "restore_status": "NOT_AVAILABLE"}
             expected_ordinal, planned_parameters = planned_cases[case_id]
             if case_record is not None:
                 if (not isinstance(run, dict) or not isinstance(case_record, dict)
@@ -1465,6 +2006,12 @@ class ControlDaemon:
                     case_record=case_record, case_data=case_data,
                     expected_ordinal=expected_ordinal, planned_parameters=planned_parameters,
                 )
+                model_artifact_summary = self._verify_experiment_case_model_artifact(
+                    snapshot=snapshot, project_id=project_id, project_workspace=project_workspace,
+                    experiment_id=experiment_id, case_id=case_id, design=design, run=run,
+                    run_producer=run_producer, case_record=case_record, case_data=case_data,
+                    expected_ordinal=expected_ordinal, planned_parameters=planned_parameters,
+                )
                 record_source = "case_artifact"
             elif case_id in run_case_rows:
                 # The finalized run artifact is itself a hash-bound durable
@@ -1476,6 +2023,12 @@ class ControlDaemon:
                     experiment_id=experiment_id,
                     case_id=case_id, design=design, run=run, run_producer=run_producer,
                     case_record=None, case_data=case_data,
+                    expected_ordinal=expected_ordinal, planned_parameters=planned_parameters,
+                )
+                model_artifact_summary = self._verify_experiment_case_model_artifact(
+                    snapshot=snapshot, project_id=project_id, project_workspace=project_workspace,
+                    experiment_id=experiment_id, case_id=case_id, design=design, run=run,
+                    run_producer=run_producer, case_record=None, case_data=case_data,
                     expected_ordinal=expected_ordinal, planned_parameters=planned_parameters,
                 )
                 record_source = "run_artifact"
@@ -1492,10 +2045,12 @@ class ControlDaemon:
                     "run_status": run_status,
                     "result": case_data,
                     "record_source": record_source,
+                    "case_model_artifact": model_artifact_summary,
                 },
             }
 
         case_summaries = []
+        best_feasible_rows = []
         for case_id in planned_case_ids:
             ordinal, planned_parameters = planned_cases[case_id]
             result_row = snapshot.get("cases", {}).get(case_id)
@@ -1544,13 +2099,86 @@ class ControlDaemon:
                 else "UNKNOWN" if run_status == "UNKNOWN"
                 else "NOT_RECORDED"
             )
+            model_artifact_summary = (
+                self._verify_experiment_case_model_artifact(
+                    snapshot=snapshot, project_id=project_id, project_workspace=project_workspace,
+                    experiment_id=experiment_id, case_id=case_id, design=design, run=run,
+                    run_producer=run_producer, case_record=result_row if isinstance(result_row, Mapping) else None,
+                    case_data=case_data, expected_ordinal=ordinal, planned_parameters=planned_parameters,
+                )
+                if isinstance(case_data, Mapping)
+                else {"status": "NOT_AVAILABLE", "reason_code": "NO_SAME_WORKER_MODEL_COPY",
+                      "restore_status": "NOT_AVAILABLE"}
+            )
             case_summaries.append({
                 "case_id": case_id,
                 "case_ordinal": ordinal,
                 "status": case_status,
                 "parameters": planned_parameters,
                 "record_source": source,
+                "failure_reason": self._experiment_failure_summary(case_status, case_data),
+                "cache": self._experiment_cache_summary(case_data),
+                "case_model_artifact": model_artifact_summary,
             })
+            best_feasible_rows.append({
+                "case_id": case_id,
+                "case_ordinal": ordinal,
+                "status": case_status,
+                "metric_evaluation": case_data.get("metric_evaluation") if isinstance(case_data, Mapping) else None,
+            })
+
+        case_cache_hits = sum(row["cache"]["hit"] is True for row in case_summaries)
+        case_cache_misses = sum(row["cache"]["hit"] is False for row in case_summaries)
+        cache_unknown = len(case_summaries) - case_cache_hits - case_cache_misses
+        if not isinstance(run, dict):
+            cache_state = "NOT_RUN" if run_status == "NOT_RUN" else "UNAVAILABLE"
+        elif cache_unknown == 0:
+            cache_state = "COMPLETE"
+        elif case_cache_hits or case_cache_misses:
+            cache_state = "PARTIAL"
+        else:
+            cache_state = "UNAVAILABLE"
+        if isinstance(run, dict) and "cache_hits" in run:
+            recorded_hits = run.get("cache_hits")
+            if type(recorded_hits) is not int or recorded_hits < case_cache_hits:
+                raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "durable run cache summary is malformed or inconsistent")
+            if cache_unknown == 0 and recorded_hits != case_cache_hits:
+                raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "durable run cache hit count disagrees with its case records")
+        cache_summary = {
+            "state": cache_state,
+            "hits": case_cache_hits,
+            "misses": case_cache_misses,
+            "unknown_cases": cache_unknown,
+            "total_cases": len(case_summaries),
+        }
+        failure_states = {"FAILED", "UNKNOWN", "EXECUTION_STATE_UNKNOWN", "CANCELLED", "EXPIRED", "LOST"}
+        if run_status not in failure_states:
+            run_failure_reason = self._experiment_failure_summary(run_status, None)
+        else:
+            reported_case_failure = next((row["failure_reason"] for row in case_summaries
+                                          if row["failure_reason"]["state"] == "REPORTED"), None)
+            if reported_case_failure is not None:
+                run_failure_reason = reported_case_failure
+            elif isinstance(run, dict):
+                run_failure_reason = self._experiment_failure_summary(run_status, run)
+            else:
+                failed_attempts = [row for row in matching_run_attempts
+                                   if self._experiment_operation_status(row) in failure_states]
+                if len(failed_attempts) == 1:
+                    run_failure_reason = self._experiment_failure_summary(
+                        run_status, failed_attempts[0],
+                    )
+                elif len(failed_attempts) > 1:
+                    run_failure_reason = {"state": "AMBIGUOUS", "code": None, "message": None}
+                else:
+                    run_failure_reason = self._experiment_failure_summary(run_status, None)
+
+        best_feasible = self._experiment_best_feasible_summary(
+            design=design,
+            planned_case_ids=planned_case_ids,
+            case_rows=best_feasible_rows,
+            evaluations=snapshot.get("evaluations", {}),
+        )
 
         if run_status == "NOT_RUN" and design_status != "SUCCEEDED":
             overall_status = "UNKNOWN"
@@ -1579,11 +2207,16 @@ class ControlDaemon:
                     "effective_budget": run.get("effective_budget"),
                     "budget": run.get("budget"),
                     "recorded_case_count": len(run_case_rows),
+                    "failure_reason": run_failure_reason,
+                    "cache_summary": cache_summary,
                 } if isinstance(run, dict) else {
                     "status": run_status,
                     "attempt_count": len(matching_run_attempts),
+                    "failure_reason": run_failure_reason,
+                    "cache_summary": cache_summary,
                 }),
                 "cases": case_summaries,
+                "best_feasible": best_feasible,
                 "result_scope": "durable snapshot only; no current ModelRef validation, Worker RPC, or engine-queue admission",
             },
         }

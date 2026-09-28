@@ -14664,7 +14664,72 @@
                   },
                   "additionalProperties": false
                 }
+              },
+              "objective": {
+                "type": "object",
+                "required": ["metric_ref", "tuple", "direction", "unit"],
+                "properties": {
+                  "metric_ref": {
+                    "type": "object",
+                    "required": ["metric_id", "version", "definition_sha256"],
+                    "properties": {
+                      "metric_id": {"type": "string", "minLength": 1},
+                      "version": {"type": "integer", "minimum": 1},
+                      "definition_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+                    },
+                    "additionalProperties": false
+                  },
+                  "tuple": {
+                    "type": "object",
+                    "required": ["outer", "inner"],
+                    "properties": {
+                      "outer": {"type": "integer", "minimum": 1},
+                      "inner": {"type": "integer", "minimum": 1}
+                    },
+                    "additionalProperties": false
+                  },
+                  "direction": {"type": "string", "enum": ["minimize", "maximize"]},
+                  "unit": {"type": "string", "minLength": 1}
+                },
+                "additionalProperties": false
+              },
+              "constraints": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["constraint_id", "metric_ref", "tuple", "relation", "value", "unit"],
+                  "properties": {
+                    "constraint_id": {"type": "string", "minLength": 1},
+                    "metric_ref": {
+                      "type": "object",
+                      "required": ["metric_id", "version", "definition_sha256"],
+                      "properties": {
+                        "metric_id": {"type": "string", "minLength": 1},
+                        "version": {"type": "integer", "minimum": 1},
+                        "definition_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+                      },
+                      "additionalProperties": false
+                    },
+                    "tuple": {
+                      "type": "object",
+                      "required": ["outer", "inner"],
+                      "properties": {
+                        "outer": {"type": "integer", "minimum": 1},
+                        "inner": {"type": "integer", "minimum": 1}
+                      },
+                      "additionalProperties": false
+                    },
+                    "relation": {"type": "string", "enum": ["<", "<=", ">", ">="]},
+                    "value": {"type": "number"},
+                    "unit": {"type": "string", "minLength": 1}
+                  },
+                  "additionalProperties": false
+                }
               }
+            },
+            "dependentRequired": {
+              "objective": ["constraints"],
+              "constraints": ["objective"]
             }
           }
         },

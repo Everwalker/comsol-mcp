@@ -302,12 +302,13 @@ class ActionEntry:
                 "engine_queue": "bypassed; no Worker RPC or current ModelRef is required",
                 "snapshot": "design, run, case and producer operation/job metadata are read from one SQLite snapshot",
                 "case_identity": "case_id is matched exactly; case_ordinal is returned as observation metadata and is not an input alias",
+                "best_feasible": "only frozen objective/constraint contracts and hash-verified metric evaluations are ranked; FOUND covers verified completed feasible cases and does not assert global optimality",
                 "verification_scope": "durable software records only; model results remain subject to their recorded run status and provenance",
             }
             if self.operation_id == "experiment.inspect":
                 result["data_schema"] = {
                     "type": "object",
-                    "required": ["project_id", "experiment_id", "status", "design_status", "design", "run", "cases"],
+                    "required": ["project_id", "experiment_id", "status", "design_status", "design", "run", "cases", "best_feasible"],
                     "properties": {
                         "project_id": {"type": "string"},
                         "experiment_id": {"type": "string"},
@@ -317,27 +318,62 @@ class ActionEntry:
                         "run": {"type": "object"},
                         "cases": {"type": "array", "items": {
                             "type": "object",
-                            "required": ["case_id", "case_ordinal", "status", "parameters", "record_source"],
+                            "required": ["case_id", "case_ordinal", "status", "parameters", "record_source",
+                                         "failure_reason", "cache", "case_model_artifact"],
                             "properties": {
                                 "case_id": {"type": "string"},
                                 "case_ordinal": {"type": ["integer", "null"]},
                                 "status": {"type": "string"},
                                 "parameters": {"type": ["object", "null"]},
                                 "record_source": {"type": ["string", "null"]},
+                                "failure_reason": {"type": "object"},
+                                "cache": {"type": "object"},
+                                "case_model_artifact": {"type": "object"},
                             },
                         }},
+                        "best_feasible": {
+                            "type": "object",
+                            "required": ["status", "reason_code", "case_id"],
+                            "properties": {
+                                "status": {"type": "string", "enum": ["NOT_DEFINED", "UNVERIFIED", "FOUND", "NONE_FEASIBLE", "UNKNOWN"]},
+                                "reason_code": {"type": "string"},
+                                "case_id": {"type": ["string", "null"]},
+                                "objective": {"type": "object"},
+                                "constraints": {"type": "array", "items": {"type": "object"}},
+                                "comparison_scope": {"type": "string", "enum": ["verified_completed_cases", "all_planned_terminal_cases"]},
+                                "ranking_complete": {"type": "boolean"},
+                                "tie_break": {"type": "string"},
+                                "counts": {
+                                    "type": "object",
+                                    "required": ["total_cases", "verified_completed_cases", "feasible_cases",
+                                                 "infeasible_cases", "unresolved_cases", "not_run_cases", "failed_cases"],
+                                    "properties": {
+                                        "total_cases": {"type": "integer", "minimum": 0},
+                                        "verified_completed_cases": {"type": "integer", "minimum": 0},
+                                        "feasible_cases": {"type": "integer", "minimum": 0},
+                                        "infeasible_cases": {"type": "integer", "minimum": 0},
+                                        "unresolved_cases": {"type": "integer", "minimum": 0},
+                                        "not_run_cases": {"type": "integer", "minimum": 0},
+                                        "failed_cases": {"type": "integer", "minimum": 0},
+                                    },
+                                    "additionalProperties": False,
+                                },
+                            },
+                            "additionalProperties": False,
+                        },
                         "result_scope": {"type": "string"},
                     },
                     "additionalProperties": False,
                 }
                 result["output_contract"] = (
-                    "ActionResult data: one project-attributed durable design/run snapshot plus exact case_id statuses; "
+                    "ActionResult data: one project-attributed durable design/run snapshot plus exact case_id statuses, "
+                    "failure/cache/model-copy observations, and best-feasible ranking over verified completed cases; "
                     "RUNNING, UNKNOWN, partial and unrecorded cases remain distinct."
                 )
             else:
                 result["data_schema"] = {
                     "type": "object",
-                    "required": ["project_id", "experiment_id", "case_id", "case_ordinal", "status", "run_status", "result", "record_source"],
+                    "required": ["project_id", "experiment_id", "case_id", "case_ordinal", "status", "run_status", "result", "record_source", "case_model_artifact"],
                     "properties": {
                         "project_id": {"type": "string"},
                         "experiment_id": {"type": "string"},
@@ -347,6 +383,7 @@ class ActionEntry:
                         "run_status": {"type": "string"},
                         "result": {"type": ["object", "null"]},
                         "record_source": {"type": ["string", "null"]},
+                        "case_model_artifact": {"type": "object"},
                     },
                     "additionalProperties": False,
                 }

@@ -1434,6 +1434,18 @@ class OperationStore:
                     if case_data is None and isinstance(run, dict) and isinstance(run.get("cases"), list):
                         case_data = next((row for row in run["cases"]
                                           if isinstance(row, dict) and row.get("case_id") == selected), None)
+                    sample_reference = case_data.get("observation_ref") if isinstance(case_data, dict) else None
+                    sample_observation_id = (
+                        sample_reference.get("observation_id")
+                        if isinstance(sample_reference, dict) else None
+                    )
+                    if isinstance(sample_observation_id, str) and sample_observation_id:
+                        sample_observation = decode_artifact(self.db.execute(
+                            "SELECT a.metadata FROM artifacts a WHERE a.artifact_id=? AND " + artifact_project_match,
+                            (sample_observation_id, *artifact_project_params),
+                        ).fetchone())
+                        if sample_observation is not None:
+                            observations[sample_observation_id] = sample_observation
                     association = case_data.get("metric_evaluation") if isinstance(case_data, dict) else None
                     evaluation_id = association.get("evaluation_id") if isinstance(association, dict) else None
                     if isinstance(evaluation_id, str) and evaluation_id:

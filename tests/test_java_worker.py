@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from comsol_mcp import _java_worker as java_worker
+from comsol_mcp import _atomic_save, _java_worker as java_worker
 from comsol_mcp._java_worker import JavaWorkerError, JavaWorkerPaths, PersistentJavaWorker, RemoteClient, RemoteModel
 
 
@@ -474,6 +474,144 @@ def test_remote_model_save_rejects_paths_outside_configured_project_root(tmp_pat
     with pytest.raises(Exception):
         model.save(str(tmp_path.parent / "outside.mph"))
     assert not model.raw_paths
+
+
+def test_remote_model_save_case_copy_uses_no_clobber_python_policy_and_java_save_copy_true(tmp_path):
+    class RawRemoteModel(RemoteModel):
+        def __init__(self, project_root):
+            self._worker = SimpleNamespace(generation=1, paths=JavaWorkerPaths(COMSOL_ROOT, JDK11, project_root=project_root))
+            self._generation, self._handle, self.java_type = 1, "test", "test"
+            self.calls = []
+            self.source_paths = []
+
+        def _call(self, method, *args):
+            self.calls.append((method, args))
+            if method == "getFilePath":
+                return ""
+            if method == "save" and args[1] is True:
+                with zipfile.ZipFile(args[0], "w") as archive:
+                    archive.writestr("model.txt", "case copy")
+                return None
+            if method == "save" and args[1] == "java":
+                source_path = Path(args[0])
+                self.source_paths.append(source_path)
+                # Model the basename-derived public source identifier instead
+                # of writing a fixed payload that would hide a temp-name bug.
+                source_path.write_text(f"public class {source_path.stem} {{}}\n", encoding="utf-8")
+                return None
+            if method == "save" and args[1] == "m":
+                source_path = Path(args[0])
+                self.source_paths.append(source_path)
+                source_path.write_text(f"function model = {source_path.stem}()\nend\n", encoding="utf-8")
+                return None
+            raise AssertionError((method, args))
+
+    root = tmp_path.resolve()
+    model = RawRemoteModel(root)
+    destination = root / "case.mph"
+    published = model.save(str(destination), True, overwrite=False)
+    assert published["artifact"]["verified"] is True
+    assert model.calls[-1][0] == "save"
+    assert model.calls[-1][1][1] is True  # Java's boolean remains saveCopy=true.
+
+    # The historical second-string overload remains a Java source export. It
+    # is published as text and never passed through the MPH ZIP verifier.
+    java_path = root / "Config.java"
+    export = model.save(str(java_path), "java", overwrite=False)
+    assert export["artifact"]["verified"] is True
+    assert java_path.read_text(encoding="utf-8") == "public class Config {}\n"
+    assert model.calls[-1][0] == "save"
+    assert model.calls[-1][1][1] == "java"
+    source_path = model.source_paths[-1]
+    assert source_path.name == java_path.name
+    assert source_path.parent != java_path.parent
+    assert export["checkpoint"]["temporary_basename_matches"] is True
+    assert export["checkpoint"]["source_basename"] == java_path.name
+    assert export["checkpoint"]["temporary_directory_removed"] is True
+    assert not source_path.parent.exists()
+
+    java_path.write_text("old source", encoding="utf-8")
+    replaced = model.save(str(java_path), "java", overwrite=True)
+    assert java_path.read_text(encoding="utf-8") == "public class Config {}\n"
+    assert replaced["checkpoint"]["publish_mode"] == "atomic_replace"
+    assert model.source_paths[-1].name == java_path.name
+
+    matlab_path = root / "Busbar.m"
+    matlab_export = model.save(str(matlab_path), "m", overwrite=False)
+    assert matlab_path.read_text(encoding="utf-8") == "function model = Busbar()\nend\n"
+    assert model.source_paths[-1].name == matlab_path.name
+    assert model.source_paths[-1].parent != matlab_path.parent
+    assert matlab_export["checkpoint"]["temporary_basename_matches"] is True
+
+    with pytest.raises(Exception):
+        model.save(str(java_path), "java", overwrite=False)
+    assert java_path.read_text(encoding="utf-8") == "public class Config {}\n"
+    with pytest.raises(Exception):
+        model.save(str(root.parent / "outside.java"), "java")
+
+    # The legacy bool argument remains adapter-compatible: its value does not
+    # become the Python overwrite policy or get passed as Java saveCopy=false.
+    legacy_bool_path = root / "legacy-bool.mph"
+    model.save(str(legacy_bool_path), False, overwrite=False)
+    assert model.calls[-1][0] == "save"
+    assert model.calls[-1][1][1] is True
+
+    destination.write_bytes(b"preserve existing file")
+    with pytest.raises(Exception):
+        model.save(str(destination), True, overwrite=False)
+    assert destination.read_bytes() == b"preserve existing file"
+
+    model._call("save", str(java_path), "java")
+    assert model.calls[-1] == ("save", (str(java_path), "java"))
+
+
+def test_atomic_source_export_fsync_uses_windows_writable_handle_and_retains_failed_source(tmp_path, monkeypatch):
+    destination = tmp_path / "Model.java"
+    writable_handles = {}
+    open_records = []
+    real_fsync = _atomic_save.os.fsync
+    real_path_open = Path.open
+
+    def windows_fsync(fd):
+        # Simulate the Windows FlushFileBuffers contract: syncing a source file
+        # opened read-only is rejected; only the shared r+b helper is accepted.
+        assert writable_handles.get(fd) == ("r+b", True)
+        return real_fsync(fd)
+
+    def tracked_open(path, mode="r", *args, **kwargs):
+        handle = real_path_open(path, mode, *args, **kwargs)
+        if path.name == destination.name:
+            record = (mode, handle.writable())
+            writable_handles[handle.fileno()] = record
+            open_records.append(record)
+        return handle
+
+    monkeypatch.setattr(Path, "open", tracked_open)
+    monkeypatch.setattr(_atomic_save.os, "fsync", windows_fsync)
+    monkeypatch.setattr(_atomic_save, "_fsync_parent", lambda _path: True)
+
+    published = java_worker._atomic_export_file(
+        destination,
+        lambda path: path.write_text(f"public class {path.stem} {{}}\n", encoding="utf-8"),
+        tmp_path,
+        overwrite=False,
+    )
+    assert published["artifact"]["verified"] is True
+    assert ("r+b", True) in open_records
+
+    failed_destination = tmp_path / "Broken.java"
+
+    def partial_then_fail(path):
+        path.write_text(f"public class {path.stem} {{", encoding="utf-8")
+        raise RuntimeError("injected source-export failure")
+
+    with pytest.raises(JavaWorkerError, match="temporary evidence retained at") as raised:
+        java_worker._atomic_export_file(failed_destination, partial_then_fail, tmp_path, overwrite=False)
+    retained_path = Path(str(raised.value).rsplit("temporary evidence retained at ", 1)[1])
+    assert retained_path.name == failed_destination.name
+    assert retained_path.is_file()
+    assert "public class Broken" in retained_path.read_text(encoding="utf-8")
+    assert not failed_destination.exists()
 
 
 def test_remote_client_load_serializes_path_objects_as_strings(tmp_path):

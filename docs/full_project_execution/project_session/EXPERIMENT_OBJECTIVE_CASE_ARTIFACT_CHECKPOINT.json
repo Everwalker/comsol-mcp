@@ -1,0 +1,128 @@
+{
+  "schema_version": 1,
+  "stage": "F16 experiment objective, durable case MPH and source-export compatibility",
+  "status": "PASS_SCOPED_SOFTWARE",
+  "project_status": "PARTIAL",
+  "base_commit": "0f4b58c410ecc997715d99d58c2814411f9f3595",
+  "overlay": [
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "sha256": "ddc01ff4c8b86a72201e993c671be7a4f1281c9adead1dc539be055349997667"
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "sha256": "46d18bbe9c8989881fa14b71ed0c64da27308d73cb2f875e9ba7c7a079f09603"
+    },
+    {
+      "path": "comsol_mcp/_java_worker.py",
+      "sha256": "9f242ca82add8cd5939207f98f7306874940185b1bebf7b478346095d39eb8a6"
+    },
+    {
+      "path": "comsol_mcp/_operation_store.py",
+      "sha256": "6467db7d37e771cb7ac3c180e5145884091f96c7465f36b164826b9b2d14ccca"
+    },
+    {
+      "path": "comsol_mcp/_w21_execution.py",
+      "sha256": "639a13d16dd47da6ca4ff5c6f3f21ed04a978b125fe3a2763fb2c87fbeddb84c"
+    },
+    {
+      "path": "comsol_mcp/data/g2/02_ACTION_CATALOG.json",
+      "sha256": "7403f9fcb87de0e517d2e32f6bbd1152c43e631c60138f645cc68c3a11a51b89"
+    },
+    {
+      "path": "docs/comsol_mcp_design_v1/02_ACTION_CATALOG.json",
+      "sha256": "7403f9fcb87de0e517d2e32f6bbd1152c43e631c60138f645cc68c3a11a51b89"
+    },
+    {
+      "path": "tests/test_experiment_durable_reads.py",
+      "sha256": "13f713a95acafb2917f4544e57bb56cbd9c3edd41c1346b630d933aff9caebc0"
+    },
+    {
+      "path": "tests/test_g3_metrics.py",
+      "sha256": "67bf1c7ce504aa81fae22bab6fb1427a6bb4003dc135f39374ff63275c3c2a3f"
+    },
+    {
+      "path": "tests/test_java_worker.py",
+      "sha256": "e529731c24bd177ecfbf06727dd4c1051c0902db8c091b246619460a1eb72ab0"
+    },
+    {
+      "path": "tests/test_w21_canonical_contracts.py",
+      "sha256": "0f249e0c9efa793627f32f3135a953b902ccb4a0779dce90b2445dc34fbd1a55"
+    }
+  ],
+  "overlay_composite_sha256": "485fd123f8d05e9bd3762fda023fa9a8aae164f26da880565f2bb578fe04c02e",
+  "capabilities": [
+    "Frozen metric-ref/tuple/unit objective and constraints with deterministic feasible ranking and incomplete/unknown reporting.",
+    "Durable same-attempt case artifact bound to producer, planned parameters, solution identity, source observations and current file bytes.",
+    "Per-case same-Worker atomic saveCopy=True before next mutation, no-clobber publication.",
+    "Java/M source exports preserve destination basename with writable fsync and atomic publication; partial candidates retained on failure."
+  ],
+  "tests": {
+    "isolated": {
+      "tests": 92,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "main_parent_objective_durable_reads": {
+      "passed": 48,
+      "deselected": 9
+    },
+    "main_repair": {
+      "passed": 4,
+      "failures": 0
+    },
+    "integrity": {
+      "base_dependency_files_verified": 359,
+      "overlay_files_verified": 11
+    }
+  },
+  "replay": {
+    "python": "Python 3.12 with project test dependencies",
+    "working_directory": "repository root",
+    "command": "python -m pytest -q --junitxml=/tmp/f16-objective-case-artifact-junit.xml tests/test_g3_metrics.py tests/test_experiment_durable_reads.py tests/test_w21_canonical_contracts.py tests/test_g2_registry_packaging.py tests/test_java_worker.py::test_remote_model_save_never_uses_empty_path_as_in_place_bypass tests/test_java_worker.py::test_remote_model_save_rejects_paths_outside_configured_project_root tests/test_java_worker.py::test_remote_model_save_case_copy_uses_no_clobber_python_policy_and_java_save_copy_true tests/test_java_worker.py::test_atomic_source_export_fsync_uses_windows_writable_handle_and_retains_failed_source",
+    "main_repair": "python -m pytest -q tests/test_java_worker.py::test_remote_model_save_never_uses_empty_path_as_in_place_bypass tests/test_java_worker.py::test_remote_model_save_rejects_paths_outside_configured_project_root tests/test_java_worker.py::test_remote_model_save_case_copy_uses_no_clobber_python_policy_and_java_save_copy_true tests/test_java_worker.py::test_atomic_source_export_fsync_uses_windows_writable_handle_and_retains_failed_source"
+  },
+  "local_evidence": [
+    {
+      "path": "/private/tmp/f16-source-export-repair-20260928/repair_receipt.json",
+      "sha256": "defe399545d80b50cf4c3601495329da1849ceffa13aa9c6edbba4b6b41070cd"
+    },
+    {
+      "path": "/private/tmp/f16-source-export-repair-20260928/overlay_manifest.json",
+      "sha256": "2e3913382aeba272fcc7b622e89d986c79e0cd41ebc4f0045103ae612c9d234f"
+    },
+    {
+      "path": "/private/tmp/f16-source-export-repair-20260928/final_isolated_junit.xml",
+      "sha256": "b22107b727ba7849f10b3151a1d3f7fd2d580b44a17eee8b36543fe941f0fb04"
+    },
+    {
+      "path": "/private/tmp/f16-source-export-repair-20260928/source_export_api_evidence.json",
+      "sha256": "d8fd05b33c7a9f28d3915e148f4a98a43b0b12b093116f40b894827c8827fc01"
+    },
+    {
+      "path": "/private/tmp/f16-source-export-main-review.json",
+      "sha256": "c68e45707888370549325f6aaa3c313ec654aeda4a64f666541e589c3932a10e"
+    },
+    {
+      "path": "/private/tmp/f16-source-export-main-junit.xml",
+      "sha256": "d9288b331efecfad414ad8794c53e0e74d3c4e855b329d91b3e54e7881d6afb1"
+    },
+    {
+      "path": "/private/tmp/f16-objective-main-junit.xml",
+      "sha256": "88476bf54f2a2a6db132cce09ea13b20007669c3560c0d2dd57961b82e6f27c5"
+    }
+  ],
+  "limits": {
+    "native_case_reload": "NOT_RUN",
+    "native_source_export": "NOT_RUN",
+    "windows_runtime": "NOT_RUN",
+    "weighted_native_evidence": "UNVERIFIED",
+    "project_acceptance": "NOT_COMPLETE"
+  },
+  "repair_history": [
+    "Parent 91P candidate required writable-fsync and basename repairs; parent evidence preserved.",
+    "Direct non-atomic saveCopy=False proposal was rejected and abandoned; historical atomic behavior preserved."
+  ],
+  "next_action": "Continue original F16 weighted/native and state-transfer gaps; verify saved case reload and producer-native evidence when authorized resources are available. Map and close remaining original W01-W26 requirements without promoting software checks to native acceptance."
+}

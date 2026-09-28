@@ -9,6 +9,7 @@ import json
 import math
 import re
 import uuid
+from collections.abc import Mapping
 from pathlib import Path
 
 from ._artifact_store import ArtifactStore, trusted_project_root
@@ -350,6 +351,107 @@ def stored_times(worker, tag, sample):
     return times, indices
 
 
+def _save_experiment_case_model_copy(
+    worker, tag, *, binding, study, values, units, parameter_readback,
+    sample, solution_indices, solution_identity, sample_observation_ref,
+):
+    """Save the current case model through its same Worker before the next case.
+
+    The file is a hash-verified project artifact.  COMSOL reload/restore is a
+    separate native acceptance step and is deliberately left unclaimed here.
+    """
+    from ._artifact_store import ArtifactStore, trusted_project_root
+
+    base = {
+        'schema_version': 1,
+        'kind': 'w21_experiment_case_model_artifact',
+        'project_id': binding['project_id'],
+        'experiment_id': binding['experiment_id'],
+        'run_id': binding['run_id'],
+        'case_id': binding['case_id'],
+        'case_ordinal': binding['case_ordinal'],
+        'attempt_id': binding['attempt_id'],
+        'attempt_sha256': binding['attempt_sha256'],
+        'producer': binding['producer'],
+        'session_id': binding['session_id'],
+        'model_ref': copy.deepcopy(binding['model_ref']),
+        'model_revision': binding['model_revision'],
+        'revision_scope': 'run_admission_revision; exact case solution is separately bound below',
+        'design_sha256': binding['design_sha256'],
+        'study': study,
+        'parameters': copy.deepcopy(values),
+        'units': copy.deepcopy(units),
+        'parameter_readback_sha256': digest(parameter_readback),
+        'dataset': sample.get('dataset'),
+        'solution': sample.get('solution'),
+        'solution_indices': copy.deepcopy(solution_indices),
+        'solution_identity': copy.deepcopy(solution_identity),
+        'solution_identity_sha256': digest(solution_identity),
+        'sample_observation_ref': copy.deepcopy(sample_observation_ref),
+        'format': 'mph',
+        'save_copy': True,
+        'save_api': 'RemoteModel.save(path, saveCopy=True)',
+        'verification': 'ATOMIC_MPH_ZIP_CRC_AND_SHA256',
+        'restore_status': 'NOT_RELOAD_VERIFIED',
+    }
+
+    def failed(reason_code, stage=None):
+        return {
+            **base,
+            'status': 'SAVE_FAILED',
+            'reason_code': reason_code,
+            'stage': stage if isinstance(stage, str) and stage else None,
+            'restore_status': 'NOT_AVAILABLE',
+        }
+
+    try:
+        experiment_id = binding.get('experiment_id')
+        run_id = binding.get('run_id')
+        case_id = binding.get('case_id')
+        attempt_id = binding.get('attempt_id')
+        if (not isinstance(experiment_id, str) or re.fullmatch(r'exp_[0-9a-f]{32}', experiment_id) is None
+                or not isinstance(run_id, str) or re.fullmatch(r'run_[0-9a-f]{32}', run_id) is None
+                or not isinstance(case_id, str) or re.fullmatch(r'case-[0-9]{4}', case_id) is None
+                or not isinstance(attempt_id, str) or re.fullmatch(r'att_[0-9a-f]{32}', attempt_id) is None):
+            return failed('INVALID_CASE_ARTIFACT_IDENTITY')
+        relative_path = (
+            f'w21/experiment_cases/{experiment_id}/{run_id}/{case_id}/{attempt_id}.mph'
+        )
+        artifact_store = ArtifactStore(trusted_project_root(worker))
+        destination = artifact_store.resolve_safe_path(relative_path)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        # Re-resolve after creating directories to catch a symlink inserted
+        # between the initial path check and the creation.
+        destination = artifact_store.resolve_safe_path(relative_path)
+        saved = bound_model(worker, tag).save(str(destination), True, overwrite=False)
+        artifact = saved.get('artifact') if isinstance(saved, dict) else None
+        if (not isinstance(saved, dict)
+                or saved.get('path') != str(destination)
+                or not isinstance(artifact, dict)
+                or artifact.get('path') != str(destination)
+                or artifact.get('verified') is not True
+                or type(artifact.get('size')) is not int or artifact['size'] <= 0
+                or not isinstance(artifact.get('sha256'), str)
+                or re.fullmatch(r'[0-9a-f]{64}', artifact['sha256']) is None):
+            return failed('SAVE_RESULT_UNVERIFIED')
+        return {
+            **base,
+            'status': 'SAVED_HASH_VERIFIED_RELOAD_UNVERIFIED',
+            'relative_path': relative_path,
+            'file_sha256': artifact['sha256'],
+            'file_size': artifact['size'],
+            'save_copy': True,
+            'restore_status': 'NOT_RELOAD_VERIFIED',
+        }
+    except Exception as exc:
+        if _exception_is_unknown(exc):
+            raise
+        stage = getattr(exc, 'stage', None)
+        code = getattr(exc, 'code', None)
+        reason = code if isinstance(code, str) else 'SAVE_COPY_FAILED'
+        return failed(reason, stage)
+
+
 def execute_case(worker, tag, study, definition, values, budget, case_id, *,
                  metric_definitions=None, experiment_binding=None):
     from ._g3_w21 import ResultCache
@@ -357,7 +459,8 @@ def execute_case(worker, tag, study, definition, values, budget, case_id, *,
     ctx = current_context()
     metric_definitions = [] if metric_definitions is None else metric_definitions
     metric_association_requested = bool(metric_definitions)
-    if metric_association_requested:
+    experiment_case_requested = experiment_binding is not None or metric_association_requested
+    if experiment_case_requested:
         if (not isinstance(experiment_binding, dict)
                 or not isinstance(experiment_binding.get('attempt_id'), str)
                 or not experiment_binding.get('attempt_id')
@@ -376,9 +479,9 @@ def execute_case(worker, tag, study, definition, values, budget, case_id, *,
     identity = model_identity(worker, tag, values, definition, study)
     cache_key = ResultCache.compute_key(digest(identity), values, dict(definition=definition, study=study), identity['engine']['comsol_version'])
     cache = ResultCache(ctx['store'])
-    # Metric associations must prove this exact case attempt's native solve;
-    # an older W21 sample cannot be attached to a new experiment case.
-    record = None if metric_association_requested else cache.get(cache_key)
+    # Every experiment case must prove its exact attempt and own a same-Worker
+    # model copy; a previous W21 cache entry cannot provide that identity.
+    record = None if experiment_case_requested else cache.get(cache_key)
     if record and record.get('status') == 'COMPLETED':
         result = copy.deepcopy(record['result'])
         require(digest(result) == record['result_digest'], 'Cached result integrity mismatch')
@@ -387,22 +490,25 @@ def execute_case(worker, tag, study, definition, values, budget, case_id, *,
         result.update(status='CACHED', cache_hit=True, requested_case_id=case_id)
         return result
     if not budget.can_evaluate():
-        return {'status': 'NOT_RUN', 'reason': 'BUDGET_EXHAUSTED', 'case_id': case_id, 'cache_hit': False}
+        result = {'status': 'NOT_RUN', 'reason': 'BUDGET_EXHAUSTED', 'case_id': case_id, 'cache_hit': False}
+        if experiment_case_requested:
+            result['case_attempt_id'] = experiment_binding['attempt_id']
+        return result
     # The outer managed queue serializes this check with dispatch; no inner enqueue.
     budget.cases_evaluated += 1
     result = {'case_id': case_id, 'parameters': values, 'units': units, 'producer': ctx['producer'],
               'model_ref': ctx['model_ref'], 'cache_hit': False, 'engine': identity['engine'], 'cache_policy':identity['cache_policy']}
-    if metric_association_requested:
+    if experiment_case_requested:
         result['case_attempt_id'] = experiment_binding['attempt_id']
     try:
         parameter_readback = apply_parameters(worker, tag, values, units)
-        if metric_association_requested:
+        if experiment_case_requested:
             parameter_readback = _case_parameter_readback(
                 worker, tag, values, units, experiment_binding['attempt_id'], parameter_readback,
             )
         result['parameter_readback'] = parameter_readback
         solve_result = study_run(worker, tag, {'study': {'segments': [{'collection': 'study', 'tag': study}]}})
-        if metric_association_requested:
+        if experiment_case_requested:
             require(isinstance(solve_result, dict), 'Study execution did not return a structured native result')
             solve_result = copy.deepcopy(solve_result)
             solve_result['case_attempt_id'] = experiment_binding['attempt_id']
@@ -416,22 +522,33 @@ def execute_case(worker, tag, study, definition, values, budget, case_id, *,
         require(successful(result['solve']), 'Solve failed or remains unverified')
         sample = result_at_points(worker, tag, definition['sample'])
         require(successful(sample), 'W17 sampling failed')
-        if metric_association_requested:
+        if experiment_case_requested:
             require(isinstance(sample, dict), 'W21 sample did not return a structured native result')
             sample = copy.deepcopy(sample)
             sample['case_attempt_id'] = experiment_binding['attempt_id']
         result['sample'] = sample
         times, result['solution_indices'] = stored_times(worker, tag, sample)
         require(times == definition['times'], 'Requested times do not match stored solution times: ' + str(times))
+        source_identity = None
+        if experiment_case_requested:
+            from ._observation_store import solution_identity
+            source_identity = solution_identity(worker, tag, sample['solution'])
+            result['case_solution_identity'] = copy.deepcopy(source_identity)
+            result['case_solution_identity_sha256'] = digest(source_identity)
         result['observation_ref'] = register_observation(worker, tag, sample)
         result['validation'] = validate_solution(worker, tag, {'solution': {'dataset': sample['dataset']},
             'observation_ref': result['observation_ref'], 'criteria': definition['validation']})
         require(result['validation']['numerical_verification_status'] == 'PASS', 'W20 validation failed')
         result.update(extract_metrics(sample, definition['metrics']))
+        if experiment_case_requested:
+            result['case_model_artifact'] = _save_experiment_case_model_copy(
+                worker, tag, binding=experiment_binding, study=study, values=values, units=units,
+                parameter_readback=result['parameter_readback'], sample=sample,
+                solution_indices=result['solution_indices'], solution_identity=source_identity,
+                sample_observation_ref=result['observation_ref'],
+            )
         if metric_association_requested:
-            from ._observation_store import solution_identity
             from ._g3_metrics import evaluate_experiment_case_metrics
-            source_identity = solution_identity(worker, tag, sample['solution'])
             case_proof = {
                 **copy.deepcopy(experiment_binding),
                 'study': study,
@@ -456,7 +573,7 @@ def execute_case(worker, tag, study, definition, values, budget, case_id, *,
         budget.cases_failed = 0
         post_identity = model_identity(worker, tag, values, definition, study)
         post_key = ResultCache.compute_key(digest(post_identity), values, dict(definition=definition, study=study), post_identity['engine']['comsol_version'])
-        if not metric_association_requested:
+        if not experiment_case_requested:
             cache.store(post_key, {'status': 'COMPLETED', 'identity': post_identity,
                     'result': result, 'result_digest': digest(result)})
     except Exception as exc:
@@ -532,8 +649,8 @@ def _strict_grid_design(worker, model_tag, definition):
     """Validate the intentionally narrow, predeclared W21 experiment profile."""
     require(isinstance(definition, dict), 'definition must be an object')
     allowed = {'study', 'sample', 'metrics', 'times', 'validation', 'parameters', 'units', 'sampling', 'budget',
-               'metric_evaluations'}
-    required_fields = allowed - {'metric_evaluations'}
+               'metric_evaluations', 'objective', 'constraints'}
+    required_fields = allowed - {'metric_evaluations', 'objective', 'constraints'}
     require(required_fields.issubset(definition) and set(definition).issubset(allowed),
             'Supported experiment definition fields are: ' + ', '.join(sorted(allowed)))
     require(definition.get('sampling') == {'kind': 'cartesian_grid'},
@@ -584,7 +701,99 @@ def _strict_grid_design(worker, model_tag, definition):
             require(isinstance(definition_hash, str) and re.fullmatch(r'[0-9a-f]{64}', definition_hash) is not None,
                     'metric_evaluations.definition_sha256 must be a lowercase SHA-256 digest')
             seen_metric_ids.add(metric_id)
+    has_objective = 'objective' in definition
+    has_constraints = 'constraints' in definition
+    require(has_objective == has_constraints,
+            'objective and constraints must be supplied together; constraints may be an explicit empty array')
+    if has_objective:
+        objective = definition.get('objective')
+        require(isinstance(objective, dict)
+                and set(objective) == {'metric_ref', 'tuple', 'direction', 'unit'},
+                'objective requires only metric_ref, tuple, direction, and unit')
+        _validate_objective_metric_reference(objective.get('metric_ref'), 'objective.metric_ref')
+        _validate_metric_tuple(objective.get('tuple'), 'objective.tuple')
+        require(objective.get('direction') in {'minimize', 'maximize'},
+                'objective.direction must be minimize or maximize')
+        require(isinstance(objective.get('unit'), str) and objective['unit'],
+                'objective.unit must be a nonempty exact observed unit')
+        constraints = definition.get('constraints')
+        require(isinstance(constraints, list), 'constraints must be an array')
+        seen_constraint_ids = set()
+        for index, constraint in enumerate(constraints):
+            label = f'constraints[{index}]'
+            require(isinstance(constraint, dict)
+                    and set(constraint) == {'constraint_id', 'metric_ref', 'tuple', 'relation', 'value', 'unit'},
+                    f'{label} requires only constraint_id, metric_ref, tuple, relation, value, and unit')
+            constraint_id = constraint.get('constraint_id')
+            require(isinstance(constraint_id, str) and constraint_id and constraint_id not in seen_constraint_ids,
+                    f'{label}.constraint_id must be nonempty and unique')
+            seen_constraint_ids.add(constraint_id)
+            _validate_objective_metric_reference(constraint.get('metric_ref'), label + '.metric_ref')
+            _validate_metric_tuple(constraint.get('tuple'), label + '.tuple')
+            require(constraint.get('relation') in {'<', '<=', '>', '>='},
+                    f'{label}.relation must be <, <=, >, or >=')
+            bound = constraint.get('value')
+            require(isinstance(bound, (int, float)) and not isinstance(bound, bool)
+                    and math.isfinite(bound), f'{label}.value must be a finite real number')
+            require(isinstance(constraint.get('unit'), str) and constraint['unit'],
+                    f'{label}.unit must be a nonempty exact observed unit')
     return cases
+
+
+def _validate_objective_metric_reference(reference, label):
+    require(isinstance(reference, dict)
+            and set(reference) == {'metric_id', 'version', 'definition_sha256'},
+            f'{label} requires only metric_id, version, and definition_sha256')
+    require(isinstance(reference.get('metric_id'), str) and reference['metric_id'],
+            f'{label}.metric_id must be a nonempty string')
+    require(type(reference.get('version')) is int and reference['version'] >= 1,
+            f'{label}.version must be a positive integer')
+    require(isinstance(reference.get('definition_sha256'), str)
+            and re.fullmatch(r'[0-9a-f]{64}', reference['definition_sha256']) is not None,
+            f'{label}.definition_sha256 must be a lowercase SHA-256 digest')
+
+
+def _validate_metric_tuple(value, label):
+    require(isinstance(value, dict) and set(value) == {'outer', 'inner'},
+            f'{label} requires exactly outer and inner indices')
+    require(type(value.get('outer')) is int and value['outer'] >= 1
+            and type(value.get('inner')) is int and value['inner'] >= 1,
+            f'{label} outer and inner must be positive integer indices')
+
+
+def _validate_experiment_objective_contract(definition, metric_records):
+    """Bind objective and constraints to exact frozen metric definitions."""
+    if 'objective' not in definition and 'constraints' not in definition:
+        return
+    references = definition.get('metric_evaluations')
+    require(isinstance(references, list) and references,
+            'an objective requires frozen metric_evaluations')
+    records_by_ref = {}
+    for record in metric_records:
+        ref = (record.get('metric_id'), record.get('version'), record.get('definition_sha256'))
+        records_by_ref[ref] = record
+    frozen_refs = {
+        (reference.get('metric_id'), reference.get('version'), reference.get('definition_sha256'))
+        for reference in references if isinstance(reference, dict)
+    }
+    require(len(frozen_refs) == len(references), 'metric_evaluations references must be unique')
+
+    def resolve(reference, unit, label):
+        key = (reference.get('metric_id'), reference.get('version'), reference.get('definition_sha256'))
+        require(key in frozen_refs, f'{label} must exactly match a frozen metric_evaluations reference')
+        record = records_by_ref.get(key)
+        require(isinstance(record, Mapping), f'{label} frozen metric definition is unavailable')
+        metric_definition = record.get('definition')
+        require(isinstance(metric_definition, Mapping)
+                and metric_definition.get('complex_mode') in {'real', 'imag', 'abs'},
+                f'{label} requires a frozen real, imaginary, or magnitude projection')
+        require(unit == metric_definition.get('expected_unit'),
+                f'{label}.unit must exactly equal the frozen metric unit; conversions are unsupported')
+
+    objective = definition['objective']
+    resolve(objective['metric_ref'], objective['unit'], 'objective.metric_ref')
+    for index, constraint in enumerate(definition['constraints']):
+        resolve(constraint['metric_ref'], constraint['unit'], f'constraints[{index}].metric_ref')
 
 
 def _metric_definition_snapshots(ctx, definition, *, require_latest):
@@ -817,6 +1026,7 @@ def op_experiment_design(worker, model_tag, arguments):
     definition = arguments.get('definition')
     cases = _strict_grid_design(worker, model_tag, definition)
     metric_snapshots = _metric_definition_snapshots(ctx, definition, require_latest=True)
+    _validate_experiment_objective_contract(definition, metric_snapshots)
     design_id = 'exp_' + uuid.uuid4().hex
     record = {
         'schema_version': 1,
@@ -934,58 +1144,58 @@ def op_experiment_run(worker, model_tag, arguments):
             break
         metric_definitions = experiment.get('metric_definition_snapshots', [])
         experiment_case_id = experiment['experiment_id'] + ':' + row['case_id']
-        if metric_definitions:
-            attempt_id = 'att_' + uuid.uuid4().hex
-            attempt = {
-                'schema_version': 1,
-                'kind': 'w21experiment_case_attempt',
-                'attempt_id': attempt_id,
-                'experiment_id': experiment['experiment_id'],
-                'run_id': run_id,
-                'case_id': row['case_id'],
-                'case_ordinal': int(row['case_id'].split('-')[-1]),
-                'study': experiment['study'],
-                'project_id': ctx['project_id'],
-                'session_id': ctx['model_ref'].get('session_id'),
-                'model_ref': copy.deepcopy(ctx['model_ref']),
-                'model_revision': ctx['revision'],
-                'producer': ctx['producer'],
-                'design_sha256': experiment['sha256'],
-                'parameters': copy.deepcopy(row['parameters']),
-                'units': copy.deepcopy(experiment['definition']['units']),
-                'metric_definition_refs': [
-                    {key: item[key] for key in ('metric_id', 'version', 'definition_sha256')}
-                    for item in metric_definitions
-                ],
-                'admission_state': 'ATTEMPT_ADMITTED_BEFORE_CASE_DISPATCH',
-            }
-            attempt['sha256'] = digest(attempt)
-            attempt_key = 'w21experimentattempt:' + experiment['experiment_id'] + ':' + row['case_id']
-            existing_attempt = ctx['store'].register_artifact_if_absent(attempt_key, attempt)
-            require(existing_attempt is None, 'Case attempt already exists; inspect its durable state without replaying the case')
-            binding = {
-                'attempt_id': attempt_id,
-                'attempt_sha256': attempt['sha256'],
-                'experiment_id': experiment['experiment_id'],
-                'run_id': run_id,
-                'case_id': row['case_id'],
-                'execution_case_id': experiment_case_id,
-                'case_ordinal': attempt['case_ordinal'],
-                'project_id': ctx['project_id'],
-                'session_id': ctx['model_ref'].get('session_id'),
-                'model_ref': copy.deepcopy(ctx['model_ref']),
-                'model_revision': ctx['revision'],
-                'producer': ctx['producer'],
-                'design_sha256': experiment['sha256'],
-                'planned_parameters': copy.deepcopy(row['parameters']),
-                'study': experiment['study'],
-            }
-            result = execute_case(worker, model_tag, experiment['study'], experiment['definition'],
-                                  row['parameters'], budget, experiment_case_id,
-                                  metric_definitions=metric_definitions, experiment_binding=binding)
-        else:
-            result = execute_case(worker, model_tag, experiment['study'], experiment['definition'],
-                                  row['parameters'], budget, experiment_case_id)
+        attempt_id = 'att_' + uuid.uuid4().hex
+        attempt = {
+            'schema_version': 1,
+            'kind': 'w21experiment_case_attempt',
+            'attempt_id': attempt_id,
+            'experiment_id': experiment['experiment_id'],
+            'run_id': run_id,
+            'case_id': row['case_id'],
+            'case_ordinal': int(row['case_id'].split('-')[-1]),
+            'study': experiment['study'],
+            'project_id': ctx['project_id'],
+            'session_id': ctx['model_ref'].get('session_id'),
+            'model_ref': copy.deepcopy(ctx['model_ref']),
+            'model_revision': ctx['revision'],
+            'producer': ctx['producer'],
+            'design_sha256': experiment['sha256'],
+            'parameters': copy.deepcopy(row['parameters']),
+            'units': copy.deepcopy(experiment['definition']['units']),
+            'metric_definition_refs': [
+                {key: item[key] for key in ('metric_id', 'version', 'definition_sha256')}
+                for item in metric_definitions
+            ],
+            'admission_state': 'ATTEMPT_ADMITTED_BEFORE_CASE_DISPATCH',
+        }
+        attempt['sha256'] = digest(attempt)
+        attempt_key = 'w21experimentattempt:' + experiment['experiment_id'] + ':' + row['case_id']
+        existing_attempt = ctx['store'].register_artifact_if_absent(attempt_key, attempt)
+        require(existing_attempt is None, 'Case attempt already exists; inspect its durable state without replaying the case')
+        binding = {
+            'attempt_id': attempt_id,
+            'attempt_sha256': attempt['sha256'],
+            'experiment_id': experiment['experiment_id'],
+            'run_id': run_id,
+            'case_id': row['case_id'],
+            'execution_case_id': experiment_case_id,
+            'case_ordinal': attempt['case_ordinal'],
+            'project_id': ctx['project_id'],
+            'session_id': ctx['model_ref'].get('session_id'),
+            'model_ref': copy.deepcopy(ctx['model_ref']),
+            'model_revision': ctx['revision'],
+            'producer': ctx['producer'],
+            'design_sha256': experiment['sha256'],
+            'planned_parameters': copy.deepcopy(row['parameters']),
+            'study': experiment['study'],
+        }
+        result = execute_case(worker, model_tag, experiment['study'], experiment['definition'],
+                              row['parameters'], budget, experiment_case_id,
+                              metric_definitions=metric_definitions, experiment_binding=binding)
+        if (not isinstance(result, dict)
+                or result.get('case_attempt_id') != attempt_id):
+            raise PreWriteRefusal('INVALID_METRIC_CASE_BINDING',
+                                  'case callback did not preserve its pre-dispatch attempt identity')
         result['case_id'] = row['case_id']
         result['case_ordinal'] = int(row['case_id'].split('-')[-1])
         cases.append(result)

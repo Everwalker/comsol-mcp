@@ -633,10 +633,18 @@ def test_actual_w21_design_and_run_callbacks_read_back_through_public_routes(tmp
     monkeypatch.setattr(w21_execution, "validate_parameters", lambda *_args: None)
     execution_calls = []
 
-    def fake_execute_case(_worker, _model_tag, _study, _definition, values, budget, case_key):
+    def fake_execute_case(_worker, _model_tag, _study, _definition, values, budget, case_key, *,
+                          metric_definitions=None, experiment_binding=None):
+        assert isinstance(experiment_binding, dict)
+        attempt = daemon.store.get_metadata(
+            "artifacts",
+            "w21experimentattempt:" + experiment_binding["experiment_id"] + ":" + experiment_binding["case_id"],
+        )
+        assert attempt["attempt_id"] == experiment_binding["attempt_id"]
         execution_calls.append((dict(values), case_key))
         budget.cases_evaluated += 1
-        return {"status": "COMPLETED", "parameters": dict(values), "raw_result": {"metric": 12.5}}
+        return {"status": "COMPLETED", "parameters": dict(values), "raw_result": {"metric": 12.5},
+                "case_attempt_id": experiment_binding["attempt_id"]}
 
     monkeypatch.setattr(w21_execution, "execute_case", fake_execute_case)
     design_operation = _seed_operation(
@@ -696,3 +704,98 @@ def test_registry_contract_publishes_durable_read_outputs_and_exact_case_key(tmp
     assert inspect_contract["runtime_dispatch_contract"]["engine_queue"] == "bypassed; no Worker RPC or current ModelRef is required"
     assert case_contract["data_schema"]["properties"]["case_id"]["type"] == "string"
     assert case_contract["runtime_dispatch_contract"]["case_identity"].startswith("case_id is matched exactly")
+
+
+
+def test_actual_callbacks_public_inspect_project_case_failure_cache_and_not_defined_objective(tmp_path, monkeypatch):
+    project_root = tmp_path / "projects"
+    project_root.mkdir()
+    daemon = ControlDaemon(tmp_path / "control", project_root=project_root, registry={})
+    project_id = _create_project(daemon, "failure-cache-read")
+    model_ref = {
+        "schema_version": 1, "session_id": "session-synthetic",
+        "server_instance_id": "worker-synthetic", "model_tag": "model-main", "generation": 1,
+    }
+    definition = {
+        "study": "std1",
+        "sample": {"spec": {"solution": {"dataset": "dset1"}, "expressions": ["T"]},
+                   "points": [[0.0, 0.0]], "coordinate_unit": "m"},
+        "metrics": {"peak": {"expression": "T", "unit": "K", "indices": [0]}},
+        "times": [0.0],
+        "validation": {"range": [250.0, 400.0]},
+        "parameters": {"p": [1.0, 2.0]},
+        "units": {"p": "1"},
+        "sampling": {"kind": "cartesian_grid"},
+        "budget": {"max_cases": 2, "max_wall_time_s": 60.0},
+    }
+    monkeypatch.setattr(w21_execution, "validate_definition", lambda *_args: None)
+    monkeypatch.setattr(w21_execution, "validate_parameters", lambda *_args: None)
+    callback_rows = []
+
+    def fake_execute_case(_worker, _tag, _study, _definition, values, budget, _case_key, *,
+                          metric_definitions=None, experiment_binding=None):
+        assert isinstance(experiment_binding, dict)
+        budget.cases_evaluated += 1
+        row = {"parameters": dict(values), "cache_policy": "SYNTHETIC_REUSE_VERIFIED_CONFIGURATION",
+               "case_attempt_id": experiment_binding["attempt_id"]}
+        if values["p"] == 1.0:
+            row.update(status="CACHED", cache_hit=True)
+        else:
+            row.update(status="FAILED", cache_hit=False, error="synthetic convergence failure")
+        callback_rows.append(row)
+        return row
+
+    monkeypatch.setattr(w21_execution, "execute_case", fake_execute_case)
+    design_arguments = {"definition": definition}
+    design_operation = _seed_operation(
+        daemon, project_id, "experiment.design", design_arguments, status="RUNNING",
+    )
+    with observation_context(daemon.store, model_ref, 7, design_operation, project_id=project_id):
+        design = w21_execution.op_experiment_design(object(), "model-main", design_arguments)
+    design_job = daemon.store.operation_job(design_operation)
+    daemon.store.update_job(design_job["job_id"], "SUCCEEDED", result={"success": True, "data": design})
+
+    run_arguments = {"experiment_id": design["experiment_id"]}
+    run_operation = _seed_operation(
+        daemon, project_id, "experiment.run", run_arguments, status="RUNNING",
+    )
+    with observation_context(daemon.store, model_ref, design["model_revision"], run_operation,
+                            project_id=project_id):
+        run = w21_execution.op_experiment_run(object(), "model-main", run_arguments)
+    run_job = daemon.store.operation_job(run_operation)
+    daemon.store.update_job(run_job["job_id"], "SUCCEEDED", result={"success": True, "data": run})
+    monkeypatch.setattr(
+        daemon.session_scheduler, "submit",
+        lambda *_a, **_k: (_ for _ in ()).throw(AssertionError("inspect must not enter the engine queue")),
+    )
+
+    try:
+        inspected = _call_public(
+            _public_host(daemon), "experiment_inspect", project_id=project_id,
+            experiment_id=design["experiment_id"],
+        )
+        assert inspected["success"] is True, inspected
+        data = inspected["data"]
+        assert data["status"] == "FAILED"
+        assert data["best_feasible"] == {
+            "status": "NOT_DEFINED",
+            "reason_code": "NO_FROZEN_OBJECTIVE_AND_CONSTRAINTS",
+            "case_id": None,
+        }
+        assert data["run"]["failure_reason"] == {
+            "state": "REPORTED", "code": None, "message": "synthetic convergence failure",
+        }
+        assert data["run"]["cache_summary"] == {
+            "state": "COMPLETE", "hits": 1, "misses": 1, "unknown_cases": 0, "total_cases": 2,
+        }
+        assert data["cases"][0]["cache"] == {
+            "state": "HIT", "hit": True, "policy": "SYNTHETIC_REUSE_VERIFIED_CONFIGURATION",
+        }
+        assert data["cases"][0]["failure_reason"]["state"] == "NOT_APPLICABLE"
+        assert data["cases"][1]["failure_reason"] == {
+            "state": "REPORTED", "code": None, "message": "synthetic convergence failure",
+        }
+        assert callback_rows[0]["status"] == "CACHED"
+        assert callback_rows[1]["status"] == "FAILED"
+    finally:
+        daemon.close()

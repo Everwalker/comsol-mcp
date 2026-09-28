@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import hashlib
 import json
 from contextlib import nullcontext
 from pathlib import Path
 import uuid
+import zipfile
 
 import pytest
 
@@ -55,11 +57,24 @@ class _Solution:
 
 
 class _Model:
+    def __init__(self, project_root):
+        self.project_root = Path(project_root)
+
     def sol(self, _tag):
         return _Solution()
 
     def study(self, _tag):
         return _Study()
+
+    def save(self, path, save_copy=True, *, overwrite=True):
+        assert save_copy is True
+        from comsol_mcp._atomic_save import atomic_save
+
+        def write_mph(temporary):
+            with zipfile.ZipFile(temporary, "w") as archive:
+                archive.writestr("model/model.mphbin", b"synthetic W21 case model")
+
+        return atomic_save(path, write_mph, self.project_root, overwrite=overwrite)
 
 
 class _Worker:
@@ -73,7 +88,7 @@ class _Worker:
         return self
 
     def model(self, _tag):
-        return _Model()
+        return _Model(self.project_root)
 
     def operation_context(self, *_args, **_kwargs):
         return nullcontext()
@@ -663,7 +678,7 @@ def _begin_callback_operation(daemon, project_id, model_ref, revision, operation
 def _install_synthetic_experiment_callbacks(monkeypatch, *, wrong_readback_case=None, fail_solve=False,
                                             identity_drift_call=None):
     state = {"parameter": None, "solved_parameter": None, "solve_count": 0, "unit_calls": [],
-             "identity_calls": 0, "attempt_ids_seen_by_solve": []}
+             "identity_calls": 0, "attempt_ids_seen_by_solve": [], "saved_case_values": []}
     monkeypatch.setattr(_w21_execution, "validate_definition", lambda *_args: None)
     monkeypatch.setattr(_w21_execution, "validate_parameters", lambda *_args: None)
     monkeypatch.setattr(
@@ -750,11 +765,27 @@ def _install_synthetic_experiment_callbacks(monkeypatch, *, wrong_readback_case=
         }
 
     monkeypatch.setattr(_observation_store, "solution_identity", solution_identity)
+
+    def save_same_worker_case(_model, path, save_copy=True, *, overwrite=True):
+        assert save_copy is True
+        value = state["solved_parameter"]
+        from comsol_mcp._atomic_save import atomic_save
+
+        def write_mph(temporary):
+            with zipfile.ZipFile(temporary, "w") as archive:
+                archive.writestr("case.txt", str(value))
+
+        saved = atomic_save(path, write_mph, _model.project_root, overwrite=overwrite)
+        state["saved_case_values"].append(value)
+        return saved
+
+    monkeypatch.setattr(_Model, "save", save_same_worker_case)
     return state
 
 
 def _run_metric_experiment(daemon, worker, project_id, model_ref, host, state, *, cases=(1.0, 2.0),
-                           metric_id="case-temperature", run_experiment=True, after_design=None):
+                           metric_id="case-temperature", run_experiment=True, after_design=None,
+                           objective_contract=None, run_resources=None):
     define_args = {"metric_id": metric_id, "definition": _definition()}
     define_operation, define_job = _begin_callback_operation(
         daemon, project_id, model_ref, 0, "metric.define", define_args,
@@ -779,6 +810,10 @@ def _run_metric_experiment(daemon, worker, project_id, model_ref, host, state, *
             "definition_sha256": metric_ref["definition_sha256"],
         }],
     }
+    if objective_contract is not None:
+        experiment_definition.update(
+            objective_contract(metric_ref) if callable(objective_contract) else objective_contract
+        )
     design_args = {"definition": experiment_definition}
     design_operation, design_job = _begin_callback_operation(
         daemon, project_id, model_ref, 0, "experiment.design", design_args,
@@ -793,6 +828,8 @@ def _run_metric_experiment(daemon, worker, project_id, model_ref, host, state, *
         after_design(metric_ref, design)
 
     run_args = {"experiment_id": design["experiment_id"]}
+    if run_resources is not None:
+        run_args["resources"] = run_resources
     run_operation, run_job = _begin_callback_operation(
         daemon, project_id, model_ref, design["model_revision"], "experiment.run", run_args,
     )
@@ -864,15 +901,24 @@ def test_experiment_run_binds_frozen_metric_versions_to_attempt_solution_and_pub
             )
             assert evaluation["items"][0]["definition_version"] == 1
             assert evaluation["items"][0]["case_attempt_id"] == case["case_attempt_id"]
+            saved_case = case["case_model_artifact"]
+            assert saved_case["status"] == "SAVED_HASH_VERIFIED_RELOAD_UNVERIFIED"
+            assert saved_case["save_copy"] is True
+            assert saved_case["restore_status"] == "NOT_RELOAD_VERIFIED"
+            case_file = worker.project_root / saved_case["relative_path"]
+            with zipfile.ZipFile(case_file) as archive:
+                assert archive.read("case.txt").decode() == str(case["parameters"]["p"])
+        assert state["saved_case_values"] == [1.0, 2.0]
 
         # Public reads still bind every case to the design's immutable v1 definition.
         host = _public_experiment_host(daemon)
         for case in run["cases"]:
-            response = asyncio.run(host.tools["experiment_case_result"](
-                project_id=project_id, experiment_id=design["experiment_id"], case_id=case["case_id"],
-            )).structuredContent
-            assert response["success"] is True, response
-            assert response["data"]["result"]["metric_evaluation"]["case_attempt_id"] == case["case_attempt_id"]
+                response = asyncio.run(host.tools["experiment_case_result"](
+                    project_id=project_id, experiment_id=design["experiment_id"], case_id=case["case_id"],
+                )).structuredContent
+                assert response["success"] is True, response
+                assert response["data"]["result"]["metric_evaluation"]["case_attempt_id"] == case["case_attempt_id"]
+                assert response["data"]["case_model_artifact"]["status"] == "SAVED_HASH_VERIFIED_RELOAD_UNVERIFIED"
         inspected = asyncio.run(host.tools["experiment_inspect"](
             project_id=project_id, experiment_id=design["experiment_id"],
         )).structuredContent
@@ -890,6 +936,7 @@ def test_experiment_run_binds_frozen_metric_versions_to_attempt_solution_and_pub
         )).structuredContent
         assert reopened["success"] is True, reopened
         assert reopened["data"]["result"]["metric_evaluation"]["evaluation_id"] == run["cases"][1]["metric_evaluation"]["evaluation_id"]
+        assert reopened["data"]["case_model_artifact"]["file_sha256"] == run["cases"][1]["case_model_artifact"]["file_sha256"]
         assert daemon2.backend.worker is None
         assert daemon2.session_scheduler.submit is not None
 
@@ -930,6 +977,190 @@ def test_experiment_run_binds_frozen_metric_versions_to_attempt_solution_and_pub
             daemon.close()
         if daemon2 is not None:
             daemon2.close()
+
+
+def _objective_contract(metric_ref, *, bound=3.4, direction="minimize"):
+    reference = {key: metric_ref[key] for key in ("metric_id", "version", "definition_sha256")}
+    return {
+        "objective": {
+            "metric_ref": reference, "tuple": {"outer": 1, "inner": 1},
+            "direction": direction, "unit": "K",
+        },
+        "constraints": [{
+            "constraint_id": "temperature-limit", "metric_ref": reference,
+            "tuple": {"outer": 1, "inner": 1}, "relation": "<=", "value": bound, "unit": "K",
+        }],
+    }
+
+
+def test_experiment_inspect_ranks_only_verified_feasible_completed_cases_and_marks_partial_scope(tmp_path, monkeypatch):
+    daemon, worker, project_id, execution, _host, _native_calls = _setup(tmp_path, monkeypatch)
+    model_ref = execution["model_ref"]
+    state = _install_synthetic_experiment_callbacks(monkeypatch)
+    try:
+        _metric_ref, design, run, _run_operation, _run_job = _run_metric_experiment(
+            daemon, worker, project_id, model_ref, None, state,
+            objective_contract=_objective_contract,
+        )
+        invalid_definitions = []
+        bool_index = copy.deepcopy(design["definition"])
+        bool_index["objective"]["tuple"]["outer"] = True
+        invalid_definitions.append(bool_index)
+        nonfinite_bound = copy.deepcopy(design["definition"])
+        nonfinite_bound["constraints"][0]["value"] = float("nan")
+        invalid_definitions.append(nonfinite_bound)
+        unknown_contract_field = copy.deepcopy(design["definition"])
+        unknown_contract_field["objective"]["allow_projection"] = True
+        invalid_definitions.append(unknown_contract_field)
+        for invalid_definition in invalid_definitions:
+            with pytest.raises(PreWriteRefusal):
+                _w21_execution._strict_grid_design(worker, "model", invalid_definition)
+        wrong_frozen_ref = copy.deepcopy(design["definition"])
+        wrong_frozen_ref["objective"]["metric_ref"]["version"] = 2
+        with pytest.raises(PreWriteRefusal):
+            _w21_execution._validate_experiment_objective_contract(
+                wrong_frozen_ref, design["metric_definition_snapshots"],
+            )
+        wrong_unit = copy.deepcopy(design["definition"])
+        wrong_unit["objective"]["unit"] = "degC"
+        with pytest.raises(PreWriteRefusal):
+            _w21_execution._validate_experiment_objective_contract(
+                wrong_unit, design["metric_definition_snapshots"],
+            )
+        preserve_complex = copy.deepcopy(design["metric_definition_snapshots"])
+        preserve_complex[0]["definition"]["complex_mode"] = "preserve"
+        with pytest.raises(PreWriteRefusal):
+            _w21_execution._validate_experiment_objective_contract(
+                design["definition"], preserve_complex,
+            )
+        assert run["status"] == "COMPLETE"
+        public = _public_experiment_host(daemon)
+        result = asyncio.run(public.tools["experiment_inspect"](
+            project_id=project_id, experiment_id=design["experiment_id"],
+        )).structuredContent
+        assert result["success"] is True, result
+        best = result["data"]["best_feasible"]
+        assert best["status"] == "FOUND"
+        assert best["case_id"] == "case-0001"
+        assert best["objective"]["value"] == 3.25
+        assert best["constraints"][0]["status"] == "PASS"
+        assert best["comparison_scope"] == "verified_completed_cases"
+        assert best["ranking_complete"] is True
+        assert best["tie_break"] == "case_ordinal_ascending"
+        assert best["counts"] == {
+            "total_cases": 2, "verified_completed_cases": 2, "feasible_cases": 1,
+            "infeasible_cases": 1, "unresolved_cases": 0, "not_run_cases": 0, "failed_cases": 0,
+        }
+
+        # A resource-limited execution may report the best completed feasible
+        # case but must not call its ranking complete while a planned case did
+        # not run.
+        partial_root = tmp_path / "partial"
+        partial_root.mkdir()
+        partial_daemon, partial_worker, partial_project, partial_execution, _host2, _calls2 = _setup(
+            partial_root, monkeypatch,
+        )
+        try:
+            partial_model_ref = partial_execution["model_ref"]
+            partial_state = _install_synthetic_experiment_callbacks(monkeypatch)
+            _ref, partial_design, partial_run, _op, _job = _run_metric_experiment(
+                partial_daemon, partial_worker, partial_project, partial_model_ref, None, partial_state,
+                objective_contract=_objective_contract, run_resources={"max_cases": 1},
+            )
+            assert partial_run["status"] == "PARTIAL"
+            partial_public = _public_experiment_host(partial_daemon)
+            partial_result = asyncio.run(partial_public.tools["experiment_inspect"](
+                project_id=partial_project, experiment_id=partial_design["experiment_id"],
+            )).structuredContent
+            assert partial_result["success"] is True, partial_result
+            partial_best = partial_result["data"]["best_feasible"]
+            assert partial_best["status"] == "FOUND"
+            assert partial_best["case_id"] == "case-0001"
+            assert partial_best["comparison_scope"] == "verified_completed_cases"
+            assert partial_best["ranking_complete"] is False
+            assert partial_best["counts"]["total_cases"] == 2
+            assert partial_best["counts"]["verified_completed_cases"] == 1
+            assert partial_best["counts"]["not_run_cases"] == 1
+        finally:
+            partial_daemon.close()
+    finally:
+        if daemon is not None:
+            daemon.close()
+
+
+def test_experiment_inspect_reports_none_feasible_only_after_every_terminal_case_fails_constraints(tmp_path, monkeypatch):
+    daemon, worker, project_id, _execution, _host, _native_calls = _setup(
+        tmp_path, monkeypatch, native_values=[3.25, 3.5],
+    )
+    model_ref = _execution["model_ref"]
+    state = _install_synthetic_experiment_callbacks(monkeypatch)
+    try:
+        _ref, design, run, _operation, _job = _run_metric_experiment(
+            daemon, worker, project_id, model_ref, None, state,
+            objective_contract=lambda metric_ref: _objective_contract(metric_ref, bound=2.0),
+        )
+        assert run["status"] == "COMPLETE"
+        public = _public_experiment_host(daemon)
+        result = asyncio.run(public.tools["experiment_inspect"](
+            project_id=project_id, experiment_id=design["experiment_id"],
+        )).structuredContent
+        assert result["success"] is True, result
+        best = result["data"]["best_feasible"]
+        assert best["status"] == "NONE_FEASIBLE"
+        assert best["case_id"] is None
+        assert best["comparison_scope"] == "all_planned_terminal_cases"
+        assert best["ranking_complete"] is True
+        assert best["counts"]["infeasible_cases"] == 2
+        assert best["counts"]["unresolved_cases"] == 0
+    finally:
+        daemon.close()
+
+
+def test_experiment_objective_tuple_resolution_requires_one_finite_projected_value():
+    metric_ref = {"metric_id": "temperature", "version": 1, "definition_sha256": "a" * 64}
+    metric_record = {**metric_ref, "definition": {"complex_mode": "real", "expected_unit": "K"}}
+    base_item = {
+        "metric_id": "temperature", "definition_version": 1,
+        "definition_sha256": "a" * 64, "definition": metric_record["definition"],
+        "complex_mode": "real", "unit": "K",
+    }
+
+    def resolve(rows):
+        return ControlDaemon._verified_experiment_metric_value(
+            {"evaluation_id": "mev_test", "sha256": "b" * 64,
+             "items": [{**base_item, "values": rows}]},
+            metric_record, metric_ref, {"outer": 1, "inner": 1}, "K",
+        )
+
+    exact = {"outer": 1, "inner": 1, "solnum": 1, "value": 4.5}
+    assert resolve([exact])["value"] == 4.5
+    assert resolve([exact, dict(exact)]) is None
+    assert resolve([{**exact, "value": True}]) is None
+    assert resolve([{**exact, "value": float("inf")}]) is None
+    assert resolve([{**exact, "value": 10**10000}]) is None
+
+
+def test_experiment_objective_ties_use_ascending_case_ordinal(tmp_path, monkeypatch):
+    daemon, worker, project_id, execution, _host, _calls = _setup(
+        tmp_path, monkeypatch, native_values=[3.25, 3.25],
+    )
+    state = _install_synthetic_experiment_callbacks(monkeypatch)
+    try:
+        _ref, design, _run, _operation, _job = _run_metric_experiment(
+            daemon, worker, project_id, execution["model_ref"], None, state,
+            objective_contract=_objective_contract,
+        )
+        response = asyncio.run(_public_experiment_host(daemon).tools["experiment_inspect"](
+            project_id=project_id, experiment_id=design["experiment_id"],
+        )).structuredContent
+        assert response["success"] is True, response
+        best = response["data"]["best_feasible"]
+        assert best["status"] == "FOUND"
+        assert best["case_id"] == "case-0001"
+        assert best["tie_break"] == "case_ordinal_ascending"
+        assert best["counts"]["feasible_cases"] == 2
+    finally:
+        daemon.close()
 
 
 @pytest.mark.parametrize("observation_role", ["case_sample", "metric_item"])
@@ -1035,6 +1266,84 @@ def test_public_experiment_reads_reject_cross_project_observation_metadata(
         )).structuredContent
         assert foreign_read["success"] is False
         assert foreign_read["error"]["code"] == "EXPERIMENT_NOT_FOUND"
+    finally:
+        daemon.close()
+
+
+@pytest.mark.parametrize("damage", ["rewrite", "missing", "symlink_escape"])
+def test_public_experiment_reads_rehash_case_model_files(tmp_path, monkeypatch, damage):
+    daemon, worker, project_id, execution, _host, _native_calls = _setup(
+        tmp_path, monkeypatch, native_values=[3.25],
+    )
+    state = _install_synthetic_experiment_callbacks(monkeypatch)
+    try:
+        _metric_ref, design, run, _run_operation, _run_job = _run_metric_experiment(
+            daemon, worker, project_id, execution["model_ref"], None, state, cases=(1.0,),
+        )
+        row = run["cases"][0]["case_model_artifact"]
+        target = worker.project_root / row["relative_path"]
+        original = target.read_bytes()
+        outside = tmp_path / "outside.mph"
+        outside.write_bytes(original)
+        if damage == "rewrite":
+            target.write_bytes(original + b"tampered")
+        elif damage == "missing":
+            target.unlink()
+        else:
+            target.unlink()
+            target.symlink_to(outside)
+
+        host = _public_experiment_host(daemon)
+        public_case = asyncio.run(host.tools["experiment_case_result"](
+            project_id=project_id, experiment_id=design["experiment_id"], case_id="case-0001",
+        )).structuredContent
+        assert public_case["success"] is False, public_case
+        assert public_case["error"]["code"] == "EXPERIMENT_STATE_UNKNOWN"
+        public_inspect = asyncio.run(host.tools["experiment_inspect"](
+            project_id=project_id, experiment_id=design["experiment_id"],
+        )).structuredContent
+        assert public_inspect["success"] is False, public_inspect
+        assert public_inspect["error"]["code"] == "EXPERIMENT_STATE_UNKNOWN"
+    finally:
+        daemon.close()
+
+
+@pytest.mark.parametrize("save_failure", ["api_error", "destination_race"])
+def test_case_model_save_failure_is_not_reported_as_restorable(tmp_path, monkeypatch, save_failure):
+    daemon, worker, project_id, execution, _host, _native_calls = _setup(
+        tmp_path, monkeypatch, native_values=[3.25],
+    )
+    state = _install_synthetic_experiment_callbacks(monkeypatch)
+    destination_created = []
+    if save_failure == "api_error":
+        def fail_save(*_args, **_kwargs):
+            raise OSError("synthetic save failure")
+        monkeypatch.setattr(_Model, "save", fail_save)
+    else:
+        original_save = _Model.save
+
+        def race_save(model, path, save_copy=True, *, overwrite=True):
+            Path(path).write_bytes(b"preexisting candidate")
+            destination_created.append(Path(path))
+            return original_save(model, path, save_copy, overwrite=overwrite)
+        monkeypatch.setattr(_Model, "save", race_save)
+
+    try:
+        _metric_ref, design, run, _run_operation, _run_job = _run_metric_experiment(
+            daemon, worker, project_id, execution["model_ref"], None, state, cases=(1.0,),
+        )
+        host = _public_experiment_host(daemon)
+        artifact = run["cases"][0]["case_model_artifact"]
+        assert artifact["status"] == "SAVE_FAILED"
+        assert artifact["restore_status"] == "NOT_AVAILABLE"
+        response = asyncio.run(host.tools["experiment_case_result"](
+            project_id=project_id, experiment_id=design["experiment_id"], case_id="case-0001",
+        )).structuredContent
+        assert response["success"] is True, response
+        assert response["data"]["case_model_artifact"]["status"] == "SAVE_FAILED"
+        assert response["data"]["case_model_artifact"]["restore_status"] == "NOT_AVAILABLE"
+        if save_failure == "destination_race":
+            assert destination_created and destination_created[0].read_bytes() == b"preexisting candidate"
     finally:
         daemon.close()
 

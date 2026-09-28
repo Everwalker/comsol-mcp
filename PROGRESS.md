@@ -4,13 +4,11 @@ Updated 2026-09-28 UTC. **Overall PARTIAL; execution continues through W26.** Th
 
 ## Current stage
 
-**W23 full-aperture conflict detection and control-volume topology adapter: PASS for scoped software; W23/project overall PARTIAL.** Shared vertex/edge geometry, connected and annular face partitions, Java flat-row normalization and closed-edge sampling are implemented. Full air apertures remain intact; incompatible tilted backing/PML sweeps are rejected.
+**F16 experiment objectives and durable case artifacts: PASS for scoped software; project overall PARTIAL.** Frozen objectives/constraints now support deterministic feasible ranking with explicit incomplete/unknown results. Case MPH artifacts are bound to the actual attempt, producer, parameters and solution identity. Java/M source export preserves the destination basename and uses writable-handle fsync with atomic publication.
 
-**Actually executed:** published eb31e7f dependency plus three-file overlay: **56 isolated tests PASS and 56 main retests PASS**. Main verified source/dependency/evidence hashes and repeated both original counterexamples: disconnected faces rejected, annulus plus inner disk accepted. Java compilation and a synthetic proxy exercising production curve sampling passed. [Compact evidence and replay](docs/full_project_execution/w23_overlap/CV_TOPOLOGY_SOFTWARE_CHECKPOINT.json).
+**Actually executed:** 92 isolated tests PASS; main review verified 11 overlay files and 359 unchanged dependencies, with 48 objective/durable tests and 4 source-export repair tests PASS. [Compact evidence and replay](docs/full_project_execution/project_session/EXPERIMENT_OBJECTIVE_CASE_ARTIFACT_CHECKPOINT.json). COMSOL native case reload/source export and Windows runtime remain **NOT_RUN**; simulated compatibility tests are not platform acceptance.
 
-Earlier disconnected-closure, annular-regression and producer-alignment findings remain preserved. **Native geometry/solve NOT_RUN; topology and PML compatibility UNVERIFIED; physical area integral and power balance NOT_RUN.** Four required nonzero-tilt cases still fail full-aperture sweep clearance. A new backing/cap envelope and revised PML maps are next; rejecting these cases is not completion.
-
-F16 case-metric association was published at 0f4b58c (352 isolated / 16 main tests PASS). W24 production capture remains CHANGES_REQUIRED: early-stage Worker2 reopen incorrectly shares the terminal save producer identity; Luna is repairing the three-stage chain.
+W23 CV topology software was published at `3d63ad9` (56 isolated / 56 main tests PASS). Full-aperture tilted geometry and PML support remain open; an explicit complex Scaling-map candidate is being prepared. W24 production capture remains CHANGES_REQUIRED pending real Study.run saved-file path/size/hash authentication; repair validation is running.
 
 Automatic approval previously rejected cleanup of failed owned native resources; explicit local termination authorization remains pending, with no cleanup/relaunch.
 
@@ -28,7 +26,7 @@ Earlier source checkpoints and failures remain in the existing state and linked 
 
 ## In progress and real limitations
 
-- **F16 original action scope:** durable reads passed scoped software checks, but `inspect` still needs failure/cache/best-feasible reporting from frozen objectives and constraints; `case_result` still needs an exact recoverable case-model artifact, not only a historical ModelRef. Both actions remain PARTIAL in the original coverage table.
+- **F16 original action scope:** objective/constraint reporting and case-artifact binding passed scoped software checks. Authentic native case reload, weighted evidence, state-transfer/history/conservation and full original acceptance remain incomplete; action coverage is not blanket upgraded.
 - **F04:** connect/disconnect/reconnect software and recovery readback accepted. Owned Server and model-bound quiescence recovery software are accepted; no-ModelRef lifecycle recovery software is now accepted; live-context/Server recovery and managed native validation remain open.
 - **W24:** atomic admission (78 tests), sensitivity (96 tests), and setup campaign (53 tests) are scoped software checkpoints; full native science remains incomplete and no old solve budget is borrowed.
 - **W23:** single-BMA producer software is accepted; actual native producer execution and field mapping remain next. Two basis vectors are distinct eigensolutions of one receiver BMA, not two physical Ports. Managed native optics and tolerance/convergence acceptance remain open.
@@ -40,4 +38,4 @@ Earlier source checkpoints and failures remain in the existing state and linked 
 
 Continue the three Luna Max work streams: complete F16 weighted native evidence and original experiment reporting/model gaps; complete W23 radiation geometry, capture/quadrature/power-balance and original optics acceptance; complete W24 UV/gel/reference/viscoelastic implementation and remaining science. Publish each accepted software stage immediately. Then freeze isolated managed native candidates, execute their reviewed scope, complete all remaining W01–W26 work, and run a fresh independent overall review with repair/retest until accepted.
 
-The latest focused replay is in [CV_TOPOLOGY_SOFTWARE_CHECKPOINT.json](docs/full_project_execution/w23_overlap/CV_TOPOLOGY_SOFTWARE_CHECKPOINT.json). Recover from GitHub and existing state. Last previously verified GitHub sync: 0f4b58c410ecc997715d99d58c2814411f9f3595; this stage is recorded as synchronized only after post-push fetch and HEAD/origin-main equality.
+The latest focused replay is in [EXPERIMENT_OBJECTIVE_CASE_ARTIFACT_CHECKPOINT.json](docs/full_project_execution/project_session/EXPERIMENT_OBJECTIVE_CASE_ARTIFACT_CHECKPOINT.json). Recover from GitHub and existing state. Last previously verified GitHub sync: 3d63ad9f8bfe8d04903e1a09b1b1aee4e103a959; this stage is recorded as synchronized only after post-push fetch and HEAD/origin-main equality.

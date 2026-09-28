@@ -476,3 +476,21 @@ The 101-test repair fixes ordinary revision transitions and terminal stdCool reo
 ### W23 CV topology/producer review closure (2026-09-28)
 
 Three-file candidate accepted for scoped software; receipt SHA fab918560ca28e5c36106a53cfa5e8e378d39fb3ce4808513bf8258737636bf6. 56 isolated and 56 main tests pass; original disconnected false-positive now rejects, annular positive accepts. Flat producer normalization and adaptive closed-curve sampling align at software boundary. See [checkpoint](w23_overlap/CV_TOPOLOGY_SOFTWARE_CHECKPOINT.json). Tilted geometry remains PARTIAL, native topology/area/balance NOT_RUN or UNVERIFIED; no scientific acceptance or native budget granted.
+
+### W24 saved-MPH producer review finding (2026-09-28)
+
+The frozen 102-test candidate on 3d63ad9 remains CHANGES_REQUIRED. Main independently ran its complete three-stage production positive: all reopen captures accepted although the claimed terminal Study.run result has no immediate_save_path or saved-byte receipt; the test writes the file afterward and supplies its producer metadata. Evidence: /private/tmp/w24-saved-producer-main-reproducer.json, SHA ab960b588a37a21b57dd8a4d1a039a9f846c45e86cfd6132b561f03a970b9e8e. Require a same-Worker save path/size/hash receipt in the actual operation result, exact request/model/revision binding, and production save positives plus missing/foreign/replaced-artifact negatives. Native NOT_RUN. Preserve previous candidates and failures.
+
+### F16 case MPH and objective review (2026-09-28)
+
+Frozen candidate /private/tmp/f16-objective-case-mph-20260928, receipt SHA 60614a7f587d60b03c608c86002bbd2795b7ccf284c53935980778af71516a0c: 91 isolated tests; main verified11072 base files and11 overlays, then48 case/metric tests passed (9 deselected). CHANGES_REQUIRED for new source-export read-only fsync on Windows and temporary-basename/source-identity preservation. Original bool-copy atomic MPH compatibility is retained; destructive direct save rejected and abandoned. Native reload NOT_RUN. Preserve frozen candidate; review isolated export repair before publication.
+
+### W23 explicit Scaling candidate after literal-gradient review
+
+The same-version rendered manual confirms raw grad(d), not normalized grad(d). The blended side fields are not exact Euclidean distances and are not approved as built-in PML inputs. Raw-map analysis gives conservative real determinant >= 0.4115418973 and complex determinant magnitude >= 1.0108166084 for the frozen 19 one-factor cases only. These are mathematical results, not native acceptance.
+
+Next implementation uses an explicit complete complex Scaling map, without composing an additional PML node. The documented map property establishes only an API candidate; complex support and actual physics equation transformation must be checked by a separately gated native probe. Luna will prepare expressions, geometry recipe, software negatives and compile-only Java probe in an isolated candidate. No native launch, aperture reduction, curved physical fiber, or relaxed acceptance is authorized by this decision. Raw evidence and hashes are recorded in RESUME.json.
+
+### F16 objective/case artifact software stage accepted
+
+Exact 11-file overlay and 359 unchanged dependency files verified; 92 isolated tests PASS. Main previously ran 48 objective/durable checks and now 4 source-export repair tests, all PASS. Writable fsync and same-basename Java/M exports fix the prior review findings. Compact checkpoint: `docs/full_project_execution/project_session/EXPERIMENT_OBJECTIVE_CASE_ARTIFACT_CHECKPOINT.json`. Native case reload, COMSOL source export and real Windows checks remain NOT_RUN; weighted/native and original whole-project requirements remain open.

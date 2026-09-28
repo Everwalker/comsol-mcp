@@ -288,14 +288,24 @@ def test_experiment_design_persists_binding_and_unknown_run_stops_dispatch(tmp_p
     store = OperationStore(db)  # durable record remains resolvable after restart
     calls = []
 
-    def fake_case(worker, tag, study, definition, values, budget, case_id):
+    def fake_case(worker, tag, study, definition, values, budget, case_id, *,
+                  metric_definitions=None, experiment_binding=None):
+        assert isinstance(experiment_binding, dict)
+        assert isinstance(experiment_binding.get("attempt_id"), str)
+        attempt = store.get_metadata(
+            "artifacts",
+            "w21experimentattempt:" + experiment_binding["experiment_id"] + ":" + experiment_binding["case_id"],
+        )
+        assert attempt["attempt_id"] == experiment_binding["attempt_id"]
         calls.append(case_id)
         budget.cases_evaluated += 1
         if len(calls) == 2:
             budget.cases_failed += 1
             budget.total_failures += 1
-            return {"status": "UNKNOWN", "execution_state_unknown": True, "case_id": case_id}
-        return {"status": "COMPLETED", "case_id": case_id, "peak": 301.0}
+            return {"status": "UNKNOWN", "execution_state_unknown": True, "case_id": case_id,
+                    "case_attempt_id": experiment_binding["attempt_id"]}
+        return {"status": "COMPLETED", "case_id": case_id, "peak": 301.0,
+                "case_attempt_id": experiment_binding["attempt_id"]}
 
     monkeypatch.setattr(execution, "execute_case", fake_case)
     with observation_context(store, model_ref, 8, "run-op", project_id="project-a"):
@@ -364,10 +374,13 @@ def test_experiment_run_budget_exhaustion_is_partial_not_complete(tmp_path, monk
 
     calls = []
 
-    def fake_case(worker, tag, study, definition, values, budget, case_id):
+    def fake_case(worker, tag, study, definition, values, budget, case_id, *,
+                  metric_definitions=None, experiment_binding=None):
+        assert isinstance(experiment_binding, dict)
         calls.append(case_id)
         budget.cases_evaluated += 1
-        return {"status": "COMPLETED", "case_id": case_id, "peak": 301.0}
+        return {"status": "COMPLETED", "case_id": case_id, "peak": 301.0,
+                "case_attempt_id": experiment_binding["attempt_id"]}
 
     monkeypatch.setattr(execution, "execute_case", fake_case)
     with observation_context(store, _identity(), 2, "run-op", project_id="project-a"):
