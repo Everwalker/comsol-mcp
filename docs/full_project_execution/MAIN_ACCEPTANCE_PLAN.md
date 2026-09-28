@@ -468,3 +468,11 @@ Main directly called the frozen production _capture_v2_pair using the real Contr
 ### F16 case-metric association review closure (2026-09-28)
 
 Scoped software accepted on seven-file overlay `ef153ef3861652a917e894b5dae146eceb60011e24d45301160334c3b51bf76e`, base `fb8098bac4a1ca8acca2702e7e68be7ec2065194`: 352 isolated tests and 16 main tests pass. Original corrupt-observation acceptance is repaired and retested on the same fixture (both corrupted files refused; restored bytes accepted). See [CASE_METRIC_ASSOCIATION_SOFTWARE_CHECKPOINT.json](project_session/CASE_METRIC_ASSOCIATION_SOFTWARE_CHECKPOINT.json). Native NOT_RUN; original inspect/reporting and recoverable case MPH remain PARTIAL. This is main stage review, not the final independent overall Reviewer.
+
+### W24 production repair follow-up (2026-09-28)
+
+The 101-test repair fixes ordinary revision transitions and terminal stdCool reopen, but is not accepted: authentication equates each original stage solve identity with the terminal stdCool saved-MPH producer. The actual Worker2 loop also reopens stdUV/stdHeat, whose solve identities differ. Require a verified staged model/revision/capture chain to the terminal save, plus full three-stage production reopen positives and foreign/omitted-stage negatives. Frozen candidate `/private/tmp/w24_cure_branchmap_stage_c6bd_20260928`, receipt SHA `fc4aad6b6d977c42a8527aa00129e1df8e01460ec80037558904200620f3b9ad`; native NOT_RUN.
+
+### W23 CV topology/producer review closure (2026-09-28)
+
+Three-file candidate accepted for scoped software; receipt SHA fab918560ca28e5c36106a53cfa5e8e378d39fb3ce4808513bf8258737636bf6. 56 isolated and 56 main tests pass; original disconnected false-positive now rejects, annular positive accepts. Flat producer normalization and adaptive closed-curve sampling align at software boundary. See [checkpoint](w23_overlap/CV_TOPOLOGY_SOFTWARE_CHECKPOINT.json). Tilted geometry remains PARTIAL, native topology/area/balance NOT_RUN or UNVERIFIED; no scientific acceptance or native budget granted.

@@ -1,0 +1,157 @@
+{
+  "schema_version": 1,
+  "stage": "W23 full-aperture conflict detection and control-volume topology adapter",
+  "status": "PASS_SCOPED_SOFTWARE",
+  "overall": "PARTIAL",
+  "published_base_commit": "eb31e7fd4414004263f3097df42419bf58554202",
+  "published_dependency": {
+    "path": "/private/tmp/w23_cv_producer_flat_adapter_20260928T034200Z/published_dependency_archive.tar",
+    "sha256": "f05cca8f460fa97e1f6add1b974abc287c86af705307e2b755ec88000a1b2023",
+    "member_paths": [
+      "tools/w23_full3d.py"
+    ],
+    "dependency_sha256": "be98f8b8521daa578f16fcc419a3c2019ee297acc75983b753c45488d24eaed9"
+  },
+  "overlay_files": [
+    {
+      "path": "tools/w23_radiation_geometry_v2.py",
+      "sha256": "3322560a8956c974c478d9d4880da6a51b953667967a2db6c3a7f752fab85732",
+      "classification": "candidate production adapter and topology validator"
+    },
+    {
+      "path": "tools/java/NativeW23RadiationGeometryV2.java",
+      "sha256": "167163202854b38115bf4dc5101d56e553e36f1949e7ed3c542af3eb9f1a8a65",
+      "classification": "candidate Java topology and adaptive-curve producer"
+    },
+    {
+      "path": "tests/test_w23_radiation_geometry_v2.py",
+      "sha256": "ae4944be944925a0e4e9bbc1a12860b3239345a77f226ed5c014993c8aeeb764",
+      "classification": "candidate focused software tests"
+    }
+  ],
+  "capabilities": [
+    "Detect full Port-aperture sweep conflicts without silently cropping the approved air aperture.",
+    "Validate common native vertex/edge geometry, connected face partitions, outer boundary coverage and correctly oriented annular patches.",
+    "Normalize flat Java boundary rows by registered planes and interior-domain bounds while retaining raw normals and opposite adjacency orientations.",
+    "Production Java curve sampling supports nondegenerate closed edges using bounded adaptive samples."
+  ],
+  "tests": {
+    "isolated": {
+      "command": "env -u PYTHONPATH PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -B -S /private/tmp/w23_cv_producer_flat_adapter_20260928T034200Z/isolated_verify.py",
+      "cwd": "/private/tmp/w23_cv_producer_flat_adapter_20260928T034200Z/candidate",
+      "junit_path": "/private/tmp/w23_cv_producer_flat_adapter_20260928T034200Z/junit.xml",
+      "junit_sha256": "f19ffedd931e72f9865d94bc27590114d8e11082294195b66189d4f4c3144611",
+      "counts": {
+        "tests": 56,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "python_receipt_path": "/private/tmp/w23_cv_producer_flat_adapter_20260928T034200Z/isolated_receipt.json",
+      "python_receipt_sha256": "f4fa55c56ba213d503494d4e74b9b7cbdd1ee003ecd01a2798e5c7e6107bff98",
+      "import_audit": {
+        "editable_finder_or_path_hooks": [],
+        "live_repository_sys_path_entries": [],
+        "loaded_live_repository_modules": [],
+        "candidate_project_module_count": 3,
+        "tools_search_paths": [
+          "/private/tmp/w23_cv_producer_flat_adapter_20260928T034200Z/candidate/tools"
+        ]
+      }
+    },
+    "main": {
+      "passed": 56,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "junit": "/private/tmp/w23-cv-flat-main-junit.xml"
+    },
+    "java_compile_and_synthetic_curve": {
+      "javac": "/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home/bin/javac",
+      "java": "/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home/bin/java",
+      "api_jar": "/Applications/COMSOL64/Multiphysics/apiplugins/com.comsol.api_1.0.0.jar",
+      "api_jar_sha256": "9bdc47a9e320be5721956336f44f5afa4cb06a20cfa887bc7d32d1a837483a67",
+      "compile_exit_code": 0,
+      "harness_path": "/private/tmp/w23_cv_producer_flat_adapter_20260928T034200Z/W23AdaptiveCurveSamplingHarness.java",
+      "harness_sha256": "a01229dc8013d82c43a50077661c0e361f6cf8689397d043ec5106d6565f90d4",
+      "compiled_producer_class_sha256": "2c37401000b18341ba762be630b91fe44104f7d533b1e83f3b727ee188de13d4",
+      "harness_result": {
+        "closed_circle_samples": 513,
+        "max_chord_deviation_um": 4.800302936717182e-05,
+        "frozen_chord_tolerance_um": 0.0001,
+        "reverse_order_test": "PASS",
+        "straight_line_sample_count": 9,
+        "test_scope": "synthetic GeomSequence Java proxy calling production edgeCurveSamples",
+        "native_comsol_invoked": false
+      }
+    },
+    "scope": "Python synthetic geometry fixtures and Java synthetic GeomSequence proxy only; no native COMSOL geometry or solve."
+  },
+  "review": {
+    "initial_findings": [
+      "Disconnected faces reused common IDs and falsely passed closure.",
+      "One-loop-only repair rejected a legitimate annulus plus inner disk.",
+      "Flat Java output and intrinsic normals lacked a production normalization path; three samples degenerated a closed circular edge."
+    ],
+    "resolution": "56-test frozen repair accepted. Main repeated original disconnected rejection and annular acceptance; source and dependency hashes match frozen candidate."
+  },
+  "remaining": {
+    "full_aperture_tilt": "PARTIAL: four required single-axis +/-0.5 degree cases violate backing/PML sweep clearance; a new local cap/transition geometry is required. Do not mark these cases passed.",
+    "native_geometry": "NOT_RUN",
+    "native_topology": "UNVERIFIED",
+    "surface_integral_of_one": "NOT_RUN",
+    "power_balance": "NOT_RUN",
+    "nonorthogonal_pml_compatibility": "UNVERIFIED",
+    "native_budget": "NOT_FROZEN",
+    "final_independent_overall_reviewer": "NOT_STARTED"
+  },
+  "preserved_prior_evidence": [
+    {
+      "path": "/private/tmp/w23_cv_topology_repair_20260928T010128Z/receipt.json",
+      "sha256": "b404ab65dbfeb125565d35bb0d33df6bf73ee11bc0a770d8c564f1588ab001e7",
+      "note": "prior 44P candidate receipt preserved unchanged"
+    },
+    {
+      "path": "/private/tmp/w23_cv_topology_repair_20260928T010128Z/receipt_ancestry_correction.json",
+      "sha256": "501b5dd5be27675e44bb38ac662be96511858b5c28c1940096f9808e861d0335",
+      "note": "ancestry metadata correction preserved unchanged"
+    },
+    {
+      "path": "/private/tmp/w23_cv_annulus_support_20260928T011636Z/receipt.json",
+      "sha256": "09111fbe254d5c4bf8e0ca9fe24c7f46ce7610d8d4773d220b50fd75e2994f56",
+      "note": "prior 48P annulus-stage receipt preserved unchanged"
+    }
+  ],
+  "local_evidence": [
+    {
+      "path": "/private/tmp/w23_cv_producer_flat_adapter_20260928T034200Z/release_candidate_receipt.json",
+      "sha256": "fab918560ca28e5c36106a53cfa5e8e378d39fb3ce4808513bf8258737636bf6"
+    },
+    {
+      "path": "/private/tmp/w23-cv-flat-main-junit.xml",
+      "sha256": "1fa75726a73d8a3aba224655cd152c0b1dbbe2792fcba4e5bb831768d59f4213"
+    },
+    {
+      "path": "/private/tmp/w23-cv-flat-main-review.json",
+      "sha256": "70c5fd965031c392bf797320640611625ec21fe1748491fba66f3820b8dfc903"
+    },
+    {
+      "path": "/private/tmp/w23-cv-flat-main-retest.json",
+      "sha256": "6ffc7223cd5d1a76b7e5c3f39d9ed1316a4bd41c0b3c7ca833455942013d036e"
+    },
+    {
+      "path": "/private/tmp/w23-cv-disconnected-faces-main-reproducer.json",
+      "sha256": "dbb371da9fd87c053b7e0048a248c88e91424d43b496f6128ea369c42380a66a"
+    },
+    {
+      "path": "/private/tmp/w23-cv-annular-patch-main-reproducer.json",
+      "sha256": "541395ec1f07c964307ae186224b045e6fc9cc87854ea840d2961b93e28e452f"
+    }
+  ],
+  "replay": {
+    "python": "python -m pytest -q tests/test_w23_radiation_geometry_v2.py",
+    "java_compile": "javac -cp <COMSOL64>/apiplugins/com.comsol.api_1.0.0.jar -d <temporary-output> tools/java/NativeW23RadiationGeometryV2.java",
+    "notes": "Synthetic curve harness source/class/results remain at receipt paths with hashes. Native area integral/topology/balance require separate execution; analytical area is not that evidence."
+  },
+  "next_action": "Derive full true-axis swept Port backing/cap domains and changed PML face/edge/corner maps for all required tilted cases; review continuity/Jacobians, then implement authentic native geometry/capture/quadrature/balance and freeze resources before native execution."
+}

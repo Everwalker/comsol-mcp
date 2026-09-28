@@ -4,11 +4,13 @@ Updated 2026-09-28 UTC. **Overall PARTIAL; execution continues through W26.** Th
 
 ## Current stage
 
-**F16 durable experiment case-metric association: PASS for scoped software; F16/W21/project overall PARTIAL.** Exact metric definitions are frozen in each design. The same case Worker binds actual parameter/solution identity and immutable observations to its persisted attempt before the next case changes the model. Public historical reads verify authorized artifact bytes, hashes and bindings without a live Worker.
+**W23 full-aperture conflict detection and control-volume topology adapter: PASS for scoped software; W23/project overall PARTIAL.** Shared vertex/edge geometry, connected and annular face partitions, Java flat-row normalization and closed-edge sampling are implemented. Full air apertures remain intact; incompatible tilted backing/PML sweeps are rejected.
 
-**Actually executed:** isolated published `fb8098b` plus seven-file overlay: **352 PASS / 0 FAIL / 0 ERROR / 0 SKIP**, one historical Git-object test explicitly deselected in the archive. Main verified 312 baseline files and seven overlays, ran **16 critical tests PASS**, and retested the original corruption fixture: damaged source and metric files are rejected; restored files are accepted. [Compact evidence and replay](docs/full_project_execution/project_session/CASE_METRIC_ASSOCIATION_SOFTWARE_CHECKPOINT.json).
+**Actually executed:** published eb31e7f dependency plus three-file overlay: **56 isolated tests PASS and 56 main retests PASS**. Main verified source/dependency/evidence hashes and repeated both original counterexamples: disconnected faces rejected, annulus plus inner disk accepted. Java compilation and a synthetic proxy exercising production curve sampling passed. [Compact evidence and replay](docs/full_project_execution/w23_overlap/CV_TOPOLOGY_SOFTWARE_CHECKPOINT.json).
 
-The initial 342-test candidate accepted corrupted observation files and was rejected by main review. That failure and the repaired retest remain preserved. **COMSOL/native NOT_RUN.** General weighted ROI-unit/sample identity, full experiment reporting, recoverable case MPH and native W21 acceptance remain open. W23 and W24 repair candidates are frozen pending main review.
+Earlier disconnected-closure, annular-regression and producer-alignment findings remain preserved. **Native geometry/solve NOT_RUN; topology and PML compatibility UNVERIFIED; physical area integral and power balance NOT_RUN.** Four required nonzero-tilt cases still fail full-aperture sweep clearance. A new backing/cap envelope and revised PML maps are next; rejecting these cases is not completion.
+
+F16 case-metric association was published at 0f4b58c (352 isolated / 16 main tests PASS). W24 production capture remains CHANGES_REQUIRED: early-stage Worker2 reopen incorrectly shares the terminal save producer identity; Luna is repairing the three-stage chain.
 
 Automatic approval previously rejected cleanup of failed owned native resources; explicit local termination authorization remains pending, with no cleanup/relaunch.
 
@@ -38,4 +40,4 @@ Earlier source checkpoints and failures remain in the existing state and linked 
 
 Continue the three Luna Max work streams: complete F16 weighted native evidence and original experiment reporting/model gaps; complete W23 radiation geometry, capture/quadrature/power-balance and original optics acceptance; complete W24 UV/gel/reference/viscoelastic implementation and remaining science. Publish each accepted software stage immediately. Then freeze isolated managed native candidates, execute their reviewed scope, complete all remaining W01–W26 work, and run a fresh independent overall review with repair/retest until accepted.
 
-The latest focused replay is in [CASE_METRIC_ASSOCIATION_SOFTWARE_CHECKPOINT.json](docs/full_project_execution/project_session/CASE_METRIC_ASSOCIATION_SOFTWARE_CHECKPOINT.json). Recover from GitHub and existing state. Last previously verified GitHub sync: `fb8098bac4a1ca8acca2702e7e68be7ec2065194`; this stage is recorded as synchronized only after post-push fetch and HEAD/origin-main equality.
+The latest focused replay is in [CV_TOPOLOGY_SOFTWARE_CHECKPOINT.json](docs/full_project_execution/w23_overlap/CV_TOPOLOGY_SOFTWARE_CHECKPOINT.json). Recover from GitHub and existing state. Last previously verified GitHub sync: 0f4b58c410ecc997715d99d58c2814411f9f3595; this stage is recorded as synchronized only after post-push fetch and HEAD/origin-main equality.

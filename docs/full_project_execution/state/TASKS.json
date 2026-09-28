@@ -622,7 +622,10 @@
         "docs/full_project_execution/contract/02_ACTION_CATALOG.json",
         "tests/test_w23_mode_basis_v2_registry.py",
         "tools/w23_mode_basis_v2_aggregate.py",
-        "tests/test_w23_mode_basis_v2_aggregate.py"
+        "tests/test_w23_mode_basis_v2_aggregate.py",
+        "tools/w23_radiation_geometry_v2.py",
+        "tools/java/NativeW23RadiationGeometryV2.java",
+        "tests/test_w23_radiation_geometry_v2.py"
       ],
       "evidence": [
         "docs/full_project_execution/w23_overlap/software_test_evidence.md",
@@ -639,7 +642,8 @@
         "docs/full_project_execution/w23_overlap/NORMAL_READBACK_CHECKPOINT.json",
         "docs/full_project_execution/w23_overlap/BMA_PRODUCER_SOFTWARE_CHECKPOINT.json",
         "docs/full_project_execution/w23_overlap/BMA_MAPPING_SOFTWARE_CHECKPOINT.json",
-        "docs/full_project_execution/w23_overlap/MESH_COHORT_SOFTWARE_CHECKPOINT.json"
+        "docs/full_project_execution/w23_overlap/MESH_COHORT_SOFTWARE_CHECKPOINT.json",
+        "docs/full_project_execution/w23_overlap/CV_TOPOLOGY_SOFTWARE_CHECKPOINT.json"
       ],
       "blockers": [],
       "note": "W23 PARTIAL. Normal-readback combined suite99 PASS in isolated published-runtime overlay; observed normal schema, unit/area/variance negatives and aggregation consistency covered. Native mode identity, frame mapping, propagation and optical acceptance unverified. Next: actual Port/BMA/solver/dataset/SolutionInfo chain, then managed native science after session lifecycle.",
@@ -649,7 +653,8 @@
         "2026-09-27: 55 focused tests and Corretto11 COMSOL6.4 Java fixture compile passed; source/JUnit/class hashes independently checked. Continue v2 two-mode basis, managed native science and full-fiber acceptance.",
         "Single-BMA producer software134 isolated PASS; actual producer run, field mapping and optical convergence/tolerance remain incomplete.",
         "Paired BMA mapping probe scoped software171 PASS, compile/javap PASS and real no-COMSOL child-daemon smoke PASS; mapping/native science remain UNVERIFIED/NOT_RUN.",
-        "Mesh/cohort scoped software checkpoint: exact seven-file overlay, isolated222P + noCOMSOL smoke1P, main16P, Java API compile. Detachment/gauge/test-overlay findings fixed. Native lineage/mapping/capture/quadrature/power balance/physical acceptance incomplete; radiation geometry next."
+        "Mesh/cohort scoped software checkpoint: exact seven-file overlay, isolated222P + noCOMSOL smoke1P, main16P, Java API compile. Detachment/gauge/test-overlay findings fixed. Native lineage/mapping/capture/quadrature/power balance/physical acceptance incomplete; radiation geometry next.",
+        "CV topology/full-aperture conflict detection scoped software accepted: 56 isolated and 56 main tests; disconnected and annular counterexamples retested. Java compile/synthetic curve harness passed. Required nonzero-tilt sweep geometry remains PARTIAL; native topology/area/balance not accepted."
       ]
     },
     {
