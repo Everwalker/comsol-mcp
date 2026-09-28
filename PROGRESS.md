@@ -1,14 +1,18 @@
 # COMSOL MCP full-project progress
 
-Updated 2026-09-28 UTC. **Overall PARTIAL; execution continues through W26.** This is the sole progress entry. Resume from [RESUME.json](docs/full_project_execution/state/RESUME.json), [TASKS.json](docs/full_project_execution/state/TASKS.json) and the frozen [acceptance plan](docs/full_project_execution/MAIN_ACCEPTANCE_PLAN.md). Original scope remains 26 work packages / 272 actions / 60 tests across six targets; the additional v2 operation makes the catalog 273 entries, not a replacement scope.
+Updated 2026-09-28 UTC. **Overall PARTIAL; PAUSED by user request, awaiting explicit resume approval.** This is the sole progress entry. Resume from [RESUME.json](docs/full_project_execution/state/RESUME.json), [TASKS.json](docs/full_project_execution/state/TASKS.json) and the frozen [acceptance plan](docs/full_project_execution/MAIN_ACCEPTANCE_PLAN.md). Original scope remains 26 work packages / 272 actions / 60 tests across six targets; the additional v2 operation makes the catalog 273 entries, not a replacement scope.
 
 ## Current stage
+
+**Storage migration: PASS for 619 inactive paths; overall migration PARTIAL because 7 occupied roots remain.** Verified archives preserve 36.71 GB of source content on external SSD; original removal increased observed internal free space by 37.27 GB (other system activity can affect this delta). [Compact migration evidence and recovery](docs/full_project_execution/state/TMP_MIGRATION_SUMMARY.json). Raw archives and per-file hashes remain on SSD, not in Git.
+
+**All current rounds stopped.** W21 has no new code/tests after the published baseline. W23 froze 238 passing software tests plus Java compilation; W24 froze 257 passing software tests plus Java compilation. These two candidates are preserved locally, **pending main review and not published as accepted code**. Native validation remains NOT_RUN; W23 Qabs production mapping and the new W24 T058 entrypoint remain incomplete. Exact checkpoint identities are in RESUME.json.
 
 **W21 v2 plans, state-map selector configuration and durable stage attempts: PASS for scoped software; W21/project overall PARTIAL.** Canonical direct/fallback routes now configure an exact source tuple selector and verify the target solver attachment, or persist a no-dispatch attempt when native proof is absent. SQLite records bind the exact project, ModelRef, plan and revision; per-variable mapping and actual stage solves remain unimplemented.
 
 **Actually executed:** 107 isolated and 107 main integration tests PASS, including SQLite migration/rollback, public routes, v1 compatibility and registration. Main independently retested and closed two findings: integrated-unit declarations and nonzero signed terms across different selections. Main verified 390 parent source files and the 16-file final overlay. [Compact evidence and replay](docs/full_project_execution/project_session/STATE_MAP_STAGE_ATTEMPT_SOFTWARE_CHECKPOINT.json). Tests use synthetic Worker/models; native COMSOL NOT_RUN.
 
-**Next:** implement actual field/unit/mesh/frame/history verification and the single-Worker solve/check/save stage backend; continue W23 Qabs/producer binding and W24 physical controls/T058. Native resource authorization and required platform limitations remain unresolved. Final independent overall Reviewer has not started.
+**After explicit resume approval:** implement actual field/unit/mesh/frame/history verification and the single-Worker solve/check/save stage backend; review frozen W23 Qabs/producer and W24 physical-control candidates before continuing. Native resource authorization and required platform limitations remain unresolved. Final independent overall Reviewer has not started.
 
 Previously synchronized checkpoint: W24 Equation View software `303198a`, 149 isolated and 149 main tests PASS; physical field/reference semantics remain UNVERIFIED.
 
@@ -36,6 +40,6 @@ Earlier source checkpoints and failures remain in the existing state and linked 
 
 ## Next action and recovery
 
-Continue the three Luna Max work streams: complete F16 weighted native evidence and original experiment reporting/model gaps; complete W23 radiation geometry, capture/quadrature/power-balance and original optics acceptance; complete W24 UV/gel/reference/viscoelastic implementation and remaining science. Publish each accepted software stage immediately. Then freeze isolated managed native candidates, execute their reviewed scope, complete all remaining W01–W26 work, and run a fresh independent overall review with repair/retest until accepted.
+**Wait for explicit user approval.** No further implementation, tests, native jobs or Reviewer work is authorized while paused. Seven old process-bound temporary roots remain untouched pending the separate shutdown choice. After approval, follow the existing RESUME.json next action, recover needed archives onto a compatible external-SSD filesystem, and configure future project scratch there. Preserve all original W01–W26 gaps and the final independent review requirement.
 
-The latest focused replay is in [STATE_MAP_STAGE_ATTEMPT_SOFTWARE_CHECKPOINT.json](docs/full_project_execution/project_session/STATE_MAP_STAGE_ATTEMPT_SOFTWARE_CHECKPOINT.json). Recover from GitHub and existing state. Last previously verified GitHub sync: 303198a2e53f0c5e4beae621732553f5d8305bb0; this stage is recorded as synchronized only after post-push fetch and HEAD/origin-main equality.
+The latest focused replay is in [STATE_MAP_STAGE_ATTEMPT_SOFTWARE_CHECKPOINT.json](docs/full_project_execution/project_session/STATE_MAP_STAGE_ATTEMPT_SOFTWARE_CHECKPOINT.json). Recover from GitHub and existing state. Last verified implementation sync: e1d7d6eeae744a5ece21ee4194ef78900fd4bceb. This migration handoff is synchronized only after post-push fetch and HEAD/origin-main equality; the commit containing this document is the handoff identity.

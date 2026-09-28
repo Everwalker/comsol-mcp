@@ -1,0 +1,32 @@
+{
+  "status": "PARTIAL_ACTIVE_PROCESS_EXCLUSIONS",
+  "paths": 619,
+  "logical_bytes": 36711269166,
+  "free_bytes_before": 3039232000,
+  "free_bytes_after": 40304640000,
+  "physical_free_delta": 37265408000,
+  "excluded": {
+    "comsol-mcp-w23-full3d-archive-hardening-20260928c": "ACTIVE_PROCESS_HANDLES_PENDING_USER_CHOICE",
+    "comsol-mcp-w23-full3d-candidate-hardening-20260928c": "ACTIVE_PROCESS_HANDLES_PENDING_USER_CHOICE",
+    "comsol-mcp-w25-py312-20260926T2155Z": "ACTIVE_PROCESS_HANDLES_PENDING_USER_CHOICE",
+    "comsol-mcp-w23-full3d-work-11b9a3ff63bb468b851905fcc5a001f2": "ACTIVE_PROCESS_HANDLES_PENDING_USER_CHOICE",
+    "comsol-offline-ceac7a0": "ACTIVE_PROCESS_HANDLES_PENDING_USER_CHOICE",
+    "f16-guard038-escalated.3FCoRk": "ACTIVE_PROCESS_HANDLES_PENDING_USER_CHOICE",
+    "f04-full-regression-6474bf4": "ACTIVE_PROCESS_HANDLES_PENDING_USER_CHOICE"
+  },
+  "archive_directory": "/Volumes/SSD/Comsol-MCP/tmp-migration-20260928/archives",
+  "manifest_directory": "/Volumes/SSD/Comsol-MCP/tmp-migration-20260928/manifests",
+  "recovery": "Each exact source basename has a .tar archive preserving file contents, mode and symlinks. Extract to a compatible filesystem when resuming; consult per-file SHA256 manifests. No archive needs to be executed.",
+  "eligible_migration": "PASS",
+  "all_project_tmp_migrated": false,
+  "verification": "619 exact original paths absent; every archive member compared with source SHA256 and metadata; source snapshots unchanged; archive SHA256 rechecked before removal",
+  "archive_index": "/Volumes/SSD/Comsol-MCP/tmp-migration-20260928/verified-archive-index.json",
+  "archive_index_sha256": "d2677d16cb23b2fc12f166d062e349aa6f5e514c7961f8b33b6ed3332fd4a952",
+  "migration_plan_sha256": "e7a011319d8c706af503a23c56e47a30078198941ac0ab15261b0a2c3d1ca87a",
+  "restore_instructions": "/Volumes/SSD/Comsol-MCP/tmp-migration-20260928/RESTORE.md",
+  "new_runtime_tmp_policy": "After explicit resume approval, configure project scratch and temporary outputs on external SSD; validate filesystem compatibility before tests",
+  "remaining_action": "Wait for explicit user choice on process shutdown; do not terminate or move occupied roots without fresh identity/quiescence checks and authorization",
+  "project_status": "PARTIAL",
+  "development_status": "PAUSE_REQUESTED_WAIT_USER_APPROVAL",
+  "recorded_at": "2026-09-28T07:40:06.005011+00:00"
+}
