@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "stage": "F16 durable experiment case-metric association",
+  "status": "PASS_SCOPED_SOFTWARE",
+  "overall": "PARTIAL",
+  "base_commit": "fb8098bac4a1ca8acca2702e7e68be7ec2065194",
+  "base_archive_sha256": "d5033d331f492e37b240760ad745a792071956ec109053ce3ebf0e77f6dbe974",
+  "overlay_files": [
+    {
+      "bytes": 447630,
+      "path": "comsol_mcp/_control_daemon.py",
+      "sha256": "516658a13a21d6c1e5404de02e83673977137562d362e2e6637029525b9db91f"
+    },
+    {
+      "bytes": 69281,
+      "path": "comsol_mcp/_g3_metrics.py",
+      "sha256": "89e9297c13ac8f42c5260c61e723ffbdb24d3a46858b0d9abf8729ac62241d87"
+    },
+    {
+      "bytes": 101314,
+      "path": "comsol_mcp/_operation_store.py",
+      "sha256": "129fcb7b7612aa75d650ea15ce42e82075741ead524bc2acaac3e0a1f13c0b85"
+    },
+    {
+      "bytes": 64448,
+      "path": "comsol_mcp/_w21_execution.py",
+      "sha256": "0a187ad128780cc56a8d334f02eb18df6ae97d7aa6e179a16143b460978abe96"
+    },
+    {
+      "bytes": 538854,
+      "path": "comsol_mcp/data/g2/02_ACTION_CATALOG.json",
+      "sha256": "8ae4aa883cc987a49834ed914ec3202cc3e5b522e6cb39b891d694030e299309"
+    },
+    {
+      "bytes": 538854,
+      "path": "docs/comsol_mcp_design_v1/02_ACTION_CATALOG.json",
+      "sha256": "8ae4aa883cc987a49834ed914ec3202cc3e5b522e6cb39b891d694030e299309"
+    },
+    {
+      "bytes": 64899,
+      "path": "tests/test_g3_metrics.py",
+      "sha256": "4c53b0b7ec18b7a416554740a09a9f08060849af5d536cc71ba0199340f691a8"
+    }
+  ],
+  "overlay_sha256": "ef153ef3861652a917e894b5dae146eceb60011e24d45301160334c3b51bf76e",
+  "capabilities": [
+    "Freeze project-owned exact metric version/definition at experiment design; persist case attempt before same-Worker dispatch.",
+    "Bind parameter readback, actual solution identity, sample and metric observations to exact case/attempt; persist before next case mutation.",
+    "Public inspect/case_result verify durable project-scoped artifact bytes, hash, size and bounded semantic binding without a live Worker."
+  ],
+  "tests": {
+    "isolated": {
+      "deselected": 1,
+      "errors": 0,
+      "failed": 0,
+      "junit_counts": {
+        "errors": 0,
+        "failures": 0,
+        "passed": 352,
+        "skipped": 0,
+        "tests": 352
+      },
+      "passed": 352,
+      "skipped": 0
+    },
+    "main": {
+      "passed": 16,
+      "deselected": 9
+    },
+    "integrity": "312 baseline regular files and seven overlays verified against published archive",
+    "scope": "Synthetic injected Worker; actual ControlDaemon, public routes, OperationStore/SQLite, and durable artifact reads. No COMSOL process or native engine started; native acceptance NOT_RUN."
+  },
+  "review": {
+    "initial_candidate": "342 software tests passed but main reproduced acceptance of corrupted source/metric observation files.",
+    "resolution": "Same original fixture with fixed code rejects each corrupted file and accepts restored files.",
+    "result": "PASS_SCOPED_SOFTWARE"
+  },
+  "native_acceptance": "NOT_RUN",
+  "limitations": [
+    "Historical Git-object fixture test explicitly deselected in archive without object database.",
+    "General weighted native ROI unit/sample identity remains unverified and fails closed.",
+    "Failure/cache/best-feasible reporting, exact recoverable case MPH, general state/history transfer and original W21 native gates remain incomplete.",
+    "Final independent overall Reviewer has not started."
+  ],
+  "replay": {
+    "test_command": "env -u GIT_DIR -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -m pytest -q --junitxml=/private/tmp/f16-observation-rehash-20260928/observation_rehash_junit.xml --deselect=tests/test_operation_store_migrations.py::test_historical_fixture_commit_and_blob_identity_resolve tests/test_g3_metrics.py tests/test_experiment_durable_reads.py tests/test_w21_canonical_contracts.py tests/test_g3_w17.py tests/test_g3_results.py tests/test_operation_store.py tests/test_operation_store_migrations.py tests/test_control_daemon.py tests/test_control_daemon_projects.py tests/test_control_daemon_sessions.py tests/test_g2_registry_packaging.py tests/test_registration.py",
+    "portable": "On this source revision install project/test dependencies in a clean Python 3.12 environment and run the listed repository tests. For a Git checkout include the historical identity test; archive-only runs explicitly deselect it.",
+    "main_command": "python -m pytest -q -p no:cacheprovider tests/test_g3_metrics.py -k experiment"
+  },
+  "local_evidence": [
+    {
+      "path": "/private/tmp/f16-observation-rehash-20260928/observation_rehash_stage_receipt.json",
+      "sha256": "43be0a0e17d3d1a703b28cf8d76c1d174bb78bbefe2574920049619ccb02dcb2"
+    },
+    {
+      "path": "/private/tmp/f16-observation-rehash-20260928/observation_rehash_overlay_manifest.json",
+      "sha256": "a385403a66a530ccb70f6608edec3892ce9fad998277d6f72483c3d11fe0c6b5"
+    },
+    {
+      "path": "/private/tmp/f16-observation-rehash-20260928/observation_rehash_junit.xml",
+      "sha256": "6508ab8ff057e7b2a5acdf94649feee00877985b4413e9ac40578b83900b090c"
+    },
+    {
+      "path": "/private/tmp/f16-observation-rehash-20260928/observation_rehash_import_evidence.json",
+      "sha256": "8ea8d16db8d038bf04bc4ba1abe49c7db301c2ad177ece37689b38ec50240ffb"
+    },
+    {
+      "path": "/private/tmp/f16-case-association-main-integrity.json",
+      "sha256": "e2e2037b19518f82975add48ebb85e1993604ec37dca62a0ddd96d5b3ac9e9c1"
+    },
+    {
+      "path": "/private/tmp/f16-case-association-main-junit.xml",
+      "sha256": "b837db2b3e31dafdb3e37c097db7b6ca4fe2620e105fd49743c013df932038ff"
+    },
+    {
+      "path": "/private/tmp/f16-case-metric-main-observation-corruption.json",
+      "sha256": "e61ce64bd3418214c647e65b422f0b58140a893692113f5dc3458ddc2bb8de0c"
+    },
+    {
+      "path": "/private/tmp/f16-case-metric-main-observation-retest.json",
+      "sha256": "c317004579a106a6b61dddce3b98f9f24ce1a416f838eb2ab7d78af480bf8e35"
+    }
+  ],
+  "next_action": "Complete original experiment inspect failure/cache/best-feasible with frozen objective/constraints and exact same-case recoverable MPH; continue weighted native evidence and all original W01-W26 scope."
+}

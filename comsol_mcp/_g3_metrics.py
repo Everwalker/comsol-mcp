@@ -5,6 +5,7 @@ import hashlib
 import json
 import math
 import uuid
+import copy
 from collections.abc import Mapping
 from typing import Any
 
@@ -29,6 +30,11 @@ def _context(operation_id: str) -> dict[str, Any]:
 
 def _json_sha256(value: Mapping[str, Any]) -> str:
     payload = json.dumps(dict(value), sort_keys=True, separators=(",", ":"), allow_nan=False)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _default_json_sha256(value: Mapping[str, Any]) -> str:
+    payload = json.dumps(dict(value), sort_keys=True, allow_nan=False)
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
@@ -483,6 +489,306 @@ def metric_evaluate(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
     if prior is not None and prior != evaluation:
         raise ExecutionContractError("INTEGRITY_COMPROMISED", "metric evaluation id is already bound to different immutable evidence", stage="post_dispatch")
     return {"evaluation_id": evaluation_id, "sha256": evaluation["sha256"], "items": items, "immutable": True}
+
+
+def evaluate_experiment_case_metrics(
+    worker: Any,
+    model_tag: str,
+    metric_records: list[Mapping[str, Any]],
+    *,
+    case_proof: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Evaluate pinned F16 metrics inside the active experiment Worker callback.
+
+    This calls the existing strict native result adapter directly.  It neither
+    dispatches another operation nor runs a Study.  The attempt claim and the
+    native solution/parameter readbacks must still match before the immutable
+    evaluation artifact can be registered.
+    """
+    context = _context("experiment.run metric evaluation")
+    if (not isinstance(metric_records, list) or not metric_records
+            or not isinstance(case_proof, Mapping)):
+        raise ExecutionContractError("INVALID_METRIC_CASE_BINDING", "an experiment case requires pinned metrics and native case evidence", stage="validation")
+    project_id = context["project_id"]
+    model_ref = context["model_ref"]
+    if (case_proof.get("project_id") != project_id
+            or case_proof.get("model_ref") != model_ref
+            or case_proof.get("model_revision") != context["revision"]
+            or case_proof.get("producer") != context["producer"]
+            or case_proof.get("session_id") != model_ref.get("session_id")):
+        raise ExecutionContractError("INVALID_METRIC_CASE_BINDING", "experiment case identity differs from its managed Worker context", stage="validation")
+
+    attempt_id = case_proof.get("attempt_id")
+    experiment_id = case_proof.get("experiment_id")
+    case_id = case_proof.get("case_id")
+    run_id = case_proof.get("run_id")
+    if (not isinstance(attempt_id, str) or not attempt_id.startswith("att_")
+            or not isinstance(experiment_id, str) or not experiment_id.startswith("exp_")
+            or not isinstance(case_id, str) or not case_id.startswith("case-")
+            or not isinstance(run_id, str) or not run_id.startswith("run_")):
+        raise ExecutionContractError("INVALID_METRIC_CASE_BINDING", "experiment attempt identity is malformed", stage="validation")
+    attempt_key = f"w21experimentattempt:{experiment_id}:{case_id}"
+    attempt = context["store"].get_metadata("artifacts", attempt_key)
+    attempt_digest = None
+    if isinstance(attempt, Mapping):
+        attempt_digest = hashlib.sha256(json.dumps(
+            {key: value for key, value in attempt.items() if key != "sha256"},
+            sort_keys=True, allow_nan=False,
+        ).encode("utf-8")).hexdigest()
+    if (not isinstance(attempt, Mapping)
+            or attempt.get("kind") != "w21experiment_case_attempt"
+            or attempt.get("attempt_id") != attempt_id
+            or attempt.get("experiment_id") != experiment_id
+            or attempt.get("run_id") != run_id
+            or attempt.get("case_id") != case_id
+            or type(attempt.get("case_ordinal")) is not int
+            or type(case_proof.get("case_ordinal")) is not int
+            or attempt.get("case_ordinal") != case_proof.get("case_ordinal")
+            or attempt.get("study") != case_proof.get("study")
+            or attempt.get("project_id") != project_id
+            or attempt.get("session_id") != model_ref.get("session_id")
+            or attempt.get("model_ref") != model_ref
+            or attempt.get("model_revision") != context["revision"]
+            or attempt.get("producer") != context["producer"]
+            or attempt.get("design_sha256") != case_proof.get("design_sha256")
+            or attempt.get("parameters") != case_proof.get("planned_parameters")
+            or attempt.get("units") != case_proof.get("units")
+            or attempt.get("metric_definition_refs") != [
+                {"metric_id": row.get("metric_id"), "version": row.get("version"),
+                 "definition_sha256": row.get("definition_sha256")}
+                for row in metric_records if isinstance(row, Mapping)
+            ]
+            or attempt.get("sha256") != attempt_digest
+            or attempt.get("sha256") != case_proof.get("attempt_sha256")):
+        raise ExecutionContractError("INVALID_METRIC_CASE_BINDING", "experiment case attempt is absent, tampered, or bound to a different case", stage="validation")
+
+    if (case_proof.get("parameters") != attempt.get("parameters")
+            or case_proof.get("case_ordinal") != attempt.get("case_ordinal")
+            or case_proof.get("study") != attempt.get("study")
+            or case_proof.get("dataset") is None
+            or case_proof.get("solution") is None
+            or case_proof.get("validation_status") != "PASS"
+            or not isinstance(case_proof.get("solve_result_sha256"), str)
+            or not isinstance(case_proof.get("solution_indices"), Mapping)
+            or case_proof["solution_indices"].get("binding_complete") is not True
+            or case_proof["solution_indices"].get("solution") != case_proof.get("solution")):
+        raise ExecutionContractError("INVALID_METRIC_CASE_BINDING", "case solve or parameter evidence does not match the pre-dispatch attempt", stage="validation")
+
+    refs = [
+        {"metric_id": row.get("metric_id"), "version": row.get("version"),
+         "definition_sha256": row.get("definition_sha256")}
+        for row in metric_records if isinstance(row, Mapping)
+    ]
+    try:
+        resolved_records = context["store"].read_metric_definition_versions(
+            project_id, refs, require_latest=False, require_active_head=True,
+        )
+    except Exception as exc:
+        raise ExecutionContractError("UNVERIFIED_METRIC_DEFINITION", "pinned metric definitions are no longer active or failed integrity validation", stage="validation") from exc
+    if resolved_records != [dict(row) for row in metric_records]:
+        raise ExecutionContractError("UNVERIFIED_METRIC_DEFINITION", "experiment metric snapshots differ from their immutable project versions", stage="validation")
+
+    from ._metric_contract import definition_sha256, normalize_definition
+    for record in resolved_records:
+        normalized = normalize_definition(record.get("definition"))
+        if (normalized != record.get("definition")
+                or definition_sha256(normalized) != record.get("definition_sha256")):
+            raise ExecutionContractError("INTEGRITY_COMPROMISED", "pinned metric semantic definition failed hash validation", stage="validation")
+
+    parameter_names = list(case_proof.get("parameters", {}))
+    parameter_readback = case_proof.get("parameter_readback")
+    rows = parameter_readback.get("parameters") if isinstance(parameter_readback, Mapping) else None
+    if (not isinstance(parameter_readback, Mapping) or not isinstance(rows, list)
+            or parameter_readback.get("case_attempt_id") != attempt_id
+            or {row.get("name") for row in rows if isinstance(row, Mapping)} != set(parameter_names)):
+        raise ExecutionContractError("PARAMETER_READBACK_UNAVAILABLE", "case attempt has no complete native parameter readback", stage="validation")
+    for row in rows:
+        if (not isinstance(row, Mapping) or not isinstance(row.get("evaluated"), Mapping)
+                or row.get("case_attempt_id") != attempt_id):
+            raise ExecutionContractError("PARAMETER_READBACK_UNAVAILABLE", "case parameter readback is incomplete", stage="validation")
+        evaluated = row["evaluated"]
+        data = evaluated.get("data")
+        name = row.get("name")
+        expected_expression = repr(float(case_proof["parameters"][name])) + "[" + case_proof["units"][name] + "]" if name in case_proof["parameters"] else None
+        value_readback = row.get("case_value_readback")
+        expected_value = case_proof["parameters"].get(name) if isinstance(name, str) else None
+        expected_unit = case_proof["units"].get(name) if isinstance(name, str) else None
+        observed_value = value_readback.get("value") if isinstance(value_readback, Mapping) else None
+        tolerance = value_readback.get("relative_tolerance") if isinstance(value_readback, Mapping) else None
+        if (evaluated.get("kind") not in {"float64", "int64"}
+                or isinstance(data, bool) or not isinstance(data, (int, float))
+                or not math.isfinite(float(data))
+                or not isinstance(expected_expression, str)
+                or row.get("expression") != expected_expression
+                or isinstance(observed_value, bool) or not isinstance(observed_value, (int, float))
+                or not math.isfinite(float(observed_value))
+                or isinstance(expected_value, bool) or not isinstance(expected_value, (int, float))
+                or not math.isfinite(float(expected_value))
+                or isinstance(tolerance, bool) or tolerance != 1e-12
+                or value_readback.get("unit") != ("1" if expected_unit in {"1", "dimensionless"} else expected_unit)
+                or not math.isclose(float(observed_value), float(expected_value), rel_tol=1e-12, abs_tol=0.0)
+                or not isinstance(value_readback.get("source"), str)
+                or not value_readback.get("source")
+                or (case_proof["units"][name] not in {"1", "dimensionless"}
+                    and row.get("unit") != case_proof["units"][name])):
+            raise ExecutionContractError("PARAMETER_READBACK_UNAVAILABLE", "case parameter did not resolve to a finite native scalar", stage="validation")
+
+    from ._observation_store import register_observation, resolve_observation, solution_identity
+    from ._g3_results import result_evaluate
+    actual_solution_identity = solution_identity(worker, model_tag, case_proof["solution"])
+    solution_times = actual_solution_identity.get("times") if isinstance(actual_solution_identity, Mapping) else None
+    sampled_times = case_proof["solution_indices"].get("time_values")
+    if (actual_solution_identity != case_proof.get("solution_identity")
+            or _default_json_sha256(actual_solution_identity) != case_proof.get("solution_identity_sha256")
+            or actual_solution_identity.get("solution") != case_proof.get("solution")
+            or actual_solution_identity.get("study") != case_proof.get("study")
+            or not isinstance(solution_times, list)
+            or not solution_times
+            or any(isinstance(value, bool) or not isinstance(value, (int, float))
+                   or not math.isfinite(float(value)) for value in solution_times)
+            or not isinstance(sampled_times, list) or sampled_times != solution_times
+            or not all(isinstance(actual_solution_identity.get(key), str) and actual_solution_identity[key]
+                       for key in ("computation_date", "computation_version"))):
+        raise ExecutionContractError("CASE_SOLUTION_IDENTITY_MISMATCH", "native solution identity changed before metric evaluation", stage="post_dispatch")
+
+    source_ref = case_proof.get("sample_observation_ref")
+    try:
+        source_record, source_payload = resolve_observation(
+            worker, model_tag, source_ref, allow_historical=True,
+        )
+    except Exception as exc:
+        raise ExecutionContractError("CASE_SAMPLE_OBSERVATION_UNVERIFIED", "case W21 sample bytes failed project/worker/hash verification", stage="validation") from exc
+    if (not isinstance(source_record, Mapping)
+            or source_record.get("kind") != "w17_observation"
+            or source_record.get("project_id") != project_id
+            or source_record.get("producer") != context["producer"]
+            or source_record.get("model_ref") != model_ref
+            or source_record.get("dataset") != case_proof["dataset"]
+            or source_record.get("solution") != case_proof["solution"]
+            or source_record.get("source_identity") != actual_solution_identity
+            or source_payload.get("case_attempt_id") != attempt_id
+            or source_record.get("sha256") != source_ref.get("sha256")):
+        raise ExecutionContractError("CASE_SAMPLE_OBSERVATION_UNVERIFIED", "case W21 sample observation does not bind the same project, solution, and Worker", stage="validation")
+
+    items: list[dict[str, Any]] = []
+    for record in resolved_records:
+        definition = record["definition"]
+        selector = definition["solution"]
+        if selector.get("dataset") != case_proof["dataset"]:
+            raise ExecutionContractError("METRIC_CASE_DATASET_MISMATCH", "metric definition does not name the case's sampled dataset", stage="validation")
+        if selector.get("solution") is not None and selector["solution"] != case_proof["solution"]:
+            raise ExecutionContractError("METRIC_CASE_SOLUTION_MISMATCH", "metric definition selects a different solution than this case", stage="validation")
+        bound_solution = {"dataset": case_proof["dataset"], "solution": case_proof["solution"]}
+        for axis in ("outer", "inner"):
+            if axis in selector:
+                bound_solution[axis] = selector[axis]
+        metric_spec = {
+            "expressions": [definition["expression"]],
+            "solution": bound_solution,
+            "selection": definition["selection"],
+            "entity_dim": definition["selection"]["entity_dimension"],
+            "aggregate": definition["aggregate"],
+            "complex_mode": definition["complex_mode"],
+            "complex_transform_order": "before",
+            "storage": "inline",
+        }
+        weight = definition.get("weight")
+        if isinstance(weight, Mapping):
+            metric_spec["weight_expression"] = weight["expression"]
+        native = result_evaluate(worker, model_tag, {"spec": metric_spec}, strict_metric_evidence=True)
+        status = native.get("status")
+        if (not isinstance(status, Mapping) or status.get("ok") is not True
+                or native.get("dataset") != case_proof["dataset"]
+                or native.get("solution") != case_proof["solution"]):
+            raise ExecutionContractError("CASE_METRIC_SOLUTION_MISMATCH", "native metric readback does not bind to this case's exact solution", stage="post_dispatch")
+        native = copy.deepcopy(native)
+        native["case_attempt_id"] = attempt_id
+        native["case_solution_identity_sha256"] = case_proof["solution_identity_sha256"]
+        if native.get("cleanup", {}).get("cleanup_failed"):
+            raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "native metric evaluation cleanup is uncertain", stage="post_dispatch")
+        expression_units = native.get("expression_units")
+        actual_unit = expression_units.get(definition["expression"]) if isinstance(expression_units, Mapping) else None
+        if not isinstance(actual_unit, str) or actual_unit != definition["expected_unit"]:
+            raise ExecutionContractError("UNIT_READBACK_MISMATCH", "native expression unit readback does not match the frozen metric definition", stage="post_dispatch")
+        values = _selected_pairs(native)
+        weight_evidence = _verified_weight_evidence(native, definition, values) if weight is not None else None
+        outcomes = []
+        threshold = definition.get("threshold")
+        for item in values:
+            value = item["value"]
+            if threshold is None:
+                outcome = "NOT_REQUESTED"
+            elif isinstance(value, Mapping):
+                raise ExecutionContractError("API_UNSUPPORTED", "threshold evaluation requires a real scalar projection", stage="validation")
+            else:
+                relation = threshold["relation"]
+                satisfied = {"gt": value > threshold["value"], "gte": value >= threshold["value"],
+                             "lt": value < threshold["value"], "lte": value <= threshold["value"]}[relation]
+                outcome = "MET" if satisfied else "NOT_MET"
+            outcomes.append({"outer": item["outer"], "inner": item["inner"],
+                             "solnum": item["solnum"], "status": outcome})
+        observation = register_observation(worker, model_tag, native)
+        items.append({
+            "metric_id": record["metric_id"],
+            "case_attempt_id": attempt_id,
+            "case_attempt_sha256": attempt["sha256"],
+            "case_solution_identity_sha256": case_proof["solution_identity_sha256"],
+            "definition_version": record["version"],
+            "definition": copy.deepcopy(definition),
+            "definition_sha256": record["definition_sha256"],
+            "unit": actual_unit,
+            "values": values,
+            "threshold_outcomes": outcomes,
+            "observation_ref": observation,
+            "native_evidence": native["strict_metric_evidence"],
+            **({"weight_evidence": weight_evidence} if weight_evidence is not None else {}),
+            "dataset": native["dataset"],
+            "solution": native["solution"],
+            "aggregate": native.get("aggregate"),
+            "complex_mode": native.get("complex_mode"),
+            "is_complex": bool(native.get("field_array", {}).get("is_complex")) if isinstance(native.get("field_array"), Mapping) else None,
+        })
+
+    after_identity = solution_identity(worker, model_tag, case_proof["solution"])
+    if after_identity != actual_solution_identity:
+        raise ExecutionContractError("CASE_SOLUTION_IDENTITY_MISMATCH", "native solution changed during metric evaluation", stage="post_dispatch")
+    evaluation_id = "mev_" + uuid.uuid4().hex
+    binding = dict(case_proof)
+    evaluation = {
+        "kind": "w17_metric_evaluation",
+        "schema_version": 1,
+        "evaluation_id": evaluation_id,
+        "project_id": project_id,
+        "created_model_ref": dict(model_ref),
+        "created_revision": context["revision"],
+        "producer": context["producer"],
+        "evaluation_source": "experiment.run_case_same_worker_callback",
+        "case_binding": binding,
+        "case_binding_sha256": _json_sha256(binding),
+        "items": items,
+        "native_status": "VERIFIED_RESULT_READBACK",
+    }
+    evaluation["sha256"] = _json_sha256(evaluation)
+    prior = context["store"].register_artifact_if_absent(evaluation_id, evaluation)
+    if prior is not None and prior != evaluation:
+        raise ExecutionContractError("INTEGRITY_COMPROMISED", "experiment metric evaluation id is already bound to different immutable evidence", stage="post_dispatch")
+    return {
+        "evaluation_id": evaluation_id,
+        "sha256": evaluation["sha256"],
+        "case_attempt_id": attempt_id,
+        "case_binding_sha256": evaluation["case_binding_sha256"],
+        "metric_definition_refs": [
+            {"metric_id": row["metric_id"], "version": row["version"],
+             "definition_sha256": row["definition_sha256"]}
+            for row in resolved_records
+        ],
+        "observation_artifact_refs": [
+            {"metric_id": item["metric_id"], "observation_id": item["observation_ref"]["observation_id"],
+             "sha256": item["observation_ref"]["sha256"]}
+            for item in items
+        ],
+        "source": evaluation["evaluation_source"],
+    }
 
 
 def _finite_value(value: Any) -> float | complex:

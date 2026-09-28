@@ -14645,7 +14645,27 @@
             "type": "string"
           },
           "definition": {
-            "type": "object"
+            "type": "object",
+            "properties": {
+              "metric_evaluations": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "metric_id",
+                    "version",
+                    "definition_sha256"
+                  ],
+                  "properties": {
+                    "metric_id": {"type": "string", "minLength": 1},
+                    "version": {"type": "integer", "minimum": 1},
+                    "definition_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
           }
         },
         "required": [

@@ -804,6 +804,390 @@ class ControlDaemon:
         return result
 
     @staticmethod
+    def _metric_evaluation_sha256(record: Mapping[str, Any]) -> str:
+        payload = {key: value for key, value in record.items() if key != "sha256"}
+        return hashlib.sha256(json.dumps(
+            payload, sort_keys=True, separators=(",", ":"), allow_nan=False,
+        ).encode("utf-8")).hexdigest()
+
+    @staticmethod
+    def _verify_experiment_observation_artifact(
+        *,
+        project_workspace: str,
+        project_id: str,
+        observation: Mapping[str, Any],
+        reference: Mapping[str, Any],
+        attempt_id: str,
+        solution_identity_sha256: str | None = None,
+    ) -> None:
+        """Verify observation bytes under the authorized project workspace.
+
+        OperationStore snapshots contain provenance metadata, not the content
+        file itself.  A matching hash string in SQLite is therefore not enough:
+        reopen the canonical per-project JSON path, reject symlinks, and hash
+        the actual regular file through ArtifactStore's pinned reader.
+        """
+        def refuse() -> ExecutionContractError:
+            return ExecutionContractError(
+                "EXPERIMENT_STATE_UNKNOWN",
+                "durable observation artifact failed project, type, content, or hash verification",
+            )
+
+        try:
+            from ._artifact_store import ArtifactStore, MAX_CHUNK_BYTES, _read_pinned_chunk
+
+            observation_id = observation.get("observation_id")
+            record_sha = observation.get("sha256")
+            artifact = observation.get("artifact")
+            if (set(reference) != {"observation_id", "sha256"}
+                    or not isinstance(observation_id, str)
+                    or re.fullmatch(r"obs_[0-9a-f]{32}", observation_id) is None
+                    or reference.get("observation_id") != observation_id
+                    or not isinstance(record_sha, str)
+                    or re.fullmatch(r"[0-9a-f]{64}", record_sha) is None
+                    or reference.get("sha256") != record_sha
+                    or not isinstance(artifact, Mapping)
+                    or artifact.get("sha256") != record_sha
+                    or artifact.get("format") != "json"
+                    or type(artifact.get("byte_size")) is not int
+                    or artifact.get("byte_size", 0) <= 0
+                    or not isinstance(project_id, str) or not project_id
+                    or not isinstance(attempt_id, str) or not attempt_id):
+                raise refuse()
+
+            summary = artifact.get("evaluation_summary")
+            if (not isinstance(summary, Mapping)
+                    or summary.get("dataset") != observation.get("dataset")
+                    or summary.get("solution") != observation.get("solution")):
+                raise refuse()
+
+            store = ArtifactStore(Path(project_workspace))
+            relative_path = f"observations/{observation_id}.json"
+            expected_path = store.resolve_safe_path(relative_path, allow_overwrite=True)
+            stored_path = artifact.get("file_path")
+            if (not isinstance(stored_path, str) or not Path(stored_path).is_absolute()
+                    or Path(stored_path) != expected_path):
+                raise refuse()
+
+            expected_size = artifact["byte_size"]
+            chunk_length = min(MAX_CHUNK_BYTES, expected_size)
+            chunk = _read_pinned_chunk(expected_path, offset=0, length=chunk_length)
+            if (chunk.get("whole_file_sha256") != record_sha
+                    or chunk.get("file_size") != expected_size
+                    or len(chunk.get("data_bytes", b"")) != chunk_length):
+                raise refuse()
+
+            # Small observation payloads can also be semantically checked from
+            # the exact bytes that were hashed.  For larger arrays the whole-file
+            # digest and the hash-bound record already cover every serialized
+            # byte without loading an unbounded duplicate into memory.
+            if expected_size <= MAX_CHUNK_BYTES:
+                payload = json.loads(chunk["data_bytes"])
+                metadata = payload.get("metadata") if isinstance(payload, Mapping) else None
+                values = payload.get("values") if isinstance(payload, Mapping) else None
+                if (not isinstance(payload, Mapping)
+                        or not isinstance(payload.get("spec"), Mapping)
+                        or not isinstance(metadata, Mapping)
+                        or values is None
+                        or metadata.get("dataset") != observation.get("dataset")
+                        or metadata.get("solution") != observation.get("solution")
+                        or metadata.get("case_attempt_id") != attempt_id
+                        or metadata.get("case_solution_identity_sha256") != solution_identity_sha256
+                        or summary.get("expressions") != metadata.get("expressions")
+                        or summary.get("complex_mode") != metadata.get("complex_mode")
+                        or summary.get("is_complex") != metadata.get("is_complex")):
+                    raise refuse()
+        except ExecutionContractError as exc:
+            if exc.code == "EXPERIMENT_STATE_UNKNOWN":
+                raise
+            raise refuse() from exc
+        except (OSError, TypeError, ValueError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise refuse() from exc
+
+    @staticmethod
+    def _experiment_payload_sha256(value: Mapping[str, Any]) -> str:
+        return hashlib.sha256(json.dumps(dict(value), sort_keys=True, allow_nan=False).encode("utf-8")).hexdigest()
+
+    @staticmethod
+    def _find_operation_result_payload(operation_record: Mapping[str, Any], run_id: str) -> Mapping[str, Any] | None:
+        pending: list[Any] = [operation_record.get("result")]
+        visited: set[int] = set()
+        while pending:
+            value = pending.pop()
+            if not isinstance(value, Mapping) or id(value) in visited:
+                continue
+            visited.add(id(value))
+            if value.get("run_id") == run_id and value.get("kind") == "w21experiment_run":
+                return value
+            for key in ("data", "result", "payload"):
+                child = value.get(key)
+                if isinstance(child, Mapping):
+                    pending.append(child)
+        return None
+
+    def _verify_experiment_case_metric_association(
+        self,
+        *,
+        snapshot: Mapping[str, Any],
+        project_id: str,
+        project_workspace: str,
+        experiment_id: str,
+        case_id: str,
+        design: Mapping[str, Any],
+        run: Mapping[str, Any],
+        run_producer: Mapping[str, Any],
+        case_record: Mapping[str, Any] | None,
+        case_data: Mapping[str, Any],
+        expected_ordinal: int,
+        planned_parameters: Mapping[str, Any],
+    ) -> None:
+        """Cross-check a case evaluation through its attempt, producer, and W17 artifacts."""
+        association = case_data.get("metric_evaluation")
+        metric_refs = design.get("definition", {}).get("metric_evaluations", [])
+        if not metric_refs:
+            if association is not None:
+                raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "case contains an unplanned metric association")
+            return
+        if case_data.get("status") != "COMPLETED" or not isinstance(association, Mapping):
+            if association is not None or case_data.get("status") == "COMPLETED":
+                raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "completed metric case has no valid evaluation association")
+            return
+        if case_record is None:
+            raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "metric case association has no per-case durable artifact")
+        if not snapshot.get("metric_version_snapshot_valid"):
+            raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "frozen metric version record is unavailable or corrupt")
+        metric_snapshots = design.get("metric_definition_snapshots")
+        if (not isinstance(metric_snapshots, list)
+                or metric_snapshots != snapshot.get("metric_definition_versions")):
+            raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "experiment metric snapshots differ from their immutable project versions")
+
+        run_id = run.get("run_id")
+        producer_id = run.get("producer")
+        attempt_id = association.get("case_attempt_id")
+        evaluation_id = association.get("evaluation_id")
+        evaluation_hash = association.get("sha256")
+        evaluation = snapshot.get("evaluations", {}).get(case_id)
+        attempt = snapshot.get("attempts", {}).get(case_id)
+        if (not isinstance(run_id, str) or not run_id
+                or not isinstance(producer_id, str) or not producer_id
+                or not isinstance(attempt_id, str) or not attempt_id.startswith("att_")
+                or not isinstance(evaluation_id, str) or not evaluation_id.startswith("mev_")
+                or not isinstance(evaluation_hash, str) or len(evaluation_hash) != 64
+                or not isinstance(evaluation, Mapping)
+                or not isinstance(attempt, Mapping)):
+            raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "case metric association is missing its durable attempt or evaluation")
+
+        attempt_hash = self._experiment_record_sha256(attempt)
+        if (attempt.get("kind") != "w21experiment_case_attempt"
+                or attempt.get("attempt_id") != attempt_id
+                or attempt.get("experiment_id") != experiment_id
+                or attempt.get("run_id") != run_id
+                or attempt.get("case_id") != case_id
+                or type(attempt.get("case_ordinal")) is not int
+                or attempt.get("case_ordinal") != expected_ordinal
+                or attempt.get("project_id") != project_id
+                or attempt.get("session_id") != run.get("session_id")
+                or attempt.get("model_ref") != run.get("model_ref")
+                or attempt.get("model_revision") != run.get("model_revision")
+                or attempt.get("producer") != producer_id
+                or attempt.get("design_sha256") != design.get("sha256")
+                or not self._experiment_parameters_match(attempt.get("parameters"), planned_parameters)
+                or attempt.get("sha256") != attempt_hash
+                or case_data.get("case_attempt_id") != attempt_id):
+            raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "case attempt does not match the frozen case, run, or Worker binding")
+
+        if (case_record.get("project_id") != project_id
+                or case_record.get("session_id") != run.get("session_id")
+                or case_record.get("model_revision") != run.get("model_revision")
+                or case_record.get("model_ref") != run.get("model_ref")
+                or case_record.get("producer") != producer_id):
+            raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "case artifact does not match its project, session, revision, and producer")
+        if (run.get("project_id") != project_id
+                or run.get("session_id") != run.get("model_ref", {}).get("session_id")
+                or type(run.get("model_revision")) is not int or run.get("model_revision") < 0):
+            raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "run artifact has no exact admitted session and revision binding")
+
+        evaluation_binding = evaluation.get("case_binding")
+        if not isinstance(evaluation_binding, Mapping):
+            raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "metric evaluation has no case binding")
+        if (evaluation.get("kind") != "w17_metric_evaluation"
+                or evaluation.get("evaluation_id") != evaluation_id
+                or evaluation.get("project_id") != project_id
+                or evaluation.get("created_model_ref") != run.get("model_ref")
+                or evaluation.get("created_revision") != run.get("model_revision")
+                or evaluation.get("producer") != producer_id
+                or evaluation.get("evaluation_source") != "experiment.run_case_same_worker_callback"
+                or evaluation.get("sha256") != evaluation_hash
+                or evaluation.get("sha256") != self._metric_evaluation_sha256(evaluation)
+                or evaluation.get("case_binding_sha256") != self._metric_evaluation_sha256(evaluation_binding)
+                or evaluation_binding.get("attempt_id") != attempt_id
+                or evaluation_binding.get("attempt_sha256") != attempt.get("sha256")
+                or attempt.get("units") != evaluation_binding.get("units")
+                or evaluation_binding.get("experiment_id") != experiment_id
+                or evaluation_binding.get("run_id") != run_id
+                or evaluation_binding.get("case_id") != case_id
+                or type(evaluation_binding.get("case_ordinal")) is not int
+                or evaluation_binding.get("case_ordinal") != expected_ordinal
+                or evaluation_binding.get("project_id") != project_id
+                or evaluation_binding.get("session_id") != run.get("session_id")
+                or evaluation_binding.get("model_ref") != run.get("model_ref")
+                or evaluation_binding.get("model_revision") != run.get("model_revision")
+                or evaluation_binding.get("producer") != producer_id
+                or evaluation_binding.get("design_sha256") != design.get("sha256")
+                or not self._experiment_parameters_match(evaluation_binding.get("parameters"), planned_parameters)
+                or not self._experiment_parameters_match(evaluation_binding.get("planned_parameters"), planned_parameters)
+                or evaluation_binding.get("validation_status") != "PASS"):
+            raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "metric evaluation integrity or case binding is inconsistent")
+
+        sample = case_data.get("sample")
+        solve = case_data.get("solve")
+        parameter_readback = case_data.get("parameter_readback")
+        solution_indices = case_data.get("solution_indices")
+        if (not isinstance(sample, Mapping) or not isinstance(solve, Mapping)
+                or not isinstance(parameter_readback, Mapping)
+                or not isinstance(solution_indices, Mapping)
+                or sample.get("case_attempt_id") != attempt_id
+                or solve.get("case_attempt_id") != attempt_id
+                or parameter_readback.get("case_attempt_id") != attempt_id
+                or parameter_readback.get("value_comparison") != "native_scalar_in_frozen_declared_unit_with_rel_tol_1e-12"
+                or solution_indices != evaluation_binding.get("solution_indices")
+                or solution_indices.get("binding_complete") is not True
+                or solution_indices.get("solution") != evaluation_binding.get("solution")
+                or solution_indices.get("time_values") != evaluation_binding.get("solution_identity", {}).get("times")
+                or sample.get("dataset") != evaluation_binding.get("dataset")
+                or sample.get("solution") != evaluation_binding.get("solution")
+                or parameter_readback != evaluation_binding.get("parameter_readback")
+                or case_data.get("units") != evaluation_binding.get("units")
+                or case_data.get("solve") is None
+                or evaluation_binding.get("solve_result_sha256") != self._experiment_payload_sha256(solve)
+                or evaluation_binding.get("solve_status") != solve.get("status")
+                or not isinstance(evaluation_binding.get("solution_identity"), Mapping)
+                or evaluation_binding.get("solution_identity_sha256") != self._experiment_payload_sha256(
+                    evaluation_binding.get("solution_identity")
+                )):
+            raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "metric case evidence does not bind the recorded solve, parameters, and solution")
+
+        readback_rows = parameter_readback.get("parameters")
+        if not isinstance(readback_rows, list):
+            raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "metric case parameter readback is malformed")
+        readback_by_name = {row.get("name"): row for row in readback_rows if isinstance(row, Mapping)}
+        if (set(readback_by_name) != set(planned_parameters)
+                or len(readback_by_name) != len(readback_rows)):
+            raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "metric case parameter readback names do not match the frozen grid")
+        for name, expected in planned_parameters.items():
+            row = readback_by_name[name]
+            value = row.get("case_value_readback")
+            observed = value.get("value") if isinstance(value, Mapping) else None
+            expected_unit = attempt["units"].get(name)
+            observed_unit = value.get("unit") if isinstance(value, Mapping) else None
+            tolerance = value.get("relative_tolerance") if isinstance(value, Mapping) else None
+            expression = repr(float(expected)) + "[" + expected_unit + "]" if isinstance(expected_unit, str) else None
+            if (row.get("case_attempt_id") != attempt_id
+                    or row.get("expression") != expression
+                    or not isinstance(row.get("evaluated"), Mapping)
+                    or isinstance(observed, bool) or not isinstance(observed, (int, float))
+                    or not math.isfinite(float(observed))
+                    or isinstance(expected, bool) or not isinstance(expected, (int, float))
+                    or not math.isfinite(float(expected))
+                    or isinstance(tolerance, bool) or tolerance != 1e-12
+                    or observed_unit != ("1" if expected_unit in {"1", "dimensionless"} else expected_unit)
+                    or not math.isclose(float(observed), float(expected), rel_tol=1e-12, abs_tol=0.0)
+                    or not isinstance(value.get("source"), str) or not value.get("source")):
+                raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "native case parameter value differs from the frozen parameter attempt")
+
+        source_ref = evaluation_binding.get("sample_observation_ref")
+        source_observation = (
+            snapshot.get("observations", {}).get(source_ref.get("observation_id"))
+            if isinstance(source_ref, Mapping) else None
+        )
+        case_source_ref = case_data.get("observation_ref")
+        if (not isinstance(source_ref, Mapping) or source_ref != case_source_ref
+                or not isinstance(source_observation, Mapping)
+                or source_observation.get("kind") != "w17_observation"
+                or source_observation.get("project_id") != project_id
+                or source_observation.get("producer") != producer_id
+                or source_observation.get("model_ref") != run.get("model_ref")
+                or source_observation.get("dataset") != evaluation_binding.get("dataset")
+                or source_observation.get("solution") != evaluation_binding.get("solution")
+                or source_observation.get("source_identity") != evaluation_binding.get("solution_identity")
+                or source_observation.get("sha256") != source_ref.get("sha256")):
+            raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "case source observation does not match its native solution identity")
+        self._verify_experiment_observation_artifact(
+            project_workspace=project_workspace,
+            project_id=project_id,
+            observation=source_observation,
+            reference=source_ref,
+            attempt_id=attempt_id,
+        )
+
+        metric_by_id = {row.get("metric_id"): row for row in metric_snapshots if isinstance(row, Mapping)}
+        items = evaluation.get("items")
+        if (not isinstance(items, list) or len(items) != len(metric_refs)
+                or len({item.get("metric_id") for item in items if isinstance(item, Mapping)}) != len(items)):
+            raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "metric evaluation item set differs from the frozen experiment definition")
+        observation_refs = []
+        for item in items:
+            if not isinstance(item, Mapping):
+                raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "metric evaluation item is malformed")
+            definition_record = metric_by_id.get(item.get("metric_id"))
+            observation_ref = item.get("observation_ref")
+            observation = (
+                snapshot.get("observations", {}).get(observation_ref.get("observation_id"))
+                if isinstance(observation_ref, Mapping) else None
+            )
+            if (not isinstance(definition_record, Mapping)
+                    or item.get("definition_version") != definition_record.get("version")
+                    or item.get("definition_sha256") != definition_record.get("definition_sha256")
+                    or item.get("definition") != definition_record.get("definition")
+                    or item.get("case_attempt_id") != attempt_id
+                    or item.get("case_attempt_sha256") != attempt.get("sha256")
+                    or item.get("case_solution_identity_sha256") != evaluation_binding.get("solution_identity_sha256")
+                    or item.get("dataset") != evaluation_binding.get("dataset")
+                    or item.get("solution") != evaluation_binding.get("solution")
+                    or not isinstance(observation, Mapping)
+                    or observation.get("kind") != "w17_observation"
+                    or observation.get("project_id") != project_id
+                    or observation.get("producer") != producer_id
+                    or observation.get("model_ref") != run.get("model_ref")
+                    or observation.get("dataset") != evaluation_binding.get("dataset")
+                    or observation.get("solution") != evaluation_binding.get("solution")
+                    or observation.get("source_identity") != evaluation_binding.get("solution_identity")
+                    or not isinstance(observation_ref.get("sha256"), str)
+                    or observation.get("sha256") != observation_ref.get("sha256")):
+                raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "metric item or observation artifact is not bound to the frozen metric and case solution")
+            self._verify_experiment_observation_artifact(
+                project_workspace=project_workspace,
+                project_id=project_id,
+                observation=observation,
+                reference=observation_ref,
+                attempt_id=attempt_id,
+                solution_identity_sha256=evaluation_binding.get("solution_identity_sha256"),
+            )
+            observation_refs.append({"metric_id": item["metric_id"], "observation_id": observation_ref["observation_id"],
+                                     "sha256": observation_ref["sha256"]})
+
+        expected_refs = [
+            {key: row[key] for key in ("metric_id", "version", "definition_sha256")}
+            for row in metric_snapshots
+        ]
+        if (association.get("evaluation_id") != evaluation_id
+                or association.get("case_binding_sha256") != evaluation.get("case_binding_sha256")
+                or association.get("case_attempt_id") != attempt_id
+                or association.get("metric_definition_refs") != expected_refs
+                or association.get("observation_artifact_refs") != observation_refs):
+            raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "case-to-metric artifact reference differs from its immutable evaluation")
+
+        run_result = self._find_operation_result_payload(run_producer, run_id)
+        if (run_result is None
+                or run_result.get("sha256") != run.get("sha256")
+                or self._experiment_record_sha256(run_result) != run.get("sha256")):
+            raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "metric association is not present in the recorded run producer result")
+        run_case_rows = run_result.get("cases")
+        matching_rows = [row for row in run_case_rows if isinstance(row, Mapping) and row.get("case_id") == case_id] if isinstance(run_case_rows, list) else []
+        if len(matching_rows) != 1 or matching_rows[0] != case_data:
+            raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "case artifact differs from the run producer's persisted case association")
+
+    @staticmethod
     def _planned_experiment_cases(
         design_cases: Any,
         planned_case_ids: Any,
@@ -896,7 +1280,10 @@ class ControlDaemon:
 
         # Authorize the caller's declared project before any artifact lookup;
         # foreign IDs and absent IDs therefore share the same response.
-        self.project_authority.authorize_operation(project_id, "inspect")
+        authorized_project = self.project_authority.authorize_operation(project_id, "inspect")
+        project_workspace = authorized_project.get("workspace")
+        if not isinstance(project_workspace, str) or not project_workspace:
+            raise ExecutionContractError("PROJECT_STATE_UNKNOWN", "authorized project workspace is unavailable")
         snapshot = self.store.read_experiment_snapshot(project_id, experiment_id, case_id=case_id)
         design = snapshot.get("design")
         if not isinstance(design, dict):
@@ -915,6 +1302,9 @@ class ControlDaemon:
                     json.dumps(design["definition"], sort_keys=True, allow_nan=False).encode("utf-8")
                 ).hexdigest()):
             raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "durable experiment design failed identity or integrity validation")
+        if (not snapshot.get("metric_version_snapshot_valid")
+                or design.get("metric_definition_snapshots", []) != snapshot.get("metric_definition_versions")):
+            raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "durable experiment metric version snapshot failed project/version validation")
 
         producer_id = design.get("producer")
         producer = snapshot.get("operations", {}).get(producer_id) if isinstance(producer_id, str) else None
@@ -1068,12 +1458,26 @@ class ControlDaemon:
                         and self._normalized_experiment_case_data(recorded_by_run, expected_ordinal)
                         != self._normalized_experiment_case_data(case_data, expected_ordinal)):
                     raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "case result disagrees across durable W21 records")
+                self._verify_experiment_case_metric_association(
+                    snapshot=snapshot, project_id=project_id, project_workspace=project_workspace,
+                    experiment_id=experiment_id,
+                    case_id=case_id, design=design, run=run, run_producer=run_producer,
+                    case_record=case_record, case_data=case_data,
+                    expected_ordinal=expected_ordinal, planned_parameters=planned_parameters,
+                )
                 record_source = "case_artifact"
             elif case_id in run_case_rows:
                 # The finalized run artifact is itself a hash-bound durable
                 # result. Older stores may have the aggregate but no per-case
                 # row, so preserve and label that compatible representation.
                 case_data = run_case_rows[case_id]
+                self._verify_experiment_case_metric_association(
+                    snapshot=snapshot, project_id=project_id, project_workspace=project_workspace,
+                    experiment_id=experiment_id,
+                    case_id=case_id, design=design, run=run, run_producer=run_producer,
+                    case_record=None, case_data=case_data,
+                    expected_ordinal=expected_ordinal, planned_parameters=planned_parameters,
+                )
                 record_source = "run_artifact"
             return {
                 "success": True,
@@ -1117,9 +1521,23 @@ class ControlDaemon:
                         and self._normalized_experiment_case_data(run_case_rows[case_id], ordinal)
                         != self._normalized_experiment_case_data(case_data, ordinal)):
                     raise ExecutionContractError("EXPERIMENT_STATE_UNKNOWN", "case result disagrees across durable W21 records")
+                self._verify_experiment_case_metric_association(
+                    snapshot=snapshot, project_id=project_id, project_workspace=project_workspace,
+                    experiment_id=experiment_id,
+                    case_id=case_id, design=design, run=run, run_producer=run_producer,
+                    case_record=result_row, case_data=case_data,
+                    expected_ordinal=ordinal, planned_parameters=planned_parameters,
+                )
                 source = "case_artifact"
             elif case_id in run_case_rows:
                 case_data = run_case_rows[case_id]
+                self._verify_experiment_case_metric_association(
+                    snapshot=snapshot, project_id=project_id, project_workspace=project_workspace,
+                    experiment_id=experiment_id,
+                    case_id=case_id, design=design, run=run, run_producer=run_producer,
+                    case_record=None, case_data=case_data,
+                    expected_ordinal=ordinal, planned_parameters=planned_parameters,
+                )
                 source = "run_artifact"
             case_status = (
                 case_data.get("status") if isinstance(case_data, Mapping)

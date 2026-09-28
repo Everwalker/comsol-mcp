@@ -1359,6 +1359,45 @@ class OperationStore:
                     ("w21experiment:" + experiment_id, *artifact_project_params),
                 ).fetchone()
                 design = decode_artifact(design_row)
+                metric_definition_versions: list[dict[str, Any]] = []
+                metric_version_snapshot_valid = True
+                if isinstance(design, dict):
+                    definition = design.get("definition")
+                    references = definition.get("metric_evaluations", []) if isinstance(definition, dict) else None
+                    if not isinstance(references, list):
+                        metric_version_snapshot_valid = False
+                    else:
+                        seen_metric_ids: set[str] = set()
+                        for reference in references:
+                            if (not isinstance(reference, dict)
+                                    or set(reference) != {"metric_id", "version", "definition_sha256"}):
+                                metric_version_snapshot_valid = False
+                                break
+                            metric_id = reference.get("metric_id")
+                            version = reference.get("version")
+                            if (not isinstance(metric_id, str) or not metric_id or metric_id in seen_metric_ids
+                                    or isinstance(version, bool) or not isinstance(version, int) or version < 1):
+                                metric_version_snapshot_valid = False
+                                break
+                            seen_metric_ids.add(metric_id)
+                            scope = self._metric_scope_digest(project_id, metric_id)
+                            version_key = f"w17metric.version.{scope}.{version:08d}"
+                            version_row = self.db.execute(
+                                f"SELECT metadata FROM artifacts WHERE {self._metadata_column('artifacts')}=?",
+                                (version_key,),
+                            ).fetchone()
+                            version_record = decode_artifact(version_row)
+                            if (not isinstance(version_record, dict)
+                                    or version_record.get("kind") != "w17_metric_definition_version"
+                                    or version_record.get("project_id") != project_id
+                                    or version_record.get("metric_id") != metric_id
+                                    or version_record.get("version") != version
+                                    or version_record.get("removed") is not False
+                                    or version_record.get("definition_sha256") != reference.get("definition_sha256")
+                                    or version_record.get("sha256") != self._metric_record_digest(version_record)):
+                                metric_version_snapshot_valid = False
+                                break
+                            metric_definition_versions.append(version_record)
                 planned_case_ids: list[str] = []
                 if isinstance(design, dict) and isinstance(design.get("cases"), list):
                     planned_case_ids = [
@@ -1375,6 +1414,9 @@ class OperationStore:
                     ("w21experimentrun:" + experiment_id, *artifact_project_params),
                 ).fetchone())
                 cases: dict[str, dict[str, Any]] = {}
+                attempts: dict[str, dict[str, Any]] = {}
+                evaluations: dict[str, dict[str, Any]] = {}
+                observations: dict[str, dict[str, Any]] = {}
                 for selected in selected_case_ids:
                     record = decode_artifact(self.db.execute(
                         "SELECT a.metadata FROM artifacts a WHERE a.artifact_id=? AND " + artifact_project_match,
@@ -1382,10 +1424,55 @@ class OperationStore:
                     ).fetchone())
                     if record is not None:
                         cases[selected] = record
+                    attempt = decode_artifact(self.db.execute(
+                        "SELECT a.metadata FROM artifacts a WHERE a.artifact_id=? AND " + artifact_project_match,
+                        ("w21experimentattempt:" + experiment_id + ":" + selected, *artifact_project_params),
+                    ).fetchone())
+                    if attempt is not None:
+                        attempts[selected] = attempt
+                    case_data = record.get("case") if isinstance(record, dict) else None
+                    if case_data is None and isinstance(run, dict) and isinstance(run.get("cases"), list):
+                        case_data = next((row for row in run["cases"]
+                                          if isinstance(row, dict) and row.get("case_id") == selected), None)
+                    association = case_data.get("metric_evaluation") if isinstance(case_data, dict) else None
+                    evaluation_id = association.get("evaluation_id") if isinstance(association, dict) else None
+                    if isinstance(evaluation_id, str) and evaluation_id:
+                        evaluation = decode_artifact(self.db.execute(
+                            "SELECT a.metadata FROM artifacts a WHERE a.artifact_id=? AND " + artifact_project_match,
+                            (evaluation_id, *artifact_project_params),
+                        ).fetchone())
+                        if evaluation is not None:
+                            evaluations[selected] = evaluation
+                        binding = evaluation.get("case_binding") if isinstance(evaluation, dict) else None
+                        sample_reference = binding.get("sample_observation_ref") if isinstance(binding, dict) else None
+                        sample_observation_id = (
+                            sample_reference.get("observation_id")
+                            if isinstance(sample_reference, dict) else None
+                        )
+                        if isinstance(sample_observation_id, str) and sample_observation_id:
+                            sample_observation = decode_artifact(self.db.execute(
+                                "SELECT a.metadata FROM artifacts a WHERE a.artifact_id=? AND " + artifact_project_match,
+                                (sample_observation_id, *artifact_project_params),
+                            ).fetchone())
+                            if sample_observation is not None:
+                                observations[sample_observation_id] = sample_observation
+                        items = evaluation.get("items") if isinstance(evaluation, dict) else None
+                        if isinstance(items, list):
+                            for item in items:
+                                reference = item.get("observation_ref") if isinstance(item, dict) else None
+                                observation_id = reference.get("observation_id") if isinstance(reference, dict) else None
+                                if not isinstance(observation_id, str) or not observation_id:
+                                    continue
+                                observation = decode_artifact(self.db.execute(
+                                    "SELECT a.metadata FROM artifacts a WHERE a.artifact_id=? AND " + artifact_project_match,
+                                    (observation_id, *artifact_project_params),
+                                ).fetchone())
+                                if observation is not None:
+                                    observations[observation_id] = observation
 
                 producer_ids = {
                     value.get("producer")
-                    for value in (design, run, *cases.values())
+                    for value in (design, run, *cases.values(), *attempts.values())
                     if isinstance(value, dict) and isinstance(value.get("producer"), str)
                 }
                 operation_rows: dict[str, dict[str, Any]] = {}
@@ -1426,6 +1513,11 @@ class OperationStore:
                     "design": design,
                     "run": run,
                     "cases": cases,
+                    "attempts": attempts,
+                    "evaluations": evaluations,
+                    "observations": observations,
+                    "metric_definition_versions": metric_definition_versions,
+                    "metric_version_snapshot_valid": metric_version_snapshot_valid,
                     "planned_case_ids": planned_case_ids,
                     "operations": operation_rows,
                     "run_operations": run_operation_rows,
@@ -1648,6 +1740,88 @@ class OperationStore:
                         raise RuntimeError("metric definition version is corrupt or misattributed")
                     if include_removed or not record.get("removed"):
                         output.append(record)
+                self.db.execute("COMMIT")
+                return output
+            except BaseException:
+                if self.db.in_transaction:
+                    self.db.execute("ROLLBACK")
+                raise
+
+    def read_metric_definition_versions(
+        self,
+        project_id: str,
+        references: list[dict[str, Any]],
+        *,
+        require_latest: bool = False,
+        require_active_head: bool = True,
+    ) -> list[dict[str, Any]]:
+        """Resolve exact immutable metric versions in one project-scoped snapshot.
+
+        The caller supplies only ``metric_id``, ``version`` and the semantic
+        definition hash.  Returned definitions always come from the immutable
+        version row; caller-provided definition bodies are never accepted as
+        observations.  ``require_latest`` is used when an experiment freezes a
+        new metric reference.  A later active version does not invalidate that
+        frozen reference, but a removal tombstone prevents a new run.
+        """
+        if not isinstance(project_id, str) or not project_id:
+            raise ValueError("project_id is required")
+        if not isinstance(references, list) or not references:
+            raise ValueError("at least one metric version reference is required")
+        column = self._metadata_column("artifacts")
+        seen: set[str] = set()
+        with self.lock:
+            self.db.execute("BEGIN")
+            try:
+                output: list[dict[str, Any]] = []
+                for reference in references:
+                    if (not isinstance(reference, dict)
+                            or set(reference) != {"metric_id", "version", "definition_sha256"}):
+                        raise ValueError("metric version reference is malformed")
+                    metric_id = reference.get("metric_id")
+                    version = reference.get("version")
+                    definition_hash = reference.get("definition_sha256")
+                    if (not isinstance(metric_id, str) or not metric_id or metric_id in seen
+                            or isinstance(version, bool) or not isinstance(version, int) or version < 1
+                            or not isinstance(definition_hash, str) or len(definition_hash) != 64):
+                        raise ValueError("metric version reference is invalid or duplicated")
+                    seen.add(metric_id)
+                    scope = self._metric_scope_digest(project_id, metric_id)
+                    prefix = f"w17metric.version.{scope}."
+                    head_key = f"w17metric.head.{scope}"
+                    head_row = self.db.execute(
+                        f"SELECT metadata FROM artifacts WHERE {column}=?", (head_key,),
+                    ).fetchone()
+                    if head_row is None:
+                        raise ValueError("metric version is unavailable in this project")
+                    head = json.loads(head_row[0])
+                    if (not isinstance(head, dict) or head.get("kind") != "w17_metric_definition_head"
+                            or head.get("project_id") != project_id or head.get("metric_id") != metric_id
+                            or head.get("sha256") != self._metric_record_digest(head)):
+                        raise RuntimeError("metric definition head is corrupt or misattributed")
+                    latest = head.get("latest_version")
+                    latest_key = head.get("latest_key")
+                    if (isinstance(latest, bool) or not isinstance(latest, int) or latest < 1
+                            or latest_key != f"{prefix}{latest:08d}"):
+                        raise RuntimeError("metric definition head has an invalid version pointer")
+                    if require_active_head and head.get("removed") is not False:
+                        raise ValueError("removed metric definitions cannot be used for a new experiment run")
+                    if require_latest and latest != version:
+                        raise ValueError("new experiment designs must pin the current metric definition version")
+                    version_key = f"{prefix}{version:08d}"
+                    version_row = self.db.execute(
+                        f"SELECT metadata FROM artifacts WHERE {column}=?", (version_key,),
+                    ).fetchone()
+                    if version_row is None:
+                        raise ValueError("pinned metric definition version is unavailable")
+                    record = json.loads(version_row[0])
+                    if (not isinstance(record, dict) or record.get("kind") != "w17_metric_definition_version"
+                            or record.get("project_id") != project_id or record.get("metric_id") != metric_id
+                            or record.get("version") != version or record.get("removed") is not False
+                            or record.get("sha256") != self._metric_record_digest(record)
+                            or record.get("definition_sha256") != definition_hash):
+                        raise RuntimeError("pinned metric definition version failed integrity or semantic binding")
+                    output.append(record)
                 self.db.execute("COMMIT")
                 return output
             except BaseException:

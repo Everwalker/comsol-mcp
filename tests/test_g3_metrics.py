@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import json
 from contextlib import nullcontext
 from pathlib import Path
+import uuid
 
 import pytest
 
 from comsol_mcp import _g3_ops
 from comsol_mcp._control_daemon import ControlDaemon
-from comsol_mcp._execution_contract import ExecutionContractError, SessionLedger, model_ref_from_mapping
+from comsol_mcp._execution_contract import ExecutionContractError, PreWriteRefusal, SessionLedger, model_ref_from_mapping
 from comsol_mcp._execution_service import ExecutionService
 from comsol_mcp._g2_registry import validate_call
 from comsol_mcp._managed_backend import ManagedBackend
@@ -16,6 +19,9 @@ from comsol_mcp._mcp_gateway import GatewayRegistry
 from comsol_mcp._operation_store import OperationStore
 from comsol_mcp._metric_contract import definition_sha256
 from comsol_mcp._g2_tools import register as register_g2
+from comsol_mcp._observation_store import observation_context
+from comsol_mcp._tools_w21 import register as register_w21
+from comsol_mcp import _g3_metrics, _w21_execution
 from comsol_mcp import _g3_results
 
 
@@ -630,5 +636,571 @@ def test_metric_complex_comparison_requires_and_uses_explicit_modulus(tmp_path, 
         assert row["comparisons"][0]["absolute_delta"] == 5.0
         assert row["comparisons"][0]["status"] == "WITHIN_TOLERANCE"
         assert worker.requests == []
+    finally:
+        daemon.close()
+
+
+def _begin_callback_operation(daemon, project_id, model_ref, revision, operation, arguments):
+    request_id = operation + "-" + uuid.uuid4().hex
+    metadata = {
+        "operation": operation,
+        "arguments": dict(arguments),
+        "execution": {"project_id": project_id, "model_ref": dict(model_ref), "expected_revision": revision},
+    }
+    request_hash = hashlib.sha256(json.dumps(
+        [operation, arguments, project_id, revision, request_id], sort_keys=True, allow_nan=False,
+    ).encode("utf-8")).hexdigest()
+    record, reused = daemon.store.begin(
+        request_id=request_id, idempotency_key=request_id,
+        request_hash=request_hash, operation=operation, metadata=metadata,
+    )
+    assert reused is False
+    job = daemon.store.operation_job(record["operation_id"])
+    daemon.store.update_job(job["job_id"], "RUNNING")
+    return record["operation_id"], job["job_id"]
+
+
+def _install_synthetic_experiment_callbacks(monkeypatch, *, wrong_readback_case=None, fail_solve=False,
+                                            identity_drift_call=None):
+    state = {"parameter": None, "solved_parameter": None, "solve_count": 0, "unit_calls": [],
+             "identity_calls": 0, "attempt_ids_seen_by_solve": []}
+    monkeypatch.setattr(_w21_execution, "validate_definition", lambda *_args: None)
+    monkeypatch.setattr(_w21_execution, "validate_parameters", lambda *_args: None)
+    monkeypatch.setattr(
+        _w21_execution,
+        "model_identity",
+        lambda *_args: {"engine": {"comsol_version": "synthetic-6.4"}, "cache_policy": "SYNTHETIC"},
+    )
+
+    def apply_parameters(_worker, _tag, values, units):
+        state["parameter"] = float(values["p"])
+        readback_value = state["parameter"] + 1.0 if wrong_readback_case == state["parameter"] else state["parameter"]
+        return {
+            "scope": "model",
+            "parameters": [{
+                "name": "p", "group": None, "expression": repr(float(values["p"])) + "[" + units["p"] + "]",
+                "unit": units["p"],
+                # ModelParam.evaluate(String) is in the root base unit system.
+                "evaluated": {"kind": "float64", "shape": [], "data": readback_value / 100.0},
+            }],
+        }
+
+    class _RequestedUnitParam:
+        def evaluate(self, name, unit):
+            state["unit_calls"].append((name, unit, state["parameter"]))
+            if name != "p" or unit != "cm":
+                raise AssertionError("case readback did not request the exact declared unit")
+            return state["parameter"] + (1.0 if wrong_readback_case == state["parameter"] else 0.0)
+
+    monkeypatch.setattr(_Model, "param", lambda _self, *args: _RequestedUnitParam(), raising=False)
+    monkeypatch.setattr(_w21_execution, "apply_parameters", apply_parameters)
+
+    def study_run(_worker, _tag, _arguments):
+        attempts = [row for row in state["store"].list_metadata("artifacts")
+                    if row.get("kind") == "w21experiment_case_attempt"
+                    and row.get("parameters") == {"p": state["parameter"]}]
+        assert len(attempts) == 1, "the exact case attempt must be durable before Study.run"
+        state["attempt_ids_seen_by_solve"].append(attempts[0]["attempt_id"])
+        state["solve_count"] += 1
+        state["solved_parameter"] = state["parameter"]
+        if fail_solve:
+            return {"status": "FAILED", "failed": True, "study": "std1"}
+        return {"status": "COMPLETED", "study": "std1", "solver_reply": f"solve-{state['solve_count']}"}
+
+    monkeypatch.setattr(_w21_execution, "study_run", study_run)
+    monkeypatch.setattr(
+        _w21_execution,
+        "result_at_points",
+        lambda _worker, _tag, _spec: {
+            "status": {"ok": True, "status": "APPLIED"},
+            "dataset": "dset1", "solution": "sol1", "expressions": ["T"],
+            "values": [[[[300.0 + state["solved_parameter"]]]]],
+            "field_array": {
+                "values": [[[[300.0 + state["solved_parameter"]]]]],
+                "axes": ["expression", "outer", "inner", "point"],
+                "shape": [1, 1, 1, 1],
+                "coords": {"outer": [1], "inner": [1], "point": [1]},
+                "units": {"expression": "K"}, "metadata": {}, "is_complex": False,
+            },
+        },
+    )
+    monkeypatch.setattr(
+        _w21_execution,
+        "stored_times",
+        lambda _worker, _tag, sample: ([0.0], {
+            "binding_complete": True, "solution": sample["solution"], "time_values": [0.0],
+        }),
+    )
+    from comsol_mcp import _g3_w20_validation
+    monkeypatch.setattr(
+        _g3_w20_validation, "validate_solution",
+        lambda *_args: {"numerical_verification_status": "PASS"},
+    )
+    monkeypatch.setattr(_w21_execution, "extract_metrics", lambda *_args: {"legacy_metrics": {"peak": 301.0}})
+
+    from comsol_mcp import _observation_store
+    def solution_identity(_worker, _tag, solution):
+        state["identity_calls"] += 1
+        observed_solution = "sol-other" if state["identity_calls"] == identity_drift_call else solution
+        return {
+            "solution": observed_solution, "study": "std1",
+            "computation_date": f"synthetic-solve-{state['solved_parameter']}",
+            "computation_version": "synthetic-comsol-6.4",
+            "times": [0.0],
+        }
+
+    monkeypatch.setattr(_observation_store, "solution_identity", solution_identity)
+    return state
+
+
+def _run_metric_experiment(daemon, worker, project_id, model_ref, host, state, *, cases=(1.0, 2.0),
+                           metric_id="case-temperature", run_experiment=True, after_design=None):
+    define_args = {"metric_id": metric_id, "definition": _definition()}
+    define_operation, define_job = _begin_callback_operation(
+        daemon, project_id, model_ref, 0, "metric.define", define_args,
+    )
+    with observation_context(daemon.store, model_ref, 0, define_operation, project_id=project_id):
+        metric_ref = _g3_metrics.metric_define(worker, "model", define_args)
+    daemon.store.update_job(define_job, "SUCCEEDED", result={"success": True, "data": metric_ref})
+
+    experiment_definition = {
+        "study": "std1",
+        "sample": {"spec": {"solution": {"dataset": "dset1"}, "expressions": ["T"]},
+                   "points": [[0.0, 0.0]], "coordinate_unit": "m"},
+        "metrics": {"peak": {"expression": "T", "unit": "K", "indices": [0]}},
+        "times": [0.0],
+        "validation": {"range": [250.0, 400.0]},
+        "parameters": {"p": [float(value) for value in cases]},
+        "units": {"p": "cm"},
+        "sampling": {"kind": "cartesian_grid"},
+        "budget": {"max_cases": len(cases), "max_wall_time_s": 60.0},
+        "metric_evaluations": [{
+            "metric_id": metric_ref["metric_id"], "version": metric_ref["version"],
+            "definition_sha256": metric_ref["definition_sha256"],
+        }],
+    }
+    design_args = {"definition": experiment_definition}
+    design_operation, design_job = _begin_callback_operation(
+        daemon, project_id, model_ref, 0, "experiment.design", design_args,
+    )
+    with observation_context(daemon.store, model_ref, 0, design_operation, project_id=project_id):
+        design = _w21_execution.op_experiment_design(worker, "model", design_args)
+    daemon.store.update_job(design_job, "SUCCEEDED", result={"success": True, "data": design})
+
+    if not run_experiment:
+        return metric_ref, design, None, None, None
+    if after_design is not None:
+        after_design(metric_ref, design)
+
+    run_args = {"experiment_id": design["experiment_id"]}
+    run_operation, run_job = _begin_callback_operation(
+        daemon, project_id, model_ref, design["model_revision"], "experiment.run", run_args,
+    )
+    state["store"] = daemon.store
+    with observation_context(daemon.store, model_ref, design["model_revision"], run_operation,
+                            project_id=project_id):
+        run = _w21_execution.op_experiment_run(worker, "model", run_args)
+    daemon.store.update_job(run_job, "SUCCEEDED", result={"success": True, "data": run})
+    return metric_ref, design, run, run_operation, run_job
+
+
+def _public_experiment_host(daemon):
+    host = _FakeMcp()
+    gateway = GatewayRegistry(
+        host,
+        dispatcher=lambda operation, arguments, execution: daemon.dispatch({
+            "operation": operation, "arguments": arguments, "execution": execution,
+        }),
+    )
+    register_w21(gateway)
+    return host
+
+
+def test_experiment_run_binds_frozen_metric_versions_to_attempt_solution_and_public_durable_case(tmp_path, monkeypatch):
+    daemon, worker, project_id, execution, _host, _native_calls = _setup(tmp_path, monkeypatch)
+    model_ref = execution["model_ref"]
+    state = _install_synthetic_experiment_callbacks(monkeypatch)
+    daemon2 = None
+    try:
+        version2_result = {}
+
+        def add_new_metric_head(metric_ref, design):
+            update_args = {"metric_id": metric_ref["metric_id"],
+                           "definition": {**_definition(), "threshold": {"relation": "gte", "value": 3.0,
+                                                                           "unit": "K"}}}
+            update_operation, update_job = _begin_callback_operation(
+                daemon, project_id, model_ref, design["model_revision"], "metric.define", update_args,
+            )
+            with observation_context(daemon.store, model_ref, design["model_revision"], update_operation,
+                                    project_id=project_id):
+                version2_result.update(_g3_metrics.metric_define(worker, "model", update_args))
+            daemon.store.update_job(update_job, "SUCCEEDED",
+                                    result={"success": True, "data": dict(version2_result)})
+
+        metric_ref, design, run, run_operation, _run_job = _run_metric_experiment(
+            daemon, worker, project_id, model_ref, None, state, after_design=add_new_metric_head,
+        )
+        assert run["status"] == "COMPLETE"
+        assert len(run["cases"]) == 2
+        assert version2_result["version"] == 2
+        assert state["unit_calls"] == [("p", "cm", 1.0), ("p", "cm", 2.0)]
+        assert [row["case_value_readback"]["value"] for case in run["cases"]
+                for row in case["parameter_readback"]["parameters"]] == [1.0, 2.0]
+        attempt_ids = [case["case_attempt_id"] for case in run["cases"]]
+        assert len(set(attempt_ids)) == 2 and all(value.startswith("att_") for value in attempt_ids)
+        for case in run["cases"]:
+            assert case["solve"]["case_attempt_id"] == case["case_attempt_id"]
+            assert case["sample"]["case_attempt_id"] == case["case_attempt_id"]
+            assert case["parameter_readback"]["case_attempt_id"] == case["case_attempt_id"]
+            assert case["metric_evaluation"]["case_attempt_id"] == case["case_attempt_id"]
+            assert case["metric_evaluation"]["metric_definition_refs"] == [{
+                "metric_id": metric_ref["metric_id"], "version": 1,
+                "definition_sha256": metric_ref["definition_sha256"],
+            }]
+            evaluation = daemon.store.get_metadata("artifacts", case["metric_evaluation"]["evaluation_id"])
+            assert evaluation["case_binding"]["attempt_id"] == case["case_attempt_id"]
+            assert evaluation["case_binding"]["solution_identity"]["computation_date"].endswith(
+                str(case["parameters"]["p"])
+            )
+            assert evaluation["items"][0]["definition_version"] == 1
+            assert evaluation["items"][0]["case_attempt_id"] == case["case_attempt_id"]
+
+        # Public reads still bind every case to the design's immutable v1 definition.
+        host = _public_experiment_host(daemon)
+        for case in run["cases"]:
+            response = asyncio.run(host.tools["experiment_case_result"](
+                project_id=project_id, experiment_id=design["experiment_id"], case_id=case["case_id"],
+            )).structuredContent
+            assert response["success"] is True, response
+            assert response["data"]["result"]["metric_evaluation"]["case_attempt_id"] == case["case_attempt_id"]
+        inspected = asyncio.run(host.tools["experiment_inspect"](
+            project_id=project_id, experiment_id=design["experiment_id"],
+        )).structuredContent
+        assert inspected["success"] is True, inspected
+        assert [row["status"] for row in inspected["data"]["cases"]] == ["COMPLETED", "COMPLETED"]
+        assert [row["parameters"] for row in inspected["data"]["cases"]] == [{"p": 1.0}, {"p": 2.0}]
+
+        # Durable association reads survive daemon/store reopen and never need a Worker.
+        daemon.close()
+        daemon = None
+        daemon2 = ControlDaemon(tmp_path / "control", project_root=tmp_path / "projects", registry={})
+        host2 = _public_experiment_host(daemon2)
+        reopened = asyncio.run(host2.tools["experiment_case_result"](
+            project_id=project_id, experiment_id=design["experiment_id"], case_id="case-0002",
+        )).structuredContent
+        assert reopened["success"] is True, reopened
+        assert reopened["data"]["result"]["metric_evaluation"]["evaluation_id"] == run["cases"][1]["metric_evaluation"]["evaluation_id"]
+        assert daemon2.backend.worker is None
+        assert daemon2.session_scheduler.submit is not None
+
+        foreign_project, _foreign_workspace = _project(daemon2, "foreign-association-project")
+        foreign_read = asyncio.run(host2.tools["experiment_case_result"](
+            project_id=foreign_project, experiment_id=design["experiment_id"], case_id="case-0002",
+        )).structuredContent
+        assert foreign_read["success"] is False
+        assert foreign_read["error"]["code"] == "EXPERIMENT_NOT_FOUND"
+
+        # A SQLite tamper of the attempt payload cannot keep the old hash valid.
+        attempt_key = f"w21experimentattempt:{design['experiment_id']}:case-0002"
+        attempt_record = daemon2.store.get_metadata("artifacts", attempt_key)
+        attempt_record["parameters"]["p"] = 200.0
+        daemon2.store.db.execute(
+            "UPDATE artifacts SET metadata=? WHERE artifact_id=?",
+            (json.dumps(attempt_record, sort_keys=True), attempt_key),
+        )
+        daemon2.store.db.commit()
+        tampered = asyncio.run(host2.tools["experiment_case_result"](
+            project_id=project_id, experiment_id=design["experiment_id"], case_id="case-0002",
+        )).structuredContent
+        assert tampered["success"] is False
+        assert tampered["error"]["code"] == "EXPERIMENT_STATE_UNKNOWN"
+
+        # Re-running this frozen experiment is not an idempotent solve retry.
+        rerun_operation, _rerun_job = _begin_callback_operation(
+            daemon2, project_id, model_ref, design["model_revision"], "experiment.run",
+            {"experiment_id": design["experiment_id"]},
+        )
+        with observation_context(daemon2.store, model_ref, design["model_revision"], rerun_operation,
+                                project_id=project_id):
+            with pytest.raises(ExecutionContractError, match="already has a run claim"):
+                _w21_execution.op_experiment_run(worker, "model", {"experiment_id": design["experiment_id"]})
+        assert state["solve_count"] == 2
+    finally:
+        if daemon is not None:
+            daemon.close()
+        if daemon2 is not None:
+            daemon2.close()
+
+
+@pytest.mark.parametrize("observation_role", ["case_sample", "metric_item"])
+@pytest.mark.parametrize("damage", ["rewrite", "missing", "symlink_escape"])
+def test_public_experiment_reads_rehash_actual_observation_files(
+    tmp_path, monkeypatch, observation_role, damage,
+):
+    daemon, worker, project_id, execution, _host, _native_calls = _setup(
+        tmp_path, monkeypatch, native_values=[3.25],
+    )
+    state = _install_synthetic_experiment_callbacks(monkeypatch)
+    target_path = None
+    original_bytes = None
+    try:
+        _metric_ref, design, run, _run_operation, _run_job = _run_metric_experiment(
+            daemon, worker, project_id, execution["model_ref"], None, state, cases=(1.0,),
+        )
+        case = run["cases"][0]
+        evaluation = daemon.store.get_metadata("artifacts", case["metric_evaluation"]["evaluation_id"])
+        reference = (
+            evaluation["case_binding"]["sample_observation_ref"]
+            if observation_role == "case_sample"
+            else evaluation["items"][0]["observation_ref"]
+        )
+        observation = daemon.store.get_metadata("artifacts", reference["observation_id"])
+        target_path = Path(observation["artifact"]["file_path"])
+        original_bytes = target_path.read_bytes()
+        if damage == "rewrite":
+            target_path.write_bytes(b'{"tampered":true}\n')
+        elif damage == "missing":
+            target_path.unlink()
+        else:
+            outside = tmp_path / "outside-observation.json"
+            outside.write_bytes(original_bytes)
+            target_path.unlink()
+            target_path.symlink_to(outside)
+
+        host = _public_experiment_host(daemon)
+        case_result = asyncio.run(host.tools["experiment_case_result"](
+            project_id=project_id, experiment_id=design["experiment_id"], case_id="case-0001",
+        )).structuredContent
+        inspected = asyncio.run(host.tools["experiment_inspect"](
+            project_id=project_id, experiment_id=design["experiment_id"],
+        )).structuredContent
+        for response in (case_result, inspected):
+            assert response["success"] is False, response
+            assert response["error"]["code"] == "EXPERIMENT_STATE_UNKNOWN"
+    finally:
+        if target_path is not None and original_bytes is not None:
+            if target_path.is_symlink() or target_path.exists():
+                target_path.unlink()
+            target_path.write_bytes(original_bytes)
+        daemon.close()
+
+
+@pytest.mark.parametrize("observation_role", ["case_sample", "metric_item"])
+@pytest.mark.parametrize("metadata_swap", ["foreign_project_id", "foreign_workspace_path"])
+def test_public_experiment_reads_reject_cross_project_observation_metadata(
+    tmp_path, monkeypatch, observation_role, metadata_swap,
+):
+    daemon, worker, project_id, execution, _host, _native_calls = _setup(
+        tmp_path, monkeypatch, native_values=[3.25],
+    )
+    state = _install_synthetic_experiment_callbacks(monkeypatch)
+    try:
+        _metric_ref, design, run, _run_operation, _run_job = _run_metric_experiment(
+            daemon, worker, project_id, execution["model_ref"], None, state, cases=(1.0,),
+        )
+        foreign_project, foreign_workspace = _project(daemon, "foreign-observation-project")
+        case = run["cases"][0]
+        evaluation = daemon.store.get_metadata("artifacts", case["metric_evaluation"]["evaluation_id"])
+        reference = (
+            evaluation["case_binding"]["sample_observation_ref"]
+            if observation_role == "case_sample"
+            else evaluation["items"][0]["observation_ref"]
+        )
+        observation_id = reference["observation_id"]
+        observation = daemon.store.get_metadata("artifacts", observation_id)
+        if metadata_swap == "foreign_project_id":
+            observation["project_id"] = foreign_project
+        else:
+            observation["artifact"]["file_path"] = str(
+                Path(foreign_workspace) / "observations" / f"{observation_id}.json"
+            )
+        daemon.store.db.execute(
+            "UPDATE artifacts SET metadata=? WHERE artifact_id=?",
+            (json.dumps(observation, sort_keys=True), observation_id),
+        )
+        daemon.store.db.commit()
+
+        host = _public_experiment_host(daemon)
+        case_result = asyncio.run(host.tools["experiment_case_result"](
+            project_id=project_id, experiment_id=design["experiment_id"], case_id="case-0001",
+        )).structuredContent
+        inspected = asyncio.run(host.tools["experiment_inspect"](
+            project_id=project_id, experiment_id=design["experiment_id"],
+        )).structuredContent
+        for response in (case_result, inspected):
+            assert response["success"] is False, response
+            assert response["error"]["code"] == "EXPERIMENT_STATE_UNKNOWN"
+        foreign_read = asyncio.run(host.tools["experiment_case_result"](
+            project_id=foreign_project, experiment_id=design["experiment_id"], case_id="case-0001",
+        )).structuredContent
+        assert foreign_read["success"] is False
+        assert foreign_read["error"]["code"] == "EXPERIMENT_NOT_FOUND"
+    finally:
+        daemon.close()
+
+
+def test_experiment_metric_attempt_rejects_wrong_native_parameter_before_evaluation(tmp_path, monkeypatch):
+    daemon, worker, project_id, execution, _host, _native_calls = _setup(tmp_path, monkeypatch)
+    state = _install_synthetic_experiment_callbacks(monkeypatch, wrong_readback_case=2.0)
+    try:
+        _metric_ref, design, run, _run_operation, _run_job = _run_metric_experiment(
+            daemon, worker, project_id, execution["model_ref"], None, state,
+        )
+        assert run["status"] == "FAILED"
+        assert run["cases"][0]["status"] == "COMPLETED"
+        assert run["cases"][0]["metric_evaluation"]["evaluation_id"]
+        second = run["cases"][1]
+        assert second["status"] == "FAILED"
+        assert "differs from the frozen case value" in second["error"]
+        assert "metric_evaluation" not in second
+        assert second["case_attempt_id"]
+        assert state["solve_count"] == 1
+        assert state["attempt_ids_seen_by_solve"] == [run["cases"][0]["case_attempt_id"]]
+        evaluations = [row for row in daemon.store.list_metadata("artifacts")
+                       if row.get("kind") == "w17_metric_evaluation"]
+        assert len(evaluations) == 1
+        assert not any(
+            row.get("kind") == "w17_metric_evaluation"
+            and row.get("case_binding", {}).get("case_id") == "case-0002"
+            for row in evaluations
+        )
+    finally:
+        daemon.close()
+
+
+def test_experiment_attempt_ordinal_rejects_bool_even_with_recomputed_payload_hash(tmp_path, monkeypatch):
+    daemon, worker, project_id, execution, _host, _native_calls = _setup(tmp_path, monkeypatch, native_values=[3.25])
+    state = _install_synthetic_experiment_callbacks(monkeypatch)
+    try:
+        _metric_ref, design, run, _run_operation, _run_job = _run_metric_experiment(
+            daemon, worker, project_id, execution["model_ref"], None, state, cases=(1.0,),
+        )
+        case = run["cases"][0]
+        evaluation = daemon.store.get_metadata("artifacts", case["metric_evaluation"]["evaluation_id"])
+        binding = dict(evaluation["case_binding"])
+        attempt_key = f"w21experimentattempt:{design['experiment_id']}:case-0001"
+        attempt = daemon.store.get_metadata("artifacts", attempt_key)
+        attempt["case_ordinal"] = True
+        attempt["sha256"] = _w21_execution.digest({key: value for key, value in attempt.items() if key != "sha256"})
+        binding["case_ordinal"] = True
+        binding["attempt_sha256"] = attempt["sha256"]
+        daemon.store.db.execute(
+            "UPDATE artifacts SET metadata=? WHERE artifact_id=?",
+            (json.dumps(attempt, sort_keys=True), attempt_key),
+        )
+        daemon.store.db.commit()
+        context = {
+            "store": daemon.store,
+            "project_id": project_id,
+            "model_ref": run["model_ref"],
+            "revision": run["model_revision"],
+            "producer": run["producer"],
+        }
+        with pytest.raises(PreWriteRefusal, match="durable experiment attempt"):
+            _w21_execution._verify_experiment_case_attempt(
+                context,
+                f"{design['experiment_id']}:case-0001",
+                design["study"],
+                case["parameters"],
+                design["definition"]["units"],
+                design["metric_definition_snapshots"],
+                binding,
+            )
+    finally:
+        daemon.close()
+
+
+def test_experiment_metric_rejects_solution_identity_drift_and_wrong_native_solution_pair(tmp_path, monkeypatch):
+    daemon, worker, project_id, execution, _host, native_calls = _setup(tmp_path, monkeypatch, native_values=[3.25])
+    state = _install_synthetic_experiment_callbacks(monkeypatch, identity_drift_call=3)
+    try:
+        _metric_ref, _design, run, _run_operation, _run_job = _run_metric_experiment(
+            daemon, worker, project_id, execution["model_ref"], None, state, cases=(1.0,),
+        )
+        assert run["cases"][0]["status"] == "FAILED"
+        assert run["cases"][0]["error"] == "native solution identity changed before metric evaluation"
+        assert "metric_evaluation" not in run["cases"][0]
+        assert native_calls == []
+        assert not [row for row in daemon.store.list_metadata("artifacts")
+                    if row.get("kind") == "w17_metric_evaluation"]
+    finally:
+        daemon.close()
+
+    (tmp_path / "wrong-native-solution").mkdir()
+    daemon2, worker2, project_id2, execution2, _host2, native_calls2 = _setup(
+        tmp_path / "wrong-native-solution", monkeypatch, native_values=[3.25],
+    )
+    state2 = _install_synthetic_experiment_callbacks(monkeypatch)
+    original_evaluate = _g3_results.result_evaluate
+
+    def wrong_solution_evaluate(*args, **kwargs):
+        result = original_evaluate(*args, **kwargs)
+        result["solution"] = "sol-other"
+        return result
+
+    monkeypatch.setattr(_g3_results, "result_evaluate", wrong_solution_evaluate)
+    try:
+        _metric_ref, _design, run, _run_operation, _run_job = _run_metric_experiment(
+            daemon2, worker2, project_id2, execution2["model_ref"], None, state2, cases=(1.0,),
+        )
+        assert run["cases"][0]["status"] == "FAILED"
+        assert "exact solution" in run["cases"][0]["error"]
+        assert "metric_evaluation" not in run["cases"][0]
+        assert len(native_calls2) == 1
+        assert not [row for row in daemon2.store.list_metadata("artifacts")
+                    if row.get("kind") == "w17_metric_evaluation"]
+    finally:
+        daemon2.close()
+
+
+def test_experiment_metric_failed_solve_does_not_create_success_association(tmp_path, monkeypatch):
+    daemon, worker, project_id, execution, _host, _native_calls = _setup(tmp_path, monkeypatch, native_values=[3.25])
+    model_ref = execution["model_ref"]
+    state = _install_synthetic_experiment_callbacks(monkeypatch, fail_solve=True)
+    try:
+        _metric_ref, design, run, _run_operation, _run_job = _run_metric_experiment(
+            daemon, worker, project_id, model_ref, None, state, cases=(1.0,),
+        )
+        assert run["status"] == "FAILED"
+        assert run["cases"][0]["status"] == "FAILED"
+        assert "metric_evaluation" not in run["cases"][0]
+        attempt_key = f"w21experimentattempt:{design['experiment_id']}:case-0001"
+        assert daemon.store.get_metadata("artifacts", attempt_key)["attempt_id"] == run["cases"][0]["case_attempt_id"]
+        assert not [row for row in daemon.store.list_metadata("artifacts")
+                    if row.get("kind") == "w17_metric_evaluation"]
+    finally:
+        daemon.close()
+
+
+def test_removed_metric_head_blocks_new_frozen_run_before_attempt_or_solve(tmp_path, monkeypatch):
+    daemon, worker, project_id, execution, _host, _native_calls = _setup(tmp_path, monkeypatch, native_values=[3.25])
+    model_ref = execution["model_ref"]
+    state = _install_synthetic_experiment_callbacks(monkeypatch)
+    try:
+        metric_ref, design, run, _run_operation, _run_job = _run_metric_experiment(
+            daemon, worker, project_id, model_ref, None, state, cases=(1.0,), run_experiment=False,
+        )
+        remove_args = {"metric_id": metric_ref["metric_id"]}
+        remove_operation, remove_job = _begin_callback_operation(
+            daemon, project_id, model_ref, design["model_revision"], "metric.remove", remove_args,
+        )
+        with observation_context(daemon.store, model_ref, design["model_revision"], remove_operation,
+                                project_id=project_id):
+            removed = _g3_metrics.metric_remove(worker, "model", remove_args)
+        daemon.store.update_job(remove_job, "SUCCEEDED", result={"success": True, "data": removed})
+        assert removed["active"] is False
+        run_args = {"experiment_id": design["experiment_id"]}
+        run_operation, _run_job = _begin_callback_operation(
+            daemon, project_id, model_ref, design["model_revision"], "experiment.run", run_args,
+        )
+        with observation_context(daemon.store, model_ref, design["model_revision"], run_operation,
+                                project_id=project_id):
+            with pytest.raises(ExecutionContractError, match="removed metric definitions"):
+                _w21_execution.op_experiment_run(worker, "model", run_args)
+        assert state["solve_count"] == 0
+        assert daemon.store.get_metadata("artifacts", "w21experimentrun:" + design["experiment_id"]) is None
+        assert daemon.store.get_metadata(
+            "artifacts", f"w21experimentattempt:{design['experiment_id']}:case-0001"
+        ) is None
     finally:
         daemon.close()
