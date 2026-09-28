@@ -1,6 +1,6 @@
 {
   "schema": "W21_WINDOWS64_REPAIRED_UPLOAD_CHECKPOINT_V1",
-  "status": "PARTIAL",
+  "status": "PASS_PREPARATION_ONLY",
   "source_commit": "0501e8cb643b973c286b266eaae9e460e5bd1f38",
   "local_archive_status": "PASS; main verified105 exact Git blobs+3metadata",
   "archive": {
@@ -22,7 +22,24 @@
     "runner_closure_count": 103,
     "file_count": 105
   },
-  "remote_state": {
+  "native": {
+    "status": "NOT_RUN",
+    "server_births": 0,
+    "worker_births": 0,
+    "study_dispatches": 0,
+    "solver_dispatches": 0
+  },
+  "receipt": {
+    "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-20260928T1655Z-0501e8c/local_preparation_receipt.json",
+    "sha256": "9674c31224b7e826127d1bccf62598c6b941f4e64e0f4e6effcba89b53ca5e70"
+  },
+  "next_action": "Execute this exact reviewed metadata-only frozen plan once; no reprepare/replay. Native output remains unverified until actual result. On UNKNOWN preserve original requests/jobs and owned resources. Then calibrate field/unit/mesh admission and separately freeze actual stage solves6.4,6.3,W23-W26.",
+  "prior_transfer_refusal": {
+    "status": "NOT_RUN_BLOCKED_BY_AUTO_REVIEW",
+    "rejection_summary_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-20260928T1655Z-0501e8c/transfer_auto_review_rejection_summary.json",
+    "rejection_summary_sha256": "062870bc3928f3418a724ba7076cdddb5d0a689ecbfea9081dfef70b737b428b"
+  },
+  "prior_remote_state": {
     "endpoint": "everwalker@192.168.100.2",
     "root": "C:\\Temp\\w21_win64_metadata_prepare_20260928T1655Z_0501e8c",
     "method": "saved read-only SSH path-state check",
@@ -44,20 +61,49 @@
     "interpretation": "task root and task-only evidence/home/temp/scratch directories exist; source, archive, and extractor are absent; no source payload was uploaded"
   },
   "transfer": {
-    "status": "NOT_RUN_BLOCKED_BY_AUTO_REVIEW",
-    "rejection_summary_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-20260928T1655Z-0501e8c/transfer_auto_review_rejection_summary.json",
-    "rejection_summary_sha256": "062870bc3928f3418a724ba7076cdddb5d0a689ecbfea9081dfef70b737b428b"
+    "status": "UPLOADED_HASH_VERIFIED",
+    "authorization": "Explicit user approval, same SCP command approved and executed from root thread",
+    "archive_sha256": "1d20c776c1d8c7867a12b9510916212fcc9ea76e1f051e1c10a3563c13503649",
+    "extractor_sha256": "2d26523215002042d5ff0441dee428de7644dab93ce2f2834f92ac4abd83ad02"
   },
-  "native": {
-    "status": "NOT_RUN",
-    "server_births": 0,
-    "worker_births": 0,
-    "study_dispatches": 0,
-    "solver_dispatches": 0
-  },
-  "receipt": {
-    "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-20260928T1655Z-0501e8c/local_preparation_receipt.json",
-    "sha256": "9674c31224b7e826127d1bccf62598c6b941f4e64e0f4e6effcba89b53ca5e70"
-  },
-  "next_action": "Pending concrete user approval requested for SCP archive and extractor upload. Once approved, revalidate no-overwrite destinations, upload/verify/prepare same unique root; main reviews freeze before execute under existing task scope and1Server/1Worker/900s/0study-or-solver budget. Do not rerun old failed freeze or switch transports to bypass review."
+  "prepare": {
+    "status": "PREPARED_ONLY",
+    "run_id": "w21-64-20260928T225727Z-145bc8e6",
+    "run_root": "C:\\Temp\\w21_win64_metadata_prepare_20260928T1655Z_0501e8c\\evidence\\6.4\\w21-64-20260928T225727Z-145bc8e6",
+    "freeze_sha256": "75adad904dd251d5f40980bfdb33fea6ca2d2f813170f6f5d7ddaaec91d8e3a8",
+    "source_hashes_verified_against_git": 103,
+    "published_tool_schemas": 3,
+    "logical_operation_schemas": 11,
+    "budgets": {
+      "geometry_run": 1,
+      "mesh_run": 1,
+      "ordinary_rpc_wait_seconds": 45,
+      "project_create_wait_calls_max": 1,
+      "project_create_wait_timeout_seconds": 30,
+      "seconds_from_session_start_dispatch": 900,
+      "server_births_max": 1,
+      "solver_dispatch": 0,
+      "study_dispatch": 0,
+      "worker_births_max": 1
+    },
+    "main_verification": "Canonical freeze, source/schema hashes, unique request IDs and pristine zero-birth state verified; selected COMSOL6.4.0.293/Python/JDK identities unchanged from previous validated preparation",
+    "artifacts": {
+      "freeze.json": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-20260928T1655Z-0501e8c/freeze.json",
+        "sha256": "21eb6f9cfa866a8747bbe4acc4932f3208a1b662c656849b448c15559f773c37"
+      },
+      "state.json": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-20260928T1655Z-0501e8c/state.json",
+        "sha256": "dfb817b95e67ec45a6f3b94ca126de4fbe3032ad5aa6231de2881d0070cd0fd9"
+      },
+      "remote_module_origin_check_attempt3.stdout": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-20260928T1655Z-0501e8c/remote_module_origin_check_attempt3.stdout",
+        "sha256": "4db409cc12306ae237ca203064b787094d903f306dbf84c59a947760baedc908"
+      },
+      "main_authorized_upload_receipt.json": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-20260928T1655Z-0501e8c/main_authorized_upload_receipt.json",
+        "sha256": "443a9bf20f87f675bb1be7ea49225a81a4b293cedd13d5081e5cdb8370669010"
+      }
+    }
+  }
 }
