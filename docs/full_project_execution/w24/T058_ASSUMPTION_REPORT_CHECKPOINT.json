@@ -1,0 +1,57 @@
+{
+  "schema": "T058_ASSUMPTION_REPORT_SOFTWARE_CHECKPOINT_V1",
+  "status": "PASS_SCOPED_SOFTWARE",
+  "original_T058_status": "PARTIAL",
+  "native_acceptance": "NOT_RUN",
+  "physical_validation": "UNVERIFIED",
+  "base_commit": "536b79b2a3178afc51432114ef7e81e8fd9c4e3c",
+  "candidate_fingerprint": "039ff3c8d0f3a5e2cbbc6fb034f80d2bc8afacb0af7e8ca7ab986b6deb5eea38",
+  "capabilities": [
+    "Preserve legacy input_assumptions in JSON and show assumptions/source/estimated/calibration labels in Markdown",
+    "Optional assumption sensitivity metadata: missing NOT_RUN, supplied UNVERIFIED; caller PASS cannot confer validation",
+    "Explicit calibration versus independent physical validation boundary; preserve existing numerical status axis",
+    "Variable-length JSON code fences preserve embedded fenced text"
+  ],
+  "tests": {
+    "required_regression_passed": 323,
+    "focused_passed": 3,
+    "focused_included_in_regression": true,
+    "earlier_targeted_report_passed": 4,
+    "main_source_hashes_verified": 135,
+    "main_junit_and_artifact_hashes_verified": true
+  },
+  "receipt": {
+    "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/20260928T092721Z-98ba0d35.summary.json",
+    "sha256": "c6844a1d41829f0a053f08785009e29be53854b72502f4419157109716f201ef"
+  },
+  "artifacts": [
+    {
+      "bytes": 22,
+      "path": "/Volumes/CTestEff/test-efficiency/runs/20260928T092721Z-98ba0d35/focus.log",
+      "sha256": "dc33162dc61ba5c1e189d940403ced6647da44c48d42ffc47eef36d6d0f7dcb7"
+    },
+    {
+      "bytes": 686,
+      "path": "/Volumes/CTestEff/test-efficiency/runs/20260928T092721Z-98ba0d35/focus.junit.xml",
+      "sha256": "1424ea20ca6801afd5390c48c90f5698e7b740ae5e8dd1a1fffc992fc52c26a6"
+    },
+    {
+      "bytes": 345,
+      "path": "/Volumes/CTestEff/test-efficiency/runs/20260928T092721Z-98ba0d35/required_regression.log",
+      "sha256": "cec04e126fa9584dde020e9d8c232b54cf0cda4cfa2a758fa6962c96575a108d"
+    },
+    {
+      "bytes": 53371,
+      "path": "/Volumes/CTestEff/test-efficiency/runs/20260928T092721Z-98ba0d35/required_regression.junit.xml",
+      "sha256": "fdf729ae4da7c6c19c0681f533f7dd6901b268db877f46d21bf8cec3939fd088"
+    }
+  ],
+  "manifest": "tools/test_efficiency_t058_baseline.json",
+  "replay": "python3 -B tools/run_bounded_tests.py --baseline tools/test_efficiency_t058_baseline.json --with-required-regression",
+  "limitations": [
+    "Caller metadata is not authenticated native evidence",
+    "No sensitivity computation or native lifecycle added; full T047/T058 acceptance remains open",
+    "No new Java compile or COMSOL run"
+  ],
+  "next_action": "Same Luna executor repairs W23 omitted Java producer manifest and null output_association contract, adds cross-language contract test, integrates frozen candidate and runs bounded regression before stage publication; continue original W01-W26 scope."
+}

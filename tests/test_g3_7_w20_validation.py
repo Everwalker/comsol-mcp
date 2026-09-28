@@ -251,6 +251,10 @@ class TestValidationReport:
         data = json.loads(text)
         assert data["source_identity"] == "be5bfc8"
         assert data["frozen_expectations"]["T_0.025"] == 325.0
+        assert data["input_assumptions"] == {"k": 400, "L": 0.05}
+        assert data["input_assumption_provenance_status"] == "CALLER_SUPPLIED_NOT_AUTHENTICATED"
+        assert data["input_assumption_sensitivity_status"] == "NOT_RUN"
+        assert data["physical_validation_status"] == STATUS_UNVERIFIED
 
     def test_report_markdown_contains_sections(self):
         report = ValidationReport(
@@ -269,6 +273,11 @@ class TestValidationReport:
         )
         md = report.to_markdown()
         assert "Validation Report" in md
+        assert "Input Assumptions and Provenance" in md
+        assert "Input Assumption Sensitivity" in md
+        assert "`NOT_RUN`" in md
+        assert "Calibration fitting is not independent physical validation" in md
+        assert "`UNVERIFIED`" in md
         assert "Evidence Hash" in md
         assert "xyz789" in md
 
@@ -531,6 +540,63 @@ class TestG3ValidationOperations:
         })
         assert fail_up["status"] == STATUS_FAIL
 
+    def test_dispatch_validate_report_preserves_unverified_assumption_boundary(self):
+        from comsol_mcp import _g3_ops
+
+        worker = type("MockWorker", (), {"client": lambda self: None})()
+        assumptions = {
+            "gel_contact_angle": {
+                "value_deg": 42.0,
+                "source": {"classification": "estimated", "reference": "engineering estimate"},
+                "calibration": {"method": "fit to observed profile", "status": "PASS",
+                                "independent_validation": True},
+                "physical_validation_status": "PASS",
+                "note": "literal | pipe and fenced text:\n```\nnot a report heading",
+            }
+        }
+        sensitivity = {
+            "gel_contact_angle": {
+                "values_deg": [35.0, 42.0, 50.0],
+                "response_delta": 0.08,
+                "status": "PASS",
+            }
+        }
+        result = _g3_ops.dispatch("validate.report", worker, "model1", {
+            "data": {
+                "source_identity": "W24_assumption_presentation_fixture",
+                "status": STATUS_PASS,
+                "physical_validation_status": STATUS_PASS,
+                "error_tolerance_data": {
+                    "status": STATUS_PASS,
+                    "numerical_verification_status": STATUS_PASS,
+                },
+                "input_assumptions": assumptions,
+                "input_assumption_sensitivity": sensitivity,
+            }
+        })
+
+        report_json = json.loads(result["report_json"])
+        assert result["status"] == STATUS_PASS
+        assert result["numerical_verification_status"] == STATUS_PASS
+        assert result["physical_validation_status"] == STATUS_UNVERIFIED
+        assert report_json["input_assumptions"] == assumptions
+        assert report_json["input_assumption_sensitivity"] == sensitivity
+        assert report_json["input_assumption_provenance_status"] == "CALLER_SUPPLIED_NOT_AUTHENTICATED"
+        assert report_json["input_assumption_sensitivity_status"] == STATUS_UNVERIFIED
+        assert report_json["physical_validation_status"] == STATUS_UNVERIFIED
+        assert report_json["calibration_validation_boundary"] == (
+            "CALIBRATION_FIT_IS_NOT_INDEPENDENT_PHYSICAL_VALIDATION")
+
+        markdown = result["report_markdown"]
+        assert "classification" in markdown and "estimated" in markdown
+        assert "method" in markdown and "fit to observed profile" in markdown
+        assert "response_delta" in markdown and "0.08" in markdown
+        assert "caller-supplied evidence/reference" in markdown
+        assert "not authenticated" in markdown
+        assert "Calibration fitting is not independent physical validation" in markdown
+        assert "`UNVERIFIED`" in markdown
+        assert "````json" in markdown
+
 
 class TestW20RemediationRegressions:
     """Explicit regression tests for findings F01-F07 (P01-P10)."""
@@ -725,5 +791,4 @@ class TestW20RemediationRegressions:
                 "solution": {"dataset": "dset1"},
                 "arguments": {"solution": {"dataset": "dset2"}}
             })
-
 

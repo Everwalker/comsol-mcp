@@ -389,23 +389,63 @@ class ValidationReport:
     coverage_exclusions: Dict[str, Any]
     warnings: List[str]
     evidence_hash: str
-    
+    input_assumption_sensitivity: Any = None
+
+    @property
+    def input_assumption_sensitivity_status(self) -> str:
+        value = self.input_assumption_sensitivity
+        if value is None or (isinstance(value, (Mapping, list, tuple, str, bytes)) and not value):
+            return "NOT_RUN"
+        return STATUS_UNVERIFIED
+
+    def _presentation_fields(self) -> dict[str, Any]:
+        return {
+            "input_assumption_provenance_status": (
+                "CALLER_SUPPLIED_NOT_AUTHENTICATED" if self.input_assumptions else "NOT_PROVIDED"
+            ),
+            "input_assumption_sensitivity_status": self.input_assumption_sensitivity_status,
+            "calibration_validation_boundary": (
+                "CALIBRATION_FIT_IS_NOT_INDEPENDENT_PHYSICAL_VALIDATION"
+            ),
+            "physical_validation_status": STATUS_UNVERIFIED,
+        }
+
     def to_json(self) -> str:
-        return json.dumps(self.__dict__, default=str)
+        payload = dict(self.__dict__)
+        payload.update(self._presentation_fields())
+        return json.dumps(payload, default=str)
+
+    @staticmethod
+    def _markdown_json_block(value: Any) -> str:
+        encoded = json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True, default=str)
+        longest_backtick_run = max((len(run) for run in re.findall(r"`+", encoded)), default=0)
+        fence = "`" * max(3, longest_backtick_run + 1)
+        return f"{fence}json\n{encoded}\n{fence}\n\n"
         
     def to_markdown(self) -> str:
         md = f"# Validation Report: {self.source_identity}\n\n"
         md += f"**Runtime Version:** {self.runtime_version}\n"
         md += f"**Dataset:** {self.dataset_ref}\n\n"
-        md += "## Frozen Expectations\n```json\n"
-        md += json.dumps(self.frozen_expectations, indent=2)
-        md += "\n```\n\n"
-        md += "## Observations\n```json\n"
-        md += json.dumps(self.raw_observations, indent=2)
-        md += "\n```\n\n"
-        md += "## Results\n```json\n"
-        md += json.dumps(self.error_tolerance_data, indent=2)
-        md += "\n```\n\n"
+        md += "## Input Assumptions and Provenance\n"
+        md += self._markdown_json_block(self.input_assumptions)
+        provenance_status = self._presentation_fields()["input_assumption_provenance_status"]
+        md += (f"**Provenance status:** `{provenance_status}`. Caller-provided source, estimated, and "
+               "calibration labels are preserved as supplied, not authenticated; omitted labels are not inferred.\n\n")
+        md += "**Calibration boundary:** Calibration fitting is not independent physical validation.\n"
+        md += "**Physical validation status:** `UNVERIFIED`.\n\n"
+        md += "## Input Assumption Sensitivity\n"
+        if self.input_assumption_sensitivity_status == "NOT_RUN":
+            md += "**Status:** `NOT_RUN` (no sensitivity evidence/reference was supplied).\n\n"
+        else:
+            md += ("**Status:** `UNVERIFIED` (caller-supplied evidence/reference; this report does not "
+                   "compute or authenticate it).\n\n")
+        md += self._markdown_json_block(self.input_assumption_sensitivity)
+        md += "## Frozen Expectations\n"
+        md += self._markdown_json_block(self.frozen_expectations)
+        md += "## Observations\n"
+        md += self._markdown_json_block(self.raw_observations)
+        md += "## Results\n"
+        md += self._markdown_json_block(self.error_tolerance_data)
         md += f"**Evidence Hash:** `{self.evidence_hash}`\n"
         return md
 
@@ -1428,6 +1468,7 @@ def validate_report(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
         coverage_exclusions=data.get("coverage_exclusions", {}),
         warnings=data.get("warnings", []),
         evidence_hash=evidence_hash,
+        input_assumption_sensitivity=data.get("input_assumption_sensitivity"),
     )
 
     report_json = report.to_json()

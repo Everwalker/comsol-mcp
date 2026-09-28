@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "phase": "W24_PHYSICAL_CONTROLS_SOFTWARE_ACCEPTED_T058_NEXT",
+  "phase": "T058_REPORT_SOFTWARE_ACCEPTED_W23_REPAIR_NEXT",
   "task": "W01_W26_CONTINUOUS_IMPLEMENTATION",
   "status": "PARTIAL_EXECUTION_CONTINUING_NATIVE_UNVERIFIED",
   "candidate_source": "docs/full_project_execution/project_session/EXPERIMENT_READS_SOFTWARE_CHECKPOINT.json",
@@ -103,7 +103,7 @@
       "native_acceptance": "NOT_RUN"
     }
   ],
-  "next_action": "Implement T058 assumption provenance presentation and separation from physical conclusions using existing validation reports; retain original T047 native/lifecycle gaps, then continue W21/W23 and MASTER_GOAL.",
+  "next_action": "Same Luna executor repairs W23 omitted Java producer manifest and null output_association contract, adds cross-language contract test, integrates frozen candidate and runs bounded regression before stage publication; continue original W01-W26 scope.",
   "active_jobs": [],
   "blockers": [
     "W23 failed setup owned Server 75272 and daemon 75260 remain preserved: cleanup SIGTERM was rejected by automatic approval and explicit authorization is pending; no cleanup or relaunch authorized by elapsed time.",
@@ -990,12 +990,10 @@
     "next": "Wait for stable F04 runtime handoff; refresh closure and submit a new candidate for root review. No automatic rerun."
   },
   "verified_git_sync": {
-    "status": "VERIFIED",
-    "head": "e79f00a6203dd2da89c5e5277b15df76bedb72ca",
-    "origin_main": "e79f00a6203dd2da89c5e5277b15df76bedb72ca",
-    "verified_at": "2026-09-28T08:55:38.097469+00:00",
-    "method": "post-push fetch; HEAD/origin-main equality",
-    "stage": "test-efficiency scoped offline tooling"
+    "head": "536b79b2a3178afc51432114ef7e81e8fd9c4e3c",
+    "origin_main": "536b79b2a3178afc51432114ef7e81e8fd9c4e3c",
+    "status": "VERIFIED_EQUAL_AFTER_PUSH",
+    "stage": "W24_PHYSICAL_CONTROLS_SOFTWARE"
   },
   "w24_static_shape_science_admission_repair": {
     "status": "SCOPED_SOFTWARE_REPAIR_ACCEPTED_NATIVE_NOT_RUN",
@@ -1959,39 +1957,44 @@
     "preserve": "Active process state, unique source/results/failure evidence; no blanket tmp deletion; original-to-destination map required",
     "round_checkpoints": {
       "W21": {
-        "status": "QUEUED_AFTER_TEST_EFFICIENCY_STAGE",
+        "status": "QUEUED_AFTER_CURRENT_W24_AND_W23_INTEGRATION",
         "candidate": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-runtime/stage-mapping-backend-e1d7d6",
         "base": "e1d7d6eeae744a5ece21ee4194ef78900fd4bceb",
         "implementation": "NO_NEW_CODE",
         "tests": "NOT_RUN",
-        "next_action": "After test-efficiency stage, implement typed read-only Eval for exact dataset/outer/inner/selection, preserving unverified units/frame; investigate exact Xmesh tuple binding; actual stage solve/check/save remains open"
+        "next_action": "After current W24 and W23 integration, implement typed read-only Eval for exact dataset/outer/inner/selection, preserving unverified units/frame; investigate exact Xmesh tuple binding; actual stage solve/check/save remains open"
       },
       "W24": {
-        "status": "EXECUTING_MAIN_REVIEW_REPAIR_AND_INTEGRATION",
+        "status": "SOFTWARE_ACCEPTED_SYNCED_T058_NEXT_UNIT_EXECUTING",
         "checkpoint": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-physical-controls-303198a/checkpoints/w24_physical_controls_20260928T0718Z/software_checkpoint.json",
         "sha256": "f6e9c1ae6ad46a0bb656cb26351a2c53a476c1218300e8f0a10c62339112e868",
         "agent_reported_tests_passed": 257,
         "native": "NOT_RUN",
-        "new_T058_entrypoint": "NOT_IMPLEMENTED",
+        "new_T058_entrypoint": "ASSUMPTION_REPORT_PRESENTATION_ACCEPTED_FULL_REQUIREMENT_PARTIAL",
         "main_pre_review": {
           "status": "CHANGES_REQUIRED",
           "finding": "Non-finite actfac string NaN accepted as configuration matched; malformed string raises raw ValueError",
           "evidence": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w24-review-preview/nonfinite_actfac_reproducer.json",
           "sha256": "4ea06a9a80cb16b4174cd574dfdaed27d142d425d77c488b012490a08de15d6c",
           "native": "NOT_RUN",
-          "next_action": "After tooling stage, repair finite numeric validation and add focused negative controls before final candidate integration"
+          "next_action": "After tooling stage, repair finite numeric validation and add focused negative controls before final candidate integration",
+          "historical": true,
+          "resolution": "Finite-value fix accepted with independent 4-case recheck and 271-test integration"
         },
         "main_nonfinite_retest": {
-          "status": "PASS_FOUR_CASES_FINAL_REGRESSION_PENDING",
+          "status": "PASS_FOUR_CASES_AND_FINAL_REGRESSION271_VERIFIED",
           "source_sha256": "3ded29a6581cc99a2db38db36b16729a96346af9c0544ced557244d4dfb6ab2a",
           "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w24-review-preview/nonfinite_actfac_main_retest.json",
           "sha256": "4b0dfcb28d7c0cfb66e5d0d6c26962e70b02e72049dba1db99f98b7e18e520e6",
           "native": "NOT_RUN"
         },
-        "original_acceptance_scope_note": "T047 includes flat/step plus UV-thermal-cooling state history; T058 requires explicitly estimated sources, separation of fit/validation and assumption sensitivity. Existing ValidationReport input_assumptions JSON is reusable; Markdown omission identified; no new implementation of that next gap yet."
+        "original_acceptance_scope_note": "T047 includes flat/step plus UV-thermal-cooling state history; T058 requires explicitly estimated sources, separation of fit/validation and assumption sensitivity. Existing ValidationReport input_assumptions JSON is reusable; Markdown omission identified; no new implementation of that next gap yet.",
+        "accepted_checkpoint": "docs/full_project_execution/w24/PHYSICAL_CONTROLS_SOFTWARE_CHECKPOINT.json",
+        "accepted_commit": "536b79b2a3178afc51432114ef7e81e8fd9c4e3c",
+        "final_regression_passed": 271
       },
       "W23": {
-        "status": "FROZEN_PENDING_MAIN_REVIEW",
+        "status": "MAIN_REVIEW_REPAIRS_REQUIRED",
         "checkpoint": "/Volumes/SSD/Comsol-MCP/execution-scratch/w23-qabs-frequency/frozen_checkpoint.json",
         "sha256": "b57ac713736f30f2d07689554d89f5c975ef62d8eeb42b09f20e6c8fdc5b32fa",
         "candidate_original": "/private/tmp/w23_qabs_frequency_producer_20260928/candidate",
@@ -1999,7 +2002,8 @@
         "java_compile": "PASS",
         "native": "NOT_RUN",
         "Qabs_production_registry": "EMPTY_UNVERIFIED",
-        "candidate_archive": "/Volumes/SSD/Comsol-MCP/tmp-migration-20260928/archives/w23_qabs_frequency_producer_20260928.tar"
+        "candidate_archive": "/Volumes/SSD/Comsol-MCP/tmp-migration-20260928/archives/w23_qabs_frequency_producer_20260928.tar",
+        "next_action": "After current T058 stage, repair omitted Java producer source in manifest and null output_association contract, then integrate and retest; see w23_frozen_main_review"
       }
     },
     "migration_plan": "/Volumes/SSD/Comsol-MCP/tmp-migration-20260928/migration-plan.json",
@@ -2017,7 +2021,7 @@
       "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/20260928T085002Z-580f0720.summary.json",
       "sha256": "51b802c5c713d2204cbb27626a6146ea3381bf35feff692b733a707bcd2d3591"
     },
-    "next_action": "Use same Luna executor to repair frozen W24 non-finite actfac validation, preserve original failure, and review/integrate physical-controls candidate using explicit next-stage test selection; then continue MASTER_GOAL without stage pauses",
+    "next_action": "Tooling accepted; reuse for current T058 and W23 repair/integration without repeating accepted tooling suite unless implementation changes",
     "main_post_commit_replay": {
       "status": "PASS",
       "tests": 9,
@@ -2030,6 +2034,28 @@
   "w24_physical_controls_checkpoint": {
     "status": "PASS_SCOPED_SOFTWARE",
     "path": "docs/full_project_execution/w24/PHYSICAL_CONTROLS_SOFTWARE_CHECKPOINT.json",
+    "native_acceptance": "NOT_RUN",
+    "github_sync": "536b79b2a3178afc51432114ef7e81e8fd9c4e3c"
+  },
+  "w23_frozen_main_review": {
+    "status": "REPAIR_REQUIRED_BEFORE_INTEGRATION",
+    "finding": "Frozen source manifest omits modified NativeW23Full3DFixture.java; incomplete four-file overlay would dispatch phases absent in published Java. Archived source matches compile hash. Three supplied overlay base hashes also stale; null test base unspecified.",
+    "audit_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w23-qabs-frequency/main-review-recovered/full_manifest_base_audit.json",
+    "recovered_source_root": "/Volumes/SSD/Comsol-MCP/execution-scratch/w23-qabs-frequency/main-review-recovered",
+    "next_action": "After T058 stage, same executor repairs complete source/overlay closure, integrates recovered candidate and runs bounded regression before publication.",
+    "native_acceptance": "NOT_RUN",
+    "additional_findings": [
+      {
+        "status": "REPAIR_REQUIRED",
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w23-qabs-frequency/main-review-recovered/java_python_output_association_finding.json",
+        "summary": "Successful native run would fail downstream route validation; existing synthetic PASS does not prove Java/Python serialization contract"
+      }
+    ]
+  },
+  "t058_assumption_report_checkpoint": {
+    "status": "PASS_SCOPED_SOFTWARE",
+    "path": "docs/full_project_execution/w24/T058_ASSUMPTION_REPORT_CHECKPOINT.json",
+    "original_T058_status": "PARTIAL",
     "native_acceptance": "NOT_RUN"
   }
 }
