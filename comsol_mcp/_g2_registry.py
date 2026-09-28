@@ -398,14 +398,6 @@ class ActionEntry:
                     "project_policy": "permissions and scheduler timeout caps only; unsupported resource/data policy fields are refused",
                     "model_attribution": "explicit outer execution.project_id at model create/adopt; legacy untagged revisions remain UNATTRIBUTED",
                 })
-            if self.operation_id in {"job.list", "job.log"}:
-                result["runtime_dispatch_contract"]["cursor"] = (
-                    "Base-10, zero-based offset encoded as a string; cursor is mutually exclusive with offset"
-                    if self.operation_id == "job.list"
-                    else "Base-10, zero-based event offset encoded as a string"
-                )
-            if self.operation_id == "job.list":
-                result["runtime_dispatch_contract"]["filter_fields"] = ["status", "project_id"]
             if self.operation_id == "job.cleanup":
                 result["runtime_dispatch_contract"].update({
                     "scope": "explicit job_ids only; every selected job must be terminal and have no linked job dependency",
@@ -423,6 +415,14 @@ class ActionEntry:
                     },
                     "additionalProperties": False,
                 }
+        if self.operation_id in {"job.list", "job.log"}:
+            result["runtime_dispatch_contract"]["cursor"] = (
+                "Base-10, zero-based offset encoded as a string; cursor is mutually exclusive with offset"
+                if self.operation_id == "job.list"
+                else "Base-10, zero-based event offset encoded as a string"
+            )
+        if self.operation_id == "job.list":
+            result["runtime_dispatch_contract"]["filter_fields"] = ["status", "project_id"]
         if self.operation_id == "desktop.status":
             result["runtime_dispatch_contract"] = {
                 "handler": "ControlDaemon DesktopCoordinator read-only status route",

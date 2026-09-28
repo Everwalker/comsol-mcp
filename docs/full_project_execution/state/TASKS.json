@@ -490,13 +490,15 @@
         "docs/full_project_execution/evidence/luna_control_fallback/pytest.log",
         "docs/full_project_execution/evidence/luna_job_cleanup_v4/junit.xml",
         "docs/full_project_execution/evidence/luna_job_cleanup_v4/pytest.log",
-        "docs/full_project_execution/project_session/f04_dispatch_control_checkpoint_20260927.json"
+        "docs/full_project_execution/project_session/f04_dispatch_control_checkpoint_20260927.json",
+        "docs/full_project_execution/project_session/JOB_CURSOR_CONTRACT_CHECKPOINT.json"
       ],
       "blockers": [],
       "execution_notes": [
         "Partial control-plane slice implemented and locally regression-tested: supported job.* actions have strict registry_call/operation_call fallback to the cached operation store while the engine queue is occupied.",
         "This evidence does not complete the task or any native six-target acceptance cell; remaining requirements stay open.",
-        "Added bounded cached job-control fallback plus terminal job-row cache compaction; remains partial and does not satisfy the work package or native target acceptance."
+        "Added bounded cached job-control fallback plus terminal job-row cache compaction; remains partial and does not satisfy the work package or native target acceptance.",
+        "Job list/log cursor descriptor branch repaired. Scoped control/registration tests:31 isolated PASS, main3 PASS. No native or full-W19 acceptance claimed."
       ],
       "note": "PARTIAL: F04 dispatch/control software checkpoint passed 164 focused synthetic tests. Unified scheduling, exact job/Worker binding, independent control observations and conservative process-birth checks are implemented. Cached session read routes do not prove live health. Six lifecycle mutations, platform adapters and native acceptance remain incomplete."
     },

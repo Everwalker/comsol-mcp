@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "stage": "job.list cursor runtime descriptor contract repair",
+  "status": "PASS_SCOPED_SOFTWARE",
+  "base_commit": "7d43f085d619192d03c84c566ac42b1a7ab1e506",
+  "root_cause": "Production descriptor omission: job.list/job.log cursor fields were nested beneath the experiment.inspect/experiment.case_result conditional. Runtime schema and dispatch were already correct; original descriptor assertion raised KeyError cursor.",
+  "files": [
+    {
+      "base_sha256": "36bfda855e6c62d109634c12ba1b6cb7426aca875d6c859f1f967f45bcd6e828",
+      "candidate_sha256": "c6a363f2edd02157ed1be803175411615d891c3d124db15a80ffb6575fad3e89",
+      "path": "comsol_mcp/_g2_registry.py"
+    },
+    {
+      "base_sha256": "5c441d050862fb0c87c9f5325785722448834527675a0e752880c6d813670fff",
+      "candidate_sha256": "22ec755e5e61a790691b244b5a617c4645ce654ce1e5fbd01f9f77c168101d56",
+      "path": "tests/test_registry_job_control_fallback.py"
+    }
+  ],
+  "candidate_receipt": {
+    "path": "/private/tmp/w21-job-cursor-7d43f08-candidate/FREEZE_RECEIPT.json",
+    "sha256": "495b5178c1c9a37a455fbdb0b0ca177ab576aceffa42e8b5b20c152917dc3794"
+  },
+  "verified_archive_file_count": 320,
+  "tests": [
+    {
+      "command": "/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -m pytest -q tests/test_registry_job_control_fallback.py::test_job_status_log_cancel_are_responsive_through_all_three_entrypoints --junitxml=/private/tmp/w21-job-cursor-7d43f08-candidate/original-three-route-junit.xml",
+      "junit": "original-three-route-junit.xml",
+      "junit_sha256": "5c74c8bb2e22d5c28a8bd0d4a46799f0014ddc1b10a26280e679c557174efa94",
+      "result": "1 passed; no skips"
+    },
+    {
+      "command": "/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -m pytest -q tests/test_registry_job_control_fallback.py --junitxml=/private/tmp/w21-job-cursor-7d43f08-candidate/job-control-module-final-junit.xml",
+      "junit": "job-control-module-final-junit.xml",
+      "junit_sha256": "0a102e475655ad5b8cd0946fabd1ceb9377329028785bede2e87b1d7544b75a4",
+      "result": "3 passed; no skips; includes bad cursor through direct, operation_call, registry_call"
+    },
+    {
+      "command": "/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -m pytest -q tests/test_registration.py tests/test_g2_w08_w12.py --junitxml=/private/tmp/w21-job-cursor-7d43f08-candidate/registry-contracts-junit.xml",
+      "junit": "registry-contracts-junit.xml",
+      "junit_sha256": "91d1c4fa7f11f24d2d8c925b08c02c48e8bc783df5c1832ec6689af6cef347d4",
+      "result": "28 passed; no skips"
+    }
+  ],
+  "preserved_base_failure": {
+    "command": "/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -m pytest -q tests/test_registry_job_control_fallback.py::test_job_status_log_cancel_are_responsive_through_all_three_entrypoints --junitxml=/private/tmp/w21-stage-cursor-base-failure-junit.xml",
+    "junit": "/private/tmp/w21-stage-cursor-base-failure-junit.xml",
+    "junit_sha256": "69a2da94e4bbf9f0b9af2c41e95f8ec5104371aa509539a62be1793ad1dda1d9",
+    "result": "1 failed; KeyError: runtime_dispatch_contract['cursor']"
+  },
+  "main_review": {
+    "diff": "Reviewed exact two-file patch; metadata branch fixed without dispatch changes",
+    "junit": "/private/tmp/w21-job-cursor-main-review-junit.xml",
+    "sha256": "43af8aa9d711f7c9bff61158cb88e3f86de327c74258dd3469770f97327dd49f",
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0
+  },
+  "replay": "python -m pytest -q tests/test_registry_job_control_fallback.py tests/test_registration.py tests/test_g2_w08_w12.py",
+  "limitations": "No broad full-suite run; no native COMSOL test; this fixes only descriptor metadata and adds route negatives.",
+  "next_action": "Continue original experiment.state_map/stage_run and remaining W01-W26 scope; final overall independent Reviewer remains pending."
+}

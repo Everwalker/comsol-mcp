@@ -106,6 +106,8 @@ def test_job_status_log_cancel_are_responsive_through_all_three_entrypoints(tmp_
         assert described["implementation_status"] == "SUPPORTED_UNVERIFIED"
         assert described["runtime_dispatch_contract"]["engine_queue"] == "bypassed"
         assert described["runtime_dispatch_contract"]["cursor"].startswith("Base-10")
+        registry_described = _g2_registry.registry_describe("job.list")
+        assert registry_described["runtime_dispatch_contract"]["cursor"] == described["runtime_dispatch_contract"]["cursor"]
         assert described["input_schema"]["properties"]["filter"]["additionalProperties"] is False
         assert described["input_schema"]["allOf"] == [{"not": {"required": ["cursor", "offset"]}}]
 
@@ -129,7 +131,6 @@ def test_registry_job_schema_and_identity_errors_do_not_queue_or_mutate(tmp_path
             _nested("registry_call", "job.status", {"job_id": ""}),
             _nested("registry_call", "job.resume", {"job_id": job_id}),
             _nested("registry_call", "job.list", {"filter": {"not_a_filter": "x"}}),
-            _nested("registry_call", "job.list", {"cursor": "../../1"}),
             {
                 "operation": "registry_call",
                 "arguments": {"operation_id": "job.status", "arguments": {"job_id": job_id}, "ignored": 1},
@@ -143,13 +144,15 @@ def test_registry_job_schema_and_identity_errors_do_not_queue_or_mutate(tmp_path
                 "INVALID_REQUEST", "UNSUPPORTED_OPERATION", "RESUME_SOURCE_NOT_FAILED",
             }, (request, result)
 
-        direct_bad = daemon.dispatch({
-            "operation": "job.list",
-            "arguments": {"cursor": "../../1"},
-            "execution": {},
-        })
-        assert direct_bad["success"] is False
-        assert direct_bad["error"]["code"] == "INVALID_REQUEST"
+        invalid_cursor_requests = [
+            {"operation": "job.list", "arguments": {"cursor": "../../1"}, "execution": {}},
+            _nested("operation_call", "job.list", {"cursor": "../../1"}),
+            _nested("registry_call", "job.list", {"cursor": "../../1"}),
+        ]
+        for request in invalid_cursor_requests:
+            invalid_cursor = daemon.dispatch(request)
+            assert invalid_cursor["success"] is False
+            assert invalid_cursor["error"]["code"] == "INVALID_REQUEST", (request, invalid_cursor)
 
         unauthorized = daemon.dispatch(_nested("registry_call", "job.cancel", {
             "job_id": job_id,

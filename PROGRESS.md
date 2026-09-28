@@ -4,13 +4,13 @@ Updated 2026-09-28 UTC. **Overall PARTIAL; execution continues through W26.** Th
 
 ## Current stage
 
-**W21 immutable stage-definition route: PASS for scoped software; W21/project overall PARTIAL.** `experiment.stage_define` now registers a complete immutable plan through public MCP, direct and fallback routes. Plans and unique stage indexes persist in one SQLite transaction, bound to project and full ModelRef; revision is separate. Multiple disjoint plans retry correctly after revision changes and database reopen. Registration invokes no Worker or solve and returns DECLARED_UNVERIFIED.
+**Job cursor contract repair: PASS for scoped software; project overall PARTIAL.** `job.list` and `job.log` now expose their cursor descriptions from the correct registry branch. Invalid cursors are rejected through direct, operation_call and registry_call routes. This resolves the baseline KeyError retained in the previous W21 checkpoint.
 
-**Actually executed:** 267 isolated tests PASS with two documented exclusions; main verified nine source files and306 unchanged dependencies, reran25 critical tests PASS and reproduced the original multi-plan bug as fixed. [Compact evidence and replay](docs/full_project_execution/project_session/STAGE_DEFINITION_SOFTWARE_CHECKPOINT.json). The historical Git-object test passed separately; the `job.list` cursor assertion fails on both clean base and candidate and remains an explicit unresolved defect.
+**Actually executed:** 31 isolated control/registration tests PASS; main reviewed both modified files, verified all 320 archived baseline files and reran the control module: 3 PASS. The original failing test also passed separately. [Compact evidence and replay](docs/full_project_execution/project_session/JOB_CURSOR_CONTRACT_CHECKPOINT.json). These are overlapping focused runs, not a full-suite or native acceptance.
 
-**Original stage_run/state_map and native variable/reference-state/continuity validation remain incomplete.** Platform/T021/T047 cells are unchanged. W24 v3 internal-state software is frozen for main review; W23 native CV power-integration evidence is being implemented. Native process cleanup authorization remains pending following automatic approval rejection.
+**Next:** continue original W21 `state_map`/`stage_run`; W23 CV power evidence software is under test. W24 V3 capture remains CHANGES_REQUIRED: main found shared mutable lineage/registry metadata, and production authentication accepted two in-place edits in the reproducer. The same Luna is repairing an isolated candidate. Native cleanup authorization and platform limitations remain unresolved; final independent overall Reviewer has not started.
 
-Latest previously published milestones: W23 explicit maps `dd452a6` (9 isolated/9 main tests,798 offline expression checks); W24 saved producer `d181e61` (142 isolated/142 integration tests); F16 objective/case artifacts `6dba12d`. These do not establish whole-project or scientific acceptance.
+Latest published stage: W21 immutable stage definitions `7d43f08`, scoped software only. Earlier W23 explicit maps `dd452a6`, W24 saved producer `d181e61`, and F16 objective/case artifacts `6dba12d` remain evidence of their stated scope only.
 
 ## Latest accepted software baseline
 
@@ -38,4 +38,4 @@ Earlier source checkpoints and failures remain in the existing state and linked 
 
 Continue the three Luna Max work streams: complete F16 weighted native evidence and original experiment reporting/model gaps; complete W23 radiation geometry, capture/quadrature/power-balance and original optics acceptance; complete W24 UV/gel/reference/viscoelastic implementation and remaining science. Publish each accepted software stage immediately. Then freeze isolated managed native candidates, execute their reviewed scope, complete all remaining W01–W26 work, and run a fresh independent overall review with repair/retest until accepted.
 
-The latest focused replay is in [STAGE_DEFINITION_SOFTWARE_CHECKPOINT.json](docs/full_project_execution/project_session/STAGE_DEFINITION_SOFTWARE_CHECKPOINT.json). Recover from GitHub and existing state. Last previously verified GitHub sync: dd452a6c63bb37d7e763b91d2528b75e91f8a5e2; this stage is recorded as synchronized only after post-push fetch and HEAD/origin-main equality.
+The latest focused replay is in [JOB_CURSOR_CONTRACT_CHECKPOINT.json](docs/full_project_execution/project_session/JOB_CURSOR_CONTRACT_CHECKPOINT.json). Recover from GitHub and existing state. Last previously verified GitHub sync: 7d43f085d619192d03c84c566ac42b1a7ab1e506; this stage is recorded as synchronized only after post-push fetch and HEAD/origin-main equality.

@@ -526,3 +526,7 @@ The 259-test candidate is CHANGES_REQUIRED. Main reproduced through actual Contr
 ### W21 stage-definition software closure
 
 Main verified 9 overlay files and306 unchanged dependency files;25 critical tests PASS. The original two-plan retry counterexample now returns IDEMPOTENT_EXISTING independently for both plans. The267-test isolated closure retains2 documented exclusions and the prior historical Git test result; job.list cursor KeyError is a preserved baseline defect, not a PASS. Declaration registration is complete only at software scope. Native semantics and original state_map/stage_run remain open. Compact checkpoint: `docs/full_project_execution/project_session/STAGE_DEFINITION_SOFTWARE_CHECKPOINT.json`.
+
+### Job cursor contract repair and W24 review finding
+
+The historical job.list cursor KeyError is fixed by moving cursor metadata to the correct registry branch. Two source/test files changed;31 focused isolated tests and3 main reruns passed. This is scoped software acceptance only. W24 V3 is not accepted: shared mutable lineage metadata permits in-place edits to alter the authentication registry as well. Production-path counterexample and next repair action are persisted in RESUME.json. Original frozen candidate and failed evidence remain preserved.
