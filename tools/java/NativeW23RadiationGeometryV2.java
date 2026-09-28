@@ -13,6 +13,8 @@ import com.comsol.model.Study;
 import com.comsol.model.StudyFeature;
 import com.comsol.model.physics.Physics;
 import com.comsol.model.physics.PhysicsFeature;
+import com.comsol.model.physics.FeatureInfo;
+import com.comsol.model.physics.FeatureInfoList;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -41,6 +43,14 @@ public final class NativeW23RadiationGeometryV2 {
     private static final String CV_PARTITION = "cvPartitionV2";
     private static final double[][] CV_LIMITS_UM = {{-19.0, 19.0}, {-5.5, 5.5}, {-5.5, 5.5}};
     private static final double CV_GEOMETRY_TOLERANCE_UM = 1.0e-7;
+    // Empty until a real 6.4 calibration is independently reviewed and pinned.
+    private static final String APPROVED_QABS_SCHEMA_ID = "";
+    private static final String APPROVED_QABS_CALIBRATION_SHA256 = "";
+    private static final String APPROVED_QABS_CALIBRATION_ROUTE_BINDING_SHA256 = "";
+    private static final String APPROVED_QABS_APPROVAL_EVIDENCE_SHA256 = "";
+    private static final int APPROVED_QABS_EXPRESSION_COLUMN = -1;
+    private static final int APPROVED_QABS_UNIT_COLUMN = -1;
+    private static final int APPROVED_QABS_MINIMUM_FEATURE_INFO_OWNERS = 2;
 
     private NativeW23RadiationGeometryV2() {}
 
@@ -52,7 +62,9 @@ public final class NativeW23RadiationGeometryV2 {
             return readControlVolumeTopologyForBox(model, COMPONENT, GEOMETRY);
         if ("cv_power_terms".equals(phase))
             return evaluateControlVolumePowerTerms(model, args);
-        throw new IllegalArgumentException("phase must be read_cv_topology or cv_power_terms");
+        if ("qabs_mapping_calibration".equals(phase))
+            return calibrateQabsMapping(model, args);
+        throw new IllegalArgumentException("phase must be read_cv_topology, qabs_mapping_calibration, or cv_power_terms");
     }
 
     public static Map<String, Object> configureDomainBackedNumericPort(
@@ -438,6 +450,17 @@ public final class NativeW23RadiationGeometryV2 {
                 readSelectedSolutionIdentity(model, datasetTag, solutionTag, outer, inner, solnum);
         if (!sourceIdentityMatchesCohort(selectedSolutionBefore, sourceBefore))
             throw new IllegalStateException("current native dataset/solution/tuple/date/parameters differ from the source cohort");
+        Map<String, Object> sourceFixture = requiredMap(
+                sourceBefore.get("fixture_explicit_configuration"), "source cohort fixture configuration");
+        Map<String, Object> sourcePhysics = requiredMap(sourceFixture.get("physics"), "source cohort physics");
+        Map<String, Object> sourceEquationInventory = requiredMap(
+                sourcePhysics.get("equation_view_inventory"), "source cohort Equation View inventory");
+        Map<String, Object> currentEquationInventory = physicsEquationInventory(
+                model.component(COMPONENT).physics("ewfd"));
+        if (!sameNestedValues(sourceEquationInventory, currentEquationInventory))
+            throw new IllegalStateException("current EWFD Equation View inventory differs from the source-field cohort");
+        Map<String, Object> qabsCheck = validateQabsContractAndCertificate(
+                model, args, sourceEquationInventory);
 
         List<Integer> faceIds = new ArrayList<>();
         Map<String, int[]> faceIdsByRole = new LinkedHashMap<>();
@@ -493,6 +516,7 @@ public final class NativeW23RadiationGeometryV2 {
         List<Map<String, Object>> numericalReadbacks = new ArrayList<>();
         Map<String, Object> volumeReadback = null;
         Map<String, Object> pinReadback = null;
+        Map<String, Object> qabsIntegralReadback = null;
         String operationFailure = "";
         String cleanupFailure = "";
         List<String> remainingTags = new ArrayList<>();
@@ -526,6 +550,14 @@ public final class NativeW23RadiationGeometryV2 {
             pinReadback = evaluateIntegral(model, "w23cv" + nonce + "p", "EvalGlobal",
                     datasetTag, solnum, outer, -1, new int[0], "ewfd.Pin", "W", numericalTags);
             numericalReadbacks.add(pinReadback);
+            if (Boolean.TRUE.equals(qabsCheck.get("integral_authorized"))) {
+                Map<String, Object> contract = requiredMap(args.get("q_abs_expression_contract"),
+                        "q_abs_expression_contract");
+                qabsIntegralReadback = evaluateIntegral(model, "w23cv" + nonce + "q", "IntVolume",
+                        datasetTag, solnum, outer, 3, interiorDomainIds,
+                        requiredString(contract.get("expression"), "Qabs expression"), "W", numericalTags);
+                numericalReadbacks.add(qabsIntegralReadback);
+            }
         } catch (RuntimeException error) {
             operationFailure = error.getClass().getName() + ": " + String.valueOf(error.getMessage());
         } finally {
@@ -561,11 +593,20 @@ public final class NativeW23RadiationGeometryV2 {
                 ? unavailableTerm("NOT_AVAILABLE_INTEGRATION_FAILED", "m^3") : volumeReadback);
         result.put("positive_incident_power", pinReadback == null
                 ? unavailableTerm("NOT_AVAILABLE_PIN_EVALUATION_FAILED", "W") : pinReadback);
-        result.put("q_abs_volume_integral", unavailableTerm(
-                "NOT_AVAILABLE_NATIVE_PHYSICS_FIELD_MAPPING_REQUIRED", "W"));
-        result.put("q_abs_field_mapping", Map.of(
-                "status", "UNVERIFIED", "expression", "NOT_PROVIDED",
-                "unit", "NOT_PROVIDED", "required_evidence", "same-model EWFD equation/field definition and native unit readback"));
+        if (qabsIntegralReadback == null) {
+            String expression = (String) qabsCheck.getOrDefault("expression", "NOT_PROVIDED");
+            Map<String, Object> unavailable = unavailableTerm(
+                    qabsCheck.containsKey("expression")
+                            ? "NOT_AVAILABLE_REVIEWED_COLUMN_MAPPING_CERTIFICATE_REQUIRED"
+                            : "NOT_AVAILABLE_EXPLICIT_QABS_CONTRACT_REQUIRED", "W");
+            unavailable.put("expression", expression);
+            result.put("q_abs_volume_integral", unavailable);
+        } else {
+            result.put("q_abs_volume_integral", qabsIntegralReadback);
+        }
+        result.put("q_abs_expression_contract", args.get("q_abs_expression_contract"));
+        result.put("q_abs_mapping_certificate", args.get("q_abs_mapping_certificate"));
+        result.put("q_abs_field_mapping", qabsCheck);
         result.put("normalization", "surface flux / positive native ewfd.Pin");
         result.put("absolute_balance_tolerance", "NOT_FROZEN");
         result.put("producer_step_binding", "UNVERIFIED");
@@ -581,9 +622,402 @@ public final class NativeW23RadiationGeometryV2 {
         result.put("status", operationFailure.isEmpty() && cleanupFailure.isEmpty()
                 ? "RAW_TERMS_READBACK_COMPLETE_QABS_AND_PRODUCER_UNVERIFIED"
                 : "INCOMPLETE_CV_POWER_TERMS_READBACK");
-        result.put("balance_residual", null);
+        Object residual = null;
+        if (qabsIntegralReadback != null && pinReadback != null
+                && pinReadback.get("value") instanceof Number
+                && ((Number) pinReadback.get("value")).doubleValue() > 0.0
+                && fluxByRole.size() == 6) {
+            double sum = 0.0;
+            for (Object value : fluxByRole.values()) {
+                if (!(value instanceof Number) || !Double.isFinite(((Number) value).doubleValue())) {
+                    sum = Double.NaN;
+                    break;
+                }
+                sum += ((Number) value).doubleValue();
+            }
+            if (Double.isFinite(sum) && qabsIntegralReadback.get("value") instanceof Number)
+                residual = (sum + ((Number) qabsIntegralReadback.get("value")).doubleValue())
+                        / ((Number) pinReadback.get("value")).doubleValue();
+        }
+        result.put("balance_residual", residual);
         result.put("scientific_acceptance", "NOT_RUN_QABS_MAPPING_PRODUCER_BINDING_AND_ABSOLUTE_TOLERANCE_OPEN");
         return result;
+    }
+
+    /** Validate a declared expression's unit and, separately, a reviewed row/column mapping certificate. */
+    private static Map<String, Object> validateQabsContractAndCertificate(
+            Model model, Map<String, Object> args, Map<String, Object> currentInventory) {
+        Object rawContract = args.get("q_abs_expression_contract");
+        Object rawCertificate = args.get("q_abs_mapping_certificate");
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("schema_id", "urn:comsol-mcp:w23:qabs-expression-contract:1.0.0");
+        result.put("integral_authorized", false);
+        result.put("mapping_status", "UNVERIFIED");
+        result.put("equation_inventory_matches_source", true);
+        if (rawContract == null) {
+            if (rawCertificate != null)
+                throw new IllegalArgumentException("Qabs mapping certificate cannot be supplied without an expression contract");
+            result.put("status", "NO_EXPLICIT_QABS_EXPRESSION_CONTRACT");
+            return result;
+        }
+        Map<String, Object> contract = requiredMap(rawContract, "q_abs_expression_contract");
+        if (!"urn:comsol-mcp:w23:qabs-expression-contract:1.0.0".equals(contract.get("schema_id"))
+                || !"ewfd".equals(contract.get("physics_tag"))
+                || !"W/m^3".equals(contract.get("expected_density_unit"))
+                || !"W".equals(contract.get("integral_unit"))
+                || Boolean.TRUE.equals(contract.get("declaration_is_mapping_evidence")))
+            throw new IllegalArgumentException("Qabs declaration must bind EWFD, density W/m^3, and integral W without claiming mapping proof");
+        String expression = requiredString(contract.get("expression"), "q_abs_expression_contract.expression");
+        String evaluatedUnit = model.param().evaluateUnit(expression);
+        result.put("expression", expression);
+        result.put("physics_tag", "ewfd");
+        result.put("declared_density_unit", contract.get("expected_density_unit"));
+        result.put("evaluated_density_unit", evaluatedUnit);
+        if (!"W/m^3".equals(evaluatedUnit))
+            throw new IllegalStateException("native evaluateUnit readback does not match the declared Qabs density unit W/m^3");
+        if (rawCertificate == null) {
+            result.put("status", "UNIT_READBACK_ONLY_MAPPING_CERTIFICATE_REQUIRED");
+            result.put("mapping_status", "UNVERIFIED");
+            return result;
+        }
+        if (APPROVED_QABS_SCHEMA_ID.isEmpty() || APPROVED_QABS_CALIBRATION_SHA256.isEmpty()
+                || APPROVED_QABS_CALIBRATION_ROUTE_BINDING_SHA256.isEmpty()
+                || APPROVED_QABS_APPROVAL_EVIDENCE_SHA256.isEmpty()
+                || APPROVED_QABS_EXPRESSION_COLUMN < 0 || APPROVED_QABS_UNIT_COLUMN < 0
+                || APPROVED_QABS_MINIMUM_FEATURE_INFO_OWNERS < 2)
+            throw new IllegalStateException("no independently approved Qabs column schema is pinned in this source version");
+        Map<String, Object> certificate = requiredMap(rawCertificate, "q_abs_mapping_certificate");
+        if (!"urn:comsol-mcp:w23:qabs-mapping-certificate:1.0.0".equals(certificate.get("schema_id"))
+                || !"PINNED_NATIVE_COLUMN_SCHEMA_EVIDENCE".equals(certificate.get("status"))
+                || !APPROVED_QABS_SCHEMA_ID.equals(certificate.get("approved_schema_id"))
+                || !"ewfd".equals(certificate.get("physics_tag"))
+                || !expression.equals(certificate.get("expression"))
+                || !"W/m^3".equals(certificate.get("density_unit"))
+                || !sameNestedValues(currentInventory, certificate.get("equation_inventory")))
+            throw new IllegalArgumentException("Qabs certificate is detached from the current raw native Equation View inventory");
+        Map<String, Object> approvedSchema = requiredMap(certificate.get("approved_schema"), "pinned Qabs schema");
+        Map<String, Object> calibration = requiredMap(certificate.get("calibration"), "Qabs calibration evidence");
+        Map<String, Object> calibrationSchema = requiredMap(calibration.get("schema_candidate"), "Qabs calibrated schema candidate");
+        Map<String, Object> calibrationColumns = requiredMap(calibrationSchema.get("column_indices"), "Qabs calibrated columns");
+        Map<String, Object> calibrationCrossFeature = requiredMap(
+                calibrationSchema.get("cross_feature_comparison"), "Qabs cross-FeatureInfo comparison");
+        Object rawControls = calibrationSchema.get("control_expressions");
+        Map<String, Object> approvedColumns = requiredMap(approvedSchema.get("column_indices"), "pinned Qabs columns");
+        Map<String, Object> certificateColumns = requiredMap(certificate.get("column_indices"), "Qabs certificate columns");
+        if (!"NATIVE_CALIBRATION_ROUTE_VALIDATED".equals(calibration.get("status"))
+                || !APPROVED_QABS_CALIBRATION_SHA256.equals(calibration.get("readback_sha256"))
+                || !APPROVED_QABS_CALIBRATION_SHA256.equals(approvedSchema.get("calibration_readback_sha256"))
+                || !APPROVED_QABS_CALIBRATION_ROUTE_BINDING_SHA256.equals(
+                        approvedSchema.get("calibration_route_binding_sha256"))
+                || !"6.4.0.293".equals(approvedSchema.get("comsol_version"))
+                || !Integer.valueOf(APPROVED_QABS_EXPRESSION_COLUMN).equals(calibrationColumns.get("expression"))
+                || !Integer.valueOf(APPROVED_QABS_UNIT_COLUMN).equals(calibrationColumns.get("unit"))
+                || !sameNestedValues(approvedColumns, calibrationColumns)
+                || !sameNestedValues(approvedColumns, certificateColumns)
+                || !"AT_LEAST_TWO_DISTINCT_FEATUREINFO_OWNERS".equals(calibrationCrossFeature.get("status"))
+                || !Integer.valueOf(APPROVED_QABS_MINIMUM_FEATURE_INFO_OWNERS)
+                        .equals(approvedSchema.get("minimum_distinct_feature_info_owners"))
+                || !(calibrationCrossFeature.get("distinct_owner_count") instanceof Number)
+                || ((Number) calibrationCrossFeature.get("distinct_owner_count")).intValue()
+                        < APPROVED_QABS_MINIMUM_FEATURE_INFO_OWNERS
+                || !Arrays.asList(Map.of("expression", "ewfd.Ex", "expected_unit", "V/m"),
+                        Map.of("expression", "ewfd.Hx", "expected_unit", "A/m")).equals(rawControls)
+                || !APPROVED_QABS_APPROVAL_EVIDENCE_SHA256.equals(approvedSchema.get("approval_evidence_sha256"))
+                || !(approvedSchema.get("approval_evidence_sha256") instanceof String)
+                || !((String) approvedSchema.get("approval_evidence_sha256")).matches("[0-9a-f]{64}"))
+            throw new IllegalArgumentException("Qabs mapping certificate does not match the pinned calibration schema identity");
+        Map<String, Object> owner = requiredMap(certificate.get("feature_info_owner"), "Qabs feature-info owner");
+        String ownerPath = requiredString(owner.get("parent_path"), "Qabs owner parent_path");
+        String ownerTag = requiredString(owner.get("feature_info_tag"), "Qabs owner feature_info_tag");
+        int rowIndex = requiredPositiveOrZeroIndex(certificate.get("row_index"), "Qabs row_index");
+        Map<String, Object> columns = certificateColumns;
+        int expressionColumn = requiredPositiveOrZeroIndex(columns.get("expression"), "Qabs expression column");
+        int unitColumn = requiredPositiveOrZeroIndex(columns.get("unit"), "Qabs unit column");
+        if (expressionColumn == unitColumn)
+            throw new IllegalArgumentException("Qabs expression and unit must use distinct reviewed Equation View columns");
+        List<Map<String, Object>> currentControlObservations = new ArrayList<>();
+        List<Map<String, Object>> currentControlUnitReadbacks = new ArrayList<>();
+        List<Map<String, String>> knownControlSpecs = Arrays.asList(
+                Map.of("expression", "ewfd.Ex", "expected_unit", "V/m"),
+                Map.of("expression", "ewfd.Hx", "expected_unit", "A/m"));
+        for (Map<String, String> control : knownControlSpecs) {
+            String controlExpression = (String) control.get("expression");
+            String expectedUnit = (String) control.get("expected_unit");
+            String controlEvaluatedUnit = model.param().evaluateUnit(controlExpression);
+            if (!expectedUnit.equals(controlEvaluatedUnit))
+                throw new IllegalStateException("known Qabs schema control expression unit changed");
+            Map<String, Object> observed = findEquationExpressionUnit(currentInventory, controlExpression, expectedUnit);
+            if (observed == null
+                    || !Integer.valueOf(expressionColumn).equals(observed.get("expression_column"))
+                    || !Integer.valueOf(unitColumn).equals(observed.get("unit_column")))
+                throw new IllegalStateException("known Qabs control row does not match the pinned current column schema");
+            currentControlObservations.add(observed);
+            currentControlUnitReadbacks.add(Map.of("expression", controlExpression,
+                    "expected_unit", expectedUnit, "evaluated_unit", controlEvaluatedUnit,
+                    "source", "Model.param().evaluateUnit"));
+        }
+        Map<String, Object> currentTargetObservation = findEquationExpressionUnit(
+                currentInventory, expression, "W/m^3");
+        if (currentTargetObservation == null
+                || !ownerPath.equals(currentTargetObservation.get("parent_path"))
+                || !ownerTag.equals(currentTargetObservation.get("feature_info_tag"))
+                || !Integer.valueOf(rowIndex).equals(currentTargetObservation.get("row_index"))
+                || !Integer.valueOf(expressionColumn).equals(currentTargetObservation.get("expression_column"))
+                || !Integer.valueOf(unitColumn).equals(currentTargetObservation.get("unit_column")))
+            throw new IllegalStateException("Qabs target row differs from its pinned current inventory owner or coordinates");
+        List<Map<String, Object>> currentAllObservations = new ArrayList<>(currentControlObservations);
+        currentAllObservations.add(currentTargetObservation);
+        Map<String, Object> currentCrossFeature = crossFeatureSummary(currentAllObservations);
+        if (!sameNestedValues(calibrationSchema.get("control_observations"), currentControlObservations)
+                || !sameNestedValues(calibrationSchema.get("target_observation"), currentTargetObservation)
+                || !sameNestedValues(calibrationCrossFeature, currentCrossFeature))
+            throw new IllegalStateException("Qabs calibration control/target/cross-feature evidence differs from current native rows");
+        List<?> inventoryEntries = (List<?>) currentInventory.get("entries");
+        int ownerMatches = 0, expressionOccurrences = 0;
+        List<?> selectedRows = null;
+        for (Object rawEntry : inventoryEntries) {
+            Map<String, Object> entry = requiredMap(rawEntry, "Equation View entry");
+            if (ownerPath.equals(entry.get("parent_path")) && ownerTag.equals(entry.get("feature_info_tag"))) {
+                ownerMatches++;
+                Object rows = entry.get("rows");
+                if (!(rows instanceof List)) throw new IllegalStateException("raw Equation View rows are malformed");
+                selectedRows = (List<?>) rows;
+            }
+            Object rows = entry.get("rows");
+            if (!(rows instanceof List)) throw new IllegalStateException("raw Equation View rows are malformed");
+            for (Object rawRow : (List<?>) rows) {
+                if (!(rawRow instanceof List)) throw new IllegalStateException("raw Equation View row is malformed");
+                List<?> cells = (List<?>) rawRow;
+                if (expressionColumn < cells.size() && expression.equals(cells.get(expressionColumn)))
+                    expressionOccurrences++;
+            }
+        }
+        if (ownerMatches != 1 || selectedRows == null || rowIndex >= selectedRows.size())
+            throw new IllegalArgumentException("Qabs owner path/tag/row is absent or ambiguous in the current Equation View");
+        Object selectedRow = selectedRows.get(rowIndex);
+        if (!(selectedRow instanceof List)) throw new IllegalStateException("selected Qabs Equation View row is malformed");
+        List<?> cells = (List<?>) selectedRow;
+        if (Math.max(expressionColumn, unitColumn) >= cells.size()
+                || !expression.equals(cells.get(expressionColumn))
+                || !"W/m^3".equals(cells.get(unitColumn)) || expressionOccurrences != 1)
+            throw new IllegalArgumentException("reviewed Qabs expression/unit columns do not uniquely match current raw rows");
+        if (certificate.get("equation_inventory_sha256") instanceof String) {
+            String sha = (String) certificate.get("equation_inventory_sha256");
+            if (!sha.matches("[0-9a-f]{64}"))
+                throw new IllegalArgumentException("Qabs Equation View inventory digest is malformed");
+        } else {
+            throw new IllegalArgumentException("Qabs Equation View inventory digest is missing");
+        }
+        Map<String, Object> sourceRoute = requiredMap(certificate.get("source_route"), "Qabs source route");
+        Map<String, Object> calibrationRoute = requiredMap(calibration.get("route_binding"), "Qabs calibration route binding");
+        if (sourceRoute.isEmpty() || calibrationRoute.isEmpty())
+            throw new IllegalArgumentException("Qabs schema certificate lacks calibration and current source-route bindings");
+        result.put("status", "PINNED_COLUMN_CERTIFICATE_AND_NATIVE_UNIT_READBACK_MATCH");
+        result.put("mapping_status", "CERTIFICATE_BOUND_TO_CURRENT_NATIVE_EQUATION_VIEW");
+        result.put("approved_schema_id", APPROVED_QABS_SCHEMA_ID);
+        result.put("approval_evidence_sha256", approvedSchema.get("approval_evidence_sha256"));
+        result.put("equation_inventory_sha256", certificate.get("equation_inventory_sha256"));
+        result.put("feature_info_owner", owner);
+        result.put("row_index", rowIndex);
+        result.put("column_indices", columns);
+        result.put("control_unit_readbacks", currentControlUnitReadbacks);
+        result.put("control_row_observations", currentControlObservations);
+        result.put("target_row_observation", currentTargetObservation);
+        result.put("cross_feature_comparison", currentCrossFeature);
+        result.put("integral_authorized", true);
+        return result;
+    }
+
+    /** Read-only native calibration recipe. A candidate never becomes an approved production schema here. */
+    private static Map<String, Object> calibrateQabsMapping(Model model, Map<String, Object> args) {
+        Map<String, Object> managedIdentity = readManagedIdentity(model, args);
+        Map<String, Object> source = requiredMap(args.get("source"), "source");
+        String datasetTag = requiredString(source.get("dataset_id"), "source.dataset_id");
+        String solutionTag = requiredString(source.get("solution_id"), "source.solution_id");
+        int outer = requiredPositiveIndex(source.get("outer_index"), "source.outer_index");
+        int inner = requiredPositiveIndex(source.get("inner_index"), "source.inner_index");
+        int solnum = requiredPositiveIndex(source.get("solnum"), "source.solnum");
+        if (inner != solnum) throw new IllegalArgumentException("Qabs calibration selected inner index must equal solnum");
+        Map<String, Object> nativeIdentity = readSelectedSolutionIdentity(
+                model, datasetTag, solutionTag, outer, inner, solnum);
+        Map<String, Object> stored = requiredMap(nativeIdentity.get("stored_solution"), "native stored solution");
+        Map<String, Object> contract = requiredMap(args.get("q_abs_expression_contract"), "q_abs_expression_contract");
+        if (!"urn:comsol-mcp:w23:qabs-expression-contract:1.0.0".equals(contract.get("schema_id"))
+                || !"ewfd".equals(contract.get("physics_tag"))
+                || !"W/m^3".equals(contract.get("expected_density_unit"))
+                || !"W".equals(contract.get("integral_unit")))
+            throw new IllegalArgumentException("exact EWFD W/m^3 candidate expression contract is required");
+        String targetExpression = requiredString(contract.get("expression"), "q_abs_expression_contract.expression");
+        List<Map<String, Object>> controls = List.of(
+                Map.of("expression", "ewfd.Ex", "expected_unit", "V/m"),
+                Map.of("expression", "ewfd.Hx", "expected_unit", "A/m"));
+        if (!sameNestedValues(args.get("control_expressions"), controls)
+                || !stored.get("computation_version").equals(args.get("comsol_version_expected")))
+            throw new IllegalArgumentException("calibration controls/version differ from the frozen route recipe");
+        Map<String, Object> inventory = physicsEquationInventory(model.component(COMPONENT).physics("ewfd"));
+        List<Map<String, Object>> controlReadbacks = new ArrayList<>();
+        List<Map<String, Object>> controlObservations = new ArrayList<>();
+        for (Map<String, Object> control : controls) {
+            String expression = (String) control.get("expression");
+            String expectedUnit = (String) control.get("expected_unit");
+            String evaluatedUnit = model.param().evaluateUnit(expression);
+            Map<String, Object> observation = findEquationExpressionUnit(inventory, expression, expectedUnit);
+            controlReadbacks.add(Map.of("expression", expression, "expected_unit", expectedUnit,
+                    "evaluated_unit", evaluatedUnit == null ? "NOT_AVAILABLE" : evaluatedUnit,
+                    "source", "Model.param().evaluateUnit"));
+            if (observation == null || !expectedUnit.equals(evaluatedUnit)) {
+                controlObservations.add(Map.of("expression", expression,
+                        "expected_unit", expectedUnit, "row_observation", "NOT_UNIQUE_OR_MISSING"));
+            } else {
+                controlObservations.add(observation);
+            }
+        }
+        String targetUnit = model.param().evaluateUnit(targetExpression);
+        Map<String, Object> targetObservation = findEquationExpressionUnit(
+                inventory, targetExpression, "W/m^3");
+        List<Map<String, Object>> rowControls = new ArrayList<>();
+        for (Map<String, Object> control : controls)
+            rowControls.add(Map.of("expression", control.get("expression"),
+                    "expected_unit", control.get("expected_unit")));
+        List<Map<String, Object>> allObservations = new ArrayList<>(controlObservations);
+        if (targetObservation != null) allObservations.add(targetObservation);
+        Map<String, Object> crossFeatureComparison = crossFeatureSummary(allObservations);
+        Map<String, Object> schemaCandidate = null;
+        int[][] locations = new int[3][2];
+        boolean complete = controlReadbacks.size() == 2;
+        for (int index = 0; index < 2; index++) {
+            Map<String, Object> controlReadback = controlReadbacks.get(index);
+            Map<String, Object> observation = controlObservations.get(index);
+            if (!controlReadback.get("expected_unit").equals(controlReadback.get("evaluated_unit"))
+                    || observation.get("row_index") == null) {
+                complete = false;
+                continue;
+            }
+            locations[index][0] = ((Number) observation.get("expression_column")).intValue();
+            locations[index][1] = ((Number) observation.get("unit_column")).intValue();
+        }
+        if (targetObservation == null || !"W/m^3".equals(targetUnit)) complete = false;
+        if (complete) {
+            locations[2][0] = ((Number) targetObservation.get("expression_column")).intValue();
+            locations[2][1] = ((Number) targetObservation.get("unit_column")).intValue();
+            if (!Arrays.equals(locations[0], locations[1]) || !Arrays.equals(locations[0], locations[2]))
+                complete = false;
+        }
+        if (((Number) crossFeatureComparison.get("distinct_owner_count")).intValue() < 2)
+            complete = false;
+        if (complete) {
+            schemaCandidate = new LinkedHashMap<>();
+            schemaCandidate.put("column_indices", Map.of("expression", locations[0][0], "unit", locations[0][1]));
+            schemaCandidate.put("control_expressions", rowControls);
+            schemaCandidate.put("control_observations", controlObservations);
+            schemaCandidate.put("target_observation", targetObservation);
+            schemaCandidate.put("cross_feature_comparison", crossFeatureComparison);
+        }
+        Map<String, Object> targetUnitReadback = new LinkedHashMap<>();
+        targetUnitReadback.put("expression", targetExpression);
+        targetUnitReadback.put("expected_unit", contract.get("expected_density_unit"));
+        targetUnitReadback.put("evaluated_unit", targetUnit == null ? "NOT_AVAILABLE" : targetUnit);
+        targetUnitReadback.put("source", "Model.param().evaluateUnit");
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("schema_id", "urn:comsol-mcp:w23:qabs-mapping-calibration:1.0.0");
+        result.put("native_result", "COMSOL_NATIVE_QABS_MAPPING_CALIBRATION_READBACK");
+        result.put("status", schemaCandidate == null
+                ? "CANDIDATE_MAPPING_UNRESOLVED" : "CANDIDATE_SCHEMA_NEEDS_INDEPENDENT_REVIEW");
+        result.put("study_or_solver_invoked", false);
+        result.put("model_mutated", false);
+        result.put("managed_identity", managedIdentity);
+        result.put("dataset_tag", datasetTag);
+        result.put("solution_tag", solutionTag);
+        result.put("selected_tuple", Map.of("outer_index", outer, "inner_index", inner, "solnum", solnum));
+        result.put("native_source_identity", nativeIdentity);
+        result.put("comsol_version", stored.get("computation_version"));
+        result.put("q_abs_expression_contract", contract);
+        result.put("control_expressions", rowControls);
+        result.put("control_unit_readbacks", controlReadbacks);
+        result.put("control_row_observations", controlObservations);
+        result.put("equation_view_inventory", inventory);
+        result.put("target_unit_readback", targetUnitReadback);
+        result.put("target_row_observation", targetObservation);
+        result.put("cross_feature_comparison", crossFeatureComparison);
+        result.put("schema_candidate", schemaCandidate);
+        result.put("production_schema_approval", "NOT_APPROVED_IN_CALIBRATION_ROUTE");
+        return result;
+    }
+
+    private static Map<String, Object> crossFeatureSummary(List<Map<String, Object>> observations) {
+        Map<String, Map<String, Object>> owners = new LinkedHashMap<>();
+        for (Map<String, Object> observation : observations) {
+            Object rawPath = observation.get("parent_path");
+            Object rawTag = observation.get("feature_info_tag");
+            if (!(rawPath instanceof String) || !(rawTag instanceof String)) continue;
+            String key = rawPath + "\u0000" + rawTag;
+            Map<String, Object> owner = new LinkedHashMap<>();
+            owner.put("parent_path", rawPath);
+            owner.put("feature_info_tag", rawTag);
+            owners.put(key, owner);
+        }
+        List<String> keys = new ArrayList<>(owners.keySet());
+        Collections.sort(keys);
+        List<Map<String, Object>> rows = new ArrayList<>();
+        for (String key : keys) rows.add(owners.get(key));
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("status", rows.size() >= 2
+                ? "AT_LEAST_TWO_DISTINCT_FEATUREINFO_OWNERS"
+                : "INSUFFICIENT_DISTINCT_FEATUREINFO_OWNERS");
+        result.put("distinct_owner_count", rows.size());
+        result.put("owners", rows);
+        return result;
+    }
+
+    private static Map<String, Object> readManagedIdentity(Model model, Map<String, Object> args) {
+        Map<String, Object> supplied = requiredMap(args.get("managed_identity"), "managed_identity");
+        String projectId = requiredString(supplied.get("project_id"), "project_id");
+        String modelTag = requiredString(supplied.get("model_tag"), "model_tag");
+        if (!modelTag.equals(model.tag()))
+            throw new IllegalStateException("managed Model tag differs from the native Model");
+        Map<String, Object> modelRef = requiredMap(supplied.get("model_ref"), "managed ModelRef");
+        Object rawRevision = supplied.get("expected_revision");
+        if (!(rawRevision instanceof Number) || rawRevision instanceof Boolean
+                || ((Number) rawRevision).doubleValue() != ((Number) rawRevision).longValue()
+                || ((Number) rawRevision).longValue() < 0)
+            throw new IllegalArgumentException("managed expected revision must be a nonnegative integer");
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("project_id", projectId);
+        result.put("model_ref", modelRef);
+        result.put("model_tag", modelTag);
+        result.put("expected_revision", ((Number) rawRevision).longValue());
+        return result;
+    }
+
+    private static Map<String, Object> findEquationExpressionUnit(
+            Map<String, Object> inventory, String expression, String expectedUnit) {
+        List<?> entries = (List<?>) inventory.get("entries");
+        List<Map<String, Object>> hits = new ArrayList<>();
+        for (Object rawEntry : entries) {
+            Map<String, Object> entry = requiredMap(rawEntry, "Equation View entry");
+            Object rawRows = entry.get("rows");
+            if (!(rawRows instanceof List)) throw new IllegalStateException("Equation View rows are unavailable");
+            List<?> rows = (List<?>) rawRows;
+            for (int rowIndex = 0; rowIndex < rows.size(); rowIndex++) {
+                Object rawRow = rows.get(rowIndex);
+                if (!(rawRow instanceof List)) throw new IllegalStateException("Equation View row is malformed");
+                List<?> row = (List<?>) rawRow;
+                for (int expressionColumn = 0; expressionColumn < row.size(); expressionColumn++) {
+                    if (!expression.equals(row.get(expressionColumn))) continue;
+                    for (int unitColumn = 0; unitColumn < row.size(); unitColumn++) {
+                        if (expressionColumn == unitColumn || !expectedUnit.equals(row.get(unitColumn))) continue;
+                        Map<String, Object> hit = new LinkedHashMap<>();
+                        hit.put("parent_path", entry.get("parent_path"));
+                        hit.put("feature_info_tag", entry.get("feature_info_tag"));
+                        hit.put("row_index", rowIndex);
+                        hit.put("expression_column", expressionColumn);
+                        hit.put("unit_column", unitColumn);
+                        hits.add(hit);
+                    }
+                }
+            }
+        }
+        return hits.size() == 1 ? hits.get(0) : null;
     }
 
     private static Map<String, Object> evaluateIntegral(
@@ -658,6 +1092,65 @@ public final class NativeW23RadiationGeometryV2 {
         value.put("value", null);
         value.put("expression", "NOT_PROVIDED");
         return value;
+    }
+
+    /** Preserve raw FeatureInfo rows and owner paths without inventing column labels. */
+    private static Map<String, Object> physicsEquationInventory(Physics physics) {
+        List<Map<String, Object>> entries = new ArrayList<>();
+        collectPhysicsEquationEntries(physics, physics.tag(), "Physics", entries);
+        for (String tag : physics.feature().tags())
+            collectPhysicsEquationTree(physics.feature(tag), tag, entries);
+        Map<String, Object> output = new LinkedHashMap<>();
+        output.put("schema_id", "urn:comsol-mcp:w23:physics-equation-view-raw-inventory:1.0.0");
+        output.put("physics_tag", physics.tag());
+        output.put("feature_info_table_id", "Expression");
+        output.put("options", Arrays.asList("all"));
+        output.put("column_semantics", "NOT_EXPOSED_BY_FEATUREINFO_GETINFOTABLE");
+        output.put("mapping_authentication", "NOT_AUTHENTICATED");
+        output.put("entries", entries);
+        return output;
+    }
+
+    private static void collectPhysicsEquationTree(
+            PhysicsFeature feature, String path, List<Map<String, Object>> entries) {
+        collectPhysicsEquationEntries(feature, path, feature.getType(), entries);
+        for (String child : feature.feature().tags())
+            collectPhysicsEquationTree(feature.feature(child), path + "/" + child, entries);
+    }
+
+    private static void collectPhysicsEquationEntries(
+            com.comsol.model.physics.EquationViewParent parent, String parentPath,
+            String parentType, List<Map<String, Object>> entries) {
+        FeatureInfoList list = parent.featureInfo();
+        if (list == null || list.tags() == null)
+            throw new IllegalStateException("Equation View FeatureInfo tag inventory is unavailable");
+        for (String tag : list.tags()) {
+            FeatureInfo info = parent.featureInfo(tag);
+            if (info == null)
+                throw new IllegalStateException("Equation View FeatureInfo entry disappeared during readback");
+            String[][] rawRows = info.getInfoTable("Expression", "all");
+            if (rawRows == null) throw new IllegalStateException("FeatureInfo returned no raw Expression table");
+            List<List<String>> rows = new ArrayList<>();
+            List<Integer> widths = new ArrayList<>();
+            for (String[] rawRow : rawRows) {
+                if (rawRow == null) throw new IllegalStateException("FeatureInfo Expression table contains a null row");
+                List<String> row = new ArrayList<>(Arrays.asList(rawRow));
+                rows.add(row);
+                widths.add(row.size());
+            }
+            Map<String, Object> entry = new LinkedHashMap<>();
+            entry.put("parent_path", parentPath);
+            entry.put("parent_type", parentType);
+            entry.put("feature_info_tag", info.tag());
+            entry.put("feature_info_name", info.name());
+            entry.put("table_id", "Expression");
+            entry.put("options", Arrays.asList("all"));
+            entry.put("row_count", rows.size());
+            entry.put("row_widths", widths);
+            entry.put("rows", rows);
+            entry.put("column_semantics", "NOT_EXPOSED_BY_FEATUREINFO_GETINFOTABLE");
+            entries.add(entry);
+        }
     }
 
     private static Map<String, Object> sourceFieldSource(Map<String, Object> readback) {
@@ -845,6 +1338,14 @@ public final class NativeW23RadiationGeometryV2 {
                 || ((Number) value).doubleValue() != ((Number) value).intValue()
                 || ((Number) value).intValue() < 1)
             throw new IllegalArgumentException(label + " must be a positive exact integer");
+        return ((Number) value).intValue();
+    }
+
+    private static int requiredPositiveOrZeroIndex(Object value, String label) {
+        if (!(value instanceof Number) || value instanceof Boolean
+                || ((Number) value).doubleValue() != ((Number) value).intValue()
+                || ((Number) value).intValue() < 0)
+            throw new IllegalArgumentException(label + " must be a nonnegative exact integer");
         return ((Number) value).intValue();
     }
 

@@ -13,6 +13,8 @@ import com.comsol.model.SolverFeature;
 import com.comsol.model.SolverSequence;
 import com.comsol.model.physics.Physics;
 import com.comsol.model.physics.PhysicsFeature;
+import com.comsol.model.physics.FeatureInfo;
+import com.comsol.model.physics.FeatureInfoList;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -37,6 +39,8 @@ public final class NativeW23Full3DFixture {
     private static final String GEOMETRY = "geom3d";
     private static final String BMA_PROBE_STUDY = "std3dBmaOutputProbe";
     private static final String BMA_PROBE_STEP = "bmaOutputProbe";
+    private static final String FULL_BMA_FREQUENCY_STUDY = "std3dFullBmaFrequencyProducerV1";
+    private static final String FULL_BMA_FREQUENCY_DATASET = "dsetW23Full3dBmaFrequencyV1";
     private static final double PORT_SECTION_HALF_LENGTH_UM = 0.01;
     private static final double PORT_SELECTION_RADIAL_MARGIN_UM = 0.02;
     private static final String[] VECTOR_FIELDS = {
@@ -68,11 +72,15 @@ public final class NativeW23Full3DFixture {
         if ("solution_inventory".equals(phase)) return solutionInventory(model);
         if ("prepare_bma_output_probe".equals(phase)) return prepareBmaOutputProbe(model, args);
         if ("run_bma_output_probe".equals(phase)) return runBmaOutputProbe(model, args);
+        if ("prepare_full_bma_frequency_producer".equals(phase))
+            return prepareFullBmaFrequencyProducer(model, args);
+        if ("run_full_bma_frequency_producer".equals(phase))
+            return runFullBmaFrequencyProducer(model, args);
         if ("bma_basis_fields".equals(phase)) return bmaBasisFields(model, args);
         if ("raw_fields".equals(phase)) return rawFields(model, args);
         if ("save".equals(phase)) return save(model, args);
         if ("identity".equals(phase)) return identity(model);
-        throw new IllegalArgumentException("phase must be build, apply_case, solution_inventory, raw_fields, bma_basis_fields, save, or identity");
+        throw new IllegalArgumentException("phase must be build, apply_case, solution_inventory, raw_fields, bma_basis_fields, prepare/run full BMA-Frequency producer, save, or identity");
     }
 
     private static Map<String, Object> build(Model model, Map<String, Object> args) {
@@ -699,6 +707,177 @@ public final class NativeW23Full3DFixture {
         return result;
     }
 
+    /** Clone the frozen full BMA/BMA/Frequency graph into a fresh Study; no solve. */
+    private static Map<String, Object> prepareFullBmaFrequencyProducer(
+            Model model, Map<String, Object> args) {
+        Map<String, Object> managedIdentity = readManagedIdentity(model, args);
+        if (!Arrays.asList(model.component().tags()).contains(COMPONENT)
+                || !Arrays.asList(model.study().tags()).contains("std3d"))
+            throw new IllegalStateException("owned full-3D fixture and original std3d study are required");
+        if (Arrays.asList(model.study().tags()).contains(FULL_BMA_FREQUENCY_STUDY)
+                || Arrays.asList(model.result().dataset().tags()).contains(FULL_BMA_FREQUENCY_DATASET))
+            throw new IllegalStateException("fresh full BMA-Frequency producer tags already exist; refusing overwrite/replay");
+
+        List<Map<String, Object>> baseline = fullStudyStepReadback(model, "std3d");
+        requireFrozenFullBmaFrequencyBaseline(baseline);
+        Set<String> existingSolvers = new LinkedHashSet<>(Arrays.asList(model.sol().tags()));
+        Study study = model.study().create(FULL_BMA_FREQUENCY_STUDY);
+        List<String> clonedStepTags = Arrays.asList("producerBmaInput3d", "producerBmaOutput3d", "producerFreq3d");
+        for (int index = 0; index < baseline.size(); index++) {
+            Map<String, Object> row = baseline.get(index);
+            StudyFeature target = study.feature().create(clonedStepTags.get(index), (String) row.get("feature_type"));
+            copyFrozenStudyStepProperties(target, row);
+        }
+        List<Map<String, Object>> clonedSteps = fullStudyStepReadback(model, FULL_BMA_FREQUENCY_STUDY);
+        if (!normalizeClonedStudyTags(clonedSteps, baseline).equals(baseline))
+            throw new IllegalStateException("new study readback differs from copied original std3d properties");
+
+        study.createAutoSequences("sol");
+        String[] sequenceTags = study.getSolverSequences("SolverSequence");
+        if (sequenceTags == null || sequenceTags.length != 1 || sequenceTags[0] == null
+                || sequenceTags[0].trim().isEmpty() || existingSolvers.contains(sequenceTags[0]))
+            throw new IllegalStateException("new full BMA-Frequency study did not generate one fresh solver sequence");
+        SolverSequence sequence = model.sol(sequenceTags[0]);
+        List<String> stepTags = Arrays.asList("producerBmaInput3d", "producerBmaOutput3d", "producerFreq3d");
+        Map<String, Object> sequenceReadback = fullBmaFrequencySequenceReadback(
+                sequence, FULL_BMA_FREQUENCY_STUDY, stepTags);
+        Map<String, Object> preSolveState = solutionState(sequence, sequenceTags[0]);
+        if (!(preSolveState.get("solution_pairs") instanceof List)
+                || !((List<?>) preSolveState.get("solution_pairs")).isEmpty())
+            throw new IllegalStateException("fresh full BMA-Frequency sequence already contains solutions");
+
+        PropFeature dataset = model.result().dataset().create(FULL_BMA_FREQUENCY_DATASET, "Solution");
+        dataset.set("solution", sequenceTags[0]);
+        if (!"Solution".equals(dataset.getType()) || !dataset.hasProperty("solution")
+                || !sequenceTags[0].equals(dataset.getString("solution")))
+            throw new IllegalStateException("new Solution dataset does not bind to the exact fresh sequence");
+        if (!baseline.equals(fullStudyStepReadback(model, "std3d")))
+            throw new IllegalStateException("producer preparation changed the original std3d baseline");
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("fixture_id", FIXTURE_ID);
+        result.put("managed_identity", managedIdentity);
+        result.put("status", "FULL_BMA_FREQUENCY_PRODUCER_CONFIGURED_NOT_SOLVED");
+        result.put("native_result", "COMSOL_NATIVE_FULL_BMA_FREQUENCY_CONFIGURATION_READBACK");
+        result.put("study_or_solver_invoked", false);
+        result.put("producer_status", "PREPARED_ONLY_NOT_PRODUCER_EVIDENCE");
+        result.put("producer_step_binding", "UNVERIFIED_UNTIL_EXACT_SEQUENCE_RUN_AND_OUTPUT_READBACK");
+        result.put("original_std3d_steps", baseline);
+        result.put("producer_study", Map.of("study_tag", FULL_BMA_FREQUENCY_STUDY,
+                "study_steps", clonedSteps));
+        result.put("solver_sequence", sequenceReadback);
+        result.put("dataset", Map.of("tag", FULL_BMA_FREQUENCY_DATASET,
+                "feature_type", dataset.getType(), "solution", dataset.getString("solution")));
+        result.put("pre_solve_solution_state", preSolveState);
+        result.put("solver_work_plan", Map.of("run_all_calls", 1,
+                "bma_study_steps", 2, "frequency_study_steps", 1,
+                "eigensolutions_per_bma_step_readback", Arrays.asList(
+                        baseline.get(0).get("neigs"), baseline.get(1).get("neigs")),
+                "study_run_calls", 0, "old_solution_clear_calls", 0));
+        return result;
+    }
+
+    /** Run the exact prepared complete BMA/BMA/Frequency generated sequence once. */
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> runFullBmaFrequencyProducer(Model model, Map<String, Object> args) {
+        if (args == null || !(args.get("preparation_readback") instanceof Map))
+            throw new IllegalArgumentException("exact prior preparation readback is required");
+        Map<String, Object> managedIdentity = readManagedIdentity(model, args);
+        Map<String, Object> preparation = (Map<String, Object>) args.get("preparation_readback");
+        Map<String, Object> preparedStudy = requireMap(preparation.get("producer_study"), "preparation producer_study");
+        if (!FULL_BMA_FREQUENCY_STUDY.equals(preparedStudy.get("study_tag")))
+            throw new IllegalArgumentException("preparation readback names a foreign producer study");
+        Map<?, ?> prepIdentity = requireMap(preparation.get("managed_identity"), "preparation managed_identity");
+        Object priorRevision = prepIdentity.get("expected_revision");
+        if (!managedIdentity.get("project_id").equals(prepIdentity.get("project_id"))
+                || !managedIdentity.get("model_ref").equals(prepIdentity.get("model_ref"))
+                || !managedIdentity.get("model_tag").equals(prepIdentity.get("model_tag"))
+                || !(priorRevision instanceof Number)
+                || ((Number) managedIdentity.get("expected_revision")).longValue()
+                        != ((Number) priorRevision).longValue() + 1)
+            throw new IllegalStateException("run does not immediately follow the exact managed preparation revision");
+        Map<String, Object> expectedSequence = requireMap(preparation.get("solver_sequence"), "preparation solver_sequence");
+        String sequenceTag = nonemptyString(expectedSequence.get("tag"), "prepared solver_sequence.tag");
+        Map<String, Object> expectedDataset = requireMap(preparation.get("dataset"), "preparation dataset");
+        if (!FULL_BMA_FREQUENCY_DATASET.equals(expectedDataset.get("tag")))
+            throw new IllegalStateException("prepared output dataset tag differs from the registered unique tag");
+
+        List<Map<String, Object>> baseline = fullStudyStepReadback(model, "std3d");
+        if (!baseline.equals(preparation.get("original_std3d_steps")))
+            throw new IllegalStateException("original std3d study changed after producer preparation");
+        List<String> stepTags = Arrays.asList("producerBmaInput3d", "producerBmaOutput3d", "producerFreq3d");
+        List<Map<String, Object>> steps = fullStudyStepReadback(model, FULL_BMA_FREQUENCY_STUDY);
+        if (!normalizeClonedStudyTags(steps, baseline).equals(baseline))
+            throw new IllegalStateException("copied producer Study settings changed before run");
+        String[] sequenceTags = model.study(FULL_BMA_FREQUENCY_STUDY).getSolverSequences("SolverSequence");
+        if (sequenceTags == null || sequenceTags.length != 1 || !sequenceTag.equals(sequenceTags[0]))
+            throw new IllegalStateException("producer Study no longer resolves to the exact prepared SolverSequence");
+        SolverSequence sequence = model.sol(sequenceTag);
+        Map<String, Object> sequenceReadback = fullBmaFrequencySequenceReadback(
+                sequence, FULL_BMA_FREQUENCY_STUDY, stepTags);
+        if (!sequenceReadback.equals(expectedSequence))
+            throw new IllegalStateException("generated full solver tree changed after preparation");
+        PropFeature dataset = model.result().dataset(FULL_BMA_FREQUENCY_DATASET);
+        if (!"Solution".equals(dataset.getType()) || !dataset.hasProperty("solution")
+                || !sequenceTag.equals(dataset.getString("solution")))
+            throw new IllegalStateException("prepared dataset no longer binds to the exact producer sequence");
+        Map<String, Object> preSolveState = solutionState(sequence, sequenceTag);
+        if (!(preSolveState.get("solution_pairs") instanceof List)
+                || !((List<?>) preSolveState.get("solution_pairs")).isEmpty())
+            throw new IllegalStateException("full producer is one-shot and refuses preexisting solution data");
+
+        sequence.runAll();
+        Map<String, Object> postSolveState = solutionStateWithParameters(sequence, sequenceTag);
+        if (!Boolean.TRUE.equals(postSolveState.get("is_valid"))
+                || !Boolean.FALSE.equals(postSolveState.get("solver_sequence_is_empty"))
+                || !(postSolveState.get("solution_pairs") instanceof List)
+                || ((List<?>) postSolveState.get("solution_pairs")).isEmpty())
+            throw new IllegalStateException("runAll returned no valid new SolutionInfo tuples");
+        dataset = model.result().dataset(FULL_BMA_FREQUENCY_DATASET);
+        if (!"Solution".equals(dataset.getType()) || !sequenceTag.equals(dataset.getString("solution")))
+            throw new IllegalStateException("post-run dataset is detached from the exact executed sequence");
+        Study producerStudy = model.study(FULL_BMA_FREQUENCY_STUDY);
+        long computationDate = producerStudy.getLastComputationDate();
+        String computationVersion = producerStudy.getLastComputationVersion();
+        if (computationDate <= 0 || computationVersion == null || computationVersion.trim().isEmpty())
+            throw new IllegalStateException("post-run Study computation date/version readback is unavailable");
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("fixture_id", FIXTURE_ID);
+        result.put("managed_identity", managedIdentity);
+        result.put("status", "FULL_BMA_FREQUENCY_RUN_RETURNED_SOLUTIONINFO_TUPLES");
+        result.put("native_result", "COMSOL_NATIVE_FULL_BMA_FREQUENCY_PRODUCER_RUN_READBACK");
+        result.put("study_or_solver_invoked", true);
+        result.put("solver_calls", 1);
+        result.put("study_run_calls", 0);
+        result.put("producer_status", "UNVERIFIED_PENDING_NATIVE_OUTPUT_STEP_ASSOCIATION");
+        result.put("producer_step_binding", "UNVERIFIED_PENDING_TERMINAL_FREQUENCY_OUTPUT_READBACK");
+        result.put("invocation", Map.of("method", "SolverSequence.runAll",
+                "solver_sequence_tag", sequenceTag, "parent_study_tag", FULL_BMA_FREQUENCY_STUDY,
+                "terminal_study_step_tag", "producerFreq3d", "method_returned", true));
+        result.put("producer_study", Map.of("study_tag", FULL_BMA_FREQUENCY_STUDY,
+                "study_steps", steps, "last_computation_date_ms", computationDate,
+                "last_computation_version", computationVersion));
+        result.put("solver_sequence", sequenceReadback);
+        result.put("dataset", Map.of("tag", FULL_BMA_FREQUENCY_DATASET,
+                "feature_type", dataset.getType(), "solution", dataset.getString("solution")));
+        result.put("pre_solve_solution_state", preSolveState);
+        result.put("post_solve_solution_state", postSolveState);
+        bindFullBmaFrequencyOutputAssociation(result, sequenceReadback);
+        result.put("solver_work", Map.of("run_all_calls", 1,
+                "bma_study_steps", 2, "frequency_study_steps", 1,
+                "study_run_calls", 0, "old_solution_clear_calls", 0));
+        result.put("field_mapping_status", "UNVERIFIED");
+        return result;
+    }
+
+    static void bindFullBmaFrequencyOutputAssociation(Map<String, Object> runReadback,
+            Map<String, Object> sequenceReadback) {
+        if (runReadback == null || sequenceReadback == null)
+            throw new IllegalArgumentException("run and solver-sequence readbacks are required");
+        runReadback.put("output_association", new LinkedHashMap<>(sequenceReadback));
+    }
+
     private static Map<String, Object> readManagedIdentity(Model model, Map<String, Object> args) {
         if (args == null) throw new IllegalArgumentException("managed identity arguments are required");
         Object raw = args.get("managed_identity");
@@ -742,6 +921,165 @@ public final class NativeW23Full3DFixture {
             steps.add(row);
         }
         return steps;
+    }
+
+    private static List<Map<String, Object>> fullStudyStepReadback(Model model, String studyTag) {
+        List<Map<String, Object>> rows = new ArrayList<>();
+        for (String tag : model.study(studyTag).feature().tags()) {
+            StudyFeature feature = model.study(studyTag).feature(tag);
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("tag", tag);
+            row.put("feature_type", feature.getType());
+            for (String property : new String[]{"PortName", "modeFreq", "eigwhich", "shiftactive", "shift", "plist"})
+                if (feature.hasProperty(property)) row.put(property, feature.getString(property));
+            if (feature.hasProperty("neigs")) row.put("neigs", feature.getInt("neigs"));
+            rows.add(row);
+        }
+        return rows;
+    }
+
+    private static void requireFrozenFullBmaFrequencyBaseline(List<Map<String, Object>> rows) {
+        if (rows.size() != 3 || !"bmaInput3d".equals(rows.get(0).get("tag"))
+                || !"bmaOutput3d".equals(rows.get(1).get("tag"))
+                || !"freq3d".equals(rows.get(2).get("tag")))
+            throw new IllegalStateException("original Study is not the registered BMA/BMA/Frequency sequence");
+        for (int index = 0; index < 2; index++) {
+            Map<String, Object> row = rows.get(index);
+            String expectedPort = index == 0 ? "1" : "2";
+            if (!"BoundaryModeAnalysis".equals(row.get("feature_type"))
+                    || !expectedPort.equals(row.get("PortName"))
+                    || !"f0".equals(row.get("modeFreq"))
+                    || !Integer.valueOf(2).equals(row.get("neigs"))
+                    || !"effective_mode_index".equals(row.get("eigwhich"))
+                    || !"on".equals(row.get("shiftactive"))
+                    || !"1.45".equals(row.get("shift")))
+                throw new IllegalStateException("actual original BMA properties differ from the frozen full-3D baseline");
+        }
+        if (!"Frequency".equals(rows.get(2).get("feature_type"))
+                || !"f0".equals(rows.get(2).get("plist")))
+            throw new IllegalStateException("actual original Frequency step differs from the frozen baseline");
+    }
+
+    private static void copyFrozenStudyStepProperties(StudyFeature target, Map<String, Object> source) {
+        String type = (String) source.get("feature_type");
+        if ("BoundaryModeAnalysis".equals(type)) {
+            for (String property : new String[]{"PortName", "modeFreq", "eigwhich", "shiftactive", "shift"}) {
+                Object value = source.get(property);
+                if (!(value instanceof String) || !target.hasProperty(property))
+                    throw new IllegalStateException("original BMA property is missing from exact copy: " + property);
+                target.set(property, (String) value);
+            }
+            Object neigs = source.get("neigs");
+            if (!(neigs instanceof Integer) || !target.hasProperty("neigs"))
+                throw new IllegalStateException("original BMA neigs value is unavailable for exact copy");
+            target.set("neigs", ((Integer) neigs).intValue());
+        } else if ("Frequency".equals(type)) {
+            Object plist = source.get("plist");
+            if (!(plist instanceof String) || !target.hasProperty("plist"))
+                throw new IllegalStateException("original Frequency plist is unavailable for exact copy");
+            target.set("plist", (String) plist);
+        } else {
+            throw new IllegalStateException("unregistered Study step type cannot be copied into producer Study");
+        }
+    }
+
+    private static List<Map<String, Object>> normalizeClonedStudyTags(
+            List<Map<String, Object>> cloned, List<Map<String, Object>> baseline) {
+        if (cloned.size() != baseline.size()) return List.of();
+        List<Map<String, Object>> normalized = new ArrayList<>();
+        for (int index = 0; index < cloned.size(); index++) {
+            Map<String, Object> target = new LinkedHashMap<>(cloned.get(index));
+            target.put("tag", baseline.get(index).get("tag"));
+            normalized.add(target);
+        }
+        return normalized;
+    }
+
+    private static Map<String, Object> fullBmaFrequencySequenceReadback(
+            SolverSequence sequence, String expectedStudy, List<String> expectedStepTags) {
+        if (!expectedStudy.equals(sequence.study()))
+            throw new IllegalStateException("generated sequence is attached to a foreign parent Study");
+        List<Map<String, Object>> tree = new ArrayList<>();
+        List<Map<String, Object>> bindings = new ArrayList<>();
+        for (String featureTag : sequence.feature().tags())
+            collectSolverFeature(sequence.feature(featureTag), featureTag, tree, bindings);
+        if (tree.isEmpty() || bindings.size() != 3)
+            throw new IllegalStateException("generated producer solver tree must expose exactly three StudyStep bindings");
+        for (int index = 0; index < bindings.size(); index++) {
+            Map<String, Object> binding = bindings.get(index);
+            if (!expectedStudy.equals(binding.get("study"))
+                    || !expectedStepTags.get(index).equals(binding.get("studystep"))
+                    || !"StudyStep".equals(binding.get("feature_type")))
+                throw new IllegalStateException("generated sequence has missing, duplicate, reordered, or foreign StudyStep binding");
+        }
+        int frequencyPosition = -1;
+        for (int index = 0; index < tree.size(); index++)
+            if (bindings.get(2).get("path").equals(tree.get(index).get("path"))) frequencyPosition = index;
+        if (frequencyPosition < 0)
+            throw new IllegalStateException("terminal Frequency binding is absent from generated solver tree");
+        List<String> storePaths = new ArrayList<>(), storeAfterFrequency = new ArrayList<>();
+        for (int index = 0; index < tree.size(); index++) {
+            Map<String, Object> node = tree.get(index);
+            if ("StoreSolution".equals(node.get("feature_type"))) {
+                String path = (String) node.get("path");
+                storePaths.add(path);
+                if (index > frequencyPosition) storeAfterFrequency.add(path);
+            }
+        }
+        String outputPath = storeAfterFrequency.isEmpty()
+                ? "DIRECT_SEQUENCE_RESULT_CANDIDATE_NO_POST_FREQUENCY_STORE_SOLUTION"
+                : "EXPLICIT_POST_FREQUENCY_STORE_SOLUTION_CANDIDATE";
+        Map<String, Object> output = new LinkedHashMap<>();
+        output.put("tag", sequence.tag());
+        output.put("feature_type", sequence.getType());
+        output.put("parent_study", sequence.study());
+        output.put("solver_tree_features", tree);
+        output.put("study_step_bindings_in_solver_tree_order", bindings);
+        output.put("terminal_frequency_binding", bindings.get(2));
+        output.put("store_solution_feature_paths", storePaths);
+        output.put("store_solution_paths_after_frequency", storeAfterFrequency);
+        output.put("output_path_readback", outputPath);
+        output.put("output_association_status", "UNVERIFIED_UNTIL_EXACT_NEW_SOLUTIONINFO_AND_DATASET_READBACK");
+        return output;
+    }
+
+    private static Map<String, Object> solutionStateWithParameters(
+            SolverSequence sequence, String expectedSequenceTag) {
+        Map<String, Object> state = solutionState(sequence, expectedSequenceTag);
+        SolutionInfo info = sequence.getSolutioninfo();
+        List<?> rawPairs = (List<?>) state.get("solution_pairs");
+        int[][] tuples = new int[rawPairs.size()][2];
+        for (int index = 0; index < rawPairs.size(); index++) {
+            Map<?, ?> pair = (Map<?, ?>) rawPairs.get(index);
+            tuples[index][0] = ((Number) pair.get("outer_index")).intValue();
+            tuples[index][1] = ((Number) pair.get("inner_index")).intValue();
+        }
+        String[][] names = info.getPNames(tuples);
+        double[][] values = info.getPvals(tuples);
+        if (names == null || values == null || names.length != rawPairs.size() || values.length != rawPairs.size())
+            throw new IllegalStateException("SolutionInfo per-tuple parameter names and values are unavailable");
+        List<Map<String, Object>> boundPairs = new ArrayList<>();
+        for (int index = 0; index < rawPairs.size(); index++) {
+            if (names[index] == null || values[index] == null || names[index].length != values[index].length)
+                throw new IllegalStateException("SolutionInfo tuple parameter axes differ");
+            Map<?, ?> pair = (Map<?, ?>) rawPairs.get(index);
+            Map<String, Object> bound = new LinkedHashMap<>();
+            for (String key : new String[]{"outer_index", "inner_index", "solnum", "solver_sequence_tag"})
+                bound.put(key, pair.get(key));
+            List<Map<String, Object>> params = new ArrayList<>();
+            for (int parameter = 0; parameter < names[index].length; parameter++) {
+                if (names[index][parameter] == null || names[index][parameter].trim().isEmpty()
+                        || !Double.isFinite(values[index][parameter]))
+                    throw new IllegalStateException("SolutionInfo parameter name/value is malformed");
+                params.add(Map.of("name", names[index][parameter], "value", values[index][parameter]));
+            }
+            bound.put("parameters", params);
+            boundPairs.add(bound);
+        }
+        Map<String, Object> output = new LinkedHashMap<>(state);
+        output.put("solution_pairs", boundPairs);
+        output.put("parameter_values_source", "SolutionInfo.getPNames/getPvals(actual outer-inner tuples)");
+        return output;
     }
 
     private static void requireOriginalStudyConfiguration(List<Map<String, Object>> steps) {
@@ -1536,7 +1874,7 @@ public final class NativeW23Full3DFixture {
         fixtureConfiguration.put("mesh", meshReadback);
         fixtureConfiguration.put("materials", materials);
         fixtureConfiguration.put("physics", Map.of("tag", "ewfd", "feature_type", physics.getType(),
-                "features", physicsFeatures));
+                "features", physicsFeatures, "equation_view_inventory", physicsEquationInventory(physics)));
         fixtureConfiguration.put("pml", pml);
         fixtureConfiguration.put("selections", selections);
         fixtureConfiguration.put("study_steps", studies);
@@ -1555,6 +1893,74 @@ public final class NativeW23Full3DFixture {
                     throw new IllegalStateException("material matrix contains an empty value");
                 cells.add(value);
             }
+            rows.add(cells);
+        }
+        return rows;
+    }
+
+    /**
+     * Preserve raw Equation View rows and their ownership without assigning
+     * undocumented column meanings. The 6.4 API returns String[][] and does
+     * not expose column labels; this inventory is not field authentication.
+     */
+    private static Map<String, Object> physicsEquationInventory(Physics physics) {
+        List<Map<String, Object>> entries = new ArrayList<>();
+        collectPhysicsEquationEntries(physics, physics.tag(), "Physics", entries);
+        for (String tag : physics.feature().tags())
+            collectPhysicsEquationTree(physics.feature(tag), tag, entries);
+        Map<String, Object> output = new LinkedHashMap<>();
+        output.put("schema_id", "urn:comsol-mcp:w23:physics-equation-view-raw-inventory:1.0.0");
+        output.put("physics_tag", physics.tag());
+        output.put("feature_info_table_id", "Expression");
+        output.put("options", Arrays.asList("all"));
+        output.put("column_semantics", "NOT_EXPOSED_BY_FEATUREINFO_GETINFOTABLE");
+        output.put("mapping_authentication", "NOT_AUTHENTICATED");
+        output.put("entries", entries);
+        return output;
+    }
+
+    private static void collectPhysicsEquationTree(
+            PhysicsFeature feature, String path, List<Map<String, Object>> entries) {
+        collectPhysicsEquationEntries(feature, path, feature.getType(), entries);
+        for (String child : feature.feature().tags())
+            collectPhysicsEquationTree(feature.feature(child), path + "/" + child, entries);
+    }
+
+    private static void collectPhysicsEquationEntries(
+            com.comsol.model.physics.EquationViewParent parent, String parentPath,
+            String parentType, List<Map<String, Object>> entries) {
+        FeatureInfoList list = parent.featureInfo();
+        if (list == null || list.tags() == null)
+            throw new IllegalStateException("Equation View FeatureInfo tag inventory is unavailable");
+        for (String tag : list.tags()) {
+            FeatureInfo info = parent.featureInfo(tag);
+            if (info == null) throw new IllegalStateException("Equation View FeatureInfo entry disappeared during readback");
+            String[][] rawRows = info.getInfoTable("Expression", "all");
+            if (rawRows == null) throw new IllegalStateException("FeatureInfo returned no raw Expression table");
+            List<List<String>> rows = nullableStringMatrixRows(rawRows);
+            List<Integer> widths = new ArrayList<>();
+            for (List<String> row : rows) widths.add(row.size());
+            Map<String, Object> entry = new LinkedHashMap<>();
+            entry.put("parent_path", parentPath);
+            entry.put("parent_type", parentType);
+            entry.put("feature_info_tag", info.tag());
+            entry.put("feature_info_name", info.name());
+            entry.put("table_id", "Expression");
+            entry.put("options", Arrays.asList("all"));
+            entry.put("row_count", rows.size());
+            entry.put("row_widths", widths);
+            entry.put("rows", rows);
+            entry.put("column_semantics", "NOT_EXPOSED_BY_FEATUREINFO_GETINFOTABLE");
+            entries.add(entry);
+        }
+    }
+
+    private static List<List<String>> nullableStringMatrixRows(String[][] values) {
+        List<List<String>> rows = new ArrayList<>();
+        for (String[] row : values) {
+            if (row == null) throw new IllegalStateException("FeatureInfo Expression table contains a null row");
+            List<String> cells = new ArrayList<>();
+            cells.addAll(Arrays.asList(row));
             rows.add(cells);
         }
         return rows;

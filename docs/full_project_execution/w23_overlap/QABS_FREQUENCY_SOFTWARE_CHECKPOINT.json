@@ -1,0 +1,81 @@
+{
+  "schema": "W23_QABS_FREQUENCY_SOFTWARE_CHECKPOINT_V1",
+  "status": "PASS_SCOPED_SOFTWARE",
+  "original_W23_status": "PARTIAL",
+  "native_acceptance": "NOT_RUN",
+  "scientific_acceptance": "NOT_RUN",
+  "production_qabs_registry": "EMPTY_UNVERIFIED",
+  "candidate_fingerprint": "0ba00befd13cd5873d47985fd66cecfa248ecfc7e848ff59a518f0fdaf2a14b0",
+  "base_commit": "3ce18d796170b6b35c782e41cb17898a6a33c7ab",
+  "capabilities": [
+    "Full BMA/BMA/Frequency producer preparation/run request and exact returned tuple validation",
+    "Qabs raw Equation View/unit calibration interface with independent source-pinned schema gate",
+    "Complete restored Java producer source included in baseline",
+    "Java production helper emits full output association; executable harness JSON consumed by Python validator"
+  ],
+  "tests": {
+    "required_regression_passed": 239,
+    "focused_passed": 2,
+    "focused_included_in_regression": true,
+    "main_source_hashes_verified": 108,
+    "main_junit_and_artifact_hashes_verified": true,
+    "java_compile": "PASS_TWO_FIXTURES_AND_HARNESS",
+    "java_class_hashes_verified": 5
+  },
+  "receipt": {
+    "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/20260928T094951Z-234405bb.summary.json",
+    "sha256": "28f23d2043a2ebe8fbe5e4ad3e7cc8d98fc46447657f247647cc1744331c89dc"
+  },
+  "artifacts": [
+    {
+      "bytes": 21,
+      "path": "/Volumes/CTestEff/test-efficiency/runs/20260928T094951Z-234405bb/focus.log",
+      "sha256": "977872e72cee89fc5e4ba4b5ef464795c89d4b68c9add39b02c23c9884ece5a9"
+    },
+    {
+      "bytes": 553,
+      "path": "/Volumes/CTestEff/test-efficiency/runs/20260928T094951Z-234405bb/focus.junit.xml",
+      "sha256": "0afb15aef4b068ca8ed206521be50da31848c7594f24a8f2a75a045ccbf5db61"
+    },
+    {
+      "bytes": 260,
+      "path": "/Volumes/CTestEff/test-efficiency/runs/20260928T094951Z-234405bb/required_regression.log",
+      "sha256": "f7f07c58082512d9bb2c114ed50bc7f311f16b034c4c9945894fcded0cec17a2"
+    },
+    {
+      "bytes": 39194,
+      "path": "/Volumes/CTestEff/test-efficiency/runs/20260928T094951Z-234405bb/required_regression.junit.xml",
+      "sha256": "c9ecbf95050b079ee35e39de5bf69b8e6f1961395f3f0b6805707f7b1fd02d5a"
+    }
+  ],
+  "java_compile_receipt": {
+    "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w23-qabs-frequency/integrated-v1/20260928T094759Z-739ea002/compile_receipt.json",
+    "sha256": "a1239d0e55ad1f15cd046d569b258d63a0c2a7c61d90f3e0a4fb60b1f2ed7325",
+    "sources": [
+      {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/tools/java/NativeW23Full3DFixture.java",
+        "sha256": "e9f451b874352f8a647b745922114319e6472696f60fd74a376d9b8600183543"
+      },
+      {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/tools/java/NativeW23RadiationGeometryV2.java",
+        "sha256": "a8b57d82fdb3d6551e21e725f5abc1d2dbc34486efcbef835338a83fd1db05af"
+      },
+      {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/tests/java/W23OutputAssociationContractHarness.java",
+        "sha256": "45a660a672d6c16e2e80a7e2f93b811f82785b004c1e0d68ff054b8d38c40a37"
+      }
+    ],
+    "javac_version": "javac 11.0.31",
+    "model_instantiated": false,
+    "native_started": false
+  },
+  "manifest": "tools/test_efficiency_w23_baseline.json",
+  "replay": "python3 -B tools/run_bounded_tests.py --baseline tools/test_efficiency_w23_baseline.json --with-required-regression",
+  "preserved_failure": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/20260928T094849Z-f1f6578b.summary.json: 238 PASS/1 FAIL stale Java source pin; repaired explicitly",
+  "limitations": [
+    "Java harness executes map binding only, not COMSOL solve",
+    "Native producer output association, Qabs calibration, power-balance tolerance and original W23 scientific acceptance remain unverified",
+    "Contract test uses local macOS COMSOL API/JDK; missing environment yields NOT_RUN/skip and bounded acceptance fails"
+  ],
+  "next_action": "Same Luna implements W21 actual field/unit/tuple/mesh evidence and supported single-Worker stage solve/check/save backend, preserving unsupported-profile and UNKNOWN refusal; then remaining MASTER_GOAL and final independent review."
+}

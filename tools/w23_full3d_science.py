@@ -56,6 +56,10 @@ _MODEL_REF_KEYS = {"schema_version", "session_id", "server_instance_id", "model_
 _TAG = re.compile(r"^[A-Za-z][A-Za-z0-9_]{0,62}$")
 _BMA_PROBE_STUDY = "std3dBmaOutputProbe"
 _BMA_PROBE_STEP = "bmaOutputProbe"
+_FULL_BMA_FREQUENCY_STUDY = "std3dFullBmaFrequencyProducerV1"
+_FULL_BMA_FREQUENCY_DATASET = "dsetW23Full3dBmaFrequencyV1"
+_FULL_BMA_FREQUENCY_STEP_TAGS = (
+    "producerBmaInput3d", "producerBmaOutput3d", "producerFreq3d")
 # Frozen software comparison policy.  Values were selected before any W23
 # native run; they are not inferred or widened from observed native results.
 # The absolute cross tolerance is dimensionless after normalization by the
@@ -150,7 +154,7 @@ COMSOL_CV_POWER_API_EVIDENCE = {
     },
     "q_abs": {
         "local_kb_search": "NOT_FOUND_FOR_EWFD_QH_OR_EQUIVALENT_ABSORPTION_FIELD",
-        "generic_expression_interface": "NOT_IMPLEMENTED",
+        "generic_expression_interface": "IMPLEMENTED_WITH_AUTHENTICATION_GATE",
         "authenticated_field_mapping": "NOT_AVAILABLE",
         "production_expression": "NOT_PROVIDED",
         "production_unit": "NOT_PROVIDED",
@@ -169,9 +173,9 @@ CV_POWER_BALANCE_POLICY = {
     "volume_unit": "m^3",
     "incident_power_expression": "ewfd.Pin",
     "incident_power_unit": "W",
-    "q_abs_expression": "NOT_PROVIDED",
+    "q_abs_expression": "EXPLICIT_CONTRACT_REQUIRED",
     "q_abs_unit": "NOT_PROVIDED",
-    "q_abs_generic_expression_interface": "NOT_IMPLEMENTED",
+    "q_abs_generic_expression_interface": "IMPLEMENTED_WITH_AUTHENTICATION_GATE",
     "q_abs_authenticated_mapping": "NOT_AVAILABLE",
     "surface_and_volume_integrals_share_one_native_request_and_solution_spec": True,
     "include_port_or_pml_flux": False,
@@ -182,18 +186,88 @@ CV_POWER_BALANCE_POLICY = {
     "scientific_acceptance": "NOT_RUN",
 }
 
+QABS_EXPRESSION_CONTRACT_SCHEMA = "urn:comsol-mcp:w23:qabs-expression-contract:1.0.0"
+QABS_MAPPING_CERTIFICATE_SCHEMA = "urn:comsol-mcp:w23:qabs-mapping-certificate:1.0.0"
+# Production is deliberately empty until a real same-version calibration is
+# independently reviewed and its receipt identity is frozen here in source.
+# Public callers cannot add entries through a dispatch argument.
+QABS_APPROVED_COLUMN_SCHEMA_REGISTRY: dict[str, dict[str, Any]] = {}
+QABS_CALIBRATION_CONTROL_EXPRESSIONS = (
+    {"expression": "ewfd.Ex", "expected_unit": "V/m"},
+    {"expression": "ewfd.Hx", "expected_unit": "A/m"},
+)
+
+
+def _qabs_cross_feature_summary(observations: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    owners = sorted({(row.get("parent_path"), row.get("feature_info_tag")) for row in observations
+                     if isinstance(row.get("parent_path"), str)
+                     and isinstance(row.get("feature_info_tag"), str)})
+    return {
+        "status": "AT_LEAST_TWO_DISTINCT_FEATUREINFO_OWNERS" if len(owners) >= 2
+            else "INSUFFICIENT_DISTINCT_FEATUREINFO_OWNERS",
+        "distinct_owner_count": len(owners),
+        "owners": [{"parent_path": path, "feature_info_tag": tag} for path, tag in owners],
+    }
+
+
+QABS_EXPRESSION_API_POLICY = {
+    "schema_id": QABS_EXPRESSION_CONTRACT_SCHEMA,
+    "generic_expression_interface": "IMPLEMENTED_WITH_AUTHENTICATION_GATE",
+    "feature_info_api": {
+        "manual": "COMSOL 6.4 - FeatureInfo",
+        "document_path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/api/com/comsol/model/physics/FeatureInfo.html",
+        "chunk_id": 23146,
+        "source_sha256": "4235da3e67011348aeed61e3ca50fcdec888068f2152ac5d659b0280c68d03a0",
+        "table_id": "Expression",
+        "options": ["all"],
+        "claim": "FeatureInfo returns raw String[][] rows and all available columns, but exposes no column headers or fixed expression/unit semantics.",
+    },
+    "unit_api": {
+        "manual": "COMSOL 6.4 - ParamBase",
+        "document_path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/api/com/comsol/model/ParamBase.html",
+        "chunk_id": 23002,
+        "source_sha256": "d7b6be3acb71d7ba99292c7740cad05a413a5503ba6c913aa976b4d0c788c9c9",
+        "method": "Model.param().evaluateUnit(expression)",
+        "claim": "Returns the evaluated expression unit; it does not authenticate a physics-variable or loss-density mapping.",
+    },
+    "equation_view_parent_api": {
+        "manual": "COMSOL 6.4 - EquationViewParent",
+        "document_path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/api/com/comsol/model/physics/EquationViewParent.html",
+        "chunk_id": 23145,
+        "source_sha256": "98f7b2c54e2a31dc52f9c0fdfae5073d343b035cb0d295130011f4b4ca0e732b",
+    },
+    "required_unit": "W/m^3",
+    "integral_unit": "W",
+    "integral_path": "IntVolume(W) is implemented and executes only after current inventory, unit, and route-bound reviewed column-schema certificate checks",
+    "current_mapping_status": "NOT_AUTHENTICATED_COLUMN_SEMANTICS_NOT_EXPOSED",
+    "approved_column_schema_registry": "EMPTY_PENDING_REAL_NATIVE_CALIBRATION_AND_INDEPENDENT_REVIEW",
+    "current_qabs_status": "NOT_AVAILABLE",
+    "calibration_controls": [dict(row) for row in QABS_CALIBRATION_CONTROL_EXPRESSIONS],
+    "calibration_cross_feature_requirement": (
+        "at least two distinct FeatureInfo parent_path/tag owners among the two known-unit controls "
+        "and declared target; raw rows and owner identity are preserved for independent review"),
+    "calibration_required_readbacks": [
+        "exact ModelRef/project/model/revision and single-file source hash/entrypoint",
+        "dataset/solver sequence/SolutionInfo selected tuple and computation version/date",
+        "complete raw FeatureInfo Expression rows with owner paths and row widths",
+        "independent evaluateUnit results for ewfd.Ex, ewfd.Hx, and the declared loss expression",
+        "expression/unit row observations and cross-FeatureInfo owner comparison",
+    ],
+    "calibration_route": "READ_ONLY_RAW_EQUATION_VIEW_AND_EVALUATEUNIT; no solver/model mutation",
+}
+
 # The persistent Worker accepts one project-local .java source per execute_java
 # call. These hashes bind the CV routes to the two distinct frozen sources;
 # the Java response's source_sha256/entrypoint are checked against these values
 # on every route. A caller-supplied source label is not source-byte evidence.
 CV_RADIATION_JAVA_SOURCE = {
     "source_artifact": "NativeW23RadiationGeometryV2.java",
-    "source_sha256": "9d0d7a2cc3b14c479180c619cf8e0159dff368a6b9a5303074af50c428520cb1",
+    "source_sha256": "a8b57d82fdb3d6551e21e725f5abc1d2dbc34486efcbef835338a83fd1db05af",
     "entrypoint": "NativeW23RadiationGeometryV2#run",
 }
 CV_FIELD_JAVA_SOURCE = {
     "source_artifact": "NativeW23Full3DFixture.java",
-    "source_sha256": "882dfe530e704671e2f884663bcdcd142102beb618ffd70d90e4b83d527db0ca",
+    "source_sha256": "e9f451b874352f8a647b745922114319e6472696f60fd74a376d9b8600183543",
     "entrypoint": "NativeW23Full3DFixture#run",
 }
 
@@ -1885,6 +1959,674 @@ def build_full3d_bma_probe_run_dispatch(
     request["planned_solver_calls"] = 1
     request["planned_study_run_calls"] = 0
     return request
+
+
+def build_full3d_bma_frequency_producer_prepare_dispatch(
+    *, source_artifact: str, project_id: str, model_ref: Mapping[str, Any], model_tag: str,
+    revision: int, request_id: str, idempotency_key: str,
+) -> dict[str, Any]:
+    """Clone the exact original BMA/BMA/Frequency settings into a fresh sequence; no solve."""
+    if (not isinstance(source_artifact, str) or Path(source_artifact).name != "NativeW23Full3DFixture.java"):
+        _fail("registered single-file NativeW23Full3DFixture source artifact is required")
+    binding = _managed_route_binding(
+        project_id=project_id, model_ref=model_ref, model_tag=model_tag, revision=revision,
+        request_id=request_id, idempotency_key=idempotency_key)
+    java_args = {"phase": "prepare_full_bma_frequency_producer",
+        "managed_identity": {key: binding[key] for key in
+                             ("project_id", "model_ref", "model_tag", "expected_revision")}}
+    request = _operation_call("code.execute_java", {
+        "source_artifact": source_artifact,
+        "entrypoint": "NativeW23Full3DFixture#run", "mode": "trusted", "arguments": java_args,
+    }, binding=binding, dispatch_scope=(
+        "copy actual std3d BMA Port 1, BMA Port 2, and Frequency settings into one new Study; "
+        "generate/read back the full solver tree and empty output dataset without invoking a solver"))
+    request["native_result"] = "NOT_RUN"
+    request["study_or_solver_invoked"] = False
+    return request
+
+
+def build_full3d_bma_frequency_producer_run_dispatch(
+    *, source_artifact: str, preparation_readback: Mapping[str, Any],
+    project_id: str, model_ref: Mapping[str, Any], model_tag: str,
+    revision: int, request_id: str, idempotency_key: str,
+) -> dict[str, Any]:
+    """Submit one runAll on the exact freshly prepared complete BMA/BMA/Frequency sequence."""
+    if (not isinstance(source_artifact, str) or Path(source_artifact).name != "NativeW23Full3DFixture.java"
+            or not isinstance(preparation_readback, Mapping)):
+        _fail("single-file fixture source and exact preparation response are required")
+    validate_full3d_bma_frequency_producer_preparation(
+        preparation_readback, project_id=project_id, model_tag=model_tag, model_ref=model_ref)
+    prep_study = preparation_readback.get("producer_study")
+    seq = preparation_readback.get("solver_sequence")
+    ds = preparation_readback.get("dataset")
+    if (preparation_readback.get("status") != "FULL_BMA_FREQUENCY_PRODUCER_CONFIGURED_NOT_SOLVED"
+            or not isinstance(prep_study, Mapping) or prep_study.get("study_tag") != _FULL_BMA_FREQUENCY_STUDY
+            or not isinstance(seq, Mapping) or not isinstance(seq.get("tag"), str)
+            or not _TAG.fullmatch(seq["tag"])
+            or not isinstance(ds, Mapping) or ds.get("tag") != _FULL_BMA_FREQUENCY_DATASET):
+        _fail("exact complete BMA/Frequency preparation readback is missing or foreign")
+    binding = _managed_route_binding(
+        project_id=project_id, model_ref=model_ref, model_tag=model_tag, revision=revision,
+        request_id=request_id, idempotency_key=idempotency_key)
+    java_args = {"phase": "run_full_bma_frequency_producer",
+        "preparation_readback": dict(preparation_readback),
+        "managed_identity": {key: binding[key] for key in
+                             ("project_id", "model_ref", "model_tag", "expected_revision")}}
+    request = _operation_call("code.execute_java", {
+        "source_artifact": source_artifact,
+        "entrypoint": "NativeW23Full3DFixture#run", "mode": "trusted", "arguments": java_args,
+    }, binding=binding, dispatch_scope=(
+        "one complete SolverSequence.runAll on the exact new BMA Port 1 → BMA Port 2 → Frequency sequence; "
+        "includes both configured BMA eigensolution steps and the terminal Frequency step; no old solution clear"))
+    request["native_result"] = "NOT_RUN"
+    request["study_or_solver_invoked"] = False
+    request["planned_solver_calls"] = 1
+    request["planned_study_run_calls"] = 0
+    request["planned_bma_steps"] = 2
+    request["planned_frequency_steps"] = 1
+    return request
+
+
+def _full_bma_frequency_java_request(request: Mapping[str, Any], *, phase: str) -> tuple[dict[str, Any], dict[str, Any]]:
+    java, payload = _cv_java_arguments(request, entrypoint="NativeW23Full3DFixture#run")
+    managed = payload.get("managed_identity")
+    execution = request.get("execution")
+    if (Path(str(java.get("source_artifact", ""))).name != "NativeW23Full3DFixture.java"
+            or payload.get("phase") != phase
+            or not isinstance(managed, Mapping) or not isinstance(execution, Mapping)
+            or managed.get("project_id") != execution.get("project_id")
+            or managed.get("model_ref") != execution.get("model_ref")
+            or managed.get("expected_revision") != execution.get("expected_revision")
+            or not isinstance(managed.get("model_tag"), str) or not managed.get("model_tag")):
+        _fail("Frequency producer route does not bind the exact fixture phase/source/model revision")
+    return java, payload
+
+
+def validate_full3d_bma_frequency_producer_preparation(
+    readback: Mapping[str, Any], *, project_id: str, model_tag: str,
+    model_ref: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Validate copied settings and the generated 3-step tree; preparation is not a solve."""
+    if (not isinstance(readback, Mapping)
+            or readback.get("fixture_id") != "w23_full3d_fiber_ball_lens_vector_pml_v1"
+            or readback.get("status") != "FULL_BMA_FREQUENCY_PRODUCER_CONFIGURED_NOT_SOLVED"
+            or readback.get("native_result") not in {
+                "COMSOL_NATIVE_FULL_BMA_FREQUENCY_CONFIGURATION_READBACK", "SOFTWARE_TEST_FIXTURE"}
+            or readback.get("study_or_solver_invoked") is not False
+            or readback.get("producer_status") != "PREPARED_ONLY_NOT_PRODUCER_EVIDENCE"
+            or readback.get("producer_step_binding") != "UNVERIFIED_UNTIL_EXACT_SEQUENCE_RUN_AND_OUTPUT_READBACK"):
+        _fail("full BMA/Frequency preparation lacks its exact no-solve contract")
+    identity = readback.get("managed_identity")
+    if (not isinstance(identity, Mapping) or identity.get("project_id") != project_id
+            or identity.get("model_tag") != model_tag or identity.get("model_ref") != dict(model_ref)):
+        _fail("full BMA/Frequency preparation is detached from the exact project/ModelRef")
+    baseline = readback.get("original_std3d_steps")
+    expected_shape = [
+        ("bmaInput3d", "BoundaryModeAnalysis", "1"),
+        ("bmaOutput3d", "BoundaryModeAnalysis", "2"),
+    ]
+    if (not isinstance(baseline, list) or len(baseline) != 3
+            or any(not isinstance(row, Mapping) for row in baseline)
+            or [(row.get("tag"), row.get("feature_type"), row.get("PortName"))
+                for row in baseline[:2]] != expected_shape
+            or baseline[2].get("tag") != "freq3d" or baseline[2].get("feature_type") != "Frequency"
+            or any(row.get("modeFreq") != "f0" or row.get("neigs") != 2
+                   or row.get("eigwhich") != "effective_mode_index"
+                   or row.get("shiftactive") != "on" or row.get("shift") != "1.45"
+                   for row in baseline[:2])
+            or any("plist" in row for row in baseline[:2])
+            or baseline[2].get("plist") != "f0"):
+        _fail("original std3d settings are not the frozen actual BMA/BMA/Frequency baseline")
+    prepared_study = readback.get("producer_study")
+    if not isinstance(prepared_study, Mapping) or prepared_study.get("study_tag") != _FULL_BMA_FREQUENCY_STUDY:
+        _fail("fresh producer Study tag is missing or foreign")
+    cloned_steps = prepared_study.get("study_steps")
+    if not isinstance(cloned_steps, list) or len(cloned_steps) != 3:
+        _fail("fresh producer Study omitted one of the three copied Study steps")
+    normalized = [dict(row, tag=baseline[index]["tag"])
+                  for index, row in enumerate(cloned_steps) if isinstance(row, Mapping)]
+    if len(normalized) != 3 or normalized != baseline:
+        _fail("new Study's actual property readback is not an exact copy of original std3d settings")
+    expected_tags = list(_FULL_BMA_FREQUENCY_STEP_TAGS)
+    if [row.get("tag") for row in cloned_steps] != expected_tags:
+        _fail("fresh Study steps are missing, duplicate, reordered, or foreign")
+
+    sequence = readback.get("solver_sequence")
+    sequence_tag = sequence.get("tag") if isinstance(sequence, Mapping) else None
+    tree = sequence.get("solver_tree_features") if isinstance(sequence, Mapping) else None
+    bindings = sequence.get("study_step_bindings_in_solver_tree_order") if isinstance(sequence, Mapping) else None
+    if (not isinstance(sequence, Mapping) or not isinstance(sequence_tag, str)
+            or not _TAG.fullmatch(sequence_tag) or sequence.get("parent_study") != _FULL_BMA_FREQUENCY_STUDY
+            or not isinstance(tree, list) or not tree or not isinstance(bindings, list) or len(bindings) != 3):
+        _fail("full producer SolverSequence inventory or exact three-step binding is missing")
+    tree_by_path: dict[str, Mapping[str, Any]] = {}
+    for node in tree:
+        if (not isinstance(node, Mapping) or not isinstance(node.get("path"), str)
+                or not node["path"] or node["path"] in tree_by_path
+                or not isinstance(node.get("feature_type"), str) or not node["feature_type"]):
+            _fail("solver tree paths/types are malformed or duplicated")
+        tree_by_path[node["path"]] = node
+    expected_bindings = list(zip(expected_tags, ("1", "2", None)))
+    for index, (expected_step, unused_port) in enumerate(expected_bindings):
+        binding = bindings[index]
+        if (not isinstance(binding, Mapping) or binding.get("study") != _FULL_BMA_FREQUENCY_STUDY
+                or binding.get("studystep") != expected_step or binding.get("feature_type") != "StudyStep"
+                or binding.get("path") not in tree_by_path
+                or tree_by_path[binding["path"]].get("feature_type") != "StudyStep"):
+            _fail("solver sequence bindings do not prove ordered BMA Port1/BMA Port2/Frequency steps")
+    if (sequence.get("terminal_frequency_binding") != bindings[2]
+            or sequence.get("output_association_status") != "UNVERIFIED_UNTIL_EXACT_NEW_SOLUTIONINFO_AND_DATASET_READBACK"
+            or sequence.get("output_path_readback") not in {
+                "DIRECT_SEQUENCE_RESULT_CANDIDATE_NO_POST_FREQUENCY_STORE_SOLUTION",
+                "EXPLICIT_POST_FREQUENCY_STORE_SOLUTION_CANDIDATE"}):
+        _fail("solver tree output-path classification is missing or asserts an unverified producer")
+    store_paths = sequence.get("store_solution_feature_paths")
+    store_after = sequence.get("store_solution_paths_after_frequency")
+    if (not isinstance(store_paths, list) or not isinstance(store_after, list)
+            or len(set(store_paths)) != len(store_paths) or len(set(store_after)) != len(store_after)
+            or not set(store_after) <= set(store_paths)
+            or any(path not in tree_by_path or tree_by_path[path].get("feature_type") != "StoreSolution"
+                   for path in store_paths)):
+        _fail("StoreSolution nodes are not fully tied to actual solver tree paths")
+    if sequence["output_path_readback"].startswith("DIRECT_") and store_after:
+        _fail("direct-output branch conflicts with a post-Frequency StoreSolution node")
+    if sequence["output_path_readback"].startswith("EXPLICIT_") and not store_after:
+        _fail("explicit StoreSolution branch lacks a post-Frequency node")
+
+    dataset = readback.get("dataset")
+    if (not isinstance(dataset, Mapping) or dataset.get("tag") != _FULL_BMA_FREQUENCY_DATASET
+            or dataset.get("feature_type") != "Solution" or dataset.get("solution") != sequence_tag):
+        _fail("fresh output dataset is not bound to the exact generated producer sequence")
+    before = readback.get("pre_solve_solution_state")
+    if (not isinstance(before, Mapping) or type(before.get("is_valid")) is not bool
+            or before.get("solver_sequence_is_empty") is not True or before.get("outer_solnums") != []
+            or before.get("solution_pairs") != [] or before.get("pair_count") != 0):
+        _fail("new solver sequence is not proven empty before a producer run")
+    work = readback.get("solver_work_plan")
+    if (not isinstance(work, Mapping) or work.get("run_all_calls") != 1
+            or work.get("bma_study_steps") != 2 or work.get("frequency_study_steps") != 1
+            or work.get("eigensolutions_per_bma_step_readback") != [2, 2]
+            or work.get("study_run_calls") != 0 or work.get("old_solution_clear_calls") != 0):
+        _fail("solver budget/step plan does not include both BMA eigensolution steps plus Frequency")
+    return {"status": "SOFTWARE_VALIDATED_FULL_BMA_FREQUENCY_SEQUENCE_PREPARED_NOT_SOLVED",
+            "native_result": "PREPARATION_ONLY_NOT_PRODUCER_EVIDENCE",
+            "producer_status": "UNVERIFIED_UNTIL_EXACT_SEQUENCE_RUN_AND_OUTPUT_READBACK",
+            "project_id": project_id, "model_tag": model_tag, "model_ref": dict(model_ref),
+            "original_std3d_steps": baseline, "producer_study": dict(prepared_study),
+            "solver_sequence": dict(sequence), "dataset": dict(dataset),
+            "pre_solve_solution_state": dict(before)}
+
+
+def validate_full3d_bma_frequency_producer_prepare_route(
+    *, request: Mapping[str, Any], route_result: Mapping[str, Any],
+    project_id: str, model_tag: str, model_ref: Mapping[str, Any],
+    max_execution_timeout_s: float,
+) -> dict[str, Any]:
+    binding = validate_full3d_bma_mapping_route_result(
+        request, route_result, expected_revision_delta=1,
+        max_execution_timeout_s=max_execution_timeout_s)
+    java, payload = _full_bma_frequency_java_request(
+        request, phase="prepare_full_bma_frequency_producer")
+    if java.get("source_artifact") != "NativeW23Full3DFixture.java" or payload.get("managed_identity") is None:
+        _fail("producer preparation route uses an unregistered source artifact")
+    response = route_result.get("response")
+    source_identity = _validate_cv_java_source_identity(
+        java, response, source_spec=CV_FIELD_JAVA_SOURCE,
+        label="full BMA/Frequency preparation route")
+    readback = _java_action_readback(response, "full BMA/Frequency preparation")
+    if route_result.get("readback") != readback:
+        _fail("preparation summary differs from the actual terminal public Java response")
+    checked = validate_full3d_bma_frequency_producer_preparation(
+        readback, project_id=project_id, model_tag=model_tag, model_ref=model_ref)
+    if payload.get("managed_identity", {}).get("model_tag") != model_tag:
+        _fail("preparation Java arguments used a different native model tag")
+    return {**checked, "route_binding": binding, "source_identity": source_identity,
+            "readback": readback}
+
+
+def validate_full3d_bma_frequency_producer_run_readback(
+    readback: Mapping[str, Any], *, preparation_readback: Mapping[str, Any],
+    project_id: str, model_tag: str, model_ref: Mapping[str, Any],
+    run_request: Mapping[str, Any], route_result: Mapping[str, Any],
+    max_execution_timeout_s: float,
+) -> dict[str, Any]:
+    """Bind a single full BMA/BMA/Frequency run to a fresh sequence and its exact output dataset."""
+    prep = validate_full3d_bma_frequency_producer_preparation(
+        preparation_readback, project_id=project_id, model_tag=model_tag, model_ref=model_ref)
+    if (not isinstance(readback, Mapping)
+            or readback.get("fixture_id") != "w23_full3d_fiber_ball_lens_vector_pml_v1"
+            or readback.get("status") != "FULL_BMA_FREQUENCY_RUN_RETURNED_SOLUTIONINFO_TUPLES"
+            or readback.get("native_result") not in {
+                "COMSOL_NATIVE_FULL_BMA_FREQUENCY_PRODUCER_RUN_READBACK", "SOFTWARE_TEST_FIXTURE"}
+            or readback.get("study_or_solver_invoked") is not True
+            or readback.get("solver_calls") != 1 or readback.get("study_run_calls") != 0
+            or readback.get("producer_status") != "UNVERIFIED_PENDING_NATIVE_OUTPUT_STEP_ASSOCIATION"
+            or readback.get("producer_step_binding") != "UNVERIFIED_PENDING_TERMINAL_FREQUENCY_OUTPUT_READBACK"
+            or readback.get("field_mapping_status") != "UNVERIFIED"):
+        _fail("producer result lacks the expected one-run, unresolved-output-association contract")
+    identity = readback.get("managed_identity")
+    if (not isinstance(identity, Mapping) or identity.get("project_id") != project_id
+            or identity.get("model_tag") != model_tag or identity.get("model_ref") != dict(model_ref)):
+        _fail("producer result is detached from the exact managed project/ModelRef")
+    if not isinstance(run_request, Mapping) or not isinstance(route_result, Mapping):
+        _fail("original public producer run request and route are required")
+    request_execution = run_request.get("execution")
+    _, payload = _full_bma_frequency_java_request(
+        run_request, phase="run_full_bma_frequency_producer")
+    if (payload.get("preparation_readback") != dict(preparation_readback)
+            or payload.get("managed_identity") != {
+                "project_id": project_id, "model_ref": dict(model_ref),
+                "model_tag": model_tag,
+                "expected_revision": request_execution.get("expected_revision")
+                    if isinstance(request_execution, Mapping) else None}
+            or run_request.get("native_result") != "NOT_RUN"
+            or run_request.get("study_or_solver_invoked") is not False
+            or run_request.get("planned_solver_calls") != 1
+            or run_request.get("planned_study_run_calls") != 0
+            or run_request.get("planned_bma_steps") != 2
+            or run_request.get("planned_frequency_steps") != 1):
+        _fail("run request is not the exact complete prepared BMA/BMA/Frequency graph")
+    binding = validate_full3d_bma_mapping_route_result(
+        run_request, route_result, expected_revision_delta=1,
+        max_execution_timeout_s=max_execution_timeout_s)
+    response = route_result.get("response")
+    java, _ = _full_bma_frequency_java_request(
+        run_request, phase="run_full_bma_frequency_producer")
+    source_identity = _validate_cv_java_source_identity(
+        java, response, source_spec=CV_FIELD_JAVA_SOURCE,
+        label="full BMA/Frequency producer run") if isinstance(response, Mapping) else None
+    actual = _java_action_readback(response, "full BMA/Frequency producer run") \
+        if isinstance(response, Mapping) else None
+    if not isinstance(actual, Mapping) or route_result.get("readback") != dict(actual) or dict(actual) != dict(readback):
+        _fail("cached producer data differs from exact terminal public Java response")
+
+    preparation_identity = preparation_readback.get("managed_identity")
+    if (not isinstance(preparation_identity, Mapping)
+            or request_execution.get("expected_revision") != preparation_identity.get("expected_revision", -2) + 1
+            or request_execution.get("project_id") != project_id
+            or request_execution.get("model_ref") != dict(model_ref)):
+        _fail("producer run does not immediately follow its exact preparation revision")
+    prep_sequence = prep["solver_sequence"]
+    prep_dataset = prep["dataset"]
+    if (readback.get("solver_sequence") != prep_sequence
+            or readback.get("dataset") != prep_dataset
+            or readback.get("pre_solve_solution_state") != prep["pre_solve_solution_state"]):
+        _fail("producer run changed the generated solver tree, dataset binding, or empty pre-solve state")
+    invocation = readback.get("invocation")
+    if (not isinstance(invocation, Mapping) or invocation.get("method") != "SolverSequence.runAll"
+            or invocation.get("solver_sequence_tag") != prep_sequence.get("tag")
+            or invocation.get("parent_study_tag") != _FULL_BMA_FREQUENCY_STUDY
+            or invocation.get("terminal_study_step_tag") != _FULL_BMA_FREQUENCY_STEP_TAGS[-1]
+            or invocation.get("method_returned") is not True):
+        _fail("native invocation did not run the exact complete solver sequence")
+    study = readback.get("producer_study")
+    if (not isinstance(study, Mapping) or study.get("study_tag") != _FULL_BMA_FREQUENCY_STUDY
+            or study.get("study_steps") != preparation_readback.get("producer_study", {}).get("study_steps")
+            or type(study.get("last_computation_date_ms")) is not int
+            or study["last_computation_date_ms"] <= 0
+            or not isinstance(study.get("last_computation_version"), str)
+            or not study["last_computation_version"].strip()):
+        _fail("actual post-run Study computation identity or copied steps are missing")
+    post = readback.get("post_solve_solution_state")
+    pairs = post.get("solution_pairs") if isinstance(post, Mapping) else None
+    outers = post.get("outer_solnums") if isinstance(post, Mapping) else None
+    if (not isinstance(post, Mapping) or post.get("is_valid") is not True
+            or post.get("solver_sequence_is_empty") is not False
+            or not isinstance(outers, list) or not outers
+            or any(type(value) is not int or value < 1 for value in outers)
+            or len(outers) != len(set(outers))
+            or not isinstance(pairs, list) or not pairs
+            or post.get("parameter_values_source") != "SolutionInfo.getPNames/getPvals(actual outer-inner tuples)"):
+        _fail("post-run actual SolutionInfo tuple/parameter readback is incomplete")
+    seen: set[tuple[int, int]] = set()
+    for pair in pairs:
+        if not isinstance(pair, Mapping):
+            _fail("post-run SolutionInfo tuple is malformed")
+        outer, inner = pair.get("outer_index"), pair.get("inner_index")
+        params = pair.get("parameters")
+        if (type(outer) is not int or outer < 1 or outer not in outers
+                or type(inner) is not int or inner < 1 or pair.get("solnum") != inner
+                or pair.get("solver_sequence_tag") != prep_sequence.get("tag")
+                or (outer, inner) in seen or not isinstance(params, list)):
+            _fail("post-run solution tuple is duplicated or maps to a foreign sequence")
+        seen.add((outer, inner))
+        if any(not isinstance(item, Mapping) or not isinstance(item.get("name"), str)
+               or not item["name"].strip() or isinstance(item.get("value"), bool)
+               or not isinstance(item.get("value"), (int, float))
+               or not math.isfinite(float(item["value"])) for item in params):
+            _fail("post-run SolutionInfo parameter names/values are malformed")
+    dataset = readback.get("dataset")
+    if (not isinstance(dataset, Mapping) or dataset != prep_dataset
+            or dataset.get("solution") != prep_sequence.get("tag")):
+        _fail("post-run dataset is not the exact new Solution output bound before execution")
+    work = readback.get("solver_work")
+    if (not isinstance(work, Mapping) or work.get("run_all_calls") != 1
+            or work.get("bma_study_steps") != 2 or work.get("frequency_study_steps") != 1
+            or work.get("study_run_calls") != 0 or work.get("old_solution_clear_calls") != 0):
+        _fail("actual solve work inventory omitted one or both BMA steps or the Frequency step")
+    output_association = readback.get("output_association")
+    if (output_association != prep_sequence
+            or output_association.get("output_association_status")
+                != "UNVERIFIED_UNTIL_EXACT_NEW_SOLUTIONINFO_AND_DATASET_READBACK"):
+        _fail("output association summary is detached or prematurely claims a producer")
+    return {"status": "SOFTWARE_VALIDATED_FULL_BMA_FREQUENCY_RUN_READBACK",
+            "native_result": "UNVERIFIED_PENDING_NATIVE_RUN_AND_OUTPUT_ASSOCIATION_REVIEW",
+            "producer_step_binding": "UNVERIFIED",
+            "producer_study_tag": _FULL_BMA_FREQUENCY_STUDY,
+            "solver_sequence_tag": prep_sequence["tag"],
+            "dataset": dict(dataset), "solution_pairs": [dict(pair) for pair in pairs],
+            "managed_route_binding": binding, "source_identity": source_identity,
+            "readback": dict(readback),
+            "project_id": project_id, "model_tag": model_tag, "model_ref": dict(model_ref)}
+
+
+def _validate_full3d_bma_frequency_producer_evidence(evidence: Mapping[str, Any]) -> dict[str, Any]:
+    if not isinstance(evidence, Mapping):
+        _fail("exact full BMA/Frequency public producer evidence is required")
+    preparation_request = evidence.get("preparation_request")
+    preparation_route = evidence.get("preparation_route_result")
+    run_request = evidence.get("run_request")
+    run_route = evidence.get("run_route_result")
+    readback = evidence.get("readback")
+    project_id, model_tag, model_ref = evidence.get("project_id"), evidence.get("model_tag"), evidence.get("model_ref")
+    timeout = evidence.get("max_execution_timeout_s")
+    if (not all(isinstance(item, Mapping) for item in
+                (preparation_request, preparation_route, run_request, run_route, readback, model_ref))
+            or not isinstance(project_id, str) or not isinstance(model_tag, str)
+            or not isinstance(timeout, (int, float)) or isinstance(timeout, bool)):
+        _fail("producer evidence omitted an exact prepare/run public envelope or project/ModelRef")
+    preparation = validate_full3d_bma_frequency_producer_prepare_route(
+        request=preparation_request, route_result=preparation_route,
+        project_id=project_id, model_tag=model_tag, model_ref=model_ref,
+        max_execution_timeout_s=float(timeout))
+    run = validate_full3d_bma_frequency_producer_run_readback(
+        readback, preparation_readback=preparation["readback"],
+        project_id=project_id, model_tag=model_tag, model_ref=model_ref,
+        run_request=run_request, route_result=run_route,
+        max_execution_timeout_s=float(timeout))
+    selected = evidence.get("selected_tuple")
+    if (not isinstance(selected, Mapping)
+            or set(selected) != {"outer_index", "inner_index", "solnum"}
+            or any(type(selected.get(key)) is not int or selected[key] < 1
+                   for key in ("outer_index", "inner_index", "solnum"))
+            or selected["inner_index"] != selected["solnum"]):
+        _fail("one exact positive producer SolutionInfo tuple must be selected")
+    matches = [pair for pair in run["solution_pairs"]
+               if pair.get("outer_index") == selected["outer_index"]
+               and pair.get("inner_index") == selected["inner_index"]
+               and pair.get("solnum") == selected["solnum"]]
+    if len(matches) != 1:
+        _fail("selected tuple is absent or ambiguous in the exact full producer SolutionInfo readback")
+    run_execution = run_request.get("execution")
+    if not isinstance(run_execution, Mapping):
+        _fail("producer run request omitted its public managed execution identity")
+    return {"status": "SOFTWARE_VALIDATED_FULL_BMA_FREQUENCY_ROUTE_CHAIN",
+            "native_result": "UNVERIFIED_PENDING_NATIVE_OUTPUT_STEP_ASSOCIATION",
+            "producer_step_binding": "UNVERIFIED",
+            "project_id": project_id, "model_tag": model_tag, "model_ref": dict(model_ref),
+            "preparation": preparation, "run": run,
+            "run_request": dict(run_request), "run_route_result": dict(run_route),
+            "run_execution": dict(run_execution),
+            "run_binding": dict(run["managed_route_binding"]),
+            "readback": dict(readback),
+            "dataset": dict(run["dataset"]),
+            "selected_tuple": dict(selected),
+            "selected_solution_pair": dict(matches[0]),
+            "solver_sequence_tag": run["solver_sequence_tag"],
+            "frequency_study_step_tag": _FULL_BMA_FREQUENCY_STEP_TAGS[-1]}
+
+
+def _qabs_expression_unit_observations(
+    equation_inventory: Mapping[str, Any], contract: Mapping[str, Any],
+) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
+    specifications = [dict(row) for row in QABS_CALIBRATION_CONTROL_EXPRESSIONS]
+    specifications.append({"expression": contract["expression"],
+                           "expected_unit": contract["expected_density_unit"], "role": "q_abs_target"})
+    observations = []
+    for spec in specifications:
+        hits = []
+        for entry in equation_inventory.get("entries", []):
+            if not isinstance(entry, Mapping) or not isinstance(entry.get("rows"), list):
+                _fail("Equation View inventory entry/rows are malformed")
+            for row_index, row in enumerate(entry["rows"]):
+                if not isinstance(row, list):
+                    _fail("Equation View inventory row is malformed")
+                for expression_column, value in enumerate(row):
+                    if value != spec["expression"]:
+                        continue
+                    for unit_column, unit in enumerate(row):
+                        if unit_column != expression_column and unit == spec["expected_unit"]:
+                            hits.append({"parent_path": entry.get("parent_path"),
+                                "feature_info_tag": entry.get("feature_info_tag"),
+                                "row_index": row_index,
+                                "expression_column": expression_column, "unit_column": unit_column})
+        if len(hits) != 1:
+            observations.append({"expression": spec["expression"],
+                "expected_unit": spec["expected_unit"], "row_observation": "NOT_UNIQUE_OR_MISSING"})
+        else:
+            observations.append(hits[0])
+    if any("expression_column" not in item for item in observations):
+        return observations, None
+    pairs = {(item["expression_column"], item["unit_column"]) for item in observations}
+    if len(pairs) != 1:
+        return observations, None
+    expression_column, unit_column = next(iter(pairs))
+    cross_feature = _qabs_cross_feature_summary(observations)
+    if cross_feature["distinct_owner_count"] < 2:
+        return observations, None
+    return observations, {
+        "column_indices": {"expression": expression_column, "unit": unit_column},
+        "control_expressions": [dict(row) for row in QABS_CALIBRATION_CONTROL_EXPRESSIONS],
+        "control_observations": observations[:-1], "target_observation": observations[-1],
+        "cross_feature_comparison": cross_feature,
+    }
+
+
+def _infer_qabs_column_schema_candidate(
+    equation_inventory: Mapping[str, Any], contract: Mapping[str, Any],
+) -> dict[str, Any] | None:
+    _, candidate = _qabs_expression_unit_observations(equation_inventory, contract)
+    return candidate
+
+
+def build_qabs_mapping_calibration_dispatch(
+    *, producer_evidence: Mapping[str, Any], contract: Mapping[str, Any],
+    request_id: str, idempotency_key: str,
+) -> dict[str, Any]:
+    """Read raw Equation View rows and native units for a chosen producer tuple; never solves."""
+    producer = _validate_full3d_bma_frequency_producer_evidence(producer_evidence)
+    if (not isinstance(contract, Mapping)
+            or contract.get("schema_id") != QABS_EXPRESSION_CONTRACT_SCHEMA
+            or contract.get("physics_tag") != "ewfd"
+            or contract.get("expected_density_unit") != "W/m^3"
+            or contract.get("integral_unit") != "W"):
+        _fail("versioned explicit EWFD Qabs expression contract is required for calibration")
+    run_binding = producer["run_binding"]
+    selected = producer["selected_tuple"]
+    binding = _managed_route_binding(
+        project_id=producer["project_id"], model_ref=producer["model_ref"],
+        model_tag=producer["model_tag"], revision=run_binding["revision_after"],
+        request_id=request_id, idempotency_key=idempotency_key)
+    java_args = {"phase": "qabs_mapping_calibration",
+        "managed_identity": {key: binding[key] for key in
+                             ("project_id", "model_ref", "model_tag", "expected_revision")},
+        "source": {"dataset_id": producer["dataset"]["tag"],
+                   "solution_id": producer["dataset"]["solution"], **dict(selected)},
+        "q_abs_expression_contract": dict(contract),
+        "control_expressions": [dict(row) for row in QABS_CALIBRATION_CONTROL_EXPRESSIONS],
+        "comsol_version_expected": producer["readback"]["producer_study"]["last_computation_version"]}
+    request = _operation_call("code.execute_java", {
+        "source_artifact": CV_RADIATION_JAVA_SOURCE["source_artifact"],
+        "entrypoint": CV_RADIATION_JAVA_SOURCE["entrypoint"], "mode": "trusted",
+        "arguments": java_args,
+    }, binding=binding, dispatch_scope=(
+        "read current Physics.featureInfo Expression rows and evaluateUnit for two sampled E/H controls plus the declared candidate expression; "
+        "no model mutation, study, solver, or integral"))
+    request["native_result"] = "NOT_RUN"
+    request["study_or_solver_invoked"] = False
+    return request
+
+
+def validate_qabs_mapping_calibration_route(
+    evidence: Mapping[str, Any],
+) -> dict[str, Any]:
+    producer_evidence = evidence.get("producer_evidence")
+    contract = evidence.get("contract")
+    request, route_result = evidence.get("request"), evidence.get("route_result")
+    timeout = evidence.get("max_execution_timeout_s")
+    if (not isinstance(producer_evidence, Mapping) or not isinstance(contract, Mapping)
+            or not isinstance(request, Mapping) or not isinstance(route_result, Mapping)
+            or not isinstance(timeout, (int, float)) or isinstance(timeout, bool)):
+        _fail("exact producer, calibration request/route, expression contract, and timeout are required")
+    producer = _validate_full3d_bma_frequency_producer_evidence(producer_evidence)
+    execution = request.get("execution")
+    if not isinstance(execution, Mapping):
+        _fail("Qabs calibration request omitted its public managed execution identity")
+    expected = build_qabs_mapping_calibration_dispatch(
+        producer_evidence=producer_evidence, contract=contract,
+        request_id=execution.get("request_id"), idempotency_key=execution.get("idempotency_key"))
+    if dict(request) != expected:
+        _fail("Qabs calibration request is detached from the exact Frequency producer tuple and candidate expression")
+    binding = validate_full3d_bma_mapping_route_result(
+        request, route_result, expected_revision_delta=1,
+        max_execution_timeout_s=float(timeout))
+    if execution.get("expected_revision") != producer["run_binding"]["revision_after"]:
+        _fail("Qabs calibration is not the immediate read-only route after the exact producer run")
+    java, payload = _cv_java_arguments(request, entrypoint=CV_RADIATION_JAVA_SOURCE["entrypoint"])
+    response = route_result.get("response")
+    java_source_identity = _validate_cv_java_source_identity(
+        java, response, source_spec=CV_RADIATION_JAVA_SOURCE,
+        label="Qabs mapping calibration route") if isinstance(response, Mapping) else None
+    raw = _java_action_readback(response, "Qabs mapping calibration") \
+        if isinstance(response, Mapping) else None
+    if not isinstance(raw, Mapping) or route_result.get("readback") != raw:
+        _fail("Qabs calibration readback is detached from its exact public terminal response")
+    source = producer["dataset"]
+    selected = producer["selected_tuple"]
+    if (raw.get("native_result") != "COMSOL_NATIVE_QABS_MAPPING_CALIBRATION_READBACK"
+            or raw.get("study_or_solver_invoked") is not False
+            or raw.get("model_mutated") is not False
+            or raw.get("dataset_tag") != source["tag"]
+            or raw.get("solution_tag") != source["solution"]
+            or raw.get("selected_tuple") != dict(selected)
+            or raw.get("comsol_version") != producer["readback"]["producer_study"]["last_computation_version"]
+            or raw.get("q_abs_expression_contract") != dict(contract)
+            or raw.get("control_expressions") != [dict(row) for row in QABS_CALIBRATION_CONTROL_EXPRESSIONS]):
+        _fail("Qabs calibration is not same-model/same-output tuple evidence or attempted a mutation")
+    inventory = raw.get("equation_view_inventory")
+    if not isinstance(inventory, Mapping):
+        _fail("Qabs calibration omitted the raw complete Equation View inventory")
+    row_candidate = _infer_qabs_column_schema_candidate(inventory, contract)
+    observations, _ = _qabs_expression_unit_observations(inventory, contract)
+    expected_cross_feature = _qabs_cross_feature_summary(observations)
+    expected_target_observation = observations[2] if len(observations) == 3 \
+        and "expression_column" in observations[2] else None
+    if (raw.get("control_row_observations") != observations[:2]
+            or raw.get("target_row_observation") != expected_target_observation
+            or raw.get("cross_feature_comparison") != expected_cross_feature):
+        _fail("calibration row locations or cross-FeatureInfo comparison differ from recomputation")
+    if not isinstance(raw.get("cross_feature_comparison"), Mapping):
+        _fail("Qabs calibration omitted cross-FeatureInfo owner comparison")
+    cross_feature = raw["cross_feature_comparison"]
+    if (type(cross_feature.get("distinct_owner_count")) is not int
+            or cross_feature["distinct_owner_count"] < 0
+            or cross_feature.get("status") not in {
+                "AT_LEAST_TWO_DISTINCT_FEATUREINFO_OWNERS", "INSUFFICIENT_DISTINCT_FEATUREINFO_OWNERS"}):
+        _fail("Qabs cross-FeatureInfo owner evidence is malformed")
+    control_readbacks = raw.get("control_unit_readbacks")
+    expected_control_readbacks = [
+        {"expression": expected["expression"], "expected_unit": expected["expected_unit"],
+         "source": "Model.param().evaluateUnit"}
+        for expected in QABS_CALIBRATION_CONTROL_EXPRESSIONS]
+    if (not isinstance(control_readbacks, list) or len(control_readbacks) != 2
+            or any(not isinstance(actual, Mapping)
+                   or any(actual.get(key) != value for key, value in expected.items())
+                   or not isinstance(actual.get("evaluated_unit"), str)
+                   for actual, expected in zip(control_readbacks, expected_control_readbacks))):
+        _fail("known E/H controls lack exact independent native evaluateUnit readbacks")
+    target = raw.get("target_unit_readback")
+    if (not isinstance(target, Mapping)
+            or target.get("expression") != contract.get("expression")
+            or target.get("expected_unit") != contract.get("expected_density_unit")
+            or target.get("source") != "Model.param().evaluateUnit"
+            or not isinstance(target.get("evaluated_unit"), str)):
+        _fail("candidate Qabs unit readback is missing or detached from the explicit contract")
+    units_match = all(actual.get("evaluated_unit") == expected["expected_unit"]
+                      for actual, expected in zip(control_readbacks, expected_control_readbacks)) \
+        and target.get("evaluated_unit") == contract["expected_density_unit"]
+    candidate = row_candidate if units_match else None
+    if candidate is None:
+        if raw.get("schema_candidate") is not None or raw.get("status") != "CANDIDATE_MAPPING_UNRESOLVED":
+            _fail("calibration claims a column schema despite missing/ambiguous controls or target row")
+    elif raw.get("schema_candidate") != candidate or raw.get("status") != "CANDIDATE_SCHEMA_NEEDS_INDEPENDENT_REVIEW":
+        _fail("calibration column-schema candidate differs from recomputation over actual raw rows")
+    source_identity = raw.get("native_source_identity")
+    raw_dataset = source_identity.get("dataset") if isinstance(source_identity, Mapping) else None
+    raw_stored = source_identity.get("stored_solution") if isinstance(source_identity, Mapping) else None
+    raw_selected = raw_stored.get("selected_tuple") if isinstance(raw_stored, Mapping) else None
+    raw_solution_info = raw_stored.get("solution_info") if isinstance(raw_stored, Mapping) else None
+    raw_pairs = raw_solution_info.get("solution_pairs") if isinstance(raw_solution_info, Mapping) else None
+    selected_solution_pairs = [pair for pair in raw_pairs if isinstance(pair, Mapping)
+        and pair.get("outer_index") == selected["outer_index"]
+        and pair.get("inner_index") == selected["inner_index"]
+        and pair.get("solnum") == selected["solnum"]
+        and pair.get("solver_sequence_tag") == source["solution"]] if isinstance(raw_pairs, list) else []
+    raw_execution = execution
+    raw_managed = raw.get("managed_identity")
+    expected_study = producer["readback"].get("producer_study")
+    raw_dataset_properties = raw_dataset.get("properties") if isinstance(raw_dataset, Mapping) else None
+    raw_solution_property = raw_dataset_properties.get("solution") \
+        if isinstance(raw_dataset_properties, Mapping) else None
+    expected_study_date = expected_study.get("last_computation_date_ms") \
+        if isinstance(expected_study, Mapping) else None
+    expected_study_version = expected_study.get("last_computation_version") \
+        if isinstance(expected_study, Mapping) else None
+    if (not isinstance(source_identity, Mapping) or not isinstance(raw_dataset, Mapping)
+            or not isinstance(raw_stored, Mapping) or not isinstance(raw_selected, Mapping)
+            or raw_dataset.get("tag") != source["tag"]
+            or raw_dataset.get("feature_type") != "Solution"
+            or raw_solution_property != source["solution"]
+            or raw_stored.get("solution_tag") != source["solution"]
+            or raw_stored.get("study_tag") != expected_study.get("study_tag")
+            or raw_stored.get("computation_version") != expected_study_version
+            or raw_stored.get("computation_date_ms") != expected_study_date
+            or any(raw_selected.get(key) != selected.get(key)
+                   for key in ("outer_index", "inner_index", "solnum"))
+            or raw_selected.get("solver_sequence_tag") != source["solution"]
+            or len(selected_solution_pairs) != 1
+            or not isinstance(raw_managed, Mapping)
+            or raw_managed.get("project_id") != raw_execution.get("project_id")
+            or raw_managed.get("model_ref") != raw_execution.get("model_ref")
+            or raw_managed.get("model_tag") != producer["model_tag"]
+            or raw_managed.get("expected_revision") != raw_execution.get("expected_revision")
+            or not isinstance(expected_study, Mapping)):
+        _fail("calibration omitted actual native stored-solution identity")
+    readback_sha = _sha256(raw)
+    route_ref = {
+        "source_identity": source_identity,
+        "java_source_identity": java_source_identity,
+        "project_id": execution["project_id"], "session_id": execution["session_id"],
+        "model_ref": dict(execution["model_ref"]),
+        "request_id": binding["request_id"], "idempotency_key": binding["idempotency_key"],
+        "operation_instance_id": binding["operation_instance_id"], "job_id": binding["job_id"],
+        "revision_before": binding["revision_before"], "revision_after": binding["revision_after"],
+        "request_hash": binding["request_hash"],
+    }
+    calibration_route_binding = {**dict(binding), "java_source_identity": java_source_identity}
+    return {"status": "SOFTWARE_VALIDATED_QABS_CALIBRATION_ROUTE",
+            "native_result": "CANDIDATE_CALIBRATION_READBACK_NOT_APPROVED_SCHEMA",
+            "mapping_status": "UNVERIFIED_PENDING_INDEPENDENT_REVIEW_AND_SOURCE_PIN",
+            "route_binding": calibration_route_binding, "source_route": route_ref,
+            "java_source_identity": java_source_identity,
+            "source_identity": dict(raw["native_source_identity"]),
+            "equation_inventory": dict(inventory),
+            "equation_inventory_sha256": _sha256(inventory),
+            "schema_candidate": candidate, "readback_sha256": readback_sha,
+            "comsol_version": raw["comsol_version"],
+            "readback": dict(raw), "contract": dict(contract),
+            "source_identity": dict(source_identity),
+            "producer_step_binding": "UNVERIFIED",
+            "scientific_acceptance": "NOT_RUN"}
 
 
 def validate_full3d_bma_probe_preparation(
@@ -3967,13 +4709,232 @@ def _validate_full3d_cv_source_field_evidence(evidence: Mapping[str, Any]) -> di
             "source_cohort_before": dict(before)}
 
 
+def build_qabs_expression_contract(
+    expression: str, *, physics_tag: str = "ewfd", expected_density_unit: str = "W/m^3",
+) -> dict[str, Any]:
+    """Declare a loss-density expression without treating the declaration as proof."""
+    if (not isinstance(expression, str) or not expression.strip() or expression != expression.strip()
+            or not isinstance(physics_tag, str) or not _TAG.fullmatch(physics_tag)
+            or expected_density_unit != "W/m^3"):
+        _fail("Qabs contract needs an exact nonempty expression, physics tag, and W/m^3 density unit")
+    return {"schema_id": QABS_EXPRESSION_CONTRACT_SCHEMA, "physics_tag": physics_tag,
+            "expression": expression, "expected_density_unit": expected_density_unit,
+            "integral_unit": "W", "declaration_is_mapping_evidence": False}
+
+
+def _qabs_inventory_from_source(source_field_readback: Mapping[str, Any]) -> dict[str, Any]:
+    cohort = source_field_readback.get("source_cohort")
+    before = cohort.get("before") if isinstance(cohort, Mapping) else None
+    config = before.get("fixture_explicit_configuration") if isinstance(before, Mapping) else None
+    physics = config.get("physics") if isinstance(config, Mapping) else None
+    inventory = physics.get("equation_view_inventory") if isinstance(physics, Mapping) else None
+    if (not isinstance(inventory, Mapping)
+            or inventory.get("schema_id") != "urn:comsol-mcp:w23:physics-equation-view-raw-inventory:1.0.0"
+            or inventory.get("physics_tag") != "ewfd"
+            or inventory.get("column_semantics") != "NOT_EXPOSED_BY_FEATUREINFO_GETINFOTABLE"
+            or inventory.get("mapping_authentication") != "NOT_AUTHENTICATED"
+            or not isinstance(inventory.get("entries"), list)):
+        _fail("Qabs needs the exact raw same-model EWFD Equation View inventory from its source cohort")
+    return dict(inventory)
+
+
+def _validate_qabs_mapping_certificate(
+    certificate: Mapping[str, Any], *, contract: Mapping[str, Any],
+    equation_inventory: Mapping[str, Any], expected_source_route: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Check only code-pinned schema evidence; caller claims cannot populate this registry."""
+    approved_id = certificate.get("approved_schema_id") if isinstance(certificate, Mapping) else None
+    approved_schema = QABS_APPROVED_COLUMN_SCHEMA_REGISTRY.get(approved_id) \
+        if isinstance(approved_id, str) else None
+    if (not isinstance(certificate, Mapping)
+            or certificate.get("schema_id") != QABS_MAPPING_CERTIFICATE_SCHEMA
+            or certificate.get("status") != "PINNED_NATIVE_COLUMN_SCHEMA_EVIDENCE"
+            or certificate.get("physics_tag") != contract.get("physics_tag")
+            or certificate.get("expression") != contract.get("expression")
+            or certificate.get("density_unit") != contract.get("expected_density_unit")
+            or certificate.get("equation_inventory_sha256") != _sha256(equation_inventory)
+            or certificate.get("equation_inventory") != dict(equation_inventory)
+            or not isinstance(approved_schema, Mapping)
+            or certificate.get("approved_schema") != dict(approved_schema)):
+        _fail("Qabs schema evidence is not independently pinned in the production registry")
+    for hash_field in ("calibration_readback_sha256", "calibration_route_binding_sha256",
+                       "approval_evidence_sha256"):
+        if re.fullmatch(r"[0-9a-f]{64}", str(approved_schema.get(hash_field, ""))) is None:
+            _fail("Qabs production schema is missing a code-pinned calibration/reviewer digest")
+    calibration = certificate.get("calibration")
+    calibration_candidate = calibration.get("schema_candidate") \
+        if isinstance(calibration, Mapping) else None
+    calibration_cross_feature = calibration_candidate.get("cross_feature_comparison") \
+        if isinstance(calibration_candidate, Mapping) else None
+    current_candidate = _infer_qabs_column_schema_candidate(equation_inventory, contract)
+    if (not isinstance(calibration, Mapping)
+            or calibration.get("status") != "NATIVE_CALIBRATION_ROUTE_VALIDATED"
+            or calibration.get("readback_sha256") != approved_schema.get("calibration_readback_sha256")
+            or calibration.get("comsol_version") != approved_schema.get("comsol_version")
+            or not isinstance(calibration.get("route_binding"), Mapping)
+            or _sha256(calibration.get("route_binding"))
+                != approved_schema.get("calibration_route_binding_sha256")
+            or not isinstance(current_candidate, Mapping)
+            or calibration_candidate != current_candidate
+            or dict(approved_schema.get("column_indices", {}))
+                != dict(current_candidate.get("column_indices", {}))
+            or list(approved_schema.get("control_expressions", []))
+                != list(current_candidate.get("control_expressions", []))
+            or approved_schema.get("minimum_distinct_feature_info_owners") != 2
+            or not isinstance(calibration_cross_feature, Mapping)
+            or calibration_cross_feature.get("status") != "AT_LEAST_TWO_DISTINCT_FEATUREINFO_OWNERS"
+            or type(calibration_cross_feature.get("distinct_owner_count")) is not int
+            or calibration_cross_feature["distinct_owner_count"] < 2):
+        _fail("Qabs calibration route does not match the independently pinned native schema evidence")
+    source_route = certificate.get("source_route")
+    if (not isinstance(source_route, Mapping)
+            or (expected_source_route is not None and dict(source_route) != dict(expected_source_route))):
+        _fail("Qabs certificate is detached from the exact public source-field route")
+    owner = certificate.get("feature_info_owner")
+    indices = certificate.get("column_indices")
+    row_index = certificate.get("row_index")
+    if (not isinstance(owner, Mapping) or not isinstance(owner.get("parent_path"), str)
+            or not isinstance(owner.get("feature_info_tag"), str)
+            or type(row_index) is not int or row_index < 0
+            or not isinstance(indices, Mapping)
+            or type(indices.get("expression")) is not int or indices["expression"] < 0
+            or type(indices.get("unit")) is not int or indices["unit"] < 0
+            or dict(indices) != dict(approved_schema.get("column_indices", {}))
+            or indices["expression"] == indices["unit"]):
+        _fail("Qabs column-schema row/owner coordinates are malformed")
+    matches = []
+    for entry in equation_inventory["entries"]:
+        if (isinstance(entry, Mapping) and entry.get("parent_path") == owner["parent_path"]
+                and entry.get("feature_info_tag") == owner["feature_info_tag"]):
+            matches.append(entry)
+    if len(matches) != 1:
+        _fail("Qabs feature-info owner is missing or ambiguous in the raw Equation View inventory")
+    rows = matches[0].get("rows")
+    if (not isinstance(rows, list) or row_index >= len(rows)
+            or not isinstance(rows[row_index], list)
+            or max(indices["expression"], indices["unit"]) >= len(rows[row_index])
+            or rows[row_index][indices["expression"]] != contract["expression"]
+            or rows[row_index][indices["unit"]] != contract["expected_density_unit"]):
+        _fail("reviewed Qabs expression/unit columns do not match the exact selected raw row")
+    occurrences = 0
+    for entry in equation_inventory["entries"]:
+        if not isinstance(entry, Mapping) or not isinstance(entry.get("rows"), list):
+            _fail("raw Equation View inventory contains a malformed entry")
+        for row in entry["rows"]:
+            if (isinstance(row, list) and indices["expression"] < len(row)
+                    and row[indices["expression"]] == contract["expression"]):
+                occurrences += 1
+    if occurrences != 1:
+        _fail("Qabs expression is ambiguous across the reviewed Equation View inventory")
+    return {"status": "SOFTWARE_CERTIFICATE_BOUND_TO_CODE_PINNED_SCHEMA_AND_SOURCE_INVENTORY",
+            "native_mapping_status": "UNVERIFIED_PENDING_PRODUCTION_CALIBRATION",
+            "approved_schema_id": approved_id,
+            "approved_evidence_sha256": approved_schema.get("approval_evidence_sha256"),
+            "equation_inventory_sha256": certificate["equation_inventory_sha256"],
+            "feature_info_owner": dict(owner), "row_index": row_index,
+            "column_indices": dict(indices), "calibration": dict(calibration),
+            "source_route": dict(source_route)}
+
+
+def build_qabs_mapping_certificate(
+    *, source_field_evidence: Mapping[str, Any], contract: Mapping[str, Any],
+    calibration_evidence: Mapping[str, Any], parent_path: str,
+    feature_info_tag: str, row_index: int,
+) -> dict[str, Any]:
+    """Materialize a certificate only when the exact calibration is pre-pinned in source."""
+    source = _validate_full3d_cv_source_field_evidence(source_field_evidence)
+    if (not isinstance(contract, Mapping)
+            or contract.get("schema_id") != QABS_EXPRESSION_CONTRACT_SCHEMA
+            or contract.get("expected_density_unit") != "W/m^3"
+            or contract.get("integral_unit") != "W"):
+        _fail("versioned Qabs expression contract is required")
+    inventory = _qabs_inventory_from_source(source["raw_readback"])
+    route = _cv_source_route_receipt(source)
+    calibration = validate_qabs_mapping_calibration_route(calibration_evidence)
+    candidate = calibration.get("schema_candidate")
+    if not isinstance(candidate, Mapping):
+        _fail("Qabs calibration did not produce an independently reviewable schema candidate")
+    cross_feature = candidate.get("cross_feature_comparison")
+    candidate_schema = dict(candidate)
+    approved = [(schema_id, schema) for schema_id, schema in QABS_APPROVED_COLUMN_SCHEMA_REGISTRY.items()
+                if isinstance(schema, Mapping)
+                and schema.get("column_indices") == candidate_schema["column_indices"]
+                and schema.get("control_expressions") == candidate_schema["control_expressions"]
+                and schema.get("minimum_distinct_feature_info_owners") == 2
+                and schema.get("calibration_route_binding_sha256")
+                    == _sha256(calibration.get("route_binding"))
+                and isinstance(candidate_schema["cross_feature_comparison"], Mapping)
+                and candidate_schema["cross_feature_comparison"].get("distinct_owner_count", 0) >= 2
+                and schema.get("comsol_version") == calibration.get("comsol_version")
+                and schema.get("calibration_readback_sha256") == calibration.get("readback_sha256")]
+    if len(approved) != 1:
+        _fail("no production Qabs column schema is independently approved and pinned")
+    approved_id, approved_schema = approved[0]
+    calibration_source = calibration.get("source_route")
+    calibration_source_identity = calibration.get("source_identity")
+    source_snapshot = source.get("source_cohort_before")
+    if (not isinstance(calibration_source, Mapping)
+            or calibration_source.get("project_id") != route.get("project_id")
+            or calibration_source.get("session_id") != route.get("session_id")
+            or calibration_source.get("model_ref") != route.get("model_ref")
+            or calibration.get("equation_inventory_sha256") != _sha256(inventory)
+            or not isinstance(calibration_source_identity, Mapping)
+            or not isinstance(source_snapshot, Mapping)
+            or calibration_source_identity.get("dataset") != source_snapshot.get("dataset")
+            or calibration_source_identity.get("stored_solution") != source_snapshot.get("stored_solution")):
+        _fail("Qabs calibration belongs to a different managed model or Equation View inventory")
+    indices = calibration["schema_candidate"].get("column_indices")
+    certificate = {
+        "schema_id": QABS_MAPPING_CERTIFICATE_SCHEMA,
+        "status": "PINNED_NATIVE_COLUMN_SCHEMA_EVIDENCE",
+        "approved_schema_id": approved_id,
+        "approved_schema": dict(approved_schema),
+        "physics_tag": contract["physics_tag"],
+        "expression": contract["expression"],
+        "density_unit": contract["expected_density_unit"],
+        "equation_inventory": inventory,
+        "equation_inventory_sha256": _sha256(inventory),
+        "feature_info_owner": {"parent_path": parent_path, "feature_info_tag": feature_info_tag},
+        "row_index": row_index,
+        "column_indices": dict(indices),
+        "calibration": {"status": "NATIVE_CALIBRATION_ROUTE_VALIDATED",
+                        "readback_sha256": calibration["readback_sha256"],
+                        "comsol_version": calibration["comsol_version"],
+                        "schema_candidate": candidate_schema,
+                        "route_binding": dict(calibration["route_binding"])},
+        "source_route": route,
+        "native_run_status": "NOT_RUN",
+    }
+    _validate_qabs_mapping_certificate(
+        certificate, contract=contract, equation_inventory=inventory, expected_source_route=route)
+    return certificate
+
+
 def build_full3d_control_volume_power_terms_dispatch(
     *, topology_evidence: Mapping[str, Any], source_field_evidence: Mapping[str, Any],
     request_id: str, idempotency_key: str,
+    q_abs_contract: Mapping[str, Any] | None = None,
+    q_abs_mapping_certificate: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the final read-only integral route after consecutive topology and field routes."""
     topology = _validate_full3d_cv_topology_evidence(topology_evidence)
     source = _validate_full3d_cv_source_field_evidence(source_field_evidence)
+    qabs_arguments: dict[str, Any] = {}
+    if q_abs_mapping_certificate is not None and q_abs_contract is None:
+        _fail("Qabs mapping certificate cannot be supplied without an expression contract")
+    if q_abs_contract is not None:
+        if (not isinstance(q_abs_contract, Mapping)
+                or q_abs_contract.get("schema_id") != QABS_EXPRESSION_CONTRACT_SCHEMA
+                or q_abs_contract.get("expected_density_unit") != "W/m^3"
+                or q_abs_contract.get("integral_unit") != "W"):
+            _fail("versioned W/m^3 Qabs expression contract is required")
+        qabs_arguments["q_abs_expression_contract"] = dict(q_abs_contract)
+        if q_abs_mapping_certificate is not None:
+            inventory = _qabs_inventory_from_source(source["raw_readback"])
+            _validate_qabs_mapping_certificate(
+                q_abs_mapping_certificate, contract=q_abs_contract,
+                equation_inventory=inventory, expected_source_route=_cv_source_route_receipt(source))
+            qabs_arguments["q_abs_mapping_certificate"] = dict(q_abs_mapping_certificate)
     topology_exec, source_exec = topology["request_execution"], source["request_execution"]
     if (topology_exec.get("project_id") != source_exec.get("project_id")
             or topology_exec.get("session_id") != source_exec.get("session_id")
@@ -3995,10 +4956,13 @@ def build_full3d_control_volume_power_terms_dispatch(
             "source": dict(source["contract"]["source"]),
             "source_field_readback": source["raw_readback"],
             "native_result": "NOT_RUN", "study_or_solver_invoked": False,
+            **qabs_arguments,
         },
     }, binding=binding, dispatch_scope=(
         "one same-SolutionSpec IntSurface area/Poynting, IntVolume(1), and driven full-field ewfd.Pin readback; "
-        "Qabs is not supplied; no study or solver call"))
+        + ("Qabs IntVolume executes only under a reviewed current Equation View mapping certificate; "
+           "if absent, Qabs is unavailable; " if qabs_arguments else "Qabs is not supplied; ")
+        + "no study or solver call"))
 
 
 def _numeric_integral_row(
@@ -4091,13 +5055,19 @@ def recompute_full3d_control_volume_power_terms(
     cleanup = power_readback.get("cleanup")
     rows = power_readback["temporary_numerical_features"]
     tags = [row.get("tag") for row in rows if isinstance(row, Mapping)]
-    if (not isinstance(cleanup, Mapping) or len(rows) != 14 or len(tags) != 14
+    qabs_contract = power_readback.get("q_abs_expression_contract")
+    qabs_certificate = power_readback.get("q_abs_mapping_certificate")
+    qabs_enabled = isinstance(qabs_contract, Mapping)
+    qabs_integral_authorized = qabs_certificate is not None
+    expected_node_count = 15 if qabs_integral_authorized else 14
+    if (not isinstance(cleanup, Mapping) or len(rows) != expected_node_count or len(tags) != expected_node_count
             or any(not isinstance(tag, str) or not tag for tag in tags)
             or len(set(tags)) != len(tags)
-            or cleanup.get("created_count") != 14 or cleanup.get("removed_count") != 14
+            or cleanup.get("created_count") != expected_node_count
+            or cleanup.get("removed_count") != expected_node_count
             or cleanup.get("removed") is not True or cleanup.get("cleanup_failed") is not False
             or cleanup.get("remaining_tags") != [] or cleanup.get("error") != ""):
-        _fail("all 14 request-owned numerical nodes require exact confirmed cleanup evidence")
+        _fail("all request-owned numerical nodes require exact confirmed cleanup evidence")
 
     interior_ids = topology_check.get("interior_domain_ids")
     if power_readback.get("interior_domain_ids") != interior_ids:
@@ -4183,18 +5153,66 @@ def recompute_full3d_control_volume_power_terms(
         _fail("incident-power summary differs from the exact native EvalGlobal readback")
     qabs = power_readback.get("q_abs_volume_integral")
     qabs_mapping = power_readback.get("q_abs_field_mapping")
-    if (not isinstance(qabs, Mapping) or qabs.get("value") is not None
-            or qabs.get("status") != "NOT_AVAILABLE_NATIVE_PHYSICS_FIELD_MAPPING_REQUIRED"
-            or qabs.get("expression") != "NOT_PROVIDED"
-            or not isinstance(qabs_mapping, Mapping) or qabs_mapping.get("status") != "UNVERIFIED"
-            or qabs_mapping.get("expression") != "NOT_PROVIDED"
-            or qabs_mapping.get("unit") != "NOT_PROVIDED"):
-        _fail("Qabs cannot be replaced by zero or an unverified expression/unit mapping")
-    if (power_readback.get("balance_residual") is not None
+    if not isinstance(qabs, Mapping) or not isinstance(qabs_mapping, Mapping):
+        _fail("Qabs status and integral fields must be explicit objects even when unavailable")
+    qabs_value: float | None = None
+    qabs_mapping_result: dict[str, Any] = {"status": "UNVERIFIED"}
+    if not qabs_enabled:
+        if (qabs_integral_authorized
+                or not isinstance(qabs, Mapping) or qabs.get("value") is not None
+                or qabs.get("status") != "NOT_AVAILABLE_EXPLICIT_QABS_CONTRACT_REQUIRED"
+                or qabs.get("expression") != "NOT_PROVIDED"
+                or not isinstance(qabs_mapping, Mapping)
+                or qabs_mapping.get("status") != "NO_EXPLICIT_QABS_EXPRESSION_CONTRACT"):
+            _fail("Qabs cannot be supplied without an explicit density expression contract")
+    else:
+        if (qabs_contract.get("schema_id") != QABS_EXPRESSION_CONTRACT_SCHEMA
+                or qabs_contract.get("physics_tag") != "ewfd"
+                or not isinstance(qabs_contract.get("expression"), str)
+                or not qabs_contract["expression"].strip()
+                or qabs_contract.get("expected_density_unit") != "W/m^3"
+                or qabs_contract.get("integral_unit") != "W"
+                or qabs_contract.get("declaration_is_mapping_evidence") is not False
+                or not isinstance(qabs_mapping, Mapping)
+                or qabs_mapping.get("expression") != qabs_contract["expression"]
+                or qabs_mapping.get("physics_tag") != "ewfd"
+                or qabs_mapping.get("declared_density_unit") != "W/m^3"
+                or qabs_mapping.get("evaluated_density_unit") != "W/m^3"):
+            _fail("Qabs declaration lacks exact same-model physics and native unit readback")
+        inventory = _qabs_inventory_from_source(source_field_readback)
+        if qabs_integral_authorized:
+            certificate_result = _validate_qabs_mapping_certificate(
+                qabs_certificate, contract=qabs_contract, equation_inventory=inventory)
+            if (qabs_mapping.get("mapping_status") != "CERTIFICATE_BOUND_TO_CURRENT_NATIVE_EQUATION_VIEW"
+                    or qabs_mapping.get("status") != "PINNED_COLUMN_CERTIFICATE_AND_NATIVE_UNIT_READBACK_MATCH"
+                    or qabs_mapping.get("equation_inventory_sha256")
+                        != certificate_result["equation_inventory_sha256"]
+                    or qabs.get("expression") != [qabs_contract["expression"]]
+                    or qabs.get("unit") != "W"):
+                _fail("Qabs native integral is not tied to the reviewed current Equation View certificate")
+            qabs_row = _numeric_integral_row(rows, feature_type="IntVolume", dataset=dataset,
+                expression=qabs_contract["expression"], unit="W", geometry="geom3d", dimension=3,
+                entity_ids=interior_ids, outer=outer, inner=inner)
+            qabs_value = _finite_number(qabs_row.get("value"), "native Qabs volume integral")
+            if dict(qabs) != dict(qabs_row):
+                _fail("Qabs summary differs from the exact selected IntVolume readback")
+            qabs_mapping_result = certificate_result
+        else:
+            if (qabs.get("value") is not None
+                    or qabs.get("status") != "NOT_AVAILABLE_REVIEWED_COLUMN_MAPPING_CERTIFICATE_REQUIRED"
+                    or qabs.get("expression") != qabs_contract["expression"]
+                    or qabs_mapping.get("mapping_status") != "UNVERIFIED"
+                    or qabs_mapping.get("status") != "UNIT_READBACK_ONLY_MAPPING_CERTIFICATE_REQUIRED"):
+                _fail("unit evaluation alone cannot authorize the Qabs volume integral")
+            if any(row.get("feature_type") == "IntVolume"
+                   and row.get("expression") == [qabs_contract["expression"]] for row in rows):
+                _fail("Qabs IntVolume cannot be dispatched without a reviewed mapping certificate")
+    expected_residual = (math.fsum(surface_sum_terms) + qabs_value) / pin if qabs_value is not None else None
+    if (power_readback.get("balance_residual") != expected_residual
             or power_readback.get("absolute_balance_tolerance") != "NOT_FROZEN"
             or power_readback.get("producer_step_binding") != "UNVERIFIED"
             or power_readback.get("normalization") != "surface flux / positive native ewfd.Pin"):
-        _fail("total balance cannot be claimed without Qabs, frozen tolerance, and exact producer binding")
+        _fail("power balance remains diagnostic only and requires exact source terms and open acceptance status")
     signed_flux_sum = math.fsum(surface_sum_terms)
     return {
         "status": "SOFTWARE_CV_POWER_TERMS_RECOMPUTED" if fixture_scope
@@ -4207,10 +5225,10 @@ def recompute_full3d_control_volume_power_terms(
         "signed_surface_flux_sum_over_Pin": signed_flux_sum / pin,
         "volume_integral_of_one_m3": volume_value,
         "analytic_cv_volume_reference_m3": expected_volume,
-        "q_abs_volume_integral": "NOT_AVAILABLE",
-        "q_abs_generic_expression_interface": "NOT_IMPLEMENTED",
-        "q_abs_mapping": "UNVERIFIED",
-        "power_balance_residual_over_Pin": None,
+        "q_abs_volume_integral": qabs_value,
+        "q_abs_generic_expression_interface": "IMPLEMENTED_WITH_AUTHENTICATION_GATE",
+        "q_abs_mapping": qabs_mapping_result,
+        "power_balance_residual_over_Pin": expected_residual,
         "area_volume_diagnostic_policy": dict(CV_NATIVE_INTEGRAL_DIAGNOSTIC_POLICY),
         "absolute_balance_tolerance": "NOT_FROZEN",
         "producer_step_binding": "UNVERIFIED",
@@ -4228,9 +5246,15 @@ def validate_full3d_control_volume_power_terms_route(
     execution = request.get("execution") if isinstance(request, Mapping) else None
     if not isinstance(execution, Mapping):
         _fail("managed CV power request omitted its exact current execution identity")
+    _, requested_payload = _cv_java_arguments(
+        request, entrypoint=CV_RADIATION_JAVA_SOURCE["entrypoint"])
+    requested_qabs_contract = requested_payload.get("q_abs_expression_contract")
+    requested_qabs_certificate = requested_payload.get("q_abs_mapping_certificate")
     expected_request = build_full3d_control_volume_power_terms_dispatch(
         topology_evidence=topology_evidence, source_field_evidence=source_field_evidence,
-        request_id=execution.get("request_id"), idempotency_key=execution.get("idempotency_key"))
+        request_id=execution.get("request_id"), idempotency_key=execution.get("idempotency_key"),
+        q_abs_contract=requested_qabs_contract,
+        q_abs_mapping_certificate=requested_qabs_certificate)
     if dict(request) != expected_request:
         _fail("CV integral request is detached from consecutive topology and source-field evidence")
     topology = _validate_full3d_cv_topology_evidence(topology_evidence)
@@ -4247,7 +5271,9 @@ def validate_full3d_control_volume_power_terms_route(
     java, payload = _cv_java_arguments(request, entrypoint=CV_RADIATION_JAVA_SOURCE["entrypoint"])
     if (payload.get("phase") != "cv_power_terms"
             or payload.get("control_volume_topology") != topology["normalized_readback"]
-            or payload.get("source_field_readback") != source["raw_readback"]):
+            or payload.get("source_field_readback") != source["raw_readback"]
+            or payload.get("q_abs_expression_contract") != requested_qabs_contract
+            or payload.get("q_abs_mapping_certificate") != requested_qabs_certificate):
         _fail("CV integral Java request must use the registered source and exact topology/field readbacks")
     source_identity = _validate_cv_java_source_identity(
         java, response, source_spec=CV_RADIATION_JAVA_SOURCE, label="CV integral route") \
@@ -4257,6 +5283,9 @@ def validate_full3d_control_volume_power_terms_route(
         _fail("CV power terms are detached from the exact terminal public Java response")
     if raw.get("native_result") != "COMSOL_NATIVE_CV_POWER_TERMS_READBACK":
         _fail("public CV power route did not return the versioned native integral readback")
+    if (raw.get("q_abs_expression_contract") != requested_qabs_contract
+            or raw.get("q_abs_mapping_certificate") != requested_qabs_certificate):
+        _fail("Qabs expression/certificate readback is detached from the exact public request")
     recomputed = recompute_full3d_control_volume_power_terms(
         raw, topology_readback=topology["raw_readback"],
         source_contract=source["contract"], source_field_readback=source["raw_readback"])
@@ -4304,6 +5333,10 @@ __all__ = [
     "Full3DScienceError", "ManagedRouteOutcomeError", "FULL3D_COMPARISON_POLICY",
     "FULL3D_CONVERGENCE_POLICY", "build_full3d_convergence_recipe",
     "COMSOL_CV_POWER_API_EVIDENCE", "CV_POWER_BALANCE_POLICY",
+    "QABS_EXPRESSION_CONTRACT_SCHEMA", "QABS_MAPPING_CERTIFICATE_SCHEMA",
+    "QABS_EXPRESSION_API_POLICY", "QABS_CALIBRATION_CONTROL_EXPRESSIONS",
+    "build_qabs_expression_contract", "build_qabs_mapping_calibration_dispatch",
+    "validate_qabs_mapping_calibration_route", "build_qabs_mapping_certificate",
     "build_full3d_control_volume_topology_dispatch",
     "validate_full3d_control_volume_topology_route",
     "build_full3d_control_volume_power_terms_dispatch",
@@ -4324,6 +5357,11 @@ __all__ = [
     "build_full3d_study_run_dispatch", "build_full3d_solution_inventory_dispatch",
     "build_full3d_bma_probe_prepare_dispatch", "build_full3d_bma_probe_run_dispatch",
     "validate_full3d_bma_probe_preparation", "validate_full3d_bma_probe_run_readback",
+    "build_full3d_bma_frequency_producer_prepare_dispatch",
+    "build_full3d_bma_frequency_producer_run_dispatch",
+    "validate_full3d_bma_frequency_producer_preparation",
+    "validate_full3d_bma_frequency_producer_prepare_route",
+    "validate_full3d_bma_frequency_producer_run_readback",
     "build_full3d_dataset_list_dispatch", "build_full3d_dataset_indices_dispatch",
     "build_full3d_save_dispatch", "build_full3d_model_load_request",
     "build_full3d_mode_overlap_definition", "build_full3d_mode_overlap_dispatch",
