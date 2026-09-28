@@ -1,0 +1,124 @@
+{
+  "schema": "W21_FIELD_IDENTITY_PROBE_SOFTWARE_CHECKPOINT_V1",
+  "status": "PASS_SCOPED_OFFLINE",
+  "native_status": "NOT_RUN",
+  "production_admission": "UNVERIFIED",
+  "source_hashes": {
+    "tools/java/W21FieldIdentityProbe.java": "632f6657c98752b1522d30ce75840dcc9dc16e52c54fabcd8232ab250bbbcbbf",
+    "tools/java/W21FieldIdentityProbeOfflineTest.java": "b0a9d47fddc5027f1d064d7daef1d6b2a4ac2cd85729e8f8835dcba90cde64e0"
+  },
+  "capability": "Bounded read-only run(Model,args) probe for physics/field metadata, raw EquationView Shape/Expression rows and unit-system definitions. Only caller-supplied lock identifiers are queried. No inferred column meanings or dependent-field unit mapping.",
+  "main_review": {
+    "status": "ACCEPTED_SCOPED_SOFTWARE",
+    "closed_finding": "LimitExceeded was swallowed by version/type/field/component catch(Exception), returning partial data. Separate rethrow and targeted negatives now produce error-only envelopes.",
+    "verified": "Source,15 compiled classes,7 API docs,API JAR,receipt and log hashes checked;10 JSON envelopes parsed,7 overflow envelopes contain no partial data;Java class major55.",
+    "parser_note": "Initial main verifier assumed unlabeled JSON lines; corrected to parse labeled lines. No test artifacts changed or repeated."
+  },
+  "validation": {
+    "static_compile": "PASS_COMSOL6.4_API_CORRETTO11",
+    "offline_harness_assertions": 38,
+    "json_envelopes": 10,
+    "overflow_envelopes": 7,
+    "native": "NOT_RUN",
+    "not_junit_test_count": true
+  },
+  "limits": {
+    "max_chars_each_cell": 512,
+    "max_feature_info_tags": 64,
+    "max_fields": 32,
+    "max_json_chars": 32768,
+    "max_json_utf8_bytes": 65536,
+    "max_lock_identifiers": 32,
+    "max_table_rows_each": 128,
+    "max_total_table_rows": 512,
+    "max_unit_rows": 256,
+    "overflow_behavior": "FAIL_WITH_SMALL_ERROR_ENVELOPE; NEVER_TRUNCATE; no partial data"
+  },
+  "api_evidence": [
+    {
+      "path": "/Applications/COMSOL64/Multiphysics/doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/api/com/comsol/model/physics/Physics.html",
+      "sha256": "d0de70997a9ea928edd8f1d207f926ce82c3849e5846c20189d28d67cd9273fc",
+      "summary": "getType returns the type identifier; field list and lookup are documented.",
+      "title": "Physics"
+    },
+    {
+      "path": "/Applications/COMSOL64/Multiphysics/doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/api/com/comsol/model/physics/PhysicsField.html",
+      "sha256": "627685629983d1755932ccacc037229ca2739a7eb351d9d83396bdbcac61a774",
+      "summary": "field() returns the field name; component() returns field components.",
+      "title": "PhysicsField"
+    },
+    {
+      "path": "/Applications/COMSOL64/Multiphysics/doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/api/com/comsol/model/physics/FeatureInfo.html",
+      "sha256": "4235da3e67011348aeed61e3ca50fcdec888068f2152ac5d659b0280c68d03a0",
+      "summary": "getInfoTable(String,String...) returns String[][]; Shape/Expression and all columns are documented; rows are items; isLocked(String) is documented.",
+      "title": "FeatureInfo"
+    },
+    {
+      "path": "/Applications/COMSOL64/Multiphysics/doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/api/com/comsol/model/AbstractModel.html",
+      "sha256": "de5cdd05c8ed879e990f299859e84323452ff07bf9fcce6e9d53acab36e72a36",
+      "summary": "baseSystem() returns the base unit system.",
+      "title": "AbstractModel"
+    },
+    {
+      "path": "/Applications/COMSOL64/Multiphysics/doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/api/com/comsol/model/UnitSystem.html",
+      "sha256": "80b47d350af25f45496cd8a40f282d6f9b35390149836e4c71734826ab8f0c62",
+      "summary": "base/additional/derived unit list and tag lookups are documented.",
+      "title": "UnitSystem"
+    },
+    {
+      "path": "/Applications/COMSOL64/Multiphysics/doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/api/com/comsol/model/Unit.html",
+      "sha256": "e5077f1cb55100c79a672b09ec0cb4842e0f685fac5f1ada12d9e69b9636a4fc",
+      "summary": "quantity, dimension, symbol, scale, offset getters are documented.",
+      "title": "Unit"
+    },
+    {
+      "path": "/Applications/COMSOL64/Multiphysics/doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/api/com/comsol/model/util/ModelUtil.html",
+      "sha256": "a5e4c080407a673a5dd78e95b9fb089d92c0f518477ffdcc4f62b3348085c4eb",
+      "summary": "getComsolVersion() returns current software version.",
+      "title": "ModelUtil"
+    }
+  ],
+  "receipt": {
+    "path": "/Volumes/CTestEff/w21-field-identity-probe-20260928/compile-test-receipt-overflow-fix.json",
+    "sha256": "69ef0decb21b2a444c74d0869a6a8661ed6d6b336ff190faa1772aeda6dd75a6"
+  },
+  "raw_log": {
+    "path": "/Volumes/CTestEff/w21-field-identity-probe-20260928/offline-test-final-v3.log",
+    "sha256": "9a04c958cfa049af66b5ba45b6f954ca4aa41a292a98a820680e65882c74a759"
+  },
+  "prior_receipt": {
+    "path": "/Volumes/CTestEff/w21-field-identity-probe-20260928/compile-test-receipt.json",
+    "prior_26_assertion_log": "/Volumes/CTestEff/w21-field-identity-probe-20260928/offline-test-final-v2.log",
+    "prior_log_sha256": "902226ece5818fedbc56e3889dde42408a7d977ba27c1ec304144adb2431f9ea",
+    "sha256": "92c6fe5024ed38ba064230210c66de22a4bd6819da9061750a2caa44585c06cc"
+  },
+  "replay_commands": [
+    [
+      "/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home/bin/javac",
+      "-proc:none",
+      "-encoding",
+      "UTF-8",
+      "-classpath",
+      "/Applications/COMSOL64/Multiphysics/apiplugins/com.comsol.api_1.0.0.jar",
+      "-d",
+      "/Volumes/CTestEff/w21-field-identity-probe-20260928/classes-final-v3",
+      "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/tools/java/W21FieldIdentityProbe.java",
+      "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/tools/java/W21FieldIdentityProbeOfflineTest.java"
+    ],
+    [
+      "/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home/bin/java",
+      "-cp",
+      "/Volumes/CTestEff/w21-field-identity-probe-20260928/classes-final-v3:/Applications/COMSOL64/Multiphysics/apiplugins/com.comsol.api_1.0.0.jar",
+      "W21FieldIdentityProbeOfflineTest"
+    ]
+  ],
+  "remaining": [
+    "dependent-field intrinsic-unit linkage",
+    "source/target definition identity",
+    "mesh topology/frame equivalence",
+    "native admission",
+    "Not integrated into production state_map/admission/output_reader",
+    "Windows6.4 then6.3 actual production MCP chain remains incomplete"
+  ],
+  "next_action": "Use current-source production MCP path to capture/calibrate field-unit metadata on a task-owned Windows6.4 fixture; implement authenticated field/unit/mesh mapping and exact result producer, verify6.4 then6.3 within frozen budget. Then continue W23-W26."
+}
