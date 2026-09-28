@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "stage": "W21_WINDOWS_PRODUCTION_LIFECYCLE_PREREQUISITE",
+  "status": "PASS_SCOPED_OFFLINE",
+  "overall_status": "PARTIAL",
+  "native_status": "NOT_RUN",
+  "capability": "Windows access-denied breakaway failure now refuses daemon startup instead of retrying without Job isolation.",
+  "source_hashes": {
+    "comsol_mcp/_control_client.py": "c2f68007eb56a4a9ef274f241dc377376c7126c4876c51228e8b6aa47da62754",
+    "tests/test_control_client.py": "8ec4060bc76e038238ef5efe4f5700c8733be7707d2ba352a2cbeaf0478bb73f"
+  },
+  "tests": {
+    "errors": 0,
+    "failures": 0,
+    "path": "/Volumes/CTestEff/windows-control-client-winerror5-20260928/junit.xml",
+    "sha256": "86efa3aece442ac7cd0bc6cfb338705ae1d88a889e57c532202402fb083b7849",
+    "skipped": 0,
+    "tests": 8,
+    "time_seconds": 0.057
+  },
+  "reproduce": {
+    "argv": [
+      "/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python",
+      "-B",
+      "-m",
+      "pytest",
+      "-p",
+      "no:cacheprovider",
+      "--basetemp=/Volumes/CTestEff/windows-control-client-winerror5-20260928/pytest-tmp",
+      "--junitxml=/Volumes/CTestEff/windows-control-client-winerror5-20260928/junit.xml",
+      "-q",
+      "tests/test_control_client.py"
+    ],
+    "environment": {
+      "PYTHONDONTWRITEBYTECODE": "1"
+    },
+    "exit_code": 0,
+    "workdir": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository"
+  },
+  "receipt": {
+    "path": "/Volumes/CTestEff/windows-control-client-winerror5-20260928/receipt.json",
+    "sha256": "5b0d07801b36de4c7bdea9767196b78d00077ee6a124388aeef70763a94b3c4f"
+  },
+  "main_review": {
+    "status": "VERIFIED",
+    "diff": "Only removed unsafe retry and strengthened actual winerror=5 negative control.",
+    "verification": "4 source/artifact hashes, 8 unique JUnit cases, zero failure/error/skip; Popen mocked, no native launch."
+  },
+  "limitations": [
+    "Windows native execution has not run for this change.",
+    "A host denying CREATE_BREAKAWAY_FROM_JOB will now fail closed; no platform acceptance is implied."
+  ],
+  "next_action": "Finish and review production MCP runner and actual output producer; freeze current source and validate Windows6.4 metadata before stage solve admission, then Windows6.3 and W23-W26."
+}

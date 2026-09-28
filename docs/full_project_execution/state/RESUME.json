@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "phase": "W21_PRODUCTION_MCP_NATIVE_RUNNER_IMPLEMENTATION",
+  "phase": "W21_PRODUCTION_RUNNER_AND_ACTUAL_OUTPUT_IMPLEMENTATION",
   "task": "W01_W26_CONTINUOUS_IMPLEMENTATION",
   "status": "PARTIAL_EXECUTION_CONTINUING_NATIVE_UNVERIFIED",
   "candidate_source": "docs/full_project_execution/project_session/EXPERIMENT_READS_SOFTWARE_CHECKPOINT.json",
@@ -990,10 +990,10 @@
     "next": "Wait for stable F04 runtime handoff; refresh closure and submit a new candidate for root review. No automatic rerun."
   },
   "verified_git_sync": {
-    "head": "e96786440d0f234c7775dba48e904eb388bf5349",
-    "origin_main": "e96786440d0f234c7775dba48e904eb388bf5349",
+    "head": "b3af9e52f2f5674b9c02ef525a8d92b00794dbf9",
+    "origin_main": "b3af9e52f2f5674b9c02ef525a8d92b00794dbf9",
     "status": "HEAD_EQUALS_ORIGIN_MAIN",
-    "checked_at": "2026-09-28T13:38:44.174096+00:00"
+    "checked_at": "2026-09-28T13:55:39.211014+00:00"
   },
   "w24_static_shape_science_admission_repair": {
     "status": "SCOPED_SOFTWARE_REPAIR_ACCEPTED_NATIVE_NOT_RUN",
@@ -2249,6 +2249,19 @@
         ],
         "budget_rule": "MASTER_GOAL section5 requires frozen fixture/thresholds/compute budget before new solves; do not borrow exhausted historical budgets or function-evaluate zero-solve campaign. Freeze concrete stage limits before any engine/solve dispatch.",
         "lifecycle_finding": "tools/run_w21_native.py old helper stop unconditionally terminate/kill; not approved for reuse unchanged; preserve UNKNOWN/running jobs and unrelated processes."
+      },
+      "documented_quantity_property_alternative": {
+        "status": "DOCUMENTED_GENERAL_PDE_EXAMPLE_NOT_IMPLEMENTED_NOT_RUNTIME_VERIFIED",
+        "document": {
+          "version": "COMSOL6.4",
+          "doc_id": 11653,
+          "chunk_id": 33977,
+          "page": 228,
+          "path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.llmatlab/LiveLinkForMATLABUsersGuide.pdf",
+          "sha256": "735b3d4ac100666224d1ce48c374c32dc9f3fa9a1cdc2c7657e367d8738e80d0"
+        },
+        "fact": "Official GeneralFormPDE example sets physics.prop(Units).DependentVariableQuantity=temperature and CustomSourceTermUnit=W/m^3.",
+        "limit": "Does not prove HeatTransfer exposes same property or establish generic intrinsic-unit reader; do not infer it or change fixture scope without native verification."
       }
     }
   },
@@ -2301,11 +2314,11 @@
     {
       "stage": "WINDOWS_NATIVE_PREFLIGHT",
       "agent": "/root/luna_handoff_scope",
-      "status": "SOURCE_AND_PIN_PREPARATION_ACCEPTED_PENDING_SYNC",
+      "status": "SOURCE_PIN_PREPARATION_SYNCED",
       "scope": "Local committed source manifest/archive and dependency closure; no SSH/upload/Java/native engine in this unit",
       "acceptance": "117archivefiles/gitblobs and33pin versions verified;installPARTIAL;nativeNOT_RUN",
       "next_action": "Finish actual production MCP runner and output producer, freeze exact new candidate and first metadata discovery request sequence, validate Windows6.4 before6.3. Native field/unit/mesh mapping remains required before stage solve acceptance.",
-      "commit": "80a057f0d40283e44875ae05ebff7b9b6ed58cec"
+      "commit": "b3af9e52f2f5674b9c02ef525a8d92b00794dbf9"
     },
     {
       "stage": "W21_FIELD_IDENTITY_PROBE",
@@ -2327,7 +2340,17 @@
         "study_solver_dispatch": 0,
         "seconds": 900
       },
-      "acceptance": "PENDING; nativefield/units/mesh/output remain open"
+      "acceptance": "PENDING; nativefield/units/mesh/output remain open",
+      "implementation_review": {
+        "status": "FINDINGS_SENT_TO_EXECUTOR_TESTS_PENDING",
+        "findings": [
+          "Record recovery request IDs from actual dispatched envelope, not mismatched action-label keys.",
+          "Validate probe execution exact ModelRef/project/session and resulting revision; pure inspect must not drift revision.",
+          "Keep ModelRef model generation separate from Worker connection epoch.",
+          "Use only original-request read-only status query on timeout; no replay.",
+          "Verify stdio teardown preserves UNKNOWN Worker/Server resources."
+        ]
+      }
     },
     {
       "stage": "W21_NATIVE_OUTPUT_PRODUCER",
@@ -2336,7 +2359,19 @@
       "scope": "Actual Worker-driven exact tuple/field/continuity/native-integral readback using existing result/observation routes; new helper+ManagedBackend method+tests",
       "native_status": "NOT_RUN",
       "admission": "UNCHANGED_UNVERIFIED",
-      "next_action": "Same executor implements/tests/debugs; main reviews production authority/identity/evidence and focused regression before stage sync."
+      "next_action": "Same executor implements/tests/debugs; main reviews production authority/identity/evidence and focused regression before stage sync.",
+      "additional_allowed_files": [
+        "comsol_mcp/_control_daemon.py:output-phase-only callbacks/revision/UNKNOWN handling",
+        "tests/test_stage_definition.py:affected output-phase integration regressions"
+      ]
+    },
+    {
+      "stage": "W21_WINDOWS_CONTROL_BREAKAWAY",
+      "agent": "/root/luna_handoff_scope",
+      "status": "ACCEPTED_SCOPED_OFFLINE_PENDING_GIT_SYNC",
+      "acceptance": "8 unique PASS; source/JUnit/receipt hashes verified; native NOT_RUN",
+      "checkpoint": "docs/full_project_execution/project_session/WINDOWS_CONTROL_BREAKAWAY_CHECKPOINT.json",
+      "next_action": "Synchronize this accepted prerequisite while runner/output implementation continues."
     }
   ],
   "windows_readonly_connection_observation": {
@@ -2469,6 +2504,29 @@
     "status": "PASS_SCOPED_SOURCE_PIN_CONSISTENCY",
     "checkpoint": "docs/full_project_execution/project_session/WINDOWS_STAGE_SOURCE_DEPENDENCIES_CHECKPOINT.json",
     "native_status": "NOT_RUN",
-    "install_status": "PARTIAL"
+    "install_status": "PARTIAL",
+    "commit": "b3af9e52f2f5674b9c02ef525a8d92b00794dbf9",
+    "git_sync": "VERIFIED"
+  },
+  "w21_native_output_architecture": {
+    "status": "DECIDED_IMPLEMENTATION_IN_PROGRESS",
+    "execution_agent": "/root/luna_stage_output",
+    "producer_route": "Existing ManagedBackend/_invoke_g3_model/result.evaluate and managed service tickets, actual SolutionBinding/selection/readbacks and existing observation evidence. No direct caller-array acceptance.",
+    "worker_events": "Output-phase event callback persists/redacts each actual WorkerRPC in same stage job before send; no solve/save dispatch gate or solve-budget consumption.",
+    "revision": "Do not suppress legitimate evaluate revision changes. Preserve original solve identity and each observation actual revision; verify complete ticket/revision chain and clean exact final ledger binding before using post-read revision for output validation/save.",
+    "unknown": "Transport/cleanup/unexpected readback uncertainty propagates to durable UNKNOWN and stops all furtherRPC/save; deterministic unavailable capability may return UNVERIFIED.",
+    "required_dimension": "Minimal W21fixture is3D; investigate native IntVolume/existing generic integral path, not sample sums or blindly inheritingW23dimension1/2 limit.",
+    "admission": "UNCHANGED_UNVERIFIED; nativefield/unit/mesh/frame proof remains required.",
+    "implementation_review": {
+      "status": "FINDINGS_SENT_TO_EXECUTOR_TESTS_PENDING",
+      "findings": [
+        "Bind source and target observations to their own managed child ticket/request hash, not the last target read ticket.",
+        "Persist actual observation revision per artifact; preserve solve revision separately without relabelling observations.",
+        "Use actual conservation target-term boundary tuple, not final stage output tuple.",
+        "Configured unit equality does not establish intrinsic unit proof; retain UNVERIFIED where proof is unavailable."
+      ],
+      "native_status": "NOT_RUN"
+    },
+    "validator_boundary_decision": "Conservation row.target_tuple retains final-output summary; actual integral tuples come from each term_readback matching its frozen side SolutionSpec. Target terms must bind the same actual solution as final output, but may use a different boundary time. Minimal validator repair authorized; tests pending."
   }
 }

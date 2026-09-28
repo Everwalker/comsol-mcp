@@ -4,6 +4,8 @@ Updated 2026-09-28 UTC. **Overall PARTIAL; W21 field-identity probe accepted for
 
 ## Current stage
 
+**Windows control lifecycle: PASS scoped offline; native NOT_RUN.** Removed the `WinError 5` fallback that could leave the control daemon inside the stdio Job. Actual **8 tests PASS**; main verified source/JUnit/receipt hashes and exact one-attempt failure behavior. Hosts denying process breakaway now refuse startup. [Evidence and replay](docs/full_project_execution/project_session/WINDOWS_CONTROL_BREAKAWAY_CHECKPOINT.json). Runner/output implementation continues; W21 and project remain PARTIAL.
+
 **Priority:** complete actual stage field/unit/mesh mapping and output readback, validate the minimal production MCP chain on **Windows6.4 → Windows6.3**, then continue W23–W26 and final independent review.
 
 **Windows stage-chain prerequisites: PASS scoped source/pin checks; installation PARTIAL.** Fixed stale Windows pins to match the validated mcp1.30 dependency set without lowering project requirements. Main verified117 frozen archive files against Git blobs and33 overlapping dependency versions. The80a archive excludes later probe/lock/runner changes and is not the final native candidate. User-authorized read-only Windows metadata confirms Python3.12.10/AMD64 andmcp1.30.0; pytest is missing, wheelhouse/install health remain open. [Evidence and recovery](docs/full_project_execution/project_session/WINDOWS_STAGE_SOURCE_DEPENDENCIES_CHECKPOINT.json).

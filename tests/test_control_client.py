@@ -76,7 +76,7 @@ def test_windows_spawn_requests_breakaway_detached_process_group(monkeypatch, tm
     assert "start_new_session" not in kwargs
 
 
-def test_windows_breakaway_denial_fails_closed_without_transport_fallback(monkeypatch, tmp_path):
+def test_windows_breakaway_winerror_5_fails_closed_without_transport_fallback(monkeypatch, tmp_path):
     monkeypatch.setattr(client, "control_home", lambda: tmp_path)
     monkeypatch.setattr(client, "_is_windows", lambda: True)
     monkeypatch.setattr(client, "_read_endpoint", lambda home: None)
@@ -84,7 +84,9 @@ def test_windows_breakaway_denial_fails_closed_without_transport_fallback(monkey
 
     def denied(*args, **kwargs):
         calls.append((args, kwargs))
-        raise PermissionError("breakaway denied")
+        error = PermissionError("breakaway denied")
+        error.winerror = 5
+        raise error
 
     monkeypatch.setattr(client.subprocess, "Popen", denied)
     import pytest
@@ -92,7 +94,12 @@ def test_windows_breakaway_denial_fails_closed_without_transport_fallback(monkey
     with pytest.raises(client.ControlStartupError, match="outside the MCP SDK Job"):
         client.ensure_control()
     assert len(calls) == 1
-    assert "creationflags" in calls[0][1]
+    expected_flags = (
+        client._WINDOWS_CREATE_BREAKAWAY_FROM_JOB
+        | client._WINDOWS_DETACHED_PROCESS
+        | client._WINDOWS_CREATE_NEW_PROCESS_GROUP
+    )
+    assert calls[0][1]["creationflags"] == expected_flags
     assert "start_new_session" not in calls[0][1]
 
 

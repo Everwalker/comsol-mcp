@@ -108,14 +108,6 @@ def _spawn_control_daemon(home: Path, stream):
             return subprocess.Popen(command, creationflags=flags, **kwargs)
         except OSError as exc:
             winerror = getattr(exc, "winerror", None)
-            if winerror == 5:
-                # The host process is inside a Job that denies breakaway (e.g. OpenSSH session).
-                # Fall back to detached process group so the control daemon can execute.
-                try:
-                    fallback_flags = _WINDOWS_DETACHED_PROCESS | _WINDOWS_CREATE_NEW_PROCESS_GROUP
-                    return subprocess.Popen(command, creationflags=fallback_flags, **kwargs)
-                except OSError:
-                    pass
             detail = f"{type(exc).__name__}: {exc}"
             if winerror is not None:
                 detail += f" (WinError {winerror})"
