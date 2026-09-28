@@ -60,7 +60,7 @@
 - 支持 visible-main 主模型锁，避免误切换或误保存模型
 - 支持参数设置、表达式求值、几何特征创建/更新/删除、物理场、变量、求解器配置和研究运行
 - 支持主模型快照、当前模型保存、异步加载大型 `.mph`
-- 公开工具接口稳定；默认 full profile 当前注册 **109 个 MCP 工具**；可执行领域 operations 由 `registry_manifest(profile="full")` 动态列出。
+- 公开工具接口稳定；默认 full profile 当前注册 **112 个 MCP 工具**；可执行领域 operations 由 `registry_manifest(profile="full")` 动态列出。
 
 ## 适用场景
 
@@ -381,7 +381,7 @@ steps, and saved snapshots evolve in COMSOL Desktop.
 - Lock the visible main model to prevent accidental model switching
 - Set parameters, evaluate expressions, edit geometry and physics features, configure solvers, run mesh and studies
 - Save main-model snapshots and handle large `.mph` loads asynchronously
-- Stable MCP tool surface; the default full profile currently registers **109 MCP tools**; executable domain operations are listed dynamically by `registry_manifest(profile="full")`.
+- Stable MCP tool surface; the default full profile currently registers **112 MCP tools**; executable domain operations are listed dynamically by `registry_manifest(profile="full")`.
 
 ### Requirements
 

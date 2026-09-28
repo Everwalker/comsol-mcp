@@ -1017,6 +1017,139 @@ def op_solver_solution_transfer(worker, model_tag, arguments):
     }
 
 
+def _attached_solver_sequence_evidence(model, target_solver_tag):
+    """Read the target solver's exact study association and attachment state.
+
+    ``SolverSequence.study()`` names its associated Study, while
+    ``SolverSequence.isAttached()`` distinguishes a sequence that is actually
+    attached.  Enumerating all solver sequences lets this adapter fail closed
+    unless the target is the one and only attached sequence reported for that
+    Study.  These readbacks happen before any Variables selector is changed.
+    """
+    try:
+        study_tags = tag_list(_call(model, 'study'))
+        solver_list = _call(model, 'sol')
+        solver_tags = tag_list(solver_list)
+        rows = []
+        for solver_tag in solver_tags:
+            solver = _call(solver_list, 'get', solver_tag)
+            associated = _call(solver, 'study')
+            attached = _call(solver, 'isAttached')
+            if type(attached) is not bool:
+                raise ValueError('isAttached() did not return a boolean')
+            if isinstance(associated, str) and associated:
+                if associated not in study_tags:
+                    raise ValueError(f'solver {solver_tag!r} reports unknown Study {associated!r}')
+            elif attached:
+                raise ValueError(f'attached solver {solver_tag!r} has no Study association')
+            rows.append({
+                'solver': solver_tag,
+                'study': associated if isinstance(associated, str) and associated else None,
+                'is_attached': attached,
+            })
+    except Exception as exc:
+        raise PreWriteRefusal(
+            'SOLVER_ATTACHMENT_READBACK_UNAVAILABLE',
+            'COMSOL could not prove the target solver sequence has a unique attached Study binding',
+            safe_retry=True,
+            details={'cause_type': type(exc).__name__, 'cause_code': getattr(exc, 'code', None)},
+        ) from exc
+
+    target_rows = [row for row in rows if row['solver'] == target_solver_tag]
+    if len(target_rows) != 1:
+        raise PreWriteRefusal('TARGET_SOLVER_NOT_FOUND', 'target solver sequence is not uniquely listed')
+    target = target_rows[0]
+    if target['is_attached'] is not True or target['study'] not in study_tags:
+        raise PreWriteRefusal(
+            'TARGET_SOLVER_NOT_ATTACHED',
+            'target solver sequence is not attached to an existing Study',
+        )
+    attached_for_study = [row['solver'] for row in rows
+                          if row['study'] == target['study'] and row['is_attached'] is True]
+    if attached_for_study != [target_solver_tag]:
+        raise PreWriteRefusal(
+            'TARGET_STUDY_SOLVER_AMBIGUOUS',
+            'target Study does not have exactly one attached solver sequence',
+            details={'target_study': target['study'], 'attached_solver_tags': attached_for_study},
+        )
+    return {
+        'status': 'VERIFIED',
+        'study': target['study'],
+        'solver': target_solver_tag,
+        'is_attached': True,
+        'unique_attached_solver_tags': attached_for_study,
+        'readback_methods': ['SolverSequence.study()', 'SolverSequence.isAttached()'],
+    }
+
+
+def op_experiment_state_map(worker, model_tag, arguments):
+    """Configure the documented initial-solution selector for a strict identity profile.
+
+    This is a bounded WRITE adapter.  It verifies the exact stored source
+    solution and the target Variables node, then configures and reads back the
+    Variables initial-solution selectors.  The current API evidence does not
+    prove per-variable dimensionality, source/target field equivalence, mesh
+    topology, boundary-frame equality, or hidden solver-history continuity;
+    those remain explicitly unverified and this operation never calls solve.
+    """
+    from ._stage_contract import normalize_state_map_request
+
+    try:
+        normalized = normalize_state_map_request(arguments)
+    except ExecutionContractError as exc:
+        raise PreWriteRefusal(exc.code, str(exc), safe_retry=True,
+                              details=getattr(exc, 'details', None)) from exc
+    model = bound_model(worker, model_tag)
+    target_solver_tag = normalized['target']['segments'][0]['tag']
+    attachment = _attached_solver_sequence_evidence(model, target_solver_tag)
+
+    # The established adapter performs exact dataset/solution/tuple resolution,
+    # checks the Variables feature subtype, and reads back every documented
+    # initial-solution selector.  The high-level identity declaration is never
+    # forwarded as proof or as a per-variable mapping instruction.
+    configured = op_solver_solution_transfer(worker, model_tag, {
+        'source': normalized['source'],
+        'target': normalized['target'],
+        'mapping': {},
+    })
+    declarations = normalized['mapping']['variables']
+    configured.update({
+        'contract': 'experiment.state_map/v1',
+        'profile': normalized['mapping']['profile'],
+        'coverage_status': 'PARTIAL',
+        'target_solver_attachment_readback': attachment,
+        'declared_variable_mappings': copy.deepcopy(declarations),
+        'variable_mapping_applied': False,
+        'mapping_evidence': {
+            'status': 'UNVERIFIED',
+            'reason': ('the documented Variables initial-solution selector does not expose a per-variable '
+                       'mapping readback in the available adapter'),
+            'source_field_identity': 'UNVERIFIED',
+            'target_field_identity': 'UNVERIFIED',
+            'source_target_units': 'UNVERIFIED',
+            'source_target_mesh_identity': 'UNVERIFIED',
+            'frame_equivalence': 'UNVERIFIED',
+            'hidden_solver_history': 'NOT_VERIFIED',
+        },
+        'solve_dispatched': False,
+        'api_basis': {
+            'variables': {
+                'title': 'COMSOL 6.4 Variables, Table 6-80',
+                'doc_id': 4652,
+                'chunk_id': 17614,
+                'sha256': '1b86563b282f32a7c7d506b43dbba1a310e9509a2bd605c40d9a1f8108094466',
+            },
+            'solver_attachment': {
+                'title': 'COMSOL 6.4 SolverSequence',
+                'doc_id': 7714,
+                'chunk_id': 23084,
+                'sha256': '8fcefe8e2f2171858f49fe53ad6210d4231a6a28651766db67effc39c327a2c5',
+            },
+        },
+    })
+    return configured
+
+
 def op_experiment_design(worker, model_tag, arguments):
     ctx = current_context()
     require(isinstance(ctx.get('project_id'), str) and ctx['project_id'],

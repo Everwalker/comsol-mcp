@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import asyncio
 from contextlib import nullcontext
+import hashlib
 import json
 import threading
+from types import SimpleNamespace
 
 import pytest
 
@@ -16,6 +18,7 @@ from comsol_mcp._operation_store import OperationStore, StagePlanStoreConflict
 from comsol_mcp._stage_contract import StagePlanDefinition, validate_stage_plan_definition
 from comsol_mcp._tools_w21 import register as register_w21
 from comsol_mcp._g2_tools import register as register_g2
+from comsol_mcp import _w21_execution
 
 
 class _Adapter:
@@ -99,6 +102,57 @@ def _plan(plan_id="heat-cycle", first_id="preheat"):
     }
 
 
+def _plan_v2():
+    plan = _plan()
+    stages = plan["stages"]
+    stages[0]["mapping_profile"] = "same_name_same_mesh_initialization"
+    stages[0]["variable_mappings"] = [{
+        "source_variable": "T", "target_variable": "T", "source_unit": "K",
+        "target_unit": "K", "mapping_method": "identity",
+    }]
+    stages[0]["checks"] = []
+    stages[1]["target_variables"] = {"segments": [
+        {"collection": "sol", "tag": "sol2"},
+        {"collection": "feature", "tag": "v2"},
+    ]}
+    stages[1]["mapping_profile"] = "same_name_same_mesh_initialization"
+    stages[1]["source_selection"]["selection"] = {
+        "dataset": "dset1", "solution": "sol1", "outer": [1], "inner": [2],
+    }
+    stages[1]["target_selection"] = {
+        "dataset": "dset2", "solution": "sol2", "outer": [1], "inner": [1],
+    }
+    stages[1]["variable_mappings"] = [{
+        "source_variable": "T", "target_variable": "T", "source_unit": "K",
+        "target_unit": "K", "mapping_method": "identity",
+    }]
+    stages[1]["checks"] = [{
+        "kind": "continuity", "check_id": "temperature-boundary",
+        "operator": "pointwise_max_abs", "source_variable": "T", "target_variable": "T",
+        "source_solution": {"dataset": "dset1", "solution": "sol1", "outer": [1], "inner": [2]},
+        "target_solution": {"dataset": "dset2", "solution": "sol2", "outer": [1], "inner": [1]},
+        "source_selection": {"kind": "all", "component": "comp1", "geometry": "geom1", "entity_dimension": 3},
+        "target_selection": {"kind": "all", "component": "comp1", "geometry": "geom1", "entity_dimension": 3},
+        "frame": "spatial", "boundary_time": {"value": 1.0, "unit": "s"},
+        "unit": "K", "tolerance": {"absolute": 0.1, "relative": 0.01},
+    }, {
+        "kind": "conservation", "check_id": "temperature-balance",
+        "operator": "native_integral", "quantity": "temperature",
+        "source_solution": {"dataset": "dset1", "solution": "sol1", "outer": [1], "inner": [2]},
+        "target_solution": {"dataset": "dset2", "solution": "sol2", "outer": [1], "inner": [1]},
+        "terms": [
+            {"side": "source", "variable": "T", "coefficient": 1.0,
+             "selection": {"kind": "all", "component": "comp1", "geometry": "geom1", "entity_dimension": 3},
+             "entity_dimension": 3},
+            {"side": "target", "variable": "T", "coefficient": 1.0,
+             "selection": {"kind": "all", "component": "comp1", "geometry": "geom1", "entity_dimension": 3},
+             "entity_dimension": 3},
+        ],
+        "unit": "K", "tolerance": {"absolute": 0.2, "relative": 0.01},
+    }]
+    return {"version": 2, "plan_id": "heat-cycle-v2", "stages": stages}
+
+
 def _setup(tmp_path, permissions=None):
     project_root = tmp_path / "projects"
     project_root.mkdir()
@@ -144,14 +198,95 @@ def _call_public(host, name, **kwargs):
     return asyncio.run(host.tools[name](**kwargs)).structuredContent
 
 
+class _StateMapFeature:
+    def __init__(self):
+        self.values = {"useinitsol": "off", "initmethod": "init", "initsol": "zero",
+                       "initsoluse": "current", "initsolusesolnum": 1,
+                       "solnum": "last", "manualsolnum": 1}
+        self.set_calls = []
+
+    def getType(self):
+        return "Variables"
+
+    def set(self, name, value):
+        self.set_calls.append((name, value))
+        self.values[name] = value
+
+    def getString(self, name):
+        return self.values[name]
+
+    def getInt(self, name):
+        return self.values[name]
+
+
+class _StateMapSequence:
+    def __init__(self, study, features=None, attached=True):
+        self.study_tag = study
+        self.features = {"v1": _StateMapFeature()} if features is None else features
+        self.attached = attached
+        self.run_calls = 0
+
+    def study(self):
+        return self.study_tag
+
+    def isAttached(self):
+        return self.attached
+
+    def feature(self, tag=None):
+        return SimpleNamespace(tags=lambda: list(self.features), get=lambda name: self.features[name]) if tag is None else self.features[tag]
+
+    def run(self):
+        self.run_calls += 1
+
+
+class _StateMapList:
+    def __init__(self, values):
+        self.values = values
+
+    def tags(self):
+        return list(self.values)
+
+    def get(self, tag):
+        return self.values[tag]
+
+
+class _StateMapModel:
+    def __init__(self):
+        self.sequences = _StateMapList({
+            "sol2": _StateMapSequence("std1", {"source": _StateMapFeature()}),
+            "sol3": _StateMapSequence("std2"),
+        })
+        self.studies = _StateMapList({"std1": object(), "std2": object()})
+
+    def sol(self, tag=None):
+        return self.sequences if tag is None else self.sequences.get(tag)
+
+    def study(self, tag=None):
+        return self.studies if tag is None else self.studies.get(tag)
+
+
+def _state_map_request():
+    return {
+        "source": {"dataset": "dset1", "solution": "sol2", "outer": 1, "inner": 1},
+        "target": {"segments": [{"collection": "sol", "tag": "sol3"},
+                                {"collection": "feature", "tag": "v1"}]},
+        "mapping": {"profile": "same_name_same_mesh_initialization", "variables": [{
+            "source_variable": "T", "target_variable": "T", "source_unit": "K",
+            "target_unit": "K", "mapping_method": "identity",
+        }]},
+    }
+
+
 def test_stage_plan_schema_is_closed_and_semantically_validated():
     plan = _plan()
     validate_stage_plan_definition(plan)
     model = StagePlanDefinition.model_validate(plan)
     assert model.model_dump(mode="json", exclude_none=True) == plan
     schema = operation_describe("experiment.stage_define")["input_schema"]
-    assert schema["properties"]["definition"]["additionalProperties"] is False
-    assert schema["properties"]["definition"]["properties"]["stages"]["items"]["additionalProperties"] is False
+    catalog_definition = schema["properties"]["definition"]
+    assert len(catalog_definition["oneOf"]) == 2
+    assert all(item["additionalProperties"] is False for item in catalog_definition["oneOf"])
+    assert catalog_definition["oneOf"][1]["properties"]["version"]["const"] == 2
     from mcp.server.fastmcp import FastMCP
     public = FastMCP("stage-schema-test")
     register_w21(GatewayRegistry(public))
@@ -159,15 +294,135 @@ def test_stage_plan_schema_is_closed_and_semantically_validated():
     direct_schema = direct_tool.inputSchema
     definition_ref = direct_schema["properties"]["definition"]["$ref"].split("/")[-1]
     definition_schema = direct_schema["$defs"][definition_ref]
-    assert definition_schema["additionalProperties"] is False
-    stage_ref = definition_schema["properties"]["stages"]["items"]["$ref"].split("/")[-1]
-    assert direct_schema["$defs"][stage_ref]["additionalProperties"] is False
+    assert "anyOf" in definition_schema
+    version1_ref, version2_ref = [entry["$ref"].split("/")[-1] for entry in definition_schema["anyOf"]]
+    assert direct_schema["$defs"][version1_ref]["additionalProperties"] is False
+    assert direct_schema["$defs"][version2_ref]["additionalProperties"] is False
     assert "experiment_stage_define" in {item.name for item in asyncio.run(public.list_tools())}
     assert validate_call("experiment.stage_define", {
         "project_id": "p", "session_id": "s",
         "model_ref": {"session_id": "s", "server_instance_id": "server", "model_tag": "m", "generation": 1, "schema_version": 1},
         "expected_revision": 0, "idempotency_key": "key", "definition": plan,
     }).operation_id == "experiment.stage_define"
+
+
+def test_stage_plan_v2_exact_profile_and_readback_contract():
+    plan = _plan_v2()
+    normalized = validate_stage_plan_definition(plan)
+    assert normalized["version"] == 2
+    assert normalized["stages"][1]["target_variables"] == plan["stages"][1]["target_variables"]
+    assert normalized["stages"][1]["checks"][0]["operator"] == "pointwise_max_abs"
+    assert normalized["stages"][1]["checks"][1]["operator"] == "native_integral"
+    assert StagePlanDefinition.model_validate(plan).model_dump(mode="json", exclude_none=True) == plan
+
+
+def test_stage_plan_v2_integral_unit_is_declared_result_unit_not_field_unit():
+    plan = _plan_v2()
+    check = plan["stages"][1]["checks"][1]
+    check["unit"] = "K*m^3"
+
+    normalized = validate_stage_plan_definition(plan)
+
+    # The term maps a K-valued field and integrates over 3D selections. The
+    # declared integrated unit is retained; no native dimensionality proof is
+    # implied by definition validation.
+    assert normalized["stages"][1]["checks"][1]["unit"] == "K*m^3"
+    assert normalized["stages"][1]["variable_mappings"][0]["source_unit"] == "K"
+
+
+def test_stage_plan_v2_allows_nonzero_signed_terms_over_distinct_selections():
+    plan = _plan_v2()
+    check = plan["stages"][1]["checks"][1]
+    check["unit"] = "K*m^3"
+    check["terms"] = [
+        {"side": "source", "variable": "T", "coefficient": 1.0,
+         "selection": {"kind": "explicit", "entities": [1], "entity_dimension": 3},
+         "entity_dimension": 3},
+        {"side": "source", "variable": "T", "coefficient": -1.0,
+         "selection": {"kind": "explicit", "entities": [2], "entity_dimension": 3},
+         "entity_dimension": 3},
+        {"side": "target", "variable": "T", "coefficient": 1.0,
+         "selection": {"kind": "explicit", "entities": [3], "entity_dimension": 3},
+         "entity_dimension": 3},
+        {"side": "target", "variable": "T", "coefficient": -1.0,
+         "selection": {"kind": "explicit", "entities": [4], "entity_dimension": 3},
+         "entity_dimension": 3},
+    ]
+
+    normalized = validate_stage_plan_definition(plan)
+
+    assert [term["selection"]["entities"] for term in normalized["stages"][1]["checks"][1]["terms"]] == [
+        [1], [2], [3], [4],
+    ]
+    assert all(term["coefficient"] != 0 for term in normalized["stages"][1]["checks"][1]["terms"])
+
+
+@pytest.mark.parametrize("bad_coefficient", [float("inf"), float("-inf"), float("nan")])
+def test_stage_plan_v2_rejects_nonfinite_integral_coefficients(bad_coefficient):
+    plan = _plan_v2()
+    plan["stages"][1]["checks"][1]["terms"][0]["coefficient"] = bad_coefficient
+    with pytest.raises(ExecutionContractError):
+        validate_stage_plan_definition(plan)
+
+
+def test_stage_plan_v2_rejects_term_selection_dimension_mismatch():
+    plan = _plan_v2()
+    term = plan["stages"][1]["checks"][1]["terms"][0]
+    term["selection"] = {"kind": "explicit", "entities": [1], "entity_dimension": 2}
+    with pytest.raises(ExecutionContractError, match="conflicts with term entity_dimension"):
+        validate_stage_plan_definition(plan)
+
+
+def test_stage_plan_v1_conservation_keeps_field_unit_contract():
+    plan = _plan()
+    normalized = validate_stage_plan_definition(plan)
+    canonical = json.dumps(
+        normalized, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False,
+    ).encode("utf-8")
+    assert hashlib.sha256(canonical).hexdigest() == "fe033e7d1c1d9d1a8169923990cf6041dcf4e196520f3017f682b8270bc88a29"
+    plan["stages"][1]["checks"][0]["unit"] = "K*m^3"
+    with pytest.raises(ExecutionContractError, match="term units must match"):
+        validate_stage_plan_definition(plan)
+
+
+@pytest.mark.parametrize("integrated_unit", ["K", "K*m^3"])
+def test_v2_public_stage_define_keeps_integral_units_unverified(tmp_path, integrated_unit):
+    daemon, _service, worker, project_id, model_ref, execution, host = _setup(tmp_path)
+    try:
+        plan = _plan_v2()
+        plan["stages"][1]["checks"][1]["unit"] = integrated_unit
+        result = _call_public(host, "experiment_stage_define", definition=plan, execution=execution)
+
+        assert result["success"] is True, result
+        assert result["data"]["declaration_status"] == "DECLARED_UNVERIFIED"
+        assert result["data"]["worker_rpc_performed"] is False
+        assert result["data"]["solve_started"] is False
+        stored = daemon.store.get_stage_plan(project_id, model_ref, plan["plan_id"])
+        assert stored["definition"]["stages"][1]["checks"][1]["unit"] == integrated_unit
+        assert stored["declaration_evidence"]["mapping_method_execution"] == "NOT_CHECKED"
+        assert worker.calls == []
+    finally:
+        daemon.close()
+
+
+@pytest.mark.parametrize("mutation", [
+    lambda p: p["stages"][1].pop("target_variables"),
+    lambda p: p["stages"][1]["target_variables"]["segments"][0].update(collection="study"),
+    lambda p: p["stages"][1]["variable_mappings"][0].update(target_variable="T2"),
+    lambda p: p["stages"][1]["checks"][0].update(operator="max_norm"),
+    lambda p: p["stages"][1]["checks"][0]["source_solution"].update(inner="all"),
+    lambda p: p["stages"][1]["checks"][0].update(frame="unknown"),
+    lambda p: p["stages"][1]["checks"][0]["boundary_time"].update(value=True),
+    lambda p: p["stages"][1]["checks"][1]["terms"][0].update(coefficient=True),
+    lambda p: p["stages"][1]["checks"][1]["terms"][0].update(entity_dimension=True),
+    lambda p: p["stages"][1]["checks"][1]["terms"][0]["selection"].update(extra="no"),
+    lambda p: [term.update(coefficient=0.0) for term in p["stages"][1]["checks"][1]["terms"]],
+])
+def test_stage_plan_v2_rejects_ambiguous_or_unbound_contract(mutation):
+    plan = _plan_v2()
+    mutation(plan)
+    with pytest.raises(ExecutionContractError):
+        validate_stage_plan_definition(plan)
 
 
 @pytest.mark.parametrize("mutate", [
@@ -540,6 +795,289 @@ def test_concurrent_plans_cannot_claim_same_stage_id_in_one_exact_scope(tmp_path
         failure = next(result for result in results if not result["success"])
         assert failure["error"]["code"] == "STAGE_ID_CONFLICT"
         assert len([row for row in daemon.store.list_metadata("artifacts") if row.get("kind") == "w21_stage_plan"]) == 1
+        assert worker.calls == []
+    finally:
+        daemon.close()
+
+
+def test_stage_attempts_are_project_model_plan_bound_idempotent_and_cas_persisted(tmp_path):
+    daemon, _service, worker, project_id, model_ref, execution, _host = _setup(tmp_path)
+    plan = _plan_v2()
+    try:
+        created = daemon.dispatch({
+            "operation": "experiment.stage_define", "arguments": {"definition": plan}, "execution": execution,
+        })
+        assert created["success"] is True, created
+        first, reused = daemon.store.begin_stage_attempt(
+            project_id=project_id, model_ref=model_ref, stage_id="preheat", expected_revision=0,
+            request_id="attempt-1", operation_id="attempt-operation-1",
+            idempotency_key="stage-attempt-1", request_hash="a" * 64,
+        )
+        assert reused is False
+        assert first["status"] == "ADMITTED" and first["version"] == 1
+        assert first["engine_dispatched"] is False and first["acceptance_status"] == "NOT_EVALUATED"
+        replay, reused = daemon.store.begin_stage_attempt(
+            project_id=project_id, model_ref=model_ref, stage_id="preheat", expected_revision=0,
+            request_id="attempt-1", operation_id="attempt-operation-1",
+            idempotency_key="stage-attempt-1", request_hash="a" * 64,
+        )
+        assert reused is True and replay == first
+
+        blocked = daemon.store.update_stage_attempt(
+            project_id, model_ref, first["attempt_id"], expected_version=1,
+            status="NOT_DISPATCHED_UNVERIFIED", engine_dispatched=False,
+            execution_status="NOT_DISPATCHED", acceptance_status="UNVERIFIED",
+            evidence=[{"reason": "native mapping/mesh/frame proof is not available in this route"}],
+        )
+        assert blocked["version"] == 2 and blocked["status"] == "NOT_DISPATCHED_UNVERIFIED"
+        assert blocked["engine_dispatched"] is False and blocked["acceptance_status"] == "UNVERIFIED"
+        with pytest.raises(StagePlanStoreConflict, match="changed before"):
+            daemon.store.update_stage_attempt(
+                project_id, model_ref, first["attempt_id"], expected_version=1,
+                status="FAILED", engine_dispatched=False, execution_status="FAILED",
+                acceptance_status="NOT_EVALUATED", evidence=blocked["evidence"],
+            )
+
+        second, reused = daemon.store.begin_stage_attempt(
+            project_id=project_id, model_ref=model_ref, stage_id="preheat", expected_revision=0,
+            request_id="attempt-2", operation_id="attempt-operation-2",
+            idempotency_key="stage-attempt-2", request_hash="b" * 64,
+        )
+        assert reused is False and second["attempt_number"] == 2
+        dispatched = daemon.store.update_stage_attempt(
+            project_id, model_ref, second["attempt_id"], expected_version=1,
+            status="RUNNING", engine_dispatched=True, execution_status="RUNNING",
+            acceptance_status="NOT_EVALUATED", evidence=[{"dispatch": "test-only CAS negative control"}],
+        )
+        assert dispatched["engine_dispatched"] is True
+        with pytest.raises(StagePlanStoreConflict, match="cannot certify scientific acceptance"):
+            daemon.store.update_stage_attempt(
+                project_id, model_ref, second["attempt_id"], expected_version=2,
+                status="ACCEPTED", engine_dispatched=True, execution_status="SOLVE_SUCCEEDED",
+                acceptance_status="ACCEPTED", evidence=dispatched["evidence"],
+            )
+        with pytest.raises(StagePlanStoreConflict, match="dispatched"):
+            daemon.store.begin_stage_attempt(
+                project_id=project_id, model_ref=model_ref, stage_id="preheat", expected_revision=0,
+                request_id="attempt-3", operation_id="attempt-operation-3",
+                idempotency_key="stage-attempt-3", request_hash="c" * 64,
+            )
+        with pytest.raises(StagePlanStoreConflict, match="scientifically accepted"):
+            daemon.store.begin_stage_attempt(
+                project_id=project_id, model_ref=model_ref, stage_id="cooldown", expected_revision=0,
+                request_id="successor-attempt", operation_id="successor-operation",
+                idempotency_key="successor-attempt", request_hash="d" * 64,
+            )
+        assert worker.calls == []
+        database_path = daemon.store.path
+    finally:
+        daemon.close()
+
+    reopened = OperationStore(database_path)
+    try:
+        records = reopened.list_stage_attempts(project_id, model_ref, stage_id="preheat")
+        assert [record["status"] for record in records] == ["NOT_DISPATCHED_UNVERIFIED", "RUNNING"]
+        assert reopened.get_stage_attempt(project_id, model_ref, first["attempt_id"]) == blocked
+        other_model = {**model_ref, "server_instance_id": "different-server"}
+        assert reopened.get_stage_attempt(project_id, other_model, first["attempt_id"]) is None
+        # Same-session/model-tag identity with another server instance cannot
+        # inherit either the plan or attempts.
+        with pytest.raises(StagePlanStoreConflict, match="not registered"):
+            reopened.begin_stage_attempt(
+                project_id=project_id, model_ref=other_model, stage_id="preheat", expected_revision=0,
+                request_id="other-server", operation_id="other-server-operation",
+                idempotency_key="other-server", request_hash="e" * 64,
+            )
+    finally:
+        reopened.close()
+
+
+def test_stage_attempt_readback_rejects_record_tamper(tmp_path):
+    daemon, _service, _worker, project_id, model_ref, execution, _host = _setup(tmp_path)
+    try:
+        created = daemon.dispatch({
+            "operation": "experiment.stage_define", "arguments": {"definition": _plan_v2()}, "execution": execution,
+        })
+        assert created["success"] is True, created
+        record, _ = daemon.store.begin_stage_attempt(
+            project_id=project_id, model_ref=model_ref, stage_id="preheat", expected_revision=0,
+            request_id="tamper-attempt", operation_id="tamper-attempt-operation",
+            idempotency_key="tamper-attempt", request_hash="f" * 64,
+        )
+        daemon.store.db.execute(
+            "UPDATE stage_attempts SET status='FAILED' WHERE attempt_id=?", (record["attempt_id"],),
+        )
+        with pytest.raises(StagePlanStoreConflict, match="columns disagree"):
+            daemon.store.get_stage_attempt(project_id, model_ref, record["attempt_id"])
+    finally:
+        daemon.close()
+
+
+def test_public_stage_run_direct_and_fallback_persist_no_dispatch_unverified_attempt(tmp_path):
+    daemon, _service, worker, project_id, model_ref, execution, host = _setup(tmp_path)
+    try:
+        defined = _call_public(host, "experiment_stage_define", definition=_plan_v2(), execution=execution)
+        assert defined["success"] is True, defined
+        run_execution = {**execution, "request_id": "stage-run-1", "idempotency_key": "stage-run-key-1"}
+        direct = _call_public(host, "experiment_stage_run", stage_id="preheat", execution=run_execution)
+        assert direct["success"] is False, direct
+        assert direct["error"]["code"] == "STAGE_PROFILE_UNVERIFIED"
+        attempt = direct["data"]["attempt"]
+        assert attempt["status"] == "NOT_DISPATCHED_UNVERIFIED"
+        assert attempt["project_id"] == project_id and attempt["model_ref"] == model_ref
+        assert attempt["plan_id"] == "heat-cycle-v2" and attempt["stage_id"] == "preheat"
+        assert attempt["expected_revision"] == 0 and attempt["engine_dispatched"] is False
+        assert direct["data"]["worker_rpc_performed"] is False
+        assert direct["data"]["solve_started"] is False
+        assert len(direct["data"]["missing_evidence"]) == 4
+        replay = _call_public(host, "experiment_stage_run", stage_id="preheat", execution=run_execution)
+        assert replay == direct
+
+        fallback = _call_public(
+            host, "operation_call", operation_id="experiment.stage_run",
+            arguments={"stage_id": "preheat"},
+            execution={**execution, "request_id": "stage-run-2", "idempotency_key": "stage-run-key-2"},
+        )
+        assert fallback["success"] is False and fallback["error"]["code"] == "STAGE_PROFILE_UNVERIFIED"
+        assert fallback["data"]["attempt"]["attempt_number"] == 2
+        assert fallback["data"]["attempt"]["operation_id"] != attempt["operation_id"]
+        assert worker.calls == []
+        persisted = daemon.store.list_stage_attempts(project_id, model_ref, stage_id="preheat")
+        assert [row["status"] for row in persisted] == ["NOT_DISPATCHED_UNVERIFIED", "NOT_DISPATCHED_UNVERIFIED"]
+        operation_rows = daemon.store.db.execute(
+            "SELECT operation,status,result FROM operations WHERE operation='experiment.stage_run' ORDER BY created_at,operation_id"
+        ).fetchall()
+        assert len(operation_rows) == 2 and all(row["status"] == "FAILED" for row in operation_rows)
+        assert all(json.loads(row["result"])["error"]["code"] == "STAGE_PROFILE_UNVERIFIED" for row in operation_rows)
+        database_path = daemon.store.path
+    finally:
+        daemon.close()
+
+    reopened = OperationStore(database_path)
+    try:
+        records = reopened.list_stage_attempts(project_id, model_ref, stage_id="preheat")
+        assert [row["attempt_number"] for row in records] == [1, 2]
+        for record in records:
+            assert reopened.get_stage_attempt_for_operation(project_id, model_ref, record["operation_id"]) == record
+    finally:
+        reopened.close()
+
+
+def test_public_state_map_direct_and_fallback_read_back_selector_without_solving(tmp_path, monkeypatch):
+    daemon, _service, worker, project_id, model_ref, execution, host = _setup(tmp_path)
+    model = _StateMapModel()
+    sequence_rows = {
+        "dataset": "dset1", "solution": "sol2", "binding_complete": True,
+        "binding_source": "typed dataset + SolutionInfo.getSolnum(outer, strict)",
+        "parameters_complete": True,
+        "parameters": {"by_pair": {"1:1": {"names": [], "values": [], "units": [], "solnum": 1}}},
+        "solnum_pairs": [{"outer": 1, "inner": 1, "solnum": 1}],
+    }
+    monkeypatch.setattr(_w21_execution, "bound_model", lambda _worker, _tag: model)
+    monkeypatch.setattr(_w21_execution, "dataset_solution_indices", lambda *_args: sequence_rows)
+    monkeypatch.setattr(daemon.backend, "_require_g2_isolation", lambda: {"test_only": True})
+    # The G3 route enters the persistent Worker's request-event context, but
+    # this synthetic test resolves the COMSOL model/solution helpers locally
+    # and must issue no Java Worker RPC.
+    monkeypatch.setattr(worker, "operation_context", lambda *_args, **_kwargs: nullcontext())
+    try:
+        direct = _call_public(
+            host, "experiment_state_map", **_state_map_request(), execution=execution,
+        )
+        assert direct["success"] is True, direct
+        assert direct["data"]["contract"] == "experiment.state_map/v1"
+        assert direct["data"]["coverage_status"] == "PARTIAL"
+        assert direct["data"]["target_solver_attachment_readback"]["status"] == "VERIFIED"
+        assert direct["data"]["variable_mapping_applied"] is False
+        assert direct["data"]["mapping_evidence"]["source_target_units"] == "UNVERIFIED"
+        assert direct["data"]["solve_dispatched"] is False
+        assert direct["execution"]["revision"] == 1
+
+        fallback = _call_public(
+            host,
+            "operation_call",
+            operation_id="experiment.state_map",
+            arguments=_state_map_request(),
+            execution={**execution, "request_id": "state-map-fallback", "idempotency_key": "state-map-fallback",
+                       "expected_revision": 1},
+        )
+        assert fallback["success"] is True, fallback
+        assert fallback["data"]["coverage_status"] == "PARTIAL"
+        assert fallback["data"]["target_solver_attachment_readback"]["unique_attached_solver_tags"] == ["sol3"]
+        assert fallback["data"]["solve_dispatched"] is False
+        assert fallback["execution"]["revision"] == 2
+
+        feature = model.sequences.get("sol3").features["v1"]
+        assert len(feature.set_calls) == 14
+        assert model.sequences.get("sol2").run_calls == model.sequences.get("sol3").run_calls == 0
+        assert worker.calls == []
+    finally:
+        daemon.close()
+
+
+def test_stage_run_refuses_wrong_source_and_unaccepted_predecessor_without_attempt(tmp_path):
+    daemon, _service, worker, project_id, model_ref, execution, _host = _setup(tmp_path)
+    try:
+        defined = daemon.dispatch({
+            "operation": "experiment.stage_define", "arguments": {"definition": _plan_v2()}, "execution": execution,
+        })
+        assert defined["success"] is True, defined
+        wrong_source = daemon.dispatch({
+            "operation": "experiment.stage_run",
+            "arguments": {"stage_id": "cooldown", "source_attempt_id": "foreign-attempt",
+                           "source": {"dataset": "wrong", "solution": "sol1", "outer": [1], "inner": [2]}},
+            "execution": {**execution, "request_id": "wrong-source", "idempotency_key": "wrong-source"},
+        })
+        assert wrong_source["success"] is False
+        assert wrong_source["error"]["code"] == "STAGE_SOURCE_SELECTION_MISMATCH"
+        no_predecessor = daemon.dispatch({
+            "operation": "experiment.stage_run",
+            "arguments": {"stage_id": "cooldown", "source_attempt_id": "nonexistent"},
+            "execution": {**execution, "request_id": "no-predecessor", "idempotency_key": "no-predecessor"},
+        })
+        assert no_predecessor["success"] is False
+        assert no_predecessor["error"]["code"] == "STAGE_PREDECESSOR_UNAVAILABLE"
+        assert daemon.store.list_stage_attempts(project_id, model_ref) == []
+        assert worker.calls == []
+    finally:
+        daemon.close()
+
+
+def test_stage_run_compute_permission_is_checked_before_attempt_creation(tmp_path):
+    daemon, _service, worker, project_id, model_ref, execution, _host = _setup(
+        tmp_path, permissions=["inspect", "project_write"],
+    )
+    try:
+        defined = daemon.dispatch({
+            "operation": "experiment.stage_define", "arguments": {"definition": _plan()}, "execution": execution,
+        })
+        assert defined["success"] is True, defined
+        denied = daemon.dispatch({
+            "operation": "experiment.stage_run", "arguments": {"stage_id": "preheat"},
+            "execution": {**execution, "request_id": "compute-denied", "idempotency_key": "compute-denied"},
+        })
+        assert denied["success"] is False and denied["error"]["code"] == "PERMISSION_DENIED"
+        assert daemon.store.list_stage_attempts(project_id, model_ref) == []
+        assert worker.calls == []
+    finally:
+        daemon.close()
+
+
+def test_stage_run_keeps_v1_declaration_only(tmp_path):
+    daemon, _service, worker, project_id, model_ref, execution, _host = _setup(tmp_path)
+    try:
+        defined = daemon.dispatch({
+            "operation": "experiment.stage_define", "arguments": {"definition": _plan()}, "execution": execution,
+        })
+        assert defined["success"] is True, defined
+        result = daemon.dispatch({
+            "operation": "experiment.stage_run", "arguments": {"stage_id": "preheat"},
+            "execution": {**execution, "request_id": "v1-stage-run", "idempotency_key": "v1-stage-run"},
+        })
+        assert result["success"] is False
+        assert result["error"]["code"] == "STAGE_PLAN_V1_DECLARATION_ONLY"
+        assert result["data"]["stage_attempt_created"] is False
+        assert daemon.store.list_stage_attempts(project_id, model_ref) == []
         assert worker.calls == []
     finally:
         daemon.close()

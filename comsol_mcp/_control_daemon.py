@@ -24,7 +24,7 @@ from uuid import uuid4
 from ._execution_contract import ExecutionContractError, canonical_request_hash
 from ._managed_backend import ManagedBackend, ProcessLock, SessionConnectFailure, collect_legacy_registry, _g3_operations
 from ._operation_store import (
-    IdempotencyConflict, JobCleanupError, OperationStore,
+    IdempotencyConflict, JobCleanupError, OperationStore, StagePlanStoreConflict,
     session_recovery_evidence_sha256,
 )
 from ._platform_process import process_identity, terminate_process_tree
@@ -357,6 +357,8 @@ class ControlDaemon:
             operation = SESSION_ALIASES.get(operation, operation)
             if operation in {"experiment.stage_define", "experiment_stage_define"}:
                 return self._dispatch_experiment_stage_define(arguments, execution)
+            if operation in {"experiment.stage_run", "experiment_stage_run"}:
+                return self._dispatch_experiment_stage_run(arguments, execution)
             timeouts = self._timeouts(execution)
             if operation in SESSION_OPERATIONS:
                 return self._dispatch_session_control(operation, arguments, execution)
@@ -625,6 +627,13 @@ class ControlDaemon:
             if not isinstance(inner_arguments, dict):
                 raise ExecutionContractError("INVALID_REQUEST", "registry call arguments must be an object")
             return self._dispatch_experiment_stage_define(inner_arguments, execution)
+        if inner_operation in {"experiment.stage_run", "experiment_stage_run"}:
+            if extra_outer:
+                raise ExecutionContractError("INVALID_REQUEST", f"{outer_operation} has unsupported arguments: {', '.join(extra_outer)}")
+            inner_arguments = outer_arguments.get("arguments", {})
+            if not isinstance(inner_arguments, dict):
+                raise ExecutionContractError("INVALID_REQUEST", "registry call arguments must be an object")
+            return self._dispatch_experiment_stage_run(inner_arguments, execution)
         if inner_operation in PROJECT_OPERATIONS:
             inner_arguments = outer_arguments.get("arguments", {})
             if not isinstance(inner_arguments, dict):
@@ -2035,6 +2044,252 @@ class ControlDaemon:
                 data={"engine_dispatched": False},
                 safe_retry=False,
             )
+            return self._finish(record, result, "FAILED")
+        try:
+            return future.result(timeout=timeouts["rpc_timeout_s"])
+        except FutureTimeout:
+            return self._pending(record, rpc_wait_expired=True, engine_dispatched=False)
+
+    def _dispatch_experiment_stage_run(
+        self, arguments: dict[str, Any], execution: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Persist a stage attempt, then fail closed before unsupported native work.
+
+        The current 6.4 adapter can configure one exact Variables initial-solution
+        selector, but it cannot yet prove the field/unit/mesh/frame and saved
+        output evidence required to authorize a solve. This route therefore
+        records an auditable no-dispatch attempt and does not contact a Worker.
+        """
+        from ._execution_contract import canonical_request_hash, model_ref_from_mapping
+        from ._stage_contract import canonical_json
+        from ._g2_registry import validate_call
+
+        identity_fields = (
+            "project_id", "session_id", "model_ref", "expected_revision",
+            "idempotency_key", "request_id",
+        )
+        scoped = dict(arguments)
+        normalized_execution = dict(execution)
+        for field in identity_fields:
+            body_value = scoped.get(field)
+            outer_value = normalized_execution.get(field)
+            if body_value is not None and outer_value is not None and body_value != outer_value:
+                code = "IDEMPOTENCY_CONFLICT" if field == "idempotency_key" else "MODEL_IDENTITY_MISMATCH"
+                raise ExecutionContractError("IDEMPOTENCY_CONFLICT" if code == "IDEMPOTENCY_CONFLICT" else code,
+                                             f"experiment.stage_run {field} differs between arguments and execution envelope")
+            value = outer_value if outer_value is not None else body_value
+            if value is not None:
+                scoped[field] = value
+                normalized_execution[field] = value
+        if scoped.get("source_attempt_id") is None:
+            scoped.pop("source_attempt_id", None)
+        if scoped.get("source") is None:
+            scoped.pop("source", None)
+        entry = validate_call("experiment.stage_run", scoped)
+        if entry.effect.upper() != "COMPUTE" or entry.scope != "model":
+            raise ExecutionContractError("UNSUPPORTED_OPERATION", "stage run route has an unexpected catalog effect or scope")
+
+        project_id = scoped.get("project_id")
+        session_id = scoped.get("session_id")
+        model_ref_value = scoped.get("model_ref")
+        stage_id = scoped.get("stage_id")
+        expected_revision = scoped.get("expected_revision")
+        idempotency_key = scoped.get("idempotency_key")
+        source_attempt_id = scoped.get("source_attempt_id")
+        source = scoped.get("source")
+        if not isinstance(project_id, str) or not project_id:
+            raise ExecutionContractError("PROJECT_IDENTITY_REQUIRED", "experiment.stage_run requires project_id")
+        if not isinstance(session_id, str) or not session_id:
+            raise ExecutionContractError("MODEL_IDENTITY_REQUIRED", "experiment.stage_run requires session_id")
+        if not isinstance(model_ref_value, Mapping):
+            raise ExecutionContractError("MODEL_IDENTITY_REQUIRED", "experiment.stage_run requires a production ModelRef object")
+        model_ref = model_ref_from_mapping(model_ref_value)
+        if model_ref.session_id != session_id:
+            raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "ModelRef session_id differs from the execution session")
+        if not isinstance(stage_id, str) or not stage_id:
+            raise ExecutionContractError("INVALID_REQUEST", "stage_id must be a non-empty string")
+        if source_attempt_id is not None and (not isinstance(source_attempt_id, str) or not source_attempt_id):
+            raise ExecutionContractError("INVALID_REQUEST", "source_attempt_id must be a non-empty string when supplied")
+        if isinstance(expected_revision, bool) or not isinstance(expected_revision, int) or expected_revision < 0:
+            raise ExecutionContractError("REVISION_CONFLICT", "experiment.stage_run requires a non-negative expected_revision")
+        if not isinstance(idempotency_key, str) or not idempotency_key:
+            raise ExecutionContractError("INVALID_REQUEST", "experiment.stage_run requires a non-empty idempotency_key")
+
+        request_id = scoped.get("request_id") or normalized_execution.get("request_id") or str(uuid4())
+        if not isinstance(request_id, str) or not request_id:
+            raise ExecutionContractError("INVALID_REQUEST", "request_id must be a non-empty string")
+        normalized_execution.update({
+            "project_id": project_id, "session_id": session_id,
+            "model_ref": model_ref.as_dict(), "expected_revision": expected_revision,
+            "idempotency_key": idempotency_key, "request_id": request_id,
+        })
+        self._authorize_project_execution("experiment.stage_run", scoped, normalized_execution)
+        timeouts = self.project_authority.apply_timeout_caps(project_id, self._timeouts(normalized_execution))
+
+        operation_arguments = {key: scoped[key] for key in ("stage_id", "source_attempt_id", "source") if key in scoped}
+        digest = canonical_request_hash(
+            "experiment.stage_run", operation_arguments, model_ref.as_dict(), expected_revision,
+            project_id=project_id, session_id=session_id,
+            queue_timeout_s=timeouts["queue_timeout_s"], execution_timeout_s=timeouts["execution_timeout_s"],
+            no_progress_warning_s=timeouts["no_progress_warning_s"],
+        )
+        persisted_execution = {
+            key: value for key, value in normalized_execution.items()
+            if key not in {"rpc_timeout_s", "queue_timeout_s", "execution_timeout_s", "no_progress_warning_s"}
+        }
+        metadata = {
+            "operation": "experiment.stage_run", "arguments": operation_arguments,
+            "execution": persisted_execution, "effect": "COMPUTE",
+            "engine_dispatched": False,
+        }
+        with self.lock:
+            record, reused = self.store.begin(
+                request_id=request_id, idempotency_key=idempotency_key, request_hash=digest,
+                operation="experiment.stage_run", metadata=metadata, timeouts=timeouts,
+            )
+            if reused and record.get("result") is not None:
+                return record["result"]
+
+        try:
+            context = self._execution_session_context(normalized_execution)
+        except ExecutionContractError as exc:
+            return self._finish(record, self._exception(exc), "FAILED")
+
+        def preflight_and_record() -> dict[str, Any]:
+            attempt: dict[str, Any] | None = None
+            try:
+                self._authorize_project_execution("experiment.stage_run", scoped, normalized_execution)
+                backend = context.backend if context is not None else self._default_backend
+                service = context.service if context is not None else getattr(backend, "service", None)
+                if service is None or getattr(service, "ledger", None) is None:
+                    raise ExecutionContractError("SESSION_NOT_CONNECTED", "stage_run requires a current managed model ledger")
+                if context is not None and (context.project_id != project_id or context.session_id != session_id):
+                    raise ExecutionContractError("PROJECT_IDENTITY_MISMATCH", "stage_run session context differs from its project binding")
+                if service.ledger.session_id != session_id:
+                    raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "ModelRef session does not match the selected managed ledger")
+                state = service.ledger._state_for(model_ref)
+                if state.active_operation_id is not None:
+                    raise ExecutionContractError("ENGINE_BUSY", "model has an active operation; stage was not admitted")
+                if state.dirty:
+                    raise ExecutionContractError("REVISION_CONFLICT", "model requires reconciliation before stage execution")
+                if state.revision != expected_revision:
+                    raise ExecutionContractError("REVISION_CONFLICT", "expected_revision does not match the current managed model revision")
+                revision_key = backend._model_project_key(model_ref.as_dict())
+                revision_record = self.store.get_metadata("revisions", revision_key)
+                if (not isinstance(revision_record, Mapping)
+                        or revision_record.get("model_ref") != model_ref.as_dict()
+                        or revision_record.get("project_id") != project_id
+                        or revision_record.get("attribution") != "PROJECT_BOUND"
+                        or revision_record.get("revision") != state.revision
+                        or revision_record.get("dirty") is not False):
+                    raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "durable revision binding does not match the selected project ModelRef")
+
+                resolved = self.store.resolve_stage(project_id, model_ref.as_dict(), stage_id)
+                if resolved is None:
+                    raise StagePlanStoreConflict("STAGE_NOT_FOUND", "stage_id is not registered in this project/model scope")
+                plan, stage = resolved["plan"], resolved["stage"]
+                if plan["definition"].get("version") != 2:
+                    raise StagePlanStoreConflict("STAGE_PLAN_V1_DECLARATION_ONLY", "version 1 stage plans are declaration-only")
+                frozen_source = stage.get("source_selection")
+                if source is not None:
+                    if not isinstance(frozen_source, Mapping) or frozen_source.get("kind") != "stage" \
+                            or canonical_json(source) != canonical_json(frozen_source.get("selection")):
+                        raise StagePlanStoreConflict("STAGE_SOURCE_SELECTION_MISMATCH", "caller source selector must exactly match the immutable stage plan")
+
+                attempt, attempt_reused = self.store.begin_stage_attempt(
+                    project_id=project_id, model_ref=model_ref.as_dict(), stage_id=stage_id,
+                    expected_revision=state.revision, request_id=request_id,
+                    operation_id=record["operation_id"], idempotency_key=idempotency_key,
+                    request_hash=digest, source_attempt_id=source_attempt_id,
+                )
+                if attempt_reused:
+                    # Operation-level idempotency should already have returned
+                    # the authoritative result. A cross-record reuse here is
+                    # a durable consistency error, never a second attempt.
+                    raise StagePlanStoreConflict("STAGE_ATTEMPT_STATE_UNKNOWN", "stage attempt exists without its matching operation result")
+                evidence = [{
+                    "kind": "pre-solve-admission",
+                    "status": "NOT_DISPATCHED_UNVERIFIED",
+                    "worker_rpc_performed": False,
+                    "solve_started": False,
+                    "reason": "native field/unit/mesh/frame and exact saved-output evidence are not available to this route",
+                }]
+                attempt = self.store.update_stage_attempt(
+                    project_id, model_ref.as_dict(), attempt["attempt_id"], expected_version=attempt["version"],
+                    status="NOT_DISPATCHED_UNVERIFIED", engine_dispatched=False,
+                    execution_status="NOT_DISPATCHED", acceptance_status="UNVERIFIED",
+                    evidence=evidence,
+                    result={"mapping_status": "UNVERIFIED", "continuity": "NOT_RUN", "conservation": "NOT_RUN"},
+                )
+                result = self._error(
+                    "STAGE_PROFILE_UNVERIFIED",
+                    "stage execution was refused before Worker dispatch because the declared mapping profile has no exact native field, unit, mesh, frame, and saved-output proof",
+                    data={
+                        "stage_id": stage_id,
+                        "plan_id": plan["plan_id"],
+                        "plan_sha256": plan["sha256"],
+                        "attempt": attempt,
+                        "execution_status": "NOT_DISPATCHED",
+                        "acceptance_status": "UNVERIFIED",
+                        "missing_evidence": [
+                            "target Variables belongs to the uniquely attached SolverSequence for study_target",
+                            "source and target variable identity plus native unit readback",
+                            "exact source/target mesh and declared frame identity",
+                            "saved source/output SolutionSpec tuple and same-time continuity or conservation readback",
+                        ],
+                        "worker_rpc_performed": False,
+                        "solve_started": False,
+                        "engine_dispatched": False,
+                    },
+                    engine_dispatched=False,
+                    safe_retry=False,
+                )
+                result["execution"] = {
+                    "project_id": project_id, "session_id": session_id,
+                    "model_ref": model_ref.as_dict(), "revision": state.revision,
+                    "engine_dispatched": False,
+                }
+                return self._finish(record, result, "FAILED")
+            except StagePlanStoreConflict as exc:
+                result = self._error(exc.code, str(exc), data={
+                    "stage_id": stage_id, "engine_dispatched": False,
+                    "stage_attempt_created": attempt is not None,
+                })
+                return self._finish(record, result, "FAILED")
+            except ExecutionContractError as exc:
+                return self._finish(record, self._exception(exc), "FAILED")
+            except Exception as exc:
+                self._log_exception()
+                if attempt is not None:
+                    try:
+                        attempt = self.store.update_stage_attempt(
+                            project_id, model_ref.as_dict(), attempt["attempt_id"],
+                            expected_version=attempt["version"], status="UNKNOWN",
+                            engine_dispatched=False, execution_status="UNKNOWN",
+                            acceptance_status="UNKNOWN",
+                            evidence=[*attempt["evidence"], {"kind": "control-state", "error_type": type(exc).__name__}],
+                            result={"reason": "durable no-dispatch completion could not be established"},
+                        )
+                    except Exception:
+                        pass
+                result = self._error(
+                    "EXECUTION_STATE_UNKNOWN",
+                    "stage attempt control state could not be durably established; replay with the same idempotency key",
+                    data={"stage_id": stage_id, "engine_dispatched": False,
+                          "attempt": attempt}, safe_retry=False,
+                    type=type(exc).__name__,
+                )
+                return self._finish(record, result, "UNKNOWN")
+
+        try:
+            future = self.session_scheduler.submit(context, preflight_and_record)
+        except SessionSchedulerClosed:
+            result = self._error("SESSION_BINDING_FENCED", "selected model session is fenced and cannot admit a stage attempt",
+                                 data={"engine_dispatched": False}, safe_retry=False)
+            return self._finish(record, result, "FAILED")
+        except SessionIdentityConflict:
+            result = self._error("SESSION_IDENTITY_CONFLICT", "selected model endpoint conflicts with an existing scheduler identity",
+                                 data={"engine_dispatched": False}, safe_retry=False)
             return self._finish(record, result, "FAILED")
         try:
             return future.result(timeout=timeouts["rpc_timeout_s"])

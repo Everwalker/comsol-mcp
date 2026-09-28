@@ -82,7 +82,7 @@ CONTROL_IMPLEMENTED_OPERATIONS = frozenset({
     "job.wait", "job.cancel", "job.cleanup",
     "project.create", "project.inspect", "project.contract_set",
     "project.policy_set", "project.permissions", "project.state_export",
-    "experiment.inspect", "experiment.case_result", "experiment.stage_define",
+    "experiment.inspect", "experiment.case_result", "experiment.stage_define", "experiment.stage_run",
     # Durable project-scoped lifecycle snapshots and process-birth fenced
     # owned Server lifecycle.
     "session.list", "session.inspect", "session.health", "session.connect",
@@ -972,6 +972,11 @@ def _validate_operation_shape(operation_id: str, arguments: Mapping[str, Any]) -
     if operation_id == "experiment.stage_define":
         from ._stage_contract import validate_stage_plan_definition
         validate_stage_plan_definition(arguments.get("definition"))
+        return
+
+    if operation_id == "experiment.state_map":
+        from ._stage_contract import normalize_state_map_request
+        normalize_state_map_request(arguments)
         return
 
     if operation_id in {"metric.define", "metric.list", "metric.evaluate", "metric.remove", "metric.compare"}:

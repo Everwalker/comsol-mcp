@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "phase": "F16_DURABLE_READS_SOFTWARE_CHECKPOINT",
+  "phase": "W21_STATE_MAP_STAGE_ATTEMPT_SOFTWARE_CHECKPOINT",
   "task": "W01_W26_CONTINUOUS_IMPLEMENTATION",
   "status": "PARTIAL_EXECUTION_CONTINUING_NATIVE_UNVERIFIED",
   "candidate_source": "docs/full_project_execution/project_session/EXPERIMENT_READS_SOFTWARE_CHECKPOINT.json",
@@ -103,7 +103,7 @@
       "native_acceptance": "NOT_RUN"
     }
   ],
-  "next_action": "Continue W21 v2 durable stage execution and actual state-map profile, W23 Qabs and exact producer-step binding, and W24 Equation View/state association. Native and final overall acceptance remain incomplete.",
+  "next_action": "Implement authenticated source/target fields, native integral units, exact mesh/frame/history and same-time checks, then single-Worker solve/check/atomic-save with durable acceptance; continue W23/W24 and all W01-W26 requirements.",
   "active_jobs": [],
   "blockers": [
     "W23 failed setup owned Server 75272 and daemon 75260 remain preserved: cleanup SIGTERM was rejected by automatic approval and explicit authorization is pending; no cleanup or relaunch authorized by elapsed time.",
@@ -132,7 +132,7 @@
     "native_solve_budget_remaining": 0,
     "evidence": "docs/full_project_execution/evidence/luna_process_reconciliation/mac_readonly_snapshot_20260926T2152Z.json"
   },
-  "updated_at": "2026-09-28T05:54:41.318347+00:00",
+  "updated_at": "2026-09-28T07:04:39.284552+00:00",
   "note": "Continuous authorized execution through W26. OpenViking task-detail retrieval was denied by auto-review because it would disclose internal roadmap identifiers externally; no workaround. Use current frozen workpack and read-only local memory only. Do not rerun bootstrap/init on resume. Source files now contain executor edits; do not rerun bootstrap/init. Git metadata is an APFS pointer managed by main agent; migration requires bundle/source transfer, not copying only the repository pointer. Git metadata migration is documented by evidence/git_metadata_relocation.json and owned by the main agent; do not copy the APFS git pointer to another machine without source bundle/archive. GUI permission boundary and checkpoint solution-scope caveat recorded. This executor has one W24 native setup-only failure with exact cleanup verified; the durable operation/job UNKNOWN records remain unchanged. No W24 solver submission occurred. Saved-MPH readback supplement uses separate time/evidence and zero study/solver calls; run08 remains FAIL_OR_INCOMPLETE. Root raw SQLite recomputation is linked under native_resume_saved_artifact_supplement.raw_recomputation_evidence; original run08 remains FAIL_OR_INCOMPLETE and no solve budget is restored. Latest checkpoint 2026-09-27T03:50:43Z: W24 0334Z setup run failed pre-model due Python 3.14 missing mcp, with exact cleanup; 0346Z candidate pins the validated 3.12.13 environment and passes a production no-engine registry/daemon preflight. Native setup remains pending root review; science implementation continues offline. Latest checkpoint 2026-09-27T09:09:28Z: W24 0841Z candidate was invoked once at 0857Z and failed before any engine/Worker birth because project.inspect received an injected idempotency_key; project.create persisted successfully. Exact read-only SQLite hash and operation result are in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_contract_diagnostic.json. The runner now omits the unnecessary inspect key; actual ControlDaemon focused regression is 2/2 PASS in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_runner_regression_receipt.json. No native retry or acceptance is claimed; release F04 runtime integration is active, so refresh closure and root review are required before another launch. Windows COMSOL 6.3 remains required/unassessed; only macOS 6.3 is USER_REQUESTED_SKIP.",
   "native_resume_smoke": {
     "status": "FAIL_OR_INCOMPLETE_POINT_SCHEMA_FAILURE; SOLVED_CHILD_ARTIFACT_DURABLE; SOLVE_BUDGET_EXHAUSTED; SEPARATE_SAVED_MPH_READBACK_PASS",
@@ -746,7 +746,7 @@
     "cleanup": "exact PID and ports absent; global COMSOL/Worker inventory quiescent",
     "scope": "API-only evidence; no optical, numerical, or physical acceptance"
   },
-  "recent_checkpoint": "docs/full_project_execution/project_session/STAGE_DEFINITION_SOFTWARE_CHECKPOINT.json",
+  "recent_checkpoint": "docs/full_project_execution/project_session/STATE_MAP_STAGE_ATTEMPT_SOFTWARE_CHECKPOINT.json",
   "root_resume_summary_correction": {
     "at": "2026-09-27T05:10:40.509110+00:00",
     "reason": "Prevent stale0346 relaunch from oldtop-level recovery summary; historical evidence retained",
@@ -991,11 +991,11 @@
   },
   "verified_git_sync": {
     "status": "VERIFIED",
-    "head": "aa1ae3168444c4f302eaa95c32f29447fd78b2b0",
-    "origin_main": "aa1ae3168444c4f302eaa95c32f29447fd78b2b0",
-    "verified_at": "2026-09-28T05:40:33.329594+00:00",
+    "head": "303198a2e53f0c5e4beae621732553f5d8305bb0",
+    "origin_main": "303198a2e53f0c5e4beae621732553f5d8305bb0",
+    "verified_at": "2026-09-28T05:56:06.800216+00:00",
     "method": "post-push fetch; HEAD/origin-main equality",
-    "stage": "W23 CV partial power terms software"
+    "stage": "W24 Equation View software"
   },
   "w24_static_shape_science_admission_repair": {
     "status": "SCOPED_SOFTWARE_REPAIR_ACCEPTED_NATIVE_NOT_RUN",
@@ -1147,6 +1147,14 @@
       "superseded_assumption": "Single-Frequency-only new Study may violate Numeric Port dependencies; withdrawn based on COMSOL 6.4 RF Module User Guide p157/doc24256/chunk104236 evidence reported by executor.",
       "approved_graph": "Preserve original model/study/solutions. New owned Study copies exact original BMA Port1 -> BMA Port2 -> Frequency settings, generates and reads actual solver graph, starts empty, then binds one controlled run to dedicated dataset/exact SolutionInfo tuple. Tag collisions refuse. Software implementation only; new native budget must include both BMA computations and Frequency.",
       "output_binding_rule": "Do not assume auto-sequence always has StoreSolution after final Frequency. Prove actual terminal Frequency solver direct output or documented explicit output StoreSolution; otherwise UNVERIFIED. Preserve all intermediate/original state and readbacks."
+    },
+    "qabs_certificate_review": {
+      "status": "IMPLEMENTATION_IN_PROGRESS_NATIVE_MAPPING_NOT_AVAILABLE",
+      "finding": "Caller reviewed=true or self-issued certificate cannot authenticate Equation View column semantics.",
+      "required_repair": "Production schema evidence registry must pin independently reviewed version/source/schema identity; no registered native evidence yet, so reject all caller-generated certificates. Test positive registry injection must be inaccessible via public input.",
+      "next_native_evidence": "Same-version native raw FeatureInfo column calibration, controlled known expressions and independently read units, cross-feature controls, source/version binding; main review freezes evidence before production registration.",
+      "java_compile": "Agent reports separate modified Java source compiles PASS; main receipt/hash verification pending",
+      "native": "NOT_RUN"
     }
   },
   "f16_current_review": {
@@ -1608,17 +1616,212 @@
       "main_passed": 149,
       "native": "NOT_RUN",
       "semantic_identity": "UNVERIFIED"
+    },
+    "control_production_next": {
+      "status": "IN_PROGRESS",
+      "base": "303198a2e53f0c5e4beae621732553f5d8305bb0",
+      "scope": "Complete controlled Study.run -> capture -> authenticated analytic comparator production chain; then T058 lifecycle",
+      "native": "NOT_RUN_RESOURCE_AND_BUDGET_GATES_PENDING",
+      "control_plan_preregistration": {
+        "version": 1,
+        "status": "NUMERICAL_CRITERIA_FROZEN_BEFORE_NATIVE_NOT_EXECUTION_AUTHORIZATION",
+        "maxwell": {
+          "times_s": [
+            1,
+            301,
+            601,
+            901
+          ],
+          "components": [
+            "solid.sx",
+            "solid.sy"
+          ],
+          "absolute_tolerance_pa": 100.0,
+          "relative_tolerance": 0.01,
+          "rule": "abs(native-analytic) <= max(absolute_tolerance_pa, relative_tolerance*abs(analytic)); every authenticated sample"
+        },
+        "gel": {
+          "required_times_s": [
+            2,
+            3
+          ],
+          "components": [
+            "solid.sx",
+            "solid.sy",
+            "solid.sz",
+            "solid.sxy",
+            "solid.sxz",
+            "solid.syz"
+          ],
+          "maximum_absolute_stress_pa": 100.0,
+          "wasactive_checks": "Existing exact 2.5s and 3s native checks retained"
+        },
+        "sampling": {
+          "scheme": "27 fixed interior points; center included",
+          "cube_origin_m": [
+            0,
+            0,
+            0
+          ],
+          "cube_size_m": [
+            0.0001,
+            0.0001,
+            0.0001
+          ],
+          "coordinates_m": [
+            [
+              2.5e-05,
+              2.5e-05,
+              2.5e-05
+            ],
+            [
+              2.5e-05,
+              2.5e-05,
+              5e-05
+            ],
+            [
+              2.5e-05,
+              2.5e-05,
+              7.5e-05
+            ],
+            [
+              2.5e-05,
+              5e-05,
+              2.5e-05
+            ],
+            [
+              2.5e-05,
+              5e-05,
+              5e-05
+            ],
+            [
+              2.5e-05,
+              5e-05,
+              7.5e-05
+            ],
+            [
+              2.5e-05,
+              7.5e-05,
+              2.5e-05
+            ],
+            [
+              2.5e-05,
+              7.5e-05,
+              5e-05
+            ],
+            [
+              2.5e-05,
+              7.5e-05,
+              7.5e-05
+            ],
+            [
+              5e-05,
+              2.5e-05,
+              2.5e-05
+            ],
+            [
+              5e-05,
+              2.5e-05,
+              5e-05
+            ],
+            [
+              5e-05,
+              2.5e-05,
+              7.5e-05
+            ],
+            [
+              5e-05,
+              5e-05,
+              2.5e-05
+            ],
+            [
+              5e-05,
+              5e-05,
+              5e-05
+            ],
+            [
+              5e-05,
+              5e-05,
+              7.5e-05
+            ],
+            [
+              5e-05,
+              7.5e-05,
+              2.5e-05
+            ],
+            [
+              5e-05,
+              7.5e-05,
+              5e-05
+            ],
+            [
+              5e-05,
+              7.5e-05,
+              7.5e-05
+            ],
+            [
+              7.5e-05,
+              2.5e-05,
+              2.5e-05
+            ],
+            [
+              7.5e-05,
+              2.5e-05,
+              5e-05
+            ],
+            [
+              7.5e-05,
+              2.5e-05,
+              7.5e-05
+            ],
+            [
+              7.5e-05,
+              5e-05,
+              2.5e-05
+            ],
+            [
+              7.5e-05,
+              5e-05,
+              5e-05
+            ],
+            [
+              7.5e-05,
+              5e-05,
+              7.5e-05
+            ],
+            [
+              7.5e-05,
+              7.5e-05,
+              2.5e-05
+            ],
+            [
+              7.5e-05,
+              7.5e-05,
+              5e-05
+            ],
+            [
+              7.5e-05,
+              7.5e-05,
+              7.5e-05
+            ]
+          ],
+          "requirement": "Every fixed time, every required component, every actual native point; reject missing/duplicate/reordered-identity mismatch; plan and source hashes bound to external approval"
+        },
+        "scope": "Uniform affine constitutive/reference-state numerical controls only; not full project physical calibration",
+        "admission": "Separate 2-slot candidate using existing ApprovalEnvelope and BirthBudget; reject legacy 10-slot approval; native resource/approval gates still pending",
+        "threshold_change_policy": "No post-result relaxation"
+      }
     }
   },
   "w21_original_stage_api_followup": {
-    "status": "PASS_SCOPED_DEFINITION_SOFTWARE_EXECUTION_REMAINS_OPEN",
+    "status": "PASS_SCOPED_SOFTWARE_STAGE_EXECUTION_REMAINS_OPEN",
     "gap_plan": {
       "path": "/private/tmp/w01-w22-stage-gap-plan-20260928.md",
       "sha256": "c57b03d63cbfc18c81a48b6784f90bd95e210daa4120d73379bf7f6de663e782"
     },
     "finding": "Canonical experiment.stage_define/stage_run/state_map have catalog schemas but lack production routes. Existing selector-only solution_transfer and COMPUTE stage.state_transfer do not satisfy the original WRITE mapping contract.",
     "decision": "Register one immutable complete plan per stage_define call. Preserve outer schemas; stage IDs unique across plans within project and stable model identity, so stage_run(stage_id) unambiguously resolves plan/hash. Atomic graph registration; exact retries idempotent, conflicting plan or stage IDs rejected.",
-    "scope": "Definition registration only, no Worker/solve; declaration is not native capability validation. Original stage_run, state_map and T021/T047 remain incomplete.",
+    "scope": "v2 plan, selector configuration and durable no-dispatch attempt software only; native mapping/solve/check/save remain open",
     "next_action": "Continue original WRITE state_map and COMPUTE stage_run against persisted plans, native continuity and remaining W01-W26 scope.",
     "model_identity_clarification": "Plan/stage uniqueness uses project_id + complete ModelRef identity (session_id, server_instance_id, model_tag, generation and schema_version), excluding revision. Session+tag alone is insufficient. Different server/generation cannot inherit a plan implicitly; future reopen migration needs explicit authenticated lineage.",
     "executor_checkpoint": {
@@ -1702,6 +1905,50 @@
         "conservation": "Each term has dimensionless finite coefficient, spatial SelectionSpec/entity_dimension; explicit exact source_solution and target_solution bound to authenticated stage lineage. Compare signed sum by side; residual=target_sum-source_sum. Both sides required; all-zero coefficients refused; all native integrated units match declared check unit.",
         "status": "APPROVED_FOR_SOFTWARE_IMPLEMENTATION_NATIVE_NOT_RUN"
       }
+    },
+    "candidate_review": {
+      "status": "FIXED_PASS_SCOPED_SOFTWARE",
+      "candidate": "/private/tmp/w21-state-map-stage-run-b4ffbc0-candidate",
+      "receipt": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-runtime/state_map_stage_run_candidate_receipt.json",
+      "receipt_sha256": "d20d421d03e02d5177d1627f828110347c41841138913f80b081b181fd05de59",
+      "verified_overlay_files": 14,
+      "main_files_unchanged_since_candidate_base": true,
+      "findings": [
+        "V2 native volume integral incorrectly accepts K for T[K] and refuses declared integrated unit K*m^3 through reused v1 and v2 field-unit equality checks",
+        "V2 rejects nonzero signed coefficients on distinct selections when sums on both sides cancel; must reject all-zero terms rather than zero coefficient sums"
+      ],
+      "reproducer": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-main-review/conservation-reproducer.json",
+      "reproducer_sha256": "aec661042b787e7ea567a554be23adb19064cdf13e185c28f790c2634ba056da",
+      "next_action": "Luna repair candidate with dimensional-declaration and signed-selection regression tests; preserve v1 semantics and hashes; refreeze and main retest",
+      "native": "NOT_RUN",
+      "github": "PENDING_PUSH_VERIFICATION",
+      "checkpoint": "docs/full_project_execution/project_session/STATE_MAP_STAGE_ATTEMPT_SOFTWARE_CHECKPOINT.json",
+      "repair_receipt": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-runtime/conservation_repair_candidate_receipt.json",
+        "sha256": "98de21244cfe713ac3475b1207ca7620b53eb950d1915664d1cf6aa6a77da639"
+      },
+      "main_tests_passed": 107,
+      "main_retest": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-main-review/conservation-main-retest.json",
+        "sha256": "c8c585fc2aab6622497d0cad31e206b3bb8f1492c781b8681afa7b6b20638795"
+      }
+    }
+  },
+  "scratch_space_recovery": {
+    "status": "RECOVERED_EXECUTION_RESUMED",
+    "removed": "/private/tmp/w24_physical_controls_303198a_20260928",
+    "inventory": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-failed-archive-cleanup-20260928.json",
+    "reason": "Failed incomplete tracked-only archive; no unique work per owning agent",
+    "future_scratch": "/Volumes/SSD/Comsol-MCP/execution-scratch",
+    "cleanup_authorization": "User authorizes cleaning unnecessary project historical files when disk space is low; preserve source, unique final/native/failure evidence and active work",
+    "historical_archive_cleanup": {
+      "receipt": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-historical-archive-verification.json",
+      "checked_git_blobs": 11033,
+      "mismatches": 0,
+      "logical_bytes": 1899816960,
+      "physical_free_delta": 1900544000,
+      "system_free_bytes_after": 3215360000,
+      "status": "REMOVED_VERIFIED_REBUILDABLE_UNUSED_ARCHIVE"
     }
   }
 }

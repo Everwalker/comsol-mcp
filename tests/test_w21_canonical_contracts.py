@@ -40,11 +40,13 @@ def test_canonical_operation_ids_have_distinct_handlers_and_catalog_effects():
     assert DISPATCH["experiment.run"] is execution.op_experiment_run
     assert DISPATCH["optimization.bounded_run"] is execution.op_optimization_bounded_run
     assert DISPATCH["experiment.design"] is execution.op_experiment_design
+    assert DISPATCH["experiment.state_map"] is execution.op_experiment_state_map
     assert EFFECTS["solver.solution_transfer"] == "WRITE"
     assert EFFECTS["stage.state_transfer"] == "COMPUTE"
     assert EFFECTS["optimization.bounded_run"] == "COMPUTE"
     assert EFFECTS["experiment.design"] == "STATE_WRITE"
     assert EFFECTS["experiment.run"] == "COMPUTE"
+    assert EFFECTS["experiment.state_map"] == "WRITE"
     assert {"solver.solution_transfer", "stage.state_transfer", "experiment.design",
             "experiment.run", "optimization.bounded_run"}.issubset(REQUIRES_ISOLATION)
     assert ALIASES["stage_state_transfer"] == "stage.state_transfer"
@@ -52,6 +54,7 @@ def test_canonical_operation_ids_have_distinct_handlers_and_catalog_effects():
     assert ALIASES["solver_solution_transfer"] == "solver.solution_transfer"
     assert ALIASES["experiment_design"] == "experiment.design"
     assert ALIASES["experiment_run"] == "experiment.run"
+    assert ALIASES["experiment_state_map"] == "experiment.state_map"
 
 
 def test_canonical_catalog_schema_accepts_the_declared_contracts():
@@ -65,6 +68,26 @@ def test_canonical_catalog_schema_accepts_the_declared_contracts():
     time_transfer = dict(transfer, source={"dataset": "dset1", "outer": 1,
                                            "time": [{"value": 0.25, "unit": "s"}]})
     assert validate_call("solver.solution_transfer", time_transfer).operation_id == "solver.solution_transfer"
+    state_map = dict(
+        envelope,
+        source={"dataset": "dset1", "solution": "sol2", "outer": 2, "inner": 3},
+        target={"segments": [{"collection": "sol", "tag": "sol3"},
+                             {"collection": "feature", "tag": "v1"}]},
+        mapping={"profile": "same_name_same_mesh_initialization", "variables": [{
+            "source_variable": "T", "target_variable": "T", "source_unit": "K",
+            "target_unit": "K", "mapping_method": "identity",
+        }]},
+    )
+    assert validate_call("experiment.state_map", state_map).operation_id == "experiment.state_map"
+    with pytest.raises(ExecutionContractError):
+        validate_call("experiment.state_map", {**state_map, "mapping": {**state_map["mapping"], "extra": 1}})
+    with pytest.raises(ExecutionContractError):
+        validate_call("experiment.state_map", {**state_map, "mapping": {
+            "profile": "same_name_same_mesh_initialization", "variables": [{
+                "source_variable": "T", "target_variable": "T", "source_unit": "K",
+                "target_unit": "s", "mapping_method": "identity",
+            }],
+        }})
     assert validate_call("experiment.design", dict(envelope, definition={"sampling": "declared"})).operation_id == "experiment.design"
     assert validate_call("experiment.run", dict(envelope, experiment_id="exp_1", resources={"max_cases": 1}, timeout_s=1.0)).operation_id == "experiment.run"
     with pytest.raises(ExecutionContractError):
@@ -124,13 +147,17 @@ class _Variables:
 
 
 class _Solver:
-    def __init__(self, study, features=None):
+    def __init__(self, study, features=None, attached=True):
         self.study_tag = study
+        self.attached = attached
         self.features = _Collection(features or {})
         self.run_calls = 0
 
     def study(self):
         return self.study_tag
+
+    def isAttached(self):
+        return self.attached
 
     def feature(self):
         return self.features
@@ -142,9 +169,14 @@ class _Solver:
 class _Model:
     def __init__(self, solvers):
         self.solvers = _Collection(solvers)
+        study_tags = {solver.study_tag for solver in solvers.values() if solver.study_tag}
+        self.studies = _Collection({tag: object() for tag in sorted(study_tags)})
 
     def sol(self, tag=None):
         return self.solvers if tag is None else self.solvers.get(tag)
+
+    def study(self, tag=None):
+        return self.studies if tag is None else self.studies.get(tag)
 
 
 def _transfer_arguments(inner=3, outer=2, mapping=None, time=None, solution="sol2"):
@@ -160,6 +192,18 @@ def _transfer_arguments(inner=3, outer=2, mapping=None, time=None, solution="sol
         "target": {"segments": [{"collection": "sol", "tag": "sol3"},
                                 {"collection": "feature", "tag": "v1"}]},
         "mapping": {} if mapping is None else mapping,
+    }
+
+
+def _state_map_arguments():
+    return {
+        "source": {"dataset": "dset1", "solution": "sol2", "outer": 2, "inner": 3},
+        "target": {"segments": [{"collection": "sol", "tag": "sol3"},
+                                {"collection": "feature", "tag": "v1"}]},
+        "mapping": {"profile": "same_name_same_mesh_initialization", "variables": [{
+            "source_variable": "T", "target_variable": "T", "source_unit": "K",
+            "target_unit": "K", "mapping_method": "identity",
+        }]},
     }
 
 
@@ -269,6 +313,58 @@ def test_solution_transfer_accepts_unique_time_quantity_and_rejects_mesh_history
     with pytest.raises(ExecutionContractError, match="mesh/history verification"):
         execution.op_solver_solution_transfer(object(), "model-a", request)
     assert variables.set_calls == []
+
+
+def test_experiment_state_map_configures_selector_and_reports_partial_native_evidence(monkeypatch):
+    variables = _Variables()
+    model = _Model({"sol2": _Solver("std1"), "sol3": _Solver("std2", {"v1": variables})})
+    monkeypatch.setattr(execution, "bound_model", lambda worker, tag: model)
+    monkeypatch.setattr(execution, "dataset_solution_indices", lambda *args: _bound_indices())
+
+    result = execution.op_experiment_state_map(object(), "model-a", _state_map_arguments())
+
+    assert result["status"] == "APPLIED"
+    assert result["contract"] == "experiment.state_map/v1"
+    assert result["coverage_status"] == "PARTIAL"
+    assert result["source"]["manualsolnum"] == 3
+    assert result["target_solver_attachment_readback"] == {
+        "status": "VERIFIED", "study": "std2", "solver": "sol3", "is_attached": True,
+        "unique_attached_solver_tags": ["sol3"],
+        "readback_methods": ["SolverSequence.study()", "SolverSequence.isAttached()"],
+    }
+    assert result["initialization_readback"]["initsol"] == "sol2"
+    assert result["declared_variable_mappings"] == _state_map_arguments()["mapping"]["variables"]
+    assert result["variable_mapping_applied"] is False
+    assert result["mapping_evidence"] == {
+        "status": "UNVERIFIED",
+        "reason": "the documented Variables initial-solution selector does not expose a per-variable mapping readback in the available adapter",
+        "source_field_identity": "UNVERIFIED", "target_field_identity": "UNVERIFIED",
+        "source_target_units": "UNVERIFIED", "source_target_mesh_identity": "UNVERIFIED",
+        "frame_equivalence": "UNVERIFIED", "hidden_solver_history": "NOT_VERIFIED",
+    }
+    assert result["solve_dispatched"] is False
+    assert variables.set_calls
+    assert model.solvers.get("sol3").run_calls == 0
+
+
+@pytest.mark.parametrize("target_solver", [
+    _Solver("std2", {"v1": _Variables()}, attached=False),
+    _Solver("std2", {"v1": _Variables()}),
+])
+def test_experiment_state_map_refuses_detached_or_ambiguous_target_before_selector_write(monkeypatch, target_solver):
+    variables = target_solver.features.values["v1"]
+    solvers = {"sol2": _Solver("std1"), "sol3": target_solver}
+    if target_solver.attached:
+        solvers["sol4"] = _Solver("std2")
+    model = _Model(solvers)
+    monkeypatch.setattr(execution, "bound_model", lambda worker, tag: model)
+    monkeypatch.setattr(execution, "dataset_solution_indices", lambda *args: _bound_indices())
+
+    with pytest.raises(ExecutionContractError) as excinfo:
+        execution.op_experiment_state_map(object(), "model-a", _state_map_arguments())
+    assert excinfo.value.code in {"TARGET_SOLVER_NOT_ATTACHED", "TARGET_STUDY_SOLVER_AMBIGUOUS"}
+    assert variables.set_calls == []
+    assert model.solvers.get("sol3").run_calls == 0
 
 
 def test_experiment_design_persists_binding_and_unknown_run_stops_dispatch(tmp_path, monkeypatch):

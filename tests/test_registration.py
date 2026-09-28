@@ -113,6 +113,8 @@ EXPECTED_TOOLS = [
     "experiment_inspect",
     "experiment_case_result",
     "experiment_stage_define",
+    "experiment_stage_run",
+    "experiment_state_map",
     "solver_solution_transfer",
 ]
 

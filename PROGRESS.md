@@ -4,13 +4,13 @@ Updated 2026-09-28 UTC. **Overall PARTIAL; execution continues through W26.** Th
 
 ## Current stage
 
-**W24 Equation View capture and state association: PASS for scoped software; W24/project overall PARTIAL.** Read-only private capture retains actual physics/feature paths, raw table cells and shape metadata, then authenticates the operation, source, artifact, model revision and exact V3 layout. Exact-cell field associations retain all ambiguous/unmatched candidates. API column labels and Maxwell/reference semantics remain explicitly unavailable or unverified.
+**W21 v2 plans, state-map selector configuration and durable stage attempts: PASS for scoped software; W21/project overall PARTIAL.** Canonical direct/fallback routes now configure an exact source tuple selector and verify the target solver attachment, or persist a no-dispatch attempt when native proof is absent. SQLite records bind the exact project, ModelRef, plan and revision; per-variable mapping and actual stage solves remain unimplemented.
 
-**Actually executed:** 149 isolated and 149 main integration tests PASS; main verified 114 runtime-source hashes, four overlays and the Java compile class hashes. [Compact evidence and replay](docs/full_project_execution/w24/EQUATION_VIEW_SOFTWARE_CHECKPOINT.json). Tests use actual ControlDaemon/SQLite with a synthetic Worker; no COMSOL model was started or solved. Earlier failures and their fixes remain recorded, not counted as native evidence.
+**Actually executed:** 107 isolated and 107 main integration tests PASS, including SQLite migration/rollback, public routes, v1 compatibility and registration. Main independently retested and closed two findings: integrated-unit declarations and nonzero signed terms across different selections. Main verified 390 parent source files and the 16-file final overlay. [Compact evidence and replay](docs/full_project_execution/project_session/STATE_MAP_STAGE_ATTEMPT_SOFTWARE_CHECKPOINT.json). Tests use synthetic Worker/models; native COMSOL NOT_RUN.
 
-**Next:** complete W24 physical fixtures/numerical controls and native semantic evidence; continue W21 durable stage execution and actual mapping, plus W23 Qabs and BMA→Frequency producer binding. Native cleanup authorization/platform limitations remain unresolved. Final independent overall Reviewer has not started.
+**Next:** implement actual field/unit/mesh/frame/history verification and the single-Worker solve/check/save stage backend; continue W23 Qabs/producer binding and W24 physical controls/T058. Native resource authorization and required platform limitations remain unresolved. Final independent overall Reviewer has not started.
 
-Latest published stage: W23 partial CV power terms `aa1ae31`, with Qabs generic interface NOT_IMPLEMENTED and native/science NOT_RUN. W24 V3 `b4ffbc0` and prior stages retain their scoped acceptance only.
+Previously synchronized checkpoint: W24 Equation View software `303198a`, 149 isolated and 149 main tests PASS; physical field/reference semantics remain UNVERIFIED.
 
 ## Latest accepted software baseline
 
@@ -38,4 +38,4 @@ Earlier source checkpoints and failures remain in the existing state and linked 
 
 Continue the three Luna Max work streams: complete F16 weighted native evidence and original experiment reporting/model gaps; complete W23 radiation geometry, capture/quadrature/power-balance and original optics acceptance; complete W24 UV/gel/reference/viscoelastic implementation and remaining science. Publish each accepted software stage immediately. Then freeze isolated managed native candidates, execute their reviewed scope, complete all remaining W01–W26 work, and run a fresh independent overall review with repair/retest until accepted.
 
-The latest focused replay is in [EQUATION_VIEW_SOFTWARE_CHECKPOINT.json](docs/full_project_execution/w24/EQUATION_VIEW_SOFTWARE_CHECKPOINT.json). Recover from GitHub and existing state. Last previously verified GitHub sync: aa1ae3168444c4f302eaa95c32f29447fd78b2b0; this stage is recorded as synchronized only after post-push fetch and HEAD/origin-main equality.
+The latest focused replay is in [STATE_MAP_STAGE_ATTEMPT_SOFTWARE_CHECKPOINT.json](docs/full_project_execution/project_session/STATE_MAP_STAGE_ATTEMPT_SOFTWARE_CHECKPOINT.json). Recover from GitHub and existing state. Last previously verified GitHub sync: 303198a2e53f0c5e4beae621732553f5d8305bb0; this stage is recorded as synchronized only after post-push fetch and HEAD/origin-main equality.

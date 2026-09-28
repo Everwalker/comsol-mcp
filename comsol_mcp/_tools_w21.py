@@ -202,6 +202,29 @@ def experiment_stage_define(definition: StagePlanDefinition) -> dict[str, Any]:
     return {"definition": normalized}
 
 
+def experiment_stage_run(
+    stage_id: str,
+    source_attempt_id: str | None = None,
+    source: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Admit one exact persisted stage attempt; an unverified native profile fails closed."""
+    result: dict[str, Any] = {"stage_id": stage_id}
+    if source_attempt_id is not None:
+        result["source_attempt_id"] = source_attempt_id
+    if source is not None:
+        result["source"] = source
+    return result
+
+
+def experiment_state_map(
+    source: dict[str, Any],
+    target: dict[str, Any],
+    mapping: dict[str, Any],
+) -> dict[str, Any]:
+    """Set one exact stored solution as a partial identity-profile initializer."""
+    return {"source": source, "target": target, "mapping": mapping}
+
+
 def register(registry: Any) -> None:
     tools = [
         ("parameter.case_manage", parameter_case_manage),
@@ -223,3 +246,5 @@ def register(registry: Any) -> None:
     registry.add_tool(experiment_inspect, name="experiment_inspect", operation_id="experiment.inspect")
     registry.add_tool(experiment_case_result, name="experiment_case_result", operation_id="experiment.case_result")
     registry.add_tool(experiment_stage_define, name="experiment_stage_define", operation_id="experiment.stage_define")
+    registry.add_tool(experiment_stage_run, name="experiment_stage_run", operation_id="experiment.stage_run")
+    registry.add_tool(experiment_state_map, name="experiment_state_map", operation_id="experiment.state_map")

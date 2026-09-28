@@ -92,14 +92,22 @@ def test_historical_v1_extension_preserves_rows_idempotency_and_reopen(tmp_path)
     path = tmp_path / "historical-v1.sqlite"
     _make_head_v1_database(path)
     before_objects, before_rows = _logical_snapshot(path)
-    assert {"resume_claims", "projects"}.isdisjoint({row[1] for row in before_objects})
+    assert {"resume_claims", "projects", "stage_attempts", "idx_stage_attempt_scope"}.isdisjoint(
+        {row[1] for row in before_objects}
+    )
 
     store = OperationStore(path)
     assert store.db.execute("SELECT version FROM schema_meta").fetchone()[0] == 1
     assert store.db.execute("PRAGMA table_info(resume_claims)").fetchall()
     after_objects, after_rows = _logical_snapshot(path)
     after_names = {row[1] for row in after_objects}
-    assert after_names - {row[1] for row in before_objects} == {"resume_claims", "projects"}
+    assert after_names - {row[1] for row in before_objects} == {
+        "resume_claims", "projects", "stage_attempts", "idx_stage_attempt_scope",
+    }
+    assert [row[1] for row in store.db.execute("PRAGMA table_info(stage_attempts)")] == [
+        "attempt_id", "scope_digest", "stage_id", "idempotency_key", "request_hash",
+        "status", "version", "record_json", "created_at", "updated_at",
+    ]
     assert after_rows["operations"] == before_rows["operations"]
     assert after_rows["jobs"] == before_rows["jobs"]
     assert after_rows["job_events"] == before_rows["job_events"]
@@ -119,10 +127,12 @@ def test_historical_v1_extension_preserves_rows_idempotency_and_reopen(tmp_path)
     assert store.db.execute("SELECT COUNT(*) FROM jobs").fetchone()[0] == 1
     assert store.db.execute("SELECT COUNT(*) FROM resume_claims").fetchone()[0] == 0
     assert store.db.execute("SELECT COUNT(*) FROM projects").fetchone()[0] == 0
+    assert store.db.execute("SELECT COUNT(*) FROM stage_attempts").fetchone()[0] == 0
     store.close()
 
     reopened = OperationStore(path)
     assert reopened.db.execute("SELECT COUNT(*) FROM resume_claims").fetchone()[0] == 0
+    assert reopened.db.execute("SELECT COUNT(*) FROM stage_attempts").fetchone()[0] == 0
     again, reused_again = reopened.begin(
         request_id="after-reopen", idempotency_key="idem-v1", request_hash="hash-v1",
         operation="study.run",
@@ -176,6 +186,28 @@ def test_malformed_additive_table_is_rejected_without_changing_legacy_data(tmp_p
     before = _logical_snapshot(path)
 
     with pytest.raises(RuntimeError, match="invalid resume_claims schema"):
+        OperationStore(path)
+
+    assert _logical_snapshot(path) == before
+
+
+def test_malformed_stage_attempt_table_is_rejected_without_changing_legacy_data(tmp_path):
+    path = tmp_path / "malformed-stage-attempt-extension.sqlite"
+    _make_head_v1_database(path)
+    db = _REAL_CONNECT(path)
+    # Include columns needed for the additive index so the migration reaches
+    # its exact schema validation instead of failing incidentally at DDL.
+    db.execute(
+        "CREATE TABLE stage_attempts("
+        "attempt_id TEXT,scope_digest TEXT,stage_id TEXT,idempotency_key TEXT,"
+        "request_hash TEXT,status TEXT,version INTEGER,record_json TEXT,"
+        "created_at TEXT,updated_at TEXT)"
+    )
+    db.commit()
+    db.close()
+    before = _logical_snapshot(path)
+
+    with pytest.raises(RuntimeError, match="invalid stage_attempts schema"):
         OperationStore(path)
 
     assert _logical_snapshot(path) == before
@@ -285,12 +317,12 @@ def test_migration_ddl_failure_rolls_back_prior_schema_changes(tmp_path, monkeyp
     def connect_with_migration_failure(*args, **kwargs):
         connection = real_connect(*args, **kwargs)
 
-        def deny_resume_table(action, arg1, arg2, database, trigger):
-            if action == sqlite3.SQLITE_CREATE_TABLE and arg1 == "resume_claims":
+        def deny_stage_attempt_table(action, arg1, arg2, database, trigger):
+            if action == sqlite3.SQLITE_CREATE_TABLE and arg1 == "stage_attempts":
                 return sqlite3.SQLITE_DENY
             return sqlite3.SQLITE_OK
 
-        connection.set_authorizer(deny_resume_table)
+        connection.set_authorizer(deny_stage_attempt_table)
         return connection
 
     monkeypatch.setattr(operation_store.sqlite3, "connect", connect_with_migration_failure)
@@ -321,9 +353,11 @@ def test_online_backup_and_restore_preserve_wal_data_and_reopen(tmp_path):
     before_migration = _logical_snapshot(backup)
     assert any(row[2] == "CommittedWhileWalOpen" for row in before_migration[1]["job_events"])
     assert "resume_claims" not in {row[1] for row in before_migration[0]}
+    assert "stage_attempts" not in {row[1] for row in before_migration[0]}
 
     migrated = OperationStore(source)
     assert migrated.db.execute("SELECT COUNT(*) FROM resume_claims").fetchone()[0] == 0
+    assert migrated.db.execute("SELECT COUNT(*) FROM stage_attempts").fetchone()[0] == 0
     migrated.close()
 
     backup_db = _REAL_CONNECT(backup)
@@ -336,6 +370,7 @@ def test_online_backup_and_restore_preserve_wal_data_and_reopen(tmp_path):
     reopened = OperationStore(restored)
     assert reopened.db.execute("SELECT version FROM schema_meta").fetchone()[0] == 1
     assert reopened.db.execute("SELECT COUNT(*) FROM resume_claims").fetchone()[0] == 0
+    assert reopened.db.execute("SELECT COUNT(*) FROM stage_attempts").fetchone()[0] == 0
     assert reopened.db.execute(
         "SELECT event FROM job_events WHERE event='CommittedWhileWalOpen'"
     ).fetchone()[0] == "CommittedWhileWalOpen"

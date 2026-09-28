@@ -1,0 +1,163 @@
+{
+  "schema_version": 1,
+  "stage": "W21 v2 plans, selector configuration and durable stage-attempt admission",
+  "status": "PASS_SCOPED_SOFTWARE",
+  "overall_w21": "PARTIAL",
+  "integration_base": "303198a2e53f0c5e4beae621732553f5d8305bb0",
+  "capabilities": [
+    "Strict v2 plans preserve v1 normalized hashes; integrated units remain unverified declarations.",
+    "Canonical direct and fallback state_map configures and reads back exact source tuple selectors and unique attached target solver. Per-variable mapping is not applied.",
+    "stage_run persists project/full-ModelRef/plan/revision-bound attempts with idempotency, CAS and append-only evidence, refusing unsupported profiles before Worker RPC.",
+    "Additive SQLite migration preserves historical rows, rejects malformed schemas, and rolls back on failed DDL."
+  ],
+  "limitations": [
+    "state_map field identity, units, topology, frame and hidden history remain UNVERIFIED.",
+    "stage_run returns STAGE_PROFILE_UNVERIFIED; no actual solve/check/save stage backend yet.",
+    "Native COMSOL NOT_RUN; original T021/T047 and final overall review remain open."
+  ],
+  "tests": {
+    "isolated_unique_passed": 107,
+    "main_integration_passed": 107,
+    "main_integration": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-main-review/main-integration.xml",
+      "sha256": "858fd8ddab7eabfce618c63387fac7e55162bf90b1713e305949e9e366262d69"
+    },
+    "main_original_counterexamples_retested": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-main-review/conservation-main-retest.json",
+      "sha256": "c8c585fc2aab6622497d0cad31e206b3bb8f1492c781b8681afa7b6b20638795"
+    },
+    "isolated_receipt": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-runtime/conservation_repair_candidate_receipt.json",
+      "sha256": "98de21244cfe713ac3475b1207ca7620b53eb950d1915664d1cf6aa6a77da639"
+    },
+    "isolated_runs": [
+      {
+        "command": "TMPDIR=/Volumes/SSD/Comsol-MCP/execution-scratch/w21-runtime /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -m pytest -q tests/test_stage_definition.py tests/test_operation_store.py tests/test_operation_store_migrations.py --deselect=tests/test_operation_store_migrations.py::test_historical_fixture_commit_and_blob_identity_resolve --basetemp=/Volumes/SSD/Comsol-MCP/execution-scratch/w21-runtime/pytest-conservation-final2 --junitxml=/Volumes/SSD/Comsol-MCP/execution-scratch/w21-runtime/conservation_repair_stage_migration_final_junit.xml",
+        "cwd": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-runtime/backend-next-candidate",
+        "junit_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-runtime/conservation_repair_stage_migration_final_junit.xml",
+        "junit_sha256": "79fab2e85d045aaa15f3a35ccb33b7f0329840167d5c208ea1d4f44ebc0f06c6",
+        "name": "stage definition + operation store + migrations",
+        "result": "74 passed, 1 deselected, 0 failed/errors/skipped"
+      },
+      {
+        "command": "GIT_DIR='/Users/everwalker/Library/Application Support/Comsol-MCP/git-store-20260926-01a0dbbd/repository.git' TMPDIR=/Volumes/SSD/Comsol-MCP/execution-scratch/w21-runtime /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -m pytest -q tests/test_operation_store_migrations.py::test_historical_fixture_commit_and_blob_identity_resolve --basetemp=/Volumes/SSD/Comsol-MCP/execution-scratch/w21-runtime/pytest-conservation-history-final --junitxml=/Volumes/SSD/Comsol-MCP/execution-scratch/w21-runtime/conservation_repair_history_final_junit.xml",
+        "cwd": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-runtime/backend-next-candidate",
+        "junit_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-runtime/conservation_repair_history_final_junit.xml",
+        "junit_sha256": "f0de7643003f20341432a3dd90ae4bb306253afa8da2a95e1fc6c2b0b44cbd58",
+        "name": "historical Git blob identity (isolated single test only)",
+        "result": "1 passed, 0 failed/errors/skipped; GIT_DIR applied only to this command/test"
+      },
+      {
+        "command": "TMPDIR=/Volumes/SSD/Comsol-MCP/execution-scratch/w21-runtime /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -m pytest -q tests/test_w21_canonical_contracts.py --basetemp=/Volumes/SSD/Comsol-MCP/execution-scratch/w21-runtime/pytest-conservation-canonical --junitxml=/Volumes/SSD/Comsol-MCP/execution-scratch/w21-runtime/conservation_canonical_junit.xml",
+        "cwd": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-runtime/backend-next-candidate",
+        "junit_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-runtime/conservation_canonical_junit.xml",
+        "junit_sha256": "6bda5ac7b4de29509d1fb4d09ef18dc980cdd72b9d88dcaa59d14c0cd4faf4b6",
+        "name": "W21 canonical contracts",
+        "result": "29 passed, 0 failed/errors/skipped"
+      },
+      {
+        "command": "TMPDIR=/Volumes/SSD/Comsol-MCP/execution-scratch/w21-runtime /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -m pytest -q tests/test_registration.py --basetemp=/Volumes/SSD/Comsol-MCP/execution-scratch/w21-runtime/pytest-conservation-registration --junitxml=/Volumes/SSD/Comsol-MCP/execution-scratch/w21-runtime/conservation_registration_junit.xml",
+        "cwd": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-runtime/backend-next-candidate",
+        "junit_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-runtime/conservation_registration_junit.xml",
+        "junit_sha256": "9273ef908d83bc1ff247d6f6468969d77979d27ccecf4f67254c8a0a479c8cad",
+        "name": "runtime public MCP registration",
+        "result": "3 passed, 0 failed/errors/skipped"
+      }
+    ],
+    "main_replay": "python -m pytest -q tests/test_stage_definition.py tests/test_operation_store.py tests/test_operation_store_migrations.py tests/test_w21_canonical_contracts.py tests/test_registration.py",
+    "runtime_scope": "Actual ControlDaemon/SQLite with injected synthetic Worker/models; native NOT_RUN"
+  },
+  "source_integrity": {
+    "parent_files_verified": 390,
+    "final_overlay": {
+      "AGENTS.md": "c0ac2afa3f0b2c8dd8b95444e2fa2db9243254644cb97b41f610544077886012",
+      "README.md": "a67a84cd05c7de38b1dd15bf7f2f7f6330903ef00f1dec5940e26923df605445",
+      "comsol_mcp/_control_daemon.py": "e13bdba091eac414ae10cc9cdc49b98a19608e37c4006c6791c937580bb13fdc",
+      "comsol_mcp/_g2_registry.py": "1b91126dec1d6dee8de60459d7d84cccf349fe835b0de2e4c80795f0d80cd0cf",
+      "comsol_mcp/_g3_w21.py": "bf567f34257d58e931f457d211182fddf04f1d94c6c0771fb4c69833fd2886a6",
+      "comsol_mcp/_operation_store.py": "fd601f2183e87012cda36da733cbcaf4bcd1f5a047c4225e027bc061f77b68a8",
+      "comsol_mcp/_stage_contract.py": "c028b33223b0cca3d994c9359efc6a02b27ed2f3103511639e9d3014bfacdbbe",
+      "comsol_mcp/_tools_w21.py": "e686b2d9545eb91d470aca99ac5f5e8eb01278ab669b35b7c34abcd87f22d964",
+      "comsol_mcp/_w21_execution.py": "b6adf435729acbecbd2767f46516657ecfac61faf4914e1ef712e1c5db9a466d",
+      "comsol_mcp/data/g2/02_ACTION_CATALOG.json": "124ef66964e7f2cae78eca79b974f4f8c2ea1a3263f6440427de5edab052124e",
+      "docs/comsol_mcp_design_v1/02_ACTION_CATALOG.json": "124ef66964e7f2cae78eca79b974f4f8c2ea1a3263f6440427de5edab052124e",
+      "tests/test_registration.py": "29c0618619cdf33869646b81d3861f7cf14e97a384a0c75d0e9df1f331533f82",
+      "tests/test_stage_definition.py": "08474afecd6111b63b403a7324aeeffc290174a29e2ef66300bf7aab64994c3f",
+      "tests/test_w21_canonical_contracts.py": "276324ce2ca7027fec14c8f84b3f8ddd05b72de263bc9a399b24e72829ff0a61",
+      "tests/test_operation_store.py": "ad74d673549ed7085dcbcec916a0c45b5208eecda3bedcab01ec67efd2e935f1",
+      "tests/test_operation_store_migrations.py": "e657341e8beaac4f9eb18b83a96b376fdab590c8c740456dfcc98ba2d7309a44"
+    },
+    "main_integrity": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-main-review/repair-integrity.json",
+      "sha256": "6f75cdaa9fde1595ab20a086fd53155d538ad3a0e1a5387cf1f545924a9a90a9"
+    },
+    "parent_manifest": {
+      "actual_file_count": 390,
+      "canonical_tree_sha256": "a67ecda6b6f9e3f81bcca0881dc11be5055ad6940e63fa5991afb3efcd0ac4c5",
+      "exclusions": [
+        ".pytest_cache/**",
+        "**/__pycache__/**",
+        "AppleDouble files named ._*"
+      ],
+      "file_sha256": "986e230dc6148f6967b3c727567fe8008d200f584f015606b1b01bc034850d25",
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-runtime/conservation_repair_full_base_source_manifest.json"
+    },
+    "repair_manifest": {
+      "canonical_overlay_sha256": "6614a3b16903a3857fcc48eeefff8b7e722368e102ce42109b3d9103bb9b9e3b",
+      "changed_file_count": 4,
+      "changed_files": [
+        {
+          "path": "comsol_mcp/_stage_contract.py",
+          "sha256": "c028b33223b0cca3d994c9359efc6a02b27ed2f3103511639e9d3014bfacdbbe"
+        },
+        {
+          "path": "tests/test_stage_definition.py",
+          "sha256": "08474afecd6111b63b403a7324aeeffc290174a29e2ef66300bf7aab64994c3f"
+        },
+        {
+          "path": "tests/test_operation_store.py",
+          "sha256": "ad74d673549ed7085dcbcec916a0c45b5208eecda3bedcab01ec67efd2e935f1"
+        },
+        {
+          "path": "tests/test_operation_store_migrations.py",
+          "sha256": "e657341e8beaac4f9eb18b83a96b376fdab590c8c740456dfcc98ba2d7309a44"
+        }
+      ],
+      "file_sha256": "0932751da108e079455b07993929de419be882ef2fc29157dce9426a53d9ccd5",
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-runtime/conservation_repair_overlay_manifest.json"
+    },
+    "imports": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-runtime/conservation_repair_import_provenance.json",
+      "sha256": "db1e7dba003d4ca1e9d97e3598f326942780bffe33bbf29251d5491c2b083f9d",
+      "summary": "exact Python 3.12.13 at the repair candidate cwd; every recorded comsol_mcp production import resolved inside candidate_root; test source paths are all under candidate_root."
+    },
+    "catalog_operations_changed": [
+      "experiment.stage_define",
+      "experiment.stage_run",
+      "experiment.state_map"
+    ],
+    "runtime_tool_count": 112
+  },
+  "failures_and_repairs": {
+    "main_findings": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-main-review/conservation-reproducer.json",
+      "sha256": "aec661042b787e7ea567a554be23adb19064cdf13e185c28f790c2634ba056da"
+    },
+    "repair": "Removed v2 field-unit/integrated-unit equality; reject all-zero coefficients, not zero side sums; v1 semantics/hash retained.",
+    "first_candidate_receipt": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-runtime/state_map_stage_run_candidate_receipt.json",
+      "sha256": "d20d421d03e02d5177d1627f828110347c41841138913f80b081b181fd05de59"
+    },
+    "initial_isolated_history_failure": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-runtime/conservation_repair_junit.xml",
+      "result": "72 passed, 1 failed in an initial 73-test run because the historical blob test invoked git rev-parse from the isolated candidate without a repository object database; the exact historical test passed in the isolated single-test GIT_DIR run above.",
+      "sha256": "f3ea532e85d11ce4f1fdd74a823e348ce6d3ad44a7b6d5d54cf4ece8006be8e0"
+    },
+    "registration_failure": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-runtime/registration_110_junit.xml",
+      "sha256": "663b2f4bab7f2ca5271ccfe7c61630a81a2fb7c783091956de6877092e1e5d7a"
+    },
+    "note": "Initial catalog overreach was restored; unrelated operations including metric.compare are unchanged. Failed evidence remains local by path/hash, not copied as bulk logs."
+  },
+  "next_action": "Implement authenticated source/target fields, native integral units, exact mesh/frame/history and same-time checks, then single-Worker solve/check/atomic-save with durable acceptance; continue W23/W24 and all W01-W26 requirements."
+}

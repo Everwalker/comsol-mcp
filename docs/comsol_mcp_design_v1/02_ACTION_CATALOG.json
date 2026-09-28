@@ -15032,174 +15032,93 @@
             "type": "string"
           },
           "definition": {
-            "type": "object",
-            "properties": {
-              "plan_id": {
-                "type": "string",
-                "minLength": 1,
-                "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
-              },
-              "stages": {
-                "type": "array",
-                "minItems": 1,
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "stage_id": {
-                      "type": "string",
-                      "minLength": 1,
-                      "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
-                    },
-                    "ordinal": {
-                      "type": "integer",
-                      "minimum": 1
-                    },
-                    "depends_on": {
-                      "type": "array",
-                      "items": {
-                        "type": "string",
-                        "minLength": 1,
-                        "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
-                      },
-                      "uniqueItems": true
-                    },
-                    "study_target": {
-                      "$ref": "common.schema.json#/$defs/NodePath"
-                    },
-                    "source_selection": {
-                      "oneOf": [
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "const": "initial_state"
-                            },
-                            "strategy": {
-                              "const": "declared_initial"
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "strategy"
-                          ],
-                          "additionalProperties": false
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "plan_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
+                  },
+                  "stages": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "stage_id": {
+                          "type": "string",
+                          "minLength": 1,
+                          "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
                         },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "const": "stage"
-                            },
-                            "stage_id": {
-                              "type": "string",
-                              "minLength": 1,
-                              "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
-                            },
-                            "selection": {
-                              "$ref": "common.schema.json#/$defs/SolutionSpec"
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "stage_id",
-                            "selection"
-                          ],
-                          "additionalProperties": false
-                        }
-                      ]
-                    },
-                    "target_selection": {
-                      "$ref": "common.schema.json#/$defs/SolutionSpec"
-                    },
-                    "variable_mappings": {
-                      "type": "array",
-                      "minItems": 1,
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "source_variable": {
-                            "type": "string",
-                            "minLength": 1
-                          },
-                          "target_variable": {
-                            "type": "string",
-                            "minLength": 1
-                          },
-                          "source_unit": {
-                            "type": "string",
-                            "minLength": 1
-                          },
-                          "target_unit": {
-                            "type": "string",
-                            "minLength": 1
-                          },
-                          "mapping_method": {
-                            "enum": [
-                              "identity",
-                              "interpolate",
-                              "projection"
-                            ]
-                          }
+                        "ordinal": {
+                          "type": "integer",
+                          "minimum": 1
                         },
-                        "required": [
-                          "source_variable",
-                          "target_variable",
-                          "source_unit",
-                          "target_unit",
-                          "mapping_method"
-                        ],
-                        "additionalProperties": false
-                      }
-                    },
-                    "reference_state": {
-                      "oneOf": [
-                        {
-                          "type": "object",
-                          "properties": {
-                            "strategy": {
-                              "const": "initial_state"
-                            }
+                        "depends_on": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
                           },
-                          "required": [
-                            "strategy"
-                          ],
-                          "additionalProperties": false
+                          "uniqueItems": true
                         },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "strategy": {
-                              "const": "predecessor_stage"
+                        "study_target": {
+                          "$ref": "common.schema.json#/$defs/NodePath"
+                        },
+                        "source_selection": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "const": "initial_state"
+                                },
+                                "strategy": {
+                                  "const": "declared_initial"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "strategy"
+                              ],
+                              "additionalProperties": false
                             },
-                            "source_stage_id": {
-                              "type": "string",
-                              "minLength": 1,
-                              "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "const": "stage"
+                                },
+                                "stage_id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
+                                },
+                                "selection": {
+                                  "$ref": "common.schema.json#/$defs/SolutionSpec"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "stage_id",
+                                "selection"
+                              ],
+                              "additionalProperties": false
                             }
-                          },
-                          "required": [
-                            "strategy",
-                            "source_stage_id"
-                          ],
-                          "additionalProperties": false
-                        }
-                      ]
-                    },
-                    "checks": {
-                      "type": "array",
-                      "items": {
-                        "oneOf": [
-                          {
+                          ]
+                        },
+                        "target_selection": {
+                          "$ref": "common.schema.json#/$defs/SolutionSpec"
+                        },
+                        "variable_mappings": {
+                          "type": "array",
+                          "minItems": 1,
+                          "items": {
                             "type": "object",
                             "properties": {
-                              "kind": {
-                                "const": "continuity"
-                              },
-                              "check_id": {
-                                "type": "string",
-                                "minLength": 1,
-                                "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
-                              },
                               "source_variable": {
                                 "type": "string",
                                 "minLength": 1
@@ -15208,139 +15127,648 @@
                                 "type": "string",
                                 "minLength": 1
                               },
-                              "unit": {
+                              "source_unit": {
                                 "type": "string",
                                 "minLength": 1
                               },
-                              "tolerance": {
-                                "type": "object",
-                                "properties": {
-                                  "absolute": {
-                                    "type": "number",
-                                    "minimum": 0
-                                  },
-                                  "relative": {
-                                    "type": "number",
-                                    "minimum": 0
-                                  }
-                                },
-                                "required": [
-                                  "absolute",
-                                  "relative"
-                                ],
-                                "additionalProperties": false
+                              "target_unit": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "mapping_method": {
+                                "enum": [
+                                  "identity",
+                                  "interpolate",
+                                  "projection"
+                                ]
                               }
                             },
                             "required": [
-                              "kind",
-                              "check_id",
                               "source_variable",
                               "target_variable",
-                              "unit",
-                              "tolerance"
-                            ],
-                            "additionalProperties": false
-                          },
-                          {
-                            "type": "object",
-                            "properties": {
-                              "kind": {
-                                "const": "conservation"
-                              },
-                              "check_id": {
-                                "type": "string",
-                                "minLength": 1,
-                                "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
-                              },
-                              "quantity": {
-                                "type": "string",
-                                "minLength": 1
-                              },
-                              "terms": {
-                                "type": "array",
-                                "minItems": 2,
-                                "items": {
-                                  "type": "object",
-                                  "properties": {
-                                    "side": {
-                                      "enum": [
-                                        "source",
-                                        "target"
-                                      ]
-                                    },
-                                    "variable": {
-                                      "type": "string",
-                                      "minLength": 1
-                                    },
-                                    "coefficient": {
-                                      "type": "number"
-                                    }
-                                  },
-                                  "required": [
-                                    "side",
-                                    "variable",
-                                    "coefficient"
-                                  ],
-                                  "additionalProperties": false
-                                }
-                              },
-                              "unit": {
-                                "type": "string",
-                                "minLength": 1
-                              },
-                              "tolerance": {
-                                "type": "object",
-                                "properties": {
-                                  "absolute": {
-                                    "type": "number",
-                                    "minimum": 0
-                                  },
-                                  "relative": {
-                                    "type": "number",
-                                    "minimum": 0
-                                  }
-                                },
-                                "required": [
-                                  "absolute",
-                                  "relative"
-                                ],
-                                "additionalProperties": false
-                              }
-                            },
-                            "required": [
-                              "kind",
-                              "check_id",
-                              "quantity",
-                              "terms",
-                              "unit",
-                              "tolerance"
+                              "source_unit",
+                              "target_unit",
+                              "mapping_method"
                             ],
                             "additionalProperties": false
                           }
-                        ]
-                      }
+                        },
+                        "reference_state": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "strategy": {
+                                  "const": "initial_state"
+                                }
+                              },
+                              "required": [
+                                "strategy"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "strategy": {
+                                  "const": "predecessor_stage"
+                                },
+                                "source_stage_id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
+                                }
+                              },
+                              "required": [
+                                "strategy",
+                                "source_stage_id"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "checks": {
+                          "type": "array",
+                          "items": {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "const": "continuity"
+                                  },
+                                  "check_id": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
+                                  },
+                                  "source_variable": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "target_variable": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "unit": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "tolerance": {
+                                    "type": "object",
+                                    "properties": {
+                                      "absolute": {
+                                        "type": "number",
+                                        "minimum": 0
+                                      },
+                                      "relative": {
+                                        "type": "number",
+                                        "minimum": 0
+                                      }
+                                    },
+                                    "required": [
+                                      "absolute",
+                                      "relative"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "check_id",
+                                  "source_variable",
+                                  "target_variable",
+                                  "unit",
+                                  "tolerance"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "const": "conservation"
+                                  },
+                                  "check_id": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
+                                  },
+                                  "quantity": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "terms": {
+                                    "type": "array",
+                                    "minItems": 2,
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "side": {
+                                          "enum": [
+                                            "source",
+                                            "target"
+                                          ]
+                                        },
+                                        "variable": {
+                                          "type": "string",
+                                          "minLength": 1
+                                        },
+                                        "coefficient": {
+                                          "type": "number"
+                                        }
+                                      },
+                                      "required": [
+                                        "side",
+                                        "variable",
+                                        "coefficient"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "unit": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "tolerance": {
+                                    "type": "object",
+                                    "properties": {
+                                      "absolute": {
+                                        "type": "number",
+                                        "minimum": 0
+                                      },
+                                      "relative": {
+                                        "type": "number",
+                                        "minimum": 0
+                                      }
+                                    },
+                                    "required": [
+                                      "absolute",
+                                      "relative"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "check_id",
+                                  "quantity",
+                                  "terms",
+                                  "unit",
+                                  "tolerance"
+                                ],
+                                "additionalProperties": false
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "stage_id",
+                        "ordinal",
+                        "depends_on",
+                        "study_target",
+                        "source_selection",
+                        "target_selection",
+                        "variable_mappings",
+                        "reference_state",
+                        "checks"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "plan_id",
+                  "stages"
+                ],
+                "additionalProperties": false,
+                "title": "stage plan v1 declaration-only definition"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "plan_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
+                  },
+                  "stages": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "stage_id": {
+                          "type": "string",
+                          "minLength": 1,
+                          "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
+                        },
+                        "ordinal": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "depends_on": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
+                          },
+                          "uniqueItems": true
+                        },
+                        "study_target": {
+                          "$ref": "common.schema.json#/$defs/NodePath"
+                        },
+                        "source_selection": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "const": "initial_state"
+                                },
+                                "strategy": {
+                                  "const": "declared_initial"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "strategy"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "const": "stage"
+                                },
+                                "stage_id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
+                                },
+                                "selection": {
+                                  "$ref": "common.schema.json#/$defs/SolutionSpec"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "stage_id",
+                                "selection"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "target_selection": {
+                          "$ref": "common.schema.json#/$defs/SolutionSpec"
+                        },
+                        "variable_mappings": {
+                          "type": "array",
+                          "minItems": 1,
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "source_variable": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "target_variable": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "source_unit": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "target_unit": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "mapping_method": {
+                                "const": "identity"
+                              }
+                            },
+                            "required": [
+                              "source_variable",
+                              "target_variable",
+                              "source_unit",
+                              "target_unit",
+                              "mapping_method"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "reference_state": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "strategy": {
+                                  "const": "initial_state"
+                                }
+                              },
+                              "required": [
+                                "strategy"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "strategy": {
+                                  "const": "predecessor_stage"
+                                },
+                                "source_stage_id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
+                                }
+                              },
+                              "required": [
+                                "strategy",
+                                "source_stage_id"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "checks": {
+                          "type": "array",
+                          "items": {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "const": "continuity"
+                                  },
+                                  "check_id": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
+                                  },
+                                  "source_variable": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "target_variable": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "unit": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "tolerance": {
+                                    "type": "object",
+                                    "properties": {
+                                      "absolute": {
+                                        "type": "number",
+                                        "minimum": 0
+                                      },
+                                      "relative": {
+                                        "type": "number",
+                                        "minimum": 0
+                                      }
+                                    },
+                                    "required": [
+                                      "absolute",
+                                      "relative"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "operator": {
+                                    "const": "pointwise_max_abs"
+                                  },
+                                  "source_solution": {
+                                    "$ref": "common.schema.json#/$defs/SolutionSpec"
+                                  },
+                                  "target_solution": {
+                                    "$ref": "common.schema.json#/$defs/SolutionSpec"
+                                  },
+                                  "source_selection": {
+                                    "$ref": "common.schema.json#/$defs/SelectionSpec"
+                                  },
+                                  "target_selection": {
+                                    "$ref": "common.schema.json#/$defs/SelectionSpec"
+                                  },
+                                  "frame": {
+                                    "enum": [
+                                      "spatial",
+                                      "material",
+                                      "geometry",
+                                      "mesh"
+                                    ]
+                                  },
+                                  "boundary_time": {
+                                    "type": "object",
+                                    "properties": {
+                                      "value": {
+                                        "type": "number"
+                                      },
+                                      "unit": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      }
+                                    },
+                                    "required": [
+                                      "value",
+                                      "unit"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "check_id",
+                                  "source_variable",
+                                  "target_variable",
+                                  "unit",
+                                  "tolerance",
+                                  "operator",
+                                  "source_solution",
+                                  "target_solution",
+                                  "source_selection",
+                                  "target_selection",
+                                  "frame",
+                                  "boundary_time"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "const": "conservation"
+                                  },
+                                  "check_id": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
+                                  },
+                                  "quantity": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "terms": {
+                                    "type": "array",
+                                    "minItems": 2,
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "side": {
+                                          "enum": [
+                                            "source",
+                                            "target"
+                                          ]
+                                        },
+                                        "variable": {
+                                          "type": "string",
+                                          "minLength": 1
+                                        },
+                                        "coefficient": {
+                                          "type": "number"
+                                        },
+                                        "selection": {
+                                          "$ref": "common.schema.json#/$defs/SelectionSpec"
+                                        },
+                                        "entity_dimension": {
+                                          "type": "integer",
+                                          "minimum": 0,
+                                          "maximum": 3
+                                        }
+                                      },
+                                      "required": [
+                                        "side",
+                                        "variable",
+                                        "coefficient",
+                                        "selection",
+                                        "entity_dimension"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "unit": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "tolerance": {
+                                    "type": "object",
+                                    "properties": {
+                                      "absolute": {
+                                        "type": "number",
+                                        "minimum": 0
+                                      },
+                                      "relative": {
+                                        "type": "number",
+                                        "minimum": 0
+                                      }
+                                    },
+                                    "required": [
+                                      "absolute",
+                                      "relative"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "operator": {
+                                    "const": "native_integral"
+                                  },
+                                  "source_solution": {
+                                    "$ref": "common.schema.json#/$defs/SolutionSpec"
+                                  },
+                                  "target_solution": {
+                                    "$ref": "common.schema.json#/$defs/SolutionSpec"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "check_id",
+                                  "quantity",
+                                  "terms",
+                                  "unit",
+                                  "tolerance",
+                                  "operator",
+                                  "source_solution",
+                                  "target_solution"
+                                ],
+                                "additionalProperties": false
+                              }
+                            ]
+                          }
+                        },
+                        "mapping_profile": {
+                          "const": "same_name_same_mesh_initialization"
+                        },
+                        "target_variables": {
+                          "$ref": "common.schema.json#/$defs/NodePath"
+                        }
+                      },
+                      "required": [
+                        "stage_id",
+                        "ordinal",
+                        "depends_on",
+                        "study_target",
+                        "source_selection",
+                        "target_selection",
+                        "variable_mappings",
+                        "reference_state",
+                        "checks",
+                        "mapping_profile"
+                      ],
+                      "additionalProperties": false,
+                      "allOf": [
+                        {
+                          "if": {
+                            "properties": {
+                              "source_selection": {
+                                "properties": {
+                                  "kind": {
+                                    "const": "stage"
+                                  }
+                                },
+                                "required": [
+                                  "kind"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "source_selection"
+                            ]
+                          },
+                          "then": {
+                            "required": [
+                              "target_variables"
+                            ]
+                          },
+                          "else": {
+                            "not": {
+                              "required": [
+                                "target_variables"
+                              ]
+                            }
+                          }
+                        }
+                      ]
                     }
                   },
-                  "required": [
-                    "stage_id",
-                    "ordinal",
-                    "depends_on",
-                    "study_target",
-                    "source_selection",
-                    "target_selection",
-                    "variable_mappings",
-                    "reference_state",
-                    "checks"
-                  ],
-                  "additionalProperties": false
-                }
+                  "version": {
+                    "type": "integer",
+                    "const": 2
+                  }
+                },
+                "required": [
+                  "plan_id",
+                  "stages",
+                  "version"
+                ],
+                "additionalProperties": false,
+                "title": "stage plan v2 executable mapping contract"
               }
-            },
-            "required": [
-              "plan_id",
-              "stages"
             ],
-            "additionalProperties": false
+            "description": "Version 1 remains declaration-only with its original hash shape; version 2 freezes the strict same-name initialization profile."
           }
         },
         "required": [
@@ -15358,19 +15786,19 @@
         "normal_path",
         "failure_is_truthful"
       ],
-      "notes": "Definition-only control route. No Worker RPC, solve, target-existence probe, or executable state mapping occurs."
+      "notes": "Version 1 definitions are unchanged declarations. Version 2 freezes an explicit same-name/same-mesh initialization profile; runtime field, unit, mesh, frame and conservation proof remains required before a stage can be accepted."
     },
     {
       "operation_id": "experiment.stage_run",
       "mcp_tool_name": "experiment_stage_run",
       "domain": "experiment",
       "purpose": "运行一阶段并保存状态历史",
-      "arguments_signature": "stage_id:str,source:SolutionSpec?",
+      "arguments_signature": "stage_id:str,source_attempt_id:str?,source:SolutionSpec?",
       "effect": "COMPUTE",
       "scope": "model",
       "gate": "G5",
-      "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
-      "route": "control orchestration + versioned engine calls; scientific rules are explicit",
+      "implementation_status": "SOFTWARE_CONTROL_ROUTE_IMPLEMENTED_NATIVE_UNVERIFIED",
+      "route": "atomic project/ModelRef-scoped stage attempt admission; current native field/unit/mesh/frame and saved-output proof is unavailable, so attempts stop before Worker RPC and solve",
       "capability_requirements": "common target with version capability probe",
       "input_schema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -15400,7 +15828,82 @@
             "type": "string"
           },
           "source": {
-            "$ref": "common.schema.json#/$defs/SolutionSpec"
+            "type": "object",
+            "properties": {
+              "dataset": {
+                "type": "string",
+                "minLength": 1
+              },
+              "solution": {
+                "type": "string",
+                "minLength": 1
+              },
+              "outer": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "inner": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "time": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 1,
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "number"
+                    },
+                    "unit": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "value",
+                    "unit"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "dataset",
+              "outer"
+            ],
+            "additionalProperties": false,
+            "oneOf": [
+              {
+                "required": [
+                  "inner"
+                ],
+                "not": {
+                  "required": [
+                    "time"
+                  ]
+                }
+              },
+              {
+                "required": [
+                  "time"
+                ],
+                "not": {
+                  "required": [
+                    "inner"
+                  ]
+                }
+              }
+            ]
+          },
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "source_attempt_id": {
+            "type": "string",
+            "minLength": 1
           }
         },
         "required": [
@@ -15408,17 +15911,18 @@
           "session_id",
           "model_ref",
           "idempotency_key",
-          "stage_id"
+          "stage_id",
+          "expected_revision"
         ],
         "additionalProperties": false
       },
-      "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+      "output_contract": "Durable stage_attempt with exact plan/ModelRef/revision binding; NOT_DISPATCHED_UNVERIFIED when native mapping evidence is unavailable; no scientific acceptance implied",
       "required_tests": [
         "schema_valid",
         "normal_path",
         "failure_is_truthful"
       ],
-      "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read."
+      "notes": "source_attempt_id must resolve to the unique accepted predecessor attempt bound by the immutable plan. This software route currently records a no-dispatch attempt because exact native mapping, continuity/conservation and saved-output evidence are not yet available; native COMSOL execution remains unverified."
     },
     {
       "operation_id": "experiment.state_map",
@@ -15429,9 +15933,9 @@
       "effect": "WRITE",
       "scope": "model",
       "gate": "G5",
-      "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
-      "route": "control orchestration + versioned engine calls; scientific rules are explicit",
-      "capability_requirements": "common target with version capability probe",
+      "implementation_status": "SOFTWARE_CONTROL_ROUTE_IMPLEMENTED_NATIVE_UNVERIFIED",
+      "route": "single-Worker WRITE; read back the exact source selector and unique attached target solver before selector configuration; never solve",
+      "capability_requirements": "COMSOL Variables initial-solution selector plus SolverSequence study/isAttached readback",
       "input_schema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "title": "experiment.state_map input",
@@ -15467,7 +15971,59 @@
             "$ref": "common.schema.json#/$defs/NodePath"
           },
           "mapping": {
-            "type": "object"
+            "type": "object",
+            "properties": {
+              "profile": {
+                "type": "string",
+                "enum": [
+                  "same_name_same_mesh_initialization"
+                ]
+              },
+              "variables": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "source_variable": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "target_variable": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "source_unit": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "target_unit": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "mapping_method": {
+                      "type": "string",
+                      "enum": [
+                        "identity"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "source_variable",
+                    "target_variable",
+                    "source_unit",
+                    "target_unit",
+                    "mapping_method"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "profile",
+              "variables"
+            ],
+            "additionalProperties": false
           }
         },
         "required": [
@@ -15482,7 +16038,7 @@
         ],
         "additionalProperties": false
       },
-      "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+      "output_contract": "ActionResult with exact source-solution selector and target attachment readbacks; coverage_status=PARTIAL until variable/unit/mesh/frame mapping evidence is complete",
       "required_tests": [
         "schema_valid",
         "normal_path",
@@ -15490,7 +16046,7 @@
         "readback_and_revision",
         "idempotency_and_partial_failure"
       ],
-      "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read."
+      "notes": "This bounded profile configures and reads back COMSOL Variables initial-solution selector properties only. Caller-declared units and same-name identity are not native proof; source/target field identity, units, mesh topology, frame equality, and hidden solver history remain UNVERIFIED. The operation never solves."
     },
     {
       "operation_id": "checkpoint.create",

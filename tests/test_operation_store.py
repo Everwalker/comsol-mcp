@@ -6,6 +6,10 @@ import threading
 def test_store_idempotency_result_and_restart_reconciliation(tmp_path):
     store = OperationStore(tmp_path / "operations.sqlite")
     assert store.db.execute("SELECT version FROM schema_meta").fetchone()[0] == SCHEMA_VERSION
+    assert [row[1] for row in store.db.execute("PRAGMA table_info(stage_attempts)")] == [
+        "attempt_id", "scope_digest", "stage_id", "idempotency_key", "request_hash",
+        "status", "version", "record_json", "created_at", "updated_at",
+    ]
     record, reused = store.begin(request_id="r", idempotency_key="key", request_hash="hash", operation="run_study")
     assert reused is False
     store.finish(record["operation_id"], status="SUCCEEDED", result={"success": True})
@@ -33,6 +37,9 @@ def test_schema_zero_migrates_and_durable_metadata_round_trips(tmp_path):
     store.save_metadata("sessions", "s", {"server": "x"})
     store.save_metadata("revisions", "m", {"revision": 4, "fingerprint": "f"})
     assert store.db.execute("SELECT version FROM schema_meta").fetchone()[0] == SCHEMA_VERSION
+    assert store.db.execute(
+        "SELECT type FROM sqlite_master WHERE name='stage_attempts'"
+    ).fetchone()[0] == "table"
     assert store.db.execute("SELECT revision FROM revisions WHERE model_key='m'").fetchone()[0] == 4
 
 

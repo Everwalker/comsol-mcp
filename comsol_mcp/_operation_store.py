@@ -34,6 +34,34 @@ PROJECT_TABLE_COLUMNS = (
     ("created_at", "TEXT", 1, 0),
     ("updated_at", "TEXT", 1, 0),
 )
+STAGE_ATTEMPT_TABLE_COLUMNS = (
+    ("attempt_id", "TEXT", 1, 1, None),
+    ("scope_digest", "TEXT", 1, 0, None),
+    ("stage_id", "TEXT", 1, 0, None),
+    ("idempotency_key", "TEXT", 1, 0, None),
+    ("request_hash", "TEXT", 1, 0, None),
+    ("status", "TEXT", 1, 0, None),
+    ("version", "INTEGER", 1, 0, None),
+    ("record_json", "TEXT", 1, 0, None),
+    ("created_at", "TEXT", 1, 0, "CURRENT_TIMESTAMP"),
+    ("updated_at", "TEXT", 1, 0, "CURRENT_TIMESTAMP"),
+)
+STAGE_ATTEMPT_STATUSES = frozenset({
+    "ADMITTED", "RUNNING", "NOT_DISPATCHED_UNVERIFIED",
+    "MAPPING_CONFIGURED_PARTIAL", "SUCCEEDED_PARTIAL", "ACCEPTED",
+    "FAILED", "UNKNOWN", "CANCELLED",
+})
+STAGE_ATTEMPT_TRANSITIONS = {
+    "ADMITTED": frozenset({"RUNNING", "NOT_DISPATCHED_UNVERIFIED", "MAPPING_CONFIGURED_PARTIAL", "FAILED", "UNKNOWN", "CANCELLED"}),
+    "RUNNING": frozenset({"SUCCEEDED_PARTIAL", "FAILED", "UNKNOWN", "CANCELLED"}),
+}
+STAGE_EXECUTION_STATUSES = frozenset({
+    "NOT_STARTED", "NOT_DISPATCHED", "MAPPING_CONFIGURED", "RUNNING",
+    "SOLVE_SUCCEEDED", "FAILED", "UNKNOWN", "CANCELLED",
+})
+STAGE_ACCEPTANCE_STATUSES = frozenset({
+    "NOT_EVALUATED", "UNVERIFIED", "PARTIAL", "ACCEPTED", "REJECTED", "UNKNOWN",
+})
 
 
 class IdempotencyConflict(RuntimeError):
@@ -239,6 +267,40 @@ class OperationStore:
                     or observed_project_columns != PROJECT_TABLE_COLUMNS
                     or ("workspace",) not in unique_project_columns):
                 raise RuntimeError("invalid projects schema")
+            # Durable W21 stage attempts are additive to v1 databases. Their
+            # canonical record includes the full project/ModelRef/plan/stage
+            # binding and is integrity checked on every read and CAS update.
+            self.db.execute(
+                "CREATE TABLE IF NOT EXISTS stage_attempts("
+                "attempt_id TEXT PRIMARY KEY NOT NULL,scope_digest TEXT NOT NULL,"
+                "stage_id TEXT NOT NULL,idempotency_key TEXT NOT NULL UNIQUE,"
+                "request_hash TEXT NOT NULL,status TEXT NOT NULL,version INTEGER NOT NULL,"
+                "record_json TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                "updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"
+            )
+            self.db.execute(
+                "CREATE INDEX IF NOT EXISTS idx_stage_attempt_scope "
+                "ON stage_attempts(scope_digest,stage_id,created_at,attempt_id)"
+            )
+            attempt_object = self.db.execute(
+                "SELECT type FROM sqlite_master WHERE name='stage_attempts'"
+            ).fetchone()
+            observed_attempt_columns = tuple(
+                (row[1], (row[2] or "").upper(), row[3], row[5], row[4])
+                for row in self.db.execute("PRAGMA table_info(stage_attempts)").fetchall()
+            )
+            unique_attempt_columns: set[tuple[str, ...]] = set()
+            for index in self.db.execute("PRAGMA index_list(stage_attempts)").fetchall():
+                if index[2] != 1 or (len(index) > 4 and index[4] != 0):
+                    continue
+                name = str(index[1]).replace("'", "''")
+                columns = self.db.execute(f"PRAGMA index_info('{name}')").fetchall()
+                if len(columns) == 1 and columns[0][1] >= 0 and columns[0][2] is not None:
+                    unique_attempt_columns.add((columns[0][2],))
+            if (attempt_object is None or attempt_object[0] != "table"
+                    or observed_attempt_columns != STAGE_ATTEMPT_TABLE_COLUMNS
+                    or not {("attempt_id",), ("idempotency_key",)} <= unique_attempt_columns):
+                raise RuntimeError("invalid stage_attempts schema")
             self.db.execute("COMMIT")
         except Exception:
             self.db.execute("ROLLBACK")
@@ -1893,6 +1955,299 @@ class OperationStore:
         if len(matches) != 1:
             raise StagePlanStoreConflict("STAGE_PLAN_STATE_UNKNOWN", "stored stage index does not resolve uniquely in its plan")
         return {"index": index, "plan": plan, "stage": matches[0]}
+
+    @staticmethod
+    def _validate_stage_attempt_record(record: Any, *, project_id: str | None = None,
+                                        model_ref: dict[str, Any] | None = None) -> dict[str, Any]:
+        from ._stage_contract import sha256_json
+
+        if not isinstance(record, dict):
+            raise StagePlanStoreConflict("STAGE_ATTEMPT_STATE_UNKNOWN", "stored stage attempt is malformed")
+        payload = dict(record)
+        observed = payload.pop("sha256", None)
+        scope_digest = record.get("scope_digest")
+        status = record.get("status")
+        if (type(record.get("schema_version")) is not int or record.get("schema_version") != 1
+                or record.get("kind") != "w21_stage_attempt"
+                or not isinstance(record.get("project_id"), str) or not record["project_id"]
+                or not isinstance(record.get("model_ref"), dict)
+                or not isinstance(scope_digest, str) or len(scope_digest) != 64
+                or scope_digest != OperationStore._stage_scope_digest(record["project_id"], record["model_ref"])
+                or not isinstance(record.get("plan_id"), str) or not record["plan_id"]
+                or not isinstance(record.get("plan_sha256"), str) or len(record["plan_sha256"]) != 64
+                or not isinstance(record.get("definition_sha256"), str) or len(record["definition_sha256"]) != 64
+                or not isinstance(record.get("stage_id"), str) or not record["stage_id"]
+                or type(record.get("ordinal")) is not int or record["ordinal"] < 1
+                or not isinstance(record.get("attempt_id"), str) or not record["attempt_id"]
+                or type(record.get("attempt_number")) is not int or record["attempt_number"] < 1
+                or not isinstance(record.get("idempotency_key"), str) or not record["idempotency_key"]
+                or not isinstance(record.get("operation_id"), str) or not record["operation_id"]
+                or not isinstance(record.get("request_hash"), str) or len(record["request_hash"]) != 64
+                or not isinstance(record.get("request_id"), str) or not record["request_id"]
+                or type(record.get("expected_revision")) is not int or record["expected_revision"] < 0
+                or (record.get("source_attempt_id") is not None
+                    and (not isinstance(record.get("source_attempt_id"), str) or not record["source_attempt_id"]))
+                or status not in STAGE_ATTEMPT_STATUSES
+                or type(record.get("version")) is not int or record["version"] < 1
+                or type(record.get("engine_dispatched")) is not bool
+                or record.get("execution_status") not in STAGE_EXECUTION_STATUSES
+                or record.get("acceptance_status") not in STAGE_ACCEPTANCE_STATUSES
+                or not isinstance(record.get("evidence"), list)
+                or not isinstance(record.get("result"), (dict, type(None)))
+                or not isinstance(observed, str) or observed != sha256_json(payload)
+                or (project_id is not None and record.get("project_id") != project_id)
+                or (model_ref is not None and not OperationStore._stage_json_equal(record.get("model_ref"), model_ref))):
+            raise StagePlanStoreConflict("STAGE_ATTEMPT_STATE_UNKNOWN", "stored stage attempt failed its integrity or scope check")
+        return record
+
+    def _stage_attempt_from_row(self, row, *, project_id: str | None = None,
+                                model_ref: dict[str, Any] | None = None) -> dict[str, Any]:
+        try:
+            record = json.loads(row["record_json"])
+        except (TypeError, ValueError, KeyError) as exc:
+            raise StagePlanStoreConflict("STAGE_ATTEMPT_STATE_UNKNOWN", "stored stage attempt JSON is unreadable") from exc
+        record = self._validate_stage_attempt_record(record, project_id=project_id, model_ref=model_ref)
+        if (record["attempt_id"] != row["attempt_id"]
+                or record["scope_digest"] != row["scope_digest"]
+                or record["stage_id"] != row["stage_id"]
+                or record["idempotency_key"] != row["idempotency_key"]
+                or record["request_hash"] != row["request_hash"]
+                or record["status"] != row["status"]
+                or record["version"] != row["version"]):
+            raise StagePlanStoreConflict("STAGE_ATTEMPT_STATE_UNKNOWN", "stage attempt index columns disagree with its hashed record")
+        plans, indexes = self._load_validated_stage_scope_locked(record["project_id"], record["model_ref"])
+        plan = plans.get(record["plan_id"])
+        index = indexes.get(record["stage_id"])
+        if (plan is None or index is None
+                or plan.get("sha256") != record["plan_sha256"]
+                or plan.get("definition_sha256") != record["definition_sha256"]
+                or index.get("plan_id") != record["plan_id"]
+                or index.get("ordinal") != record["ordinal"]):
+            raise StagePlanStoreConflict("STAGE_ATTEMPT_STATE_UNKNOWN", "stage attempt no longer binds to its exact stored plan/index")
+        return record
+
+    def begin_stage_attempt(self, *, project_id: str, model_ref: dict[str, Any], stage_id: str,
+                            expected_revision: int, request_id: str, idempotency_key: str,
+                            request_hash: str, operation_id: str, source_attempt_id: str | None = None
+                            ) -> tuple[dict[str, Any], bool]:
+        """Atomically bind one durable attempt to a validated plan and predecessors."""
+        from ._stage_contract import sha256_json, canonical_json
+
+        if (not isinstance(project_id, str) or not project_id or not isinstance(model_ref, dict)
+                or not isinstance(stage_id, str) or not stage_id
+                or type(expected_revision) is not int or expected_revision < 0
+                or not isinstance(request_id, str) or not request_id
+                or not isinstance(operation_id, str) or not operation_id
+                or not isinstance(idempotency_key, str) or not idempotency_key
+                or not isinstance(request_hash, str) or len(request_hash) != 64):
+            raise StagePlanStoreConflict("INVALID_REQUEST", "stage attempt admission fields are malformed")
+        digest = self._stage_scope_digest(project_id, model_ref)
+        with self.lock:
+            self.db.execute("BEGIN IMMEDIATE")
+            try:
+                existing_row = self.db.execute(
+                    "SELECT * FROM stage_attempts WHERE idempotency_key=?", (idempotency_key,),
+                ).fetchone()
+                if existing_row is not None:
+                    existing = self._stage_attempt_from_row(existing_row)
+                    if (existing["request_hash"] != request_hash
+                            or existing["scope_digest"] != digest
+                            or existing["project_id"] != project_id
+                            or not self._stage_json_equal(existing["model_ref"], model_ref)
+                            or existing["stage_id"] != stage_id):
+                        raise StagePlanStoreConflict("IDEMPOTENCY_CONFLICT", "stage attempt idempotency key is bound to different content")
+                    self.db.execute("COMMIT")
+                    return existing, True
+
+                resolved = self.resolve_stage(project_id, model_ref, stage_id)
+                if resolved is None:
+                    raise StagePlanStoreConflict("STAGE_NOT_FOUND", "stage_id is not registered in this project/model scope")
+                plan, stage = resolved["plan"], resolved["stage"]
+                if plan["definition"].get("version") != 2:
+                    raise StagePlanStoreConflict("STAGE_PLAN_V1_DECLARATION_ONLY", "version 1 stage plans are declaration-only")
+
+                rows = self.db.execute(
+                    "SELECT * FROM stage_attempts WHERE scope_digest=? ORDER BY created_at,attempt_id",
+                    (digest,),
+                ).fetchall()
+                records = [self._stage_attempt_from_row(row, project_id=project_id, model_ref=model_ref) for row in rows]
+                same_stage = [row for row in records if row["stage_id"] == stage_id]
+                if any(row["status"] in {"ADMITTED", "RUNNING", "UNKNOWN"}
+                       or row["engine_dispatched"]
+                       for row in same_stage):
+                    raise StagePlanStoreConflict("STAGE_ATTEMPT_UNRESOLVED", "a prior stage attempt is active or dispatched; explicit recovery is required before retry")
+                if any(row["status"] in {"SUCCEEDED_PARTIAL", "ACCEPTED"} for row in same_stage):
+                    raise StagePlanStoreConflict("STAGE_ALREADY_COMPLETED", "stage already has a completed durable attempt")
+
+                accepted_by_stage: dict[str, list[dict[str, Any]]] = {}
+                for row in records:
+                    if row["status"] == "ACCEPTED":
+                        accepted_by_stage.setdefault(row["stage_id"], []).append(row)
+                for dependency in stage["depends_on"]:
+                    accepted = accepted_by_stage.get(dependency, [])
+                    if len(accepted) != 1:
+                        code = "STAGE_PREDECESSOR_UNAVAILABLE" if not accepted else "STAGE_PREDECESSOR_AMBIGUOUS"
+                        raise StagePlanStoreConflict(code, "every dependency needs one exact scientifically accepted stage attempt")
+                source_id = stage.get("source_selection", {}).get("stage_id") if isinstance(stage.get("source_selection"), dict) else None
+                if source_id is not None:
+                    selected = accepted_by_stage.get(source_id, [])
+                    if len(selected) != 1 or source_attempt_id != selected[0]["attempt_id"]:
+                        raise StagePlanStoreConflict("STAGE_SOURCE_ATTEMPT_MISMATCH", "source_attempt_id must identify the unique accepted predecessor attempt")
+                elif source_attempt_id is not None:
+                    raise StagePlanStoreConflict("STAGE_SOURCE_ATTEMPT_MISMATCH", "initial-state stages cannot claim a predecessor attempt")
+
+                attempt_number = 1 + max((row["attempt_number"] for row in same_stage), default=0)
+                record = {
+                    "schema_version": 1,
+                    "kind": "w21_stage_attempt",
+                    "project_id": project_id,
+                    "model_ref": dict(model_ref),
+                    "scope_digest": digest,
+                    "plan_id": plan["plan_id"],
+                    "plan_sha256": plan["sha256"],
+                    "definition_sha256": plan["definition_sha256"],
+                    "stage_id": stage_id,
+                    "ordinal": stage["ordinal"],
+                    "attempt_id": str(uuid4()),
+                    "attempt_number": attempt_number,
+                    "idempotency_key": idempotency_key,
+                    "operation_id": operation_id,
+                    "request_hash": request_hash,
+                    "request_id": request_id,
+                    "expected_revision": expected_revision,
+                    "source_attempt_id": source_attempt_id,
+                    "status": "ADMITTED",
+                    "version": 1,
+                    "engine_dispatched": False,
+                    "execution_status": "NOT_STARTED",
+                    "acceptance_status": "NOT_EVALUATED",
+                    "evidence": [],
+                    "result": None,
+                }
+                record["sha256"] = sha256_json(record)
+                encoded = canonical_json(record)
+                now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+                self.db.execute(
+                    "INSERT INTO stage_attempts(attempt_id,scope_digest,stage_id,idempotency_key,request_hash,status,version,record_json,created_at,updated_at) "
+                    "VALUES(?,?,?,?,?,?,?,?,?,?)",
+                    (record["attempt_id"], digest, stage_id, idempotency_key, request_hash,
+                     record["status"], record["version"], encoded, now, now),
+                )
+                self.db.execute("COMMIT")
+                return record, False
+            except Exception:
+                if self.db.in_transaction:
+                    self.db.execute("ROLLBACK")
+                raise
+
+    def get_stage_attempt(self, project_id: str, model_ref: dict[str, Any], attempt_id: str) -> dict[str, Any] | None:
+        digest = self._stage_scope_digest(project_id, model_ref)
+        with self.lock:
+            row = self.db.execute(
+                "SELECT * FROM stage_attempts WHERE scope_digest=? AND attempt_id=?",
+                (digest, attempt_id),
+            ).fetchone()
+            return self._stage_attempt_from_row(row, project_id=project_id, model_ref=model_ref) if row else None
+
+    def get_stage_attempt_for_operation(self, project_id: str, model_ref: dict[str, Any], operation_id: str) -> dict[str, Any] | None:
+        """Resolve the one pre-admitted attempt bound to a producer operation."""
+        if not isinstance(operation_id, str) or not operation_id:
+            raise StagePlanStoreConflict("STAGE_ATTEMPT_STATE_UNKNOWN", "producer operation identity is malformed")
+        matches = [record for record in self.list_stage_attempts(project_id, model_ref)
+                   if record["operation_id"] == operation_id]
+        if len(matches) > 1:
+            raise StagePlanStoreConflict("STAGE_ATTEMPT_STATE_UNKNOWN", "producer operation resolves to multiple stage attempts")
+        return matches[0] if matches else None
+
+    def list_stage_attempts(self, project_id: str, model_ref: dict[str, Any], *, stage_id: str | None = None) -> list[dict[str, Any]]:
+        digest = self._stage_scope_digest(project_id, model_ref)
+        query = "SELECT * FROM stage_attempts WHERE scope_digest=?"
+        params: tuple[Any, ...] = (digest,)
+        if stage_id is not None:
+            query += " AND stage_id=?"
+            params += (stage_id,)
+        query += " ORDER BY created_at,attempt_id"
+        with self.lock:
+            rows = self.db.execute(query, params).fetchall()
+            records = [self._stage_attempt_from_row(row, project_id=project_id, model_ref=model_ref) for row in rows]
+            return sorted(records, key=lambda item: (item["stage_id"], item["attempt_number"], item["attempt_id"]))
+
+    def update_stage_attempt(self, project_id: str, model_ref: dict[str, Any], attempt_id: str, *,
+                             expected_version: int, status: str, engine_dispatched: bool,
+                             execution_status: str, acceptance_status: str,
+                             evidence: list[dict[str, Any]], result: dict[str, Any] | None = None
+                             ) -> dict[str, Any]:
+        """CAS one attempt state; UNKNOWN and completed records are immutable."""
+        from ._stage_contract import sha256_json, canonical_json
+
+        if (type(expected_version) is not int or expected_version < 1
+                or status not in STAGE_ATTEMPT_STATUSES
+                or type(engine_dispatched) is not bool
+                or not isinstance(execution_status, str) or not isinstance(acceptance_status, str)
+                or not isinstance(evidence, list)
+                or (result is not None and not isinstance(result, dict))):
+            raise StagePlanStoreConflict("INVALID_REQUEST", "stage attempt CAS fields are malformed")
+        digest = self._stage_scope_digest(project_id, model_ref)
+        with self.lock:
+            self.db.execute("BEGIN IMMEDIATE")
+            try:
+                row = self.db.execute(
+                    "SELECT * FROM stage_attempts WHERE scope_digest=? AND attempt_id=?",
+                    (digest, attempt_id),
+                ).fetchone()
+                if row is None:
+                    raise StagePlanStoreConflict("STAGE_ATTEMPT_NOT_FOUND", "stage attempt is not registered in this project/model scope")
+                current = self._stage_attempt_from_row(row, project_id=project_id, model_ref=model_ref)
+                if current["version"] != expected_version:
+                    raise StagePlanStoreConflict("STAGE_ATTEMPT_CAS_CONFLICT", "stage attempt changed before the requested update")
+                if status == "ACCEPTED" or acceptance_status == "ACCEPTED":
+                    raise StagePlanStoreConflict("STAGE_ACCEPTANCE_UNVERIFIED", "generic attempt CAS cannot certify scientific acceptance")
+                if status not in STAGE_ATTEMPT_TRANSITIONS.get(current["status"], frozenset()):
+                    raise StagePlanStoreConflict("STAGE_ATTEMPT_TRANSITION_INVALID", "stage attempt status transition is not permitted")
+                if current["engine_dispatched"] and not engine_dispatched:
+                    raise StagePlanStoreConflict("STAGE_ATTEMPT_STATE_UNKNOWN", "engine dispatch evidence cannot be cleared")
+                if status == "NOT_DISPATCHED_UNVERIFIED" and (
+                        engine_dispatched or execution_status != "NOT_DISPATCHED"
+                        or acceptance_status != "UNVERIFIED"):
+                    raise StagePlanStoreConflict("STAGE_ATTEMPT_STATE_UNKNOWN", "not-dispatched status requires explicit no-engine and unverified evidence")
+                if status == "MAPPING_CONFIGURED_PARTIAL" and (
+                        not engine_dispatched or execution_status != "MAPPING_CONFIGURED"
+                        or acceptance_status != "PARTIAL"):
+                    raise StagePlanStoreConflict("STAGE_ATTEMPT_STATE_UNKNOWN", "partial mapping status requires a dispatched configuration readback")
+                if status == "RUNNING" and (not engine_dispatched or execution_status != "RUNNING"):
+                    raise StagePlanStoreConflict("STAGE_ATTEMPT_STATE_UNKNOWN", "running status requires recorded engine dispatch")
+                if status == "SUCCEEDED_PARTIAL" and (
+                        not engine_dispatched or execution_status != "SOLVE_SUCCEEDED"
+                        or acceptance_status not in {"PARTIAL", "UNVERIFIED"}):
+                    raise StagePlanStoreConflict("STAGE_ATTEMPT_STATE_UNKNOWN", "partial success requires a dispatched solve and explicit scientific limitation")
+                if not self._stage_json_equal(evidence[:len(current["evidence"])], current["evidence"]):
+                    raise StagePlanStoreConflict("STAGE_ATTEMPT_STATE_UNKNOWN", "stage attempt evidence is append-only")
+                updated = dict(current)
+                updated.update({
+                    "status": status,
+                    "version": expected_version + 1,
+                    "engine_dispatched": engine_dispatched,
+                    "execution_status": execution_status,
+                    "acceptance_status": acceptance_status,
+                    "evidence": evidence,
+                    "result": result,
+                })
+                updated.pop("sha256", None)
+                updated["sha256"] = sha256_json(updated)
+                self._validate_stage_attempt_record(updated, project_id=project_id, model_ref=model_ref)
+                updated_cursor = self.db.execute(
+                    "UPDATE stage_attempts SET status=?,version=?,record_json=?,updated_at=? WHERE attempt_id=? AND version=?",
+                    (status, expected_version + 1, canonical_json(updated),
+                     time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), attempt_id, expected_version),
+                )
+                if updated_cursor.rowcount != 1:
+                    raise StagePlanStoreConflict("STAGE_ATTEMPT_CAS_CONFLICT", "stage attempt changed during the requested update")
+                self.db.execute("COMMIT")
+                return updated
+            except Exception:
+                if self.db.in_transaction:
+                    self.db.execute("ROLLBACK")
+                raise
 
     @staticmethod
     def _metric_scope_digest(project_id: str, metric_id: str) -> str:

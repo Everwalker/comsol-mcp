@@ -615,7 +615,7 @@ _GLOBAL_STATE_XFER = StageStateTransferManager()
 # intentionally late so the reusable containers above remain import-light.
 from ._w21_execution import (
     op_parameter_case_manage, op_study_sweep_manage,
-    op_solver_solution_transfer, op_experiment_design, op_experiment_run,
+    op_solver_solution_transfer, op_experiment_state_map, op_experiment_design, op_experiment_run,
     op_stage_state_transfer, op_optimization_bounded_run, op_stage_checkpoint_create,
 )
 
@@ -623,6 +623,7 @@ OPERATIONS = {
     "parameter.case_manage": op_parameter_case_manage,
     "study.sweep_manage": op_study_sweep_manage,
     "solver.solution_transfer": op_solver_solution_transfer,
+    "experiment.state_map": op_experiment_state_map,
     "stage.checkpoint_create": op_stage_checkpoint_create,
     "stage.state_transfer": op_stage_state_transfer,
     "optimization.bounded_run": op_optimization_bounded_run,
@@ -634,6 +635,7 @@ ALIASES = {
     "parameter_case_manage": "parameter.case_manage",
     "study_sweep_manage": "study.sweep_manage",
     "solver_solution_transfer": "solver.solution_transfer",
+    "experiment_state_map": "experiment.state_map",
     "experiment_design": "experiment.design",
     "experiment_run": "experiment.run",
     "optimization_bounded_run": "optimization.bounded_run",
