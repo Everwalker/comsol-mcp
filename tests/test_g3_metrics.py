@@ -109,7 +109,8 @@ def _project(daemon, label):
     return result["data"]["project"]["project_id"], Path(result["data"]["project"]["workspace"])
 
 
-def _setup(tmp_path, monkeypatch, *, native_values=None, native_complex_mode="real", native_is_complex=False):
+def _setup(tmp_path, monkeypatch, *, native_values=None, native_complex_mode="real", native_is_complex=False,
+           native_global_unit_readback_status="READBACK_ONLY", native_global_unit="1"):
     project_root = tmp_path / "projects"
     project_root.mkdir()
     service = ExecutionService(SessionLedger("session", "server"), _Adapter(), project_root=project_root)
@@ -145,9 +146,105 @@ def _setup(tmp_path, monkeypatch, *, native_values=None, native_complex_mode="re
         assert strict_metric_evidence is True
         native_calls.append(arguments)
         value = next(values)
+        spec = arguments["spec"]
+        selection = spec.get("selection") or {}
+        strict_evidence = {
+            "status": "VERIFIED",
+            "selection_source": "actual_transient_numerical_feature_readback",
+            "selection_membership_identical": True,
+            "selection_features": [{"role": "primary", "feature_tag": "primary-feature",
+                                    "source": "actual_transient_numerical_feature",
+                                    "component": selection.get("component"), "geometry": selection.get("geometry"),
+                                    "entity_dimension": selection.get("entity_dimension"), "kind": selection.get("kind"),
+                                    "tag": selection.get("tag"), "entities": selection.get("entities"),
+                                    "native_selection_readback": {"entities": selection.get("entities"),
+                                                                   "geometry": selection.get("geometry"),
+                                                                   "dimension": selection.get("entity_dimension")}},
+                                   ],
+            "selected_solution_pairs": [{"outer": 1, "inner": 1, "solnum": 1}],
+            "expression_unit_readback": {"T": "K"},
+            "requested_solution": {"dataset": "dset1", "solution": "sol1"},
+        }
+        cleanup = {"tag": "primary-feature", "type_id": "IntVolume", "created": True,
+                   "removed": True, "verified_removed": True, "cleanup_failed": False, "error": None}
+        if spec.get("weight_expression") is not None:
+            roles = ("weight_validation", "denominator", "numerator")
+            cleanup["children"] = []
+            for role in roles:
+                tag = f"{role}-feature"
+                strict_evidence["selection_features"].append({
+                    "role": role, "feature_tag": tag,
+                    "source": "actual_transient_numerical_feature",
+                    "component": selection.get("component"), "geometry": selection.get("geometry"),
+                    "entity_dimension": selection.get("entity_dimension"), "kind": selection.get("kind"),
+                    "tag": selection.get("tag"), "entities": selection.get("entities"),
+                    "native_selection_readback": {"entities": selection.get("entities"),
+                                                   "geometry": selection.get("geometry"),
+                                                   "dimension": selection.get("entity_dimension")},
+                })
+                cleanup["children"].append({"tag": tag, "type_id": "IntVolume", "created": True,
+                                             "removed": True, "verified_removed": True,
+                                             "cleanup_failed": False, "error": None})
+            global_readback = {
+                "status": native_global_unit_readback_status,
+                "unit": native_global_unit if native_global_unit_readback_status == "READBACK_ONLY" else None,
+                "expression": spec["weight_expression"],
+                "source": "Model.param().evaluateUnit(expression)",
+                "scope": "global_parameter_context",
+            }
+            if native_global_unit_readback_status != "READBACK_ONLY":
+                global_readback["unavailable_reason"] = "synthetic global-context resolver did not return a unit"
+            strict_evidence["weight_validation"] = {
+                "status": "UNVERIFIED",
+                "expression": spec["weight_expression"],
+                "unit_evidence": {
+                    "status": "UNVERIFIED",
+                    "roi_context_dimensionality": {
+                        "status": "UNVERIFIED",
+                        "expression": spec["weight_expression"],
+                        "scope": "selected_numerical_feature_expression_over_dataset_and_selection",
+                        "reason": "synthetic route has no ROI-context dimensionality resolver",
+                    },
+                    "global_parameter_context_unit_readback": global_readback,
+                    "feature_unit_property_readback": {
+                        "value": "1", "source": "NumericalFeature.getStringArray('unit')",
+                        "interpretation": "configuration_readback_or_model_dependent_default",
+                        "dimensionality_verified": False,
+                    },
+                },
+                "minimum": {
+                    "status": "VERIFIED", "source": "MinVolume.getReal_native_minimum",
+                    "by_solution": [{"outer": 1, "inner": 1, "solnum": 1, "minimum": 0.5}],
+                    "sampling": {
+                        "method": "native_minimum_at_integration_points",
+                        "points_property_readback": "integration",
+                        "minimum_intorder_readback": 4,
+                        "sampling_order": "Gauss_integration_points_intorder_4",
+                        "scope": "sampled_integration_points_only",
+                        "continuous_roi_nonnegativity": "NOT_PROVEN",
+                        "integral_rule_configuration": {
+                            "status": "VERIFIED_MATCHING_METHOD_AND_ORDER_READBACKS",
+                            "minimum_points": "integration", "minimum_intorder": 4,
+                            "numerator": {"source": "native_numerical_feature_property_set_and_readback",
+                                          "method": "integration", "intorderactive": "on", "intorder": 4},
+                            "denominator": {"source": "native_numerical_feature_property_set_and_readback",
+                                            "method": "integration", "intorderactive": "on", "intorder": 4},
+                            "actual_gauss_point_set_identity": "UNVERIFIED_NATIVE_POINT_IDENTITIES_NOT_EXPOSED",
+                        },
+                        "actual_sample_coverage": "UNVERIFIED_NATIVE_GAUSS_POINT_IDENTITIES_NOT_EXPOSED",
+                    },
+                },
+                "denominator": {
+                    "status": "VERIFIED", "source": "native_integral_of_weight_over_same_dataset_and_ROI",
+                    "strictly_positive_finite": True,
+                    "by_solution": [{"outer": 1, "inner": 1, "solnum": 1, "value": 2.0}],
+                },
+                "selection_roles": ["denominator", "numerator", "primary", "weight_validation"],
+                "same_dataset_solution_tuple_and_selection": True,
+            }
         return {
             "status": {"ok": True, "status": "APPLIED"},
-            "cleanup": {"cleanup_failed": False},
+            "cleanup": cleanup,
             "expressions": ["T"], "dataset": "dset1", "solution": "sol1",
             "aggregate": "integral", "complex_mode": native_complex_mode, "is_complex": native_is_complex,
             "values": [value],
@@ -157,15 +254,7 @@ def _setup(tmp_path, monkeypatch, *, native_values=None, native_complex_mode="re
                 "units": {"expression": "K"}, "metadata": {}, "is_complex": native_is_complex,
             },
             "expression_units": {"T": "K"},
-            "strict_metric_evidence": {
-                "status": "VERIFIED",
-                "selection_source": "actual_transient_numerical_feature_readback",
-                "selection_membership_identical": True,
-                "selection_features": [{"role": "primary", "entities": [1, 2]}],
-                "selected_solution_pairs": [{"outer": 1, "inner": 1, "solnum": 1}],
-                "expression_unit_readback": {"T": "K"},
-                "requested_solution": {"dataset": "dset1", "solution": "sol1"},
-            },
+            "strict_metric_evidence": strict_evidence,
         }
 
     monkeypatch.setattr(_g3_results, "result_evaluate", native_evaluate)
@@ -188,6 +277,16 @@ def test_metric_contract_rejects_phase_and_bool_threshold_and_publishes_closed_s
         validate_call("metric.define", {**base, "definition": {**_definition(), "complex_mode": "phase"}})
     with pytest.raises(ExecutionContractError, match="finite real"):
         validate_call("metric.define", {**base, "definition": {**_definition(), "threshold": {"relation": "gt", "value": True, "unit": "K"}}})
+    weighted_definition = {
+        **_definition(),
+        "weight": {"expression": "w", "expected_unit": "1", "nonnegative": True},
+    }
+    validate_call("metric.define", {**base, "definition": weighted_definition})
+    with pytest.raises(ExecutionContractError, match="unsupported fields"):
+        validate_call("metric.define", {**base, "definition": {
+            **weighted_definition,
+            "weight": {**weighted_definition["weight"], "dimensionality_verified": True},
+        }})
     schema = operation_describe("metric.define")["input_schema"]
     assert schema["additionalProperties"] is False
     assert {"project_id", "session_id", "model_ref", "expected_revision", "idempotency_key", "metric_id", "definition"} <= set(schema["required"])
@@ -267,6 +366,60 @@ def test_public_metric_define_evaluate_compare_list_and_tombstone_use_real_sqlit
         assert hidden["success"] is True and hidden["data"]["metrics"] == []
         assert all_versions["success"] is True and all_versions["data"]["metrics"][0]["version"] == 2
         assert worker.requests == []
+    finally:
+        daemon.close()
+
+
+def test_public_weighted_metric_refuses_when_global_unit_scope_is_not_roi_bound(tmp_path, monkeypatch):
+    daemon, worker, _project_id, execution, host, native_calls = _setup(tmp_path, monkeypatch)
+    weighted_definition = {
+        **_definition(),
+        "weight": {"expression": "w", "expected_unit": "1", "nonnegative": True},
+    }
+    try:
+        defined = daemon.dispatch({
+            "operation": "metric.define",
+            "arguments": {"metric_id": "weighted", "definition": weighted_definition},
+            "execution": execution,
+        })
+        assert defined["success"] is True, defined
+        current = {**execution, "expected_revision": defined["execution"]["revision"]}
+        first = _fallback(host, "registry_call", "metric.evaluate", {"metric_ids": ["weighted"]},
+                          {**current, "request_id": "weighted-eval-1", "idempotency_key": "weighted-eval-1"})
+        assert first["success"] is False
+        assert first["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
+        assert first["error"]["details"]["cause_code"] == "WEIGHT_UNIT_UNVERIFIED"
+        assert len(native_calls) == 1 and native_calls[0]["spec"]["weight_expression"] == "w"
+        assert list((worker.project_root / "observations").glob("*.json")) == []
+    finally:
+        daemon.close()
+
+
+def test_public_weighted_metric_refuses_when_global_unit_diagnostic_is_unavailable(tmp_path, monkeypatch):
+    daemon, worker, _project_id, execution, host, native_calls = _setup(
+        tmp_path, monkeypatch, native_global_unit_readback_status="UNAVAILABLE"
+    )
+    weighted_definition = {
+        **_definition(),
+        "weight": {"expression": "w", "expected_unit": "1", "nonnegative": True},
+    }
+    try:
+        defined = daemon.dispatch({
+            "operation": "metric.define",
+            "arguments": {"metric_id": "weighted", "definition": weighted_definition},
+            "execution": execution,
+        })
+        assert defined["success"] is True, defined
+        evaluated = _fallback(host, "registry_call", "metric.evaluate", {"metric_ids": ["weighted"]},
+                              {**execution, "expected_revision": defined["execution"]["revision"],
+                               "request_id": "weighted-unverified", "idempotency_key": "weighted-unverified"})
+        assert evaluated["success"] is False
+        # The engine evaluation already ran, so the operation ledger preserves
+        # UNKNOWN while retaining the exact refusal cause from the unit gate.
+        assert evaluated["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
+        assert evaluated["error"]["details"]["cause_code"] == "WEIGHT_UNIT_UNVERIFIED"
+        assert len(native_calls) == 1 and native_calls[0]["spec"]["weight_expression"] == "w"
+        assert list((worker.project_root / "observations").glob("*.json")) == []
     finally:
         daemon.close()
 

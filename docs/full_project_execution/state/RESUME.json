@@ -970,8 +970,8 @@
   },
   "acceptance_cells_changed": false,
   "current_execution_checkpoint": {
-    "path": "docs/full_project_execution/w24/CURE_V2_CAPTURE_SOFTWARE_CHECKPOINT.json",
-    "status": "PASS_SCOPED_SOFTWARE_NATIVE_NOT_RUN"
+    "path": "docs/full_project_execution/project_session/WEIGHTED_EVIDENCE_SOFTWARE_CHECKPOINT.json",
+    "status": "PASS_SCOPED_SOFTWARE_FULL_WEIGHTED_CAPABILITY_PARTIAL"
   },
   "w24_setup_candidate_0841z_native_attempt": {
     "candidate_id": "W24-CURE-HIST-AXISYM-01",
@@ -996,10 +996,11 @@
     "next": "Wait for stable F04 runtime handoff; refresh closure and submit a new candidate for root review. No automatic rerun."
   },
   "verified_git_sync": {
-    "head": "eb31e7fd4414004263f3097df42419bf58554202",
-    "origin_main": "eb31e7fd4414004263f3097df42419bf58554202",
-    "verified_after_push": true,
-    "at": "2026-09-27T23:03:16.113788+00:00"
+    "head": "c6bd0d191bf1c5006eba15f9134a37af31d96313",
+    "origin_main": "c6bd0d191bf1c5006eba15f9134a37af31d96313",
+    "verified_at": "2026-09-27T23:49:57.044840+00:00",
+    "method": "post-push git fetch origin main; git rev-parse HEAD origin/main",
+    "stage": "W24 public cure capture and full-field history scoped software"
   },
   "w24_static_shape_science_admission_repair": {
     "status": "SCOPED_SOFTWARE_REPAIR_ACCEPTED_NATIVE_NOT_RUN",
@@ -1113,18 +1114,11 @@
   },
   "w24_next_implementation": {
     "status": "IMPLEMENTING_NATIVE_HISTORY_AND_REFERENCE_ORCHESTRATION",
-    "scope": "Continue same-version native history/reference API investigation and connect authenticated captures to continuous/staged/reopen orchestration. Preserve required internal-state gates; freeze reviewed native budget before execution."
+    "scope": "Reuse existing campaign adapter/journal for explicitly identified v2 cases: exact two-source manifest, public V2 DOF and history capture with operation/job/model/revision/study/solver/time lineage, then stage/continuous/reopen comparisons. Preserve v1; investigate native Maxwell state without claiming behavior-only evidence establishes hidden-state continuity."
   },
   "f16_next_implementation": {
-    "scope": "Implement observed dimensionless/nonnegative weighted metrics and persisted experiment-case metric association; complete original inspect failure/cache/best-feasible and exact recoverable case-model scope. Then complete remaining native/platform/full-project gates.",
-    "status": "IMPLEMENTING_REMAINING_ORIGINAL_SCOPE",
-    "native_acceptance": "NOT_RUN",
-    "open_evidence_requirements": [
-      "actual ROI membership on evaluated features",
-      "native weight unit and nonnegative weighting evidence",
-      "actual experiment-case metric association where requested",
-      "complex/phase explicit semantics"
-    ]
+    "status": "IMPLEMENTING_ORIGINAL_EXPERIMENT_METRIC_ASSOCIATION",
+    "scope": "Implement durable experiment-case association to actual authorized immutable metric observations, then original experiment inspection and per-case recovery artifacts. Keep general weighted native acceptance open."
   },
   "f16_original_action_followups": {
     "status": "PARTIAL",
@@ -1257,6 +1251,30 @@
       "path": "/private/tmp/w24-cure-v2-full-history-main-retest.json",
       "sha256": "c22089853452f42568a438d721cdaa910103ccae8b154ad6325f0ae2423043d7",
       "result": "PASS_CLEAN_ACCEPTED_FOUR_MISSING_FIELDS_REJECTED"
+    }
+  },
+  "f16_weighted_current_review": {
+    "status": "PASS_SCOPED_SOFTWARE",
+    "receipt": "/private/tmp/f16-weighted-stage-ae4e817-6tolcbtv/weighted-software-receipt.json",
+    "receipt_sha256": "aad5a1f15c8de17ae9c7ac083c3824518645890915551028356e783553a7ea05",
+    "finding": "Model.param().evaluateUnit returns in global parameter context; candidate marks general field expression dimensionality VERIFIED without component/ROI/solution scope equivalence.",
+    "root_evidence": {
+      "path": "/private/tmp/f16-weight-unit-scope-root-review.json",
+      "sha256": "bff16a50cc13e409b106dfc5208de27632a63c232009bb25ae6fe8c23ff9d6f3"
+    },
+    "next_action": "Implement durable experiment-case association to actual authorized immutable metric observations, then original experiment inspection and per-case recovery artifacts. Keep general weighted native acceptance open.",
+    "native": "NOT_RUN",
+    "checkpoint": "docs/full_project_execution/project_session/WEIGHTED_EVIDENCE_SOFTWARE_CHECKPOINT.json",
+    "fixed_receipt": {
+      "path": "/private/tmp/f16-weight-unit-scope-ae4e817-7ywdfiog/unit-scope-review-receipt.json",
+      "sha256": "4b106107c9baa884817d2d63702a4bd04607453bfae48115b9b0ac4d2ce3feee"
+    },
+    "isolated_tests_passed": 182,
+    "main_tests_passed": 9,
+    "root_retest": {
+      "path": "/private/tmp/f16-weight-unit-scope-main-retest.json",
+      "sha256": "0e13baf1eccec36b72a56da868fd6d24493a843dc55ea41112a84afaf30b3c87",
+      "result": "PASS_SCOPED_GLOBAL_DIAGNOSTIC_ONLY"
     }
   }
 }

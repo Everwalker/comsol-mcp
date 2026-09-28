@@ -214,6 +214,10 @@ class FNumericalFeature(FNode):
             ]
         return []
 
+    def getInt(self, name: str) -> int:
+        self._guard("getInt", (name,))
+        return int(self.props[name])
+
     def getString(self, name: str) -> str | None:
         self._guard("getString", (name,))
         value = self.props.get(name)
@@ -391,8 +395,12 @@ class FWiredTree:
 
     def __init__(self, *, sdim: int = 3, is_axisymmetric: bool = False,
                  numerical_real: Any = 42.0, numerical_imag: Any = None,
-                 is_complex: bool = False, fail_numerical_remove: bool = False) -> None:
+                 is_complex: bool = False, fail_numerical_remove: bool = False,
+                 native_expression_units: Mapping[str, str] | None = None,
+                 weight_minimum: Any = None) -> None:
         self.fail_numerical_remove = fail_numerical_remove
+        self.native_expression_units = dict(native_expression_units or {})
+        self.weight_minimum = weight_minimum
 
         # Geometry
         self.geom = FNode(tag="geom1", type_id="GeomSequence",
@@ -471,13 +479,25 @@ class FWiredTree:
         # Numerical Features
         def numerical_factory(tag: str, *args: Any) -> Any:
             feat_type = str(args[0]) if args else "EvalGlobal"
+            feature_values = (
+                self.weight_minimum
+                if feat_type in {"MinLine", "MinSurface", "MinVolume"} and self.weight_minimum is not None
+                else numerical_real
+            )
+            feature_rule_props = {}
+            if feat_type in {"MinLine", "MinSurface", "MinVolume"}:
+                feature_rule_props = {"points": "lagrange", "intorder": 4}
+            elif feat_type in {"IntLine", "IntSurface", "IntVolume"}:
+                feature_rule_props = {"method": "auto", "intorderactive": "off", "intorder": 4}
             return FNumericalFeature(
                 tag=tag, type_id=feat_type,
-                real_data=numerical_real, imag_data=numerical_imag,
+                real_data=feature_values, imag_data=numerical_imag,
                 is_complex=is_complex, coordinates=[[0.0, 0.01], [0.0, 0.01], [0.0, 0.01]],
                 props=(
-                    {"intvolume": "off", "intsurface": "off"}
-                    if is_axisymmetric else {}
+                    {
+                        **({"intvolume": "off", "intsurface": "off"} if is_axisymmetric else {}),
+                        **feature_rule_props,
+                    }
                 ),
                 fail_cleanup=self.fail_numerical_remove,
             )
@@ -528,6 +548,13 @@ class FWiredTree:
         self.model.sol = lambda *args: self.model._collection("sol", args)
         self.model.collections["study"].items["std1"] = self.study
         self.model.study = lambda *args: self.model._collection("study", args)
+        self.parameter_node = FNode(tag="param", type_id="ParameterList")
+        def evaluate_unit(expression: str) -> str:
+            if expression not in self.native_expression_units:
+                raise FakeEngineError("expression unit is unavailable")
+            return self.native_expression_units[expression]
+        self.parameter_node.evaluateUnit = evaluate_unit
+        self.model.param = lambda *args: self.parameter_node
 
     @property
     def worker(self) -> Any:
@@ -817,6 +844,211 @@ def test_strict_metric_evaluate_reads_back_transient_selection_and_solution_bind
             arguments,
             strict_metric_evidence=True,
         )
+
+
+def test_strict_weighted_metric_keeps_global_unit_readback_out_of_roi_scope_and_cleans_up() -> None:
+    tree = FWiredTree(native_expression_units={"w": "1"}, weight_minimum=0.5)
+    arguments = {
+        "spec": {
+            "expressions": ["T"],
+            "solution": {"dataset": "dset1", "solution": "sol1"},
+            "aggregate": "average",
+            "complex_mode": "real",
+            "weight_expression": "w",
+            "selection": {
+                "kind": "explicit", "component": "comp1", "geometry": "geom1",
+                "entity_dimension": 3, "entities": [1, 2],
+            },
+            "storage": "inline",
+        }
+    }
+
+    result = results.result_evaluate(tree.worker, "Model", arguments, strict_metric_evidence=True)
+    weight = result["strict_metric_evidence"]["weight_validation"]
+    assert result["status"]["ok"] is True
+    assert weight["status"] == "UNVERIFIED"
+    assert weight["unit_evidence"]["status"] == "UNVERIFIED"
+    assert weight["unit_evidence"]["global_parameter_context_unit_readback"] == {
+        "status": "READBACK_ONLY", "unit": "1", "expression": "w",
+        "source": "Model.param().evaluateUnit(expression)",
+        "scope": "global_parameter_context",
+    }
+    # A same-named global parameter can resolve as dimensionless while the
+    # NumericalFeature reports a different configured/default unit. Neither
+    # value binds the local field expression to this selected ROI/tuple.
+    assert weight["unit_evidence"]["roi_context_dimensionality"] == {
+        "status": "UNVERIFIED",
+        "expression": "w",
+        "scope": "selected_numerical_feature_expression_over_dataset_and_selection",
+        "reason": "no unit evaluator binds the expression to the selected numerical-feature context",
+    }
+    # This property is retained as configuration/default provenance only.
+    assert weight["unit_evidence"]["feature_unit_property_readback"] == {
+        "value": "K", "source": "NumericalFeature.getStringArray('unit')",
+        "interpretation": "configuration_readback_or_model_dependent_default",
+        "dimensionality_verified": False,
+    }
+    assert weight["minimum"]["sampling"] == {
+        "method": "native_minimum_at_integration_points",
+        "points_property_readback": "integration",
+        "minimum_intorder_readback": 4,
+        "sampling_order": "Gauss_integration_points_intorder_4",
+        "scope": "sampled_integration_points_only",
+        "continuous_roi_nonnegativity": "NOT_PROVEN",
+        "integral_rule_configuration": {
+            "status": "VERIFIED_MATCHING_METHOD_AND_ORDER_READBACKS",
+            "minimum_points": "integration",
+            "minimum_intorder": 4,
+            "numerator": {
+                "source": "native_numerical_feature_property_set_and_readback",
+                "method": "integration", "intorderactive": "on", "intorder": 4,
+            },
+            "denominator": {
+                "source": "native_numerical_feature_property_set_and_readback",
+                "method": "integration", "intorderactive": "on", "intorder": 4,
+            },
+            "actual_gauss_point_set_identity": "UNVERIFIED_NATIVE_POINT_IDENTITIES_NOT_EXPOSED",
+        },
+        "actual_sample_coverage": "UNVERIFIED_NATIVE_GAUSS_POINT_IDENTITIES_NOT_EXPOSED",
+    }
+    assert weight["status"] != "VERIFIED"
+    assert weight["minimum"]["by_solution"] == [
+        {"outer": 1, "inner": inner, "solnum": inner, "minimum": 0.5}
+        for inner in (1, 2, 3)
+    ]
+    assert weight["denominator"]["strictly_positive_finite"] is True
+    assert [row["value"] for row in weight["denominator"]["by_solution"]] == [42.0, 42.0, 42.0]
+    from comsol_mcp._g3_metrics import _verified_weight_evidence
+    with pytest.raises(ExecutionContractError) as unit_scope:
+        _verified_weight_evidence(
+            result,
+            {"weight": {"expression": "w"}, "selection": arguments["spec"]["selection"]},
+            result["strict_metric_evidence"]["selected_solution_pairs"],
+        )
+    assert unit_scope.value.code == "WEIGHT_UNIT_UNVERIFIED"
+
+    evidence = result["strict_metric_evidence"]
+    roles = {row["role"]: row for row in evidence["selection_features"]}
+    for role in ("primary", "weight_validation", "denominator", "numerator"):
+        row = roles[role]
+        assert row["entities"] == [1, 2]
+        assert row["native_selection_readback"]["entities"] == [1, 2]
+        cleanup_rows = [result["cleanup"], *result["cleanup"]["children"]]
+        cleanup = next(record for record in cleanup_rows if record["tag"] == row["feature_tag"])
+        assert cleanup["created"] and cleanup["removed"] and cleanup["verified_removed"]
+        assert cleanup["cleanup_failed"] is False
+
+
+def test_strict_weighted_metric_does_not_use_unit_property_as_dimension_evidence() -> None:
+    tree = FWiredTree(weight_minimum=0.5)
+    arguments = {
+        "spec": {
+            "expressions": ["T"],
+            "solution": {"dataset": "dset1", "solution": "sol1"},
+            "aggregate": "average",
+            "complex_mode": "real",
+            "weight_expression": "w",
+            "selection": {
+                "kind": "explicit", "component": "comp1", "geometry": "geom1",
+                "entity_dimension": 3, "entities": [1, 2],
+            },
+            "storage": "inline",
+        }
+    }
+    result = results.result_evaluate(tree.worker, "Model", arguments, strict_metric_evidence=True)
+    weight = result["strict_metric_evidence"]["weight_validation"]
+    assert weight["status"] == "UNVERIFIED"
+    assert weight["unit_evidence"]["global_parameter_context_unit_readback"]["status"] == "UNAVAILABLE"
+    assert weight["unit_evidence"]["roi_context_dimensionality"]["status"] == "UNVERIFIED"
+    assert weight["unit_evidence"]["feature_unit_property_readback"]["dimensionality_verified"] is False
+
+
+def test_strict_weighted_metric_rejects_negative_sampled_minimum_and_nonpositive_denominator() -> None:
+    base_spec = {
+        "expressions": ["T"],
+        "solution": {"dataset": "dset1", "solution": "sol1"},
+        "aggregate": "average",
+        "complex_mode": "real",
+        "weight_expression": "w",
+        "selection": {
+            "kind": "explicit", "component": "comp1", "geometry": "geom1",
+            "entity_dimension": 3, "entities": [1, 2],
+        },
+        "storage": "inline",
+    }
+    with pytest.raises(ExecutionContractError) as negative:
+        results.result_evaluate(
+            FWiredTree(native_expression_units={"w": "1"}, weight_minimum=-0.1).worker,
+            "Model", {"spec": base_spec}, strict_metric_evidence=True,
+        )
+    assert negative.value.code == "NEGATIVE_WEIGHT_READBACK"
+
+    with pytest.raises(ExecutionContractError) as denominator:
+        results.result_evaluate(
+            FWiredTree(native_expression_units={"w": "1"}, numerical_real=0.0, weight_minimum=0.5).worker,
+            "Model", {"spec": base_spec}, strict_metric_evidence=True,
+        )
+    assert denominator.value.code == "ZERO_OR_INVALID_MEASURE"
+
+
+def test_strict_weighted_metric_rejects_minimum_sampling_rule_readback_mismatch(monkeypatch: pytest.MonkeyPatch) -> None:
+    tree = FWiredTree(native_expression_units={"w": "1"}, weight_minimum=0.5)
+    spec = {
+        "expressions": ["T"],
+        "solution": {"dataset": "dset1", "solution": "sol1"},
+        "aggregate": "average",
+        "complex_mode": "real",
+        "weight_expression": "w",
+        "selection": {
+            "kind": "explicit", "component": "comp1", "geometry": "geom1",
+            "entity_dimension": 3, "entities": [1, 2],
+        },
+        "storage": "inline",
+    }
+    original_get_string = FNumericalFeature.getString
+
+    def stale_minimum_rule(feature: FNumericalFeature, name: str) -> str | None:
+        value = original_get_string(feature, name)
+        if feature.type_id == "MinVolume" and name == "points":
+            return "lagrange"
+        return value
+
+    monkeypatch.setattr(FNumericalFeature, "getString", stale_minimum_rule)
+    with pytest.raises(ExecutionContractError) as mismatch:
+        results.result_evaluate(tree.worker, "Model", {"spec": spec}, strict_metric_evidence=True)
+    assert mismatch.value.code == "WEIGHT_SAMPLING_MISMATCH"
+    # The adapter removes every temporary numerical feature even when a
+    # configured native rule does not survive its readback.
+    assert tree.numerical_list.tags() == []
+
+
+def test_strict_weighted_metric_rejects_integral_rule_readback_mismatch(monkeypatch: pytest.MonkeyPatch) -> None:
+    tree = FWiredTree(native_expression_units={"w": "1"}, weight_minimum=0.5)
+    spec = {
+        "expressions": ["T"],
+        "solution": {"dataset": "dset1", "solution": "sol1"},
+        "aggregate": "average",
+        "complex_mode": "real",
+        "weight_expression": "w",
+        "selection": {
+            "kind": "explicit", "component": "comp1", "geometry": "geom1",
+            "entity_dimension": 3, "entities": [1, 2],
+        },
+        "storage": "inline",
+    }
+    original_set = FNode.set
+
+    def ignore_integral_method(feature: FNode, name: str, value: Any) -> None:
+        if feature.getType() == "IntVolume" and name == "method":
+            feature._guard("set", (name, value))
+            return
+        original_set(feature, name, value)
+
+    monkeypatch.setattr(FNode, "set", ignore_integral_method)
+    with pytest.raises(ExecutionContractError) as mismatch:
+        results.result_evaluate(tree.worker, "Model", {"spec": spec}, strict_metric_evidence=True)
+    assert mismatch.value.code == "WEIGHT_SAMPLING_MISMATCH"
+    assert tree.numerical_list.tags() == []
 
 
 def test_result_evaluate_does_not_dereference_null_binding_error(monkeypatch: pytest.MonkeyPatch) -> None:

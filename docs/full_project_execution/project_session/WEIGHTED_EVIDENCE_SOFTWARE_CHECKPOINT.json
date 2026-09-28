@@ -1,0 +1,117 @@
+{
+  "schema_version": 1,
+  "stage": "F16 weighted metric evidence adapter intermediate",
+  "status": "PASS_SCOPED_SOFTWARE",
+  "full_weighted_metric_capability": "PARTIAL_FAIL_CLOSED",
+  "native": "NOT_RUN",
+  "capabilities": [
+    "Explicit integration/minimum sampling configuration readbacks, exact selected solution tuple and transient ROI evidence",
+    "Positive finite denominator and sampled minimum checks; temporary-node cleanup on configuration failure",
+    "Global parameter unit readback retained only as a scoped diagnostic; ROI dimensionality remains UNVERIFIED",
+    "Public weighted metric refuses incomplete evidence and publishes no observation; historical resolution rechecks artifact evidence"
+  ],
+  "acceptance_boundary": {
+    "native_comsol_execution": "NOT_RUN",
+    "weighted_metric_evaluate": "FAIL_CLOSED",
+    "roi_context_dimensionality": "UNVERIFIED",
+    "actual_gauss_point_set_identity": "UNVERIFIED_NATIVE_POINT_IDENTITIES_NOT_EXPOSED",
+    "full_weighted_metric_acceptance": "OPEN"
+  },
+  "base": {
+    "commit": "ae4e817ee1a57ab70a1f9890f4946603806ed7d5",
+    "archive": "/private/tmp/f16-weight-unit-scope-ae4e817-7ywdfiog/frozen-base.tar",
+    "archive_sha256": "79cea7ce0478d60f37f2c319cbb206e75847fcf80e246db9cac654e5bc77002c",
+    "included_paths": [
+      "comsol_mcp/",
+      "tests/",
+      "tools/phase4_run_mcp.py",
+      "pyproject.toml",
+      "docs/comsol_mcp_design_v1/"
+    ]
+  },
+  "overlay": {
+    "files": [
+      {
+        "path": "comsol_mcp/_g3_metrics.py",
+        "sha256": "6634af3c3c8d1fd6a31d66bf60b13404cc079b132b213030f5966bf68d2626d5",
+        "isolated_sha256": "6634af3c3c8d1fd6a31d66bf60b13404cc079b132b213030f5966bf68d2626d5"
+      },
+      {
+        "path": "comsol_mcp/_g3_results.py",
+        "sha256": "c76700e21523d601268d690fb99fd1b1033a42ecf28b7b0dbe811362b75ffcb0",
+        "isolated_sha256": "c76700e21523d601268d690fb99fd1b1033a42ecf28b7b0dbe811362b75ffcb0"
+      },
+      {
+        "path": "tests/test_g3_metrics.py",
+        "sha256": "c687746ca248bd6c4d0a245ac27ac99ef675636ef71a332ebbe67cd319b76573",
+        "isolated_sha256": "c687746ca248bd6c4d0a245ac27ac99ef675636ef71a332ebbe67cd319b76573"
+      },
+      {
+        "path": "tests/test_g3_w17.py",
+        "sha256": "6814b32f8f33d8c9ae4d3a2018ec89948ac765fe40e2b99f3aa20bfa9d425b90",
+        "isolated_sha256": "6814b32f8f33d8c9ae4d3a2018ec89948ac765fe40e2b99f3aa20bfa9d425b90"
+      }
+    ],
+    "manifest": "/private/tmp/f16-weight-unit-scope-ae4e817-7ywdfiog/overlay_manifest.json",
+    "canonicalization": "UTF-8 JSON object {'files':[{'path':relative_posix_path,'sha256':lowercase_sha256},...]} sorted by path; json.dumps(sort_keys=True,separators=(',',':'),ensure_ascii=False); SHA-256 over exact bytes",
+    "manifest_sha256": "43b724bf2f9f5df565ab9c0a8acc27829ee4740aadd198ea81552c5bb00c2f79"
+  },
+  "tests": {
+    "command": "/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -m pytest -q tests/test_g3_results.py tests/test_g3_3_core_numeric_contracts.py tests/test_g3_metrics.py tests/test_g3_w17.py --junitxml=/private/tmp/f16-weight-unit-scope-ae4e817-7ywdfiog/weighted-unit-scope-junit.xml",
+    "junit": "/private/tmp/f16-weight-unit-scope-ae4e817-7ywdfiog/weighted-unit-scope-junit.xml",
+    "junit_sha256": "0b2db702ba44a7775ad33b84bfc46625e15e1dba2aefd908ad2bd7a5570d8aca",
+    "counts": {
+      "passed": 182,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "scope_tests": [
+      "test_strict_weighted_metric_keeps_global_unit_readback_out_of_roi_scope_and_cleans_up",
+      "test_strict_weighted_metric_does_not_use_unit_property_as_dimension_evidence",
+      "test_public_weighted_metric_refuses_when_global_unit_scope_is_not_roi_bound",
+      "test_public_weighted_metric_refuses_when_global_unit_diagnostic_is_unavailable"
+    ],
+    "sampling_boundary": "Existing direct W17 assertions still require UNVERIFIED_NATIVE_GAUSS_POINT_IDENTITIES_NOT_EXPOSED; public route tests no longer fake ROI unit verification to reach the sampling gate."
+  },
+  "main_review": {
+    "unchanged_base_files_verified": 307,
+    "overlay_files_verified": 4,
+    "tests_passed": 9,
+    "junit": {
+      "path": "/private/tmp/f16-weighted-main-fixed-junit.xml",
+      "sha256": "238be1a4bbe2b720b3e44ba683ff73c546d8eb80704f773410341f4578bdd8bc"
+    },
+    "original_finding": {
+      "path": "/private/tmp/f16-weight-unit-scope-root-review.json",
+      "sha256": "bff16a50cc13e409b106dfc5208de27632a63c232009bb25ae6fe8c23ff9d6f3"
+    },
+    "retest": {
+      "path": "/private/tmp/f16-weight-unit-scope-main-retest.json",
+      "sha256": "0e13baf1eccec36b72a56da868fd6d24493a843dc55ea41112a84afaf30b3c87",
+      "result": "PASS_SCOPED_GLOBAL_DIAGNOSTIC_ONLY"
+    }
+  },
+  "receipt": {
+    "path": "/private/tmp/f16-weight-unit-scope-ae4e817-7ywdfiog/unit-scope-review-receipt.json",
+    "sha256": "4b106107c9baa884817d2d63702a4bd04607453bfae48115b9b0ac4d2ce3feee"
+  },
+  "prior_candidate": {
+    "prior_candidate_receipt": "/private/tmp/f16-weighted-stage-ae4e817-6tolcbtv/weighted-software-receipt.json",
+    "prior_candidate_receipt_sha256": "aad5a1f15c8de17ae9c7ac083c3824518645890915551028356e783553a7ea05",
+    "note": "Prior receipt and artifacts are preserved; this narrow overlay corrects ParamBase evidence scope."
+  },
+  "retained_initial_isolation_failure": {
+    "counts": "176 PASS / 1 FAIL / 5 SKIP",
+    "reason": "Initial archive omitted common.schema.json and phase4_run_mcp.py. Same-base dependency closure repaired; final run has zero failures or skips.",
+    "receipt": "/private/tmp/f16-weighted-stage-ae4e817-6tolcbtv/weighted-software-receipt.json"
+  },
+  "replay": "With Python 3.12 and project dependencies: pytest -q tests/test_g3_results.py tests/test_g3_3_core_numeric_contracts.py tests/test_g3_metrics.py tests/test_g3_w17.py. Tests are synthetic software checks; no native COMSOL invocation.",
+  "remaining": [
+    "General same-ROI/component/solution weight dimensionality evidence",
+    "Actual minimum/numerator/denominator sampling coverage and native validation",
+    "Experiment case-to-metric association, objective/constraint-based reporting and recoverable per-case model artifacts",
+    "All remaining original F16 and W01-W26 platform/science/release acceptance"
+  ],
+  "next_action": "Implement durable experiment-case association to actual authorized immutable metric observations, then original experiment inspection and per-case recovery artifacts. Keep general weighted native acceptance open."
+}

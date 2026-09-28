@@ -3307,6 +3307,129 @@ def _feature_units(feature: Any, expressions: Sequence[str]) -> dict[str, Any]:
     }
 
 
+def _global_parameter_context_unit_readback(model: Any, expression: str) -> dict[str, Any]:
+    """Retain ParamBase's unit result as a global-context diagnostic only.
+
+    ParamBase.evaluateUnit is scoped to the model's global parameter context.
+    A result does not establish the unit of a same-named local field expression
+    as evaluated by a numerical feature over a selected ROI and solution tuple.
+    It therefore never verifies the weighted expression's ROI-context unit.
+    """
+    result: dict[str, Any] = {
+        "status": "UNAVAILABLE",
+        "unit": None,
+        "expression": expression,
+        "source": "Model.param().evaluateUnit(expression)",
+        "scope": "global_parameter_context",
+    }
+    try:
+        parameters = _call(model, "param")
+        value = _call(parameters, "evaluateUnit", expression)
+    except Exception as exc:
+        result["unavailable_reason"] = type(exc).__name__
+        return result
+    if not isinstance(value, str) or not value.strip():
+        result["unavailable_reason"] = "native_unit_evaluator_returned_no_unit"
+        return result
+    result["unit"] = value.strip()
+    result["status"] = "READBACK_ONLY"
+    return result
+
+
+_STRICT_WEIGHT_INTEGRATION_ORDER = 4
+
+
+def _verify_weight_minimum_integration_order(feature: Any) -> int:
+    try:
+        properties = {str(item) for item in _call(feature, "properties")}
+    except Exception as exc:
+        raise ExecutionContractError("WEIGHT_SAMPLING_UNAVAILABLE", "native minimum property inventory is unavailable") from exc
+    if "intorder" not in properties:
+        raise ExecutionContractError("WEIGHT_SAMPLING_UNAVAILABLE", "native minimum feature does not expose intorder")
+    _call(feature, "set", "intorder", _STRICT_WEIGHT_INTEGRATION_ORDER)
+    try:
+        observed = _call(feature, "getInt", "intorder")
+    except Exception as exc:
+        raise ExecutionContractError("WEIGHT_SAMPLING_UNAVAILABLE", "native minimum integration order could not be read back") from exc
+    if isinstance(observed, bool) or not isinstance(observed, int) or observed != _STRICT_WEIGHT_INTEGRATION_ORDER:
+        raise ExecutionContractError("WEIGHT_SAMPLING_MISMATCH", "native minimum integration order differs from the declared rule")
+    return observed
+
+
+def _verify_weight_integral_rule(feature: Any, *, role: str) -> dict[str, Any]:
+    try:
+        properties = {str(item) for item in _call(feature, "properties")}
+    except Exception as exc:
+        raise ExecutionContractError("WEIGHT_SAMPLING_UNAVAILABLE", f"native {role} integral property inventory is unavailable") from exc
+    required = {"method", "intorderactive", "intorder"}
+    if not required <= properties:
+        raise ExecutionContractError("WEIGHT_SAMPLING_UNAVAILABLE", f"native {role} integral does not expose the required integration-rule properties")
+    _call(feature, "set", "method", "integration")
+    _call(feature, "set", "intorderactive", "on")
+    _call(feature, "set", "intorder", _STRICT_WEIGHT_INTEGRATION_ORDER)
+    try:
+        method = _call(feature, "getString", "method")
+        active = _call(feature, "getString", "intorderactive")
+        order = _call(feature, "getInt", "intorder")
+    except Exception as exc:
+        raise ExecutionContractError("WEIGHT_SAMPLING_UNAVAILABLE", f"native {role} integral rule could not be read back") from exc
+    if (method != "integration" or active != "on" or isinstance(order, bool)
+            or not isinstance(order, int) or order != _STRICT_WEIGHT_INTEGRATION_ORDER):
+        raise ExecutionContractError("WEIGHT_SAMPLING_MISMATCH", f"native {role} integral rule did not retain the declared integration method and order")
+    return {
+        "source": "native_numerical_feature_property_set_and_readback",
+        "method": method,
+        "intorderactive": active,
+        "intorder": order,
+    }
+
+
+def _solution_tuple_scalar_values(
+    values: Any,
+    binding: Mapping[str, Any],
+    *,
+    label: str,
+) -> dict[tuple[int, int, int], float]:
+    """Bind a canonical single-expression FieldArray payload to SolutionInfo tuples."""
+    outer_labels = list(binding.get("outer_indices") or [])
+    inner_by_outer = binding.get("inner_indices_by_outer") or {}
+    pairs = binding.get("solnum_pairs") or []
+    expression_rows = list(values) if isinstance(values, Sequence) and not isinstance(values, (str, bytes)) else [values]
+    if len(expression_rows) != 1 or not outer_labels or not pairs:
+        raise ExecutionContractError("SOLUTION_AXIS_METADATA_UNAVAILABLE", f"{label} has no exact single-expression solution binding")
+    outer_rows = list(expression_rows[0]) if isinstance(expression_rows[0], Sequence) and not isinstance(expression_rows[0], (str, bytes)) else [expression_rows[0]]
+    if len(outer_rows) != len(outer_labels):
+        raise ExecutionContractError("FIELD_ARRAY_SHAPE_MISMATCH", f"{label} outer axis differs from SolutionInfo")
+    output: dict[tuple[int, int, int], float] = {}
+    for pair in pairs:
+        if not isinstance(pair, Mapping):
+            raise ExecutionContractError("SOLUTION_AXIS_METADATA_UNAVAILABLE", f"{label} solution tuple is malformed")
+        outer, inner, solnum = pair.get("outer"), pair.get("inner"), pair.get("solnum")
+        if any(isinstance(value, bool) or not isinstance(value, int) or value < 1 for value in (outer, inner, solnum)):
+            raise ExecutionContractError("SOLUTION_AXIS_METADATA_UNAVAILABLE", f"{label} solution tuple is malformed")
+        key = (outer, inner, solnum)
+        if key in output or outer not in outer_labels:
+            raise ExecutionContractError("SOLUTION_AXIS_METADATA_UNAVAILABLE", f"{label} solution tuples are duplicated or unbound")
+        outer_position = outer_labels.index(outer)
+        inner_labels = list(inner_by_outer.get(outer, []))
+        if inner not in inner_labels:
+            raise ExecutionContractError("SOLUTION_AXIS_METADATA_UNAVAILABLE", f"{label} inner tuple is not in the exact outer axis")
+        inner_rows = list(outer_rows[outer_position]) if isinstance(outer_rows[outer_position], Sequence) and not isinstance(outer_rows[outer_position], (str, bytes)) else [outer_rows[outer_position]]
+        if len(inner_rows) != len(inner_labels):
+            raise ExecutionContractError("FIELD_ARRAY_SHAPE_MISMATCH", f"{label} inner axis differs from SolutionInfo")
+        cell = inner_rows[inner_labels.index(inner)]
+        point_values = list(cell) if isinstance(cell, Sequence) and not isinstance(cell, (str, bytes)) else [cell]
+        if len(point_values) != 1:
+            raise ExecutionContractError("FIELD_ARRAY_SHAPE_MISMATCH", f"{label} must contain exactly one scalar per solution tuple")
+        value = point_values[0]
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)):
+            raise ExecutionContractError("INVALID_RESULT", f"{label} contains a non-finite or non-real tuple value")
+        output[key] = float(value)
+    if len(output) != len(pairs):
+        raise ExecutionContractError("SOLUTION_AXIS_METADATA_UNAVAILABLE", f"{label} does not cover every SolutionInfo tuple")
+    return output
+
+
 def _field_array_context(
     binding: Mapping[str, Any],
     expressions: Sequence[str],
@@ -4068,11 +4191,6 @@ def result_evaluate(
                 "API_UNSUPPORTED",
                 "strict metric evaluation requires an explicit spatial aggregate; global/none has no declared ROI measure",
             )
-        if weight_expression is not None:
-            raise ExecutionContractError(
-                "API_UNSUPPORTED",
-                "strict metric weight-unit and pointwise nonnegative readback is not implemented",
-            )
         if (not isinstance(solution_binding, Mapping) or solution_binding.get("pair_mapping_complete") is not True
                 or not solution_binding.get("solnum_pairs")):
             raise ExecutionContractError(
@@ -4179,6 +4297,10 @@ def result_evaluate(
     field_array_is_complex = False
     axisymmetric_measure_evidence: list[dict[str, Any]] = []
     strict_selection_evidence: list[dict[str, Any]] = []
+    weight_validation_minima: list[dict[str, Any]] = []
+    weight_integral_rule_readbacks: dict[str, dict[str, Any]] = {}
+    weight_unit_evidence: dict[str, Any] | None = None
+    denominator_tuple_values: dict[tuple[int, int, int], float] | None = None
     # §3: reported in every outcome, including the failure path, so the response
     # never depends on how far the aggregate block got before an error.
     denominator_measure = None
@@ -4228,6 +4350,7 @@ def result_evaluate(
             raise ExecutionContractError("SELECTION_READBACK_MISMATCH", "numerical features used different ROI membership")
         strict_selection_evidence.append({
             "role": role,
+            "feature_tag": str(_call(target_feature, "tag")),
             "source": "actual_transient_numerical_feature",
             "component": requested["component"],
             "geometry": requested["geometry"],
@@ -4292,6 +4415,200 @@ def result_evaluate(
             outer_getters=feat_type not in {"Eval", "Interp", "EvalGlobal"},
         )
         expression_units = _feature_units(feature, expressions)
+
+        if strict_metric_evidence and weight_expression is not None:
+            minimum_types = {
+                0: "EvalPoint",
+                1: "MinLine",
+                2: "MinSurface",
+                3: "MinVolume",
+            }
+            minimum_type = minimum_types.get(ms.entity_dim)
+            if minimum_type is None:
+                raise ExecutionContractError(
+                    "API_UNSUPPORTED",
+                    "strict weighted metric validation requires a 0D through 3D selection",
+                )
+            weight_tag = _unique_tag(tag_list(numerical_list))
+            weight_cleanup = _new_cleanup_record(weight_tag, minimum_type)
+            weight_feature = _call(numerical_list, "create", weight_tag, minimum_type)
+            weight_cleanup["created"] = True
+            _call(weight_feature, "set", "data", dataset_tag)
+            _call(weight_feature, "set", "expr", [weight_expression])
+            _apply_feature_selection(weight_feature, "weight_validation")
+
+            if ms.entity_dim > 0:
+                try:
+                    properties = {str(item) for item in _call(weight_feature, "properties")}
+                except Exception as exc:
+                    raise ExecutionContractError(
+                        "WEIGHT_SAMPLING_UNAVAILABLE",
+                        "native minimum feature property inventory is unavailable",
+                    ) from exc
+                if not {"points", "intorder"} <= properties:
+                    raise ExecutionContractError(
+                        "WEIGHT_SAMPLING_UNAVAILABLE",
+                        "native minimum feature does not expose points and integration-order properties",
+                    )
+                _call(weight_feature, "set", "points", "integration")
+                try:
+                    points_readback = _call(weight_feature, "getString", "points")
+                except Exception as exc:
+                    raise ExecutionContractError(
+                        "WEIGHT_SAMPLING_UNAVAILABLE",
+                        "native minimum feature sampling rule could not be read back",
+                    ) from exc
+                if points_readback != "integration":
+                    raise ExecutionContractError(
+                        "WEIGHT_SAMPLING_MISMATCH",
+                        "native minimum feature did not retain points=integration",
+                    )
+                minimum_order_readback = _verify_weight_minimum_integration_order(weight_feature)
+                sampling = {
+                    "method": "native_minimum_at_integration_points",
+                    "points_property_readback": points_readback,
+                    "minimum_intorder_readback": minimum_order_readback,
+                    "sampling_order": f"Gauss_integration_points_intorder_{minimum_order_readback}",
+                    "scope": "sampled_integration_points_only",
+                    "continuous_roi_nonnegativity": "NOT_PROVEN",
+                    "integral_rule_configuration": None,
+                    "actual_sample_coverage": "UNVERIFIED_NATIVE_GAUSS_POINT_IDENTITIES_NOT_EXPOSED",
+                }
+            else:
+                sampling = {
+                    "method": "native_EvalPoint_values_at_selected_point_entities",
+                    "points_property_readback": None,
+                    "minimum_intorder_readback": None,
+                    "sampling_order": "all_selected_point_entities",
+                    "scope": "selected_discrete_point_entities",
+                    "continuous_roi_nonnegativity": "NOT_APPLICABLE_TO_DISCRETE_SELECTION",
+                    "integral_rule_configuration": None,
+                    "actual_sample_coverage": "UNVERIFIED_POINT_ROW_TO_ENTITY_IDENTITY_NOT_EXPOSED",
+                }
+
+            try:
+                from ._solution_binding import SolutionBinding
+            except Exception:
+                from comsol_mcp._solution_binding import SolutionBinding
+            pair_by_key = {
+                (int(pair["outer"]), int(pair["inner"])): pair
+                for pair in solution_binding.get("solnum_pairs", [])
+                if isinstance(pair, Mapping)
+                and all(isinstance(pair.get(axis), int) and not isinstance(pair.get(axis), bool)
+                        for axis in ("outer", "inner", "solnum"))
+            }
+            expected_pair_keys = {
+                (int(pair["outer"]), int(pair["inner"]))
+                for pair in solution_binding.get("solnum_pairs", [])
+                if isinstance(pair, Mapping)
+            }
+            if not pair_by_key or set(pair_by_key) != expected_pair_keys:
+                raise ExecutionContractError(
+                    "SOLUTION_AXIS_METADATA_UNAVAILABLE",
+                    "strict weight minimum requires unique native SolutionInfo tuple bindings",
+                )
+            for outer, inner in sorted(pair_by_key):
+                pair = pair_by_key[(outer, inner)]
+                try:
+                    _call(weight_feature, "set", "outersolnum", int(outer))
+                    _call(weight_feature, "set", "solnum", int(pair["solnum"]))
+                    _call(weight_feature, "run")
+                except Exception as exc:
+                    raise ExecutionContractError(
+                        "WEIGHT_MINIMUM_READBACK_FAILED",
+                        f"native weight minimum did not run for SolutionInfo tuple ({outer}, {inner})",
+                    ) from exc
+
+                if ms.entity_dim == 0:
+                    try:
+                        raw_weight = _call(weight_feature, "getData")
+                        normalized_weight, _unused_imag, point_count = _normalise_evalpoint_components(
+                            raw_weight, None, num_expressions=1
+                        )
+                    except Exception as exc:
+                        if isinstance(exc, ExecutionContractError):
+                            raise
+                        raise ExecutionContractError(
+                            "WEIGHT_MINIMUM_READBACK_FAILED",
+                            "native EvalPoint weight samples could not be read",
+                        ) from exc
+                    inner_labels = list((solution_binding.get("inner_indices_by_outer") or {}).get(outer, []))
+                    if inner not in inner_labels or point_count != len(strict_selection_evidence[-1]["entities"]):
+                        raise ExecutionContractError(
+                            "FIELD_ARRAY_SHAPE_MISMATCH",
+                            "native EvalPoint weights do not cover the exact selected points and solution tuple",
+                        )
+                    point_values = list(normalized_weight[0][inner_labels.index(inner)])
+                    if not point_values:
+                        raise ExecutionContractError("WEIGHT_MINIMUM_READBACK_FAILED", "native EvalPoint returned no selected point values")
+                    checked_values = []
+                    for value in point_values:
+                        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)):
+                            raise ExecutionContractError("WEIGHT_MINIMUM_READBACK_FAILED", "native EvalPoint weight sample is non-finite or non-real")
+                        checked_values.append(float(value))
+                    minimum_value = min(checked_values)
+                else:
+                    try:
+                        raw_weight, imag_weight, is_weight_complex, _weight_layout = _feature_components(
+                            weight_feature, outer=outer, use_outer_getters=True
+                        )
+                    except Exception as exc:
+                        if isinstance(exc, ExecutionContractError):
+                            raise
+                        raise ExecutionContractError(
+                            "WEIGHT_MINIMUM_READBACK_FAILED",
+                            f"native weight minimum could not be read for SolutionInfo tuple ({outer}, {inner})",
+                        ) from exc
+                    if is_weight_complex or imag_weight is not None:
+                        raise ExecutionContractError("WEIGHT_MINIMUM_READBACK_FAILED", "native weight minimum is unexpectedly complex")
+                    inner_labels = list((solution_binding.get("inner_indices_by_outer") or {}).get(outer, []))
+                    cells = _selected_inner_expression_cells(
+                        raw_weight,
+                        inner_labels=inner_labels,
+                        inner=inner,
+                        num_expressions=1,
+                        label="native weight minimum",
+                    )
+                    minimum_value = cells[0]
+                    if isinstance(minimum_value, bool) or not isinstance(minimum_value, (int, float)) or not math.isfinite(float(minimum_value)):
+                        raise ExecutionContractError("WEIGHT_MINIMUM_READBACK_FAILED", "native weight minimum is non-finite or non-real")
+                    minimum_value = float(minimum_value)
+
+                if minimum_value < 0.0:
+                    raise ExecutionContractError(
+                        "NEGATIVE_WEIGHT_READBACK",
+                        f"native sampled weight minimum is negative at SolutionInfo tuple ({outer}, {inner})",
+                    )
+                property_units = _feature_units(weight_feature, [weight_expression])
+                unit_property_value = property_units.get(weight_expression)
+                if weight_unit_evidence is None:
+                    weight_unit_evidence = {
+                        "status": "UNVERIFIED",
+                        "roi_context_dimensionality": {
+                            "status": "UNVERIFIED",
+                            "expression": weight_expression,
+                            "scope": "selected_numerical_feature_expression_over_dataset_and_selection",
+                            "reason": "no unit evaluator binds the expression to the selected numerical-feature context",
+                        },
+                        "global_parameter_context_unit_readback": _global_parameter_context_unit_readback(
+                            model, weight_expression,
+                        ),
+                        "feature_unit_property_readback": {
+                            "value": unit_property_value,
+                            "source": "NumericalFeature.getStringArray('unit')",
+                            "interpretation": "configuration_readback_or_model_dependent_default",
+                            "dimensionality_verified": False,
+                        },
+                    }
+                weight_validation_minima.append({
+                    "outer": outer,
+                    "inner": inner,
+                    "solnum": int(pair["solnum"]),
+                    "minimum": float(minimum_value),
+                    "global_parameter_context_unit_readback": dict(
+                        weight_unit_evidence["global_parameter_context_unit_readback"]
+                    ),
+                })
 
         if transform_before_statistics and complex_mode != "preserve":
             if is_complex:
@@ -4535,6 +4852,10 @@ def result_evaluate(
                 _call(meas_feat, "set", "data", dataset_tag)
                 _call(meas_feat, "set", "expr", measure_expr)
                 _apply_feature_selection(meas_feat, "denominator")
+                if strict_metric_evidence and weight_expression is not None and ms.entity_dim > 0:
+                    weight_integral_rule_readbacks["denominator"] = _verify_weight_integral_rule(
+                        meas_feat, role="denominator",
+                    )
                 if axisymmetric_measure_required:
                     axisymmetric_measure_evidence.append(
                         _axisymmetric_measure_readback(
@@ -4552,19 +4873,23 @@ def result_evaluate(
                     raise ExecutionContractError("COMPLEX_DATA_ERROR", "measure denominator is unexpectedly complex")
                 if solution_binding:
                     from ._solution_binding import SolutionBinding
-                    m_value = SolutionBinding.field_array_from_engine(
+                    m_field_array = SolutionBinding.field_array_from_engine(
                         m_raw,
                         solution_binding,
                         num_expressions=1,
                         layout=m_layout,
                         selected_outer=(solution_binding.get("outer_indices") or [None])[0],
                         is_complex=False,
-                    ).values
+                    )
+                    m_value = m_field_array.values
                 else:
                     m_value = m_raw
                 if ms.entity_dim == 0:
                     m_value = _point_reduce(m_value, "sum")
             except Exception as exc:
+                if (strict_metric_evidence and weight_expression is not None
+                        and isinstance(exc, ExecutionContractError)):
+                    raise
                 m_raw = None
                 m_value = None
                 m_read_error = f"{type(exc).__name__}: {exc}"
@@ -4633,6 +4958,17 @@ def result_evaluate(
                     f"caller-supplied denominator is not accepted",
                 )
             denominator_measure = m_val
+            if strict_metric_evidence and weight_expression is not None:
+                denominator_tuple_values = _solution_tuple_scalar_values(
+                    m_value,
+                    solution_binding,
+                    label="weighted denominator",
+                )
+                if any(value <= 0.0 for value in denominator_tuple_values.values()):
+                    raise ExecutionContractError(
+                        "ZERO_OR_INVALID_MEASURE",
+                        "weighted denominator must be strictly positive and finite for every exact selected solution tuple",
+                    )
             denominator_source = (
                 f"engine integral of w={weight_expression!r} over the selection"
                 if weight_expression
@@ -4657,6 +4993,10 @@ def result_evaluate(
                         [f"({weight_expression})*({e})" for e in effective_expressions],
                     )
                     _apply_feature_selection(num_feat, "numerator")
+                    if strict_metric_evidence and ms.entity_dim > 0:
+                        weight_integral_rule_readbacks["numerator"] = _verify_weight_integral_rule(
+                            num_feat, role="numerator",
+                        )
                     if axisymmetric_measure_required:
                         axisymmetric_measure_evidence.append(
                             _axisymmetric_measure_readback(
@@ -4696,11 +5036,44 @@ def result_evaluate(
                     else:
                         transformed = num_transformed
                 except Exception as exc:
+                    if (strict_metric_evidence and isinstance(exc, ExecutionContractError)):
+                        raise
                     raise ExecutionContractError(
                         "ENGINE_CALL_FAILED",
                         f"the weighted numerator ∫w·f dμ could not be evaluated: "
                         f"{type(exc).__name__}: {exc}",
                     )
+
+            if strict_metric_evidence and weight_expression is not None:
+                if ms.entity_dim > 0:
+                    expected_integral_rule = {
+                        "source": "native_numerical_feature_property_set_and_readback",
+                        "method": "integration",
+                        "intorderactive": "on",
+                        "intorder": _STRICT_WEIGHT_INTEGRATION_ORDER,
+                    }
+                    if (set(weight_integral_rule_readbacks) != {"denominator", "numerator"}
+                            or any(rule != expected_integral_rule for rule in weight_integral_rule_readbacks.values())):
+                        raise ExecutionContractError(
+                            "WEIGHT_SAMPLING_UNVERIFIED",
+                            "native numerator and denominator integration configurations do not match the minimum's declared integration rule",
+                        )
+                    sampling["integral_rule_configuration"] = {
+                        "status": "VERIFIED_MATCHING_METHOD_AND_ORDER_READBACKS",
+                        "minimum_points": "integration",
+                        "minimum_intorder": _STRICT_WEIGHT_INTEGRATION_ORDER,
+                        "numerator": dict(weight_integral_rule_readbacks["numerator"]),
+                        "denominator": dict(weight_integral_rule_readbacks["denominator"]),
+                        "actual_gauss_point_set_identity": "UNVERIFIED_NATIVE_POINT_IDENTITIES_NOT_EXPOSED",
+                    }
+                else:
+                    sampling["integral_rule_configuration"] = {
+                        "status": "DISCRETE_POINT_SELECTION_READBACK",
+                        "minimum_points": "all_selected_point_entities",
+                        "numerator": "EvalPoint_selected_entities",
+                        "denominator": "EvalPoint_selected_entities",
+                        "actual_point_row_to_entity_identity": "UNVERIFIED_NOT_EXPOSED",
+                    }
 
             def _divide_by_measure(value: Any) -> Any:
                 return _nested_divide(value, denominator_measure)
@@ -5074,6 +5447,102 @@ def result_evaluate(
             "requested_solution": dict(solution_spec),
             "dataset_binding": dict(dataset_binding) if isinstance(dataset_binding, Mapping) else None,
         }
+        if weight_expression is not None:
+            minima_by_key = {
+                (row["outer"], row["inner"], row["solnum"]): row
+                for row in weight_validation_minima
+            }
+            selected_weight_rows = []
+            selected_denominator_rows = []
+            for pair in selected_pairs:
+                key = (pair["outer"], pair["inner"], pair["solnum"])
+                minimum_row = minima_by_key.get(key)
+                denominator_value = (denominator_tuple_values or {}).get(key)
+                if (minimum_row is None or denominator_value is None
+                        or not math.isfinite(float(denominator_value)) or float(denominator_value) <= 0.0):
+                    raise ExecutionContractError(
+                        "SOLUTION_AXIS_METADATA_UNAVAILABLE",
+                        "weighted metric evidence does not cover every selected native solution tuple",
+                        stage="post_dispatch",
+                    )
+                selected_weight_rows.append({
+                    "outer": pair["outer"], "inner": pair["inner"], "solnum": pair["solnum"],
+                    "minimum": minimum_row["minimum"],
+                })
+                selected_denominator_rows.append({
+                    "outer": pair["outer"], "inner": pair["inner"], "solnum": pair["solnum"],
+                    "value": float(denominator_value),
+                })
+            if weight_unit_evidence is None:
+                weight_unit_evidence = {
+                    "status": "UNVERIFIED",
+                    "roi_context_dimensionality": {
+                        "status": "UNVERIFIED",
+                        "expression": weight_expression,
+                        "scope": "selected_numerical_feature_expression_over_dataset_and_selection",
+                        "reason": "no unit evaluator binds the expression to the selected numerical-feature context",
+                    },
+                    "global_parameter_context_unit_readback": {
+                        "status": "UNAVAILABLE",
+                        "unit": None,
+                        "expression": weight_expression,
+                        "source": "Model.param().evaluateUnit(expression)",
+                        "scope": "global_parameter_context",
+                        "unavailable_reason": "weight_expression_unit_was_not_evaluated",
+                    },
+                    "feature_unit_property_readback": {
+                        "value": None,
+                        "source": "NumericalFeature.getStringArray('unit')",
+                        "interpretation": "configuration_readback_or_model_dependent_default",
+                        "dimensionality_verified": False,
+                    },
+                }
+            required_roles = {"primary", "weight_validation", "denominator", "numerator"}
+            observed_roles = {row.get("role") for row in strict_selection_evidence if isinstance(row, Mapping)}
+            if not required_roles <= observed_roles:
+                raise ExecutionContractError(
+                    "SELECTION_READBACK_UNAVAILABLE",
+                    "weighted numerator, denominator, and minimum features must all read back the same ROI",
+                    stage="post_dispatch",
+                )
+            roi_context_unit = weight_unit_evidence.get("roi_context_dimensionality")
+            unit_verified = (
+                isinstance(roi_context_unit, Mapping)
+                and roi_context_unit.get("status") == "VERIFIED"
+                and roi_context_unit.get("unit") == "1"
+                and roi_context_unit.get("expression") == weight_expression
+                and roi_context_unit.get("scope") == "selected_numerical_feature_expression_over_dataset_and_selection"
+            )
+            sampling_status = "VERIFIED" if selected_weight_rows and all(row["minimum"] >= 0.0 for row in selected_weight_rows) else "INVALID"
+            denominator_status = "VERIFIED" if selected_denominator_rows and all(row["value"] > 0.0 for row in selected_denominator_rows) else "INVALID"
+            sample_coverage_verified = sampling.get("actual_sample_coverage") == "VERIFIED_EXACT_NATIVE_POINT_SET_IDENTITY"
+            weight_validation_status = (
+                "VERIFIED" if unit_verified and sampling_status == "VERIFIED" and denominator_status == "VERIFIED" and sample_coverage_verified
+                else "UNVERIFIED"
+            )
+            strict_metric_result["weight_validation"] = {
+                "status": weight_validation_status,
+                "expression": weight_expression,
+                "unit_evidence": dict(weight_unit_evidence),
+                "minimum": {
+                    "status": sampling_status,
+                    "source": (
+                        "EvalPoint.getData_native_samples"
+                        if ms.entity_dim == 0
+                        else f"{minimum_types[ms.entity_dim]}.getReal_native_minimum"
+                    ),
+                    "by_solution": selected_weight_rows,
+                    "sampling": sampling,
+                },
+                "denominator": {
+                    "status": denominator_status,
+                    "source": "native_integral_of_weight_over_same_dataset_and_ROI",
+                    "strictly_positive_finite": True,
+                    "by_solution": selected_denominator_rows,
+                },
+                "selection_roles": sorted(required_roles),
+                "same_dataset_solution_tuple_and_selection": True,
+            }
 
     return {
         **result_payload,

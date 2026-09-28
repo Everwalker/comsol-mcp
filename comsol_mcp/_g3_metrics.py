@@ -12,6 +12,9 @@ from ._execution_contract import ExecutionContractError
 from ._metric_contract import definition_sha256, normalize_arguments
 
 
+_WEIGHT_INTEGRATION_ORDER = 4
+
+
 def _context(operation_id: str) -> dict[str, Any]:
     from ._observation_store import current_context
     context = current_context()
@@ -167,6 +170,234 @@ def _selected_pairs(result: Mapping[str, Any]) -> list[dict[str, Any]]:
     return output
 
 
+def _verified_weight_evidence(
+    native: Mapping[str, Any],
+    definition: Mapping[str, Any],
+    selected_pairs: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Validate the strict adapter's sampled weight, unit, denominator and cleanup proof."""
+    evidence = native.get("strict_metric_evidence")
+    weight = evidence.get("weight_validation") if isinstance(evidence, Mapping) else None
+    if not isinstance(weight, Mapping):
+        raise ExecutionContractError("WEIGHT_EVIDENCE_UNAVAILABLE", "weighted metric has no strict native weight-validation evidence", stage="post_dispatch")
+    expected_keys = {
+        "status", "expression", "unit_evidence", "minimum", "denominator",
+        "selection_roles", "same_dataset_solution_tuple_and_selection",
+    }
+    if set(weight) != expected_keys or weight.get("expression") != definition.get("weight", {}).get("expression"):
+        raise ExecutionContractError("INTEGRITY_COMPROMISED", "weight evidence is malformed or does not bind to the immutable expression", stage="post_dispatch")
+    if weight.get("same_dataset_solution_tuple_and_selection") is not True:
+        raise ExecutionContractError("WEIGHT_EVIDENCE_UNAVAILABLE", "weight evidence does not bind the same dataset, tuple, and ROI", stage="post_dispatch")
+    if (evidence.get("status") != "VERIFIED"
+            or evidence.get("selection_source") != "actual_transient_numerical_feature_readback"
+            or evidence.get("selection_membership_identical") is not True):
+        raise ExecutionContractError("SELECTION_READBACK_UNAVAILABLE", "weighted metric does not carry verified transient feature selection readbacks", stage="post_dispatch")
+    required_roles = {"primary", "weight_validation", "denominator", "numerator"}
+    if set(weight.get("selection_roles", [])) != required_roles:
+        raise ExecutionContractError("SELECTION_READBACK_UNAVAILABLE", "weighted metric evidence omits a numerical feature selection role", stage="post_dispatch")
+
+    selection_rows = evidence.get("selection_features") if isinstance(evidence, Mapping) else None
+    if not isinstance(selection_rows, list):
+        raise ExecutionContractError("SELECTION_READBACK_UNAVAILABLE", "weighted metric evidence has no feature-level selection readbacks", stage="post_dispatch")
+    by_role: dict[str, list[Mapping[str, Any]]] = {}
+    feature_tags: set[str] = set()
+    primary_entities = None
+    primary_selection_identity = None
+    for row in selection_rows:
+        if not isinstance(row, Mapping):
+            raise ExecutionContractError("INTEGRITY_COMPROMISED", "native feature selection evidence is malformed", stage="post_dispatch")
+        role = row.get("role")
+        tag = row.get("feature_tag")
+        entities = row.get("entities")
+        if (not isinstance(role, str) or not isinstance(tag, str) or not tag or tag in feature_tags
+                or not isinstance(entities, list) or not entities
+                or any(isinstance(value, bool) or not isinstance(value, int) or value < 1 for value in entities)):
+            raise ExecutionContractError("INTEGRITY_COMPROMISED", "feature selection readback lacks a unique tag or exact entity list", stage="post_dispatch")
+        native_readback = row.get("native_selection_readback")
+        if (not isinstance(native_readback, Mapping)
+                or native_readback.get("entities") != entities
+                or native_readback.get("geometry") != row.get("geometry")
+                or native_readback.get("dimension") != row.get("entity_dimension")):
+            raise ExecutionContractError("SELECTION_READBACK_UNAVAILABLE", "feature selection evidence is not bound to its native selection getter", stage="post_dispatch")
+        identity = {key: row.get(key) for key in ("component", "geometry", "entity_dimension", "kind", "tag")}
+        if (not isinstance(identity["component"], str) or not identity["component"]
+                or not isinstance(identity["geometry"], str) or not identity["geometry"]
+                or isinstance(identity["entity_dimension"], bool)
+                or not isinstance(identity["entity_dimension"], int)
+                or identity["kind"] not in {"all", "named", "explicit"}):
+            raise ExecutionContractError("INTEGRITY_COMPROMISED", "feature selection identity is malformed", stage="post_dispatch")
+        feature_tags.add(tag)
+        by_role.setdefault(role, []).append(row)
+        if role == "primary":
+            primary_entities = entities
+            primary_selection_identity = identity
+    for role in required_roles:
+        rows = by_role.get(role, [])
+        if (len(rows) != 1 or rows[0].get("entities") != primary_entities
+                or {key: rows[0].get(key) for key in ("component", "geometry", "entity_dimension", "kind", "tag")} != primary_selection_identity):
+            raise ExecutionContractError("SELECTION_READBACK_MISMATCH", f"weighted {role} feature did not read back the exact primary ROI", stage="post_dispatch")
+    selection = definition.get("selection")
+    if isinstance(selection, Mapping) and selection.get("kind") == "explicit":
+        if primary_entities != selection.get("entities"):
+            raise ExecutionContractError("SELECTION_READBACK_MISMATCH", "native weighted primary selection differs from the immutable metric selection", stage="post_dispatch")
+
+    cleanup = native.get("cleanup")
+    cleanup_rows = []
+    if isinstance(cleanup, Mapping):
+        cleanup_rows.append(cleanup)
+        children = cleanup.get("children")
+        if isinstance(children, list):
+            cleanup_rows.extend(row for row in children if isinstance(row, Mapping))
+    clean_by_tag = {row.get("tag"): row for row in cleanup_rows if isinstance(row.get("tag"), str)}
+    for role in required_roles:
+        row = by_role[role][0]
+        record = clean_by_tag.get(row.get("feature_tag"))
+        if (not isinstance(record, Mapping) or record.get("created") is not True
+                or record.get("removed") is not True or record.get("verified_removed") is not True
+                or record.get("cleanup_failed") is not False):
+            raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", f"weighted {role} numerical feature cleanup is not verified", stage="post_dispatch")
+
+    unit_evidence = weight.get("unit_evidence")
+    required_unit_keys = {
+        "status", "roi_context_dimensionality",
+        "global_parameter_context_unit_readback", "feature_unit_property_readback",
+    }
+    if not isinstance(unit_evidence, Mapping) or set(unit_evidence) != required_unit_keys:
+        raise ExecutionContractError("INTEGRITY_COMPROMISED", "native weight unit evidence is malformed", stage="post_dispatch")
+    global_readback = unit_evidence.get("global_parameter_context_unit_readback")
+    if (not isinstance(global_readback, Mapping)
+            or global_readback.get("source") != "Model.param().evaluateUnit(expression)"
+            or global_readback.get("scope") != "global_parameter_context"
+            or global_readback.get("expression") != weight.get("expression")
+            or not isinstance(global_readback.get("status"), str)
+            or global_readback.get("status") not in {"READBACK_ONLY", "UNAVAILABLE"}):
+        raise ExecutionContractError("INTEGRITY_COMPROMISED", "ParamBase unit evidence is not labeled as a global-context diagnostic", stage="post_dispatch")
+    roi_unit = unit_evidence.get("roi_context_dimensionality")
+    if (not isinstance(roi_unit, Mapping)
+            or roi_unit.get("expression") != weight.get("expression")
+            or roi_unit.get("scope") != "selected_numerical_feature_expression_over_dataset_and_selection"):
+        raise ExecutionContractError("INTEGRITY_COMPROMISED", "ROI-context unit evidence is malformed or bound to another expression", stage="post_dispatch")
+    if roi_unit.get("status") == "UNVERIFIED":
+        if (set(roi_unit) != {"status", "expression", "scope", "reason"}
+                or unit_evidence.get("status") != "UNVERIFIED"):
+            raise ExecutionContractError("INTEGRITY_COMPROMISED", "unverified ROI-context unit evidence has an inconsistent status or shape", stage="post_dispatch")
+        raise ExecutionContractError("WEIGHT_UNIT_UNVERIFIED", "weighted expression dimensionality is not verified in the selected numerical-feature ROI context", stage="post_dispatch")
+    if (roi_unit.get("status") != "VERIFIED"
+            or set(roi_unit) != {"status", "expression", "scope", "unit", "source", "binding"}
+            or unit_evidence.get("status") != "VERIFIED"
+            or roi_unit.get("source") != "verified_same_scope_native_readback"):
+        raise ExecutionContractError("INTEGRITY_COMPROMISED", "ROI-context unit verification does not match the strict same-scope evidence contract", stage="post_dispatch")
+    solution = definition.get("solution")
+    expected_binding = {
+        "dataset": solution.get("dataset") if isinstance(solution, Mapping) else None,
+        "solution": solution.get("solution") if isinstance(solution, Mapping) else None,
+        "selection": {**dict(primary_selection_identity or {}), "entities": primary_entities},
+        "selected_solution_pairs": selected_pairs,
+    }
+    if roi_unit.get("binding") != expected_binding:
+        raise ExecutionContractError("WEIGHT_UNIT_UNVERIFIED", "ROI-context dimensionality proof is not bound to the exact dataset, ROI readback, and selected solution tuples", stage="post_dispatch")
+    property_readback = unit_evidence.get("feature_unit_property_readback")
+    if (not isinstance(property_readback, Mapping)
+            or property_readback.get("source") != "NumericalFeature.getStringArray('unit')"
+            or property_readback.get("interpretation") != "configuration_readback_or_model_dependent_default"
+            or property_readback.get("dimensionality_verified") is not False):
+        raise ExecutionContractError("INTEGRITY_COMPROMISED", "feature unit property is misrepresented as dimensionality proof", stage="post_dispatch")
+    if roi_unit.get("unit") != "1":
+        raise ExecutionContractError("WEIGHT_UNIT_MISMATCH", "native ROI-context expression unit is not exactly dimensionless '1'", stage="post_dispatch")
+
+    minimum = weight.get("minimum")
+    denominator = weight.get("denominator")
+    if not isinstance(minimum, Mapping) or set(minimum) != {"status", "source", "by_solution", "sampling"}:
+        raise ExecutionContractError("INTEGRITY_COMPROMISED", "native minimum evidence is malformed", stage="post_dispatch")
+    if not isinstance(denominator, Mapping) or set(denominator) != {"status", "source", "strictly_positive_finite", "by_solution"}:
+        raise ExecutionContractError("INTEGRITY_COMPROMISED", "native denominator evidence is malformed", stage="post_dispatch")
+    if minimum.get("status") != "VERIFIED" or denominator.get("status") != "VERIFIED" or denominator.get("strictly_positive_finite") is not True:
+        raise ExecutionContractError("WEIGHT_EVIDENCE_UNAVAILABLE", "sampled minimum or denominator proof is incomplete", stage="post_dispatch")
+    expected_tuples = [(row["outer"], row["inner"], row["solnum"]) for row in selected_pairs]
+    minima = minimum.get("by_solution")
+    denominators = denominator.get("by_solution")
+    if not isinstance(minima, list) or not isinstance(denominators, list):
+        raise ExecutionContractError("INTEGRITY_COMPROMISED", "weight samples are malformed", stage="post_dispatch")
+    observed_minimum_tuples = []
+    for row in minima:
+        if not isinstance(row, Mapping) or set(row) != {"outer", "inner", "solnum", "minimum"}:
+            raise ExecutionContractError("INTEGRITY_COMPROMISED", "weight minimum tuple is malformed", stage="post_dispatch")
+        observed_minimum_tuples.append((row.get("outer"), row.get("inner"), row.get("solnum")))
+        value = row.get("minimum")
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)) or float(value) < 0.0:
+            raise ExecutionContractError("NEGATIVE_WEIGHT_READBACK", "native sampled weight minimum is negative or invalid", stage="post_dispatch")
+    observed_denominator_tuples = []
+    for row in denominators:
+        if not isinstance(row, Mapping) or set(row) != {"outer", "inner", "solnum", "value"}:
+            raise ExecutionContractError("INTEGRITY_COMPROMISED", "weight denominator tuple is malformed", stage="post_dispatch")
+        observed_denominator_tuples.append((row.get("outer"), row.get("inner"), row.get("solnum")))
+        value = row.get("value")
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)) or float(value) <= 0.0:
+            raise ExecutionContractError("ZERO_OR_INVALID_MEASURE", "native weighted denominator is not strictly positive and finite", stage="post_dispatch")
+    if observed_minimum_tuples != expected_tuples or observed_denominator_tuples != expected_tuples:
+        raise ExecutionContractError("SOLUTION_AXIS_MISMATCH", "weight minima and denominators do not cover the exact selected solution tuples", stage="post_dispatch")
+
+    sampling = minimum.get("sampling")
+    dimension = selection.get("entity_dimension") if isinstance(selection, Mapping) else None
+    minimum_sources = {
+        0: "EvalPoint.getData_native_samples",
+        1: "MinLine.getReal_native_minimum",
+        2: "MinSurface.getReal_native_minimum",
+        3: "MinVolume.getReal_native_minimum",
+    }
+    if (dimension not in minimum_sources or minimum.get("source") != minimum_sources[dimension]
+            or denominator.get("source") != "native_integral_of_weight_over_same_dataset_and_ROI"):
+        raise ExecutionContractError("WEIGHT_EVIDENCE_UNAVAILABLE", "native minimum or denominator source does not match the selected domain dimension", stage="post_dispatch")
+    if dimension == 0:
+        required_sampling = {
+            "method": "native_EvalPoint_values_at_selected_point_entities",
+            "points_property_readback": None,
+            "minimum_intorder_readback": None,
+            "sampling_order": "all_selected_point_entities",
+            "scope": "selected_discrete_point_entities",
+            "continuous_roi_nonnegativity": "NOT_APPLICABLE_TO_DISCRETE_SELECTION",
+            "integral_rule_configuration": {
+                "status": "DISCRETE_POINT_SELECTION_READBACK",
+                "minimum_points": "all_selected_point_entities",
+                "numerator": "EvalPoint_selected_entities",
+                "denominator": "EvalPoint_selected_entities",
+                "actual_point_row_to_entity_identity": "UNVERIFIED_NOT_EXPOSED",
+            },
+            "actual_sample_coverage": "UNVERIFIED_POINT_ROW_TO_ENTITY_IDENTITY_NOT_EXPOSED",
+        }
+    else:
+        expected_integral_rule = {
+            "source": "native_numerical_feature_property_set_and_readback",
+            "method": "integration",
+            "intorderactive": "on",
+            "intorder": _WEIGHT_INTEGRATION_ORDER,
+        }
+        required_sampling = {
+            "method": "native_minimum_at_integration_points",
+            "points_property_readback": "integration",
+            "minimum_intorder_readback": _WEIGHT_INTEGRATION_ORDER,
+            "sampling_order": f"Gauss_integration_points_intorder_{_WEIGHT_INTEGRATION_ORDER}",
+            "scope": "sampled_integration_points_only",
+            "continuous_roi_nonnegativity": "NOT_PROVEN",
+            "integral_rule_configuration": {
+                "status": "VERIFIED_MATCHING_METHOD_AND_ORDER_READBACKS",
+                "minimum_points": "integration",
+                "minimum_intorder": _WEIGHT_INTEGRATION_ORDER,
+                "numerator": expected_integral_rule,
+                "denominator": expected_integral_rule,
+                "actual_gauss_point_set_identity": "UNVERIFIED_NATIVE_POINT_IDENTITIES_NOT_EXPOSED",
+            },
+            "actual_sample_coverage": "UNVERIFIED_NATIVE_GAUSS_POINT_IDENTITIES_NOT_EXPOSED",
+        }
+    if sampling != required_sampling:
+        raise ExecutionContractError("WEIGHT_SAMPLING_UNVERIFIED", "native weight minimum does not disclose the exact sampling rule and scope", stage="post_dispatch")
+    if sampling.get("actual_sample_coverage") != "VERIFIED_EXACT_NATIVE_POINT_SET_IDENTITY":
+        raise ExecutionContractError("WEIGHT_SAMPLING_UNVERIFIED", "native feature readbacks do not expose exact point-set identity across the minimum, numerator, and denominator", stage="post_dispatch")
+    if weight.get("status") != "VERIFIED":
+        raise ExecutionContractError("WEIGHT_EVIDENCE_UNAVAILABLE", "native weighted metric evidence is not fully verified", stage="post_dispatch")
+    return dict(weight)
+
+
 def metric_evaluate(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
     args = normalize_arguments("metric.evaluate", arguments)
     context = _context("metric.evaluate")
@@ -177,30 +408,26 @@ def metric_evaluate(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
     if missing:
         raise ExecutionContractError("METRIC_NOT_FOUND", "one or more metric definitions are unavailable in this project")
     selected_definitions = [by_id[metric_id] for metric_id in args["metric_ids"]]
-    if any(row["definition"].get("weight") for row in selected_definitions):
-        raise ExecutionContractError(
-            "API_UNSUPPORTED",
-            "weighted metrics remain unavailable until native dimensionless-unit, nonnegative-field, and positive-denominator readback is implemented",
-            stage="validation",
-        )
     from ._g3_results import result_evaluate
     from ._observation_store import register_observation
     items: list[dict[str, Any]] = []
     for definition_record in selected_definitions:
         definition = definition_record["definition"]
         solution = args.get("solution", definition["solution"])
-        native = result_evaluate(worker, model_tag, {
-            "spec": {
-                "expressions": [definition["expression"]],
-                "solution": solution,
-                "selection": definition["selection"],
-                "entity_dim": definition["selection"]["entity_dimension"],
-                "aggregate": definition["aggregate"],
-                "complex_mode": definition["complex_mode"],
-                "complex_transform_order": "before",
-                "storage": "inline",
-            },
-        }, strict_metric_evidence=True)
+        metric_spec = {
+            "expressions": [definition["expression"]],
+            "solution": solution,
+            "selection": definition["selection"],
+            "entity_dim": definition["selection"]["entity_dimension"],
+            "aggregate": definition["aggregate"],
+            "complex_mode": definition["complex_mode"],
+            "complex_transform_order": "before",
+            "storage": "inline",
+        }
+        weight = definition.get("weight")
+        if isinstance(weight, Mapping):
+            metric_spec["weight_expression"] = weight["expression"]
+        native = result_evaluate(worker, model_tag, {"spec": metric_spec}, strict_metric_evidence=True)
         status = native.get("status")
         if not isinstance(status, Mapping) or status.get("ok") is not True:
             raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "native metric evaluation did not return a verified successful status", stage="post_dispatch")
@@ -211,6 +438,7 @@ def metric_evaluate(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
         if not isinstance(actual_unit, str) or actual_unit != definition["expected_unit"]:
             raise ExecutionContractError("UNIT_READBACK_MISMATCH", "native expression unit readback does not match expected_unit", stage="post_dispatch")
         tuples = _selected_pairs(native)
+        weight_evidence = _verified_weight_evidence(native, definition, tuples) if weight is not None else None
         threshold = definition.get("threshold")
         outcomes = []
         for item in tuples:
@@ -236,6 +464,7 @@ def metric_evaluate(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -
             "threshold_outcomes": outcomes,
             "observation_ref": observation,
             "native_evidence": native["strict_metric_evidence"],
+            **({"weight_evidence": weight_evidence} if weight_evidence is not None else {}),
             "dataset": native.get("dataset"), "solution": native.get("solution"),
             "aggregate": native.get("aggregate"), "complex_mode": native.get("complex_mode"),
             "is_complex": bool(native.get("field_array", {}).get("is_complex")) if isinstance(native.get("field_array"), Mapping) else None,
@@ -371,6 +600,16 @@ def _resolve_historical_evaluation(context: Mapping[str, Any], reference: Mappin
         saved_values = item.get("values")
         if saved_values != values:
             raise ExecutionContractError("INTEGRITY_COMPROMISED", "evaluation values differ from the authorized observation artifact", stage="validation")
+        if definition.get("weight") is not None:
+            weight_evidence = _verified_weight_evidence(
+                {"cleanup": metadata.get("cleanup"), "strict_metric_evidence": evidence},
+                definition,
+                values,
+            )
+            if item.get("weight_evidence") != weight_evidence:
+                raise ExecutionContractError("INTEGRITY_COMPROMISED", "evaluation weight evidence differs from its authorized observation artifact", stage="validation")
+        elif "weight_evidence" in item:
+            raise ExecutionContractError("INTEGRITY_COMPROMISED", "unweighted metric contains unauthorized weight evidence", stage="validation")
         resolved_values[metric_id] = values
     resolved = dict(record)
     # This transient view is built only from the project-authorized, producer-
@@ -424,6 +663,7 @@ def metric_compare(worker: Any, model_tag: str, arguments: Mapping[str, Any]) ->
         complex_flags = []
         aggregates = []
         complex_modes = []
+        weight_evidence_rows = []
         for evaluation in evaluations:
             matches = [item for item in evaluation["items"] if item.get("metric_id") == metric_id]
             if len(matches) != 1:
@@ -434,6 +674,7 @@ def metric_compare(worker: Any, model_tag: str, arguments: Mapping[str, Any]) ->
             complex_flags.append(item.get("is_complex"))
             aggregates.append(item.get("aggregate"))
             complex_modes.append(item.get("complex_mode"))
+            weight_evidence_rows.append(item.get("weight_evidence"))
             vector = evaluation.get("_artifact_values", {}).get(metric_id)
             if not isinstance(vector, list) or not vector:
                 raise ExecutionContractError("INTEGRITY_COMPROMISED", "authorized observation artifact has no recomputed metric tuples", stage="validation")
@@ -476,7 +717,32 @@ def metric_compare(worker: Any, model_tag: str, arguments: Mapping[str, Any]) ->
                 {"real": float(value.real), "imag": float(value.imag)} if isinstance(value, complex) else float(value)
                 for value in values
             ], "comparisons": comparisons})
-        output.append({"metric_id": metric_id, "unit": observed_units[0], "definition_sha256": definition_hashes[0], "aggregate": aggregates[0], "complex_mode": complex_modes[0], "is_complex": complex_flags[0], "tuple_results": rows})
+        compared = {"metric_id": metric_id, "unit": observed_units[0], "definition_sha256": definition_hashes[0], "aggregate": aggregates[0], "complex_mode": complex_modes[0], "is_complex": complex_flags[0], "tuple_results": rows}
+        if any(item is not None for item in weight_evidence_rows):
+            if not all(isinstance(item, Mapping) for item in weight_evidence_rows):
+                raise ExecutionContractError("UNVERIFIED_METRIC_EVALUATION", "weighted comparison is missing per-case native weight evidence", stage="validation")
+            first_weight = weight_evidence_rows[0]
+            first_sampling = first_weight.get("minimum", {}).get("sampling") if isinstance(first_weight.get("minimum"), Mapping) else None
+            first_unit = first_weight.get("unit_evidence", {}).get("roi_context_dimensionality") if isinstance(first_weight.get("unit_evidence"), Mapping) else None
+            for item in weight_evidence_rows[1:]:
+                sampling = item.get("minimum", {}).get("sampling") if isinstance(item.get("minimum"), Mapping) else None
+                unit = item.get("unit_evidence", {}).get("roi_context_dimensionality") if isinstance(item.get("unit_evidence"), Mapping) else None
+                if sampling != first_sampling or unit != first_unit:
+                    raise ExecutionContractError("UNVERIFIED_METRIC_EVALUATION", "weighted comparison cases do not share the same verified sampling and unit semantics", stage="validation")
+            compared["weight_validation"] = {
+                "status": "VERIFIED",
+                "unit_evidence": first_weight["unit_evidence"],
+                "sampling": first_sampling,
+                "per_case": [
+                    {
+                        "evaluation_id": evaluation["evaluation_id"],
+                        "minimum": item["minimum"]["by_solution"],
+                        "denominator": item["denominator"]["by_solution"],
+                    }
+                    for evaluation, item in zip(evaluations, weight_evidence_rows)
+                ],
+            }
+        output.append(compared)
     return {"comparisons": output, "case_count": len(evaluations), "source": "authorized_immutable_metric_evaluations", "historical_resolution": "project_producer_hash_and_observation_artifact_verified"}
 
 
