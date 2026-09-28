@@ -4,13 +4,13 @@ Updated 2026-09-28 UTC. **Overall PARTIAL; execution continues through W26.** Th
 
 ## Current stage
 
-**F16 experiment objectives and durable case artifacts: PASS for scoped software; project overall PARTIAL.** Frozen objectives/constraints now support deterministic feasible ranking with explicit incomplete/unknown results. Case MPH artifacts are bound to the actual attempt, producer, parameters and solution identity. Java/M source export preserves the destination basename and uses writable-handle fsync with atomic publication.
+**W24 three-stage capture and saved-file producer: PASS for scoped software; W24/project overall PARTIAL.** The saved MPH now links to the actual terminal stdCool Study.run request and immutable response, including native-produced path, size and SHA-256. Capture and Worker2 reopen preserve the full stdUV → stdBake → stdCool chain and recheck original bytes. A later load or caller-edited summary cannot replace the producer. The solve ledger preserves prior rows when appending and rejects a nonempty initial ledger before dispatch.
 
-**Actually executed:** 92 isolated tests PASS; main review verified 11 overlay files and 359 unchanged dependencies, with 48 objective/durable tests and 4 source-export repair tests PASS. [Compact evidence and replay](docs/full_project_execution/project_session/EXPERIMENT_OBJECTIVE_CASE_ARTIFACT_CHECKPOINT.json). COMSOL native case reload/source export and Windows runtime remain **NOT_RUN**; simulated compatibility tests are not platform acceptance.
+**Actually executed:** 142 isolated tests PASS; main verified five source files and 367 unchanged dependencies, then reran all 142 tests on latest F16 baseline `6dba12d`, all PASS. Both Java fixture compilations PASS. The original manual-attribution counterexample and missing/wrong/replaced receipt negatives reject. [Compact evidence and replay](docs/full_project_execution/w24/SAVED_PRODUCER_CHAIN_CHECKPOINT.json).
 
-W23 CV topology software was published at `3d63ad9` (56 isolated / 56 main tests PASS). Full-aperture tilted geometry and PML support remain open; an explicit complex Scaling-map candidate is being prepared. W24 production capture remains CHANGES_REQUIRED pending real Study.run saved-file path/size/hash authentication; repair validation is running.
+**Native solve, saved-MPH reopen, Maxwell branch state and physical history acceptance remain NOT_RUN/UNVERIFIED.** Prior failures are retained; no new native process was launched. Cleanup of failed owned native resources remains blocked by pending explicit local termination authorization following automatic approval rejection.
 
-Automatic approval previously rejected cleanup of failed owned native resources; explicit local termination authorization remains pending, with no cleanup/relaunch.
+F16 objective/case-artifact software was published at `6dba12d` (92 isolated, 48 + 4 main tests PASS). W23 CV topology software was published at `3d63ad9` (56 isolated / 56 main tests PASS); full-aperture complex Scaling support remains under implementation. Original W01–W22 auditing has identified missing production routes for W21 stage APIs; this gap is not covered by the software milestones above.
 
 ## Latest accepted software baseline
 
@@ -38,4 +38,4 @@ Earlier source checkpoints and failures remain in the existing state and linked 
 
 Continue the three Luna Max work streams: complete F16 weighted native evidence and original experiment reporting/model gaps; complete W23 radiation geometry, capture/quadrature/power-balance and original optics acceptance; complete W24 UV/gel/reference/viscoelastic implementation and remaining science. Publish each accepted software stage immediately. Then freeze isolated managed native candidates, execute their reviewed scope, complete all remaining W01–W26 work, and run a fresh independent overall review with repair/retest until accepted.
 
-The latest focused replay is in [EXPERIMENT_OBJECTIVE_CASE_ARTIFACT_CHECKPOINT.json](docs/full_project_execution/project_session/EXPERIMENT_OBJECTIVE_CASE_ARTIFACT_CHECKPOINT.json). Recover from GitHub and existing state. Last previously verified GitHub sync: 3d63ad9f8bfe8d04903e1a09b1b1aee4e103a959; this stage is recorded as synchronized only after post-push fetch and HEAD/origin-main equality.
+The latest focused replay is in [SAVED_PRODUCER_CHAIN_CHECKPOINT.json](docs/full_project_execution/w24/SAVED_PRODUCER_CHAIN_CHECKPOINT.json). Recover from GitHub and existing state. Last previously verified GitHub sync: 6dba12d0259e477311ec97eb94400bc493fb4e9a; this stage is recorded as synchronized only after post-push fetch and HEAD/origin-main equality.

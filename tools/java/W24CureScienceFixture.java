@@ -21,6 +21,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.time.Instant;
@@ -1229,6 +1230,23 @@ public final class W24CureScienceFixture {
         }
     }
 
+    private static String sha256File(Path path) throws IOException {
+        MessageDigest digest;
+        try {
+            digest = MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 unavailable", exception);
+        }
+        try (BufferedInputStream input = new BufferedInputStream(Files.newInputStream(path))) {
+            byte[] buffer = new byte[1024 * 1024];
+            int count;
+            while ((count = input.read(buffer)) != -1) digest.update(buffer, 0, count);
+        }
+        StringBuilder text = new StringBuilder();
+        for (byte value : digest.digest()) text.append(String.format("%02x", value & 0xff));
+        return text.toString();
+    }
+
     private static String toJson(Object value) {
         StringBuilder text = new StringBuilder();
         appendJson(text, value);
@@ -1440,11 +1458,32 @@ public final class W24CureScienceFixture {
         study.run();
         long elapsed = System.nanoTime() - started;
         String savePath = String.valueOf(args.getOrDefault("save_after_success_path", ""));
+        Map<String, Object> immediateSaveReceipt = null;
         if (!savePath.isBlank()) {
             try {
                 model.save(savePath);
             } catch (IOException exception) {
                 throw new IllegalStateException("study returned but immediate baseline MPH save failed", exception);
+            }
+            Path savedPath = Path.of(savePath);
+            if (Files.isSymbolicLink(savedPath) ||
+                !Files.isRegularFile(savedPath, LinkOption.NOFOLLOW_LINKS)) {
+                throw new IllegalStateException("Study.run save did not produce a regular nonsymlink MPH file");
+            }
+            try {
+                long sizeBeforeHash = Files.size(savedPath);
+                String digest = sha256File(savedPath);
+                long sizeAfterHash = Files.size(savedPath);
+                if (sizeBeforeHash <= 0 || sizeBeforeHash != sizeAfterHash) {
+                    throw new IllegalStateException("immediate MPH save changed size while its receipt was created");
+                }
+                immediateSaveReceipt = new LinkedHashMap<>();
+                immediateSaveReceipt.put("status", "STUDY_RUN_MPH_SAVED_AND_HASHED");
+                immediateSaveReceipt.put("path", savePath);
+                immediateSaveReceipt.put("size_bytes", sizeAfterHash);
+                immediateSaveReceipt.put("sha256", digest);
+            } catch (IOException exception) {
+                throw new IllegalStateException("study returned but immediate baseline MPH receipt failed", exception);
             }
         }
         Map<String, Object> result = new LinkedHashMap<>();
@@ -1456,6 +1495,7 @@ public final class W24CureScienceFixture {
         result.put("time_feature", time.tag());
         result.put("elapsed_s", elapsed / 1.0e9);
         result.put("immediate_save_path", savePath.isBlank() ? null : savePath);
+        result.put("immediate_save_receipt", immediateSaveReceipt);
         result.put("study_run_calls_from_this_action", 1);
         return result;
     }

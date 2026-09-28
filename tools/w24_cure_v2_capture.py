@@ -42,6 +42,14 @@ ALLOWED_CAPTURE_ACTIONS = {
     "solution_snapshot_v2": ("W24CureLawV2ControlFixture#run", None),
     "history_capture_v2": ("W24CureScienceFixture#run", None),
 }
+ALLOWED_PUBLIC_ACTIONS = {
+    **ALLOWED_CAPTURE_ACTIONS,
+    "study_run": ("W24CureScienceFixture#run", None),
+    "readback": ("W24CureScienceFixture#run", None),
+    "solution_snapshot": ("W24CureScienceFixture#run", None),
+    "cure_metrics_capture": ("W24CureScienceFixture#run", None),
+    "cure_v2_contract_readback": ("W24CureCouponFixture#run", None),
+}
 
 
 class CaptureError(AcceptanceError):
@@ -255,6 +263,117 @@ def validate_capture_artifact(artifact: Mapping[str, Any], *, expected_action: s
     }
 
 
+def validate_cure_law_v2_contract_readback(readback: Mapping[str, Any]) -> dict[str, Any]:
+    """Fail closed on an actual loaded-model W24 cure-law v2 readback."""
+    row = _require_mapping(readback, "cure-law v2 readback")
+    dose = _require_mapping(row.get("relative_exposure_dose"), "relative_exposure_dose")
+    spatial = _require_mapping(row.get("spatial_uv_readback"), "spatial_uv_readback")
+    activation = _require_mapping(row.get("activation_readback"), "activation_readback")
+    visco = _require_mapping(row.get("viscoelastic_readback"), "viscoelastic_readback")
+    if row.get("cure_law_version") != "W24_CURE_LAW_V2":
+        raise CaptureError("loaded model did not publicly read back the explicit cure-law v2 version")
+    if (dose.get("field") != "Duv_rel" or dose.get("unit") != "s" or
+            dose.get("dependent_variable_quantity") != "time" or
+            dose.get("source") != "Irel" or dose.get("source_term_quantity") != "dimensionless" or
+            dose.get("initial") != "0[s]" or dose.get("source_scope") != "adhesive_only"):
+        raise CaptureError("loaded model relative-dose field/units/initial/selection readback is incomplete")
+    if (spatial.get("synthetic_estimated") is not True or
+            spatial.get("absolute_irradiance") is not False or
+            isinstance(spatial.get("z_surface_m"), bool) or
+            not isinstance(spatial.get("z_surface_m"), (int, float)) or
+            abs(float(spatial["z_surface_m"]) - 550e-6) > 1e-12 or
+            spatial.get("intensity_expression") != "S_uv*exp(-muUV*(zUVSurface-z))"):
+        raise CaptureError("loaded model spatial UV readback is not the frozen relative Beer-Lambert contract")
+    try:
+        alpha_gel = float(activation.get("alpha_gel"))
+        actfac = float(activation.get("actfac"))
+    except (TypeError, ValueError) as exc:
+        raise CaptureError("loaded model Activation readback omitted numeric alpha_gel/actfac") from exc
+    selection = activation.get("selection")
+    if (activation.get("feature_type") != "Activation" or abs(alpha_gel - 0.5) > 1e-12 or
+            abs(actfac - 1e-5) > 1e-15 or activation.get("actfac_was_set") is not False or
+            not isinstance(selection, list) or not selection):
+        raise CaptureError("loaded model Activation type/selection/gel/default-factor readback differs")
+    branch_k = visco.get("Kvm_v")
+    branch_g = visco.get("Gvm")
+    branch_tau = visco.get("tauvm")
+    if (visco.get("feature_type") != "Viscoelasticity" or
+            visco.get("material_model") != "GeneralizedMaxwell" or
+            visco.get("deformation_model") != "full" or
+            not all(isinstance(values, list) and len(values) == 1 and
+                    isinstance(values[0], str) and values[0]
+                    for values in (branch_k, branch_g, branch_tau)) or
+            visco.get("branch_order_binding") != "same ordered index across Kvm_v/Gvm/tauvm"):
+        raise CaptureError("loaded model full Generalized Maxwell ordered branch readback is incomplete")
+    tolerance_rows = row.get("dose_solver_tolerance_readbacks")
+    if not isinstance(tolerance_rows, Mapping) or set(tolerance_rows) != {"stdUV", "stdBake", "stdCool"}:
+        raise CaptureError("loaded model v2 dose solver tolerances are missing from one or more stages")
+    for tag, raw in tolerance_rows.items():
+        tolerance = _require_mapping(raw, f"dose_solver_tolerance_readbacks.{tag}")
+        if (tolerance.get("field") != "comp1_Duv_rel" or
+                tolerance.get("scale") != "unscaled" or tolerance.get("method") != "manual"):
+            raise CaptureError(f"loaded model Duv_rel solver tolerance readback differs for {tag}")
+        try:
+            atol = float(tolerance.get("absolute_tolerance"))
+        except (TypeError, ValueError) as exc:
+            raise CaptureError(f"loaded model Duv_rel solver atol is missing for {tag}") from exc
+        if not math.isfinite(atol) or abs(atol - 1e-8) > 1e-20:
+            raise CaptureError(f"loaded model Duv_rel solver atol differs for {tag}")
+    solver_rows = row.get("solver_readbacks")
+    expected_stages = {"stdUV", "stdBake", "stdCool"}
+    expected_solver_atols = {
+        "comp1_T": 1e-4,
+        "comp1_alpha": 1e-8,
+        "comp1_alpha_iso": 1e-8,
+        "comp1_qpost": 1e-8,
+        "comp1_u": 1e-12,
+        "comp1_w": 1e-12,
+    }
+    if not isinstance(solver_rows, Mapping) or set(solver_rows) != expected_stages:
+        raise CaptureError("loaded model v2 solver readback omitted a staged SolverSequence")
+    for stage, raw_solver in solver_rows.items():
+        solver = _require_mapping(raw_solver, f"solver_readbacks.{stage}")
+        fields = _require_mapping(solver.get("field_tolerances"), f"solver_readbacks.{stage}.field_tolerances")
+        if (set(fields) != set(expected_solver_atols) or
+                isinstance(solver.get("rtol"), bool) or
+                not isinstance(solver.get("rtol"), (int, float)) or
+                not math.isfinite(float(solver["rtol"])) or
+                abs(float(solver["rtol"]) - 1e-5) > 1e-15 or
+                solver.get("atolglobalmethod") != "unscaled" or
+                isinstance(solver.get("atolglobal"), bool) or
+                not isinstance(solver.get("atolglobal"), (int, float)) or
+                not math.isfinite(float(solver["atolglobal"])) or
+                abs(float(solver["atolglobal"]) - 1e-8) > 1e-18):
+            raise CaptureError(f"loaded model v2 solver global or dependent-field tolerance readback is incomplete for {stage}")
+        for field, expected_atol in expected_solver_atols.items():
+            values = _require_mapping(fields.get(field), f"solver_readbacks.{stage}.{field}")
+            try:
+                observed_atol = float(values.get("atol"))
+            except (TypeError, ValueError) as exc:
+                raise CaptureError(f"loaded model v2 solver atol is missing for {stage}/{field}") from exc
+            if (values.get("atolmethod") != "unscaled" or
+                    values.get("atolvaluemethod") != "manual" or
+                    not math.isfinite(observed_atol) or abs(observed_atol - expected_atol) > 1e-20):
+                raise CaptureError(f"loaded model v2 solver field tolerance differs for {stage}/{field}")
+    if row.get("native_study_run_calls") != 0:
+        raise CaptureError("cure-law v2 contract readback must not submit a solver run")
+    return {
+        "status": "V2_MODEL_CONTRACT_READBACK_VALIDATED_NATIVE_NOT_RUN",
+        "cure_law_version": "W24_CURE_LAW_V2",
+        "dose_field": "Duv_rel",
+        "activation_feature": "Activation",
+        "maxwell_model": "GeneralizedMaxwell",
+        "maxwell_branch_count": 1,
+        "full_dof_absolute_tolerances": {
+            **expected_solver_atols,
+            "comp1_Duv_rel": 1e-8,
+        },
+        "maxwell_branch_reference_state": "UNVERIFIED",
+        "activation_history_semantics": "UNVERIFIED",
+        "native_study_run_calls": 0,
+    }
+
+
 def _verify_public_capture_record(response: Any, operation_record: Any, *, project_root: Path,
                                   source_artifact_path: Path, expected_source_sha256: str,
                                   expected_action: str, expected_project_id: str,
@@ -276,7 +395,7 @@ def _verify_public_capture_record(response: Any, operation_record: Any, *, proje
     arguments = _require_mapping(nested.get("arguments"), "code.execute_java.arguments")
     if nested.get("mode") != "trusted":
         raise CaptureError("capture Java route did not use the approved trusted execution mode")
-    entrypoint, _expected_case = ALLOWED_CAPTURE_ACTIONS.get(expected_action, (None, None))
+    entrypoint, _expected_case = ALLOWED_PUBLIC_ACTIONS.get(expected_action, (None, None))
     if entrypoint is None or nested.get("entrypoint") != entrypoint:
         raise CaptureError("capture Java entrypoint does not match the frozen action route")
     if arguments.get("action") != expected_action:
@@ -356,6 +475,175 @@ def _verify_public_capture_record(response: Any, operation_record: Any, *, proje
         raise CaptureError("RPC response differs from the matching durable Job result")
     if record.get("job_id") is None or execution.get("job_id") != record.get("job_id"):
         raise CaptureError("capture response job id differs from the matching durable Job row")
+    if expected_action == "cure_v2_contract_readback":
+        readback = _require_mapping(java.get("readback"), "Java cure-law v2 model readback")
+        validated = validate_cure_law_v2_contract_readback(readback)
+        return {
+            "status": "PUBLIC_OPERATION_AND_V2_MODEL_READBACK_MATCHED_NATIVE_REVIEW_REQUIRED",
+            "source_path": str(source_path), "source_sha256": observed_source_sha,
+            "project_id": expected_project_id, "session_id": expected_session_id,
+            "model_ref": dict(expected_model_ref), "revision_before": expected_revision,
+            "revision_after": returned_revision, "request_id": record["request_id"],
+            "operation_id": record["operation_id"], "idempotency_key": record["idempotency_key"],
+            "request_hash": record["request_hash"],
+            "job_id": record["result"].get("execution", {}).get("job_id"),
+            "artifact": None, "artifact_receipt": None, "artifact_data": None,
+            "readback_data": dict(readback), "capture_validation": validated,
+            "native_acceptance": "NOT_RUN",
+        }
+    if expected_action == "study_run":
+        arguments = _require_mapping(arguments, "Study.run public arguments")
+        readback = _require_mapping(java.get("readback"), "Java Study.run readback")
+        if (readback.get("status") != "NATIVE_STUDY_RUN_RETURNED" or
+                readback.get("case_id") != arguments.get("case_id") or
+                readback.get("study_tag") != arguments.get("study_tag") or
+                readback.get("study_run_calls_from_this_action") != 1 or
+                not isinstance(readback.get("solver_sequence"), str) or not readback.get("solver_sequence")):
+            raise CaptureError("Study.run public Java response is not the exact one-call requested solve receipt")
+        requested_save_path = arguments.get("save_after_success_path")
+        artifact = None
+        artifact_receipt = readback.get("immediate_save_receipt")
+        save_validation: dict[str, Any]
+        if requested_save_path is not None:
+            if not isinstance(requested_save_path, str) or not requested_save_path:
+                raise CaptureError("Study.run save request path must be a nonempty exact project path")
+            save_path = _resolve_project_file(
+                project_root, requested_save_path, "Study.run immediate-save artifact", must_exist=True)
+            if str(save_path) != requested_save_path:
+                raise CaptureError("Study.run immediate-save request path is not its canonical registered-project path")
+            receipt = _require_mapping(artifact_receipt, "Study.run immediate-save receipt")
+            size = save_path.stat().st_size
+            digest = _sha256(save_path)
+            if (readback.get("immediate_save_path") != requested_save_path or
+                    receipt.get("status") != "STUDY_RUN_MPH_SAVED_AND_HASHED" or
+                    receipt.get("path") != requested_save_path or
+                    not _is_int(receipt.get("size_bytes")) or receipt["size_bytes"] <= 0 or
+                    not isinstance(receipt.get("sha256"), str) or
+                    not SHA256_RE.fullmatch(receipt["sha256"]) or
+                    size != receipt.get("size_bytes") or digest != receipt.get("sha256")):
+                raise CaptureError("Study.run save path/size/SHA-256 receipt does not match its request and saved bytes")
+            artifact = {"path": str(save_path), "size_bytes": size, "sha256": digest}
+            save_validation = {
+                "status": "PUBLIC_STUDY_RUN_SAVE_RECEIPT_MATCHED_REQUEST_AND_BYTES",
+                "save_request_path": requested_save_path,
+                "size_bytes": size,
+                "sha256": digest,
+            }
+        else:
+            if (readback.get("immediate_save_path") not in (None, "") or
+                    artifact_receipt is not None):
+                raise CaptureError("Study.run returned an immediate-save receipt without a matching save request")
+            artifact_receipt = None
+            save_validation = {
+                "status": "PUBLIC_STUDY_RUN_NO_SAVE_REQUEST",
+                "save_request_path": None,
+            }
+        return {
+            "status": "PUBLIC_OPERATION_AND_STUDY_RUN_MATCHED_NATIVE_REVIEW_REQUIRED",
+            "source_path": str(source_path), "source_sha256": observed_source_sha,
+            "project_id": expected_project_id, "session_id": expected_session_id,
+            "model_ref": dict(expected_model_ref), "revision_before": expected_revision,
+            "revision_after": returned_revision, "request_id": record["request_id"],
+            "operation_id": record["operation_id"], "idempotency_key": record["idempotency_key"],
+            "request_hash": record["request_hash"],
+            "job_id": record["result"].get("execution", {}).get("job_id"),
+            "artifact": artifact,
+            "artifact_receipt": dict(artifact_receipt) if isinstance(artifact_receipt, Mapping) else None,
+            "artifact_data": None,
+            "readback_data": dict(readback), "capture_validation": {
+                "status": "PUBLIC_STUDY_RUN_RECEIPT_SCHEMA_VALIDATED_NATIVE_NOT_RUN",
+                "case_id": arguments.get("case_id"), "study_tag": arguments.get("study_tag"),
+                "solver_tag": readback.get("solver_sequence"),
+                "study_run_calls_from_this_action": 1,
+                **save_validation,
+            }, "native_acceptance": "NOT_RUN",
+        }
+    if expected_action == "readback":
+        readback = _require_mapping(java.get("readback"), "Java native setup readback")
+        if (readback.get("status") != "SCIENCE_ACTIONS_READY_NOT_SOLVED" or
+                readback.get("study_run_calls") != 0 or
+                not isinstance(readback.get("studies"), list) or
+                not isinstance(readback.get("solver_readbacks"), Mapping) or
+                not isinstance(readback.get("study_time_readbacks"), Mapping) or
+                readback.get("quasistatic_readback") != "Quasistatic"):
+            raise CaptureError("public native setup readback is incomplete or reports a solver run")
+        return {
+            "status": "PUBLIC_NATIVE_SETUP_READBACK_MATCHED_NATIVE_REVIEW_REQUIRED",
+            "source_path": str(source_path), "source_sha256": observed_source_sha,
+            "project_id": expected_project_id, "session_id": expected_session_id,
+            "model_ref": dict(expected_model_ref), "revision_before": expected_revision,
+            "revision_after": returned_revision, "request_id": record["request_id"],
+            "operation_id": record["operation_id"], "idempotency_key": record["idempotency_key"],
+            "request_hash": record["request_hash"],
+            "job_id": record["result"].get("execution", {}).get("job_id"),
+            "artifact": None, "artifact_receipt": None, "artifact_data": None,
+            "readback_data": dict(readback), "capture_validation": {
+                "status": "PUBLIC_SETUP_READBACK_SCHEMA_VALIDATED_NATIVE_NOT_RUN",
+                "native_study_run_calls": 0,
+                "study_count": len(readback["studies"]),
+                "solver_count": len(readback["solver_readbacks"]),
+                "study_time_readback_count": len(readback["study_time_readbacks"]),
+                "quasistatic_readback": "Quasistatic",
+            }, "native_acceptance": "NOT_RUN",
+        }
+    if expected_action in {"solution_snapshot", "cure_metrics_capture"}:
+        readback = _require_mapping(java.get("readback"), f"Java {expected_action} readback")
+        if (arguments.get("solver_tag") != readback.get("solver_tag") or
+                arguments.get("path") != readback.get("path")):
+            raise CaptureError(f"{expected_action} response differs from its exact public solver/path request")
+        artifact_path = _resolve_project_file(project_root, readback.get("path"),
+                                              f"{expected_action} artifact", must_exist=True)
+        size = artifact_path.stat().st_size
+        digest = _sha256(artifact_path)
+        if expected_action == "solution_snapshot":
+            if (readback.get("status") != "SOLUTION_SNAPSHOT_WRITTEN" or
+                    readback.get("real_solution") is not True or
+                    not _is_int(readback.get("stored_time_count")) or readback["stored_time_count"] <= 0 or
+                    not _is_int(readback.get("dof_count")) or readback["dof_count"] <= 0 or
+                    not isinstance(readback.get("dof_names"), list)):
+                raise CaptureError("solution_snapshot action lacks its exact completed real-solution readback")
+            if readback.get("size_bytes") is not None and readback.get("size_bytes") != size:
+                raise CaptureError("solution_snapshot artifact size differs from its public readback")
+            from tools.run_native_w24_cure_science import iter_solution_snapshot
+
+            frames = list(iter_solution_snapshot(artifact_path))
+            if (len(frames) != readback["stored_time_count"] or not frames or
+                    frames[0]["dofs"].get("dofNames") != readback.get("dof_names") or
+                    len(frames[0]["dofs"].get("geomNums", [])) != readback["dof_count"]):
+                raise CaptureError("solution_snapshot artifact differs from its exact public DOF/time readback")
+            validation = {"status": "PUBLIC_SOLUTION_SNAPSHOT_READBACK_MATCHED_NATIVE_NOT_RUN",
+                          "stored_time_count": len(frames), "dof_count": readback["dof_count"],
+                          "dof_names": list(readback["dof_names"]), "sha256": digest}
+        else:
+            if (readback.get("status") != "NATIVE_CURE_METRICS_CAPTURED" or
+                    not isinstance(readback.get("sha256"), str) or
+                    not SHA256_RE.fullmatch(readback["sha256"]) or
+                    readback.get("size_bytes") != size or digest != readback.get("sha256")):
+                raise CaptureError("cure_metrics_capture artifact size or SHA-256 differs from its public readback")
+            try:
+                artifact_data = json.loads(artifact_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError) as exc:
+                raise CaptureError("cure_metrics_capture artifact is not valid JSON") from exc
+            if (not isinstance(artifact_data, Mapping) or
+                    artifact_data.get("status") != "NATIVE_CURE_METRICS_CAPTURED" or
+                    artifact_data.get("solver_tag") != readback.get("solver_tag")):
+                raise CaptureError("cure_metrics_capture artifact differs from its public solver/status readback")
+            validation = {"status": "PUBLIC_CURE_METRICS_ARTIFACT_HASH_MATCHED_NATIVE_NOT_RUN",
+                          "sha256": digest, "size_bytes": size}
+        return {
+            "status": "PUBLIC_POST_CAPTURE_OPERATION_MATCHED_NATIVE_REVIEW_REQUIRED",
+            "source_path": str(source_path), "source_sha256": observed_source_sha,
+            "project_id": expected_project_id, "session_id": expected_session_id,
+            "model_ref": dict(expected_model_ref), "revision_before": expected_revision,
+            "revision_after": returned_revision, "request_id": record["request_id"],
+            "operation_id": record["operation_id"], "idempotency_key": record["idempotency_key"],
+            "request_hash": record["request_hash"],
+            "job_id": record["result"].get("execution", {}).get("job_id"),
+            "artifact": {"path": str(artifact_path), "size_bytes": size, "sha256": digest},
+            "artifact_receipt": dict(readback), "artifact_data": None,
+            "readback_data": dict(readback), "capture_validation": validation,
+            "native_acceptance": "NOT_RUN",
+        }
     artifact_receipt = _require_mapping(java.get("readback"), "Java capture artifact receipt")
     if arguments.get("solver_tag") != artifact_receipt.get("solver_tag"):
         raise CaptureError("Java result solver tag differs from the exact public request")
@@ -434,6 +722,7 @@ def _verify_public_capture_record(response: Any, operation_record: Any, *, proje
         "idempotency_key": record["idempotency_key"],
         "request_hash": record["request_hash"],
         "job_id": record["result"].get("execution", {}).get("job_id"),
+        "artifact_receipt": dict(artifact_receipt),
         "artifact": evidence,
         "artifact_data": artifact,
         "capture_validation": validated,
@@ -486,6 +775,119 @@ def verify_public_capture(daemon: Any, response: Any, *, operation_id: str,
         expected_model_ref=expected_model_ref,
         expected_revision=expected_revision,
     )
+
+
+def verify_public_model_load(daemon: Any, response: Any, *, project_root: Path,
+                             requested_path: Path, expected_file_sha256: str,
+                             expected_project_id: str, expected_session_id: str,
+                             expected_model_ref: Mapping[str, Any],
+                             expected_revision: int) -> dict[str, Any]:
+    """Authenticate one exact model_load and its saved MPH against SQLite.
+
+    The project id and operation/job metadata come from the current daemon's
+    private store. This helper does not accept caller-supplied metadata copies.
+    """
+    from comsol_mcp._operation_store import OperationStore
+    from comsol_mcp._execution_contract import canonical_request_hash
+
+    reply = _require_mapping(response, "model_load response")
+    store = getattr(daemon, "store", None)
+    authority = getattr(daemon, "project_authority", None)
+    backend = getattr(daemon, "backend", None)
+    if (not isinstance(store, OperationStore) or
+            not callable(getattr(authority, "authorize_operation", None)) or
+            not callable(getattr(backend, "model_project_binding", None))):
+        raise CaptureError("model_load verification requires the current private OperationStore, project authority, and managed backend")
+    try:
+        authority.authorize_operation(expected_project_id, "project_write")
+    except Exception as exc:
+        raise CaptureError("model_load project is no longer authorized") from exc
+
+    execution = _require_mapping(reply.get("execution"), "model_load response.execution")
+    response_data = reply.get("data")
+    declared_project_fields = [("response", reply)]
+    if isinstance(response_data, Mapping):
+        declared_project_fields.append(("response.data", response_data))
+    declared_project_fields.append(("response.execution", execution))
+    for label, source in declared_project_fields:
+        echoed_project_id = source.get("project_id")
+        if echoed_project_id is not None and echoed_project_id != expected_project_id:
+            raise CaptureError(f"model_load {label} echoed a different project id")
+    operation_id = execution.get("operation_id")
+    if not isinstance(operation_id, str) or not operation_id:
+        raise CaptureError("model_load response omitted its durable operation_id")
+    record = store.get_operation(operation_id)
+    job = store.operation_job(operation_id)
+    if (not isinstance(record, Mapping) or record.get("operation_id") != operation_id or
+            not isinstance(job, Mapping) or job.get("operation_id") != operation_id):
+        raise CaptureError("original model_load operation or its matching Job row is unavailable")
+    if (record.get("operation") != "model_load" or record.get("status") != "SUCCEEDED" or
+            job.get("status") != "SUCCEEDED" or
+            job.get("operation_id") != operation_id or
+            not isinstance(job.get("job_id"), str) or not job.get("job_id")):
+        raise CaptureError("model_load requires its exact successful terminal OperationStore and Job rows")
+
+    metadata = _require_mapping(record.get("metadata"), "model_load OperationStore.metadata")
+    arguments = _require_mapping(metadata.get("arguments"), "model_load OperationStore.arguments")
+    stored_execution = _require_mapping(metadata.get("execution"), "model_load OperationStore.execution")
+    path = _resolve_project_file(project_root, str(requested_path), "saved MPH", must_exist=True)
+    if (arguments.get("path") != str(path) or
+            stored_execution.get("project_id") != expected_project_id or
+            stored_execution.get("session_id") != expected_session_id):
+        raise CaptureError("model_load operation path or registered project identity differs from the requested source")
+    if (stored_execution.get("model_ref") is not None or
+            stored_execution.get("expected_revision") is not None):
+        raise CaptureError("public model_load request must be unbound; its returned ModelRef is verified from the immutable result")
+    if (not isinstance(expected_file_sha256, str) or not SHA256_RE.fullmatch(expected_file_sha256) or
+            _sha256(path) != expected_file_sha256):
+        raise CaptureError("saved MPH bytes differ from the frozen source artifact hash")
+
+    for key in ("request_id", "operation_id", "idempotency_key", "request_hash"):
+        if not isinstance(record.get(key), str) or execution.get(key) != record.get(key):
+            raise CaptureError(f"model_load response does not match the durable OperationStore {key}")
+    if execution.get("job_id") != job.get("job_id"):
+        raise CaptureError("model_load response job_id differs from its exact durable Job row")
+    timeouts = _require_mapping(record.get("effective_timeouts"), "model_load effective timeouts")
+    recomputed = canonical_request_hash(
+        "model_load", dict(arguments), stored_execution.get("model_ref"),
+        stored_execution.get("expected_revision"),
+        project_id=expected_project_id,
+        session_id=stored_execution.get("session_id"),
+        queue_timeout_s=timeouts.get("queue_timeout_s"),
+        execution_timeout_s=timeouts.get("execution_timeout_s"),
+        no_progress_warning_s=timeouts.get("no_progress_warning_s"),
+    )
+    if record.get("request_hash") != recomputed:
+        raise CaptureError("model_load request_hash does not authenticate its path and project-bound request")
+
+    response_result = _require_mapping(record.get("result"), "model_load stored result")
+    if response_result != dict(reply) or job.get("result") != dict(reply):
+        raise CaptureError("observed model_load response differs from its immutable OperationStore or Job result")
+    if (execution.get("session_id") != expected_session_id or
+            execution.get("model_ref") != dict(expected_model_ref) or
+            execution.get("revision") != expected_revision):
+        raise CaptureError("model_load response changed the exact session, ModelRef, or revision")
+    persisted = backend.model_project_binding(dict(expected_model_ref))
+    if (not isinstance(persisted, Mapping) or persisted.get("attribution") != "PROJECT_BOUND" or
+            persisted.get("project_id") != expected_project_id):
+        raise CaptureError("loaded ModelRef lacks its authoritative persisted project binding")
+    return {
+        "status": "PUBLIC_MODEL_LOAD_AND_SAVED_MPH_AUTHENTICATED",
+        "project_id": expected_project_id,
+        "session_id": expected_session_id,
+        "model_ref": dict(expected_model_ref),
+        "revision": expected_revision,
+        "request_id": record["request_id"],
+        "operation_id": operation_id,
+        "idempotency_key": record["idempotency_key"],
+        "request_hash": record["request_hash"],
+        "job_id": job["job_id"],
+        "path": str(path),
+        "size_bytes": path.stat().st_size,
+        "sha256": expected_file_sha256,
+        "persisted_project_binding": dict(persisted),
+        "native_acceptance": "NOT_RUN",
+    }
 
 
 def dispatch_capture(daemon: Any, *, project_root: Path, source_artifact: str,

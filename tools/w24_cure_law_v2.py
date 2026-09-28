@@ -394,6 +394,167 @@ def compare_v2_history_handoff(source: Mapping[str, Any], target: Mapping[str, A
     }
 
 
+def compare_v2_history_schedules(source_frames: Sequence[Mapping[str, Any]],
+                                 target_frames: Sequence[Mapping[str, Any]], *,
+                                 dof_abs_tolerances: Mapping[str, float],
+                                 history_abs_tolerances: Mapping[str, float]) -> dict[str, Any]:
+    """Compare authenticated-caller supplied full V2 schedules field by field.
+
+    This numerical helper deliberately does not authenticate the public source
+    route. Its caller must independently bind every frame to its verified
+    OperationStore response before setting any authenticated status.
+    Unlike a post-gel handoff check, schedule comparison permits pre-gel
+    inactive activation values and compares the full binary history directly.
+    """
+    if (not isinstance(source_frames, Sequence) or isinstance(source_frames, (str, bytes)) or
+            not isinstance(target_frames, Sequence) or isinstance(target_frames, (str, bytes)) or
+            not source_frames or len(source_frames) != len(target_frames)):
+        raise AcceptanceError("full V2 schedules must contain the same nonempty frame count")
+    if not isinstance(dof_abs_tolerances, Mapping) or not dof_abs_tolerances:
+        raise AcceptanceError("per-field full-DOF schedule tolerances are required")
+    required_history = {"T", "alpha", "Duv_rel", "qpost", "u", "w",
+                       "solid.isactive", "solid.wasactive"}
+    if not isinstance(history_abs_tolerances, Mapping) or set(history_abs_tolerances) != required_history:
+        raise AcceptanceError("history schedule tolerances must exactly cover the cure/activation contract")
+
+    source_times: list[float] = []
+    target_times: list[float] = []
+    first_left: dict[tuple[Any, ...], tuple[str, float, float]] | None = None
+    first_right: dict[tuple[Any, ...], tuple[str, float, float]] | None = None
+    max_by_name: dict[str, float] = {}
+    history_max: dict[str, float] = {field: 0.0 for field in required_history}
+    total_dofs = 0
+    for frame_index, (source, target) in enumerate(zip(source_frames, target_frames)):
+        if not isinstance(source, Mapping) or not isinstance(target, Mapping):
+            raise AcceptanceError("full V2 schedule frames must be mappings")
+        source_time = _finite(source.get("time_s"), f"source_frames[{frame_index}].time_s")
+        target_time = _finite(target.get("time_s"), f"target_frames[{frame_index}].time_s")
+        if abs(source_time - target_time) > 1e-12:
+            raise AcceptanceError("full V2 schedule frames do not share exact stored times")
+        source_times.append(source_time)
+        target_times.append(target_time)
+        source_metadata = _require_frame_v2_snapshot(source, f"source_frames[{frame_index}]")
+        target_metadata = _require_frame_v2_snapshot(target, f"target_frames[{frame_index}]")
+        if source_metadata["coordinate_axes"] != target_metadata["coordinate_axes"]:
+            raise AcceptanceError("full V2 schedule coordinate axis counts differ")
+        left = dof_value_map(source)
+        right = dof_value_map(target)
+        if set(left) != set(right):
+            raise AcceptanceError("complete full V2 schedule DOF identities differ")
+        if first_left is None:
+            first_left, first_right = left, right
+            observed_names = {row[0] for row in left.values()}
+            axes = source_metadata["coordinate_axes"]
+            required_fields = {"comp1_T", "comp1_alpha", "comp1_Duv_rel", "comp1_qpost"}
+            required_fields |= ({"comp1_u", "comp1_w"} if axes == 2 else
+                                {"comp1_u", "comp1_v", "comp1_w"})
+            if not required_fields.issubset(observed_names):
+                raise AcceptanceError("full V2 schedule lacks required cure or displacement DOF members")
+            if observed_names != set(dof_abs_tolerances):
+                raise AcceptanceError("full-DOF schedule tolerances must exactly cover observed DOF names")
+            max_by_name = {name: 0.0 for name in observed_names}
+            total_dofs = len(left)
+        elif (set(left) != set(first_left) or
+              {key: row[0] for key, row in left.items()} !=
+              {key: row[0] for key, row in first_left.items()} or
+              {key: row[0] for key, row in right.items()} !=
+              {key: row[0] for key, row in first_right.items()}):
+            raise AcceptanceError("full V2 schedule changed its exact DOF mapping between stored times")
+        for key, (name, left_real, left_imag) in left.items():
+            _, right_real, right_imag = right[key]
+            tolerance = _finite(dof_abs_tolerances[name], f"dof_abs_tolerances.{name}")
+            if tolerance < 0:
+                raise AcceptanceError("full-DOF schedule tolerances cannot be negative")
+            error = max(abs(left_real - right_real), abs(left_imag - right_imag))
+            if error > tolerance:
+                raise AcceptanceError(f"full schedule DOF {name} changed by {error:g}, above {tolerance:g}")
+            max_by_name[name] = max(max_by_name[name], error)
+
+    if any(b <= a for a, b in zip(source_times, source_times[1:])) or source_times != target_times:
+        raise AcceptanceError("full V2 schedules must share a finite, strictly increasing time vector")
+
+    expected_expressions = ["T", "alpha", "Duv_rel", "qpost", "u", "w",
+                            "solid.isactive", "solid.wasactive"]
+    expected_units = ["K", "1", "s", "1", "m", "m", "1", "1"]
+
+    def read_history_frame(frame: Mapping[str, Any], label: str,
+                           time_s: float) -> dict[str, list[float]]:
+        capture = frame.get("history_capture")
+        if (not isinstance(capture, Mapping) or
+                capture.get("schema") != "W24_CURE_LAW_V2_HISTORY_CAPTURE_V1" or
+                capture.get("expressions") != expected_expressions or
+                capture.get("units") != expected_units or
+                capture.get("coordinates_m") != [[25e-6, 520e-6], [50e-6, 530e-6], [75e-6, 540e-6]] or
+                capture.get("dataset_type_requested") != "Solution" or
+                capture.get("dataset_solution_readback") != capture.get("solver_tag") or
+                capture.get("time_source") != "SolverSequence.getPVals" or
+                capture.get("quasistatic_readback") != "Quasistatic"):
+            raise AcceptanceError(f"{label} full V2 history identity/time/unit/coordinate contract differs")
+        capture_times = capture.get("stored_times_s")
+        if (not isinstance(capture_times, list) or not capture_times or
+                any(not math.isfinite(_finite(value, f"{label}.stored_times_s")) for value in capture_times) or
+                any(float(b) <= float(a) for a, b in zip(capture_times, capture_times[1:]))):
+            raise AcceptanceError(f"{label} V2 capture has an invalid native stored-time vector")
+        matches = [i for i, value in enumerate(capture_times)
+                   if _finite(value, f"{label}.stored_times_s") == time_s]
+        if len(matches) != 1:
+            raise AcceptanceError(f"{label} V2 history does not contain the exact snapshot time {time_s:g}")
+        feature = capture.get("feature_readback")
+        if (not isinstance(feature, Mapping) or feature.get("type") != "Interp" or
+                feature.get("dataset") != capture.get("dataset_tag") or
+                feature.get("solnum") != "all" or feature.get("coorderr") != "on" or
+                feature.get("matherr") != "on" or feature.get("expressions") != expected_expressions or
+                feature.get("units") != expected_units or
+                feature.get("coordinates_m") != capture.get("coordinates_m") or
+                feature.get("shape") != [len(expected_expressions), len(capture_times), 3]):
+            raise AcceptanceError(f"{label} full V2 history feature readback is incomplete")
+        data = capture.get("data")
+        if not isinstance(data, list) or len(data) != len(expected_expressions):
+            raise AcceptanceError(f"{label} full V2 history schedule omitted expression series")
+        index = matches[0]
+        result: dict[str, list[float]] = {}
+        for field_index, field in enumerate(expected_expressions):
+            if not isinstance(data[field_index], list) or len(data[field_index]) != len(capture_times):
+                raise AcceptanceError(f"{label} V2 history time series is incomplete for {field}")
+            for time_index, values in enumerate(data[field_index]):
+                if not isinstance(values, list) or len(values) != 3:
+                    raise AcceptanceError(f"{label} V2 history probe coordinates are incomplete for {field}")
+                for point_index, raw in enumerate(values):
+                    value = _finite(raw, f"{label}.{field}[{time_index}][{point_index}]")
+                    if field in {"solid.isactive", "solid.wasactive"} and value not in (0.0, 1.0):
+                        raise AcceptanceError(f"{label} V2 activation history must be binary")
+            result[field] = [_finite(value, f"{label}.{field}[{index}]")
+                             for value in data[field_index][index]]
+        return result
+
+    for frame_index, (source, target) in enumerate(zip(source_frames, target_frames)):
+        left_data = read_history_frame(source, f"source_frames[{frame_index}]", source_times[frame_index])
+        right_data = read_history_frame(target, f"target_frames[{frame_index}]", target_times[frame_index])
+        for field in expected_expressions:
+            tolerance = _finite(history_abs_tolerances[field], f"history_abs_tolerances.{field}")
+            if tolerance < 0:
+                raise AcceptanceError("history schedule tolerances cannot be negative")
+            jumps = [abs(a - b) for a, b in zip(left_data[field], right_data[field])]
+            error = max(jumps, default=0.0)
+            if error > tolerance:
+                raise AcceptanceError(f"full history {field} changed by {error:g}, above {tolerance:g}")
+            history_max[field] = max(history_max[field], error)
+
+    return {
+        "status": "VISIBLE_HISTORY_MATCH_BRANCH_STATE_UNVERIFIED",
+        "source_identity_authenticated": False,
+        "compared_stored_time_count": len(source_times),
+        "compared_stored_times_s": source_times,
+        "full_dof_count_per_time": total_dofs,
+        "max_abs_jump_by_dof_name": max_by_name,
+        "history_max_abs_jumps": history_max,
+        "max_full_dof_jump": max(max_by_name.values(), default=0.0),
+        "max_history_jump": max(history_max.values(), default=0.0),
+        "maxwell_branch_state": "UNVERIFIED_NO_PUBLIC_REFERENCE_STATE_CAPTURE",
+        "native_semantics_verified": False,
+    }
+
+
 def _require_frame_v2_snapshot(frame: Mapping[str, Any], label: str) -> Mapping[str, Any]:
     metadata = frame.get("dofs")
     if not isinstance(metadata, Mapping) or metadata.get("snapshot_schema") != "W24-DOF-SNAPSHOT-2" or \

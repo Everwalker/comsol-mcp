@@ -36,6 +36,8 @@ if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 PLAN = REPO / "docs/full_project_execution/w24/W24_CURE_FIXTURE_PROPOSAL.md"
 SCIENCE_FIXTURE = REPO / "tools/java/W24CureScienceFixture.java"
+V2_CONTROL_FIXTURE = REPO / "tools/java/W24CureLawV2ControlFixture.java"
+COUPON_FIXTURE = REPO / "tools/java/W24CureCouponFixture.java"
 SETUP_RUNNER = REPO / "tools/run_native_w24_cure_preflight.py"
 MAX_BIRTH_BUDGET_S = 3600.0
 MAX_STUDY_RUN_SUBMISSIONS = 10
@@ -59,6 +61,11 @@ CURE_FIELD_NAMES = {
     "qpost": ("comp1.qpost",),
     "displacement_r": ("comp1.u",),
     "displacement_z": ("comp1.w",),
+}
+V2_HISTORY_ABS_TOLERANCES = {
+    "T": 1e-6, "alpha": 1e-12, "Duv_rel": 1e-12, "qpost": 1e-12,
+    "u": 1e-15, "w": 1e-15,
+    "solid.isactive": 0.0, "solid.wasactive": 0.0,
 }
 T0_K = 298.15
 
@@ -890,6 +897,10 @@ class NativeCampaignRuntime:
         self.prebirth_host_grants: dict[str, Any] | None = None
         self.input_paths: dict[str, Path] = {}
         self.science_fixture_path: Path | None = None
+        self.v2_control_fixture_path: Path | None = None
+        self.coupon_fixture_path: Path | None = None
+        self.cure_law_v2_enabled = False
+        self.candidate_source_manifest: Mapping[str, Mapping[str, Any]] = {}
         self.solve_ledger_path: Path | None = None
         self.worker_identity: dict[str, Any] | None = None
         self.worker_port: int | None = None
@@ -908,6 +919,14 @@ class NativeCampaignRuntime:
         from comsol_mcp._control_daemon import ControlDaemon
 
         self.preflight = preflight
+        source_manifest = candidate.get("source_manifest")
+        if not isinstance(source_manifest, Mapping):
+            raise CampaignError("frozen native candidate omitted its source manifest")
+        self.candidate_source_manifest = source_manifest
+        v2_setup = setup.get("cure_law_v2_capture")
+        if not isinstance(v2_setup, Mapping) or not isinstance(v2_setup.get("enabled"), bool):
+            raise CampaignError("validated template omitted its explicit v1/v2 capture-mode readback")
+        self.cure_law_v2_enabled = v2_setup["enabled"]
         if sys.platform != "darwin":
             raise CampaignError(f"native W24 execution requires macOS 6.4, observed {sys.platform}")
         startup_opt_in = preflight._configure_trusted_code_startup_opt_in()
@@ -956,14 +975,35 @@ class NativeCampaignRuntime:
         if (not isinstance(expected_fixture, Mapping) or
                 sha256(SCIENCE_FIXTURE) != expected_fixture.get("sha256")):
             raise CampaignError("native science Java fixture differs from the reviewed candidate source closure")
+        expected_v2_control = candidate["source_manifest"].get("tools/java/W24CureLawV2ControlFixture.java")
+        if (not isinstance(expected_v2_control, Mapping) or
+                sha256(V2_CONTROL_FIXTURE) != expected_v2_control.get("sha256")):
+            raise CampaignError("native V2 capture Java fixture differs from the reviewed candidate source closure")
+        expected_coupon = candidate["source_manifest"].get("tools/java/W24CureCouponFixture.java")
+        if (not isinstance(expected_coupon, Mapping) or
+                sha256(COUPON_FIXTURE) != expected_coupon.get("sha256")):
+            raise CampaignError("native coupon readback Java fixture differs from the reviewed candidate source closure")
         self.science_fixture_path = self.project_workspace / "W24CureScienceFixture.java"
         copies["science_java_fixture"] = _copy_file_exclusive(SCIENCE_FIXTURE, self.science_fixture_path)
-        compile_output = self.project_workspace / "offline-science-classes"
-        compile_receipt = preflight._compile_offline(compile_output,
-                                                     fixture_source=self.science_fixture_path)
+        self.v2_control_fixture_path = self.project_workspace / V2_CONTROL_FIXTURE.name
+        copies["v2_control_java_fixture"] = _copy_file_exclusive(
+            V2_CONTROL_FIXTURE, self.v2_control_fixture_path)
+        self.coupon_fixture_path = self.project_workspace / COUPON_FIXTURE.name
+        copies["coupon_java_fixture"] = _copy_file_exclusive(COUPON_FIXTURE, self.coupon_fixture_path)
+        compile_receipts: dict[str, Any] = {}
+        for label, source in (("science", self.science_fixture_path),
+                              ("v2_control", self.v2_control_fixture_path),
+                              ("coupon_readback", self.coupon_fixture_path)):
+            compile_output = self.project_workspace / f"offline-{label}-classes"
+            receipt = preflight._compile_offline(compile_output, fixture_source=source)
+            _write_json_fsynced(evidence / f"offline_{label}_javac.json", receipt)
+            if receipt.get("exit_code") != 0 or not receipt.get("output_classes"):
+                raise CampaignError(f"COMSOL 6.4 W24 {label} Java fixture did not compile in the registered workspace")
+            compile_receipts[label] = receipt
+        compile_receipt = {"status": "ALL_CAPTURE_AND_SCIENCE_JAVA_FIXTURES_COMPILED",
+                           "sources": compile_receipts,
+                           "cure_law_v2_capture_enabled": self.cure_law_v2_enabled}
         _write_json_fsynced(evidence / "offline_science_javac.json", compile_receipt)
-        if compile_receipt.get("exit_code") != 0 or not compile_receipt.get("output_classes"):
-            raise CampaignError("COMSOL 6.4 W24 science fixture did not compile in the registered workspace")
 
         outputs = self.project_workspace / "outputs"
         outputs.mkdir(exist_ok=False)
@@ -1088,7 +1128,8 @@ class NativeCampaignRuntime:
         from tools.run_native_resume_smoke import _dispatch
 
         if (self.server is None or self.project_id is None or self.project_workspace is None or
-                self.science_fixture_path is None or not self.input_paths or self.server.worker is None):
+                self.science_fixture_path is None or self.v2_control_fixture_path is None or
+                self.coupon_fixture_path is None or not self.input_paths or self.server.worker is None):
             raise CampaignError("owned server, project authority, fixture, input copies, or Worker is missing")
         os.environ["COMSOL_ROOT"] = str(self.server.shadow_root)
         os.environ["COMSOL_JAVA_HOME"] = str(self.preflight.JAVA_HOME)
@@ -1112,6 +1153,10 @@ class NativeCampaignRuntime:
             daemon=self.daemon, server=self.server, project_id=self.project_id,
             project_workspace=self.project_workspace, work=work, evidence=evidence,
             science_fixture=self.science_fixture_path, input_paths=self.input_paths,
+            v2_control_fixture=self.v2_control_fixture_path,
+            coupon_fixture=self.coupon_fixture_path,
+            cure_law_v2_enabled=self.cure_law_v2_enabled,
+            source_manifest=self.candidate_source_manifest,
             stress_components=stress_components, setup_runner=self.preflight,
             runtime_worker_limit=MAX_SEQUENTIAL_WORKERS)
         connect = adapter._dispatch("server_connect", {
@@ -1411,6 +1456,9 @@ class NativeScienceCampaignAdapter:
     def __init__(self, *, daemon: Any, server: Any, project_id: str,
                  project_workspace: Path, work: Path, evidence: Path,
                  science_fixture: Path, input_paths: Mapping[str, Path],
+                 v2_control_fixture: Path, coupon_fixture: Path,
+                 cure_law_v2_enabled: bool,
+                 source_manifest: Mapping[str, Mapping[str, Any]],
                  stress_components: Mapping[str, Mapping[str, str]],
                  setup_runner: Any, runtime_worker_limit: int = MAX_SEQUENTIAL_WORKERS):
         self.daemon = daemon
@@ -1420,6 +1468,18 @@ class NativeScienceCampaignAdapter:
         self.work = work
         self.evidence = evidence
         self.fixture = _project_path(self.workspace, science_fixture, must_exist=True)
+        self.v2_control_fixture = _project_path(self.workspace, v2_control_fixture, must_exist=True)
+        self.coupon_fixture = _project_path(self.workspace, coupon_fixture, must_exist=True)
+        if not isinstance(cure_law_v2_enabled, bool):
+            raise CampaignError("adapter v1/v2 mode must come from a validated setup readback")
+        self.cure_law_v2_enabled = cure_law_v2_enabled
+        self.source_manifest = {str(name): dict(row) for name, row in source_manifest.items()
+                                if isinstance(row, Mapping)}
+        self.fixture_source_hashes = {
+            "science": self._pinned_source_hash("tools/java/W24CureScienceFixture.java", self.fixture),
+            "v2_control": self._pinned_source_hash("tools/java/W24CureLawV2ControlFixture.java", self.v2_control_fixture),
+            "coupon": self._pinned_source_hash("tools/java/W24CureCouponFixture.java", self.coupon_fixture),
+        }
         self.input_paths = {key: _project_path(self.workspace, value, must_exist=True)
                             for key, value in input_paths.items()}
         self.stress_components = {role: dict(value) for role, value in stress_components.items()}
@@ -1432,6 +1492,10 @@ class NativeScienceCampaignAdapter:
         self.mechanics_models: dict[str, ManagedModelBinding] = {}
         self.slot_solver_tags: dict[tuple[str, str], str] = {}
         self.captures: dict[str, Mapping[str, Any]] = {}
+        self.v2_contract_readbacks: dict[str, dict[str, Any]] = {}
+        self.slot_native_setup_readbacks: dict[str, dict[str, Any]] = {}
+        self.slot_study_run_actions: dict[str, dict[str, Any]] = {}
+        self.staged_baseline_saved_model: dict[str, Any] | None = None
         self.reopened_stage_captures: dict[str, Mapping[str, Any]] = {}
         self.project_ledger: Path | None = None
         self.worker_sessions = 1
@@ -1465,6 +1529,14 @@ class NativeScienceCampaignAdapter:
             "successful_connected_worker_sessions": self.worker_sessions,
             "connection_status": "CONNECTED_BY_SETUP_PREFLIGHT",
             "at_epoch_s": _current_epoch_s()})
+
+    def _pinned_source_hash(self, manifest_key: str, project_path: Path) -> str:
+        row = self.source_manifest.get(manifest_key)
+        expected = row.get("sha256") if isinstance(row, Mapping) else None
+        observed = sha256(project_path)
+        if not isinstance(expected, str) or not SHA256_RE.fullmatch(expected) or expected != observed:
+            raise CampaignError(f"registered project Java source differs from frozen manifest: {manifest_key}")
+        return expected
 
     def _journaled_rpc(self, operation: str, call: Any, *, worker_required: bool) -> dict[str, Any]:
         """Persist request start/terminal response around every managed RPC.
@@ -1809,7 +1881,9 @@ class NativeScienceCampaignAdapter:
                 "model_binding": binding.as_record(), "persisted_binding": dict(stored)}
 
     def _fixture_action(self, binding: ManagedModelBinding, action: str,
-                        arguments: Mapping[str, Any], *, timeout_s: float) -> tuple[ManagedModelBinding, dict[str, Any], dict[str, Any]]:
+                        arguments: Mapping[str, Any], *, timeout_s: float,
+                        source_fixture: Path | None = None,
+                        entrypoint: str | None = None) -> tuple[ManagedModelBinding, dict[str, Any], dict[str, Any]]:
         native_arguments = dict(arguments)
         for key in ("path", "output_path", "ledger_path", "save_after_success_path",
                     "equation_view_path"):
@@ -1822,10 +1896,21 @@ class NativeScienceCampaignAdapter:
                     _project_path(self.workspace, candidate, must_exist=True)
                 else:
                     _project_path(self.workspace, candidate, must_exist=False)
+        source_path = self.fixture if source_fixture is None else _project_path(
+            self.workspace, source_fixture, must_exist=True)
+        source_name = source_path.name
+        if entrypoint is None:
+            entrypoint = {
+                self.fixture.name: "W24CureScienceFixture#run",
+                self.v2_control_fixture.name: "W24CureLawV2ControlFixture#run",
+                self.coupon_fixture.name: "W24CureCouponFixture#run",
+            }.get(source_name)
+        if not isinstance(entrypoint, str) or not entrypoint:
+            raise CampaignError("managed Java action lacks its exact frozen fixture entrypoint")
         request_arguments = {
             "operation_id": "code.execute_java",
-            "arguments": {"source_artifact": self.fixture.name,
-                          "entrypoint": "W24CureScienceFixture#run",
+            "arguments": {"source_artifact": str(source_path.relative_to(self.workspace)),
+                          "entrypoint": entrypoint,
                           "arguments": {"action": action, **native_arguments},
                           "mode": "trusted"},
         }
@@ -1837,6 +1922,563 @@ class NativeScienceCampaignAdapter:
         result = self.setup_runner._java_action_readback(response, f"W24 Java {action}")
         updated = self._update_binding(binding, response)
         return updated, response, result
+
+    def _record_public_java_action(self, *, action: str, response: Mapping[str, Any],
+                                   binding_before: ManagedModelBinding,
+                                   binding_after: ManagedModelBinding,
+                                   source_fixture: Path, response_dir: Path,
+                                   response_label: str) -> dict[str, Any]:
+        from tools.w24_cure_v2_capture import CaptureError, verify_public_capture
+
+        execution = response.get("execution")
+        operation_id = execution.get("operation_id") if isinstance(execution, Mapping) else None
+        if not isinstance(operation_id, str) or not operation_id:
+            raise CampaignError(f"public Java {action} response lacks durable operation identity")
+        source_path = _project_path(self.workspace, source_fixture, must_exist=True)
+        source_hash = sha256(source_path)
+        pinned_by_name = {
+            self.fixture.name: self.fixture_source_hashes["science"],
+            self.v2_control_fixture.name: self.fixture_source_hashes["v2_control"],
+            self.coupon_fixture.name: self.fixture_source_hashes["coupon"],
+        }
+        if pinned_by_name.get(source_path.name) != source_hash:
+            raise CampaignError(f"public Java {action} source no longer matches its frozen source manifest")
+        try:
+            verified = verify_public_capture(
+                self.daemon, response, operation_id=operation_id,
+                project_root=self.workspace, source_artifact_path=source_path,
+                expected_source_sha256=pinned_by_name[source_path.name],
+                expected_action=action, expected_project_id=self.project_id,
+                expected_session_id=binding_before.session_id,
+                expected_model_ref=binding_before.model_ref,
+                expected_revision=binding_before.revision)
+        except CaptureError as exc:
+            raise CampaignError(f"public Java {action} failed private OperationStore authentication: {exc}") from exc
+        if (verified.get("revision_after") != binding_after.revision or
+                verified.get("model_ref") != dict(binding_after.model_ref) or
+                verified.get("session_id") != binding_after.session_id):
+            raise CampaignError(f"public Java {action} revision/model binding differs from the adapter transition")
+        response_dir.mkdir(parents=True, exist_ok=True)
+        safe_operation_id = re.sub(r"[^A-Za-z0-9_-]", "_", operation_id)
+        response_path = response_dir / f"{response_label}_{safe_operation_id}.json"
+        if response_path.exists() or response_path.is_symlink():
+            raise CampaignError("public Java response evidence path already exists; no overwrite is allowed")
+        _write_json_fsynced(response_path, dict(response))
+        ref_identity_keys = ("request_id", "operation_id", "idempotency_key", "request_hash",
+                             "job_id", "project_id", "session_id", "model_ref",
+                             "revision_before", "revision_after", "source_path", "source_sha256")
+        return {
+            "status": verified["status"], "action": action,
+            "source_path": str(source_path.relative_to(self.workspace)),
+            "source_sha256": pinned_by_name[source_path.name],
+            "binding_before": binding_before.as_record(),
+            "binding_after": binding_after.as_record(),
+            "public_identity": {key: verified.get(key) for key in ref_identity_keys},
+            "artifact": verified.get("artifact"),
+            "artifact_receipt": verified.get("artifact_receipt"),
+            "capture_validation": verified.get("capture_validation"),
+            "readback_data": verified.get("readback_data"),
+            "response_evidence": {
+                "path": str(response_path), "size_bytes": response_path.stat().st_size,
+                "sha256": sha256(response_path),
+            },
+            "native_acceptance": "NOT_RUN",
+        }
+
+    def _reauthenticate_public_java_action(self, action_ref: Mapping[str, Any]) -> dict[str, Any]:
+        from tools.w24_cure_v2_capture import CaptureError, verify_public_capture
+
+        if not isinstance(action_ref, Mapping):
+            raise CampaignError("V2 capture chain contains a non-object public action reference")
+        action = action_ref.get("action")
+        source_relative = action_ref.get("source_path")
+        response_record = action_ref.get("response_evidence")
+        binding_before = action_ref.get("binding_before")
+        if (not isinstance(action, str) or not isinstance(source_relative, str) or
+                not isinstance(response_record, Mapping) or not isinstance(binding_before, Mapping)):
+            raise CampaignError("V2 public action reference lacks exact source, response, or binding data")
+        source_path = _project_path(self.workspace, self.workspace / source_relative, must_exist=True)
+        source_hash = action_ref.get("source_sha256")
+        pinned_by_name = {
+            self.fixture.name: self.fixture_source_hashes["science"],
+            self.v2_control_fixture.name: self.fixture_source_hashes["v2_control"],
+            self.coupon_fixture.name: self.fixture_source_hashes["coupon"],
+        }
+        if (source_path.name not in pinned_by_name or source_hash != pinned_by_name[source_path.name] or
+                sha256(source_path) != source_hash):
+            raise CampaignError("V2 public action source changed from its exact candidate manifest")
+        response_path = Path(str(response_record.get("path", "")))
+        expected_response_hash = response_record.get("sha256")
+        if (not response_path.is_file() or response_path.is_symlink() or
+                not isinstance(expected_response_hash, str) or sha256(response_path) != expected_response_hash or
+                response_record.get("size_bytes") != response_path.stat().st_size):
+            raise CampaignError("V2 original public response evidence is missing or hash-mismatched")
+        response = _read_json(response_path, f"public {action} response")
+        ref_id = action_ref.get("public_identity")
+        if not isinstance(ref_id, Mapping) or not isinstance(ref_id.get("operation_id"), str):
+            raise CampaignError("V2 original public response reference omits its OperationStore identity")
+        expected_model_ref = binding_before.get("model_ref")
+        if not isinstance(expected_model_ref, Mapping):
+            raise CampaignError("V2 public action binding lacks the exact ModelRef")
+        try:
+            verified = verify_public_capture(
+                self.daemon, response, operation_id=ref_id["operation_id"],
+                project_root=self.workspace, source_artifact_path=source_path,
+                expected_source_sha256=source_hash, expected_action=action,
+                expected_project_id=self.project_id,
+                expected_session_id=str(binding_before.get("session_id")),
+                expected_model_ref=expected_model_ref,
+                expected_revision=binding_before.get("revision"))
+        except CaptureError as exc:
+            raise CampaignError(f"V2 stored {action} response no longer matches the original private OperationStore: {exc}") from exc
+        identity_keys = ("request_id", "operation_id", "idempotency_key", "request_hash",
+                         "job_id", "project_id", "session_id", "model_ref",
+                         "revision_before", "revision_after", "source_path", "source_sha256")
+        observed = {key: verified.get(key) for key in identity_keys}
+        if observed != dict(ref_id):
+            raise CampaignError("V2 public action identity differs from its frozen capture reference chain")
+        if action == "study_run":
+            if (action_ref.get("readback_data") != verified.get("readback_data") or
+                    action_ref.get("artifact") != verified.get("artifact") or
+                    action_ref.get("artifact_receipt") != verified.get("artifact_receipt")):
+                raise CampaignError("Study.run reference differs from its authenticated original save receipt")
+            validation = verified.get("capture_validation", {})
+            save_request_path = validation.get("save_request_path") if isinstance(validation, Mapping) else None
+            save_provenance = action_ref.get("saved_artifact_provenance")
+            if save_request_path is None:
+                if save_provenance is not None or verified.get("artifact") is not None:
+                    raise CampaignError("Study.run save provenance exists without an original save request")
+            else:
+                expected_save_provenance = {
+                    "status": "STUDY_RUN_SAVED_ARTIFACT_PROVENANCE_AUTHENTICATED",
+                    "save_request_path": save_request_path,
+                    "artifact": verified.get("artifact"),
+                    "artifact_receipt": verified.get("artifact_receipt"),
+                    "producer_public_identity": dict(ref_id),
+                    "model_binding_after_solve": action_ref.get("binding_after"),
+                }
+                if save_provenance != expected_save_provenance:
+                    raise CampaignError("Study.run save receipt is not bound to its exact operation, request, and ModelRef revision")
+        return verified
+
+    def _validate_staged_baseline_save(self, producer_ref: Mapping[str, Any], *,
+                                       saved_summary: Mapping[str, Any] | None = None) -> dict[str, Any]:
+        """Reauthenticate the terminal Study.run's requested save and current MPH bytes."""
+        if (producer_ref.get("action") != "study_run" or
+                not isinstance(producer_ref.get("public_identity"), Mapping) or
+                producer_ref["public_identity"].get("project_id") != self.project_id):
+            raise CampaignError("staged baseline saved artifact lacks its exact project-bound Study.run producer")
+        verified = self._reauthenticate_public_java_action(producer_ref)
+        validation = verified.get("capture_validation")
+        artifact = verified.get("artifact")
+        receipt = verified.get("artifact_receipt")
+        provenance = producer_ref.get("saved_artifact_provenance")
+        readback = verified.get("readback_data")
+        if (not isinstance(readback, Mapping) or
+                readback.get("case_id") != "staged_baseline" or
+                readback.get("study_tag") != "stdCool" or
+                readback.get("study_run_calls_from_this_action") != 1):
+            raise CampaignError("saved MPH producer is not the exact terminal staged-baseline stdCool Study.run")
+        if (not isinstance(validation, Mapping) or
+                validation.get("status") != "PUBLIC_STUDY_RUN_SAVE_RECEIPT_MATCHED_REQUEST_AND_BYTES" or
+                not isinstance(artifact, Mapping) or not isinstance(receipt, Mapping) or
+                not isinstance(provenance, Mapping) or
+                provenance.get("save_request_path") != validation.get("save_request_path") or
+                provenance.get("artifact") != artifact or
+                provenance.get("artifact_receipt") != receipt or
+                provenance.get("producer_public_identity") != producer_ref.get("public_identity") or
+                provenance.get("model_binding_after_solve") != producer_ref.get("binding_after")):
+            raise CampaignError("terminal stdCool Study.run has no authenticated immediate-save byte receipt")
+        if saved_summary is not None:
+            if (saved_summary.get("path") != artifact.get("path") or
+                    saved_summary.get("size_bytes") != artifact.get("size_bytes") or
+                    saved_summary.get("sha256") != artifact.get("sha256") or
+                    saved_summary.get("save_receipt") != provenance or
+                    saved_summary.get("producer_study_run") != producer_ref or
+                    saved_summary.get("model_binding_after_solve") != producer_ref.get("binding_after")):
+                raise CampaignError("staged baseline save summary differs from its exact terminal Study.run bytes and binding")
+        return {"artifact": dict(artifact), "save_provenance": dict(provenance),
+                "verified_producer": verified}
+
+    def _ensure_v2_contract_readback(self, slot: SolveSlot, binding: ManagedModelBinding,
+                                     *, timeout_s: float,
+                                     state_key: str | None = None) -> tuple[ManagedModelBinding, dict[str, Any] | None]:
+        if not self.cure_law_v2_enabled:
+            return binding, None
+        from tools.w24_cure_v2_capture import CaptureError, validate_cure_law_v2_contract_readback
+
+        updated, response, direct_readback = self._fixture_action(
+            binding, "cure_v2_contract_readback", {"phase": "readback_v2"},
+            timeout_s=timeout_s, source_fixture=self.coupon_fixture,
+            entrypoint="W24CureCouponFixture#run")
+        reference = self._record_public_java_action(
+            action="cure_v2_contract_readback", response=response,
+            binding_before=binding, binding_after=updated,
+            source_fixture=self.coupon_fixture, response_dir=self.evidence / "v2_model_readbacks",
+            response_label=f"{slot.case_id}_{slot.study_tag}_contract")
+        verified = self._reauthenticate_public_java_action(reference)
+        readback = verified.get("readback_data")
+        if direct_readback != readback:
+            raise CampaignError("actual v2 setup readback differs between Worker result and durable public response")
+        try:
+            validation = validate_cure_law_v2_contract_readback(readback)
+        except CaptureError as exc:
+            raise CampaignError(f"loaded {slot.case_id}/{slot.study_tag} model failed the declared v2 contract: {exc}") from exc
+        if (reference.get("binding_after") != updated.as_record() or
+                validation.get("cure_law_version") != "W24_CURE_LAW_V2"):
+            raise CampaignError("loaded model v2 readback is not bound to this exact current ModelRef")
+        contract = {
+            "status": "V2_CONTRACT_AUTHENTICATED_FOR_CURRENT_MODEL_REF",
+            "case_id": slot.case_id, "study_tag": slot.study_tag,
+            "setup_readback": self.slot_native_setup_readbacks.get(state_key or f"{slot.case_id}:{slot.study_tag}"),
+            "reference": reference,
+            "contract_validation": validation,
+            "native_activation_semantics": "UNVERIFIED",
+            "maxwell_branch_reference_state": "UNVERIFIED",
+        }
+        self.v2_contract_readbacks[state_key or f"{slot.case_id}:{slot.study_tag}"] = contract
+        return updated, contract
+
+    def _reauthenticate_public_model_load(self, receipt: Mapping[str, Any]) -> dict[str, Any]:
+        from tools.w24_cure_v2_capture import CaptureError, verify_public_model_load
+
+        response_record = receipt.get("response_evidence")
+        binding_record = receipt.get("binding")
+        if not isinstance(response_record, Mapping) or not isinstance(binding_record, Mapping):
+            raise CampaignError("v2 loaded model lacks its durable public model_load response or exact binding")
+        response_path = Path(str(response_record.get("path", "")))
+        expected_response_hash = response_record.get("sha256")
+        if (not response_path.is_file() or response_path.is_symlink() or
+                not isinstance(expected_response_hash, str) or sha256(response_path) != expected_response_hash or
+                response_record.get("size_bytes") != response_path.stat().st_size):
+            raise CampaignError("v2 model_load response evidence is missing or hash-mismatched")
+        response = _read_json(response_path, "v2 model_load response")
+        path = Path(str(receipt.get("input_path", "")))
+        input_hash = receipt.get("input_sha256")
+        ref = binding_record.get("model_ref")
+        try:
+            verified = verify_public_model_load(
+                self.daemon, response, project_root=self.workspace, requested_path=path,
+                expected_file_sha256=input_hash, expected_project_id=self.project_id,
+                expected_session_id=str(binding_record.get("session_id")),
+                expected_model_ref=ref, expected_revision=binding_record.get("revision"))
+        except CaptureError as exc:
+            raise CampaignError(f"loaded v2 model failed private OperationStore authentication: {exc}") from exc
+        identity = receipt.get("public_identity")
+        if not isinstance(identity, Mapping):
+            raise CampaignError("v2 model_load reference omitted its durable public identity")
+        identity_keys = ("request_id", "operation_id", "idempotency_key", "request_hash",
+                         "job_id", "project_id", "session_id", "model_ref", "revision",
+                         "path", "sha256")
+        if {key: verified.get(key) for key in identity_keys} != dict(identity):
+            raise CampaignError("v2 model_load identity differs from its immutable capture reference")
+        return verified
+
+    def _record_public_model_load(self, *, name: str, path: Path,
+                                  binding: ManagedModelBinding,
+                                  response: Mapping[str, Any]) -> dict[str, Any]:
+        from tools.w24_cure_v2_capture import CaptureError, verify_public_model_load
+
+        try:
+            verified = verify_public_model_load(
+                self.daemon, response, project_root=self.workspace, requested_path=path,
+                expected_file_sha256=sha256(path), expected_project_id=self.project_id,
+                expected_session_id=binding.session_id,
+                expected_model_ref=binding.model_ref, expected_revision=binding.revision)
+        except CaptureError as exc:
+            raise CampaignError(f"v2 {name} load did not authenticate through the exact public model_load route: {exc}") from exc
+        operation_id = verified.get("operation_id")
+        safe_operation_id = re.sub(r"[^A-Za-z0-9_-]", "_", str(operation_id))
+        response_dir = self.evidence / "v2_model_load_responses"
+        response_dir.mkdir(parents=True, exist_ok=True)
+        response_path = response_dir / f"{name}_worker{self.worker_sessions}_{safe_operation_id}.json"
+        if response_path.exists() or response_path.is_symlink():
+            raise CampaignError("model_load response evidence path already exists; no overwrite is allowed")
+        _write_json_fsynced(response_path, dict(response))
+        identity_keys = ("request_id", "operation_id", "idempotency_key", "request_hash",
+                         "job_id", "project_id", "session_id", "model_ref", "revision",
+                         "path", "sha256")
+        return {
+            "status": verified["status"],
+            "public_identity": {key: verified.get(key) for key in identity_keys},
+            "response_evidence": {"path": str(response_path),
+                                  "size_bytes": response_path.stat().st_size,
+                                  "sha256": sha256(response_path)},
+            "native_acceptance": "NOT_RUN",
+        }
+
+    def _authenticated_v2_capture_frames(self, capture: Mapping[str, Any], *,
+                                         expected_case: str,
+                                         expected_study: str) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+        """Re-read the saved public response chain and return its real artifacts."""
+        from tools.w24_cure_v2_capture import CaptureError
+
+        report = capture.get("v2_capture")
+        if (capture.get("cure_law_capture_mode") != "V2_PUBLIC_AUTHENTICATED" or
+                not isinstance(report, Mapping) or
+                report.get("status") not in {
+                    "V2_PUBLIC_CAPTURE_CHAIN_VERIFIED_NATIVE_REVIEW_REQUIRED",
+                    "V2_REOPEN_PUBLIC_CAPTURE_CHAIN_VERIFIED_NATIVE_REVIEW_REQUIRED",
+                } or report.get("native_acceptance") != "NOT_RUN"):
+            raise CampaignError("explicit v2 capture chain is missing, incomplete, or mislabeled")
+        if report.get("case_id") != expected_case or report.get("study_tag") != expected_study:
+            raise CampaignError("v2 capture report case/study identity differs from the requested comparison slot")
+
+        contract = report.get("model_contract")
+        contract_ref = contract.get("reference") if isinstance(contract, Mapping) else None
+        setup_ref = report.get("setup_readback")
+        study_ref = report.get("study_run")
+        capture_status = report.get("status")
+        snapshot_row = report.get("solution_snapshot")
+        history_row = report.get("history_capture")
+        snapshot_ref = snapshot_row.get("operation") if isinstance(snapshot_row, Mapping) else None
+        history_ref = history_row.get("operation") if isinstance(history_row, Mapping) else None
+        if not all(isinstance(value, Mapping) for value in
+                   (setup_ref, contract_ref, snapshot_ref, history_ref)):
+            raise CampaignError("v2 capture chain omitted a setup, contract, snapshot, or history operation reference")
+        if capture_status == "V2_PUBLIC_CAPTURE_CHAIN_VERIFIED_NATIVE_REVIEW_REQUIRED" and not isinstance(study_ref, Mapping):
+            raise CampaignError("solved v2 capture chain omitted its exact Study.run public operation reference")
+        if capture_status == "V2_REOPEN_PUBLIC_CAPTURE_CHAIN_VERIFIED_NATIVE_REVIEW_REQUIRED" and study_ref is not None:
+            raise CampaignError("fresh-Worker v2 reopen must reuse the original solve provenance without another Study.run")
+        setup_verified = self._reauthenticate_public_java_action(setup_ref)
+        contract_verified = self._reauthenticate_public_java_action(contract_ref)
+        snapshot_verified = self._reauthenticate_public_java_action(snapshot_ref)
+        history_verified = self._reauthenticate_public_java_action(history_ref)
+        readback = setup_verified.get("readback_data", {})
+        if (contract_verified.get("capture_validation", {}).get("cure_law_version") != "W24_CURE_LAW_V2" or
+                readback.get("status") != "SCIENCE_ACTIONS_READY_NOT_SOLVED" or
+                readback.get("quasistatic_readback") != "Quasistatic" or
+                self._check_solver_readback(
+                    readback,
+                    SolveSlot(expected_case, expected_study, "authenticated capture verification"),
+                    max_step_s=0.5 if expected_case == "tight_time" else 1.0) != report.get("solver_tag")):
+            raise CampaignError("v2 current-model setup or cure-law readback no longer authenticates the exact slot")
+        lineage_study_ref: Mapping[str, Any] | None = study_ref
+        source_staged_lineages: list[dict[str, Any]] | None = None
+        lineage_binding_start: Mapping[str, Any] = setup_ref.get("binding_before", {})
+        if capture_status == "V2_PUBLIC_CAPTURE_CHAIN_VERIFIED_NATIVE_REVIEW_REQUIRED":
+            study_verified = self._reauthenticate_public_java_action(study_ref)
+            if (study_verified.get("readback_data", {}).get("case_id") != expected_case or
+                    study_verified.get("readback_data", {}).get("study_tag") != expected_study or
+                    study_verified.get("readback_data", {}).get("study_run_calls_from_this_action") != 1 or
+                    study_verified.get("readback_data", {}).get("solver_sequence") != report.get("solver_tag")):
+                raise CampaignError("v2 Study.run response no longer authenticates the exact solved slot")
+            if (setup_ref.get("binding_after") != contract_ref.get("binding_before") or
+                    contract_ref.get("binding_after") != study_ref.get("binding_before") or
+                    study_ref.get("binding_after") != snapshot_ref.get("binding_before")):
+                raise CampaignError("v2 setup→contract→Study.run→snapshot revision chain is discontinuous")
+            if expected_case == "staged_baseline" and expected_study == "stdCool":
+                self._validate_staged_baseline_save(
+                    study_ref, saved_summary=self.staged_baseline_saved_model)
+        elif capture_status == "V2_REOPEN_PUBLIC_CAPTURE_CHAIN_VERIFIED_NATIVE_REVIEW_REQUIRED":
+            origin_v2 = report.get("reopened_from")
+            if not isinstance(origin_v2, Mapping):
+                raise CampaignError("reopened v2 capture omitted its original solved public capture")
+            origin_capture = {"cure_law_capture_mode": "V2_PUBLIC_AUTHENTICATED",
+                              "v2_capture": origin_v2}
+            _old_frames, old_lineage = self._authenticated_v2_capture_frames(
+                origin_capture, expected_case=expected_case, expected_study=expected_study)
+            model_load = report.get("model_load")
+            if not isinstance(model_load, Mapping):
+                raise CampaignError("reopened v2 capture omitted its saved MPH→Worker2 load reference")
+            load_ref = model_load.get("current_worker_model_load")
+            if not isinstance(load_ref, Mapping):
+                raise CampaignError("reopened v2 capture omitted the exact public model_load response reference")
+            loaded = self._reauthenticate_public_model_load(load_ref)
+            saved = model_load.get("saved_model")
+            lineage_study_ref = origin_v2.get("study_run")
+            saved_producer = saved.get("producer_study_run") if isinstance(saved, Mapping) else None
+            source_staged_captures = model_load.get("source_staged_captures")
+            if not isinstance(source_staged_captures, Mapping):
+                raise CampaignError("reopened v2 capture omitted its complete authenticated source stage chain")
+            _source_frames, source_staged_lineages = self._authenticated_staged_v2_schedule(
+                source_staged_captures)
+            expected_source = source_staged_captures.get(f"staged_baseline:{expected_study}")
+            terminal_source = source_staged_captures.get("staged_baseline:stdCool")
+            terminal_report = terminal_source.get("v2_capture") if isinstance(terminal_source, Mapping) else None
+            source_terminal_study_ref = (terminal_report.get("study_run")
+                                         if isinstance(terminal_report, Mapping) else None)
+            if isinstance(source_terminal_study_ref, Mapping):
+                producer_save_link = self._validate_staged_baseline_save(
+                    source_terminal_study_ref, saved_summary=self.staged_baseline_saved_model)
+                producer_verified = producer_save_link["verified_producer"]
+            else:
+                producer_verified = {}
+            terminal_snapshot = (terminal_report.get("solution_snapshot", {}).get("operation")
+                                 if isinstance(terminal_report, Mapping) else None)
+            if (old_lineage.get("source_identity_authenticated") is not True or
+                    not isinstance(lineage_study_ref, Mapping) or
+                    model_load.get("status") != "SAVED_MPH_TO_CURRENT_WORKER_MODEL_LOAD_AUTHENTICATED" or
+                    not isinstance(saved, Mapping) or
+                    not isinstance(saved_producer, Mapping) or
+                    not isinstance(expected_source, Mapping) or
+                    expected_source.get("v2_capture") != origin_v2 or
+                    not isinstance(source_terminal_study_ref, Mapping) or
+                    saved_producer != source_terminal_study_ref or
+                    saved.get("model_binding_after_solve") != source_terminal_study_ref.get("binding_after") or
+                    saved.get("save_receipt") != producer_save_link.get("save_provenance") or
+                    saved.get("path") != producer_save_link.get("artifact", {}).get("path") or
+                    saved.get("size_bytes") != producer_save_link.get("artifact", {}).get("size_bytes") or
+                    saved.get("sha256") != producer_save_link.get("artifact", {}).get("sha256") or
+                    not isinstance(terminal_snapshot, Mapping) or
+                    source_terminal_study_ref.get("binding_after") != terminal_snapshot.get("binding_before") or
+                    producer_verified.get("readback_data", {}).get("case_id") != expected_case or
+                    producer_verified.get("readback_data", {}).get("study_tag") != "stdCool" or
+                    producer_verified.get("readback_data", {}).get("study_run_calls_from_this_action") != 1 or
+                    loaded.get("path") != saved.get("path") or
+                    loaded.get("sha256") != saved.get("sha256") or
+                    setup_ref.get("binding_after") != contract_ref.get("binding_before") or
+                    contract_ref.get("binding_after") != snapshot_ref.get("binding_before")):
+                raise CampaignError("reopened v2 saved model, terminal staged source chain, Worker load, and capture lineage is discontinuous")
+            self._validate_worker2_reopen_prefix(
+                expected_case=expected_case, expected_study=expected_study,
+                prior_captures=model_load.get("worker2_prior_captures"),
+                current_start=setup_ref.get("binding_before"), current_load=load_ref,
+                saved_model=saved, source_staged_captures=source_staged_captures)
+            lineage_binding_start = setup_ref.get("binding_before", {})
+        else:
+            raise CampaignError("v2 capture chain has an unknown capture mode")
+        if (snapshot_ref.get("binding_after") != history_ref.get("binding_before") or
+                report.get("model_binding_after_history") != history_ref.get("binding_after")):
+            raise CampaignError("v2 snapshot→history revision chain is discontinuous")
+
+        def verify_evidence(row: Any, ref: Mapping[str, Any], verified: Mapping[str, Any], label: str) -> Path:
+            if not isinstance(row, Mapping):
+                raise CampaignError(f"v2 {label} receipt omitted its evidence copy")
+            evidence_record = row.get("evidence")
+            artifact_receipt = row.get("artifact_receipt")
+            public_receipt = verified.get("artifact_receipt")
+            public_artifact = verified.get("artifact")
+            if (not isinstance(evidence_record, Mapping) or
+                    not isinstance(artifact_receipt, Mapping) or
+                    artifact_receipt != public_receipt or
+                    not isinstance(public_artifact, Mapping)):
+                raise CampaignError(f"v2 {label} evidence is not bound to the authenticated public artifact receipt")
+            path = Path(str(evidence_record.get("path", "")))
+            digest = evidence_record.get("sha256")
+            size = evidence_record.get("size_bytes")
+            if (not path.is_file() or path.is_symlink() or
+                    not isinstance(digest, str) or sha256(path) != digest or
+                    size != path.stat().st_size or
+                    digest != public_artifact.get("sha256") or
+                    size != public_artifact.get("size_bytes")):
+                raise CampaignError(f"v2 {label} evidence copy differs from the authenticated source artifact bytes")
+            return path
+
+        snapshot_path = verify_evidence(snapshot_row, snapshot_ref, snapshot_verified, "Xmesh snapshot")
+        history_path = verify_evidence(history_row, history_ref, history_verified, "history capture")
+        snapshot_frames = list(iter_solution_snapshot(snapshot_path))
+        history_artifact = history_verified.get("artifact_data")
+        if not isinstance(history_artifact, Mapping):
+            raise CampaignError("authenticated v2 history response omitted its Java-produced data artifact")
+        times = [float(frame["time_s"]) for frame in snapshot_frames]
+        validation = snapshot_verified.get("capture_validation")
+        if (not snapshot_frames or not isinstance(validation, Mapping) or
+                validation.get("snapshot_schema") != "W24-DOF-SNAPSHOT-2" or
+                validation.get("stored_times_s") != times or
+                history_artifact.get("stored_times_s") != times or
+                history_artifact.get("study_tag") != expected_study or
+                history_artifact.get("solver_tag") != report.get("solver_tag") or
+                history_artifact.get("dataset_solution_readback") != report.get("solver_tag") or
+                history_artifact.get("dataset_type_requested") != "Solution"):
+            raise CampaignError("authenticated v2 snapshot and history disagree on solver, solution dataset, or stored times")
+        if report.get("snapshot_stored_times_s") != times:
+            raise CampaignError("v2 capture summary stored times differ from the authenticated native snapshot")
+        frames: list[dict[str, Any]] = []
+        for frame in snapshot_frames:
+            row = dict(frame)
+            row["history_capture"] = dict(history_artifact)
+            frames.append(row)
+
+        v2_end_binding = history_ref.get("binding_after")
+        capture_end_binding = capture.get("model_binding")
+        if not isinstance(capture_end_binding, Mapping):
+            capture_end_binding = report.get("model_binding_after_history")
+        post_v2_operations = capture.get("post_v2_operations")
+        if post_v2_operations is None:
+            if capture_end_binding != v2_end_binding:
+                raise CampaignError("v2 staged capture advanced after history without retained public operation references")
+        else:
+            if not isinstance(post_v2_operations, list) or len(post_v2_operations) != 2:
+                raise CampaignError("v2 staged capture must retain its ordered solution and metrics post-capture operations")
+            expected_actions = ("solution_snapshot", "cure_metrics_capture")
+            current_binding = v2_end_binding
+            for operation, expected_action in zip(post_v2_operations, expected_actions):
+                if not isinstance(operation, Mapping) or operation.get("action") != expected_action:
+                    raise CampaignError("v2 staged post-capture operation order is invalid")
+                operation_verified = self._reauthenticate_public_java_action(operation)
+                readback = operation_verified.get("readback_data", {})
+                if (operation.get("binding_before") != current_binding or
+                        readback.get("solver_tag") != report.get("solver_tag")):
+                    raise CampaignError("v2 staged post-capture operation differs from its exact preceding revision or solver")
+                if expected_action == "solution_snapshot":
+                    if (readback.get("status") != "SOLUTION_SNAPSHOT_WRITTEN" or
+                            readback.get("real_solution") is not True):
+                        raise CampaignError("v2 trailing solution snapshot readback is incomplete")
+                elif readback.get("status") != "NATIVE_CURE_METRICS_CAPTURED":
+                    raise CampaignError("v2 trailing cure metrics readback is incomplete")
+                current_binding = operation.get("binding_after")
+            if capture_end_binding != current_binding:
+                raise CampaignError("v2 staged capture final binding differs from its authenticated post-capture operations")
+
+        def _binding_epoch_key(value: Any, label: str) -> tuple[Any, ...]:
+            if (not isinstance(value, Mapping) or value.get("project_id") != self.project_id or
+                    not isinstance(value.get("session_id"), str) or not value.get("session_id") or
+                    not isinstance(value.get("model_ref"), Mapping) or
+                    isinstance(value.get("revision"), bool) or not isinstance(value.get("revision"), int) or
+                    value.get("revision") < 0):
+                raise CampaignError(f"v2 {label} lacks its exact model binding identity")
+            model_ref = value["model_ref"]
+            if (model_ref.get("session_id") != value.get("session_id") or
+                    not isinstance(model_ref.get("server_instance_id"), str) or
+                    not model_ref.get("server_instance_id") or
+                    isinstance(model_ref.get("generation"), bool) or
+                    not isinstance(model_ref.get("generation"), int) or model_ref.get("generation") < 1):
+                raise CampaignError(f"v2 {label} lacks its exact Worker epoch")
+            return (value.get("project_id"), value.get("session_id"),
+                    json.dumps(dict(model_ref), sort_keys=True, separators=(",", ":")))
+
+        start_revision = lineage_binding_start.get("revision") if isinstance(lineage_binding_start, Mapping) else None
+        end_revision = capture_end_binding.get("revision") if isinstance(capture_end_binding, Mapping) else None
+        if (_binding_epoch_key(lineage_binding_start, "capture start") !=
+                _binding_epoch_key(v2_end_binding, "history end") or
+                _binding_epoch_key(capture_end_binding, "capture end") !=
+                _binding_epoch_key(v2_end_binding, "history end") or
+                isinstance(start_revision, bool) or not isinstance(start_revision, int) or
+                isinstance(end_revision, bool) or not isinstance(end_revision, int) or
+                start_revision >= end_revision):
+            raise CampaignError("v2 staged capture changes Worker epoch or has a non-increasing revision chain")
+        lineage_refs = [contract_ref, snapshot_ref, history_ref]
+        if isinstance(lineage_study_ref, Mapping):
+            lineage_refs.insert(1, lineage_study_ref)
+        if capture_status == "V2_REOPEN_PUBLIC_CAPTURE_CHAIN_VERIFIED_NATIVE_REVIEW_REQUIRED":
+            lineage_refs.insert(0, report["model_load"]["current_worker_model_load"])
+        lineage = {
+            "status": "V2_PUBLIC_CAPTURE_CHAIN_REAUTHENTICATED",
+            "project_id": self.project_id,
+            "model_ref": dict(snapshot_ref["binding_before"]["model_ref"]),
+            "binding_before": dict(lineage_binding_start),
+            "binding_after": dict(capture_end_binding),
+            "case_id": expected_case, "study_tag": expected_study,
+            "solver_tag": report.get("solver_tag"),
+            "full_dof_absolute_tolerances": dict(
+                contract_verified.get("capture_validation", {}).get("full_dof_absolute_tolerances", {})),
+            "operation_ids": [ref["public_identity"]["operation_id"]
+                              for ref in lineage_refs if isinstance(ref.get("public_identity"), Mapping)],
+            "job_ids": [ref["public_identity"]["job_id"]
+                        for ref in lineage_refs if isinstance(ref.get("public_identity"), Mapping)],
+            "source_hashes": [ref["source_sha256"] for ref in lineage_refs
+                              if isinstance(ref.get("source_sha256"), str)],
+            "stored_times_s": times,
+            "source_staged_lineages": ([dict(row) for row in source_staged_lineages]
+                                        if source_staged_lineages is not None else []),
+            "snapshot_sha256": sha256(snapshot_path),
+            "history_sha256": sha256(history_path),
+            "source_identity_authenticated": True,
+            "maxwell_branch_reference_state": "UNVERIFIED_NO_PUBLIC_REFERENCE_STATE_CAPTURE",
+            "native_acceptance": "NOT_RUN",
+        }
+        return frames, lineage
 
     def _load_registered_copy(self, name: str, path: Path, *, timeout_s: float) -> ManagedModelBinding:
         from tools.run_native_resume_smoke import _dispatch
@@ -1862,7 +2504,13 @@ class NativeScienceCampaignAdapter:
                    "input_sha256": sha256(scoped_path), "binding": binding.as_record(),
                    "worker_model_ref_epoch": list(epoch),
                    "persisted_project_binding": dict(persisted), "response": response}
-        self.model_load_receipts[name] = receipt
+        if self.cure_law_v2_enabled and name != "mechanics_parent":
+            receipt["public_load_reference"] = self._record_public_model_load(
+                name=name, path=scoped_path, binding=binding, response=response)
+        receipt_key = name
+        if receipt_key in self.model_load_receipts and self.worker_sessions > 1:
+            receipt_key = f"{name}_worker{self.worker_sessions}"
+        self.model_load_receipts[receipt_key] = receipt
         self.models[name] = binding
         return binding
 
@@ -2057,10 +2705,33 @@ class NativeScienceCampaignAdapter:
             self.models["staged_baseline"] = binding
         else:
             self.models[slot.case_id] = binding
-        binding, _, readback = self._fixture_action(binding, "readback", {}, timeout_s=timeout_s)
+        readback_before = binding
+        binding, readback_response, readback = self._fixture_action(
+            binding, "readback", {}, timeout_s=timeout_s)
         max_step = 0.5 if slot.case_id == "tight_time" else 1.0
         solver_tag = self._check_solver_readback(readback, slot, max_step_s=max_step)
         study_configuration = self._check_study_readback(readback, slot, max_step_s=max_step)
+        setup_readback_key = f"{slot.case_id}:{slot.study_tag}"
+        if self.cure_law_v2_enabled:
+            readback_ref = self._record_public_java_action(
+                action="readback", response=readback_response,
+                binding_before=readback_before, binding_after=binding,
+                source_fixture=self.fixture, response_dir=self.evidence / "v2_setup_readbacks",
+                response_label=f"{slot.case_id}_{slot.study_tag}_setup")
+            readback_verified = self._reauthenticate_public_java_action(readback_ref)
+            if (readback_verified.get("readback_data") != readback or
+                    self._check_solver_readback(readback_verified["readback_data"], slot,
+                                                max_step_s=max_step) != solver_tag or
+                    self._check_study_readback(readback_verified["readback_data"], slot,
+                                              max_step_s=max_step) != study_configuration):
+                raise CampaignError("authenticated v2 setup response differs from the exact solver/study configuration readback")
+            self.slot_native_setup_readbacks[setup_readback_key] = readback_ref
+        binding, v2_contract = self._ensure_v2_contract_readback(
+            slot, binding, timeout_s=min(timeout_s, 180.0))
+        if slot.case_id == "staged_baseline":
+            self.models["staged_baseline"] = binding
+        else:
+            self.models[slot.case_id] = binding
         if slot.case_id == "staged_baseline" and slot.study_tag == "stdCool":
             self.staged_baseline_configuration_readback = {
                 "study_time_readbacks": study_configuration,
@@ -2071,6 +2742,9 @@ class NativeScienceCampaignAdapter:
         self.slot_solver_tags[(slot.case_id, slot.study_tag)] = solver_tag
         return {"status": "NATIVE_SLOT_CONFIGURED", "configuration": config,
                 "native_readback": readback,
+                "cure_law_capture_mode": ("V2_EXPLICIT_MODEL_READBACK_PASS" if v2_contract else
+                                           "V1_LEGACY_PATH_NOT_V2_ACCEPTANCE"),
+                "cure_law_v2_contract": v2_contract,
                 "study_time_readbacks": study_configuration,
                 "model_binding": binding.as_record(),
                 "solver_sequence": solver_tag}
@@ -2079,25 +2753,42 @@ class NativeScienceCampaignAdapter:
                   save_after_success_path: Path | None,
                   timeout_s: float) -> Mapping[str, Any]:
         binding = self._binding_for_slot(slot)
-        ledger = _project_path(self.workspace, ledger_path, must_exist=False)
         if self.project_ledger is None:
+            supplied_ledger = Path(ledger_path)
+            candidate_ledger = (supplied_ledger if supplied_ledger.is_absolute()
+                                else self.workspace / supplied_ledger)
+            ledger_already_created = candidate_ledger.exists()
+            ledger = _project_path(self.workspace, ledger_path,
+                                   must_exist=ledger_already_created)
+            if ledger_already_created and read_solve_ledger(ledger):
+                raise CampaignError("a new W24 science campaign must begin with an empty native solve ledger")
             self.project_ledger = ledger
-        elif ledger != self.project_ledger:
-            raise CampaignError("native solve controller changed the single frozen project ledger path")
+        else:
+            # The first Study.run creates the durable ledger; later planned
+            # submissions append to that same regular file.  Revalidate it as
+            # an existing project file instead of treating every call as a new
+            # output (which would make multi-study campaigns impossible).
+            ledger = _project_path(self.workspace, ledger_path, must_exist=True)
+            if ledger != self.project_ledger:
+                raise CampaignError("native solve controller changed the single frozen project ledger path")
         if slot.case_id in MechanicsModelBindings.CASES:
             identity = self._managed_model_inspect(binding, timeout_s=min(timeout_s, 120.0))
             if identity["model_binding"]["model_tag"] != binding.model_tag:
                 raise CampaignError("mechanics identity changed immediately before study.run")
             action = "mechanics_study_run"
             arguments = {"case_id": slot.case_id, "ledger_path": str(ledger)}
+            requested_save_path = None
         else:
             action = "study_run"
             arguments = {"case_id": slot.case_id, "study_tag": slot.study_tag,
                          "ledger_path": str(ledger)}
+            requested_save_path = None
             if save_after_success_path is not None:
                 save_path = _project_path(self.workspace, save_after_success_path, must_exist=False)
                 arguments["save_after_success_path"] = str(save_path)
-        updated, _, result = self._fixture_action(binding, action, arguments, timeout_s=timeout_s)
+                requested_save_path = str(save_path)
+        binding_before = binding
+        updated, response, result = self._fixture_action(binding, action, arguments, timeout_s=timeout_s)
         if result.get("status") != "NATIVE_STUDY_RUN_RETURNED" or result.get("study_run_calls_from_this_action") != 1:
             raise CampaignError("native Java study action did not return its exact terminal one-call receipt")
         if (result.get("case_id") != slot.case_id or result.get("study_tag") != slot.study_tag or
@@ -2106,15 +2797,338 @@ class NativeScienceCampaignAdapter:
         solver_tag = result.get("solver_sequence")
         if not isinstance(solver_tag, str) or solver_tag != self.slot_solver_tags.get((slot.case_id, slot.study_tag)):
             raise CampaignError("native Java study receipt changed its frozen SolverSequence tag")
+        java_save_receipt = result.get("immediate_save_receipt")
+        if requested_save_path is None:
+            if (result.get("immediate_save_path") is not None or java_save_receipt is not None):
+                raise CampaignError("Study.run returned save evidence without an exact save_after_success_path request")
+        else:
+            if (result.get("immediate_save_path") != requested_save_path or
+                    not isinstance(java_save_receipt, Mapping) or
+                    java_save_receipt.get("status") != "STUDY_RUN_MPH_SAVED_AND_HASHED" or
+                    java_save_receipt.get("path") != requested_save_path):
+                raise CampaignError("Study.run did not return the exact requested immediate-save byte receipt")
+            saved_path = _project_path(self.workspace, requested_save_path, must_exist=True)
+            actual_size = saved_path.stat().st_size
+            actual_hash = sha256(saved_path)
+            if (actual_size <= 0 or java_save_receipt.get("size_bytes") != actual_size or
+                    java_save_receipt.get("sha256") != actual_hash):
+                raise CampaignError("Worker Study.run save receipt differs from the immediate saved MPH bytes")
         result = {**dict(result), "model_binding_after_solve": updated.as_record()}
-        if save_after_success_path is not None:
-            saved = _project_path(self.workspace, save_after_success_path, must_exist=True)
-            result["immediate_save_path"] = str(saved)
+        if self.cure_law_v2_enabled and slot.case_id not in MechanicsModelBindings.CASES:
+            action_ref = self._record_public_java_action(
+                action="study_run", response=response, binding_before=binding_before,
+                binding_after=updated, source_fixture=self.fixture,
+                response_dir=self.evidence / "v2_study_run_responses",
+                response_label=f"{slot.case_id}_{slot.study_tag}_solve")
+            if requested_save_path is not None:
+                artifact = action_ref.get("artifact")
+                artifact_receipt = action_ref.get("artifact_receipt")
+                validation = action_ref.get("capture_validation")
+                if (not isinstance(artifact, Mapping) or
+                        not isinstance(artifact_receipt, Mapping) or
+                        not isinstance(validation, Mapping) or
+                        validation.get("save_request_path") != requested_save_path or
+                        artifact.get("path") != requested_save_path or
+                        artifact.get("size_bytes") != actual_size or
+                        artifact.get("sha256") != actual_hash):
+                    raise CampaignError("authenticated Study.run operation does not carry the exact immediate-save receipt")
+                action_ref["saved_artifact_provenance"] = {
+                    "status": "STUDY_RUN_SAVED_ARTIFACT_PROVENANCE_AUTHENTICATED",
+                    "save_request_path": requested_save_path,
+                    "artifact": dict(artifact),
+                    "artifact_receipt": dict(artifact_receipt),
+                    "producer_public_identity": dict(action_ref["public_identity"]),
+                    "model_binding_after_solve": updated.as_record(),
+                }
+                self._reauthenticate_public_java_action(action_ref)
+            self.slot_study_run_actions[f"{slot.case_id}:{slot.study_tag}"] = action_ref
+            result["public_operation_identity"] = action_ref["public_identity"]
+        if slot.case_id not in MechanicsModelBindings.CASES:
+            self.models[slot.case_id] = updated
+        if requested_save_path is not None:
+            saved = _project_path(self.workspace, requested_save_path, must_exist=True)
+            if self.cure_law_v2_enabled and slot == SolveSlot(
+                    "staged_baseline", "stdCool", SOLVE_PLAN[4].purpose):
+                producer = self.slot_study_run_actions.get(f"{slot.case_id}:{slot.study_tag}")
+                if not isinstance(producer, Mapping):
+                    raise CampaignError("v2 staged-baseline save has no authenticated stdCool Study.run producer")
+                save_link = self._validate_staged_baseline_save(producer)
+                if save_link["artifact"] != {
+                        "path": str(saved), "size_bytes": saved.stat().st_size, "sha256": sha256(saved)}:
+                    raise CampaignError("staged baseline summary cannot substitute different saved MPH bytes")
+                self.staged_baseline_saved_model = {
+                    **dict(save_link["artifact"]), "case_id": slot.case_id,
+                    "study_tag": slot.study_tag, "producer_study_run": dict(producer),
+                    "save_receipt": dict(save_link["save_provenance"]),
+                    "model_binding_after_solve": updated.as_record(),
+                    "native_acceptance": "NOT_RUN",
+                }
         self.slot_solver_tags[(slot.case_id, slot.study_tag)] = solver_tag
         return result
 
+    def _capture_v2_pair(self, slot: SolveSlot, binding: ManagedModelBinding,
+                         output_dir: Path, base: Path, token: str, solver_tag: str,
+                         *, timeout_s: float,
+                         reopened_origin: Mapping[str, Any] | None = None,
+                         reopened_model_load: Mapping[str, Any] | None = None
+                         ) -> tuple[ManagedModelBinding, dict[str, Any]]:
+        from tools.w24_cure_v2_capture import CaptureError
+
+        slot_key = f"{slot.case_id}:{slot.study_tag}"
+        state_key = (f"{slot_key}:worker{self.worker_sessions}"
+                     if reopened_origin is not None else slot_key)
+        contract = self.v2_contract_readbacks.get(state_key)
+        setup_readback_ref = self.slot_native_setup_readbacks.get(state_key)
+        solve_action = (self.slot_study_run_actions.get(slot_key)
+                        if reopened_origin is None else None)
+        if not isinstance(contract, Mapping) or not isinstance(setup_readback_ref, Mapping):
+            raise CampaignError("declared v2 slot lacks its exact current-model public setup and cure-law readbacks")
+        contract_ref = contract.get("reference")
+        if not isinstance(contract_ref, Mapping):
+            raise CampaignError("declared v2 slot contract is not bound to a public response reference")
+        capture_start_binding = binding.as_record()
+        setup_verified = self._reauthenticate_public_java_action(setup_readback_ref)
+        contract_verified = self._reauthenticate_public_java_action(contract_ref)
+        setup_data = setup_verified.get("readback_data")
+        if (not isinstance(setup_data, Mapping) or
+                setup_readback_ref.get("binding_after") != contract_ref.get("binding_before") or
+                contract_verified.get("capture_validation", {}).get("cure_law_version") != "W24_CURE_LAW_V2" or
+                slot.study_tag not in setup_data.get("studies", []) or
+                setup_data.get("quasistatic_readback") != "Quasistatic" or
+                self._check_solver_readback(setup_data, slot,
+                    max_step_s=0.5 if slot.case_id == "tight_time" else 1.0) != solver_tag):
+            raise CampaignError("authenticated current-model setup/cure readbacks do not bind to this exact model revision")
+
+        origin_report: Mapping[str, Any] | None = None
+        model_load_link: dict[str, Any] | None = None
+        if reopened_origin is None:
+            if not isinstance(solve_action, Mapping):
+                raise CampaignError("declared v2 slot lacks its exact successful Study.run public response")
+            solve_verified = self._reauthenticate_public_java_action(solve_action)
+            if (contract_ref.get("binding_after") != solve_action.get("binding_before") or
+                    solve_action.get("binding_after") != binding.as_record() or
+                    solve_verified.get("readback_data", {}).get("case_id") != slot.case_id or
+                    solve_verified.get("readback_data", {}).get("study_tag") != slot.study_tag or
+                    solve_verified.get("readback_data", {}).get("solver_sequence") != solver_tag):
+                raise CampaignError("v2 contract readback, actual Study.run, and current ModelRef revisions do not form one chain")
+            if slot.case_id == "staged_baseline" and slot.study_tag == "stdCool":
+                self._validate_staged_baseline_save(
+                    solve_action, saved_summary=self.staged_baseline_saved_model)
+        else:
+            origin_v2 = reopened_origin.get("v2_capture")
+            if not isinstance(origin_v2, Mapping):
+                raise CampaignError("fresh-Worker v2 capture lacks the original solved capture provenance")
+            _origin_frames, origin_lineage = self._authenticated_v2_capture_frames(
+                reopened_origin, expected_case=slot.case_id, expected_study=slot.study_tag)
+            origin_report = dict(origin_v2)
+            if (origin_lineage.get("source_identity_authenticated") is not True or
+                    origin_v2.get("study_run", {}).get("binding_after") !=
+                    origin_v2.get("solution_snapshot", {}).get("operation", {}).get("binding_before")):
+                raise CampaignError("original Worker solved capture does not retain its authenticated lineage")
+            if not isinstance(reopened_model_load, Mapping) or self.staged_baseline_saved_model is None:
+                raise CampaignError("fresh-Worker v2 capture lacks its exact saved-model producer and model_load receipt")
+            source_staged_captures = reopened_origin.get("staged_source_captures")
+            if not isinstance(source_staged_captures, Mapping):
+                raise CampaignError("fresh-Worker v2 capture lacks the complete original staged source chain")
+            _source_frames, source_staged_lineages = self._authenticated_staged_v2_schedule(
+                source_staged_captures)
+            expected_source = source_staged_captures.get(f"staged_baseline:{slot.study_tag}")
+            terminal_source = source_staged_captures.get("staged_baseline:stdCool")
+            terminal_report = terminal_source.get("v2_capture") if isinstance(terminal_source, Mapping) else None
+            source_terminal_study_ref = (terminal_report.get("study_run")
+                                         if isinstance(terminal_report, Mapping) else None)
+            terminal_snapshot = (terminal_report.get("solution_snapshot", {}).get("operation")
+                                 if isinstance(terminal_report, Mapping) else None)
+            if (not isinstance(expected_source, Mapping) or
+                    expected_source.get("v2_capture") != origin_v2 or
+                    not isinstance(source_terminal_study_ref, Mapping) or
+                    not isinstance(terminal_snapshot, Mapping)):
+                raise CampaignError("Worker2 stage origin or terminal solve is not in the full authenticated source chain")
+            saved_source = self.staged_baseline_saved_model
+            save_link = self._validate_staged_baseline_save(
+                source_terminal_study_ref, saved_summary=saved_source)
+            saved_artifact = save_link["artifact"]
+            saved_path = Path(str(saved_artifact.get("path", "")))
+            saved_hash = saved_source.get("sha256")
+            if (not saved_path.is_file() or saved_path.is_symlink() or
+                    sha256(saved_path) != saved_hash or
+                    reopened_model_load.get("input_path") != str(saved_path) or
+                    reopened_model_load.get("input_sha256") != saved_hash):
+                raise CampaignError("fresh Worker did not load the exact saved staged-baseline bytes")
+            if (saved_source.get("case_id") != slot.case_id or
+                    saved_source.get("study_tag") != "stdCool" or
+                    saved_source.get("producer_study_run") != source_terminal_study_ref or
+                    saved_source.get("model_binding_after_solve") !=
+                    source_terminal_study_ref.get("binding_after") or
+                    source_terminal_study_ref.get("binding_after") !=
+                    terminal_snapshot.get("binding_before")):
+                raise CampaignError("saved MPH is not bound to the authenticated terminal stdCool solve revision")
+            load_ref = reopened_model_load.get("public_load_reference")
+            if not isinstance(load_ref, Mapping):
+                raise CampaignError("fresh Worker model_load response lacks its project-bound public operation evidence")
+            load_verified = self._reauthenticate_public_model_load(reopened_model_load)
+            if (load_verified.get("sha256") != saved_hash or
+                    load_verified.get("path") != str(saved_path)):
+                raise CampaignError("saved model load response differs from its terminal staged MPH bytes")
+            source_producer = source_terminal_study_ref
+            producer_verified = save_link["verified_producer"]
+            if (producer_verified.get("readback_data", {}).get("case_id") != slot.case_id or
+                    producer_verified.get("readback_data", {}).get("study_tag") != "stdCool" or
+                    producer_verified.get("readback_data", {}).get("study_run_calls_from_this_action") != 1):
+                raise CampaignError("saved staged baseline lacks its authenticated terminal stdCool Study.run producer")
+            saved_model_link = {
+                "path": str(saved_path), "size_bytes": saved_path.stat().st_size,
+                "sha256": saved_hash, "producer_study_run": dict(source_producer),
+                "save_receipt": dict(save_link["save_provenance"]),
+                "model_binding_after_solve": dict(saved_source["model_binding_after_solve"]),
+            }
+            current_load_link = {
+                **{key: reopened_model_load.get(key) for key in
+                   ("model_name", "input_path", "input_sha256", "binding")},
+                **dict(load_ref),
+            }
+            prior_worker2_captures = reopened_origin.get("worker2_prior_captures")
+            self._validate_worker2_reopen_prefix(
+                expected_case=slot.case_id, expected_study=slot.study_tag,
+                prior_captures=prior_worker2_captures,
+                current_start=setup_readback_ref.get("binding_before"),
+                current_load=current_load_link, saved_model=saved_model_link,
+                source_staged_captures=source_staged_captures)
+            model_load_link = {
+                "status": "SAVED_MPH_TO_CURRENT_WORKER_MODEL_LOAD_AUTHENTICATED",
+                "saved_model": saved_model_link,
+                "current_worker_model_load": current_load_link,
+                "source_staged_captures": {
+                    str(key): dict(value) for key, value in source_staged_captures.items()
+                    if isinstance(value, Mapping)
+                },
+                "worker2_prior_captures": {
+                    str(key): dict(value) for key, value in prior_worker2_captures.items()
+                    if isinstance(value, Mapping)
+                },
+                "native_acceptance": "NOT_RUN",
+            }
+
+        field_path = _project_path(self.workspace,
+            base.with_name(token + "_v2_dofs.gz"), must_exist=False)
+        snapshot_before = binding
+        binding, snapshot_response, snapshot_readback = self._fixture_action(
+            binding, "solution_snapshot_v2",
+            {"study_tag": slot.study_tag, "solver_tag": solver_tag, "path": str(field_path)},
+            timeout_s=timeout_s, source_fixture=self.v2_control_fixture,
+            entrypoint="W24CureLawV2ControlFixture#run")
+        snapshot_ref = self._record_public_java_action(
+            action="solution_snapshot_v2", response=snapshot_response,
+            binding_before=snapshot_before, binding_after=binding,
+            source_fixture=self.v2_control_fixture, response_dir=self.evidence / "v2_capture_responses",
+            response_label=f"{slot.case_id}_{slot.study_tag}_snapshot")
+        snapshot_verified = self._reauthenticate_public_java_action(snapshot_ref)
+        if snapshot_readback != snapshot_verified.get("artifact_receipt"):
+            raise CampaignError("V2 complete-Xmesh Worker response differs from its durable OperationStore receipt")
+        snapshot_evidence = _evidence_copy(field_path, output_dir / "v2_field_snapshot.gz",
+                                          status="V2_PUBLIC_XMESH_SNAPSHOT_NATIVE_REVIEW_REQUIRED")
+        snapshot_frames = list(iter_solution_snapshot(Path(snapshot_evidence["path"])))
+        snapshot_times = [float(frame["time_s"]) for frame in snapshot_frames]
+        snapshot_validation = snapshot_verified.get("capture_validation")
+        if (not isinstance(snapshot_validation, Mapping) or
+                snapshot_validation.get("snapshot_schema") != "W24-DOF-SNAPSHOT-2" or
+                snapshot_validation.get("stored_times_s") != snapshot_times or
+                not snapshot_frames):
+            raise CampaignError("verified V2 snapshot raw frames differ from its actual public stored-time receipt")
+        dof_names = set(snapshot_frames[0]["dofs"].get("dofNames", []))
+        required_dofs = {"comp1_T", "comp1_alpha", "comp1_Duv_rel", "comp1_qpost"}
+        axes = snapshot_frames[0]["dofs"].get("coordinate_axes")
+        required_dofs |= ({"comp1_u", "comp1_w"} if axes == 2 else
+                          {"comp1_u", "comp1_v", "comp1_w"} if axes == 3 else set())
+        if not required_dofs.issubset(dof_names):
+            raise CampaignError("actual V2 complete Xmesh snapshot omits cure-law or displacement field members")
+
+        history_path = _project_path(self.workspace,
+            base.with_name(token + "_v2_history.json"), must_exist=False)
+        history_before = binding
+        binding, history_response, history_readback = self._fixture_action(
+            binding, "history_capture_v2",
+            {"study_tag": slot.study_tag, "solver_tag": solver_tag, "path": str(history_path)},
+            timeout_s=timeout_s, source_fixture=self.fixture,
+            entrypoint="W24CureScienceFixture#run")
+        history_ref = self._record_public_java_action(
+            action="history_capture_v2", response=history_response,
+            binding_before=history_before, binding_after=binding,
+            source_fixture=self.fixture, response_dir=self.evidence / "v2_capture_responses",
+            response_label=f"{slot.case_id}_{slot.study_tag}_history")
+        history_verified = self._reauthenticate_public_java_action(history_ref)
+        if history_readback != history_verified.get("artifact_receipt"):
+            raise CampaignError("V2 history Worker response differs from its durable OperationStore receipt")
+        history_artifact = history_verified.get("artifact_data")
+        if not isinstance(history_artifact, Mapping):
+            raise CampaignError("authenticated V2 history route omitted the verified Java-produced artifact")
+        history_evidence = _evidence_copy(history_path, output_dir / "v2_history_capture.json",
+                                          status="V2_PUBLIC_HISTORY_CAPTURE_NATIVE_REVIEW_REQUIRED")
+        if (snapshot_ref.get("binding_after") != history_ref.get("binding_before") or
+                snapshot_times != history_artifact.get("stored_times_s") or
+                history_artifact.get("study_tag") != slot.study_tag or
+                history_artifact.get("solver_tag") != solver_tag or
+                history_artifact.get("dataset_solution_readback") != solver_tag or
+                snapshot_readback.get("study_tag") != slot.study_tag or
+                snapshot_readback.get("solver_tag") != solver_tag):
+            raise CampaignError("v2 snapshot/history artifacts do not share their exact study, solver, times, and revision chain")
+        if snapshot_ref.get("binding_after") != history_ref.get("binding_before"):
+            raise CampaignError("v2 snapshot→history ModelRef/revision transition is discontinuous")
+        if reopened_origin is None and solve_action.get("binding_after") != snapshot_ref.get("binding_before"):
+            raise CampaignError("v2 Study.run→snapshot ModelRef/revision transition is discontinuous")
+        if reopened_origin is not None and (
+                setup_readback_ref.get("binding_after") != contract_ref.get("binding_before") or
+                contract_ref.get("binding_after") != capture_start_binding or
+                snapshot_ref.get("binding_before") != capture_start_binding):
+            raise CampaignError("v2 Worker2 prior-stage→setup→contract→snapshot revision chain is discontinuous")
+        report = {
+            "status": ("V2_PUBLIC_CAPTURE_CHAIN_VERIFIED_NATIVE_REVIEW_REQUIRED" if reopened_origin is None else
+                       "V2_REOPEN_PUBLIC_CAPTURE_CHAIN_VERIFIED_NATIVE_REVIEW_REQUIRED"),
+            "case_id": slot.case_id, "study_tag": slot.study_tag,
+            "solver_tag": solver_tag,
+            "model_contract": contract,
+            "setup_readback": setup_readback_ref,
+            "study_run": solve_action if reopened_origin is None else None,
+            "reopened_from": origin_report,
+            "model_load": model_load_link,
+            "solution_snapshot": {
+                "operation": snapshot_ref,
+                "evidence": snapshot_evidence,
+                "artifact_receipt": dict(snapshot_readback),
+                "capture_validation": dict(snapshot_validation),
+            },
+            "history_capture": {
+                "operation": history_ref,
+                "evidence": history_evidence,
+                "artifact_receipt": dict(history_readback),
+                "capture_validation": history_verified.get("capture_validation"),
+                "schema": history_artifact.get("schema"),
+                "dataset_tag": history_artifact.get("dataset_tag"),
+                "stored_times_s": list(history_artifact.get("stored_times_s", [])),
+            },
+            "snapshot_stored_times_s": snapshot_times,
+            "model_binding_after_history": binding.as_record(),
+            "maxwell_branch_reference_state": "UNVERIFIED_NO_PUBLIC_REFERENCE_STATE_CAPTURE",
+            "activation_history_semantics": "UNVERIFIED_NATIVE_CAPTURE_ONLY",
+            "native_acceptance": "NOT_RUN",
+        }
+        _write_json_fsynced(output_dir / "v2_capture_chain.json", {
+            "status": report["status"], "case_id": slot.case_id,
+            "study_tag": slot.study_tag, "solver_tag": solver_tag,
+            "model_contract": contract.get("reference"),
+            "study_run": solve_action,
+            "solution_snapshot": snapshot_ref, "history_capture": history_ref,
+            "snapshot_evidence": snapshot_evidence,
+            "history_evidence": history_evidence,
+            "maxwell_branch_reference_state": report["maxwell_branch_reference_state"],
+            "native_acceptance": "NOT_RUN",
+        })
+        return binding, report
+
     def _capture_native_files(self, slot: SolveSlot, binding: ManagedModelBinding,
-                              output_dir: Path, *, timeout_s: float) -> dict[str, Any]:
+                              output_dir: Path, *, timeout_s: float,
+                              reopened_origin: Mapping[str, Any] | None = None,
+                              reopened_model_load: Mapping[str, Any] | None = None) -> dict[str, Any]:
         from tools.w24_science_acceptance import AcceptanceError
 
         output_dir.mkdir(parents=True, exist_ok=False)
@@ -2122,15 +3136,31 @@ class NativeScienceCampaignAdapter:
         if not isinstance(solver_tag, str) or not solver_tag:
             raise CampaignError("native solution capture lacks the exact solved SolverSequence")
         token = re.sub(r"[^A-Za-z0-9_-]", "_", f"{slot.case_id}_{slot.study_tag}")
+        if reopened_origin is not None:
+            token = f"{token}_worker{self.worker_sessions}"
         base = self.workspace / "native_results" / token
         (self.workspace / "native_results").mkdir(exist_ok=True)
+        v2_capture: dict[str, Any] | None = None
+        post_v2_operations: list[dict[str, Any]] = []
+        if self.cure_law_v2_enabled and slot.case_id not in MechanicsModelBindings.CASES:
+            binding, v2_capture = self._capture_v2_pair(
+                slot, binding, output_dir, base, token, solver_tag, timeout_s=timeout_s,
+                reopened_origin=reopened_origin, reopened_model_load=reopened_model_load)
         field_path = _project_path(self.workspace, base.with_name(token + "_dofs.gz"), must_exist=False)
-        binding, _, field_readback = self._fixture_action(binding, "solution_snapshot", {
+        field_binding_before = binding
+        binding, field_response, field_readback = self._fixture_action(binding, "solution_snapshot", {
             "solver_tag": solver_tag, "path": str(field_path)}, timeout_s=timeout_s)
         if field_readback.get("status") != "SOLUTION_SNAPSHOT_WRITTEN" or field_readback.get("solver_tag") != solver_tag:
             raise CampaignError("native solution snapshot action lacks its exact solver/status readback")
         if field_readback.get("real_solution") is not True:
             raise CampaignError("native solution snapshot omitted COMSOL's real-valued solution readback")
+        if v2_capture is not None:
+            post_v2_operations.append(self._record_public_java_action(
+                action="solution_snapshot", response=field_response,
+                binding_before=field_binding_before, binding_after=binding,
+                source_fixture=self.fixture,
+                response_dir=self.evidence / "v2_postcapture_responses",
+                response_label=f"{token}_legacy_snapshot"))
         field_evidence = _evidence_copy(field_path, output_dir / "field_snapshot.gz",
                                         status="NATIVE_RAW_FIELD_SNAPSHOT")
         frames = list(iter_solution_snapshot(Path(field_evidence["path"])))
@@ -2138,6 +3168,8 @@ class NativeScienceCampaignAdapter:
             raise CampaignError("native field snapshot contains no frames")
         capture: dict[str, Any] = {
             "status": "NATIVE_RAW_SNAPSHOT_CAPTURED",
+            "cure_law_capture_mode": ("V2_PUBLIC_AUTHENTICATED" if v2_capture is not None else
+                                       "V1_LEGACY_PATH_NOT_V2_ACCEPTANCE"),
             "field_snapshot": {**field_evidence, "solver_tag": solver_tag,
                                "dof_count": field_readback.get("dof_count"),
                                "stored_time_count": field_readback.get("stored_time_count"),
@@ -2146,6 +3178,8 @@ class NativeScienceCampaignAdapter:
             "dof_names": field_readback.get("dof_names"),
             "model_binding": binding.as_record(),
         }
+        if v2_capture is not None:
+            capture["v2_capture"] = v2_capture
         if slot.case_id in MechanicsModelBindings.CASES:
             metrics_path = _project_path(self.workspace, base.with_name(token + "_mechanics.json"),
                                          must_exist=False)
@@ -2161,14 +3195,24 @@ class NativeScienceCampaignAdapter:
         else:
             metrics_path = _project_path(self.workspace, base.with_name(token + "_cure_metrics.json"),
                                          must_exist=False)
-            binding, _, metrics_readback = self._fixture_action(binding, "cure_metrics_capture", {
+            metrics_binding_before = binding
+            binding, metrics_response, metrics_readback = self._fixture_action(binding, "cure_metrics_capture", {
                 "solver_tag": solver_tag, "stress_components": self.stress_components,
                 "path": str(metrics_path)}, timeout_s=timeout_s)
             if metrics_readback.get("status") != "NATIVE_CURE_METRICS_CAPTURED":
                 raise CampaignError("native cure capture returned no exact status")
+            if v2_capture is not None:
+                post_v2_operations.append(self._record_public_java_action(
+                    action="cure_metrics_capture", response=metrics_response,
+                    binding_before=metrics_binding_before, binding_after=binding,
+                    source_fixture=self.fixture,
+                    response_dir=self.evidence / "v2_postcapture_responses",
+                    response_label=f"{token}_cure_metrics"))
             capture["native_metrics"] = _evidence_copy(
                 metrics_path, output_dir / "native_metrics.json",
                 status="NATIVE_CURE_METRICS_CAPTURED")
+        if v2_capture is not None:
+            capture["post_v2_operations"] = post_v2_operations
         capture["model_binding"] = binding.as_record()
         self.captures[f"{slot.case_id}:{slot.study_tag}"] = capture
         return capture
@@ -2195,9 +3239,237 @@ class NativeScienceCampaignAdapter:
                       prior_captures: Mapping[str, Mapping[str, Any]],
                       *, timeout_s: float) -> Mapping[str, Any]:
         del timeout_s
-        return _validate_native_science_slot(
+        result = _validate_native_science_slot(
             slot, capture, prior_captures, evidence=self.evidence,
             stress_components=self.stress_components)
+        if slot.case_id in MechanicsModelBindings.CASES:
+            return result
+        if not self.cure_law_v2_enabled:
+            if capture.get("cure_law_capture_mode") == "V2_PUBLIC_AUTHENTICATED" or "v2_capture" in capture:
+                raise CampaignError("legacy v1 setup cannot claim a v2 authenticated capture")
+            return {**result, "cure_law_capture_mode": "LEGACY_OR_UNDECLARED_V1_NOT_V2_ACCEPTANCE"}
+
+        if (capture.get("cure_law_capture_mode") != "V2_PUBLIC_AUTHENTICATED" or
+                not isinstance(capture.get("v2_capture"), Mapping)):
+            raise CampaignError("setup declared cure-law v2 but this solved slot lacks its complete public v2 capture")
+        current_frames, current_lineage = self._authenticated_v2_capture_frames(
+            capture, expected_case=slot.case_id, expected_study=slot.study_tag)
+        result = {**result, "v2_capture_lineage": current_lineage}
+
+        if slot.case_id == "staged_baseline" and slot.study_tag in {"stdBake", "stdCool"}:
+            source_tag = "stdUV" if slot.study_tag == "stdBake" else "stdBake"
+            source_capture = prior_captures.get(f"staged_baseline:{source_tag}")
+            if not isinstance(source_capture, Mapping):
+                raise CampaignError(f"v2 staged handoff lacks its exact {source_tag} public capture")
+            source_frames, source_lineage = self._authenticated_v2_capture_frames(
+                source_capture, expected_case="staged_baseline", expected_study=source_tag)
+            boundary = 120.0 if slot.study_tag == "stdBake" else 960.0
+            source_index = _exact_time_row([row["time_s"] for row in source_frames], boundary,
+                                           f"v2 {source_tag} source stored times")
+            target_index = _exact_time_row([row["time_s"] for row in current_frames], boundary,
+                                           f"v2 {slot.study_tag} target stored times")
+            result["v2_stage_handoff"] = self._compare_authenticated_v2_frames(
+                [source_frames[source_index]], [current_frames[target_index]],
+                [source_lineage], [current_lineage], label=f"{source_tag}->{slot.study_tag} at {boundary:g}s",
+                handoff=True)
+
+        if slot.case_id == "continuous_comparator":
+            staged_frames, staged_lineages = self._authenticated_staged_v2_schedule(prior_captures)
+            result["v2_staged_continuous_comparison"] = self._compare_authenticated_v2_frames(
+                staged_frames, current_frames, staged_lineages, [current_lineage],
+                label="complete staged versus continuous W24 cure history")
+        return result
+
+    @staticmethod
+    def _v2_full_dof_tolerances(frames: Sequence[Mapping[str, Any]],
+                                lineages: Sequence[Mapping[str, Any]]) -> dict[str, float]:
+        from tools.w24_science_acceptance import dof_value_map
+
+        if not frames or not lineages:
+            raise CampaignError("authenticated v2 comparison requires native frames and source lineages")
+        observed = {row[0] for row in dof_value_map(frames[0]).values()}
+        candidate_maps = [row.get("full_dof_absolute_tolerances") for row in lineages]
+        if (any(not isinstance(row, Mapping) for row in candidate_maps) or
+                any(dict(row) != dict(candidate_maps[0]) for row in candidate_maps[1:]) or
+                observed != set(candidate_maps[0])):
+            raise CampaignError("full Xmesh DOF set is not exactly covered by the authenticated v2 solver-atol readbacks")
+        return {str(name): float(value) for name, value in candidate_maps[0].items()}
+
+    def _compare_authenticated_v2_frames(self,
+                                         source_frames: Sequence[Mapping[str, Any]],
+                                         target_frames: Sequence[Mapping[str, Any]],
+                                         source_lineages: Sequence[Mapping[str, Any]],
+                                         target_lineages: Sequence[Mapping[str, Any]], *,
+                                         label: str,
+                                         handoff: bool = False) -> dict[str, Any]:
+        from tools.w24_cure_law_v2 import (
+            AcceptanceError, compare_v2_history_handoff,
+            compare_v2_history_schedules,
+        )
+
+        all_frames = [*source_frames, *target_frames]
+        all_lineages = [*source_lineages, *target_lineages]
+        dof_tolerances = self._v2_full_dof_tolerances(all_frames, all_lineages)
+        try:
+            if handoff:
+                if len(source_frames) != 1 or len(target_frames) != 1:
+                    raise CampaignError("v2 stage handoff compares exactly one shared native boundary frame")
+                comparison = compare_v2_history_handoff(
+                    source_frames[0], target_frames[0],
+                    dof_abs_tolerances=dof_tolerances,
+                    history_abs_tolerances=V2_HISTORY_ABS_TOLERANCES)
+            else:
+                comparison = compare_v2_history_schedules(
+                    source_frames, target_frames,
+                    dof_abs_tolerances=dof_tolerances,
+                    history_abs_tolerances=V2_HISTORY_ABS_TOLERANCES)
+        except AcceptanceError as exc:
+            raise CampaignError(f"{label} v2 authenticated numerical comparison failed: {exc}") from exc
+        return {
+            **comparison,
+            "status": "V2_AUTHENTICATED_NUMERICAL_COMPARISON_PASS_BRANCH_STATE_UNVERIFIED",
+            "label": label,
+            "source_identity_authenticated": True,
+            "source_lineages": [dict(row) for row in source_lineages],
+            "target_lineages": [dict(row) for row in target_lineages],
+            "native_acceptance": "NOT_RUN",
+            "maxwell_branch_reference_state": "UNVERIFIED_NO_PUBLIC_REFERENCE_STATE_CAPTURE",
+        }
+
+    def _validate_worker2_reopen_prefix(self, *, expected_case: str, expected_study: str,
+                                        prior_captures: Any,
+                                        current_start: Any, current_load: Any,
+                                        saved_model: Any,
+                                        source_staged_captures: Any) -> None:
+        """Bind each Worker2 stage to one original MPH load and its ordered prior captures."""
+        prefixes = {"stdUV": (), "stdBake": ("stdUV",), "stdCool": ("stdUV", "stdBake")}
+        if expected_case != "staged_baseline" or expected_study not in prefixes:
+            raise CampaignError("Worker2 reopen chain is only defined for the exact staged baseline sequence")
+        if not isinstance(prior_captures, Mapping):
+            raise CampaignError("Worker2 capture omitted its exact prior-stage capture mapping")
+        expected_keys = {f"staged_baseline:{tag}" for tag in prefixes[expected_study]}
+        if set(prior_captures) != expected_keys:
+            raise CampaignError(f"Worker2 {expected_study} reopen must retain every ordered prior stage exactly once")
+        if (not isinstance(current_load, Mapping) or
+                not isinstance(current_load.get("public_identity"), Mapping) or
+                not isinstance(current_load.get("binding"), Mapping) or
+                not isinstance(saved_model, Mapping) or
+                not isinstance(source_staged_captures, Mapping) or
+                not isinstance(current_start, Mapping)):
+            raise CampaignError("Worker2 reopen prefix omitted its exact load, saved artifact, source chain, or start binding")
+
+        def _binding_key(record: Any, label: str) -> tuple[Any, ...]:
+            if (not isinstance(record, Mapping) or record.get("project_id") != self.project_id or
+                    not isinstance(record.get("session_id"), str) or not record.get("session_id") or
+                    not isinstance(record.get("model_ref"), Mapping) or
+                    isinstance(record.get("revision"), bool) or not isinstance(record.get("revision"), int) or
+                    record.get("revision") < 0):
+                raise CampaignError(f"{label} omitted an exact project/session/ModelRef/revision identity")
+            model_ref = record["model_ref"]
+            if (model_ref.get("session_id") != record.get("session_id") or
+                    not isinstance(model_ref.get("server_instance_id"), str) or
+                    not model_ref.get("server_instance_id") or
+                    isinstance(model_ref.get("generation"), bool) or
+                    not isinstance(model_ref.get("generation"), int) or model_ref.get("generation") < 1):
+                raise CampaignError(f"{label} ModelRef does not identify its exact Worker epoch")
+            return (record.get("project_id"), record.get("session_id"),
+                    json.dumps(dict(model_ref), sort_keys=True, separators=(",", ":")))
+
+        load_binding = current_load.get("binding")
+        expected_identity = current_load.get("public_identity")
+        load_model_key = _binding_key(load_binding, "Worker2 model_load")
+        prior_end: Mapping[str, Any] | None = None
+        for tag in prefixes[expected_study]:
+            key = f"staged_baseline:{tag}"
+            previous_capture = prior_captures.get(key)
+            if not isinstance(previous_capture, Mapping):
+                raise CampaignError(f"Worker2 {expected_study} capture skipped its required {tag} predecessor")
+            previous_report = previous_capture.get("v2_capture")
+            if (not isinstance(previous_report, Mapping) or
+                    previous_report.get("status") != "V2_REOPEN_PUBLIC_CAPTURE_CHAIN_VERIFIED_NATIVE_REVIEW_REQUIRED"):
+                raise CampaignError(f"Worker2 prior {tag} capture is not an authenticated reopened stage")
+            _frames, previous_lineage = self._authenticated_v2_capture_frames(
+                previous_capture, expected_case=expected_case, expected_study=tag)
+            previous_model_load = previous_report.get("model_load")
+            previous_load = (previous_model_load.get("current_worker_model_load")
+                             if isinstance(previous_model_load, Mapping) else None)
+            if (not isinstance(previous_model_load, Mapping) or
+                    not isinstance(previous_load, Mapping) or
+                    previous_load.get("public_identity") != expected_identity or
+                    previous_load.get("binding") != load_binding or
+                    previous_model_load.get("saved_model") != saved_model or
+                    previous_model_load.get("source_staged_captures") != source_staged_captures):
+                raise CampaignError("Worker2 prior stage does not share the exact model_load, saved MPH, and Worker1 source chain")
+            previous_start = previous_lineage.get("binding_before")
+            previous_end = previous_lineage.get("binding_after")
+            if prior_end is None and _binding_key(previous_start, f"Worker2 {tag} start") != load_model_key:
+                raise CampaignError(f"Worker2 {tag} did not begin at the exact saved-MPH model_load revision")
+            if prior_end is not None and previous_start != prior_end:
+                raise CampaignError(f"Worker2 reopened stage revision chain breaks before {tag}")
+            if _binding_key(previous_end, f"Worker2 {tag} end") != load_model_key:
+                raise CampaignError(f"Worker2 {tag} changed ModelRef epoch during its capture")
+            prior_end = previous_end
+
+        current_key = _binding_key(current_start, f"Worker2 {expected_study} current start")
+        if current_key != load_model_key:
+            raise CampaignError("Worker2 staged capture changed the exact model_load ModelRef epoch")
+        if prior_end is None:
+            if current_start != load_binding:
+                raise CampaignError(f"Worker2 {expected_study} first setup does not begin at model_load revision")
+        elif current_start != prior_end:
+            raise CampaignError(f"Worker2 revision chain does not continue from its prior staged capture before {expected_study}")
+
+    def _authenticated_staged_v2_schedule(
+            self, captures: Mapping[str, Mapping[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+        expected_keys = {f"staged_baseline:{tag}" for tag in ("stdUV", "stdBake", "stdCool")}
+        if set(captures) != expected_keys:
+            raise CampaignError("full v2 staged schedule must contain exactly stdUV, stdBake, and stdCool")
+
+        def _binding_key(binding: Any, label: str) -> tuple[Any, ...]:
+            if (not isinstance(binding, Mapping) or binding.get("project_id") != self.project_id or
+                    not isinstance(binding.get("session_id"), str) or not binding.get("session_id") or
+                    not isinstance(binding.get("model_ref"), Mapping) or
+                    isinstance(binding.get("revision"), bool) or
+                    not isinstance(binding.get("revision"), int) or binding["revision"] < 0):
+                raise CampaignError(f"{label} has no exact project/session/ModelRef/revision binding")
+            ref = binding["model_ref"]
+            if (ref.get("session_id") != binding.get("session_id") or
+                    not isinstance(ref.get("server_instance_id"), str) or not ref.get("server_instance_id") or
+                    isinstance(ref.get("generation"), bool) or not isinstance(ref.get("generation"), int) or
+                    ref.get("generation") < 1):
+                raise CampaignError(f"{label} ModelRef lacks its exact Worker epoch identity")
+            return (binding.get("project_id"), binding.get("session_id"),
+                    json.dumps(dict(binding.get("model_ref", {})), sort_keys=True, separators=(",", ":")))
+
+        frames: list[dict[str, Any]] = []
+        lineages: list[dict[str, Any]] = []
+        previous_end: Mapping[str, Any] | None = None
+        for index, study_tag in enumerate(("stdUV", "stdBake", "stdCool")):
+            capture = captures.get(f"staged_baseline:{study_tag}")
+            if not isinstance(capture, Mapping):
+                raise CampaignError(f"full v2 staged schedule is missing {study_tag}")
+            stage_frames, lineage = self._authenticated_v2_capture_frames(
+                capture, expected_case="staged_baseline", expected_study=study_tag)
+            start_binding = lineage.get("binding_before")
+            end_binding = lineage.get("binding_after")
+            start_identity = _binding_key(start_binding, f"{study_tag} staged capture start")
+            end_identity = _binding_key(end_binding, f"{study_tag} staged capture end")
+            start_revision = start_binding.get("revision")
+            end_revision = end_binding.get("revision")
+            if start_identity != end_identity or start_revision >= end_revision:
+                raise CampaignError(f"{study_tag} staged capture changed ModelRef epoch or reversed revisions")
+            if previous_end is not None and previous_end != start_binding:
+                raise CampaignError(f"stdUV→stdBake→stdCool same-model revision chain breaks before {study_tag}")
+            lineage["stage_binding_before"] = dict(start_binding)
+            lineage["stage_binding_after"] = dict(end_binding)
+            lineage["stage_post_v2_operation_ids"] = [
+                row.get("public_identity", {}).get("operation_id")
+                for row in capture.get("post_v2_operations", [])
+                if isinstance(row, Mapping) and isinstance(row.get("public_identity"), Mapping)]
+            frames.extend(stage_frames[:-1] if index < 2 else stage_frames)
+            lineages.append(lineage)
+            previous_end = end_binding
+        return frames, lineages
 
     def reopen_staged_baseline(self, saved_path: Path, *, timeout_s: float) -> Mapping[str, Any]:
         if (self.worker_start_attempt_count >= MAX_SEQUENTIAL_WORKERS or
@@ -2301,17 +3573,20 @@ class NativeScienceCampaignAdapter:
         self.mechanics_models.clear()
         reopened = self._load_registered_copy("staged_baseline", path,
                                                timeout_s=min(timeout_s, 240.0))
-        response = self.model_load_receipts["staged_baseline"]["response"]
-        persisted = self.model_load_receipts["staged_baseline"]["persisted_project_binding"]
+        load_receipt = self.model_load_receipts.get("staged_baseline_worker2")
+        if not isinstance(load_receipt, Mapping):
+            raise CampaignError("second Worker staged baseline model_load receipt was not preserved separately")
+        response = load_receipt["response"]
+        persisted = load_receipt["persisted_project_binding"]
         if (not isinstance(persisted, Mapping) or persisted.get("attribution") != "PROJECT_BOUND" or
                 persisted.get("project_id") != self.project_id):
             raise CampaignError("second Worker staged baseline load lost its project association")
         identity = self._managed_model_inspect(reopened, timeout_s=min(timeout_s, 120.0))
         self.models["staged_baseline"] = reopened
-        self.model_load_receipts["staged_baseline_worker2"] = {
-            "path": str(path), "sha256": sha256(path), "binding": reopened.as_record(),
-            "persisted_project_binding": dict(persisted), "response": response}
-        binding, _, readback = self._fixture_action(reopened, "readback", {}, timeout_s=min(timeout_s, 180.0))
+        binding = reopened
+        readback_before = binding
+        binding, readback_response, readback = self._fixture_action(
+            binding, "readback", {}, timeout_s=min(timeout_s, 180.0))
         studies = readback.get("studies")
         if not isinstance(studies, list) or not {"stdUV", "stdBake", "stdCool"}.issubset(studies):
             raise CampaignError("second Worker reopened MPH lacks the three native staged studies")
@@ -2334,6 +3609,18 @@ class NativeScienceCampaignAdapter:
         if list(readback.get("mesh_tags", [])) != expected_configuration.get("mesh_tags") or \
                 readback.get("quasistatic_readback") != expected_configuration.get("quasistatic_readback"):
             raise CampaignError("second Worker mesh or quasistatic physics readback differs from the saved baseline")
+        if self.cure_law_v2_enabled:
+            initial_slot = next(row for row in SOLVE_PLAN if row.case_id == "staged_baseline" and row.study_tag == "stdUV")
+            initial_ref = self._record_public_java_action(
+                action="readback", response=readback_response,
+                binding_before=readback_before, binding_after=binding,
+                source_fixture=self.fixture, response_dir=self.evidence / "v2_setup_readbacks",
+                response_label="staged_baseline_worker2_initial_setup")
+            if self._reauthenticate_public_java_action(initial_ref).get("readback_data") != readback:
+                raise CampaignError("Worker2 actual setup response differs from its durable public readback")
+            self.slot_native_setup_readbacks[
+                f"{initial_slot.case_id}:{initial_slot.study_tag}:worker{self.worker_sessions}"] = initial_ref
+            self.models["staged_baseline"] = binding
         self.models["staged_baseline"] = binding
         reloaded_case_models: dict[str, dict[str, Any]] = {}
         for case_name in ("continuous_comparator", "reset_negative_control", "coarse_mesh",
@@ -2352,19 +3639,78 @@ class NativeScienceCampaignAdapter:
         reopened_captures: dict[str, Mapping[str, Any]] = {}
         for study_tag in ("stdUV", "stdBake", "stdCool"):
             slot = next(row for row in SOLVE_PLAN if row.case_id == "staged_baseline" and row.study_tag == study_tag)
+            state_key = f"{slot.case_id}:{slot.study_tag}:worker{self.worker_sessions}"
+            if study_tag != "stdUV" and self.cure_law_v2_enabled:
+                setup_before = binding
+                binding, setup_response, setup_readback = self._fixture_action(
+                    binding, "readback", {}, timeout_s=min(timeout_s, 180.0))
+                if (self._check_solver_readback(setup_readback, slot, max_step_s=1.0) !=
+                        self.slot_solver_tags.get((slot.case_id, slot.study_tag)) or
+                        self._check_study_readback(setup_readback, slot, max_step_s=1.0) !=
+                        expected_configuration.get("study_time_readbacks")):
+                    raise CampaignError(f"Worker2 {study_tag} readback differs from its frozen staged setup")
+                setup_ref = self._record_public_java_action(
+                    action="readback", response=setup_response,
+                    binding_before=setup_before, binding_after=binding,
+                    source_fixture=self.fixture, response_dir=self.evidence / "v2_setup_readbacks",
+                    response_label=f"staged_baseline_worker2_{study_tag}_setup")
+                if self._reauthenticate_public_java_action(setup_ref).get("readback_data") != setup_readback:
+                    raise CampaignError(f"Worker2 {study_tag} setup response differs from its durable public readback")
+                self.slot_native_setup_readbacks[state_key] = setup_ref
+            if self.cure_law_v2_enabled:
+                binding, contract = self._ensure_v2_contract_readback(
+                    slot, binding, timeout_s=min(timeout_s, 180.0), state_key=state_key)
+                if not isinstance(contract, Mapping):
+                    raise CampaignError(f"Worker2 {study_tag} current-model v2 contract readback is missing")
+                self.models["staged_baseline"] = binding
             capture = self._capture_native_files(
                 slot, binding, self.evidence / f"staged_reopen_worker2_{study_tag}",
-                timeout_s=min(timeout_s, 600.0))
+                timeout_s=min(timeout_s, 600.0),
+                reopened_origin=({**original_captures[f"staged_baseline:{study_tag}"],
+                                 "staged_source_captures": original_captures,
+                                 "worker2_prior_captures": {
+                                     f"staged_baseline:{prior_tag}": reopened_captures[prior_tag]
+                                     for prior_tag in {
+                                         "stdUV": (), "stdBake": ("stdUV",),
+                                         "stdCool": ("stdUV", "stdBake"),
+                                     }[study_tag]}}
+                                if self.cure_law_v2_enabled else None),
+                reopened_model_load=load_receipt if self.cure_law_v2_enabled else None)
             _validate_native_science_slot(slot, capture, {}, evidence=self.evidence,
                                           stress_components=self.stress_components,
                                           allow_missing_prior_for_reopen=True)
             original = original_captures[f"staged_baseline:{study_tag}"]
-            reopened_receipts[study_tag] = _compare_reopened_stage_capture(
+            reopen_comparison = _compare_reopened_stage_capture(
                 original, capture, self.evidence, stress_components=self.stress_components)
+            if self.cure_law_v2_enabled:
+                original_v2_frames, original_v2_lineage = self._authenticated_v2_capture_frames(
+                    original, expected_case="staged_baseline", expected_study=study_tag)
+                reopened_v2_frames, reopened_v2_lineage = self._authenticated_v2_capture_frames(
+                    capture, expected_case="staged_baseline", expected_study=study_tag)
+                reopen_comparison["v2_authenticated_schedule_comparison"] = \
+                    self._compare_authenticated_v2_frames(
+                        original_v2_frames, reopened_v2_frames,
+                        [original_v2_lineage], [reopened_v2_lineage],
+                        label=f"Worker1→Worker2 reopened {study_tag} stored-time schedule")
+            reopened_receipts[study_tag] = reopen_comparison
             reopened_captures[study_tag] = capture
             binding = ManagedModelBinding(self.project_id, binding.session_id,
                                           binding.model_ref,
                                           int(capture["model_binding"]["revision"]))
+        full_v2_reopen_comparison: dict[str, Any] | None = None
+        if self.cure_law_v2_enabled:
+            original_staged_frames, original_staged_lineages = self._authenticated_staged_v2_schedule(
+                original_captures)
+            reopened_stage_mapping = {
+                f"staged_baseline:{tag}": reopened_captures[tag]
+                for tag in ("stdUV", "stdBake", "stdCool")
+            }
+            reopened_staged_frames, reopened_staged_lineages = self._authenticated_staged_v2_schedule(
+                reopened_stage_mapping)
+            full_v2_reopen_comparison = self._compare_authenticated_v2_frames(
+                original_staged_frames, reopened_staged_frames,
+                original_staged_lineages, reopened_staged_lineages,
+                label="complete Worker1 versus Worker2 staged cure schedule")
         self.models["staged_baseline"] = binding
         self.captures = original_captures
         self.reopened_stage_captures = reopened_captures
@@ -2390,6 +3736,7 @@ class NativeScienceCampaignAdapter:
                 "managed_native_identity_readback": identity,
                 "native_readback": readback,
                 "stage_reopen_checks": reopened_receipts,
+                "full_v2_staged_reopen_comparison": full_v2_reopen_comparison,
                 "reopened_solver_tags": reopened_solvers,
                 "solve_ledger_count_before": ledger_count_before,
                 "solve_ledger_count_unchanged": ledger_count_after}
@@ -2550,6 +3897,25 @@ def validate_equation_view_inventory(value: Any) -> dict[str, Any]:
     }
 
 
+def _validated_setup_cure_v2_claim(build: Mapping[str, Any]) -> dict[str, Any]:
+    """Separate an explicit, complete native v2 setup readback from legacy v1."""
+    version = build.get("cure_law_version")
+    v2_markers = ("relative_exposure_dose", "spatial_uv_readback",
+                  "activation_readback", "viscoelastic_readback",
+                  "dose_solver_tolerance_readbacks")
+    has_v2_fields = any(key in build for key in v2_markers)
+    if version in (None, "W24_CURE_LAW_V1") and not has_v2_fields:
+        return {"enabled": False, "status": "LEGACY_OR_UNDECLARED_V1_SETUP_NOT_V2_ACCEPTANCE"}
+    from tools.w24_cure_v2_capture import CaptureError, validate_cure_law_v2_contract_readback
+
+    try:
+        validated = validate_cure_law_v2_contract_readback(build)
+    except CaptureError as exc:
+        raise CampaignError(f"setup declares an incomplete or invalid cure-law v2 readback: {exc}") from exc
+    return {"enabled": True, "status": "EXPLICIT_V2_SETUP_READBACK_VALIDATED",
+            "validation": validated}
+
+
 def validate_template_receipt(receipt_path: Path) -> dict[str, Any]:
     """Verify an immutable configured native template without touching COMSOL."""
     receipt_path = receipt_path.expanduser().resolve(strict=True)
@@ -2607,6 +3973,7 @@ def validate_template_receipt(receipt_path: Path) -> dict[str, Any]:
         raise CampaignError("template native readback lacks all three staged solver configurations")
     if build.get("solid_quasistatic_readback") != "Quasistatic":
         raise CampaignError("template does not natively read back quasistatic Solid Mechanics")
+    v2_setup = _validated_setup_cure_v2_claim(build)
     equation_view_inventory = validate_equation_view_inventory(receipt.get("equation_view_inventory"))
     runtime_environment = receipt.get("runtime_environment")
     if (not isinstance(runtime_environment, Mapping) or
@@ -2638,6 +4005,7 @@ def validate_template_receipt(receipt_path: Path) -> dict[str, Any]:
         "engine_identity": dict(identity),
         "setup_freeze_sha256": freeze_sha,
         "fixture_readback": dict(build),
+        "cure_law_v2_capture": v2_setup,
         "equation_view_inventory": equation_view_inventory,
         "runtime_environment": dict(runtime_environment),
         "project_id": registered_project["project_id"],
@@ -2655,13 +4023,18 @@ def runtime_source_manifest() -> dict[str, dict[str, str]]:
     paths.extend(sorted(path for path in (REPO / "comsol_mcp/worker_java").glob("*.java")
                         if not path.name.startswith("._")))
     paths.extend([
-        Path(__file__).resolve(), SCIENCE_FIXTURE, PLAN, SETUP_RUNNER,
-        REPO / "tools/java/W24CureCouponFixture.java",
+        Path(__file__).resolve(), SCIENCE_FIXTURE, V2_CONTROL_FIXTURE,
+        COUPON_FIXTURE, PLAN, SETUP_RUNNER,
+        REPO / "tools/w24_cure_law_v2.py",
+        REPO / "tools/w24_cure_v2_capture.py",
         REPO / "tools/w24_science_acceptance.py",
         REPO / "tools/run_native_resume_smoke.py",
         REPO / "tools/run_native_w23_te_managed_preflight.py",
         REPO / "tools/run_native_artifact_geometry.py",
         REPO / "tests/test_w24_cure_science_runner.py",
+        REPO / "tests/test_w24_cure_law_v2.py",
+        REPO / "tests/test_w24_cure_v2_capture.py",
+        REPO / "tests/test_w24_cure_capture_link.py",
         REPO / "tests/test_w24_cure_coupon_fixture.py",
         REPO / "tests/test_w24_science_acceptance.py",
     ])

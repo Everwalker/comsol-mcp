@@ -494,3 +494,7 @@ Next implementation uses an explicit complete complex Scaling map, without compo
 ### F16 objective/case artifact software stage accepted
 
 Exact 11-file overlay and 359 unchanged dependency files verified; 92 isolated tests PASS. Main previously ran 48 objective/durable checks and now 4 source-export repair tests, all PASS. Writable fsync and same-basename Java/M exports fix the prior review findings. Compact checkpoint: `docs/full_project_execution/project_session/EXPERIMENT_OBJECTIVE_CASE_ARTIFACT_CHECKPOINT.json`. Native case reload, COMSOL source export and real Windows checks remain NOT_RUN; weighted/native and original whole-project requirements remain open.
+
+### W24 saved producer and three-stage software closure
+
+Main verified 5 source files and 367 unchanged dependencies. The isolated six-module suite passed 142 tests; the same suite passed 142 tests after integration with F16 baseline 6dba12d. Java offline compilation passed. The former manual post-run file attribution is now rejected; actual Study.run request/result save path/size/hash and same-model revision provenance are rechecked during capture/reopen. Nonempty initial ledgers fail before dispatch and later submissions append to the same confined file. Native scientific acceptance remains NOT_RUN. Compact evidence: `docs/full_project_execution/w24/SAVED_PRODUCER_CHAIN_CHECKPOINT.json`.

@@ -103,7 +103,7 @@
       "native_acceptance": "NOT_RUN"
     }
   ],
-  "next_action": "Continue F16 original scope and requirement mapping; W23 explicit Scaling candidate; W24 real Study.run saved-artifact producer receipt. Native gates and platform blockers remain. Publish accepted stages, then complete all W01-W26 and independent overall review.",
+  "next_action": "Freeze original W21 stage API contract from gap audit; continue W23 explicit Scaling candidate and W24 native branch-state implementation. Native process/platform gates remain; complete all W01-W26 and final independent review.",
   "active_jobs": [],
   "blockers": [
     "W23 failed setup owned Server 75272 and daemon 75260 remain preserved: cleanup SIGTERM was rejected by automatic approval and explicit authorization is pending; no cleanup or relaunch authorized by elapsed time.",
@@ -132,7 +132,7 @@
     "native_solve_budget_remaining": 0,
     "evidence": "docs/full_project_execution/evidence/luna_process_reconciliation/mac_readonly_snapshot_20260926T2152Z.json"
   },
-  "updated_at": "2026-09-28T03:18:27.311063+00:00",
+  "updated_at": "2026-09-28T03:30:35.439110+00:00",
   "note": "Continuous authorized execution through W26. OpenViking task-detail retrieval was denied by auto-review because it would disclose internal roadmap identifiers externally; no workaround. Use current frozen workpack and read-only local memory only. Do not rerun bootstrap/init on resume. Source files now contain executor edits; do not rerun bootstrap/init. Git metadata is an APFS pointer managed by main agent; migration requires bundle/source transfer, not copying only the repository pointer. Git metadata migration is documented by evidence/git_metadata_relocation.json and owned by the main agent; do not copy the APFS git pointer to another machine without source bundle/archive. GUI permission boundary and checkpoint solution-scope caveat recorded. This executor has one W24 native setup-only failure with exact cleanup verified; the durable operation/job UNKNOWN records remain unchanged. No W24 solver submission occurred. Saved-MPH readback supplement uses separate time/evidence and zero study/solver calls; run08 remains FAIL_OR_INCOMPLETE. Root raw SQLite recomputation is linked under native_resume_saved_artifact_supplement.raw_recomputation_evidence; original run08 remains FAIL_OR_INCOMPLETE and no solve budget is restored. Latest checkpoint 2026-09-27T03:50:43Z: W24 0334Z setup run failed pre-model due Python 3.14 missing mcp, with exact cleanup; 0346Z candidate pins the validated 3.12.13 environment and passes a production no-engine registry/daemon preflight. Native setup remains pending root review; science implementation continues offline. Latest checkpoint 2026-09-27T09:09:28Z: W24 0841Z candidate was invoked once at 0857Z and failed before any engine/Worker birth because project.inspect received an injected idempotency_key; project.create persisted successfully. Exact read-only SQLite hash and operation result are in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_contract_diagnostic.json. The runner now omits the unnecessary inspect key; actual ControlDaemon focused regression is 2/2 PASS in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_runner_regression_receipt.json. No native retry or acceptance is claimed; release F04 runtime integration is active, so refresh closure and root review are required before another launch. Windows COMSOL 6.3 remains required/unassessed; only macOS 6.3 is USER_REQUESTED_SKIP.",
   "native_resume_smoke": {
     "status": "FAIL_OR_INCOMPLETE_POINT_SCHEMA_FAILURE; SOLVED_CHILD_ARTIFACT_DURABLE; SOLVE_BUDGET_EXHAUSTED; SEPARATE_SAVED_MPH_READBACK_PASS",
@@ -746,7 +746,7 @@
     "cleanup": "exact PID and ports absent; global COMSOL/Worker inventory quiescent",
     "scope": "API-only evidence; no optical, numerical, or physical acceptance"
   },
-  "recent_checkpoint": "docs/full_project_execution/project_session/EXPERIMENT_OBJECTIVE_CASE_ARTIFACT_CHECKPOINT.json",
+  "recent_checkpoint": "docs/full_project_execution/w24/SAVED_PRODUCER_CHAIN_CHECKPOINT.json",
   "root_resume_summary_correction": {
     "at": "2026-09-27T05:10:40.509110+00:00",
     "reason": "Prevent stale0346 relaunch from oldtop-level recovery summary; historical evidence retained",
@@ -990,11 +990,12 @@
     "next": "Wait for stable F04 runtime handoff; refresh closure and submit a new candidate for root review. No automatic rerun."
   },
   "verified_git_sync": {
-    "head": "3d63ad9f8bfe8d04903e1a09b1b1aee4e103a959",
-    "origin_main": "3d63ad9f8bfe8d04903e1a09b1b1aee4e103a959",
-    "verified_at": "2026-09-28T02:00:26.347216+00:00",
-    "method": "post-push git fetch origin main; git rev-parse HEAD origin/main",
-    "stage": "W23 CV topology/flat Java producer scoped software"
+    "status": "VERIFIED",
+    "head": "6dba12d0259e477311ec97eb94400bc493fb4e9a",
+    "origin_main": "6dba12d0259e477311ec97eb94400bc493fb4e9a",
+    "verified_at": "2026-09-28T03:19:40.099198+00:00",
+    "method": "post-push git fetch origin main; git rev-parse HEAD; git rev-parse origin/main",
+    "stage": "F16 objective and case artifact software"
   },
   "w24_static_shape_science_admission_repair": {
     "status": "SCOPED_SOFTWARE_REPAIR_ACCEPTED_NATIVE_NOT_RUN",
@@ -1461,7 +1462,7 @@
     }
   },
   "w24_capture_link_review": {
-    "status": "CHANGES_REQUIRED_SAVED_ARTIFACT_PRODUCER_RECEIPT",
+    "status": "PASS_SCOPED_SOFTWARE_NATIVE_NOT_RUN",
     "receipt": "/private/tmp/w24_cure_history_link_stage_c6bd_20260928/evidence/software_closure_receipt.json",
     "receipt_sha256": "88b2d2bf81ca054d5d22b9880e9b909b7fc2a82cd32de3eb8ded14bec0b567c9",
     "candidate_tests": 99,
@@ -1473,7 +1474,7 @@
       "Reopen final binding comparison appears to equate post-contract and post-history revisions; fix and test actual successive transitions.",
       "Worker2 loop reopens stdUV/stdHeat/stdCool from final saved MPH, but authentication requires each original stage Study.run public_identity to equal the terminal stdCool save producer. New production positive only covers stdCool; earlier legitimate stages necessarily differ."
     ],
-    "next_action": "Same Luna adds same-Worker save path/size/hash result bound to actual terminal Study.run request/model/revision; production run_study and downstream reauthentication must verify it. Test true production save flow plus no-save/missing receipt/wrong path/replaced bytes/foreign producer controls; refreeze latest-base closure.",
+    "next_action": "Continue same-version Maxwell branch-state producer design and implementation; use documented native field/solution evidence, not guessed branch DOF names. Keep native resource cleanup and frozen-budget gates; do not launch until authorized.",
     "native_result": "NOT_RUN",
     "github_sync": "NOT_PUBLISHED",
     "production_fix_candidate": {
@@ -1499,6 +1500,15 @@
       "path": "/private/tmp/w24-saved-producer-main-reproducer.json",
       "sha256": "ab960b588a37a21b57dd8a4d1a039a9f846c45e86cfd6132b561f03a970b9e8e",
       "result": "Main independently ran full three-stage production positive: all three accepted even though the claimed terminal producer has no immediate_save_path or saved bytes receipt. Test writes file after Study.run and supplies association metadata.",
+      "native": "NOT_RUN"
+    },
+    "checkpoint": "docs/full_project_execution/w24/SAVED_PRODUCER_CHAIN_CHECKPOINT.json",
+    "saved_producer_repair": {
+      "receipt": "/private/tmp/w24_saved_producer_fresh_3d63ad9_20260928/evidence/w24_saved_producer_retest_3_20260928/final_candidate_receipt.json",
+      "sha256": "68a2747e3e8ed4af3c6e7741b75da8aab21f782e9eb00fe1544a50a167535b2a",
+      "isolated_tests": 142,
+      "main_integration_tests": 142,
+      "integration_base": "6dba12d0259e477311ec97eb94400bc493fb4e9a",
       "native": "NOT_RUN"
     }
   }
