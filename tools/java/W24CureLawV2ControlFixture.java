@@ -5,6 +5,9 @@ import com.comsol.model.NumericalFeature;
 import com.comsol.model.SolverSequence;
 import com.comsol.model.Study;
 import com.comsol.model.StudyFeature;
+import com.comsol.model.XmeshInfo;
+import com.comsol.model.XmeshInfoElements;
+import com.comsol.model.XmeshInfoDofs;
 import com.comsol.model.physics.PhysicsFeature;
 import java.io.BufferedOutputStream;
 import java.io.DataOutputStream;
@@ -49,6 +52,7 @@ public final class W24CureLawV2ControlFixture {
         if ("capture_maxwell_control".equals(action)) return captureControl(model, args, true);
         if ("capture_gel_control".equals(action)) return captureControl(model, args, false);
         if ("solution_snapshot_v2".equals(action)) return solutionSnapshotV2(model, args);
+        if ("solution_snapshot_v3".equals(action)) return solutionSnapshotV3(model, args);
         throw new IllegalArgumentException("unsupported cure-law v2 control action: " + action);
     }
 
@@ -500,6 +504,287 @@ public final class W24CureLawV2ControlFixture {
         result.put("complete_xmesh_dofs", true);
         result.put("max_solution_vector_index", maxVectorIndex);
         return result;
+    }
+
+    /** Serialize the full CompileEquations Xmesh layout and each complete Sol vector. */
+    private static Map<String, Object> solutionSnapshotV3(Model model, Map<String, Object> args) {
+        String studyTag = safeToken(args.get("study_tag"), "study_tag");
+        String solverTag = safeToken(args.get("solver_tag"), "solver_tag");
+        String pathText = String.valueOf(args.getOrDefault("path", ""));
+        if (pathText.isBlank() || !Arrays.asList(model.study().tags()).contains(studyTag)) {
+            throw new IllegalArgumentException("solution_snapshot_v3 requires an exact attached study and output path");
+        }
+        String[] attached = model.study(studyTag).getSolverSequences("SolverSequence");
+        if (attached.length != 1 || !solverTag.equals(attached[0])) {
+            throw new IllegalStateException("V3 snapshot requires the exact unique SolverSequence attached to its study");
+        }
+        SolverSequence solution = model.sol(solverTag);
+        double[] times = solution.getPVals();
+        if (!solution.isAttached() || !studyTag.equals(solution.study()) || times == null || times.length == 0) {
+            throw new IllegalStateException("V3 snapshot solver attachment differs from its study or has no stored times");
+        }
+        String quasistatic = requireQuasistatic(model);
+        XmeshInfo xmesh = solution.xmeshInfo();
+        int declaredDofCount = xmesh.nDofs();
+        String[] fieldNames = xmesh.fieldNames();
+        int[] fieldNDofs = xmesh.fieldNDofs();
+        String[] dofNames = xmesh.dofs().dofNames();
+        XmeshInfoDofs dofs = xmesh.dofs();
+        int[] geometryNumbers = dofs.geomNums();
+        int[] nodes = dofs.nodes();
+        int[] nameIndices = dofs.nameInds();
+        int[] vectorIndices = dofs.solVectorInds();
+        double[][] coordinates = dofs.coords();
+        String[] geometries = xmesh.geoms();
+        int axes = coordinates == null ? 0 : coordinates.length;
+        int dofCount = geometryNumbers == null ? 0 : geometryNumbers.length;
+        if ((axes != 2 && axes != 3) || declaredDofCount <= 0 || dofCount <= 0 ||
+                fieldNames == null || fieldNDofs == null || fieldNames.length != fieldNDofs.length ||
+                dofNames == null || dofNames.length == 0 || geometries == null ||
+                nodes == null || nameIndices == null || vectorIndices == null ||
+                nodes.length != dofCount || nameIndices.length != dofCount || vectorIndices.length != dofCount ||
+                coordinates.length != axes) {
+            throw new IllegalStateException("V3 XmeshInfo field and DOF metadata is incomplete or inconsistent");
+        }
+        long fieldCountSum = 0;
+        for (int count : fieldNDofs) {
+            if (count < 0) throw new IllegalStateException("V3 XmeshInfo fieldNDofs contains a negative count");
+            fieldCountSum += count;
+        }
+        if (fieldCountSum != declaredDofCount || dofCount != declaredDofCount) {
+            throw new IllegalStateException("V3 fieldNDofs, XmeshInfo.nDofs, and XmeshInfoDofs row count differ");
+        }
+        for (int axis = 0; axis < axes; axis++) {
+            if (coordinates[axis] == null || coordinates[axis].length != dofCount) {
+                throw new IllegalStateException("V3 global coordinates do not cover every Xmesh DOF");
+            }
+        }
+        for (int i = 0; i < dofCount; i++) {
+            if (nameIndices[i] < 0 || nameIndices[i] >= dofNames.length) {
+                throw new IllegalStateException("V3 Xmesh nameInds is outside the exact dofNames array");
+            }
+            for (int axis = 0; axis < axes; axis++) {
+                if (!Double.isFinite(coordinates[axis][i])) {
+                    throw new IllegalStateException("V3 Xmesh coordinate is nonfinite");
+                }
+            }
+        }
+
+        Path output = Path.of(pathText);
+        Path parent = output.getParent();
+        if (parent == null || !Files.isDirectory(parent) || Files.exists(output)) {
+            throw new IllegalArgumentException("V3 snapshot output must be a new file in an existing task directory");
+        }
+
+        int localGroupCount = 0;
+        long elementLocalMapEntries = 0;
+        int invalidElementDofRefs = 0;
+        for (String geometry : geometries) {
+            String[] meshTypes = xmesh.meshTypes(geometry);
+            if (meshTypes == null) throw new IllegalStateException("V3 Xmesh omitted mesh types for a geometry");
+            localGroupCount += meshTypes.length;
+            for (String meshType : meshTypes) {
+                XmeshInfoElements elements = xmesh.elements(meshType, geometry);
+                int[][] elementDofs = elements.dofs();
+                int localCount = elements.localDofNames().length;
+                if (elementDofs == null || elementDofs.length != localCount) {
+                    throw new IllegalStateException("V3 local DOF rows differ from XmeshInfoElements names");
+                }
+                int elementCount = elementDofCount(elementDofs, elements.nodes());
+                for (int row = 0; row < elementDofs.length; row++) {
+                    if (elementDofs[row] == null || elementDofs[row].length != elementCount) {
+                        throw new IllegalStateException("V3 element-local DOF map has an inconsistent element count");
+                    }
+                    for (int dofIndex : elementDofs[row]) {
+                        elementLocalMapEntries++;
+                        if (dofIndex < -1 || dofIndex >= dofCount) invalidElementDofRefs++;
+                    }
+                }
+            }
+        }
+
+        int unmappedDofRows = 0;
+        int invalidSolutionDofRefs = 0;
+        Set<Integer> mappedVectorIndices = new HashSet<>();
+        int duplicateVectorIndexRows = 0;
+        for (int vectorIndex : vectorIndices) {
+            if (vectorIndex == -1) { unmappedDofRows++; continue; }
+            if (vectorIndex < -1) { invalidSolutionDofRefs++; continue; }
+            if (!mappedVectorIndices.add(vectorIndex)) duplicateVectorIndexRows++;
+        }
+
+        int vectorLength = -1;
+        int missingVectorIndices = 0;
+        int outOfRangeSolutionDofRefs = 0;
+        try (DataOutputStream out = new DataOutputStream(new BufferedOutputStream(
+                new GZIPOutputStream(Files.newOutputStream(output, StandardOpenOption.CREATE_NEW))))) {
+            out.writeUTF("W24-DOF-SNAPSHOT-3");
+            out.writeInt(axes);
+            out.writeInt(declaredDofCount);
+            out.writeInt(fieldNames.length);
+            for (int i = 0; i < fieldNames.length; i++) {
+                out.writeUTF(fieldNames[i]);
+                out.writeInt(fieldNDofs[i]);
+            }
+            out.writeInt(dofNames.length);
+            for (String name : dofNames) out.writeUTF(name);
+            out.writeInt(dofCount);
+            for (int i = 0; i < dofCount; i++) {
+                out.writeInt(geometryNumbers[i]);
+                out.writeInt(nodes[i]);
+                out.writeInt(nameIndices[i]);
+                out.writeInt(vectorIndices[i]);
+                for (int axis = 0; axis < axes; axis++) out.writeDouble(coordinates[axis][i]);
+            }
+
+            out.writeInt(geometries.length);
+            for (String geometry : geometries) {
+                out.writeUTF(geometry);
+                String[] meshTypes = xmesh.meshTypes(geometry);
+                out.writeInt(meshTypes.length);
+                for (String meshType : meshTypes) {
+                    out.writeUTF(meshType);
+                    XmeshInfoElements elements = xmesh.elements(meshType, geometry);
+                    String[] localNames = elements.localDofNames();
+                    double[][] localDofCoords = elements.localDofCoords();
+                    int[][] elementDofs = elements.dofs();
+                    int[][] elementNodes = elements.nodes();
+                    double[][] localNodeCoords = elements.localCoords();
+                    int elementCount = elementDofCount(elementDofs, elementNodes);
+                    out.writeInt(localNames.length);
+                    out.writeInt(localDofCoords == null ? -1 : localDofCoords.length);
+                    for (String name : localNames) out.writeUTF(name);
+                    if (localDofCoords != null) {
+                        for (double[] axisValues : localDofCoords) {
+                            if (axisValues == null || axisValues.length != localNames.length) {
+                                throw new IllegalStateException("V3 local DOF coordinates do not align with local names");
+                            }
+                            for (double value : axisValues) {
+                                if (!Double.isFinite(value)) throw new IllegalStateException("V3 local DOF coordinate is nonfinite");
+                                out.writeDouble(value);
+                            }
+                        }
+                    }
+                    out.writeInt(localNodeCoords == null ? -1 : localNodeCoords.length);
+                    int localNodeCount = localNodeCoords == null || localNodeCoords.length == 0 ? 0 : localNodeCoords[0].length;
+                    out.writeInt(localNodeCount);
+                    if (localNodeCoords != null) {
+                        for (double[] axisValues : localNodeCoords) {
+                            if (axisValues == null || axisValues.length != localNodeCount) {
+                                throw new IllegalStateException("V3 local node coordinates have inconsistent dimensions");
+                            }
+                            for (double value : axisValues) {
+                                if (!Double.isFinite(value)) throw new IllegalStateException("V3 local node coordinate is nonfinite");
+                                out.writeDouble(value);
+                            }
+                        }
+                    }
+                    out.writeInt(elementCount);
+                    out.writeInt(elementNodes.length);
+                    for (int[] row : elementNodes) {
+                        if (row == null || row.length != elementCount) {
+                            throw new IllegalStateException("V3 element node map has an inconsistent element count");
+                        }
+                        for (int node : row) out.writeInt(node);
+                    }
+                    out.writeInt(elementDofs.length);
+                    for (int[] row : elementDofs) {
+                        if (row == null || row.length != elementCount) {
+                            throw new IllegalStateException("V3 element DOF map has an inconsistent element count");
+                        }
+                        for (int dofIndex : row) out.writeInt(dofIndex);
+                    }
+                }
+            }
+
+            out.writeInt(times.length);
+            double prior = Double.NEGATIVE_INFINITY;
+            for (int solnum = 1; solnum <= times.length; solnum++) {
+                double time = times[solnum - 1];
+                if (!Double.isFinite(time) || time <= prior || !solution.isRealU(solnum, "Sol")) {
+                    throw new IllegalStateException("V3 snapshot requires finite increasing times and real Sol vectors");
+                }
+                double[] values = solution.getU(solnum, "Sol");
+                if (values == null || values.length == 0) {
+                    throw new IllegalStateException("V3 snapshot received an empty Sol vector");
+                }
+                if (vectorLength < 0) {
+                    vectorLength = values.length;
+                    for (int vectorIndex : vectorIndices) {
+                        if (vectorIndex >= vectorLength) outOfRangeSolutionDofRefs++;
+                    }
+                    int coveredVectorIndices = 0;
+                    for (int mappedIndex : mappedVectorIndices) {
+                        if (mappedIndex >= 0 && mappedIndex < vectorLength) coveredVectorIndices++;
+                    }
+                    missingVectorIndices = vectorLength - coveredVectorIndices;
+                } else if (values.length != vectorLength) {
+                    throw new IllegalStateException("V3 Sol vector length changed across stored times");
+                }
+                out.writeDouble(time);
+                out.writeInt(values.length);
+                for (double value : values) {
+                    if (!Double.isFinite(value)) throw new IllegalStateException("V3 Sol vector contains a nonfinite value");
+                    out.writeDouble(value);
+                }
+                prior = time;
+            }
+            out.flush();
+        } catch (IOException exception) {
+            throw new IllegalStateException("failed to write compressed W24 full-Xmesh snapshot V3", exception);
+        }
+        try (FileChannel channel = FileChannel.open(output, StandardOpenOption.WRITE)) { channel.force(true); }
+        catch (IOException exception) { throw new IllegalStateException("failed to fsync W24 full-Xmesh snapshot V3", exception); }
+
+        boolean completeMapping = unmappedDofRows == 0 && invalidSolutionDofRefs == 0 &&
+            outOfRangeSolutionDofRefs == 0 && missingVectorIndices == 0 && invalidElementDofRefs == 0 &&
+            localGroupCount > 0 && elementLocalMapEntries > 0;
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("status", completeMapping ? "SOLUTION_SNAPSHOT_V3_WRITTEN" :
+            "SOLUTION_SNAPSHOT_V3_WRITTEN_MAPPING_INCOMPLETE");
+        result.put("schema", "W24-DOF-SNAPSHOT-3");
+        result.put("study_tag", studyTag);
+        result.put("solver_tag", solverTag);
+        result.put("study_tlist_readback", model.study(studyTag).feature("time1").getString("tlist"));
+        result.put("quasistatic_readback", quasistatic);
+        result.put("path", output.toString());
+        result.put("size_bytes", safeFileSize(output));
+        result.put("sha256", sha256(output));
+        result.put("stored_time_count", times.length);
+        result.put("xmesh_n_dofs", declaredDofCount);
+        result.put("field_names", Arrays.asList(fieldNames));
+        result.put("field_ndofs", boxed(fieldNDofs));
+        result.put("dof_count", dofCount);
+        result.put("coordinate_axes", axes);
+        result.put("complete_internal_dof_capture", completeMapping);
+        result.put("maxwell_branch_field_identity", "UNVERIFIED_NOT_INFERRED_FROM_FIELD_NAME");
+        result.put("unmapped_xmesh_dof_rows", unmappedDofRows);
+        result.put("invalid_xmesh_solution_indices", invalidSolutionDofRefs);
+        result.put("out_of_range_xmesh_solution_indices", outOfRangeSolutionDofRefs);
+        result.put("duplicate_solution_vector_index_rows", duplicateVectorIndexRows);
+        result.put("unrepresented_solution_vector_indices", missingVectorIndices);
+        result.put("invalid_element_dof_references", invalidElementDofRefs);
+        result.put("element_local_map_group_count", localGroupCount);
+        result.put("element_local_map_entries", elementLocalMapEntries);
+        result.put("sol_vector_length", vectorLength);
+        result.put("real_solution", true);
+        result.put("native_study_run_calls", 0);
+        result.put("native_acceptance", "NOT_RUN");
+        result.put("maxwell_branch_reference_state", "UNVERIFIED_NO_PUBLIC_REFERENCE_STATE_CAPTURE");
+        return result;
+    }
+
+    private static int elementDofCount(int[][] dofs, int[][] nodes) {
+        int count = -1;
+        for (int[][] candidate : new int[][][]{dofs, nodes}) {
+            if (candidate == null) continue;
+            for (int[] row : candidate) {
+                if (row == null) throw new IllegalStateException("V3 Xmesh element map contains a null row");
+                if (count < 0) count = row.length;
+                else if (count != row.length) throw new IllegalStateException("V3 Xmesh element map row lengths differ");
+            }
+        }
+        return Math.max(0, count);
     }
 
     private static String requireQuasistatic(Model model) {

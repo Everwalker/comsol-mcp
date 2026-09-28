@@ -119,6 +119,51 @@ def _write_solution_snapshot_v2(path: Path, times: list[float], *, axes=3):
             stream.write(struct.pack(">" + "d" * len(names), *[float(index + j) for j in range(len(names))]))
 
 
+def _write_solution_snapshot_v3(path: Path, times: list[float], *,
+                                vector_indices=(1, 0), vector_length=2):
+    axes = 3
+    field_names = ["comp1_T", "comp1_alpha"]
+    field_counts = [1, 1]
+    dof_names = ["comp1_T", "comp1_alpha"]
+    points = [
+        (1, 1, 0, vector_indices[0], (0.0, 0.0, 0.0)),
+        (1, 2, 1, vector_indices[1], (1e-6, 0.0, 0.0)),
+    ]
+    with gzip.open(path, "wb") as stream:
+        _write_java_utf(stream, "W24-DOF-SNAPSHOT-3")
+        stream.write(struct.pack(">ii", axes, len(points)))
+        stream.write(struct.pack(">i", len(field_names)))
+        for name, count in zip(field_names, field_counts):
+            _write_java_utf(stream, name)
+            stream.write(struct.pack(">i", count))
+        stream.write(struct.pack(">i", len(dof_names)))
+        for name in dof_names:
+            _write_java_utf(stream, name)
+        stream.write(struct.pack(">i", len(points)))
+        for geom, node, name_index, vector_index, coordinates in points:
+            stream.write(struct.pack(">iiii", geom, node, name_index, vector_index))
+            stream.write(struct.pack(">ddd", *coordinates))
+        stream.write(struct.pack(">i", 1))
+        _write_java_utf(stream, "geom1")
+        stream.write(struct.pack(">i", 1))
+        _write_java_utf(stream, "mesh1")
+        stream.write(struct.pack(">ii", 2, 3))
+        _write_java_utf(stream, "comp1_T")
+        _write_java_utf(stream, "comp1_alpha")
+        stream.write(struct.pack(">dddddd", 0.0, 1e-6, 0.0, 0.0, 0.0, 0.0))
+        stream.write(struct.pack(">ii", 3, 2))
+        stream.write(struct.pack(">dddddd", 0.0, 1e-6, 0.0, 0.0, 0.0, 0.0))
+        stream.write(struct.pack(">ii", 1, 2))
+        stream.write(struct.pack(">ii", 1, 2))
+        stream.write(struct.pack(">i", 2))
+        stream.write(struct.pack(">ii", 0, 1))
+        stream.write(struct.pack(">i", len(times)))
+        for index, time_s in enumerate(times):
+            values = [float(index + j + 1) for j in range(vector_length)]
+            stream.write(struct.pack(">di", time_s, len(values)))
+            stream.write(struct.pack(">" + "d" * len(values), *values))
+
+
 def _metric_readback(feature_type, units, dimension, axisymmetric_key, *, expression=None,
                      time_count=2, entity_count=1):
     return {"native_tag": f"test_{feature_type}", "type": feature_type, "dataset": "dset1",
@@ -610,6 +655,48 @@ def test_java_solution_snapshot_v2_preserves_full_three_dimensional_xmesh_and_v1
     _write_solution_snapshot(legacy, [0.0, 1.0])
     assert [frame["dofs"]["snapshot_schema"] for frame in runner.iter_solution_snapshot(legacy)] == [
         "W24-DOF-SNAPSHOT-1", "W24-DOF-SNAPSHOT-1"]
+
+
+def test_java_solution_snapshot_v3_preserves_fields_local_maps_full_vectors_and_mapping_diagnostics(tmp_path):
+    path = tmp_path / "fields-v3.bin.gz"
+    _write_solution_snapshot_v3(path, [0.0, 1.0])
+    frames = list(runner.iter_solution_snapshot(path))
+    assert [frame["time_s"] for frame in frames] == [0.0, 1.0]
+    metadata = frames[0]["dofs"]
+    assert metadata["snapshot_schema"] == "W24-DOF-SNAPSHOT-3"
+    assert metadata["coordinate_axes"] == len(metadata["coords"]) == 3
+    assert metadata["fieldNames"] == ["comp1_T", "comp1_alpha"]
+    assert metadata["fieldNDofs"] == [1, 1]
+    assert metadata["xmesh_n_dofs"] == len(metadata["geomNums"]) == 2
+    assert metadata["element_local_map_group_count"] == 1
+    assert metadata["element_local_map_entries"] == 2
+    assert metadata["complete_xmesh_internal_dof_capture"] is True
+    assert metadata["solVectorInds"] == [1, 0]
+    assert metadata["layout_sha256"] and len(metadata["layout_sha256"]) == 64
+    assert frames[0]["u_real"] == [1.0, 2.0]
+    assert frames[1]["u_real"] == [2.0, 3.0]
+
+    # Duplicate Xmesh rows are recorded explicitly. An aliased layout may be
+    # complete when every real solution-vector index remains represented.
+    alias = tmp_path / "fields-v3-alias.bin.gz"
+    _write_solution_snapshot_v3(alias, [0.0], vector_indices=(0, 0), vector_length=1)
+    alias_frame = next(runner.iter_solution_snapshot(alias))
+    summary = alias_frame["dofs"]["mapping_summary"]
+    assert summary["duplicate_solution_vector_index_rows"] == 1
+    assert summary["unrepresented_solution_vector_indices"] == 0
+    assert alias_frame["dofs"]["complete_xmesh_internal_dof_capture"] is True
+
+    missing = tmp_path / "fields-v3-missing-index.bin.gz"
+    _write_solution_snapshot_v3(missing, [0.0], vector_indices=(0, 0), vector_length=2)
+    missing_frame = next(runner.iter_solution_snapshot(missing))
+    assert missing_frame["dofs"]["mapping_summary"]["unrepresented_solution_vector_indices"] == 1
+    assert missing_frame["dofs"]["complete_xmesh_internal_dof_capture"] is False
+
+    out_of_range = tmp_path / "fields-v3-out-of-range.bin.gz"
+    _write_solution_snapshot_v3(out_of_range, [0.0], vector_indices=(0, 2), vector_length=2)
+    out_of_range_frame = next(runner.iter_solution_snapshot(out_of_range))
+    assert out_of_range_frame["dofs"]["mapping_summary"]["out_of_range_solution_indices"] == 1
+    assert out_of_range_frame["dofs"]["complete_xmesh_internal_dof_capture"] is False
 
 
 def test_native_metric_receipt_requires_full_time_and_material_readbacks(tmp_path):

@@ -4,13 +4,13 @@ Updated 2026-09-28 UTC. **Overall PARTIAL; execution continues through W26.** Th
 
 ## Current stage
 
-**Job cursor contract repair: PASS for scoped software; project overall PARTIAL.** `job.list` and `job.log` now expose their cursor descriptions from the correct registry branch. Invalid cursors are rejected through direct, operation_call and registry_call routes. This resolves the baseline KeyError retained in the previous W21 checkpoint.
+**W24 full-Xmesh state capture and authentication: PASS for scoped software; W24/project overall PARTIAL.** Private V3 snapshots retain full stored Sol vectors and field/global/element-local DOF layout, explicitly reporting unmapped or invalid state. Same-state save/reopen uses exact finite-double comparison under matching configuration/layout/times. Continuous/staged all-state differences remain diagnostic; no physical tolerance or Maxwell identity is inferred.
 
-**Actually executed:** 31 isolated control/registration tests PASS; main reviewed both modified files, verified all 320 archived baseline files and reran the control module: 3 PASS. The original failing test also passed separately. [Compact evidence and replay](docs/full_project_execution/project_session/JOB_CURSOR_CONTRACT_CHECKPOINT.json). These are overlapping focused runs, not a full-suite or native acceptance.
+**Actually executed:** 141 isolated tests and 141 main integration tests PASS. Main verified 221 baseline files, 10 overlay files and 114 runtime-source hashes, then independently reran the two original in-place lineage-tampering counterexamples: both rejected. Java source bytes match the successful COMSOL 6.4 offline compile receipt. [Compact evidence and replay](docs/full_project_execution/w24/FULL_XMESH_STATE_SOFTWARE_CHECKPOINT.json). Failed original and first-repair evidence is retained locally by path/hash. No native solve occurred.
 
-**Next:** continue original W21 `state_map`/`stage_run`; W23 CV power evidence software is under test. W24 V3 capture remains CHANGES_REQUIRED: main found shared mutable lineage/registry metadata, and production authentication accepted two in-place edits in the reproducer. The same Luna is repairing an isolated candidate. Native cleanup authorization and platform limitations remain unresolved; final independent overall Reviewer has not started.
+**Next:** continue original W21 `state_map`/`stage_run`, W23 CV power integration and its still-unimplemented generic Qabs interface, and W24 native branch-field/reference-state evidence plus science controls. Native cleanup authorization and platform limitations remain unresolved; final independent overall Reviewer has not started.
 
-Latest published stage: W21 immutable stage definitions `7d43f08`, scoped software only. Earlier W23 explicit maps `dd452a6`, W24 saved producer `d181e61`, and F16 objective/case artifacts `6dba12d` remain evidence of their stated scope only.
+Latest published stages: job cursor contract repair `884c98e` and W21 immutable stage definitions `7d43f08`, both scoped software only. Earlier W23 maps, W24 saved-producer and F16 artifact milestones retain their stated acceptance boundaries.
 
 ## Latest accepted software baseline
 
@@ -38,4 +38,4 @@ Earlier source checkpoints and failures remain in the existing state and linked 
 
 Continue the three Luna Max work streams: complete F16 weighted native evidence and original experiment reporting/model gaps; complete W23 radiation geometry, capture/quadrature/power-balance and original optics acceptance; complete W24 UV/gel/reference/viscoelastic implementation and remaining science. Publish each accepted software stage immediately. Then freeze isolated managed native candidates, execute their reviewed scope, complete all remaining W01–W26 work, and run a fresh independent overall review with repair/retest until accepted.
 
-The latest focused replay is in [JOB_CURSOR_CONTRACT_CHECKPOINT.json](docs/full_project_execution/project_session/JOB_CURSOR_CONTRACT_CHECKPOINT.json). Recover from GitHub and existing state. Last previously verified GitHub sync: 7d43f085d619192d03c84c566ac42b1a7ab1e506; this stage is recorded as synchronized only after post-push fetch and HEAD/origin-main equality.
+The latest focused replay is in [FULL_XMESH_STATE_SOFTWARE_CHECKPOINT.json](docs/full_project_execution/w24/FULL_XMESH_STATE_SOFTWARE_CHECKPOINT.json). Recover from GitHub and existing state. Last previously verified GitHub sync: 884c98ee37e370daf50af0c12c8d24ed5a3c7039; this stage is recorded as synchronized only after post-push fetch and HEAD/origin-main equality.

@@ -31,14 +31,37 @@ def _snapshot_bytes(times: list[float]) -> bytes:
     names = ["comp1_T", "comp1_alpha", "comp1_alpha_iso", "comp1_Duv_rel", "comp1_qpost",
              "comp1_u", "comp1_w"]
     payload = io.BytesIO()
-    _write_utf(payload, "W24-DOF-SNAPSHOT-2")
+    _write_utf(payload, "W24-DOF-SNAPSHOT-3")
     payload.write(struct.pack(">ii", 2, len(names)))
+    payload.write(struct.pack(">i", len(names)))
+    for name in names:
+        _write_utf(payload, name)
+        payload.write(struct.pack(">i", 1))
+    payload.write(struct.pack(">i", len(names)))
     for name in names:
         _write_utf(payload, name)
     payload.write(struct.pack(">i", len(names)))
     for index in range(len(names)):
         payload.write(struct.pack(">iiii", 1, index + 1, index, index))
         payload.write(struct.pack(">dd", (index + 1) * 1e-6, 0.0))
+    payload.write(struct.pack(">i", 1))
+    _write_utf(payload, "geom1")
+    payload.write(struct.pack(">i", 1))
+    _write_utf(payload, "mesh1")
+    payload.write(struct.pack(">ii", len(names), 2))
+    for name in names:
+        _write_utf(payload, name)
+    payload.write(struct.pack(">" + "d" * len(names) * 2,
+                               *([index * 1e-6 for index in range(len(names))] + [0.0] * len(names))))
+    payload.write(struct.pack(">ii", 2, len(names)))
+    payload.write(struct.pack(">" + "d" * len(names) * 2,
+                               *([index * 1e-6 for index in range(len(names))] + [0.0] * len(names))))
+    payload.write(struct.pack(">ii", 1, len(names)))
+    for index in range(len(names)):
+        payload.write(struct.pack(">i", index + 1))
+    payload.write(struct.pack(">i", len(names)))
+    for index in range(len(names)):
+        payload.write(struct.pack(">i", index))
     payload.write(struct.pack(">i", len(times)))
     for time_s in times:
         values = [300.0 + time_s, 0.2, 0.1, time_s, 0.0, 1e-6, 0.0]
@@ -272,19 +295,28 @@ class _AuthenticatedLinkWorker:
                         "path": str(actual_path), "size_bytes": len(payload),
                         "sha256": hashlib.sha256(payload).hexdigest(),
                     }
-        elif action == "solution_snapshot_v2":
+        elif action == "solution_snapshot_v3":
             path = Path(arguments["path"])
             path.parent.mkdir(parents=True, exist_ok=True)
             raw = _snapshot_bytes(self.times)
             path.write_bytes(raw)
             readback = {
-                "status": "SOLUTION_SNAPSHOT_V2_WRITTEN", "schema": "W24-DOF-SNAPSHOT-2",
+                "status": "SOLUTION_SNAPSHOT_V3_WRITTEN", "schema": "W24-DOF-SNAPSHOT-3",
                 "solver_tag": solver_tag, "study_tag": study_tag, "path": str(path),
                 "size_bytes": len(raw), "sha256": hashlib.sha256(raw).hexdigest(),
-                "stored_time_count": len(self.times), "dof_count": 7,
-                "dof_names": ["comp1_T", "comp1_alpha", "comp1_alpha_iso", "comp1_Duv_rel", "comp1_qpost", "comp1_u", "comp1_w"],
-                "max_solution_vector_index": 6, "coordinate_axes": 2,
+                "stored_time_count": len(self.times), "xmesh_n_dofs": 7,
+                "dof_count": 7,
+                "field_names": ["comp1_T", "comp1_alpha", "comp1_alpha_iso", "comp1_Duv_rel", "comp1_qpost", "comp1_u", "comp1_w"],
+                "field_ndofs": [1] * 7, "coordinate_axes": 2,
                 "real_solution": True, "complete_xmesh_dofs": True,
+                "complete_internal_dof_capture": True,
+                "unmapped_xmesh_dof_rows": 0, "invalid_xmesh_solution_indices": 0,
+                "out_of_range_xmesh_solution_indices": 0, "duplicate_solution_vector_index_rows": 0,
+                "unrepresented_solution_vector_indices": 0,
+                "invalid_element_dof_references": 0,
+                "element_local_map_group_count": 1, "element_local_map_entries": 7,
+                "sol_vector_length": 7,
+                "maxwell_branch_field_identity": "UNVERIFIED_NOT_INFERRED_FROM_FIELD_NAME",
                 "study_tlist_readback": "fixture stored times", "quasistatic_readback": "Quasistatic",
             }
         elif action == "history_capture_v2":
@@ -473,18 +505,18 @@ def _make_authenticated_capture(adapter, binding, study_tag: str, times: list[fl
     snapshot_path = adapter.workspace / f"native/{response_token}-snapshot.gz"
     snapshot_before = binding
     binding, snapshot_response, snapshot_receipt = adapter._fixture_action(
-        binding, "solution_snapshot_v2",
+        binding, "solution_snapshot_v3",
         {"study_tag": study_tag, "solver_tag": "sol-v2", "path": str(snapshot_path)},
         timeout_s=10.0, source_fixture=adapter.v2_control_fixture,
         entrypoint="W24CureLawV2ControlFixture#run")
     snapshot_ref = adapter._record_public_java_action(
-        action="solution_snapshot_v2", response=snapshot_response,
+        action="solution_snapshot_v3", response=snapshot_response,
         binding_before=snapshot_before, binding_after=binding,
         source_fixture=adapter.v2_control_fixture,
         response_dir=adapter.evidence / "responses", response_label=f"{response_token}-snapshot")
     snapshot_evidence = runner._evidence_copy(
         snapshot_path, adapter.evidence / f"{response_token}-snapshot.gz",
-        status="V2_PUBLIC_XMESH_SNAPSHOT_NATIVE_REVIEW_REQUIRED")
+        status="V3_PUBLIC_FULL_XMESH_SNAPSHOT_NATIVE_REVIEW_REQUIRED")
 
     history_path = adapter.workspace / f"native/{response_token}-history.json"
     history_before = binding
@@ -696,11 +728,59 @@ def test_real_control_daemon_authenticated_capture_reaches_full_dof_schedule_com
             "comp1_qpost", "comp1_u", "comp1_w"}
         result = adapter._compare_authenticated_v2_frames(
             frames, frames, [lineage], [lineage], label="same authenticated public schedule")
-        assert result["status"] == "V2_AUTHENTICATED_NUMERICAL_COMPARISON_PASS_BRANCH_STATE_UNVERIFIED"
+        assert result["status"] == (
+            "V2_AUTHENTICATED_VISIBLE_HISTORY_GATES_MATCH_FULL_XMESH_DIAGNOSTIC_ONLY"
+            "_TOLERANCE_NOT_FROZEN_BRANCH_STATE_UNVERIFIED")
+        assert "PASS" not in result["status"]
+        assert result["frozen_visible_history_gates"] == "PASS"
+        assert result["full_xmesh_diagnostics"]["status"] == "FULL_XMESH_DIAGNOSTICS_ONLY_TOLERANCE_NOT_FROZEN"
         assert result["source_identity_authenticated"] is True
         assert result["native_acceptance"] == "NOT_RUN"
         assert result["maxwell_branch_reference_state"].startswith("UNVERIFIED")
+        forged_frames = copy.deepcopy(frames)
+        forged_frames[0]["u_real"][4] = 123.0
+        with pytest.raises(runner.CampaignError, match="differs from the exact frame parsed"):
+            adapter._compare_authenticated_v2_frames(
+                forged_frames, frames, [lineage], [lineage],
+                label="caller-edited internal solution vector")
+        forged_lineage = copy.deepcopy(lineage)
+        forged_lineage["snapshot_sha256"] = "0" * 64
+        with pytest.raises(runner.CampaignError, match="complete authenticated lineage content"):
+            adapter._compare_authenticated_v2_frames(
+                frames, frames, [forged_lineage], [lineage],
+                label="caller-edited capture identity")
         assert worker.study_runs == 1
+    finally:
+        daemon.close()
+
+
+@pytest.mark.parametrize("mutation", [
+    "nested_model_ref", "nested_operation_ids", "nested_tolerance",
+    "maxwell_state", "native_status",
+])
+def test_authenticated_capture_rejects_in_place_lineage_mutation(
+        tmp_path, monkeypatch, mutation):
+    daemon, _worker, adapter, binding = _real_daemon_adapter(
+        tmp_path, monkeypatch, [0.0, 1.0])
+    try:
+        binding, slot, capture = _make_authenticated_capture(
+            adapter, binding, "stdUV", [0.0, 1.0], tmp_path)
+        frames, lineage = adapter._authenticated_v2_capture_frames(
+            capture, expected_case=slot.case_id, expected_study=slot.study_tag)
+        if mutation == "nested_model_ref":
+            lineage["model_ref"]["generation"] += 1
+        elif mutation == "nested_operation_ids":
+            lineage["operation_ids"][0] = "caller-mutated-operation"
+        elif mutation == "nested_tolerance":
+            key = next(iter(lineage["full_dof_absolute_tolerances"]))
+            lineage["full_dof_absolute_tolerances"][key] *= 2.0
+        elif mutation == "maxwell_state":
+            lineage["maxwell_branch_reference_state"] = "CALLER_ASSERTED_VERIFIED"
+        else:
+            lineage["native_acceptance"] = "PASS"
+        with pytest.raises(runner.CampaignError, match="complete authenticated lineage content"):
+            adapter._validate_authenticated_v2_frame_set(
+                frames, [lineage], label=f"in-place lineage mutation: {mutation}")
     finally:
         daemon.close()
 
@@ -762,7 +842,9 @@ def test_staged_handoffs_and_continuous_schedule_use_authenticated_public_source
         comparison = adapter._compare_authenticated_v2_frames(
             staged_frames, continuous_frames, staged_lineages, [continuous_lineage],
             label="authenticated staged versus continuous schedule")
-        assert comparison["status"] == "V2_AUTHENTICATED_NUMERICAL_COMPARISON_PASS_BRANCH_STATE_UNVERIFIED"
+        assert comparison["status"] == (
+            "V2_AUTHENTICATED_VISIBLE_HISTORY_GATES_MATCH_FULL_XMESH_DIAGNOSTIC_ONLY"
+            "_TOLERANCE_NOT_FROZEN_BRANCH_STATE_UNVERIFIED")
         assert comparison["source_identity_authenticated"] is True
 
         uv_frames, uv_lineage = adapter._authenticated_v2_capture_frames(
@@ -776,7 +858,9 @@ def test_staged_handoffs_and_continuous_schedule_use_authenticated_public_source
         handoff = adapter._compare_authenticated_v2_frames(
             [uv_frames[uv_index]], [bake_frames[bake_index]], [uv_lineage], [bake_lineage],
             label="authenticated stdUV→stdBake boundary", handoff=True)
-        assert handoff["status"] == "V2_AUTHENTICATED_NUMERICAL_COMPARISON_PASS_BRANCH_STATE_UNVERIFIED"
+        assert handoff["status"] == (
+            "V2_AUTHENTICATED_VISIBLE_HISTORY_GATES_MATCH_FULL_XMESH_DIAGNOSTIC_ONLY"
+            "_TOLERANCE_NOT_FROZEN_BRANCH_STATE_UNVERIFIED")
         assert handoff["source_identity_authenticated"] is True
     finally:
         daemon.close()
@@ -925,7 +1009,8 @@ def test_worker2_reopen_capture_authenticates_saved_producer_load_and_current_ch
         assert len(frames) == 2
         assert lineage["source_identity_authenticated"] is True
         assert public_load_ref["public_identity"]["project_id"] == adapter.project_id
-        assert "V2_PUBLIC_CAPTURE_CHAIN_REAUTHENTICATED" == lineage["status"]
+        assert "V3_FULL_XMESH_CAPTURE_CHAIN_REAUTHENTICATED" == lineage["status"]
+        assert lineage["full_xmesh_internal_dof_capture"].startswith("COMPLETE_MAPPING_CAPTURED")
         assert worker.study_runs == 3, "Worker2 must not add a Study.run across its three reopened stages"
 
         tampered = copy.deepcopy(reopened_capture)
@@ -1066,7 +1151,7 @@ def test_production_worker2_reopens_full_three_study_chain_from_terminal_saved_m
             assert study_ref is None
             output_dir = adapter.evidence / f"production-worker2-{study_tag}"
             if study_tag == "stdCool":
-                v2_action_count = sum(action in {"solution_snapshot_v2", "history_capture_v2"}
+                v2_action_count = sum(action in {"solution_snapshot_v3", "history_capture_v2"}
                                       for action in worker.actions)
                 with pytest.raises(runner.CampaignError,
                                    match="must retain every ordered prior stage exactly once"):
@@ -1080,7 +1165,7 @@ def test_production_worker2_reopens_full_three_study_chain_from_terminal_saved_m
                                             "staged_baseline:stdUV": reopened_captures[
                                                 "staged_baseline:stdUV"]}},
                         reopened_model_load=load_receipt)
-                assert sum(action in {"solution_snapshot_v2", "history_capture_v2"}
+                assert sum(action in {"solution_snapshot_v3", "history_capture_v2"}
                            for action in worker.actions) == v2_action_count
                 assert worker.study_runs == 0
             reopened_capture = adapter._capture_native_files(
@@ -1103,7 +1188,9 @@ def test_production_worker2_reopens_full_three_study_chain_from_terminal_saved_m
         comparison = adapter._compare_authenticated_v2_frames(
             staged_frames, reopened_frames, staged_lineages, reopened_lineages,
             label="production Worker1→Worker2 full stdUV/stdBake/stdCool schedule")
-        assert comparison["status"] == "V2_AUTHENTICATED_NUMERICAL_COMPARISON_PASS_BRANCH_STATE_UNVERIFIED"
+        assert comparison["status"] == (
+            "V2_AUTHENTICATED_VISIBLE_HISTORY_GATES_MATCH_FULL_XMESH_DIAGNOSTIC_ONLY"
+            "_TOLERANCE_NOT_FROZEN_BRANCH_STATE_UNVERIFIED")
         assert worker1.study_runs == 3
         assert worker.study_runs == 0, "fresh Worker 2 must load all three stored stages without Study.run"
 
@@ -1199,7 +1286,7 @@ def test_replay_saved_producer_root_reproducer_rejects_manual_post_run_attributi
                     "model_binding_after_solve": binding.as_record(), "native_acceptance": "NOT_RUN",
                 }
                 before_captures = sum(
-                    action in {"solution_snapshot_v2", "history_capture_v2"}
+                    action in {"solution_snapshot_v3", "history_capture_v2"}
                     for action in worker.actions)
                 output_dir = adapter.evidence / "manual-post-run-attribution"
                 output_dir.mkdir()
@@ -1209,7 +1296,7 @@ def test_replay_saved_producer_root_reproducer_rejects_manual_post_run_attributi
                         slot, binding, output_dir, adapter.workspace / "native/manual-attributed",
                         "manual-attributed", "sol-v2", timeout_s=10.0)
                 after_captures = sum(
-                    action in {"solution_snapshot_v2", "history_capture_v2"}
+                    action in {"solution_snapshot_v3", "history_capture_v2"}
                     for action in worker.actions)
                 assert after_captures == before_captures
             else:

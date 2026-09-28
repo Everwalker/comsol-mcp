@@ -530,3 +530,7 @@ Main verified 9 overlay files and306 unchanged dependency files;25 critical test
 ### Job cursor contract repair and W24 review finding
 
 The historical job.list cursor KeyError is fixed by moving cursor metadata to the correct registry branch. Two source/test files changed;31 focused isolated tests and3 main reruns passed. This is scoped software acceptance only. W24 V3 is not accepted: shared mutable lineage metadata permits in-place edits to alter the authentication registry as well. Production-path counterexample and next repair action are persisted in RESUME.json. Original frozen candidate and failed evidence remain preserved.
+
+### W24 V3 capture and lineage repair software closure
+
+V3 writer/decoder, full Xmesh layout, authenticated frames and complete lineage digest passed141 isolated and141 main integration tests. Main verified221 baseline files,10 overlay files and114 runtime-source hashes. Both original in-place nested mutations now fail production validation (2 independent main tests). Native Maxwell identity/reference semantics remain UNVERIFIED, full science NOT_RUN; same-save persistence equality does not establish continuous/staged physics acceptance. Failed candidates and their hashes remain preserved. Checkpoint: `docs/full_project_execution/w24/FULL_XMESH_STATE_SOFTWARE_CHECKPOINT.json`.

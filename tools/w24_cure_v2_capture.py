@@ -40,6 +40,7 @@ ALLOWED_CAPTURE_ACTIONS = {
     "capture_maxwell_control": ("W24CureLawV2ControlFixture#run", "maxwell_ramp_hold_control"),
     "capture_gel_control": ("W24CureLawV2ControlFixture#run", "gel_stress_free_control"),
     "solution_snapshot_v2": ("W24CureLawV2ControlFixture#run", None),
+    "solution_snapshot_v3": ("W24CureLawV2ControlFixture#run", None),
     "history_capture_v2": ("W24CureScienceFixture#run", None),
 }
 ALLOWED_PUBLIC_ACTIONS = {
@@ -649,12 +650,12 @@ def _verify_public_capture_record(response: Any, operation_record: Any, *, proje
         raise CaptureError("Java result solver tag differs from the exact public request")
     if arguments.get("path") != artifact_receipt.get("path"):
         raise CaptureError("Java result artifact path differs from the exact public request")
-    if expected_action == "solution_snapshot_v2":
+    if expected_action in {"solution_snapshot_v2", "solution_snapshot_v3"}:
         if (arguments.get("study_tag") != artifact_receipt.get("study_tag") or
                 artifact_receipt.get("quasistatic_readback") != "Quasistatic" or
                 not isinstance(artifact_receipt.get("study_tlist_readback"), str) or
                 not artifact_receipt.get("study_tlist_readback")):
-            raise CaptureError("V2 Xmesh snapshot omitted its exact study or actual Quasistatic readback")
+            raise CaptureError("Xmesh snapshot omitted its exact study or actual Quasistatic readback")
     if expected_action == "solution_snapshot_v2":
         snapshot_path = _resolve_project_file(project_root, artifact_receipt.get("path"),
                                               "V2 Xmesh snapshot", must_exist=True)
@@ -699,6 +700,78 @@ def _verify_public_capture_record(response: Any, operation_record: Any, *, proje
                      "coordinate_axes": first_frame["dofs"]["coordinate_axes"],
                      "complete_dof_count": expected_dofs, "stored_time_count": frame_count,
                      "dof_names": dof_names, "stored_times_s": stored_times}
+        artifact = None
+    elif expected_action == "solution_snapshot_v3":
+        snapshot_path = _resolve_project_file(project_root, artifact_receipt.get("path"),
+                                              "V3 full-Xmesh snapshot", must_exist=True)
+        size = artifact_receipt.get("size_bytes")
+        expected_snapshot_hash = artifact_receipt.get("sha256")
+        if (not _is_int(size) or size <= 0 or snapshot_path.stat().st_size != size or
+                not isinstance(expected_snapshot_hash, str) or
+                not SHA256_RE.fullmatch(expected_snapshot_hash) or
+                _sha256(snapshot_path) != expected_snapshot_hash):
+            raise CaptureError("V3 full-Xmesh snapshot size or SHA-256 differs from the Java receipt")
+        from tools.run_native_w24_cure_science import iter_solution_snapshot
+
+        frame_count = 0
+        first_frame: Mapping[str, Any] | None = None
+        stored_times: list[float] = []
+        for frame in iter_solution_snapshot(snapshot_path):
+            if first_frame is None:
+                first_frame = frame
+            elif frame["dofs"] != first_frame["dofs"]:
+                raise CaptureError("V3 full-Xmesh layout or solution-index mapping changed between stored times")
+            stored_times.append(float(frame["time_s"]))
+            frame_count += 1
+        if first_frame is None:
+            raise CaptureError("V3 full-Xmesh snapshot contains no stored solution frame")
+        metadata = first_frame["dofs"]
+        summary = metadata.get("mapping_summary")
+        if not isinstance(summary, Mapping):
+            raise CaptureError("V3 full-Xmesh parser omitted its explicit solution-index coverage summary")
+        expected_complete = summary.get("full_vector_and_internal_dof_map_covered") is True
+        expected_fields = artifact_receipt.get("field_names")
+        expected_field_counts = artifact_receipt.get("field_ndofs")
+        if (metadata.get("snapshot_schema") != "W24-DOF-SNAPSHOT-3" or
+                metadata.get("coordinate_axes") not in (2, 3) or
+                metadata.get("xmesh_n_dofs") != artifact_receipt.get("xmesh_n_dofs") or
+                metadata.get("fieldNames") != expected_fields or
+                metadata.get("fieldNDofs") != expected_field_counts or
+                len(metadata.get("geomNums", [])) != artifact_receipt.get("dof_count") or
+                metadata.get("element_local_map_group_count") != artifact_receipt.get("element_local_map_group_count") or
+                metadata.get("element_local_map_entries") != artifact_receipt.get("element_local_map_entries") or
+                metadata.get("invalid_element_dof_references") != artifact_receipt.get("invalid_element_dof_references") or
+                summary.get("unmapped_dof_rows") != artifact_receipt.get("unmapped_xmesh_dof_rows") or
+                summary.get("invalid_solution_indices") != artifact_receipt.get("invalid_xmesh_solution_indices") or
+                summary.get("out_of_range_solution_indices") != artifact_receipt.get("out_of_range_xmesh_solution_indices") or
+                summary.get("duplicate_solution_vector_index_rows") != artifact_receipt.get("duplicate_solution_vector_index_rows") or
+                summary.get("unrepresented_solution_vector_indices") != artifact_receipt.get("unrepresented_solution_vector_indices") or
+                expected_complete is not artifact_receipt.get("complete_internal_dof_capture") or
+                artifact_receipt.get("maxwell_branch_field_identity") != "UNVERIFIED_NOT_INFERRED_FROM_FIELD_NAME" or
+                artifact_receipt.get("stored_time_count") != frame_count or
+                artifact_receipt.get("schema") != "W24-DOF-SNAPSHOT-3" or
+                artifact_receipt.get("real_solution") is not True):
+            raise CaptureError("V3 full-Xmesh snapshot disagrees with its explicit layout/mapping receipt")
+        if not expected_complete:
+            raise CaptureError("V3 full-Xmesh snapshot has unmapped, invalid, or uncovered solution-vector entries")
+        validated = {
+            "status": "V3_FULL_XMESH_INTERNAL_DOF_CAPTURE_FORMAT_VALIDATED_NATIVE_NOT_RUN",
+            "snapshot_schema": "W24-DOF-SNAPSHOT-3",
+            "coordinate_axes": metadata["coordinate_axes"],
+            "xmesh_n_dofs": metadata["xmesh_n_dofs"],
+            "field_names": list(metadata["fieldNames"]),
+            "field_ndofs": list(metadata["fieldNDofs"]),
+            "complete_internal_dof_capture": True,
+            "mapping_summary": dict(summary),
+            "element_local_map_group_count": metadata["element_local_map_group_count"],
+            "element_local_map_entries": metadata["element_local_map_entries"],
+            "layout_sha256": metadata["layout_sha256"],
+            "stored_times_s": stored_times,
+            "maxwell_branch_field_identity": "UNVERIFIED_NOT_INFERRED_FROM_FIELD_NAME",
+            "maxwell_branch_reference_state": "UNVERIFIED_NO_PUBLIC_REFERENCE_STATE_CAPTURE",
+            "native_acceptance": "NOT_RUN",
+        }
+        evidence = {"path": str(snapshot_path), "size_bytes": size, "sha256": _sha256(snapshot_path)}
         artifact = None
     else:
         artifact, evidence = _read_artifact(artifact_receipt, project_root, "capture artifact")
@@ -911,7 +984,7 @@ def dispatch_capture(daemon: Any, *, project_root: Path, source_artifact: str,
     for required in ("solver_tag", "path"):
         if not isinstance(call_arguments.get(required), str) or not call_arguments[required]:
             raise CaptureError(f"capture action requires an exact {required}")
-    if action in {"history_capture_v2", "solution_snapshot_v2"} and (
+    if action in {"history_capture_v2", "solution_snapshot_v2", "solution_snapshot_v3"} and (
             not isinstance(call_arguments.get("study_tag"), str) or not call_arguments["study_tag"]):
         raise CaptureError("capture action requires its exact attached study_tag")
     entrypoint, _ = ALLOWED_CAPTURE_ACTIONS[action]

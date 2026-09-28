@@ -286,7 +286,7 @@ def _wasactive_map(frame: Mapping[str, Any]) -> dict[tuple[str, ...], int]:
 
 
 def compare_v2_history_handoff(source: Mapping[str, Any], target: Mapping[str, Any], *,
-                               dof_abs_tolerances: Mapping[str, float],
+                               dof_abs_tolerances: Mapping[str, float] | None,
                                history_abs_tolerances: Mapping[str, float],
                                branch_dof_names: Sequence[str] | None = None) -> dict[str, Any]:
     """Compare all V2 Xmesh DOFs plus explicit thermal/cure/activation histories.
@@ -333,20 +333,22 @@ def compare_v2_history_handoff(source: Mapping[str, Any], target: Mapping[str, A
         branch_hints = set(branch_dof_names)
         if not branch_hints.issubset(observed_names):
             raise AcceptanceError("caller Maxwell branch-name hint is not present in the complete Xmesh snapshot")
-    if not isinstance(dof_abs_tolerances, Mapping) or not dof_abs_tolerances:
-        raise AcceptanceError("per-field full-DOF handoff tolerances are required")
-    if observed_names != set(dof_abs_tolerances):
+    if dof_abs_tolerances is not None and (
+            not isinstance(dof_abs_tolerances, Mapping) or not dof_abs_tolerances):
+        raise AcceptanceError("per-field full-DOF handoff tolerances must be a nonempty mapping when supplied")
+    if dof_abs_tolerances is not None and observed_names != set(dof_abs_tolerances):
         raise AcceptanceError("full-DOF tolerance names must exactly cover observed DOF names")
     max_by_name: dict[str, float] = {name: 0.0 for name in observed_names}
     for key in left:
         name, a_real, a_imag = left[key]
         _, b_real, b_imag = right[key]
-        tolerance = _finite(dof_abs_tolerances[name], f"dof_abs_tolerances.{name}")
-        if tolerance < 0:
-            raise AcceptanceError("full-DOF tolerances cannot be negative")
         error = max(abs(a_real - b_real), abs(a_imag - b_imag))
-        if error > tolerance:
-            raise AcceptanceError(f"full handoff DOF {name} changed by {error:g}, above {tolerance:g}")
+        if dof_abs_tolerances is not None:
+            tolerance = _finite(dof_abs_tolerances[name], f"dof_abs_tolerances.{name}")
+            if tolerance < 0:
+                raise AcceptanceError("full-DOF tolerances cannot be negative")
+            if error > tolerance:
+                raise AcceptanceError(f"full handoff DOF {name} changed by {error:g}, above {tolerance:g}")
         max_by_name[name] = max(max_by_name[name], error)
 
     required_history = {"T", "alpha", "Duv_rel", "qpost", "u", "w", "solid.isactive", "solid.wasactive"}
@@ -375,8 +377,11 @@ def compare_v2_history_handoff(source: Mapping[str, Any], target: Mapping[str, A
         if any(value != 1.0 for value in history_right[activation_field]):
             raise AcceptanceError(f"history handoff target is not fully post-gel active in {activation_field}")
     return {
-        "status": "VISIBLE_HISTORY_MATCH_BRANCH_STATE_UNVERIFIED",
-        "analysis_scope": "complete_v2_xmesh_and_native_expression_contract;source_auth_still_required",
+        "status": ("VISIBLE_HISTORY_MATCH_BRANCH_STATE_UNVERIFIED" if dof_abs_tolerances is not None else
+                   "VISIBLE_HISTORY_MATCH_FULL_XMESH_TOLERANCE_NOT_FROZEN"),
+        "analysis_scope": ("complete_v2_xmesh_and_native_expression_contract;source_auth_still_required"
+                           if dof_abs_tolerances is not None else
+                           "full_xmesh_numeric_diagnostics_without_approved_all_state_tolerance"),
         "source_identity_authenticated": False,
         "boundary_time_s": source_time,
         "full_dof_count": len(left),
@@ -384,6 +389,8 @@ def compare_v2_history_handoff(source: Mapping[str, Any], target: Mapping[str, A
         "caller_branch_name_hints_ignored_for_acceptance": sorted(branch_hints),
         "branch_state_max_abs_jump": None,
         "max_full_dof_jump": max(max_by_name.values(), default=0.0),
+        "full_xmesh_tolerance_status": ("SOLVER_ATOL_COMPARISON" if dof_abs_tolerances is not None else
+                                        "TOLERANCE_NOT_FROZEN"),
         "history_max_abs_jumps": history_max,
         "activation_coordinates_identical": True,
         "isactive_identical": history_max["solid.isactive"] == 0.0,
@@ -396,7 +403,7 @@ def compare_v2_history_handoff(source: Mapping[str, Any], target: Mapping[str, A
 
 def compare_v2_history_schedules(source_frames: Sequence[Mapping[str, Any]],
                                  target_frames: Sequence[Mapping[str, Any]], *,
-                                 dof_abs_tolerances: Mapping[str, float],
+                                 dof_abs_tolerances: Mapping[str, float] | None,
                                  history_abs_tolerances: Mapping[str, float]) -> dict[str, Any]:
     """Compare authenticated-caller supplied full V2 schedules field by field.
 
@@ -410,8 +417,9 @@ def compare_v2_history_schedules(source_frames: Sequence[Mapping[str, Any]],
             not isinstance(target_frames, Sequence) or isinstance(target_frames, (str, bytes)) or
             not source_frames or len(source_frames) != len(target_frames)):
         raise AcceptanceError("full V2 schedules must contain the same nonempty frame count")
-    if not isinstance(dof_abs_tolerances, Mapping) or not dof_abs_tolerances:
-        raise AcceptanceError("per-field full-DOF schedule tolerances are required")
+    if dof_abs_tolerances is not None and (
+            not isinstance(dof_abs_tolerances, Mapping) or not dof_abs_tolerances):
+        raise AcceptanceError("per-field full-DOF schedule tolerances must be a nonempty mapping when supplied")
     required_history = {"T", "alpha", "Duv_rel", "qpost", "u", "w",
                        "solid.isactive", "solid.wasactive"}
     if not isinstance(history_abs_tolerances, Mapping) or set(history_abs_tolerances) != required_history:
@@ -450,7 +458,7 @@ def compare_v2_history_schedules(source_frames: Sequence[Mapping[str, Any]],
                                 {"comp1_u", "comp1_v", "comp1_w"})
             if not required_fields.issubset(observed_names):
                 raise AcceptanceError("full V2 schedule lacks required cure or displacement DOF members")
-            if observed_names != set(dof_abs_tolerances):
+            if dof_abs_tolerances is not None and observed_names != set(dof_abs_tolerances):
                 raise AcceptanceError("full-DOF schedule tolerances must exactly cover observed DOF names")
             max_by_name = {name: 0.0 for name in observed_names}
             total_dofs = len(left)
@@ -462,12 +470,13 @@ def compare_v2_history_schedules(source_frames: Sequence[Mapping[str, Any]],
             raise AcceptanceError("full V2 schedule changed its exact DOF mapping between stored times")
         for key, (name, left_real, left_imag) in left.items():
             _, right_real, right_imag = right[key]
-            tolerance = _finite(dof_abs_tolerances[name], f"dof_abs_tolerances.{name}")
-            if tolerance < 0:
-                raise AcceptanceError("full-DOF schedule tolerances cannot be negative")
             error = max(abs(left_real - right_real), abs(left_imag - right_imag))
-            if error > tolerance:
-                raise AcceptanceError(f"full schedule DOF {name} changed by {error:g}, above {tolerance:g}")
+            if dof_abs_tolerances is not None:
+                tolerance = _finite(dof_abs_tolerances[name], f"dof_abs_tolerances.{name}")
+                if tolerance < 0:
+                    raise AcceptanceError("full-DOF schedule tolerances cannot be negative")
+                if error > tolerance:
+                    raise AcceptanceError(f"full schedule DOF {name} changed by {error:g}, above {tolerance:g}")
             max_by_name[name] = max(max_by_name[name], error)
 
     if any(b <= a for a, b in zip(source_times, source_times[1:])) or source_times != target_times:
@@ -541,7 +550,8 @@ def compare_v2_history_schedules(source_frames: Sequence[Mapping[str, Any]],
             history_max[field] = max(history_max[field], error)
 
     return {
-        "status": "VISIBLE_HISTORY_MATCH_BRANCH_STATE_UNVERIFIED",
+        "status": ("VISIBLE_HISTORY_MATCH_BRANCH_STATE_UNVERIFIED" if dof_abs_tolerances is not None else
+                   "VISIBLE_HISTORY_MATCH_FULL_XMESH_TOLERANCE_NOT_FROZEN"),
         "source_identity_authenticated": False,
         "compared_stored_time_count": len(source_times),
         "compared_stored_times_s": source_times,
@@ -549,6 +559,8 @@ def compare_v2_history_schedules(source_frames: Sequence[Mapping[str, Any]],
         "max_abs_jump_by_dof_name": max_by_name,
         "history_max_abs_jumps": history_max,
         "max_full_dof_jump": max(max_by_name.values(), default=0.0),
+        "full_xmesh_tolerance_status": ("SOLVER_ATOL_COMPARISON" if dof_abs_tolerances is not None else
+                                        "TOLERANCE_NOT_FROZEN"),
         "max_history_jump": max(history_max.values(), default=0.0),
         "maxwell_branch_state": "UNVERIFIED_NO_PUBLIC_REFERENCE_STATE_CAPTURE",
         "native_semantics_verified": False,
@@ -557,12 +569,21 @@ def compare_v2_history_schedules(source_frames: Sequence[Mapping[str, Any]],
 
 def _require_frame_v2_snapshot(frame: Mapping[str, Any], label: str) -> Mapping[str, Any]:
     metadata = frame.get("dofs")
-    if not isinstance(metadata, Mapping) or metadata.get("snapshot_schema") != "W24-DOF-SNAPSHOT-2" or \
-            metadata.get("complete_xmesh_dofs") is not True or metadata.get("coordinate_axes") not in (2, 3):
-        raise AcceptanceError(f"{label} requires a complete V2 Xmesh DOF snapshot")
+    if (not isinstance(metadata, Mapping) or
+            metadata.get("snapshot_schema") not in {"W24-DOF-SNAPSHOT-2", "W24-DOF-SNAPSHOT-3"} or
+            metadata.get("complete_xmesh_dofs") is not True or
+            metadata.get("coordinate_axes") not in (2, 3)):
+        raise AcceptanceError(f"{label} requires a complete V2 Xmesh DOF snapshot or complete V3 internal-DOF capture")
     coordinates = metadata.get("coords")
     if not isinstance(coordinates, list) or len(coordinates) != metadata["coordinate_axes"]:
-        raise AcceptanceError(f"{label} V2 coordinate_axes does not match the Xmesh coordinate row count")
+        raise AcceptanceError(f"{label} coordinate_axes does not match the Xmesh coordinate row count")
+    if metadata.get("snapshot_schema") == "W24-DOF-SNAPSHOT-3":
+        dof_count = metadata.get("xmesh_n_dofs")
+        if (metadata.get("complete_xmesh_internal_dof_capture") is not True or
+                isinstance(dof_count, bool) or not isinstance(dof_count, int) or dof_count <= 0 or
+                any(not isinstance(axis, list) or len(axis) != dof_count for axis in coordinates) or
+                len(metadata.get("geomNums", [])) != dof_count):
+            raise AcceptanceError(f"{label} V3 snapshot does not preserve the complete actual Xmesh coordinate/DOF rows")
     return metadata
 
 

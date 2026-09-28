@@ -132,6 +132,52 @@ def _solution_snapshot_v2_bytes():
     return gzip.compress(frame.getvalue())
 
 
+def _solution_snapshot_v3_bytes(*, vector_indices=(0, 1, 2), vector_length=3):
+    frame = io.BytesIO()
+    names = ["comp1.T", "comp1.u", "comp1.v"]
+    _write_java_utf(frame, "W24-DOF-SNAPSHOT-3")
+    frame.write(struct.pack(">ii", 3, len(names)))
+    frame.write(struct.pack(">i", len(names)))
+    for name in names:
+        _write_java_utf(frame, name)
+        frame.write(struct.pack(">i", 1))
+    frame.write(struct.pack(">i", len(names)))
+    for name in names:
+        _write_java_utf(frame, name)
+    frame.write(struct.pack(">i", len(names)))
+    points = [
+        (1, 1, 0, vector_indices[0], (0.0, 0.0, 0.0)),
+        (1, 2, 1, vector_indices[1], (1e-6, 0.0, 0.0)),
+        (1, 3, 2, vector_indices[2], (0.0, 1e-6, 0.0)),
+    ]
+    for geom, node, name_index, vector_index, coordinates in points:
+        frame.write(struct.pack(">iiii", geom, node, name_index, vector_index))
+        frame.write(struct.pack(">ddd", *coordinates))
+    frame.write(struct.pack(">i", 1))
+    _write_java_utf(frame, "geom1")
+    frame.write(struct.pack(">i", 1))
+    _write_java_utf(frame, "mesh1")
+    frame.write(struct.pack(">ii", len(names), 3))
+    for name in names:
+        _write_java_utf(frame, name)
+    frame.write(struct.pack(">" + "d" * 9, *[0.0, 1e-6, 0.0, 0.0, 0.0, 1e-6, 0.0, 0.0, 0.0]))
+    frame.write(struct.pack(">ii", 3, 3))
+    frame.write(struct.pack(">" + "d" * 9, *[0.0, 1e-6, 0.0, 0.0, 0.0, 1e-6, 0.0, 0.0, 0.0]))
+    frame.write(struct.pack(">ii", 1, 3))
+    for node in (1, 2, 3):
+        frame.write(struct.pack(">i", node))
+    frame.write(struct.pack(">i", 3))
+    for dof in (0, 1, 2):
+        frame.write(struct.pack(">i", dof))
+    frame.write(struct.pack(">i", 2))
+    for time_s, values in ((0.0, (300.0, 0.0, 0.0)), (1.0, (301.0, 1e-6, 0.0))):
+        actual = tuple(values[:vector_length])
+        frame.write(struct.pack(">di", time_s, len(actual)))
+        if actual:
+            frame.write(struct.pack(">" + "d" * len(actual), *actual))
+    return gzip.compress(frame.getvalue())
+
+
 def _route_fixture(tmp_path, action="capture_maxwell_control", *, revision_before=7):
     project = tmp_path / "project"
     fixture_name = ("W24CureScienceFixture.java" if action == "history_capture_v2"
@@ -140,13 +186,15 @@ def _route_fixture(tmp_path, action="capture_maxwell_control", *, revision_befor
     source_path.parent.mkdir(parents=True)
     source_path.write_text("public final class W24CureLawV2ControlFixture {}\n", encoding="utf-8")
     source_sha = hashlib.sha256(source_path.read_bytes()).hexdigest()
-    artifact = None if action == "solution_snapshot_v2" else _capture_artifact(action)
-    output_path = project / ("native/fields-v2.bin.gz" if action == "solution_snapshot_v2" else "native/capture.json")
+    snapshot_actions = {"solution_snapshot_v2", "solution_snapshot_v3"}
+    artifact = None if action in snapshot_actions else _capture_artifact(action)
+    output_path = project / ("native/fields.bin.gz" if action in snapshot_actions else "native/capture.json")
     output_path.parent.mkdir(parents=True)
-    if action == "solution_snapshot_v2":
-        raw_artifact = _solution_snapshot_v2_bytes()
+    if action in snapshot_actions:
+        raw_artifact = (_solution_snapshot_v2_bytes() if action == "solution_snapshot_v2"
+                        else _solution_snapshot_v3_bytes())
         output_path.write_bytes(raw_artifact)
-        receipt = {
+        receipt = ({
             "status": "SOLUTION_SNAPSHOT_V2_WRITTEN", "schema": "W24-DOF-SNAPSHOT-2",
             "solver_tag": "sol1", "path": str(output_path),
             "size_bytes": len(raw_artifact), "sha256": hashlib.sha256(raw_artifact).hexdigest(),
@@ -156,7 +204,25 @@ def _route_fixture(tmp_path, action="capture_maxwell_control", *, revision_befor
             "coordinate_axes": 3, "real_solution": True, "complete_xmesh_dofs": True,
             "study_tag": "stdCont", "study_tlist_readback": "range(0[s],1[s],1[s])",
             "quasistatic_readback": "Quasistatic",
-        }
+        } if action == "solution_snapshot_v2" else {
+            "status": "SOLUTION_SNAPSHOT_V3_WRITTEN", "schema": "W24-DOF-SNAPSHOT-3",
+            "solver_tag": "sol1", "path": str(output_path),
+            "size_bytes": len(raw_artifact), "sha256": hashlib.sha256(raw_artifact).hexdigest(),
+            "stored_time_count": 2, "xmesh_n_dofs": 3, "dof_count": 3,
+            "field_names": ["comp1.T", "comp1.u", "comp1.v"],
+            "field_ndofs": [1, 1, 1], "coordinate_axes": 3,
+            "real_solution": True, "complete_xmesh_dofs": True,
+            "complete_internal_dof_capture": True,
+            "unmapped_xmesh_dof_rows": 0, "invalid_xmesh_solution_indices": 0,
+            "out_of_range_xmesh_solution_indices": 0, "duplicate_solution_vector_index_rows": 0,
+            "unrepresented_solution_vector_indices": 0,
+            "invalid_element_dof_references": 0,
+            "element_local_map_group_count": 1, "element_local_map_entries": 3,
+            "sol_vector_length": 3,
+            "maxwell_branch_field_identity": "UNVERIFIED_NOT_INFERRED_FROM_FIELD_NAME",
+            "study_tag": "stdCont", "study_tlist_readback": "range(0[s],1[s],1[s])",
+            "quasistatic_readback": "Quasistatic",
+        })
     else:
         raw_artifact = (json.dumps(artifact, sort_keys=True, separators=(",", ":")) + "\n").encode()
         output_path.write_bytes(raw_artifact)
@@ -175,7 +241,7 @@ def _route_fixture(tmp_path, action="capture_maxwell_control", *, revision_befor
                          "path": str(output_path)}
     if action == "history_capture_v2":
         request_arguments["study_tag"] = artifact["study_tag"]
-    elif action == "solution_snapshot_v2":
+    elif action in snapshot_actions:
         request_arguments["study_tag"] = "stdCont"
     body = {"source_artifact": f"tools/java/{fixture_name}",
             "entrypoint": entrypoint, "arguments": request_arguments, "mode": "trusted"}
@@ -334,6 +400,26 @@ def test_public_capture_verifier_accepts_hashed_complete_3d_xmesh_snapshot_v2(tm
     store.close()
 
 
+def test_public_capture_verifier_accepts_v3_full_xmesh_fields_layout_and_stored_solutions(tmp_path):
+    project, source, digest, response, record, ref, revision, store = _route_fixture(
+        tmp_path, action="solution_snapshot_v3")
+    result = _verify_public_capture_record(
+        response, record, project_root=project, source_artifact_path=source,
+        expected_source_sha256=digest, expected_action="solution_snapshot_v3",
+        expected_project_id="project-a", expected_session_id="session-a",
+        expected_model_ref=ref, expected_revision=revision)
+    validation = result["capture_validation"]
+    assert validation["snapshot_schema"] == "W24-DOF-SNAPSHOT-3"
+    assert validation["coordinate_axes"] == 3
+    assert validation["xmesh_n_dofs"] == 3
+    assert validation["field_names"] == ["comp1.T", "comp1.u", "comp1.v"]
+    assert validation["complete_internal_dof_capture"] is True
+    assert validation["stored_times_s"] == [0.0, 1.0]
+    assert validation["maxwell_branch_field_identity"] == "UNVERIFIED_NOT_INFERRED_FROM_FIELD_NAME"
+    assert validation["native_acceptance"] == "NOT_RUN"
+    store.close()
+
+
 @pytest.mark.parametrize("mutation", ["wrong_receipt_hash", "incomplete_dof_receipt", "wrong_dof_names",
                                       "wrong_max_vector", "complex_solution", "tampered_file_bytes"])
 def test_public_capture_verifier_rejects_unhashed_or_incomplete_xmesh_snapshot_v2(tmp_path, mutation):
@@ -366,6 +452,41 @@ def test_public_capture_verifier_rejects_unhashed_or_incomplete_xmesh_snapshot_v
         _verify_public_capture_record(
             response, record, project_root=project, source_artifact_path=source,
             expected_source_sha256=digest, expected_action="solution_snapshot_v2",
+            expected_project_id="project-a", expected_session_id="session-a",
+            expected_model_ref=ref, expected_revision=revision)
+    store.close()
+
+
+@pytest.mark.parametrize("mutation", ["wrong_hash", "incomplete_mapping", "wrong_field_counts",
+                                      "wrong_mapping_summary", "wrong_schema", "tampered_bytes"])
+def test_public_capture_verifier_rejects_incomplete_or_tampered_v3_layout_receipt(tmp_path, mutation):
+    project, source, digest, response, record, ref, revision, store = _route_fixture(
+        tmp_path, action="solution_snapshot_v3")
+    response = copy.deepcopy(response)
+    record = copy.deepcopy(record)
+    if mutation == "tampered_bytes":
+        snapshot = Path(response["data"]["readback"]["readback"]["readback"]["path"])
+        snapshot.write_bytes(snapshot.read_bytes() + b"tampered")
+    else:
+        java = response["data"]["readback"]["readback"]
+        receipt = java["readback"]
+        if mutation == "wrong_hash":
+            receipt["sha256"] = "0" * 64
+        elif mutation == "incomplete_mapping":
+            receipt["complete_internal_dof_capture"] = False
+        elif mutation == "wrong_field_counts":
+            receipt["field_ndofs"] = [2, 0, 0]
+        elif mutation == "wrong_mapping_summary":
+            receipt["out_of_range_xmesh_solution_indices"] = 1
+        else:
+            receipt["schema"] = "W24-DOF-SNAPSHOT-2"
+        response["data"]["worker"]["result"]["readback"] = copy.deepcopy(java)
+        record["result"] = copy.deepcopy(response)
+        record["job_result"] = copy.deepcopy(response)
+    with pytest.raises(CaptureError):
+        _verify_public_capture_record(
+            response, record, project_root=project, source_artifact_path=source,
+            expected_source_sha256=digest, expected_action="solution_snapshot_v3",
             expected_project_id="project-a", expected_session_id="session-a",
             expected_model_ref=ref, expected_revision=revision)
     store.close()
@@ -464,14 +585,15 @@ class _PublicRouteWorker:
         action = arguments["action"]
         path = Path(arguments["path"])
         path.parent.mkdir(parents=True, exist_ok=True)
-        if action == "solution_snapshot_v2":
+        if action in {"solution_snapshot_v2", "solution_snapshot_v3"}:
             artifact = None
-            raw = _solution_snapshot_v2_bytes()
+            raw = (_solution_snapshot_v2_bytes() if action == "solution_snapshot_v2"
+                   else _solution_snapshot_v3_bytes())
         else:
             artifact = _capture_artifact(action)
             raw = (json.dumps(artifact, sort_keys=True, separators=(",", ":")) + "\n").encode()
         path.write_bytes(raw)
-        if artifact is None:
+        if artifact is None and action == "solution_snapshot_v2":
             receipt = {
                 "status": "SOLUTION_SNAPSHOT_V2_WRITTEN", "schema": "W24-DOF-SNAPSHOT-2",
                 "solver_tag": arguments["solver_tag"], "path": str(path),
@@ -480,6 +602,27 @@ class _PublicRouteWorker:
                 "dof_names": ["comp1.T", "comp1.u", "comp1.v"],
                 "max_solution_vector_index": 2,
                 "coordinate_axes": 3, "real_solution": True, "complete_xmesh_dofs": True,
+                "study_tag": arguments["study_tag"],
+                "study_tlist_readback": "range(0[s],1[s],1[s])",
+                "quasistatic_readback": "Quasistatic",
+            }
+        elif artifact is None:
+            receipt = {
+                "status": "SOLUTION_SNAPSHOT_V3_WRITTEN", "schema": "W24-DOF-SNAPSHOT-3",
+                "solver_tag": arguments["solver_tag"], "path": str(path),
+                "size_bytes": len(raw), "sha256": hashlib.sha256(raw).hexdigest(),
+                "stored_time_count": 2, "xmesh_n_dofs": 3, "dof_count": 3,
+                "field_names": ["comp1.T", "comp1.u", "comp1.v"],
+                "field_ndofs": [1, 1, 1], "coordinate_axes": 3,
+                "real_solution": True, "complete_xmesh_dofs": True,
+                "complete_internal_dof_capture": True,
+                "unmapped_xmesh_dof_rows": 0, "invalid_xmesh_solution_indices": 0,
+                "out_of_range_xmesh_solution_indices": 0, "duplicate_solution_vector_index_rows": 0,
+                "unrepresented_solution_vector_indices": 0,
+                "invalid_element_dof_references": 0,
+                "element_local_map_group_count": 1, "element_local_map_entries": 3,
+                "sol_vector_length": 3,
+                "maxwell_branch_field_identity": "UNVERIFIED_NOT_INFERRED_FROM_FIELD_NAME",
                 "study_tag": arguments["study_tag"],
                 "study_tlist_readback": "range(0[s],1[s],1[s])",
                 "quasistatic_readback": "Quasistatic",
@@ -500,7 +643,7 @@ class _PublicRouteWorker:
         return {"ok": True, "status": "SUCCEEDED", "result": {"readback": java_result}}
 
 
-@pytest.mark.parametrize("action", ["capture_maxwell_control", "solution_snapshot_v2"])
+@pytest.mark.parametrize("action", ["capture_maxwell_control", "solution_snapshot_v2", "solution_snapshot_v3"])
 def test_dispatch_capture_uses_real_control_daemon_and_operation_store_with_stub_worker(tmp_path, monkeypatch, action):
     monkeypatch.setenv("COMSOL_MCP_TRUSTED_CODE", "1")
     projects_root = tmp_path / "projects"
@@ -543,14 +686,15 @@ def test_dispatch_capture_uses_real_control_daemon_and_operation_store_with_stub
             expected_source_sha256=hashlib.sha256(source.read_bytes()).hexdigest(),
             action=action,
             arguments={"solver_tag": "sol1", "path": str(project_root / "native/capture.json"),
-                       **({"study_tag": "stdCont"} if action == "solution_snapshot_v2" else {})},
+                       **({"study_tag": "stdCont"} if action in {"solution_snapshot_v2", "solution_snapshot_v3"} else {})},
             project_id=project_id, session_id="session-a", model_ref=model_ref,
             revision=0,
         )
         assert result["status"] == "PUBLIC_CAPTURE_ENVELOPE_AND_ARTIFACT_MATCHED_NATIVE_REVIEW_REQUIRED"
         assert result["native_acceptance"] == "NOT_RUN"
-        if action == "solution_snapshot_v2":
-            assert result["capture_validation"]["snapshot_schema"] == "W24-DOF-SNAPSHOT-2"
+        if action in {"solution_snapshot_v2", "solution_snapshot_v3"}:
+            expected_schema = "W24-DOF-SNAPSHOT-2" if action == "solution_snapshot_v2" else "W24-DOF-SNAPSHOT-3"
+            assert result["capture_validation"]["snapshot_schema"] == expected_schema
             assert result["capture_validation"]["coordinate_axes"] == 3
         else:
             assert result["capture_validation"]["maxwell_branch_reference_state"] == "UNVERIFIED"

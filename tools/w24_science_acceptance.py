@@ -90,6 +90,9 @@ def dof_value_map(frame: Mapping[str, Any]) -> dict[tuple[Any, ...], tuple[str, 
     if not isinstance(meta, Mapping):
         raise AcceptanceError("frame is missing XmeshInfoDofs metadata")
     names = meta.get("dofNames")
+    schema = meta.get("snapshot_schema")
+    if schema == "W24-DOF-SNAPSHOT-3" and meta.get("complete_xmesh_internal_dof_capture") is not True:
+        raise AcceptanceError("V3 DOF-value mapping is incomplete or has an unmapped native vector entry")
     if not isinstance(names, list) or not names or not all(isinstance(x, str) for x in names):
         raise AcceptanceError("dofNames must be a nonempty string vector")
     geom_nums = meta.get("geomNums")
@@ -102,6 +105,11 @@ def dof_value_map(frame: Mapping[str, Any]) -> dict[tuple[Any, ...], tuple[str, 
     vectors = (geom_nums, nodes, coords, name_inds, vector_inds, real, imag)
     if any(not isinstance(x, list) for x in vectors):
         raise AcceptanceError("DOF metadata and solution vectors must be arrays")
+    axes = meta.get("coordinate_axes")
+    if axes is not None and (isinstance(axes, bool) or axes != len(coords)):
+        raise AcceptanceError("coordinate_axes does not equal the number of actual coordinate rows")
+    if schema == "W24-DOF-SNAPSHOT-3" and (not isinstance(coords, list) or len(coords) not in (2, 3)):
+        raise AcceptanceError("V3 Xmesh coordinates must contain the exact 2D or 3D coordinate rows")
     count = len(geom_nums)
     if count == 0 or len(nodes) != count or len(name_inds) != count or len(vector_inds) != count:
         raise AcceptanceError("XmeshInfoDofs index arrays have inconsistent lengths")
@@ -111,13 +119,16 @@ def dof_value_map(frame: Mapping[str, Any]) -> dict[tuple[Any, ...], tuple[str, 
     for i in range(count):
         name_index = name_inds[i]
         vector_index = vector_inds[i]
-        if not isinstance(name_index, int) or not 0 <= name_index < len(names):
+        if isinstance(name_index, bool) or not isinstance(name_index, int) or not 0 <= name_index < len(names):
             raise AcceptanceError(f"nameInds[{i}] is not a valid documented zero-based index")
-        if not isinstance(vector_index, int) or not 0 <= vector_index < len(real) or vector_index >= len(imag):
+        if (isinstance(vector_index, bool) or not isinstance(vector_index, int) or
+                not 0 <= vector_index < len(real) or vector_index >= len(imag)):
             raise AcceptanceError(f"solVectorInds[{i}] is not a valid documented zero-based solution index")
         coordinate_key = tuple(_finite(axis[i], f"coords[{j}][{i}]").hex()
                                for j, axis in enumerate(coords))
         key = (int(geom_nums[i]), int(nodes[i]), coordinate_key, names[name_index], name_index)
+        if schema == "W24-DOF-SNAPSHOT-3":
+            key = (*key, i)
         if key in out:
             raise AcceptanceError(f"duplicate exact DOF key at row {i}")
         out[key] = (names[name_index], _finite(real[vector_index], f"u_real[{vector_index}]"),

@@ -78,6 +78,53 @@ class PrebirthRefusal(CampaignError):
     """An explicit validation/setup gate refused work before server launch."""
 
 
+def _capture_value_sha256(value: Any, memo: dict[int, str] | None = None) -> str:
+    """Hash decoded capture content as a Merkle walk without a JSON copy."""
+    if memo is None:
+        memo = {}
+    container = isinstance(value, Mapping) or (
+        isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)))
+    if container and id(value) in memo:
+        return memo[id(value)]
+    digest = hashlib.sha256()
+    if value is None:
+        digest.update(b"N")
+    elif isinstance(value, bool):
+        digest.update(b"B1" if value else b"B0")
+    elif isinstance(value, int):
+        raw = str(value).encode("ascii")
+        digest.update(b"I" + struct.pack(">I", len(raw)) + raw)
+    elif isinstance(value, float):
+        if not math.isfinite(value):
+            raise CampaignError("authenticated capture digest refuses a nonfinite number")
+        digest.update(b"F" + struct.pack(">d", value))
+    elif isinstance(value, str):
+        raw = value.encode("utf-8")
+        digest.update(b"S" + struct.pack(">I", len(raw)) + raw)
+    elif isinstance(value, Mapping):
+        digest.update(b"M" + struct.pack(">I", len(value)))
+        for key in sorted(value):
+            if not isinstance(key, str):
+                raise CampaignError("authenticated capture digest requires string object keys")
+            digest.update(bytes.fromhex(_capture_value_sha256(key, memo)))
+            digest.update(bytes.fromhex(_capture_value_sha256(value[key], memo)))
+    elif isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        digest.update(b"L" + struct.pack(">Q", len(value)))
+        for item in value:
+            digest.update(bytes.fromhex(_capture_value_sha256(item, memo)))
+    else:
+        raise CampaignError(f"authenticated capture digest does not support {type(value).__name__}")
+    result = digest.hexdigest()
+    if container:
+        memo[id(value)] = result
+    return result
+
+
+def _authenticated_capture_frame_sha256(frame: Mapping[str, Any],
+                                        memo: dict[int, str] | None = None) -> str:
+    return _capture_value_sha256(frame, memo)
+
+
 @dataclass(frozen=True)
 class SolveSlot:
     case_id: str
@@ -1492,6 +1539,7 @@ class NativeScienceCampaignAdapter:
         self.mechanics_models: dict[str, ManagedModelBinding] = {}
         self.slot_solver_tags: dict[tuple[str, str], str] = {}
         self.captures: dict[str, Mapping[str, Any]] = {}
+        self._authenticated_v2_frame_receipts: dict[str, dict[str, Any]] = {}
         self.v2_contract_readbacks: dict[str, dict[str, Any]] = {}
         self.slot_native_setup_readbacks: dict[str, dict[str, Any]] = {}
         self.slot_study_run_actions: dict[str, dict[str, Any]] = {}
@@ -2212,6 +2260,10 @@ class NativeScienceCampaignAdapter:
                                          expected_study: str) -> tuple[list[dict[str, Any]], dict[str, Any]]:
         """Re-read the saved public response chain and return its real artifacts."""
         from tools.w24_cure_v2_capture import CaptureError
+        from tools.w24_maxwell_branch_state import (
+            MaxwellStateError, compare_persisted_full_xmesh_state,
+            v2_physics_configuration_sha256,
+        )
 
         report = capture.get("v2_capture")
         if (capture.get("cure_law_capture_mode") != "V2_PUBLIC_AUTHENTICATED" or
@@ -2245,6 +2297,10 @@ class NativeScienceCampaignAdapter:
         snapshot_verified = self._reauthenticate_public_java_action(snapshot_ref)
         history_verified = self._reauthenticate_public_java_action(history_ref)
         readback = setup_verified.get("readback_data", {})
+        contract_readback = contract_verified.get("readback_data")
+        if not isinstance(contract_readback, Mapping):
+            raise CampaignError("v2 authenticated contract response omitted its exact physics configuration readback")
+        configuration_sha256 = v2_physics_configuration_sha256(contract_readback)
         if (contract_verified.get("capture_validation", {}).get("cure_law_version") != "W24_CURE_LAW_V2" or
                 readback.get("status") != "SCIENCE_ACTIONS_READY_NOT_SOLVED" or
                 readback.get("quasistatic_readback") != "Quasistatic" or
@@ -2254,6 +2310,7 @@ class NativeScienceCampaignAdapter:
                     max_step_s=0.5 if expected_case == "tight_time" else 1.0) != report.get("solver_tag")):
             raise CampaignError("v2 current-model setup or cure-law readback no longer authenticates the exact slot")
         lineage_study_ref: Mapping[str, Any] | None = study_ref
+        reopened_source_frames: list[dict[str, Any]] | None = None
         source_staged_lineages: list[dict[str, Any]] | None = None
         lineage_binding_start: Mapping[str, Any] = setup_ref.get("binding_before", {})
         if capture_status == "V2_PUBLIC_CAPTURE_CHAIN_VERIFIED_NATIVE_REVIEW_REQUIRED":
@@ -2276,7 +2333,7 @@ class NativeScienceCampaignAdapter:
                 raise CampaignError("reopened v2 capture omitted its original solved public capture")
             origin_capture = {"cure_law_capture_mode": "V2_PUBLIC_AUTHENTICATED",
                               "v2_capture": origin_v2}
-            _old_frames, old_lineage = self._authenticated_v2_capture_frames(
+            reopened_source_frames, old_lineage = self._authenticated_v2_capture_frames(
                 origin_capture, expected_case=expected_case, expected_study=expected_study)
             model_load = report.get("model_load")
             if not isinstance(model_load, Mapping):
@@ -2307,6 +2364,9 @@ class NativeScienceCampaignAdapter:
             terminal_snapshot = (terminal_report.get("solution_snapshot", {}).get("operation")
                                  if isinstance(terminal_report, Mapping) else None)
             if (old_lineage.get("source_identity_authenticated") is not True or
+                    old_lineage.get("case_id") != expected_case or
+                    old_lineage.get("study_tag") != expected_study or
+                    old_lineage.get("solver_tag") != report.get("solver_tag") or
                     not isinstance(lineage_study_ref, Mapping) or
                     model_load.get("status") != "SAVED_MPH_TO_CURRENT_WORKER_MODEL_LOAD_AUTHENTICATED" or
                     not isinstance(saved, Mapping) or
@@ -2374,7 +2434,8 @@ class NativeScienceCampaignAdapter:
         times = [float(frame["time_s"]) for frame in snapshot_frames]
         validation = snapshot_verified.get("capture_validation")
         if (not snapshot_frames or not isinstance(validation, Mapping) or
-                validation.get("snapshot_schema") != "W24-DOF-SNAPSHOT-2" or
+                validation.get("snapshot_schema") not in {
+                    "W24-DOF-SNAPSHOT-2", "W24-DOF-SNAPSHOT-3"} or
                 validation.get("stored_times_s") != times or
                 history_artifact.get("stored_times_s") != times or
                 history_artifact.get("study_tag") != expected_study or
@@ -2382,6 +2443,35 @@ class NativeScienceCampaignAdapter:
                 history_artifact.get("dataset_solution_readback") != report.get("solver_tag") or
                 history_artifact.get("dataset_type_requested") != "Solution"):
             raise CampaignError("authenticated v2 snapshot and history disagree on solver, solution dataset, or stored times")
+        snapshot_schema = validation.get("snapshot_schema")
+        if capture_status == "V2_REOPEN_PUBLIC_CAPTURE_CHAIN_VERIFIED_NATIVE_REVIEW_REQUIRED":
+            if (old_lineage.get("study_tag") != expected_study or
+                    old_lineage.get("solver_tag") != report.get("solver_tag")):
+                raise CampaignError("saved/reopened exact study or solver sequence identity differs")
+        if snapshot_schema == "W24-DOF-SNAPSHOT-3":
+            state_metadata = snapshot_frames[0]["dofs"]
+            if (validation.get("complete_internal_dof_capture") is not True or
+                    state_metadata.get("complete_xmesh_internal_dof_capture") is not True):
+                raise CampaignError("authenticated V3 capture does not cover all mapped internal Xmesh solution entries")
+        persistence_comparison: dict[str, Any] | None = None
+        if capture_status == "V2_REOPEN_PUBLIC_CAPTURE_CHAIN_VERIFIED_NATIVE_REVIEW_REQUIRED":
+            if reopened_source_frames is None:
+                raise CampaignError("reopened v2 capture lost the exact original source stored vectors")
+            source_schema = reopened_source_frames[0]["dofs"].get("snapshot_schema")
+            if source_schema == snapshot_schema == "W24-DOF-SNAPSHOT-3":
+                try:
+                    persistence_comparison = compare_persisted_full_xmesh_state(
+                        reopened_source_frames, snapshot_frames,
+                        source_configuration_sha256=old_lineage.get("configuration_sha256"),
+                        reopened_configuration_sha256=configuration_sha256)
+                except MaxwellStateError as exc:
+                    raise CampaignError(f"saved/reopened full-Xmesh state comparison failed: {exc}") from exc
+            else:
+                persistence_comparison = {
+                    "status": "UNVERIFIED_LEGACY_V2_SNAPSHOT_HAS_NO_FULL_XMESH_LAYOUT_HASH",
+                    "native_acceptance": "NOT_RUN",
+                    "maxwell_branch_field_identity": "UNVERIFIED_NOT_INFERRED_FROM_FIELD_NAME",
+                }
         if report.get("snapshot_stored_times_s") != times:
             raise CampaignError("v2 capture summary stored times differ from the authenticated native snapshot")
         frames: list[dict[str, Any]] = []
@@ -2454,7 +2544,9 @@ class NativeScienceCampaignAdapter:
         if capture_status == "V2_REOPEN_PUBLIC_CAPTURE_CHAIN_VERIFIED_NATIVE_REVIEW_REQUIRED":
             lineage_refs.insert(0, report["model_load"]["current_worker_model_load"])
         lineage = {
-            "status": "V2_PUBLIC_CAPTURE_CHAIN_REAUTHENTICATED",
+            "status": ("V3_FULL_XMESH_CAPTURE_CHAIN_REAUTHENTICATED"
+                       if snapshot_schema == "W24-DOF-SNAPSHOT-3" else
+                       "V2_PUBLIC_CAPTURE_CHAIN_REAUTHENTICATED"),
             "project_id": self.project_id,
             "model_ref": dict(snapshot_ref["binding_before"]["model_ref"]),
             "binding_before": dict(lineage_binding_start),
@@ -2463,6 +2555,14 @@ class NativeScienceCampaignAdapter:
             "solver_tag": report.get("solver_tag"),
             "full_dof_absolute_tolerances": dict(
                 contract_verified.get("capture_validation", {}).get("full_dof_absolute_tolerances", {})),
+            "configuration_sha256": configuration_sha256,
+            "snapshot_schema": snapshot_schema,
+            "layout_sha256": (snapshot_frames[0]["dofs"].get("layout_sha256")
+                              if snapshot_schema == "W24-DOF-SNAPSHOT-3" else None),
+            "full_xmesh_internal_dof_capture": (
+                "COMPLETE_MAPPING_CAPTURED_NATIVE_BRANCH_IDENTITY_UNVERIFIED"
+                if snapshot_schema == "W24-DOF-SNAPSHOT-3" else "LEGACY_V2_NO_FIELD_LAYOUT_CAPTURE"),
+            "persisted_state_comparison": persistence_comparison,
             "operation_ids": [ref["public_identity"]["operation_id"]
                               for ref in lineage_refs if isinstance(ref.get("public_identity"), Mapping)],
             "job_ids": [ref["public_identity"]["job_id"]
@@ -2477,6 +2577,32 @@ class NativeScienceCampaignAdapter:
             "source_identity_authenticated": True,
             "maxwell_branch_reference_state": "UNVERIFIED_NO_PUBLIC_REFERENCE_STATE_CAPTURE",
             "native_acceptance": "NOT_RUN",
+        }
+        authentication_token = uuid4().hex
+        lineage["capture_authentication_token"] = authentication_token
+        registry = getattr(self, "_authenticated_v2_frame_receipts", None)
+        if not isinstance(registry, dict):
+            registry = {}
+            self._authenticated_v2_frame_receipts = registry
+        lineage_identity_fields = (
+            "project_id", "model_ref", "binding_before", "binding_after",
+            "case_id", "study_tag", "solver_tag", "configuration_sha256",
+            "snapshot_schema", "layout_sha256", "operation_ids", "job_ids",
+            "source_hashes", "stored_times_s", "snapshot_sha256",
+        )
+        frame_hash_memo: dict[int, str] = {}
+        registry[authentication_token] = {
+            # Store a detached content digest for the entire returned lineage,
+            # including nested bindings, operation IDs, tolerances, and status
+            # fields. A shallow copy of selected keys aliases mutable children
+            # and lets caller edits rewrite the apparent receipt in place.
+            "lineage_sha256": _capture_value_sha256(lineage),
+            **{key: lineage.get(key) for key in lineage_identity_fields},
+            "frame_receipts": [
+                {"time_s": float(frame["time_s"]),
+                 "content_sha256": _authenticated_capture_frame_sha256(frame, frame_hash_memo)}
+                for frame in frames
+            ],
         }
         return frames, lineage
 
@@ -2873,6 +2999,7 @@ class NativeScienceCampaignAdapter:
                          reopened_model_load: Mapping[str, Any] | None = None
                          ) -> tuple[ManagedModelBinding, dict[str, Any]]:
         from tools.w24_cure_v2_capture import CaptureError
+        from tools.w24_maxwell_branch_state import v2_physics_configuration_sha256
 
         slot_key = f"{slot.case_id}:{slot.study_tag}"
         state_key = (f"{slot_key}:worker{self.worker_sessions}"
@@ -2890,6 +3017,10 @@ class NativeScienceCampaignAdapter:
         setup_verified = self._reauthenticate_public_java_action(setup_readback_ref)
         contract_verified = self._reauthenticate_public_java_action(contract_ref)
         setup_data = setup_verified.get("readback_data")
+        contract_data = contract_verified.get("readback_data")
+        if not isinstance(contract_data, Mapping):
+            raise CampaignError("v2 contract response omitted its exact cure/Activation/Maxwell readback")
+        configuration_sha256 = v2_physics_configuration_sha256(contract_data)
         if (not isinstance(setup_data, Mapping) or
                 setup_readback_ref.get("binding_after") != contract_ref.get("binding_before") or
                 contract_verified.get("capture_validation", {}).get("cure_law_version") != "W24_CURE_LAW_V2" or
@@ -3010,31 +3141,32 @@ class NativeScienceCampaignAdapter:
             }
 
         field_path = _project_path(self.workspace,
-            base.with_name(token + "_v2_dofs.gz"), must_exist=False)
+            base.with_name(token + "_v3_dofs.gz"), must_exist=False)
         snapshot_before = binding
         binding, snapshot_response, snapshot_readback = self._fixture_action(
-            binding, "solution_snapshot_v2",
+            binding, "solution_snapshot_v3",
             {"study_tag": slot.study_tag, "solver_tag": solver_tag, "path": str(field_path)},
             timeout_s=timeout_s, source_fixture=self.v2_control_fixture,
             entrypoint="W24CureLawV2ControlFixture#run")
         snapshot_ref = self._record_public_java_action(
-            action="solution_snapshot_v2", response=snapshot_response,
+            action="solution_snapshot_v3", response=snapshot_response,
             binding_before=snapshot_before, binding_after=binding,
             source_fixture=self.v2_control_fixture, response_dir=self.evidence / "v2_capture_responses",
             response_label=f"{slot.case_id}_{slot.study_tag}_snapshot")
         snapshot_verified = self._reauthenticate_public_java_action(snapshot_ref)
         if snapshot_readback != snapshot_verified.get("artifact_receipt"):
-            raise CampaignError("V2 complete-Xmesh Worker response differs from its durable OperationStore receipt")
-        snapshot_evidence = _evidence_copy(field_path, output_dir / "v2_field_snapshot.gz",
-                                          status="V2_PUBLIC_XMESH_SNAPSHOT_NATIVE_REVIEW_REQUIRED")
+            raise CampaignError("V3 full-Xmesh Worker response differs from its durable OperationStore receipt")
+        snapshot_evidence = _evidence_copy(field_path, output_dir / "v3_full_xmesh_snapshot.gz",
+                                          status="V3_PUBLIC_FULL_XMESH_SNAPSHOT_NATIVE_REVIEW_REQUIRED")
         snapshot_frames = list(iter_solution_snapshot(Path(snapshot_evidence["path"])))
         snapshot_times = [float(frame["time_s"]) for frame in snapshot_frames]
         snapshot_validation = snapshot_verified.get("capture_validation")
         if (not isinstance(snapshot_validation, Mapping) or
-                snapshot_validation.get("snapshot_schema") != "W24-DOF-SNAPSHOT-2" or
+                snapshot_validation.get("snapshot_schema") != "W24-DOF-SNAPSHOT-3" or
                 snapshot_validation.get("stored_times_s") != snapshot_times or
+                snapshot_validation.get("complete_internal_dof_capture") is not True or
                 not snapshot_frames):
-            raise CampaignError("verified V2 snapshot raw frames differ from its actual public stored-time receipt")
+            raise CampaignError("verified V3 snapshot raw frames differ from its public stored-time or mapping receipt")
         dof_names = set(snapshot_frames[0]["dofs"].get("dofNames", []))
         required_dofs = {"comp1_T", "comp1_alpha", "comp1_Duv_rel", "comp1_qpost"}
         axes = snapshot_frames[0]["dofs"].get("coordinate_axes")
@@ -3087,6 +3219,7 @@ class NativeScienceCampaignAdapter:
             "case_id": slot.case_id, "study_tag": slot.study_tag,
             "solver_tag": solver_tag,
             "model_contract": contract,
+            "configuration_sha256": configuration_sha256,
             "setup_readback": setup_readback_ref,
             "study_run": solve_action if reopened_origin is None else None,
             "reopened_from": origin_report,
@@ -3109,6 +3242,7 @@ class NativeScienceCampaignAdapter:
             "snapshot_stored_times_s": snapshot_times,
             "model_binding_after_history": binding.as_record(),
             "maxwell_branch_reference_state": "UNVERIFIED_NO_PUBLIC_REFERENCE_STATE_CAPTURE",
+            "full_xmesh_internal_dof_capture": "COMPLETE_MAPPING_CAPTURED_NATIVE_BRANCH_IDENTITY_UNVERIFIED",
             "activation_history_semantics": "UNVERIFIED_NATIVE_CAPTURE_ONLY",
             "native_acceptance": "NOT_RUN",
         }
@@ -3295,6 +3429,65 @@ class NativeScienceCampaignAdapter:
             raise CampaignError("full Xmesh DOF set is not exactly covered by the authenticated v2 solver-atol readbacks")
         return {str(name): float(value) for name, value in candidate_maps[0].items()}
 
+    def _validate_authenticated_v2_frame_set(self,
+                                            frames: Sequence[Mapping[str, Any]],
+                                            lineages: Sequence[Mapping[str, Any]], *,
+                                            label: str) -> None:
+        """Reject caller-edited frame tuples before any public-capture comparison."""
+        if (not isinstance(frames, Sequence) or isinstance(frames, (str, bytes)) or not frames or
+                not isinstance(lineages, Sequence) or isinstance(lineages, (str, bytes)) or not lineages):
+            raise CampaignError(f"{label} lacks its in-process authenticated frame receipt")
+        identity_fields = (
+            "project_id", "model_ref", "binding_before", "binding_after",
+            "case_id", "study_tag", "solver_tag", "configuration_sha256",
+            "snapshot_schema", "layout_sha256", "operation_ids", "job_ids",
+            "source_hashes", "stored_times_s", "snapshot_sha256",
+        )
+        authenticated_receipts: set[tuple[float, str]] = set()
+        seen_tokens: set[str] = set()
+        frame_hash_memo: dict[int, str] = {}
+        for index, lineage in enumerate(lineages):
+            if not isinstance(lineage, Mapping) or lineage.get("source_identity_authenticated") is not True:
+                raise CampaignError(f"{label} lineage {index} is not a verified public source")
+            token = lineage.get("capture_authentication_token")
+            if not isinstance(token, str) or not token or token in seen_tokens:
+                raise CampaignError(f"{label} lineage {index} has a missing or repeated in-process capture token")
+            seen_tokens.add(token)
+            registry = getattr(self, "_authenticated_v2_frame_receipts", {})
+            receipt = registry.get(token) if isinstance(registry, Mapping) else None
+            if not isinstance(receipt, Mapping):
+                raise CampaignError(f"{label} lineage {index} is not present in this live adapter's authenticated capture registry")
+            try:
+                current_lineage_sha256 = _capture_value_sha256(lineage)
+            except CampaignError as exc:
+                raise CampaignError(f"{label} lineage {index} has invalid authenticated lineage content") from exc
+            if current_lineage_sha256 != receipt.get("lineage_sha256"):
+                raise CampaignError(f"{label} lineage {index} differs from the complete authenticated lineage content")
+            if any(lineage.get(key) != receipt.get(key) for key in identity_fields):
+                raise CampaignError(f"{label} lineage {index} no longer matches its authenticated OperationStore/artifact identity")
+            frame_receipts = receipt.get("frame_receipts")
+            if not isinstance(frame_receipts, list) or not frame_receipts:
+                raise CampaignError(f"{label} lineage {index} has no exact authenticated frame hashes")
+            for frame_receipt in frame_receipts:
+                if not isinstance(frame_receipt, Mapping):
+                    raise CampaignError(f"{label} lineage {index} has an invalid native frame hash record")
+                time_s = frame_receipt.get("time_s")
+                digest = frame_receipt.get("content_sha256")
+                if (isinstance(time_s, bool) or not isinstance(time_s, (int, float)) or
+                        not math.isfinite(float(time_s)) or not isinstance(digest, str) or
+                        not SHA256_RE.fullmatch(digest)):
+                    raise CampaignError(f"{label} lineage {index} has an incomplete native frame hash record")
+                authenticated_receipts.add((float(time_s), digest))
+        for index, frame in enumerate(frames):
+            if not isinstance(frame, Mapping):
+                raise CampaignError(f"{label} frame {index} is not a mapping")
+            time_s = frame.get("time_s")
+            if isinstance(time_s, bool) or not isinstance(time_s, (int, float)) or not math.isfinite(float(time_s)):
+                raise CampaignError(f"{label} frame {index} has a nonfinite or invalid stored time")
+            digest = _authenticated_capture_frame_sha256(frame, frame_hash_memo)
+            if (float(time_s), digest) not in authenticated_receipts:
+                raise CampaignError(f"{label} frame {index} differs from the exact frame parsed from its authenticated public artifact")
+
     def _compare_authenticated_v2_frames(self,
                                          source_frames: Sequence[Mapping[str, Any]],
                                          target_frames: Sequence[Mapping[str, Any]],
@@ -3306,10 +3499,44 @@ class NativeScienceCampaignAdapter:
             AcceptanceError, compare_v2_history_handoff,
             compare_v2_history_schedules,
         )
+        from tools.w24_maxwell_branch_state import (
+            MaxwellStateError, compare_full_xmesh_diagnostics,
+        )
+
+        self._validate_authenticated_v2_frame_set(
+            source_frames, source_lineages, label=f"{label} source")
+        self._validate_authenticated_v2_frame_set(
+            target_frames, target_lineages, label=f"{label} target")
 
         all_frames = [*source_frames, *target_frames]
         all_lineages = [*source_lineages, *target_lineages]
-        dof_tolerances = self._v2_full_dof_tolerances(all_frames, all_lineages)
+        schemas = {row.get("dofs", {}).get("snapshot_schema")
+                   for row in all_frames if isinstance(row, Mapping) and isinstance(row.get("dofs"), Mapping)}
+        if len(schemas) != 1 or not schemas.issubset({"W24-DOF-SNAPSHOT-2", "W24-DOF-SNAPSHOT-3"}):
+            raise CampaignError("authenticated cure comparison mixes unsupported Xmesh snapshot schemas")
+        v3_diagnostic: dict[str, Any] | None = None
+        if schemas == {"W24-DOF-SNAPSHOT-3"}:
+            if not all(isinstance(row, Mapping) and row.get("snapshot_schema") == "W24-DOF-SNAPSHOT-3"
+                       for row in all_lineages):
+                raise CampaignError("V3 full-Xmesh comparison lineage does not bind every source and target capture")
+            source_configurations = {row.get("configuration_sha256") for row in source_lineages}
+            target_configurations = {row.get("configuration_sha256") for row in target_lineages}
+            if (len(source_configurations) != 1 or len(target_configurations) != 1 or
+                    not source_configurations or not target_configurations):
+                raise CampaignError("V3 full-Xmesh comparison has missing or inconsistent validated physics fingerprints")
+            try:
+                v3_diagnostic = compare_full_xmesh_diagnostics(
+                    source_frames, target_frames,
+                    source_configuration_sha256=next(iter(source_configurations)),
+                    target_configuration_sha256=next(iter(target_configurations)))
+            except MaxwellStateError as exc:
+                raise CampaignError(f"{label} V3 all-vector diagnostic failed closed: {exc}") from exc
+            # No approved all-state physical mapping/unit/tolerance exists for the
+            # hidden Xmesh fields. Keep the frozen visible-history gates while
+            # reporting full-vector differences without calling them a pass.
+            dof_tolerances = None
+        else:
+            dof_tolerances = self._v2_full_dof_tolerances(all_frames, all_lineages)
         try:
             if handoff:
                 if len(source_frames) != 1 or len(target_frames) != 1:
@@ -3327,7 +3554,12 @@ class NativeScienceCampaignAdapter:
             raise CampaignError(f"{label} v2 authenticated numerical comparison failed: {exc}") from exc
         return {
             **comparison,
-            "status": "V2_AUTHENTICATED_NUMERICAL_COMPARISON_PASS_BRANCH_STATE_UNVERIFIED",
+            "status": ("V2_AUTHENTICATED_VISIBLE_HISTORY_GATES_MATCH_FULL_XMESH_DIAGNOSTIC_ONLY"
+                       "_TOLERANCE_NOT_FROZEN_BRANCH_STATE_UNVERIFIED"
+                       if v3_diagnostic is not None else
+                       "V2_AUTHENTICATED_NUMERICAL_COMPARISON_PASS_BRANCH_STATE_UNVERIFIED"),
+            "frozen_visible_history_gates": "PASS",
+            "full_xmesh_diagnostics": v3_diagnostic,
             "label": label,
             "source_identity_authenticated": True,
             "source_lineages": [dict(row) for row in source_lineages],
@@ -3466,6 +3698,15 @@ class NativeScienceCampaignAdapter:
                 row.get("public_identity", {}).get("operation_id")
                 for row in capture.get("post_v2_operations", [])
                 if isinstance(row, Mapping) and isinstance(row.get("public_identity"), Mapping)]
+            token = lineage.get("capture_authentication_token")
+            registry = getattr(self, "_authenticated_v2_frame_receipts", {})
+            receipt = registry.get(token) if isinstance(token, str) and isinstance(registry, Mapping) else None
+            if not isinstance(receipt, dict):
+                raise CampaignError(f"{study_tag} staged lineage lost its in-process authenticated receipt")
+            # These schedule fields are derived by this adapter after the
+            # underlying capture was authenticated. Reseal only after those
+            # trusted additions so later caller edits still fail the digest.
+            receipt["lineage_sha256"] = _capture_value_sha256(lineage)
             frames.extend(stage_frames[:-1] if index < 2 else stage_frames)
             lineages.append(lineage)
             previous_end = end_binding
@@ -4026,6 +4267,7 @@ def runtime_source_manifest() -> dict[str, dict[str, str]]:
         Path(__file__).resolve(), SCIENCE_FIXTURE, V2_CONTROL_FIXTURE,
         COUPON_FIXTURE, PLAN, SETUP_RUNNER,
         REPO / "tools/w24_cure_law_v2.py",
+        REPO / "tools/w24_maxwell_branch_state.py",
         REPO / "tools/w24_cure_v2_capture.py",
         REPO / "tools/w24_science_acceptance.py",
         REPO / "tools/run_native_resume_smoke.py",
@@ -4035,6 +4277,7 @@ def runtime_source_manifest() -> dict[str, dict[str, str]]:
         REPO / "tests/test_w24_cure_law_v2.py",
         REPO / "tests/test_w24_cure_v2_capture.py",
         REPO / "tests/test_w24_cure_capture_link.py",
+        REPO / "tests/test_w24_maxwell_branch_state.py",
         REPO / "tests/test_w24_cure_coupon_fixture.py",
         REPO / "tests/test_w24_science_acceptance.py",
     ])
@@ -4313,6 +4556,216 @@ def _read_modified_utf(stream: Any, label: str) -> str:
         raise CampaignError(f"native DOF snapshot has invalid UTF-8 in {label}") from exc
 
 
+def _iter_solution_snapshot_v3(stream: Any) -> Iterator[dict[str, Any]]:
+    """Read V3 snapshots, including the full CompileEquations Xmesh layout.
+
+    Xmesh metadata is hashed as its original binary header is read. The full
+    element-local maps are validated and represented by that digest, avoiding
+    retaining a second copy of potentially large element connectivity arrays.
+    """
+    layout_digest = hashlib.sha256()
+    layout_digest.update(b"W24-DOF-SNAPSHOT-3\0")
+
+    def read_header_exact(size: int, label: str) -> bytes:
+        raw = _read_exact(stream, size, label)
+        layout_digest.update(raw)
+        return raw
+
+    def read_header_i32(label: str) -> int:
+        return struct.unpack(">i", read_header_exact(4, label))[0]
+
+    def read_header_f64(label: str) -> float:
+        value = struct.unpack(">d", read_header_exact(8, label))[0]
+        if not math.isfinite(value):
+            raise CampaignError(f"V3 Xmesh metadata contains nonfinite {label}")
+        return value
+
+    def read_header_utf(label: str) -> str:
+        byte_count = struct.unpack(">H", read_header_exact(2, label + " length"))[0]
+        try:
+            return read_header_exact(byte_count, label).decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise CampaignError(f"V3 Xmesh metadata has invalid UTF-8 in {label}") from exc
+
+    def bounded(raw: int, maximum: int, label: str, *, allow_minus_one: bool = False) -> int:
+        minimum = -1 if allow_minus_one else 0
+        if raw < minimum or raw > maximum:
+            raise CampaignError(f"V3 Xmesh {label} is outside its supported bounds")
+        return raw
+
+    axes = read_header_i32("coordinate axis count")
+    declared_dof_count = read_header_i32("XmeshInfo.nDofs")
+    if axes not in (2, 3):
+        raise CampaignError("V3 Xmesh snapshot has invalid coordinate-axis count")
+    field_count = bounded(read_header_i32("field count"), 10000, "field count")
+    field_names: list[str] = []
+    field_ndofs: list[int] = []
+    for index in range(field_count):
+        field_names.append(read_header_utf(f"fieldNames[{index}]"))
+        field_ndofs.append(read_header_i32(f"fieldNDofs[{index}]"))
+    name_count = bounded(read_header_i32("dof name count"), 10000, "dof name count")
+    names = [read_header_utf(f"dofNames[{index}]") for index in range(name_count)]
+    dof_count = bounded(read_header_i32("Xmesh DOF row count"), 20_000_000, "Xmesh DOF row count")
+    geom_nums: list[int] = []
+    nodes: list[int] = []
+    name_indices: list[int] = []
+    vector_indices: list[int] = []
+    coordinates: list[list[float]] = [[] for _ in range(axes)]
+    for index in range(dof_count):
+        geom_nums.append(read_header_i32(f"geomNums[{index}]"))
+        nodes.append(read_header_i32(f"nodes[{index}]"))
+        name_indices.append(read_header_i32(f"nameInds[{index}]"))
+        vector_indices.append(read_header_i32(f"solVectorInds[{index}]"))
+        for axis in range(axes):
+            coordinates[axis].append(read_header_f64(f"coords[{axis}][{index}]"))
+
+    geometry_count = bounded(read_header_i32("geometry count"), 1000, "geometry count")
+    element_group_count = 0
+    element_local_map_entries = 0
+    invalid_element_dof_references = 0
+    for geometry_index in range(geometry_count):
+        read_header_utf(f"geometry[{geometry_index}]")
+        mesh_type_count = bounded(read_header_i32(f"geometry[{geometry_index}] mesh-type count"),
+                                  10000, "mesh-type count")
+        for mesh_index in range(mesh_type_count):
+            read_header_utf(f"meshType[{geometry_index}][{mesh_index}]")
+            element_group_count += 1
+            local_dof_count = bounded(read_header_i32("local DOF count"),
+                                      20_000_000, "local DOF count")
+            local_dof_axes = bounded(read_header_i32("local DOF coordinate axes"), 3,
+                                      "local DOF coordinate axes", allow_minus_one=True)
+            local_dof_names = [read_header_utf(f"localDofNames[{index}]")
+                               for index in range(local_dof_count)]
+            if local_dof_axes >= 0:
+                for axis in range(local_dof_axes):
+                    for local_index in range(local_dof_count):
+                        read_header_f64(f"localDofCoords[{axis}][{local_index}]")
+
+            local_node_axes = bounded(read_header_i32("local node coordinate axes"), 3,
+                                      "local node coordinate axes", allow_minus_one=True)
+            local_node_count = bounded(read_header_i32("local node count"),
+                                       20_000_000, "local node count")
+            if local_node_axes == -1 and local_node_count != 0:
+                raise CampaignError("V3 local node coordinates are absent but a nonzero node count was declared")
+            if local_node_axes >= 0:
+                for axis in range(local_node_axes):
+                    for node_index in range(local_node_count):
+                        read_header_f64(f"localCoords[{axis}][{node_index}]")
+
+            element_count = bounded(read_header_i32("element count"), 20_000_000, "element count")
+            node_row_count = bounded(read_header_i32("element node row count"),
+                                     20_000_000, "element node row count")
+            if node_row_count * element_count > 100_000_000:
+                raise CampaignError("V3 element node map exceeds the bounded decoder size")
+            for row in range(node_row_count):
+                for element in range(element_count):
+                    read_header_i32(f"elementNodes[{row}][{element}]")
+            dof_row_count = bounded(read_header_i32("element DOF row count"),
+                                    20_000_000, "element DOF row count")
+            if dof_row_count * element_count > 100_000_000:
+                raise CampaignError("V3 element DOF map exceeds the bounded decoder size")
+            if dof_row_count != local_dof_count:
+                raise CampaignError("V3 localDofNames and element DOF map row counts differ")
+            for row in range(dof_row_count):
+                for element in range(element_count):
+                    dof_index = read_header_i32(f"elementDofs[{row}][{element}]")
+                    element_local_map_entries += 1
+                    if dof_index < -1 or dof_index >= dof_count:
+                        invalid_element_dof_references += 1
+
+    layout_sha256 = layout_digest.hexdigest()
+    time_count = bounded(_read_i32(stream, "stored time count"), 10_000_000, "stored time count")
+    if time_count <= 0:
+        raise CampaignError("V3 snapshot has no native stored solutions")
+    prior_time: float | None = None
+    vector_length: int | None = None
+    vector_summary: dict[str, Any] | None = None
+    metadata = {
+        "snapshot_schema": "W24-DOF-SNAPSHOT-3",
+        "coordinate_axes": axes,
+        "xmesh_n_dofs": declared_dof_count,
+        "fieldNames": field_names,
+        "fieldNDofs": field_ndofs,
+        "field_ndofs_sum": sum(field_ndofs),
+        "dofNames": names,
+        "geomNums": geom_nums,
+        "nodes": nodes,
+        "nameInds": name_indices,
+        "solVectorInds": vector_indices,
+        "coords": coordinates,
+        "layout_sha256": layout_sha256,
+        "element_local_map_group_count": element_group_count,
+        "element_local_map_entries": element_local_map_entries,
+        "invalid_element_dof_references": invalid_element_dof_references,
+    }
+    for frame_index in range(time_count):
+        time_s = _read_f64(stream, f"V3 time[{frame_index}]")
+        if prior_time is not None and time_s <= prior_time:
+            raise CampaignError("V3 stored times are nonfinite or not strictly increasing")
+        frame_vector_length = bounded(_read_i32(stream, f"V3 solution vector length[{frame_index}]"),
+                                      100_000_000, "solution vector length")
+        if frame_vector_length <= 0:
+            raise CampaignError("V3 native solution vector is empty")
+        values: list[float] = []
+        for index in range(frame_vector_length):
+            values.append(_read_f64(stream, f"V3 u_real[{frame_index}][{index}]"))
+        if vector_length is None:
+            vector_length = frame_vector_length
+            seen = bytearray(vector_length)
+            unmapped_rows = 0
+            invalid_indices = 0
+            duplicate_index_rows = 0
+            unique_mapped_indices = 0
+            out_of_range_indices = 0
+            for vector_index in vector_indices:
+                if vector_index == -1:
+                    unmapped_rows += 1
+                elif vector_index < -1:
+                    invalid_indices += 1
+                elif vector_index >= vector_length:
+                    out_of_range_indices += 1
+                elif seen[vector_index]:
+                    duplicate_index_rows += 1
+                else:
+                    seen[vector_index] = 1
+                    unique_mapped_indices += 1
+            unrepresented = vector_length - unique_mapped_indices
+            field_counts_valid = (field_count > 0 and len(field_names) == len(field_ndofs) and
+                                  all(count >= 0 for count in field_ndofs) and
+                                  sum(field_ndofs) == declared_dof_count == dof_count)
+            name_indices_valid = all(0 <= index < len(names) for index in name_indices)
+            complete = (field_counts_valid and name_indices_valid and unmapped_rows == 0 and
+                        invalid_indices == 0 and out_of_range_indices == 0 and
+                        unrepresented == 0 and invalid_element_dof_references == 0 and
+                        element_group_count > 0 and element_local_map_entries > 0)
+            vector_summary = {
+                "vector_length": vector_length,
+                "mapped_dof_rows": sum(0 <= index < vector_length for index in vector_indices),
+                "unmapped_dof_rows": unmapped_rows,
+                "invalid_solution_indices": invalid_indices,
+                "out_of_range_solution_indices": out_of_range_indices,
+                "duplicate_solution_vector_index_rows": duplicate_index_rows,
+                "unique_mapped_vector_indices": unique_mapped_indices,
+                "unrepresented_solution_vector_indices": unrepresented,
+                "field_counts_valid": field_counts_valid,
+                "name_indices_valid": name_indices_valid,
+                "full_vector_and_internal_dof_map_covered": complete,
+            }
+            metadata["mapping_summary"] = vector_summary
+            metadata["complete_xmesh_internal_dof_capture"] = complete
+            metadata["complete_xmesh_dofs"] = complete
+        elif frame_vector_length != vector_length:
+            raise CampaignError("V3 solution-vector length changed across accepted stored times")
+        yield {"time_s": time_s, "dofs": metadata, "u_real": values,
+               "u_imag": [0.0] * frame_vector_length,
+               "frame_index": frame_index, "frame_count": time_count}
+        prior_time = time_s
+    if stream.read(1):
+        raise CampaignError("V3 snapshot contains trailing bytes after the declared solution vectors")
+    if vector_summary is None:
+        raise CampaignError("V3 snapshot omitted its native solution vector mapping")
+
+
 def iter_solution_snapshot(path: Path) -> Iterator[dict[str, Any]]:
     """Stream complete Java W24 DOF snapshots (legacy 2D V1 or full 3D V2).
 
@@ -4327,6 +4780,9 @@ def iter_solution_snapshot(path: Path) -> Iterator[dict[str, Any]]:
         raise CampaignError(f"cannot open compressed native DOF snapshot: {exc}") from exc
     with snapshot as stream:
         magic = _read_modified_utf(stream, "snapshot magic")
+        if magic == "W24-DOF-SNAPSHOT-3":
+            yield from _iter_solution_snapshot_v3(stream)
+            return
         if magic not in {"W24-DOF-SNAPSHOT-1", "W24-DOF-SNAPSHOT-2"}:
             raise CampaignError(f"unsupported native DOF snapshot schema: {magic!r}")
         axes = _read_i32(stream, "coordinate axis count")
