@@ -534,3 +534,7 @@ The historical job.list cursor KeyError is fixed by moving cursor metadata to th
 ### W24 V3 capture and lineage repair software closure
 
 V3 writer/decoder, full Xmesh layout, authenticated frames and complete lineage digest passed141 isolated and141 main integration tests. Main verified221 baseline files,10 overlay files and114 runtime-source hashes. Both original in-place nested mutations now fail production validation (2 independent main tests). Native Maxwell identity/reference semantics remain UNVERIFIED, full science NOT_RUN; same-save persistence equality does not establish continuous/staged physics acceptance. Failed candidates and their hashes remain preserved. Checkpoint: `docs/full_project_execution/w24/FULL_XMESH_STATE_SOFTWARE_CHECKPOINT.json`.
+
+### W23 partial CV power software closure
+
+The first 213-test candidate was rejected because it forced two independent Java classes to share one source artifact, contrary to the production single-file compiler. Fixed routes authenticate each actual source/entrypoint separately. Main verified99 manifest entries and4 overlays, reran223 tests PASS and confirmed the original distinct-source case now works. Two separate Java offline compiles passed. CV area/volume diagnostic tolerances were frozen before native execution. Qabs interface and producer-step proof remain incomplete; no total power balance or native scientific acceptance is claimed. Checkpoint: `docs/full_project_execution/w23_overlap/CV_POWER_TERMS_SOFTWARE_CHECKPOINT.json`.

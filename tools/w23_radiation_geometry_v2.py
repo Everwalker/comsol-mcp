@@ -26,6 +26,16 @@ class RadiationGeometryV2Error(ValueError):
 SCHEMA_ID = "urn:comsol-mcp:w23:radiation-geometry:2.0.0"
 FIXTURE_ID = "w23_full3d_radiation_geometry_v2"
 CV_BOX_UM = {"x": [-19.0, 19.0], "y": [-5.5, 5.5], "z": [-5.5, 5.5]}
+CV_NATIVE_INTEGRAL_DIAGNOSTIC_POLICY = {
+    "policy_id": "w23.cv.native_area_volume_identity_diagnostic.v1",
+    "surface_area_relative_tolerance": 1e-6,
+    "surface_area_absolute_tolerance_m2": 1e-24,
+    "volume_relative_tolerance": 1e-6,
+    "volume_absolute_tolerance_m3": 1e-27,
+    "comparison": "abs(actual-expected) <= max(absolute_tolerance, relative_tolerance*abs(expected))",
+    "status": "MAIN_APPROVED_PRE_NATIVE_DIAGNOSTIC",
+    "scope": "geometric completeness diagnostic only; not a power-balance acceptance tolerance",
+}
 _TOL = 1e-8
 _FACE_ORDER = (
     "input_axial", "output_axial", "transverse_y_minus",
@@ -1768,3 +1778,98 @@ def verify_control_volume_readback(readback: Mapping[str, Any]) -> dict[str, Any
             "flat_face_normalization": copy.deepcopy(readback.get("flat_face_normalization")),
             "surface_closure_evidence": "global vertex coordinates, canonical shared-edge endpoints/curve samples, connected patches, outer/hole loop winding and containment, paired internal edges, one connected external boundary cycle per face, twelve complete box-edge interval chains and eight unique three-face corners",
             "power_balance_tolerance": "NOT_FROZEN"}
+
+
+def verify_control_volume_domain_inventory(readback: Mapping[str, Any]) -> dict[str, Any]:
+    """Bind the complete physical CV volume selection to native domain/material/PML readback."""
+    if (isinstance(readback, Mapping) and isinstance(readback.get("faces"), list)
+            and readback["faces"] and any("patches" not in row for row in readback["faces"]
+                                            if isinstance(row, Mapping))):
+        readback = normalize_control_volume_topology_readback(readback)
+    topology = verify_control_volume_readback(readback)
+    if not isinstance(readback, Mapping):
+        _fail("native domain inventory requires the exact topology object")
+    inventory = readback.get("domain_inventory")
+    domain_count = readback.get("geometry_domain_count")
+    if (readback.get("evidence_scope") not in {"COMSOL_NATIVE_PARTITION_DOMAINS", "SOFTWARE_FIXTURE"}
+            or type(domain_count) is not int or domain_count <= 0
+            or not isinstance(inventory, list) or len(inventory) != domain_count):
+        _fail("complete native geometry-domain/material/PML inventory is required")
+    by_id: dict[int, dict[str, Any]] = {}
+    interior: set[int] = set()
+    pml: set[int] = set()
+    for row in inventory:
+        if (not isinstance(row, Mapping) or type(row.get("domain_id")) is not int
+                or row["domain_id"] < 1 or row["domain_id"] in by_id
+                or not isinstance(row.get("material_tag"), str) or not row["material_tag"].strip()
+                or type(row.get("is_pml")) is not bool):
+            _fail("native domain inventory row lacks a unique ID, actual material, or PML readback")
+        bounds = row.get("bounding_box_um")
+        if (not isinstance(bounds, list) or len(bounds) != 6
+                or any(isinstance(value, bool) or not isinstance(value, (int, float))
+                       or not math.isfinite(float(value)) for value in bounds)):
+            _fail("native domain inventory requires finite six-value micrometre bounds")
+        values = [float(value) for value in bounds]
+        if any(values[2 * axis] > values[2 * axis + 1] for axis in range(3)):
+            _fail("native domain inventory contains reversed bounds")
+        in_box = all(values[2 * axis] >= CV_BOX_UM[axis_name][0] - 1e-7
+                     and values[2 * axis + 1] <= CV_BOX_UM[axis_name][1] + 1e-7
+                     for axis, axis_name in enumerate(("x", "y", "z")))
+        if row["is_pml"]:
+            pml.add(row["domain_id"])
+            if in_box:
+                _fail("a PML domain is fully classified inside the physical control volume")
+        elif in_box:
+            interior.add(row["domain_id"])
+        by_id[row["domain_id"]] = dict(row)
+    if len(by_id) != domain_count:
+        _fail("native domain inventory does not cover every geometry domain exactly once")
+    declared_interior = readback.get("cv_interior_domain_ids")
+    target_ids = readback.get("partition_target_domain_ids")
+    if (not isinstance(declared_interior, list) or not declared_interior
+            or any(type(value) is not int for value in declared_interior)
+            or len(declared_interior) != len(set(declared_interior))
+            or set(declared_interior) != interior
+            or not isinstance(target_ids, list) or not target_ids
+            or any(type(value) is not int or value < 1 for value in target_ids)
+            or len(target_ids) != len(set(target_ids))):
+        _fail("native CV interior-domain set differs from complete bbox/material/PML partition classification")
+    for face in readback.get("faces", []):
+        for patch in face.get("patches", []):
+            adjacent = patch.get("adjacent_domain_ids")
+            material_tags = patch.get("adjacent_material_tags")
+            if (not isinstance(adjacent, list) or len(adjacent) != 2
+                    or any(domain_id not in by_id for domain_id in adjacent)
+                    or not isinstance(material_tags, list) or len(material_tags) != 2):
+                _fail("CV face adjacency must resolve through the complete native domain inventory")
+            interior_sides = [domain_id in interior for domain_id in adjacent]
+            if sum(interior_sides) != 1:
+                _fail("each CV patch must separate exactly one interior domain from one exterior domain")
+            if any(by_id[domain_id]["is_pml"] for domain_id in adjacent):
+                _fail("CV control surface adjacency cannot touch a PML domain")
+            expected_materials = [by_id[domain_id]["material_tag"] for domain_id in adjacent]
+            if material_tags != expected_materials:
+                _fail("flat-face material tags differ from the complete actual domain inventory")
+            pml_by_id = patch.get("adjacent_domain_pml_by_id")
+            if not isinstance(pml_by_id, Mapping) or any(
+                    pml_by_id.get(str(domain_id)) is not by_id[domain_id]["is_pml"]
+                    for domain_id in adjacent):
+                _fail("face PML flags are not bound to actual adjacent domain membership")
+    x, y, z = (CV_BOX_UM[axis] for axis in ("x", "y", "z"))
+    expected_volume_um3 = (x[1] - x[0]) * (y[1] - y[0]) * (z[1] - z[0])
+    return {
+        "status": "NATIVE_DOMAIN_INVENTORY_SHAPE_VALID_UNBOUND_ROUTE"
+        if readback.get("evidence_scope") == "COMSOL_NATIVE_PARTITION_DOMAINS"
+        else "SOFTWARE_DOMAIN_INVENTORY_VALID_NATIVE_NOT_RUN",
+        "native_result": "UNVERIFIED" if readback.get("evidence_scope") == "COMSOL_NATIVE_PARTITION_DOMAINS" else "NOT_RUN",
+        "geometry_domain_count": domain_count,
+        "interior_domain_ids": sorted(interior),
+        "interior_domain_count": len(interior),
+        "pml_domain_ids": sorted(pml),
+        "analytic_cv_volume_um3": expected_volume_um3,
+        "analytic_cv_volume_m3": expected_volume_um3 * 1e-18,
+        "diagnostic_policy": dict(CV_NATIVE_INTEGRAL_DIAGNOSTIC_POLICY),
+        "topology_summary": topology,
+        "power_balance_tolerance": "NOT_FROZEN",
+        "scientific_acceptance": "NOT_RUN",
+    }

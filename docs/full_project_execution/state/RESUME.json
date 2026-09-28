@@ -103,7 +103,7 @@
       "native_acceptance": "NOT_RUN"
     }
   ],
-  "next_action": "Continue W21 original state_map/stage_run, W23 CV power integration and Qabs interface, W24 native field/reference-state semantics and remaining science controls. Native resource gates remain; overall PARTIAL.",
+  "next_action": "Continue W21 v2 durable stage execution and actual state-map profile, W23 Qabs and exact producer-step binding, and W24 Equation View/state association. Native and final overall acceptance remain incomplete.",
   "active_jobs": [],
   "blockers": [
     "W23 failed setup owned Server 75272 and daemon 75260 remain preserved: cleanup SIGTERM was rejected by automatic approval and explicit authorization is pending; no cleanup or relaunch authorized by elapsed time.",
@@ -132,7 +132,7 @@
     "native_solve_budget_remaining": 0,
     "evidence": "docs/full_project_execution/evidence/luna_process_reconciliation/mac_readonly_snapshot_20260926T2152Z.json"
   },
-  "updated_at": "2026-09-28T05:04:13.749562+00:00",
+  "updated_at": "2026-09-28T05:39:19.595880+00:00",
   "note": "Continuous authorized execution through W26. OpenViking task-detail retrieval was denied by auto-review because it would disclose internal roadmap identifiers externally; no workaround. Use current frozen workpack and read-only local memory only. Do not rerun bootstrap/init on resume. Source files now contain executor edits; do not rerun bootstrap/init. Git metadata is an APFS pointer managed by main agent; migration requires bundle/source transfer, not copying only the repository pointer. Git metadata migration is documented by evidence/git_metadata_relocation.json and owned by the main agent; do not copy the APFS git pointer to another machine without source bundle/archive. GUI permission boundary and checkpoint solution-scope caveat recorded. This executor has one W24 native setup-only failure with exact cleanup verified; the durable operation/job UNKNOWN records remain unchanged. No W24 solver submission occurred. Saved-MPH readback supplement uses separate time/evidence and zero study/solver calls; run08 remains FAIL_OR_INCOMPLETE. Root raw SQLite recomputation is linked under native_resume_saved_artifact_supplement.raw_recomputation_evidence; original run08 remains FAIL_OR_INCOMPLETE and no solve budget is restored. Latest checkpoint 2026-09-27T03:50:43Z: W24 0334Z setup run failed pre-model due Python 3.14 missing mcp, with exact cleanup; 0346Z candidate pins the validated 3.12.13 environment and passes a production no-engine registry/daemon preflight. Native setup remains pending root review; science implementation continues offline. Latest checkpoint 2026-09-27T09:09:28Z: W24 0841Z candidate was invoked once at 0857Z and failed before any engine/Worker birth because project.inspect received an injected idempotency_key; project.create persisted successfully. Exact read-only SQLite hash and operation result are in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_contract_diagnostic.json. The runner now omits the unnecessary inspect key; actual ControlDaemon focused regression is 2/2 PASS in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_runner_regression_receipt.json. No native retry or acceptance is claimed; release F04 runtime integration is active, so refresh closure and root review are required before another launch. Windows COMSOL 6.3 remains required/unassessed; only macOS 6.3 is USER_REQUESTED_SKIP.",
   "native_resume_smoke": {
     "status": "FAIL_OR_INCOMPLETE_POINT_SCHEMA_FAILURE; SOLVED_CHILD_ARTIFACT_DURABLE; SOLVE_BUDGET_EXHAUSTED; SEPARATE_SAVED_MPH_READBACK_PASS",
@@ -964,8 +964,8 @@
   },
   "acceptance_cells_changed": false,
   "current_execution_checkpoint": {
-    "path": "docs/full_project_execution/w24/FULL_XMESH_STATE_SOFTWARE_CHECKPOINT.json",
-    "status": "PASS_SCOPED_SOFTWARE_W24_PARTIAL"
+    "path": "docs/full_project_execution/w23_overlap/CV_POWER_TERMS_SOFTWARE_CHECKPOINT.json",
+    "status": "PASS_SCOPED_SOFTWARE_W23_PARTIAL"
   },
   "w24_setup_candidate_0841z_native_attempt": {
     "candidate_id": "W24-CURE-HIST-AXISYM-01",
@@ -991,11 +991,11 @@
   },
   "verified_git_sync": {
     "status": "VERIFIED",
-    "head": "884c98ee37e370daf50af0c12c8d24ed5a3c7039",
-    "origin_main": "884c98ee37e370daf50af0c12c8d24ed5a3c7039",
-    "verified_at": "2026-09-28T04:51:28.686529+00:00",
+    "head": "b4ffbc02547fb5f21514b64b5c6f6c2a5dbf0f8c",
+    "origin_main": "b4ffbc02547fb5f21514b64b5c6f6c2a5dbf0f8c",
+    "verified_at": "2026-09-28T05:06:04.134927+00:00",
     "method": "post-push fetch; HEAD/origin-main equality",
-    "stage": "W19 job cursor contract repair"
+    "stage": "W24 full Xmesh state software"
   },
   "w24_static_shape_science_admission_repair": {
     "status": "SCOPED_SOFTWARE_REPAIR_ACCEPTED_NATIVE_NOT_RUN",
@@ -1106,6 +1106,38 @@
       "loss_density": "Exact local KB query ewfd.Qh returned no match. Do not hardcode as supported. It may be an explicitly unverified probe candidate only. Production absorption requires authenticated current-physics expression/unit mapping; missing evidence means NOT_AVAILABLE/UNVERIFIED, never zero loss.",
       "domain_coverage": "Capture complete native domain inventory and CV face inside/outside adjacency; reject PML/outside/duplicate domains. Include same-solution IntVolume(1) and six IntSurface(1) measures to diagnose coverage, distinct from analytic geometry or GeomMeasure.",
       "next_action": "Same Luna implements reusable field-neutral IntVolume and CV surface/Pin receipts with exact dataset/inner/outer/source identity, negative controls and offline compile. No native launch or scientific balance PASS."
+    },
+    "cv_power_candidate_review": {
+      "status": "FIXED_PASS_SCOPED_SOFTWARE",
+      "receipt": "/private/tmp/w23_cv_power_balance_20260928/cv_power_balance_software_receipt.json",
+      "receipt_sha256": "b4d938270b0903a0d2d236a1dd4f781e7219802067f5f21b0a19bf486a3591f8",
+      "reported_tests": 213,
+      "finding": "CV builder requires topology and raw-field operations to share one source_artifact despite distinct NativeW23RadiationGeometryV2 and NativeW23Full3DFixture classes. Production Worker sourceSpec accepts one Java file and compiles that file only; synthetic positive masks non-loadable entrypoint.",
+      "production_evidence": "comsol_mcp/worker_java/PersistentComsolWorker.java compileJava/sourceSpec/executeJava: singleton Java source compilation, source-SHA output directory and class loading.",
+      "next_action": "Implement generic Qabs interface and authenticated field mapping plus exact Frequency producer-step binding; freeze scientific balance thresholds before native evaluation. Complete remaining W23 and original W01-W26 scope and final independent review.",
+      "native": "NOT_RUN",
+      "main_reproducer": {
+        "path": "/private/tmp/w23-cv-source-main-reproducer.json",
+        "sha256": "ce9d17be6f76239d64dd025f8948a91a5d84b627d2c3167f736719a521bd5279",
+        "result": "VALID_DISTINCT_SOURCES_REJECTED"
+      },
+      "repair_progress": {
+        "candidate": "/private/tmp/w23_cv_power_balance_20260928_routefix/candidate",
+        "status": "EXECUTOR_REPORTED_TESTS_PENDING_FREEZE_AND_MAIN_REVIEW",
+        "reported_focused_passed": 37,
+        "remaining": "Independent Java compilation/loading checks and original four-module closure; no native execution."
+      },
+      "checkpoint": "docs/full_project_execution/w23_overlap/CV_POWER_TERMS_SOFTWARE_CHECKPOINT.json",
+      "repair_receipt": {
+        "path": "/private/tmp/w23_cv_power_balance_20260928_routefix/cv_source_routefix_receipt.json",
+        "sha256": "483c68a52ed572a1c50269f50c710d65062aeb0b8ee27748b19dea9710ffd316"
+      },
+      "main_tests_passed": 223,
+      "main_original_retest": {
+        "path": "/private/tmp/w23-cv-source-main-fixed.json",
+        "sha256": "dc7b786414f798ae2700bcaa72eb04e326d38f97fc2692c1322c53c6cbfe50ad",
+        "result": "DISTINCT_CORRECT_SOURCES_ACCEPTED"
+      }
     }
   },
   "f16_current_review": {
@@ -1500,7 +1532,7 @@
       "Reopen final binding comparison appears to equate post-contract and post-history revisions; fix and test actual successive transitions.",
       "Worker2 loop reopens stdUV/stdHeat/stdCool from final saved MPH, but authentication requires each original stage Study.run public_identity to equal the terminal stdCool save producer. New production positive only covers stdCool; earlier legitimate stages necessarily differ."
     ],
-    "next_action": "Continue same-version Maxwell branch-state producer design and implementation; use documented native field/solution evidence, not guessed branch DOF names. Keep native resource cleanup and frozen-budget gates; do not launch until authorized.",
+    "next_action": "Implement private authenticated Equation View readback for exact physics/viscoelastic/activation feature paths and raw table metadata/rows, then exact unambiguous candidate association with V3 fields. No inference of branch/reference semantics; native NOT_RUN until separately frozen authorized coupon.",
     "native_result": "NOT_RUN",
     "github_sync": "NOT_PUBLISHED",
     "production_fix_candidate": {
@@ -1637,6 +1669,18 @@
       "error": "KeyError: 'cursor' at assertion described[\"runtime_dispatch_contract\"][\"cursor\"].startswith(\"Base-10\") (test_registry_job_control_fallback.py:108)",
       "id": "tests/test_registry_job_control_fallback.py::test_job_status_log_cancel_are_responsive_through_all_three_entrypoints",
       "repair_checkpoint": "docs/full_project_execution/project_session/JOB_CURSOR_CONTRACT_CHECKPOINT.json"
+    },
+    "execution_design": {
+      "status": "IN_PROGRESS",
+      "proposal_path": "/private/tmp/w21-state-map-stage-run-proposal-884c98e.md",
+      "proposal_sha256": "a194635958152cef5289d9b34d4e335513a35ecb9bb99ec12f0025ff712453fe",
+      "decision": "Versioned v2 explicit target Variables NodePath and source/target selections/frame/operators. Preserve v1 declaration compatibility. Durable one-stage attempts and artifacts; no selector-only alias substituted for full mapping scope. Nonempty identity mappings require native field/unit/Xmesh/frame evidence before solve; interpolate/projection and hidden history remain open until supported backend and readback.",
+      "next_action": "Same Luna defines strict v2 schema and reuses native observation/conservation backend while implementing already agreed durable attempt/admission/idempotency machinery.",
+      "v2_checks_decision": {
+        "continuity": "Explicit boundary_time Quantity; one exact source terminal and target initial stored tuple at same physical time. E=max absolute paired difference; scale=max source/target absolute sample values; threshold=max(abs,rel*scale). Native coordinate/entity/frame identity required.",
+        "conservation": "Each term has dimensionless finite coefficient, spatial SelectionSpec/entity_dimension; explicit exact source_solution and target_solution bound to authenticated stage lineage. Compare signed sum by side; residual=target_sum-source_sum. Both sides required; all-zero coefficients refused; all native integrated units match declared check unit.",
+        "status": "APPROVED_FOR_SOFTWARE_IMPLEMENTATION_NATIVE_NOT_RUN"
+      }
     }
   }
 }

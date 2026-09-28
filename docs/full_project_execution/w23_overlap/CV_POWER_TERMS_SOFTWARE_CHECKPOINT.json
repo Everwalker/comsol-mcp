@@ -1,0 +1,131 @@
+{
+  "schema_version": 1,
+  "status": "PASS_SCOPED_SOFTWARE",
+  "work_package_status": "PARTIAL",
+  "capability": "Read-only managed routes bind full CV domain inventory, six signed Poynting surface integrals, six area integrals, volume integral and positive driven input power to exact dataset/solution tuples. Distinct topology/integral and field-sampling Java artifacts are authenticated separately.",
+  "integrated_on": "b4ffbc02547fb5f21514b64b5c6f6c2a5dbf0f8c",
+  "candidate_receipt": {
+    "path": "/private/tmp/w23_cv_power_balance_20260928_routefix/cv_source_routefix_receipt.json",
+    "sha256": "483c68a52ed572a1c50269f50c710d65062aeb0b8ee27748b19dea9710ffd316"
+  },
+  "files": [
+    {
+      "path": "tests/test_w23_cv_power_balance.py",
+      "sha256": "5a41b7387ebafe2a0ba78f4b6a2419142cbaa48eb605801a75433b430a4c6113"
+    },
+    {
+      "path": "tools/java/NativeW23RadiationGeometryV2.java",
+      "sha256": "9d0d7a2cc3b14c479180c619cf8e0159dff368a6b9a5303074af50c428520cb1"
+    },
+    {
+      "path": "tools/w23_full3d_science.py",
+      "sha256": "220e3303736121cdb32ec3846068ba4b07fa6529d6e0d3f7f0550397c02df363"
+    },
+    {
+      "path": "tools/w23_radiation_geometry_v2.py",
+      "sha256": "cfdecae82885228158ca3d4bfe4867a880a64e964d615cc5becc445f0d302db8"
+    }
+  ],
+  "main_integrity": {
+    "path": "/private/tmp/w23-cv-routefix-main-integrity.json",
+    "sha256": "41ca2e47459d188457340f682ed837f64da4b2d0062d097d1a8f855dd56e1a0e",
+    "verified_manifest_files": 99
+  },
+  "isolated_tests": {
+    "result": "PASS",
+    "tests": 223,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "selected_files": [
+      "tests/test_w23_cv_power_balance.py",
+      "tests/test_w23_radiation_geometry_v2.py",
+      "tests/test_w23_full3d_science.py",
+      "tests/test_w23_full3d.py"
+    ],
+    "launcher": "PYTHONPATH=/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/lib/python3.12/site-packages PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -B -S -",
+    "pytest_args": [
+      "-q",
+      "--junitxml=/private/tmp/w23_cv_power_balance_20260928_routefix/junit_cv_closure_final.xml",
+      "--basetemp=/private/tmp/w23_cv_power_balance_20260928_routefix/pytest-basetemp-final",
+      "tests/test_w23_cv_power_balance.py",
+      "tests/test_w23_radiation_geometry_v2.py",
+      "tests/test_w23_full3d_science.py",
+      "tests/test_w23_full3d.py"
+    ],
+    "junit_path": "/private/tmp/w23_cv_power_balance_20260928_routefix/junit_cv_closure_final.xml",
+    "junit_sha256": "be5e4eef5f6363f4cddf0860670c75ba62aa433f76ebf8551ac948e596b2d97c"
+  },
+  "main_integration_tests": {
+    "passed": 223,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "junit": "/private/tmp/w23-cv-routefix-main-junit.xml",
+    "sha256": "e622b4cfac3d1ca10af22d7e3498c7b7b9d6c4fa625e19e27ad57e21636829ca"
+  },
+  "main_original_reproducer_retest": {
+    "path": "/private/tmp/w23-cv-source-main-fixed.json",
+    "sha256": "dc7b786414f798ae2700bcaa72eb04e326d38f97fc2692c1322c53c6cbfe50ad",
+    "result": "DISTINCT_CORRECT_SOURCES_ACCEPTED"
+  },
+  "preserved_finding": {
+    "candidate_root": "/private/tmp/w23_cv_power_balance_20260928/candidate",
+    "status": "CHANGES_REQUIRED",
+    "receipt_path": "/private/tmp/w23_cv_power_balance_20260928/cv_power_balance_software_receipt.json",
+    "receipt_sha256": "b4d938270b0903a0d2d236a1dd4f781e7219802067f5f21b0a19bf486a3591f8",
+    "finding_path": "/private/tmp/w23_cv_power_balance_20260928_routefix/original_candidate_changes_required.json",
+    "finding_sha256": "11207a07a9af497faa488b1bedfde64d03d4577ad8d3e0f12d594ab2dbfafaaf",
+    "main_reproducer_path": "/private/tmp/w23-cv-source-main-reproducer.json",
+    "main_reproducer_sha256": "ce9d17be6f76239d64dd025f8948a91a5d84b627d2c3167f736719a521bd5279",
+    "main_reproducer_result": "VALID_DISTINCT_SOURCES_REJECTED",
+    "immutability": "Original candidate/receipt/JUnit/source manifest/reproducer were not changed."
+  },
+  "single_file_compile_audit": {
+    "path": "/private/tmp/w23_cv_power_balance_20260928_routefix/single_file_compile_audit.json",
+    "sha256": "7d3f03cc8401a2fb8c0559a4199e74c00f8bd075d382f64bdfcb66c237251c0c",
+    "status": "PASS_OFFLINE_SINGLE_FILE_COMPILE_AND_SOURCE_LOADER_AUDIT",
+    "model_instantiated": false,
+    "native_started": false
+  },
+  "diagnostic_policy": {
+    "area_absolute_tolerance_m2": 1e-24,
+    "area_relative_tolerance": 1e-06,
+    "formula": "abs(actual-expected) <= max(absolute_tolerance, relative_tolerance*abs(expected))",
+    "scope": "pre-solve geometric completeness check only; not power-balance or scientific acceptance",
+    "status": "MAIN_APPROVED_PRE_NATIVE_DIAGNOSTIC",
+    "volume_absolute_tolerance_m3": 1e-27,
+    "volume_relative_tolerance": 1e-06
+  },
+  "acceptance_boundaries": {
+    "candidate_scope": "Software route/source identity correction and offline source-loader/compiler feasibility only.",
+    "native_execution": "NOT_RUN",
+    "COMSOL_model": "NOT_CREATED_OR_LOADED",
+    "study_or_solver": "NOT_RUN",
+    "Qabs_generic_expression_interface": "NOT_IMPLEMENTED",
+    "Qabs_authenticated_mapping": "NOT_AVAILABLE",
+    "producer_step_binding": "UNVERIFIED",
+    "absolute_balance_tolerance": "NOT_FROZEN",
+    "scientific_acceptance": "NOT_RUN"
+  },
+  "prior_failures": [
+    {
+      "cause": "Initial isolated source archive omitted four published import dependencies.",
+      "errors": 0,
+      "failed": 18,
+      "passed": 190,
+      "path": "/private/tmp/w23_cv_power_balance_20260928/junit_cv_closure.xml",
+      "sha256": "62c82c13fef5525652210ff89dd1cae5b1dad045ef1eb20b0f7908eeca3e81e6"
+    },
+    {
+      "cause": "Published source modules were present, but the exact G2 action-catalog data dependency was omitted.",
+      "errors": 0,
+      "failed": 16,
+      "passed": 192,
+      "path": "/private/tmp/w23_cv_power_balance_20260928/junit_cv_closure_complete.xml",
+      "sha256": "c42b17d288aa59c571c2c4aac0a88046cfdb845d81d6885e42dcb6d007f67de1"
+    }
+  ],
+  "replay": "python -m pytest -q tests/test_w23_cv_power_balance.py tests/test_w23_radiation_geometry_v2.py tests/test_w23_full3d_science.py tests/test_w23_full3d.py",
+  "next_action": "Implement generic Qabs interface and authenticated field mapping plus exact Frequency producer-step binding; freeze scientific balance thresholds before native evaluation. Complete remaining W23 and original W01-W26 scope and final independent review."
+}

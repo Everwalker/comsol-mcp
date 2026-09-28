@@ -4,13 +4,13 @@ Updated 2026-09-28 UTC. **Overall PARTIAL; execution continues through W26.** Th
 
 ## Current stage
 
-**W24 full-Xmesh state capture and authentication: PASS for scoped software; W24/project overall PARTIAL.** Private V3 snapshots retain full stored Sol vectors and field/global/element-local DOF layout, explicitly reporting unmapped or invalid state. Same-state save/reopen uses exact finite-double comparison under matching configuration/layout/times. Continuous/staged all-state differences remain diagnostic; no physical tolerance or Maxwell identity is inferred.
+**W23 control-volume power terms and source binding: PASS for scoped software; W23/project overall PARTIAL.** Managed readback routes now cover six signed surface-flux terms, six surface areas, CV volume and positive input power on one exact solution tuple. Topology/integral and field-sampling routes use distinct Java sources, each with its own source hash, entrypoint, request/job and revision evidence.
 
-**Actually executed:** 141 isolated tests and 141 main integration tests PASS. Main verified 221 baseline files, 10 overlay files and 114 runtime-source hashes, then independently reran the two original in-place lineage-tampering counterexamples: both rejected. Java source bytes match the successful COMSOL 6.4 offline compile receipt. [Compact evidence and replay](docs/full_project_execution/w24/FULL_XMESH_STATE_SOFTWARE_CHECKPOINT.json). Failed original and first-repair evidence is retained locally by path/hash. No native solve occurred.
+**Actually executed:** 223 isolated and 223 main integration tests PASS. Main verified 99 manifest files and four overlays, checked separate Java offline-compile receipts, and independently confirmed the original distinct-source request is now accepted. [Compact evidence and replay](docs/full_project_execution/w23_overlap/CV_POWER_TERMS_SOFTWARE_CHECKPOINT.json). Earlier failed environments and the rejected 213-test candidate remain preserved by path/hash. No native run occurred.
 
-**Next:** continue original W21 `state_map`/`stage_run`, W23 CV power integration and its still-unimplemented generic Qabs interface, and W24 native branch-field/reference-state evidence plus science controls. Native cleanup authorization and platform limitations remain unresolved; final independent overall Reviewer has not started.
+**Not complete:** generic Qabs interface NOT_IMPLEMENTED, authenticated absorption mapping and exact Frequency producer binding UNVERIFIED; scientific balance threshold NOT_FROZEN, native/science NOT_RUN. Area/volume tolerances are geometric diagnostics only. Next implement those missing W23 capabilities while W21 durable stage execution/state mapping and W24 Equation View/state association continue. Native cleanup authorization/platform gaps and final independent overall review remain open.
 
-Latest published stages: job cursor contract repair `884c98e` and W21 immutable stage definitions `7d43f08`, both scoped software only. Earlier W23 maps, W24 saved-producer and F16 artifact milestones retain their stated acceptance boundaries.
+Latest published stage: W24 full-Xmesh state software `b4ffbc0`; prior job cursor repair `884c98e` and stage definitions `7d43f08` retain their stated scoped acceptance only.
 
 ## Latest accepted software baseline
 
@@ -38,4 +38,4 @@ Earlier source checkpoints and failures remain in the existing state and linked 
 
 Continue the three Luna Max work streams: complete F16 weighted native evidence and original experiment reporting/model gaps; complete W23 radiation geometry, capture/quadrature/power-balance and original optics acceptance; complete W24 UV/gel/reference/viscoelastic implementation and remaining science. Publish each accepted software stage immediately. Then freeze isolated managed native candidates, execute their reviewed scope, complete all remaining W01–W26 work, and run a fresh independent overall review with repair/retest until accepted.
 
-The latest focused replay is in [FULL_XMESH_STATE_SOFTWARE_CHECKPOINT.json](docs/full_project_execution/w24/FULL_XMESH_STATE_SOFTWARE_CHECKPOINT.json). Recover from GitHub and existing state. Last previously verified GitHub sync: 884c98ee37e370daf50af0c12c8d24ed5a3c7039; this stage is recorded as synchronized only after post-push fetch and HEAD/origin-main equality.
+The latest focused replay is in [CV_POWER_TERMS_SOFTWARE_CHECKPOINT.json](docs/full_project_execution/w23_overlap/CV_POWER_TERMS_SOFTWARE_CHECKPOINT.json). Recover from GitHub and existing state. Last previously verified GitHub sync: b4ffbc02547fb5f21514b64b5c6f6c2a5dbf0f8c; this stage is recorded as synchronized only after post-push fetch and HEAD/origin-main equality.

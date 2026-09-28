@@ -124,6 +124,79 @@ COMSOL_INTERP_UNIT_KB_EVIDENCE = {
     "claim": "Interp exposes a unit String property for the expressions in expr; paired sampling uses separate same-grid groups for V/m, A/m, and 1.",
 }
 
+COMSOL_CV_POWER_API_EVIDENCE = {
+    "comsol_version": "6.4.0.293",
+    "integral_result_api": {
+        "manual": "COMSOL 6.4 Results API",
+        "document_path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_results.52.084.html",
+        "chunks": [17297, 17298, 17299],
+        "source_sha256": "d2226d9202ca9faf07f7f41f4dc9472005771ecacba030ca426862f767bc2d3e",
+        "claim": "IntSurface/IntVolume expose native selections, expression/unit, dataset, SolutionSpec, and numerical readback.",
+    },
+    "poynting_components": {
+        "manual": "COMSOL 6.4 RF Module User's Guide, Fresnel equations example",
+        "document_path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.models.woptics.fresnel_equations/fresnel_equations.html",
+        "chunk": 97539,
+        "source_sha256": "bce3273cad82b4241d21ed95a0002c87be0ccff663c3b91ad2e1db964d8322eb",
+        "claim": "Poavx/Poavy/Poavz are time-averaged power-flow vector components; this contract uses signed Cartesian components on the six CV faces.",
+    },
+    "incident_power": {
+        "manual": "COMSOL 6.4 RF Module User's Guide, Coupling Between Sources and Destinations",
+        "document_path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.woptics/woptics_ug_modeling.5.42.html",
+        "chunk": 112798,
+        "source_sha256": "30420f3876e74f76cd147b592c4402d9f36158647e07bf5b74d8bf0d379e6b82",
+        "expression": "ewfd.Pin",
+        "claim": "ewfd.Pin is documented for the driven full-field EWFD frequency-domain model; native expression/unit and positive value still require readback.",
+    },
+    "q_abs": {
+        "local_kb_search": "NOT_FOUND_FOR_EWFD_QH_OR_EQUIVALENT_ABSORPTION_FIELD",
+        "generic_expression_interface": "NOT_IMPLEMENTED",
+        "authenticated_field_mapping": "NOT_AVAILABLE",
+        "production_expression": "NOT_PROVIDED",
+        "production_unit": "NOT_PROVIDED",
+        "status": "UNVERIFIED_NATIVE_PHYSICS_FIELD_MAPPING_REQUIRED",
+        "claim": "No loss-density expression or W/m^3 mapping is assumed; Qabs and total balance remain unavailable until same-model native equation/unit evidence is recorded.",
+    },
+}
+
+CV_POWER_BALANCE_POLICY = {
+    "schema_id": "urn:comsol-mcp:w23:cv-power-balance-policy:1.0.0",
+    "surface_integral_expression_family": "ewfd.Poav{x,y,z}",
+    "surface_flux_unit": "W",
+    "area_integral_expression": "1",
+    "area_unit": "m^2",
+    "volume_integral_expression": "1",
+    "volume_unit": "m^3",
+    "incident_power_expression": "ewfd.Pin",
+    "incident_power_unit": "W",
+    "q_abs_expression": "NOT_PROVIDED",
+    "q_abs_unit": "NOT_PROVIDED",
+    "q_abs_generic_expression_interface": "NOT_IMPLEMENTED",
+    "q_abs_authenticated_mapping": "NOT_AVAILABLE",
+    "surface_and_volume_integrals_share_one_native_request_and_solution_spec": True,
+    "include_port_or_pml_flux": False,
+    "include_absorption_from_pml": False,
+    "area_volume_diagnostic_policy_id": "w23.cv.native_area_volume_identity_diagnostic.v1",
+    "absolute_balance_tolerance": "NOT_FROZEN",
+    "power_balance_residual": "NOT_AVAILABLE_UNTIL_QABS_MAPPING_AND_PRODUCER_BINDING",
+    "scientific_acceptance": "NOT_RUN",
+}
+
+# The persistent Worker accepts one project-local .java source per execute_java
+# call. These hashes bind the CV routes to the two distinct frozen sources;
+# the Java response's source_sha256/entrypoint are checked against these values
+# on every route. A caller-supplied source label is not source-byte evidence.
+CV_RADIATION_JAVA_SOURCE = {
+    "source_artifact": "NativeW23RadiationGeometryV2.java",
+    "source_sha256": "9d0d7a2cc3b14c479180c619cf8e0159dff368a6b9a5303074af50c428520cb1",
+    "entrypoint": "NativeW23RadiationGeometryV2#run",
+}
+CV_FIELD_JAVA_SOURCE = {
+    "source_artifact": "NativeW23Full3DFixture.java",
+    "source_sha256": "882dfe530e704671e2f884663bcdcd142102beb618ffd70d90e4b83d527db0ca",
+    "entrypoint": "NativeW23Full3DFixture#run",
+}
+
 _BMA_PAIR_E_FIELDS = tuple(f"ewfd.E{axis}" for axis in _AXES) + tuple(
     f"ewfd.Emode{axis}_2" for axis in _AXES)
 _BMA_PAIR_H_FIELDS = tuple(f"ewfd.H{axis}" for axis in _AXES) + tuple(
@@ -3716,9 +3789,526 @@ def compare_native_mode_overlap(
             "independent_evidence_scope": independent.get("evidence_scope")}
 
 
+def build_full3d_control_volume_topology_dispatch(
+    *, source_artifact: str, project_id: str, model_ref: Mapping[str, Any],
+    model_tag: str, revision: int, request_id: str, idempotency_key: str,
+) -> dict[str, Any]:
+    """Request a fresh native six-face/domain/material inventory without solving."""
+    if not isinstance(source_artifact, str) or not source_artifact.strip():
+        _fail("registered radiation-geometry Java source artifact is required")
+    binding = _managed_route_binding(
+        project_id=project_id, model_ref=model_ref, model_tag=model_tag, revision=revision,
+        request_id=request_id, idempotency_key=idempotency_key)
+    return _operation_call("code.execute_java", {
+        "source_artifact": source_artifact,
+        "entrypoint": "NativeW23RadiationGeometryV2#run", "mode": "trusted",
+        "arguments": {"phase": "read_cv_topology"},
+    }, binding=binding, dispatch_scope=(
+        "read native PartitionDomains CV face topology and complete domain/material/PML inventory; "
+        "no Study.run, solver, or integral"))
+
+
+def _cv_java_arguments(request: Mapping[str, Any], *, entrypoint: str) -> tuple[dict[str, Any], dict[str, Any]]:
+    outer = request.get("arguments") if isinstance(request, Mapping) else None
+    java = outer.get("arguments") if isinstance(outer, Mapping) else None
+    payload = java.get("arguments") if isinstance(java, Mapping) else None
+    if (not isinstance(outer, Mapping) or outer.get("operation_id") != "code.execute_java"
+            or not isinstance(java, Mapping) or java.get("entrypoint") != entrypoint
+            or java.get("mode") != "trusted" or not isinstance(payload, Mapping)):
+        _fail(f"managed CV route must call trusted {entrypoint} through code.execute_java")
+    return dict(java), dict(payload)
+
+
+def _validate_cv_java_source_identity(
+    java_arguments: Mapping[str, Any], response: Mapping[str, Any], *,
+    source_spec: Mapping[str, Any], label: str,
+) -> dict[str, Any]:
+    """Bind one public Java route to its requested single source and actual hash."""
+    requested = java_arguments.get("source_artifact")
+    if (not isinstance(requested, str) or Path(requested).name != source_spec["source_artifact"]):
+        _fail(f"{label} must request the registered single-file source {source_spec['source_artifact']}")
+    data = response.get("data") if isinstance(response, Mapping) else None
+    if (not isinstance(data, Mapping)
+            or data.get("source_sha256") != source_spec["source_sha256"]
+            or data.get("entrypoint") != source_spec["entrypoint"]):
+        _fail(f"{label} public Java response does not prove the frozen source bytes and entrypoint")
+    worker = data.get("worker")
+    worker_result = worker.get("result") if isinstance(worker, Mapping) else None
+    if (not isinstance(worker_result, Mapping)
+            or worker_result.get("source_sha256") != source_spec["source_sha256"]
+            or worker_result.get("entrypoint") != source_spec["entrypoint"]):
+        _fail(f"{label} Worker readback does not match the public source bytes and entrypoint")
+    return {"source_artifact": requested,
+            "source_sha256": data["source_sha256"],
+            "entrypoint": data["entrypoint"],
+            "worker_source_sha256": worker_result["source_sha256"],
+            "worker_entrypoint": worker_result["entrypoint"],
+            "source_hash_matches_frozen_candidate": True}
+
+
+def _cv_source_route_receipt(checked: Mapping[str, Any]) -> dict[str, Any]:
+    binding = checked["binding"]
+    execution = checked["request_execution"]
+    return {
+        "source_identity": dict(checked["source_identity"]),
+        "project_id": execution["project_id"],
+        "session_id": execution["session_id"],
+        "model_ref": dict(execution["model_ref"]),
+        "request_id": binding["request_id"],
+        "idempotency_key": binding["idempotency_key"],
+        "operation_instance_id": binding["operation_instance_id"],
+        "job_id": binding["job_id"],
+        "revision_before": binding["revision_before"],
+        "revision_after": binding["revision_after"],
+        "request_hash": binding["request_hash"],
+    }
+
+
+def _validate_full3d_cv_topology_evidence(evidence: Mapping[str, Any]) -> dict[str, Any]:
+    from tools.w23_radiation_geometry_v2 import (
+        normalize_control_volume_topology_readback, verify_control_volume_domain_inventory,
+    )
+
+    request, route_result = evidence.get("request"), evidence.get("route_result")
+    timeout = evidence.get("max_execution_timeout_s")
+    if not isinstance(request, Mapping) or not isinstance(route_result, Mapping):
+        _fail("exact public CV topology request and terminal job record are required")
+    binding = validate_full3d_bma_mapping_route_result(
+        request, route_result, expected_revision_delta=1,
+        max_execution_timeout_s=timeout)
+    java, payload = _cv_java_arguments(request, entrypoint=CV_RADIATION_JAVA_SOURCE["entrypoint"])
+    if payload != {"phase": "read_cv_topology"}:
+        _fail("CV topology operation must be the exact read-only registered phase")
+    response = route_result.get("response")
+    source_identity = _validate_cv_java_source_identity(
+        java, response, source_spec=CV_RADIATION_JAVA_SOURCE, label="CV topology route") \
+        if isinstance(response, Mapping) else None
+    raw = _java_action_readback(response, "CV topology inventory") if isinstance(response, Mapping) else None
+    if not isinstance(raw, Mapping) or route_result.get("readback") != raw:
+        _fail("CV topology readback is detached from the exact terminal public route response")
+    if (raw.get("evidence_scope") != "COMSOL_NATIVE_PARTITION_DOMAINS"
+            or raw.get("native_readback_only") is not True
+            or raw.get("native_surface_integral_of_one") != "NOT_RUN"
+            or raw.get("power_balance") != "NOT_RUN"):
+        _fail("CV topology route must contain actual native PartitionDomains readback and no invented integral")
+    inventory = verify_control_volume_domain_inventory(raw)
+    normalized = normalize_control_volume_topology_readback(raw)
+    if inventory.get("native_result") != "UNVERIFIED":
+        _fail("native CV inventory must retain its unverified pre-solve scope")
+    execution = request.get("execution")
+    return {"request": request, "route_result": route_result, "binding": binding,
+            "request_execution": dict(execution), "source_artifact": java.get("source_artifact"),
+            "source_identity": source_identity,
+            "raw_readback": dict(raw), "normalized_readback": normalized,
+            "inventory_validation": inventory}
+
+
+def validate_full3d_control_volume_topology_route(
+    request: Mapping[str, Any], route_result: Mapping[str, Any], *,
+    max_execution_timeout_s: float,
+) -> dict[str, Any]:
+    """Validate one exact current-revision native CV topology/domain inventory route."""
+    checked = _validate_full3d_cv_topology_evidence({
+        "request": request, "route_result": route_result,
+        "max_execution_timeout_s": max_execution_timeout_s,
+    })
+    return {"status": "NATIVE_CV_TOPOLOGY_ROUTE_BOUND_UNVERIFIED",
+            "native_result": "UNVERIFIED_PENDING_NATIVE_REVIEW",
+            "route_binding": checked["binding"],
+            "java_source_identity": checked["source_identity"],
+            "inventory_validation": checked["inventory_validation"],
+            "readback": checked["raw_readback"],
+            "scientific_acceptance": "NOT_RUN"}
+
+
+def _validate_full3d_cv_source_field_evidence(evidence: Mapping[str, Any]) -> dict[str, Any]:
+    request, route_result = evidence.get("request"), evidence.get("route_result")
+    contract, quadrature = evidence.get("contract"), evidence.get("quadrature")
+    timeout = evidence.get("max_execution_timeout_s")
+    if (not isinstance(request, Mapping) or not isinstance(route_result, Mapping)
+            or not isinstance(contract, Mapping) or not isinstance(quadrature, Mapping)):
+        _fail("exact public source-field request, route, contract, and quadrature are required")
+    binding = validate_full3d_bma_mapping_route_result(
+        request, route_result, expected_revision_delta=1,
+        max_execution_timeout_s=timeout)
+    java, payload = _cv_java_arguments(request, entrypoint=CV_FIELD_JAVA_SOURCE["entrypoint"])
+    if (payload.get("phase") != "raw_fields"
+            or payload.get("contract") != dict(contract)
+            or payload.get("coordinates_m") != quadrature.get("coordinates_m")
+            or payload.get("native_result") != "NOT_RUN"
+            or payload.get("study_or_solver_invoked") is not False
+            or contract.get("role") != "signal"
+            or contract.get("native_result") != "NOT_RUN"
+            or contract.get("study_or_solver_invoked") is not False):
+        _fail("CV power route source must be the exact registered full-field signal extraction request")
+    _reconstruct_contract_quadrature(contract, quadrature)
+    response = route_result.get("response")
+    source_identity = _validate_cv_java_source_identity(
+        java, response, source_spec=CV_FIELD_JAVA_SOURCE, label="CV source-field route") \
+        if isinstance(response, Mapping) else None
+    raw = _java_action_readback(response, "CV power source-field snapshot") \
+        if isinstance(response, Mapping) else None
+    if not isinstance(raw, Mapping) or route_result.get("readback") != raw:
+        _fail("CV power source-field readback is detached from its terminal public route")
+    validated = validate_native_field_readback(
+        contract, raw, expected_quadrature=quadrature)
+    cohort = raw.get("source_cohort")
+    before = cohort.get("before") if isinstance(cohort, Mapping) else None
+    after = cohort.get("after") if isinstance(cohort, Mapping) else None
+    if (not isinstance(before, Mapping) or not isinstance(after, Mapping)
+            or dict(before) != dict(after) or validated.get("native_result") != "COMSOL_NATIVE_RAW"):
+        _fail("CV power source fields require matching native before/after stored-solution snapshots")
+    execution = request.get("execution")
+    return {"request": request, "route_result": route_result, "binding": binding,
+            "request_execution": dict(execution), "source_artifact": java.get("source_artifact"),
+            "source_identity": source_identity,
+            "contract": dict(contract), "quadrature": dict(quadrature),
+            "raw_readback": dict(raw), "validated_readback": validated,
+            "source_cohort_before": dict(before)}
+
+
+def build_full3d_control_volume_power_terms_dispatch(
+    *, topology_evidence: Mapping[str, Any], source_field_evidence: Mapping[str, Any],
+    request_id: str, idempotency_key: str,
+) -> dict[str, Any]:
+    """Build the final read-only integral route after consecutive topology and field routes."""
+    topology = _validate_full3d_cv_topology_evidence(topology_evidence)
+    source = _validate_full3d_cv_source_field_evidence(source_field_evidence)
+    topology_exec, source_exec = topology["request_execution"], source["request_execution"]
+    if (topology_exec.get("project_id") != source_exec.get("project_id")
+            or topology_exec.get("session_id") != source_exec.get("session_id")
+            or topology_exec.get("model_ref") != source_exec.get("model_ref")
+            or source_exec.get("expected_revision") != topology["binding"]["revision_after"]
+            or source["binding"]["revision_after"] != source_exec["expected_revision"] + 1):
+        _fail("CV topology and signal snapshot must be consecutive on one project, ModelRef, and live revision")
+    binding = _managed_route_binding(
+        project_id=source_exec["project_id"], model_ref=source_exec["model_ref"],
+        model_tag=source_exec["model_ref"]["model_tag"],
+        revision=source["binding"]["revision_after"],
+        request_id=request_id, idempotency_key=idempotency_key)
+    return _operation_call("code.execute_java", {
+        "source_artifact": topology["source_artifact"],
+        "entrypoint": CV_RADIATION_JAVA_SOURCE["entrypoint"], "mode": "trusted",
+        "arguments": {
+            "phase": "cv_power_terms",
+            "control_volume_topology": topology["normalized_readback"],
+            "source": dict(source["contract"]["source"]),
+            "source_field_readback": source["raw_readback"],
+            "native_result": "NOT_RUN", "study_or_solver_invoked": False,
+        },
+    }, binding=binding, dispatch_scope=(
+        "one same-SolutionSpec IntSurface area/Poynting, IntVolume(1), and driven full-field ewfd.Pin readback; "
+        "Qabs is not supplied; no study or solver call"))
+
+
+def _numeric_integral_row(
+    rows: Sequence[Mapping[str, Any]], *, feature_type: str, dataset: str,
+    expression: str, unit: str, geometry: str, dimension: int,
+    entity_ids: Sequence[int], outer: int, inner: int,
+) -> Mapping[str, Any]:
+    expected_ids = sorted(int(value) for value in entity_ids)
+    matches = []
+    for row in rows:
+        if (row.get("feature_type") == feature_type and row.get("dataset") == dataset
+                and row.get("expression") == [expression] and row.get("unit") == unit
+                and row.get("geometry") == geometry
+                and row.get("entity_dimension") == dimension
+                and row.get("entity_ids") == expected_ids
+                and row.get("innerinput") == "manual" and row.get("solnum") == str(inner)
+                and row.get("outerinput") == "manual" and row.get("outersolnum") == str(outer)
+                and row.get("solrepresentation") == "solnum"
+                and row.get("complex") is False and row.get("result_shape") == [1, 1]):
+            matches.append(row)
+    if len(matches) != 1:
+        _fail(f"expected exactly one {feature_type} result for {expression} and exact selection/SolutionSpec")
+    return matches[0]
+
+
+def recompute_full3d_control_volume_power_terms(
+    power_readback: Mapping[str, Any], *, topology_readback: Mapping[str, Any],
+    source_contract: Mapping[str, Any], source_field_readback: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Recompute partial signed surface flux and geometry identities from exact raw integral rows.
+
+    The surface-flux/P_in ratio is diagnostic only. Qabs is deliberately
+    unavailable, the absolute balance tolerance is not frozen, and this
+    function never declares physical or scientific acceptance.
+    """
+    from tools.w23_radiation_geometry_v2 import (
+        CV_NATIVE_INTEGRAL_DIAGNOSTIC_POLICY, RadiationGeometryV2Error,
+        control_volume_face_contract,
+        normalize_control_volume_topology_readback, verify_control_volume_domain_inventory,
+    )
+
+    if (not isinstance(power_readback, Mapping)
+            or power_readback.get("schema_id") != "urn:comsol-mcp:w23:cv-power-terms:1.0.0"
+            or power_readback.get("study_or_solver_invoked") is not False
+            or not isinstance(topology_readback, Mapping)
+            or not isinstance(source_contract, Mapping)
+            or not isinstance(source_field_readback, Mapping)):
+        _fail("versioned no-solve CV result, topology, and source-field records are required")
+    fixture_scope = power_readback.get("native_result") == "SOFTWARE_TEST_FIXTURE"
+    if not fixture_scope and power_readback.get("native_result") != "COMSOL_NATIVE_CV_POWER_TERMS_READBACK":
+        _fail("CV power terms must be either explicitly software fixture data or exact native raw readback")
+    if power_readback.get("control_volume_topology") != dict(topology_readback):
+        _fail("power integrals are detached from the exact CV topology/domain inventory")
+    try:
+        topology_check = verify_control_volume_domain_inventory(topology_readback)
+    except RadiationGeometryV2Error as exc:
+        raise Full3DScienceError(f"control-volume topology/domain evidence failed: {exc}") from exc
+    source = source_contract.get("source")
+    if not isinstance(source, Mapping) or source_field_readback.get("source") != dict(source):
+        _fail("power integral source tuple differs from the signal-field contract")
+    if (set(source) != {"dataset_id", "solution_id", "outer_index", "inner_index", "solnum"}
+            or not isinstance(source.get("dataset_id"), str) or not source["dataset_id"]
+            or not isinstance(source.get("solution_id"), str) or not source["solution_id"]
+            or any(type(source.get(name)) is not int or source[name] < 1
+                   for name in ("outer_index", "inner_index", "solnum"))
+            or source["inner_index"] != source["solnum"]):
+        _fail("power integration requires one exact positive dataset/solution/outer/inner/solnum tuple")
+    if fixture_scope:
+        if source_field_readback.get("native_result") != "SOFTWARE_TEST_FIXTURE":
+            _fail("software-only numerical fixture cannot borrow a native field sample")
+        source_snapshot = None
+    else:
+        if source_field_readback.get("native_result") != "COMSOL_NATIVE_RAW":
+            _fail("native power terms must bind a native E/H signal snapshot")
+        source_snapshot = validate_native_source_cohort_snapshot(source_contract, source_field_readback)
+    if (not isinstance(power_readback.get("source_identity"), Mapping)
+            or not isinstance(power_readback.get("surface_terms"), list)
+            or not isinstance(power_readback.get("temporary_numerical_features"), list)):
+        _fail("CV power result omitted source identity, surface terms, or integral readbacks")
+    source_cohort = source_field_readback.get("source_cohort")
+    cohort = source_cohort.get("before") if isinstance(source_cohort, Mapping) else None
+    if isinstance(cohort, Mapping):
+        for identity_key in ("dataset", "stored_solution"):
+            if power_readback["source_identity"].get(identity_key) != cohort.get(identity_key):
+                _fail("integral operation used a different dataset/solution/SolutionInfo identity")
+    elif not fixture_scope:
+        _fail("native field snapshot omitted its exact before/after source identity")
+    if power_readback.get("operation_failure") != "":
+        _fail("one or more native CV integral evaluations failed; partial terms cannot be accepted")
+    cleanup = power_readback.get("cleanup")
+    rows = power_readback["temporary_numerical_features"]
+    tags = [row.get("tag") for row in rows if isinstance(row, Mapping)]
+    if (not isinstance(cleanup, Mapping) or len(rows) != 14 or len(tags) != 14
+            or any(not isinstance(tag, str) or not tag for tag in tags)
+            or len(set(tags)) != len(tags)
+            or cleanup.get("created_count") != 14 or cleanup.get("removed_count") != 14
+            or cleanup.get("removed") is not True or cleanup.get("cleanup_failed") is not False
+            or cleanup.get("remaining_tags") != [] or cleanup.get("error") != ""):
+        _fail("all 14 request-owned numerical nodes require exact confirmed cleanup evidence")
+
+    interior_ids = topology_check.get("interior_domain_ids")
+    if power_readback.get("interior_domain_ids") != interior_ids:
+        _fail("volume integral selection differs from the complete CV interior-domain inventory")
+    dataset, outer, inner = source["dataset_id"], source["outer_index"], source["inner_index"]
+    expected_volume = topology_check["analytic_cv_volume_m3"]
+    terms = power_readback["surface_terms"]
+    if len(terms) != 6:
+        _fail("exactly six signed CV face terms are required")
+    expected_roles = {row["role"] for row in control_volume_face_contract()}
+    area_map, flux_map = power_readback.get("surface_area_by_role_m2"), power_readback.get("signed_surface_flux_by_role_w")
+    if (not isinstance(area_map, Mapping) or not isinstance(flux_map, Mapping)
+            or set(area_map) != expected_roles or set(flux_map) != expected_roles):
+        _fail("face area and flux maps must contain exactly the six unique CV roles")
+    normalized_topology = normalize_control_volume_topology_readback(topology_readback) \
+        if topology_readback.get("faces") and "patches" not in topology_readback["faces"][0] \
+        else dict(topology_readback)
+    face_rows = {row["role"]: row for row in normalized_topology["faces"]}
+    surface_sum_terms: list[float] = []
+    recomputed_areas: dict[str, float] = {}
+    recomputed_fluxes: dict[str, float] = {}
+    for contract_face, term in zip(control_volume_face_contract(), terms):
+        role = contract_face["role"]
+        if not isinstance(term, Mapping) or term.get("role") != role:
+            _fail("native CV surface terms are missing, reordered, or foreign to the six registered faces")
+        patches = face_rows.get(role, {}).get("patches")
+        if not isinstance(patches, list) or not patches:
+            _fail("registered CV surface role has no actual native boundary patches")
+        entity_ids = sorted(patch["boundary_id"] for patch in patches)
+        outward = ("-" if role.endswith("minus") else "+") + role[0]
+        if (term.get("boundary_ids") != entity_ids or term.get("normal_direction") != outward
+                or term.get("raw_normal_source") != "same registered native CV topology readback"):
+            _fail("signed flux selection/direction differs from the exact registered outward CV face")
+        axis = role[0]
+        expression = ("-" if role.endswith("minus") else "") + f"ewfd.Poav{axis}"
+        area_row = _numeric_integral_row(rows, feature_type="IntSurface", dataset=dataset,
+            expression="1", unit="m^2", geometry="geom3d", dimension=2,
+            entity_ids=entity_ids, outer=outer, inner=inner)
+        flux_row = _numeric_integral_row(rows, feature_type="IntSurface", dataset=dataset,
+            expression=expression, unit="W", geometry="geom3d", dimension=2,
+            entity_ids=entity_ids, outer=outer, inner=inner)
+        area_value = _finite_number(area_row.get("value"), "native face area integral")
+        flux_value = _finite_number(flux_row.get("value"), "native signed Poynting integral")
+        analytic_area_m2 = float(contract_face["area_um2"]) * 1e-12
+        area_policy = CV_NATIVE_INTEGRAL_DIAGNOSTIC_POLICY
+        if area_value <= 0 or abs(area_value - analytic_area_m2) > max(
+                area_policy["surface_area_absolute_tolerance_m2"],
+                area_policy["surface_area_relative_tolerance"] * analytic_area_m2):
+            _fail("native IntSurface(1) differs from the analytic registered rectangle diagnostic")
+        if (term.get("expression") != expression or term.get("unit") != "W"
+                or term.get("integral_w") != flux_value or term.get("area_expression") != "1"
+                or term.get("area_unit") != "m^2" or term.get("area_m2") != area_value
+                or power_readback.get("surface_area_by_role_m2", {}).get(role) != area_value
+                or power_readback.get("signed_surface_flux_by_role_w", {}).get(role) != flux_value):
+            _fail("surface summary differs from the exact IntSurface result readbacks")
+        recomputed_areas[role] = area_value
+        recomputed_fluxes[role] = flux_value
+        surface_sum_terms.append(flux_value)
+
+    volume_row = _numeric_integral_row(rows, feature_type="IntVolume", dataset=dataset,
+        expression="1", unit="m^3", geometry="geom3d", dimension=3,
+        entity_ids=interior_ids, outer=outer, inner=inner)
+    volume_value = _finite_number(volume_row.get("value"), "native interior volume integral")
+    area_policy = CV_NATIVE_INTEGRAL_DIAGNOSTIC_POLICY
+    if volume_value <= 0 or abs(volume_value - expected_volume) > max(
+            area_policy["volume_absolute_tolerance_m3"],
+            area_policy["volume_relative_tolerance"] * expected_volume):
+        _fail("native IntVolume(1) differs from the registered box-volume diagnostic")
+    volume_term = power_readback.get("volume_integral_of_one")
+    if (not isinstance(volume_term, Mapping) or volume_term.get("value") != volume_value
+            or volume_term.get("unit") != "m^3" or volume_term.get("expression") != ["1"]):
+        _fail("volume summary differs from the exact selected IntVolume(1) readback")
+
+    pin_row = _numeric_integral_row(rows, feature_type="EvalGlobal", dataset=dataset,
+        expression="ewfd.Pin", unit="W", geometry="GLOBAL", dimension=-1,
+        entity_ids=[], outer=outer, inner=inner)
+    pin = _finite_number(pin_row.get("value"), "native driven incident power")
+    if pin <= 0:
+        _fail("native full-field ewfd.Pin must be positive and finite")
+    pin_term = power_readback.get("positive_incident_power")
+    if (not isinstance(pin_term, Mapping) or pin_term.get("value") != pin
+            or pin_term.get("unit") != "W" or pin_term.get("expression") != ["ewfd.Pin"]):
+        _fail("incident-power summary differs from the exact native EvalGlobal readback")
+    qabs = power_readback.get("q_abs_volume_integral")
+    qabs_mapping = power_readback.get("q_abs_field_mapping")
+    if (not isinstance(qabs, Mapping) or qabs.get("value") is not None
+            or qabs.get("status") != "NOT_AVAILABLE_NATIVE_PHYSICS_FIELD_MAPPING_REQUIRED"
+            or qabs.get("expression") != "NOT_PROVIDED"
+            or not isinstance(qabs_mapping, Mapping) or qabs_mapping.get("status") != "UNVERIFIED"
+            or qabs_mapping.get("expression") != "NOT_PROVIDED"
+            or qabs_mapping.get("unit") != "NOT_PROVIDED"):
+        _fail("Qabs cannot be replaced by zero or an unverified expression/unit mapping")
+    if (power_readback.get("balance_residual") is not None
+            or power_readback.get("absolute_balance_tolerance") != "NOT_FROZEN"
+            or power_readback.get("producer_step_binding") != "UNVERIFIED"
+            or power_readback.get("normalization") != "surface flux / positive native ewfd.Pin"):
+        _fail("total balance cannot be claimed without Qabs, frozen tolerance, and exact producer binding")
+    signed_flux_sum = math.fsum(surface_sum_terms)
+    return {
+        "status": "SOFTWARE_CV_POWER_TERMS_RECOMPUTED" if fixture_scope
+                  else "NATIVE_CV_PARTIAL_POWER_TERMS_RECOMPUTED_UNVERIFIED",
+        "native_result": "NOT_RUN" if fixture_scope else "UNVERIFIED_PENDING_NATIVE_REVIEW",
+        "surface_area_by_role_m2": recomputed_areas,
+        "signed_surface_flux_by_role_w": recomputed_fluxes,
+        "signed_surface_flux_sum_w": signed_flux_sum,
+        "positive_incident_power_w": pin,
+        "signed_surface_flux_sum_over_Pin": signed_flux_sum / pin,
+        "volume_integral_of_one_m3": volume_value,
+        "analytic_cv_volume_reference_m3": expected_volume,
+        "q_abs_volume_integral": "NOT_AVAILABLE",
+        "q_abs_generic_expression_interface": "NOT_IMPLEMENTED",
+        "q_abs_mapping": "UNVERIFIED",
+        "power_balance_residual_over_Pin": None,
+        "area_volume_diagnostic_policy": dict(CV_NATIVE_INTEGRAL_DIAGNOSTIC_POLICY),
+        "absolute_balance_tolerance": "NOT_FROZEN",
+        "producer_step_binding": "UNVERIFIED",
+        "topology_validation": topology_check["status"],
+        "scientific_acceptance": "NOT_RUN",
+    }
+
+
+def validate_full3d_control_volume_power_terms_route(
+    *, topology_evidence: Mapping[str, Any], source_field_evidence: Mapping[str, Any],
+    request: Mapping[str, Any], route_result: Mapping[str, Any],
+    max_execution_timeout_s: float,
+) -> dict[str, Any]:
+    """Bind CV integral output to exact topology, signal tuple, and public job chain."""
+    execution = request.get("execution") if isinstance(request, Mapping) else None
+    if not isinstance(execution, Mapping):
+        _fail("managed CV power request omitted its exact current execution identity")
+    expected_request = build_full3d_control_volume_power_terms_dispatch(
+        topology_evidence=topology_evidence, source_field_evidence=source_field_evidence,
+        request_id=execution.get("request_id"), idempotency_key=execution.get("idempotency_key"))
+    if dict(request) != expected_request:
+        _fail("CV integral request is detached from consecutive topology and source-field evidence")
+    topology = _validate_full3d_cv_topology_evidence(topology_evidence)
+    source = _validate_full3d_cv_source_field_evidence(source_field_evidence)
+    binding = validate_full3d_bma_mapping_route_result(
+        request, route_result, expected_revision_delta=1,
+        max_execution_timeout_s=max_execution_timeout_s)
+    if (execution.get("expected_revision") != source["binding"]["revision_after"]
+            or execution.get("model_ref") != source["request_execution"].get("model_ref")
+            or execution.get("project_id") != source["request_execution"].get("project_id")
+            or execution.get("session_id") != source["request_execution"].get("session_id")):
+        _fail("CV integration is not the next live revision for the same managed model/project")
+    response = route_result.get("response")
+    java, payload = _cv_java_arguments(request, entrypoint=CV_RADIATION_JAVA_SOURCE["entrypoint"])
+    if (payload.get("phase") != "cv_power_terms"
+            or payload.get("control_volume_topology") != topology["normalized_readback"]
+            or payload.get("source_field_readback") != source["raw_readback"]):
+        _fail("CV integral Java request must use the registered source and exact topology/field readbacks")
+    source_identity = _validate_cv_java_source_identity(
+        java, response, source_spec=CV_RADIATION_JAVA_SOURCE, label="CV integral route") \
+        if isinstance(response, Mapping) else None
+    raw = _java_action_readback(response, "CV power terms") if isinstance(response, Mapping) else None
+    if not isinstance(raw, Mapping) or route_result.get("readback") != raw:
+        _fail("CV power terms are detached from the exact terminal public Java response")
+    if raw.get("native_result") != "COMSOL_NATIVE_CV_POWER_TERMS_READBACK":
+        _fail("public CV power route did not return the versioned native integral readback")
+    recomputed = recompute_full3d_control_volume_power_terms(
+        raw, topology_readback=topology["raw_readback"],
+        source_contract=source["contract"], source_field_readback=source["raw_readback"])
+    return {
+        "status": "CONTROLLED_CV_POWER_TERMS_ROUTE_BOUND_QABS_AND_PRODUCER_UNVERIFIED",
+        "native_result": "UNVERIFIED_PENDING_NATIVE_RUN_AND_INDEPENDENT_REVIEW",
+        "route_binding": binding,
+        "java_source_identity": source_identity,
+        "java_source_routes": {
+            "topology": _cv_source_route_receipt(topology),
+            "signal_field_snapshot": _cv_source_route_receipt(source),
+            "integrals": {
+                "source_identity": dict(source_identity),
+                "project_id": execution["project_id"],
+                "session_id": execution["session_id"],
+                "model_ref": dict(execution["model_ref"]),
+                "request_id": binding["request_id"],
+                "idempotency_key": binding["idempotency_key"],
+                "operation_instance_id": binding["operation_instance_id"],
+                "job_id": binding["job_id"],
+                "revision_before": binding["revision_before"],
+                "revision_after": binding["revision_after"],
+                "request_hash": binding["request_hash"],
+            },
+        },
+        "revision_chain": {
+            "topology": [topology["binding"]["revision_before"], topology["binding"]["revision_after"]],
+            "signal_fields": [source["binding"]["revision_before"], source["binding"]["revision_after"]],
+            "integrals": [execution["expected_revision"], binding["revision_after"]],
+        },
+        "source_tuple": dict(source["contract"]["source"]),
+        "raw_native_terms": dict(raw),
+        "recomputed_partial_terms": recomputed,
+        "api_evidence": copy.deepcopy(COMSOL_CV_POWER_API_EVIDENCE),
+        "policy": copy.deepcopy(CV_POWER_BALANCE_POLICY),
+        "q_abs_status": "UNVERIFIED_NATIVE_PHYSICS_FIELD_MAPPING_REQUIRED",
+        "producer_step_binding": "UNVERIFIED",
+        "absolute_balance_tolerance": "NOT_FROZEN",
+        "power_balance_residual_over_Pin": None,
+        "scientific_acceptance": "NOT_RUN",
+    }
+
+
 __all__ = [
     "Full3DScienceError", "ManagedRouteOutcomeError", "FULL3D_COMPARISON_POLICY",
     "FULL3D_CONVERGENCE_POLICY", "build_full3d_convergence_recipe",
+    "COMSOL_CV_POWER_API_EVIDENCE", "CV_POWER_BALANCE_POLICY",
+    "build_full3d_control_volume_topology_dispatch",
+    "validate_full3d_control_volume_topology_route",
+    "build_full3d_control_volume_power_terms_dispatch",
+    "recompute_full3d_control_volume_power_terms",
+    "validate_full3d_control_volume_power_terms_route",
     "build_full3d_mesh_level_fixture_dispatch",
     "recompute_full3d_mesh_stability_from_registered_routes",
     "BMA_FIELD_MAPPING_POLICY", "COMSOL_PORT_MODE_FIELD_KB_EVIDENCE",
