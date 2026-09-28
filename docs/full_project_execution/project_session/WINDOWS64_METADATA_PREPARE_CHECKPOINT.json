@@ -1,0 +1,50 @@
+{
+  "schema": "W21_WINDOWS64_PREPARE_CHECKPOINT_V1",
+  "status": "PASS",
+  "scope": "Source/archive/freeze and isolated Windows preparation only; native execution pending, overall PARTIAL",
+  "source_commit": "52cf463eb116c37d9894a613df1565af3f675e26",
+  "run_id": "w21-64-20260928T152755Z-48612216",
+  "remote_run_root": "C:\\Temp\\w21_win64_metadata_prepare_20260928T151415Z\\evidence\\6.4\\w21-64-20260928T152755Z-48612216",
+  "freeze_sha256": "81d81c46e32239dc4a9557b1abcab55603e538098816ec7fc3f81b9de2b5e81a",
+  "archive_members": {
+    "source_git_blob_matches": 106,
+    "explicit_metadata": 3,
+    "total": 109
+  },
+  "freeze_source_hashes_verified": 103,
+  "budgets": {
+    "geometry_run": 1,
+    "mesh_run": 1,
+    "ordinary_rpc_wait_seconds": 45,
+    "seconds_from_session_start_dispatch": 900,
+    "server_births_max": 1,
+    "solver_dispatch": 0,
+    "study_dispatch": 0,
+    "worker_births_max": 1
+  },
+  "initial_state": "PREPARED; empty action_history/job_ids; zero possible births and solve dispatch",
+  "symlink_preflight": "VERIFIED; three newly owned items removed",
+  "evidence": {
+    "freeze.json": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-prepare-20260928T151415Z/freeze.json",
+      "sha256": "364985028548fe73b375e162124681c8c3ac6643d810c2c601b29b65e9246719"
+    },
+    "state.json": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-prepare-20260928T151415Z/state.json",
+      "sha256": "f0fa70cc3da30670ea2890ec646c7f79ae4130ee4be3bfdec509c8c436849121"
+    },
+    "w21_windows64_metadata_prepare_receipt_v2.json": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-prepare-20260928T151415Z/w21_windows64_metadata_prepare_receipt_v2.json",
+      "sha256": "b66942aca8084764e8de2cc6b6a2546c69c91b20d6e2c8f8ebfb158b033d209b"
+    },
+    "symlink_preflight_receipt.json": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-prepare-20260928T151415Z/symlink_preflight_receipt.json",
+      "sha256": "daa3e562e2ab9b9a61b419dc9e9c18c85763eb1bac7599ac500420c382ed243b"
+    },
+    "w21_windows64_source_manifest_git.json": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-prepare-20260928T151415Z/w21_windows64_source_manifest_git.json",
+      "sha256": "0ce8dce334982572bd9a1b3c94174672ad7836ce50086949089162dc79aacad8"
+    }
+  },
+  "next_action": "Execute existing frozen Windows6.4 metadata-only plan once; no reprepare or solve. UNKNOWN requires original request/job recovery, no replay. Repair output composition before actual stage solve."
+}
