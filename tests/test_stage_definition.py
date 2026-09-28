@@ -1293,7 +1293,9 @@ def test_stage_uses_real_worker_rpc_identity_and_persists_before_send(
             worker.close()
 
 
-@pytest.mark.parametrize("output_mode", ["valid", "wrong_revision", "unknown_after_submit", "cleanup_unknown"])
+@pytest.mark.parametrize("output_mode", ["valid", "wrong_revision", "missing_ticket",
+                                         "wrong_model_ref", "wrong_worker_epoch",
+                                         "unknown_after_submit", "cleanup_unknown"])
 def test_stage_output_worker_event_ticket_revision_and_no_save_on_unknown(tmp_path, output_mode):
     """Exercise output callback persistence and revision checks with a real ledger ticket."""
     from comsol_mcp._stage_contract import sha256_json
@@ -1302,6 +1304,9 @@ def test_stage_output_worker_event_ticket_revision_and_no_save_on_unknown(tmp_pa
     # The G3 EVALUATE permission is an explicit managed-session capability;
     # project policy still checks the operation's project_write scope.
     service.ledger.permissions.add("evaluate")
+    # ModelRef generation and Worker process epoch are separate identities.
+    daemon.backend.worker.generation = 71
+    daemon.backend.endpoint_key = "127.0.0.1:56001"
     sent_output_rpcs = []
     durable_before_send = []
     try:
@@ -1331,12 +1336,26 @@ def test_stage_output_worker_event_ticket_revision_and_no_save_on_unknown(tmp_pa
             authorize_callback(operation, arguments, child_execution)
             worker_id = f"worker-output-{output_mode}"
             worker_hash = hashlib.sha256(worker_id.encode()).hexdigest()
+            event_model_ref = dict(binding["model_ref"])
+            event_worker_generation = daemon.backend.worker.generation
+            if output_mode == "wrong_model_ref":
+                event_model_ref["model_tag"] = "different-model"
+            elif output_mode == "wrong_worker_epoch":
+                event_worker_generation += 1
             event = {
                 "kind": "call", "phase": "submitted", "operation_id": child_operation_id,
                 "request_id": worker_id, "request_hash": worker_hash,
                 "metadata": {"type": "call", "request_id": worker_id,
-                             "handle": "fake-model-handle", "generation": 71,
+                             "handle": "fake-model-handle",
+                             "generation": daemon.backend.worker.generation,
                              "method": "getData", "args": []},
+                "w21_stage_output_binding": {
+                    "model_ref": event_model_ref,
+                    "model_tag": event_model_ref["model_tag"],
+                    "worker_generation": event_worker_generation,
+                    "child_operation_id": child_operation_id,
+                    "operation": operation, "readphase": readphase,
+                },
             }
             event_context = {
                 "readphase": readphase, "operation": operation,
@@ -1402,13 +1421,20 @@ def test_stage_output_worker_event_ticket_revision_and_no_save_on_unknown(tmp_pa
                 "revision_chain": [{
                     "operation": operation, "readphase": readphase,
                     "child_operation_id": child_operation_id,
-                    "managed_operation_id": ticket_execution["operation_id"],
+                    "child_request_id": ticket_request_id,
+                    "managed_operation_id": None if output_mode == "missing_ticket" else ticket_execution["operation_id"],
+                    "managed_request_id": None if output_mode == "missing_ticket" else ticket_execution["request_id"],
                     "request_id": ticket_execution["request_id"],
-                    "request_hash": ticket_execution["request_hash"],
+                    "request_hash": None if output_mode == "missing_ticket" else ticket_execution["request_hash"],
+                    "revision_witness": "service-inspect-no-ticket" if output_mode == "missing_ticket"
+                                        else "managed-evaluate-ticket",
                     "expected_revision": model_revision, "revision": step_revision,
                     "effect": "EVALUATE", "worker_requests": [{
                         "worker_request_id": worker_id, "worker_request_hash": worker_hash,
-                        "worker_method": "getData", "phase": "submitted",
+                        "worker_kind": "call", "worker_model_tag": None,
+                        "worker_method": "getData", "worker_receiver": "fake-model-handle",
+                        "worker_generation": daemon.backend.worker.generation,
+                        "phase": "submitted",
                     }],
                 }],
             }
@@ -1420,8 +1446,12 @@ def test_stage_output_worker_event_ticket_revision_and_no_save_on_unknown(tmp_pa
             "execution": {**execution, "request_id": stage_request, "idempotency_key": stage_request},
         })
         attempt = result["data"]["attempt"]
-        assert durable_before_send == [True]
-        assert sent_output_rpcs == [f"worker-output-{output_mode}"]
+        if output_mode in {"wrong_model_ref", "wrong_worker_epoch"}:
+            assert durable_before_send == []
+            assert sent_output_rpcs == []
+        else:
+            assert durable_before_send == [True]
+            assert sent_output_rpcs == [f"worker-output-{output_mode}"]
         if output_mode == "valid":
             assert result["success"] is False and result["error"]["code"] == "STAGE_ACCEPTANCE_UNVERIFIED"
             assert attempt["status"] == "SUCCEEDED_PARTIAL"
@@ -1794,3 +1824,426 @@ def test_stage_run_keeps_v1_declaration_only(tmp_path):
         assert worker.calls == []
     finally:
         daemon.close()
+
+
+@pytest.mark.parametrize("fault", ["none", "unknown_after_eval"])
+def test_stage_output_real_managed_backend_persists_model_snapshot_and_binding_rpc_events(
+    tmp_path, fault, monkeypatch,
+):
+    """Exercise production composition with explicit offline-only gate fixtures.
+
+    Native COMSOL data is absent. Only the RemoteJava _request transport, native
+    stage admission, owned-server isolation verifier boundary, and predecessor
+    attempt are synthetic; producer, backend.invoke, ExecutionService tickets,
+    Worker event persistence, output-chain validation, and save/no-save handling
+    remain on their production paths. No scientific or isolation PASS is claimed.
+    """
+    import comsol_mcp._managed_backend as managed_backend
+    from comsol_mcp._stage_contract import canonical_json, sha256_json
+
+    monkeypatch.setattr(managed_backend, "configured_receipt",
+                        lambda: "TEST_ONLY_SYNTHETIC_OWNED_SERVER_RECEIPT")
+    monkeypatch.setattr(managed_backend, "verify_owned_server",
+                        lambda receipt_path, *, endpoint, worker_pid: {
+                            "kind": "TEST_ONLY_SYNTHETIC_ISOLATION_PROOF",
+                            "receipt_path": receipt_path, "endpoint": endpoint,
+                            "worker_pid": worker_pid,
+                        })
+
+    daemon, service, _old_worker, project_id, model_ref, execution, _host = _setup(tmp_path)
+    service.ledger.permissions.add("evaluate")
+    daemon.backend.endpoint_key = "127.0.0.1:56000"  # TEST_FIXTURE-only isolation verifier boundary
+    workspace = Path(daemon.project_authority.get_project(project_id)["workspace"])
+    (workspace / "stage_outputs").mkdir(parents=True, exist_ok=True)
+    transport_requests = []
+    # Worker epoch and ModelRef generation are deliberately independent.
+    worker_generation = model_ref["generation"] + 70
+    numerical_tags = []
+    numerical_properties = {}
+    selection_state = {}
+    readback_output = {}
+
+    def handle(name, generation=worker_generation, java_type="Object"):
+        return {"$worker_handle": name, "generation": generation, "java_type": java_type}
+
+    def request(body, *, timeout_s=None):
+        del timeout_s
+        transport_requests.append(dict(body))
+        kind = body["type"]
+        if (fault == "unknown_after_eval" and kind == "call"
+                and body.get("method") == "getStrictFieldReadback"):
+            # The Worker has already persisted this submitted child RPC event
+            # before transport dispatch. Simulate a lost result after that
+            # real result.evaluate command so the daemon must stop before save.
+            raise JavaWorkerTimeout("injected loss after result.evaluate dispatch")
+        result = None
+        if kind == "health":
+            result = {"generation": worker_generation, "instance_id": "worker-stage-test",
+                      "connected": True, "server": "synthetic-test-fixture"}
+        elif kind == "model_snapshot":
+            tag = body["tag"]
+            result = {
+                "tag": tag, "model_tag": tag, "server_instance_id": "server-stage",
+                "instance_id": "worker-stage-test", "generation": worker_generation,
+                "external_event_counter": 0,
+                "fingerprint": "stage-model-fingerprint",
+            }
+        elif kind == "model":
+            assert body["tag"] == model_ref["model_tag"]
+            result = handle("model-main-handle", java_type="Model")
+        elif kind == "call":
+            method, args, receiver = body["method"], body.get("args", []), body["handle"]
+            if receiver == "model-main-handle":
+                if method == "save":
+                    import zipfile
+
+                    destination = Path(args[0])
+                    destination.parent.mkdir(parents=True, exist_ok=True)
+                    with zipfile.ZipFile(destination, "w") as archive:
+                        archive.writestr("synthetic/worker-transport-fixture.txt", "test fixture only")
+                    result = None
+                elif method == "study" and args:
+                    result = handle(f"study-{args[0]}-handle", java_type="Study")
+                elif method == "result":
+                    result = handle("result-handle", java_type="Result")
+                elif method == "sol":
+                    result = handle("solution-list-handle", java_type="SolverSequenceList")
+                elif method == "modelNode":
+                    result = handle("modelnode-list-handle", java_type="ModelNodeList")
+                elif method == "component" and args == ["comp1"]:
+                    result = handle("component-comp1-handle", java_type="Component")
+            elif receiver.startswith("study-") and method == "run":
+                result = None
+            elif receiver == "result-handle" and method == "dataset":
+                result = handle("dataset-list-handle", java_type="DatasetList")
+            elif receiver == "result-handle" and method == "numerical":
+                result = handle("numerical-list-handle", java_type="NumericalFeatureList")
+            elif receiver == "dataset-list-handle" and method == "tags":
+                result = ["dset1", "dset2"]
+            elif receiver == "dataset-list-handle" and method == "get" and args in (["dset1"], ["dset2"]):
+                result = handle(f"dataset-{args[0]}-handle", java_type="Dataset")
+            elif receiver in {"dataset-dset1-handle", "dataset-dset2-handle"}:
+                dset_tag = receiver.removeprefix("dataset-").removesuffix("-handle")
+                if method == "getType":
+                    result = "Solution"
+                elif method == "properties":
+                    result = ["solution", "comp", "geom"]
+                elif method == "getString":
+                    result = {"solution": "sol1" if dset_tag == "dset1" else "sol2",
+                              "comp": "comp1", "geom": "geom1"}.get(args[0])
+            elif receiver == "solution-list-handle" and method == "tags":
+                result = ["sol1", "sol2"]
+            elif receiver == "solution-list-handle" and method == "get" and args in (["sol1"], ["sol2"]):
+                result = handle(f"solution-{args[0]}-handle", java_type="SolverSequence")
+            elif receiver in {"solution-sol1-handle", "solution-sol2-handle"}:
+                if method == "getPVals":
+                    result = [1.0]
+                elif method == "study":
+                    result = "std1" if "sol1" in receiver else "std2"
+                elif method == "getSolutioninfo":
+                    result = handle(f"solution-info-{receiver.removeprefix('solution-').removesuffix('-handle')}-handle",
+                                    java_type="SolutionInfo")
+            elif receiver in {"solution-info-sol1-handle", "solution-info-sol2-handle"}:
+                if method == "getOuterSolnum":
+                    result = [1]
+                elif method == "getSolnum":
+                    result = [1]
+                elif method == "getPNames":
+                    result = [["t"]]
+                elif method == "getPvals":
+                    result = [[1.0]]
+                elif method == "getUnits":
+                    result = [["s"]]
+                elif method == "getLevelNames":
+                    result = ["t"]
+            elif receiver == "modelnode-list-handle" and method == "tags":
+                result = ["comp1"]
+            elif receiver == "component-comp1-handle" and method == "geom":
+                if args:
+                    assert args == ["geom1"]
+                    result = handle("geometry-geom1-handle", java_type="GeomSequence")
+                else:
+                    result = handle("geometry-list-handle", java_type="GeomList")
+            elif receiver == "geometry-list-handle" and method == "tags":
+                result = ["geom1"]
+            elif receiver == "geometry-list-handle" and method == "get" and args == ["geom1"]:
+                result = handle("geometry-geom1-handle", java_type="GeomSequence")
+            elif receiver == "geometry-geom1-handle":
+                if method == "lengthUnit":
+                    result = "m"
+                elif method == "getSDim":
+                    result = 3
+                elif method == "isAxisymmetric":
+                    result = False
+            elif receiver == "numerical-list-handle" and method == "tags":
+                result = list(numerical_tags)
+            elif receiver == "numerical-list-handle" and method == "create":
+                tag, feature_type = args
+                assert feature_type == "Eval"
+                numerical_tags.append(tag)
+                numerical_properties[tag] = {}
+                selection_state[tag] = {"geometry": None, "dimension": None, "entities": []}
+                result = handle(f"numerical-{tag}-handle", java_type="NumericalFeature")
+            elif receiver == "numerical-list-handle" and method == "remove":
+                numerical_tags.remove(args[0])
+                result = None
+            elif receiver.startswith("numerical-"):
+                tag = receiver.removeprefix("numerical-").removesuffix("-handle")
+                props = numerical_properties[tag]
+                if method == "set":
+                    props[args[0]] = args[1]
+                    result = None
+                elif method == "selection":
+                    result = handle(f"selection-{tag}-handle", java_type="Selection")
+                elif method == "tag":
+                    result = tag
+                elif method == "properties":
+                    result = []
+                elif method == "getString":
+                    result = props.get(args[0])
+                    if args[0] in {"outerinput", "innerinput"}:
+                        result = "manual"
+                elif method == "getInt":
+                    result = props.get(args[0], 1)
+                elif method == "getStringArray":
+                    result = ["K"] if args[0] == "unit" else list(props.get("expr", ["T"]))
+                elif method == "isComplex":
+                    result = False
+                elif method == "getCoordinatesShape":
+                    result = {"kind": "coordinates_shape", "shape": [3, 2], "dimension": 3,
+                              "point_count": 2, "source": "native NumericalFeature.getCoordinates()",
+                              "values_transmitted": False, "wire_payload": "shape-only"}
+                elif method == "getStrictFieldReadback":
+                    result = {"layout": "expression,solnum,point", "shape": [1, 1, 2],
+                              "is_complex": False, "real": [[[300.0, 301.0]]], "imag": None,
+                              "coordinates": [[0.0, 1.0], [0.0, 0.0], [0.0, 0.0]],
+                              "numeric_scalar_count": 8, "json_payload_bytes": 256}
+                elif method == "run":
+                    result = None
+            elif receiver.startswith("selection-"):
+                tag = receiver.removeprefix("selection-").removesuffix("-handle")
+                state = selection_state[tag]
+                if method == "geom":
+                    if args:
+                        state["geometry"], state["dimension"] = args
+                        result = None
+                    else:
+                        result = state["geometry"]
+                elif method == "set":
+                    state["entities"] = list(args[0])
+                    result = None
+                elif method == "entities":
+                    result = list(state["entities"])
+                elif method == "dim":
+                    result = state["dimension"]
+                elif method == "named":
+                    result = None
+                elif method == "isInheriting":
+                    result = False
+            elif method == "save":
+                import zipfile
+
+                destination = Path(args[0])
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                with zipfile.ZipFile(destination, "w") as archive:
+                    archive.writestr("synthetic/worker-transport-fixture.txt", "test fixture only")
+                result = None
+            if result is None and not (
+                (receiver in {"dataset-dset1-handle", "dataset-dset2-handle"}
+                 and method == "getString" and args[0] in {"data", "dataset", "data2"})
+                or receiver.startswith("study-") and method == "run"
+                or receiver.startswith("numerical-") and method in {"set", "run"}
+                or receiver == "numerical-list-handle" and method == "remove"
+                or receiver.startswith("selection-") and method in {"geom", "set"}
+                or receiver == "model-main-handle" and method == "component" and args != ["comp1"]
+                or method == "save"
+            ):
+                raise AssertionError(f"unexpected PersistentJavaWorker call: {body}")
+        else:
+            raise AssertionError(f"unexpected PersistentJavaWorker command: {body}")
+        response = {"ok": True, "status": "ok", "generation": worker_generation, "result": result}
+        if isinstance(body.get("request_id"), str):
+            response["request_id"] = body["request_id"]
+        return response
+
+    worker = _persistent_worker_with_stub(workspace, request)
+    worker._generation = worker_generation
+    daemon.backend.worker = worker
+
+    real_output_reader = daemon.backend.stage_output_readback
+
+    def capture_output_readback(**kwargs):
+        output = real_output_reader(**kwargs)
+        readback_output["value"] = output
+        return output
+
+    daemon.backend.stage_output_readback = capture_output_readback
+
+    class WorkerSnapshotAdapter:
+        def model_snapshot(self, tag):
+            return worker.backend_snapshot(tag)
+
+    service.adapter = WorkerSnapshotAdapter()
+
+    def run_study(arguments):
+        model = worker.client().model(model_ref["model_tag"])
+        model._call("study", arguments["study_tag"])._call("run")
+        return json.dumps({"success": True, "data": {"study_tag": arguments["study_tag"]}})
+
+    def save_model(arguments):
+        model = worker.client().model(model_ref["model_tag"])
+        target = Path(arguments["path"])
+        model.save(str(target))
+        return json.dumps({"success": True, "data": {"saved_path": str(target)}})
+
+    daemon.backend.registry.update({"run_study": run_study, "save_model": save_model})
+    daemon.backend.stage_native_admission = lambda *, binding, **_kwargs: _fake_stage_admission(binding)
+    try:
+        definition = _plan_v2()
+        output_stage = definition["stages"][1]
+        output_stage["source_selection"]["selection"] = {
+            "dataset": "dset1", "solution": "sol1", "outer": [1], "inner": [1],
+        }
+        continuity = deepcopy(output_stage["checks"][0])
+        continuity["check_id"] = "real-managed-output-readback"
+        continuity["source_solution"] = {
+            "dataset": "dset1", "solution": "sol1", "outer": [1], "inner": [1],
+        }
+        continuity["target_solution"] = {
+            "dataset": "dset2", "solution": "sol2", "outer": [1], "inner": [1],
+        }
+        explicit_selection = {
+            "kind": "explicit", "entities": [1], "component": "comp1",
+            "geometry": "geom1", "entity_dimension": 3,
+        }
+        continuity["source_selection"] = deepcopy(explicit_selection)
+        continuity["target_selection"] = deepcopy(explicit_selection)
+        output_stage["checks"] = [continuity]
+        defined = daemon.dispatch({
+            "operation": "experiment.stage_define", "arguments": {"definition": definition},
+            "execution": execution,
+        })
+        assert defined["success"] is True, defined
+
+        # The stage contract requires an accepted predecessor. Seed one
+        # explicitly as a test-only synthetic source-attempt fixture; this
+        # contains no native result and makes no scientific acceptance claim.
+        source_attempt, reused = daemon.store.begin_stage_attempt(
+            project_id=project_id, model_ref=model_ref, stage_id="preheat", expected_revision=0,
+            request_id="synthetic-source-request", operation_id="synthetic-source-operation",
+            idempotency_key="synthetic-source-idempotency", request_hash="a" * 64,
+        )
+        assert reused is False
+        synthetic_source = dict(source_attempt)
+        synthetic_source.pop("sha256", None)
+        synthetic_source.update({
+            "status": "ACCEPTED", "version": source_attempt["version"] + 1,
+            "engine_dispatched": True, "execution_status": "SOLVE_SUCCEEDED",
+            "acceptance_status": "ACCEPTED",
+            "evidence": [{"kind": "test_only_synthetic_source_attempt",
+                          "synthetic": True, "native_result": False,
+                          "scientific_acceptance_claim": False}],
+            "result": {"fixture_only": True, "native_acceptance_claimed": False},
+        })
+        synthetic_source["sha256"] = sha256_json(synthetic_source)
+        daemon.store.db.execute(
+            "UPDATE stage_attempts SET status=?,version=?,record_json=? WHERE attempt_id=?",
+            (synthetic_source["status"], synthetic_source["version"],
+             canonical_json(synthetic_source), synthetic_source["attempt_id"]),
+        )
+        assert daemon.store.get_stage_attempt(project_id, model_ref, source_attempt["attempt_id"]) == synthetic_source
+
+        stage_request = "real-output-worker-binding"
+        result = daemon.dispatch({
+            "operation": "experiment.stage_run",
+            "arguments": {"stage_id": "cooldown", "source_attempt_id": source_attempt["attempt_id"]},
+            "execution": {**execution, "request_id": stage_request, "idempotency_key": stage_request},
+        })
+        attempt = daemon.store.list_stage_attempts(project_id, model_ref, stage_id="cooldown")[-1]
+        if fault == "none":
+            assert result["success"] is False
+            assert result["error"]["code"] == "STAGE_ACCEPTANCE_UNVERIFIED", result
+            output = readback_output["value"]
+            assert output["status"] == "UNVERIFIED"
+            evaluate_steps = [step for step in output["revision_chain"]
+                              if step["operation"] == "result.evaluate"]
+            assert len(evaluate_steps) == 2, {
+                "checks": [{key: row.get(key) for key in (
+                    "status", "missing", "source_tuple", "target_tuple",
+                )} for row in output["checks"]],
+                "revision_chain": [{key: row.get(key) for key in (
+                    "operation", "readphase", "expected_revision", "revision",
+                )} for row in output["revision_chain"]],
+            }
+            for step in evaluate_steps:
+                assert step["revision_witness"] == "managed-evaluate-ticket"
+                assert step["managed_operation_id"]
+                assert step["managed_request_id"] == step["child_request_id"] == step["request_id"]
+                assert len(step["request_hash"]) == 64
+                assert step["revision"] == step["expected_revision"] + 1
+            read_steps = [step for step in output["revision_chain"]
+                          if step["operation"] == "dataset.solution_indices"]
+            assert read_steps
+            for step in read_steps:
+                assert step["revision_witness"] == "service-inspect-no-ticket"
+                assert step["managed_operation_id"] is None
+                assert step["managed_request_id"] is None and step["request_hash"] is None
+                assert step["revision"] == step["expected_revision"]
+            assert output["output_revision"] == evaluate_steps[-1]["revision"]
+            assert attempt["status"] == "SUCCEEDED_PARTIAL"
+        else:
+            assert result["success"] is False and result["error"]["code"] == "EXECUTION_STATE_UNKNOWN", result
+            assert attempt["status"] == "UNKNOWN"
+            assert "value" not in readback_output
+            assert not (workspace / "stage_outputs" / f"{attempt['attempt_id']}.mph").exists()
+        job_row = daemon.store.db.execute(
+            "SELECT job_id FROM jobs WHERE operation_id=?", (attempt["operation_id"],),
+        ).fetchone()
+        assert job_row is not None
+        stored = [row["metadata"] for row in daemon.store.events(job_row["job_id"], limit=1000)
+                  if row["event"] == "worker_request" and isinstance(row["metadata"].get("w21_stage_output"), dict)]
+        output_kinds = {row.get("kind") for row in stored}
+        assert {"model_snapshot", "model", "call"}.issubset(output_kinds)
+        output_tags = [row["metadata"].get("tag") for row in stored
+                       if row.get("kind") in {"model", "model_snapshot"}]
+        assert output_tags and set(output_tags) == {model_ref["model_tag"]}
+        assert all(row["w21_stage_output"]["child_operation_id"]
+                   == row.get("operation_id") for row in stored)
+        assert all(row["w21_stage_output_binding"]["worker_generation"] == worker_generation
+                   and row["w21_stage_output_binding"]["model_tag"] == model_ref["model_tag"]
+                   for row in stored)
+        assert "model_snapshot" in [item["type"] for item in transport_requests]
+        assert any(item["type"] == "model" and item.get("tag") == model_ref["model_tag"]
+                   for item in transport_requests)
+        if fault == "none":
+            assert any(item["type"] == "call" and item.get("method") == "getStrictFieldReadback"
+                       for item in transport_requests)
+            for step in output["revision_chain"]:
+                submitted = [row for row in stored
+                             if row.get("operation_id") == step["child_operation_id"]
+                             and row.get("phase") == "submitted"]
+                actual_requests = [{
+                    "worker_request_id": row.get("request_id"),
+                    "worker_request_hash": row.get("request_hash"),
+                    "worker_kind": row.get("kind"),
+                    "worker_model_tag": (row.get("metadata") or {}).get("tag")
+                        if row.get("kind") in {"model", "model_snapshot"} else None,
+                    "worker_method": (row.get("metadata") or {}).get("method"),
+                    "worker_receiver": (row.get("metadata") or {}).get("handle"),
+                    "worker_generation": row["w21_stage_output_binding"]["worker_generation"],
+                    "phase": "submitted",
+                } for row in submitted]
+                assert actual_requests == step["worker_requests"]
+        else:
+            assert any(row.get("w21_stage_output", {}).get("operation") == "result.evaluate"
+                       for row in stored), {
+                "attempt_evidence": attempt.get("evidence"),
+                "transport": [(item.get("type"), item.get("method")) for item in transport_requests],
+                "stored": [(row.get("w21_stage_output"), row.get("method"), row.get("phase"))
+                           for row in stored],
+            }
+            assert not any(row.get("metadata", {}).get("w21_stage_output", {}).get("phase") == "save"
+                           for row in stored)
+    finally:
+        daemon.close()
+        worker.close()

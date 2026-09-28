@@ -2452,26 +2452,60 @@ class ControlDaemon:
                 # sent; output reads do not pass through the solve/save gate.
                 self.store.add_event(record["job_id"], "worker_request", safe_event)
                 output_worker_events.append({"context": stage_output, "event": safe_event})
+                worker = getattr(backend, "worker", None)
+                try:
+                    worker_generation = getattr(worker, "generation", None)
+                    if callable(worker_generation):
+                        worker_generation = worker_generation()
+                except Exception:
+                    worker_generation = None
+                metadata = safe_event.get("metadata")
+                model_binding = safe_event.get("w21_stage_output_binding")
+                kind = safe_event.get("kind")
+                event_request_id = safe_event.get("request_id")
+                event_request_hash = safe_event.get("request_hash")
                 if (safe_event.get("operation_id") != child_operation_id
-                        or safe_event.get("kind") != "call"
+                        or kind not in {"call", "model", "model_snapshot"}
                         or not isinstance(operation, str) or not operation
                         or not isinstance(readphase, str) or not readphase):
                     raise ExecutionContractError(
                         "WORKER_OUTPUT_BINDING_MISMATCH",
                         "stage output Worker event differs from its managed child operation",
                     )
-                if safe_event.get("phase") == "submitted":
-                    current_revision(expected_revision)
-                    metadata = safe_event.get("metadata")
-                    if (not isinstance(metadata, Mapping)
-                            or not isinstance(metadata.get("method"), str)
-                            or not isinstance(safe_event.get("request_id"), str)
-                            or not isinstance(safe_event.get("request_hash"), str)
-                            or len(safe_event["request_hash"]) != 64):
+                if (not isinstance(metadata, Mapping)
+                        or metadata.get("type") != kind
+                        or metadata.get("request_id") != event_request_id
+                        or not isinstance(event_request_id, str) or not event_request_id
+                        or not isinstance(event_request_hash, str) or len(event_request_hash) != 64
+                        or any(char not in "0123456789abcdef" for char in event_request_hash)
+                        or not isinstance(model_binding, Mapping)
+                        or model_binding.get("model_ref") != model_ref
+                        or model_binding.get("model_tag") != model_ref.get("model_tag")
+                        or model_binding.get("worker_generation") != worker_generation
+                        or type(worker_generation) is not int or worker_generation < 1
+                        or model_binding.get("child_operation_id") != child_operation_id
+                        or model_binding.get("operation") != operation
+                        or model_binding.get("readphase") != readphase):
+                    raise ExecutionContractError(
+                        "WORKER_OUTPUT_BINDING_MISMATCH",
+                        "stage output Worker event lacks the exact model/generation/child binding",
+                    )
+                if kind == "call":
+                    if (metadata.get("generation") != worker_generation
+                            or not isinstance(metadata.get("handle"), str) or not metadata.get("handle")
+                            or not isinstance(metadata.get("method"), str) or not metadata.get("method")
+                            or not isinstance(metadata.get("args"), list)):
                         raise ExecutionContractError(
                             "WORKER_OUTPUT_BINDING_MISMATCH",
-                            "submitted stage output Worker event has no actual RPC id/hash/method",
+                            "stage output call event has no exact receiver/generation/method",
                         )
+                elif metadata.get("tag") != model_ref.get("model_tag"):
+                    raise ExecutionContractError(
+                        "WORKER_OUTPUT_BINDING_MISMATCH",
+                        "stage output model command names a different bound model tag",
+                    )
+                if safe_event.get("phase") == "submitted":
+                    current_revision(expected_revision)
                 return
             self.store.add_event(record["job_id"], "worker_request", safe_event)
             try:
@@ -2654,26 +2688,39 @@ class ControlDaemon:
                         managed_operation_id = step.get("managed_operation_id")
                         request_id = step.get("request_id")
                         request_hash = step.get("request_hash")
+                        managed_request_id = step.get("managed_request_id")
+                        revision_witness = step.get("revision_witness")
                         expected = step.get("expected_revision")
                         revision = step.get("revision")
                         effect = g3_effects.get(operation) if isinstance(operation, str) else None
                         delta = 0 if effect == "READ" else 1 if effect == "EVALUATE" else None
+                        ticket_required = delta == 1
                         if (delta is None or not isinstance(readphase, str) or not readphase
                                 or not isinstance(child_operation_id, str)
                                 or child_operation_id in seen_operations
-                                or not isinstance(managed_operation_id, str) or not managed_operation_id
-                                or managed_operation_id in seen_managed_operations
+                                or (ticket_required and (not isinstance(managed_operation_id, str)
+                                    or not managed_operation_id or managed_operation_id in seen_managed_operations
+                                    or not isinstance(request_hash, str) or len(request_hash) != 64
+                                    or any(char not in "0123456789abcdef" for char in request_hash)
+                                    or managed_request_id != step.get("child_request_id")
+                                    or revision_witness != "managed-evaluate-ticket"))
+                                or (not ticket_required and (managed_operation_id is not None
+                                    or managed_request_id is not None or request_hash is not None
+                                    or revision_witness != "service-inspect-no-ticket"))
+                                or request_id != step.get("child_request_id")
                                 or not isinstance(request_id, str)
-                                or not isinstance(request_hash, str) or len(request_hash) != 64
                                 or expected != cursor or type(revision) is not int
                                 or revision != cursor + delta):
                             raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "stage output ticket/revision sequence is invalid")
                         seen_operations.add(child_operation_id)
-                        seen_managed_operations.add(managed_operation_id)
+                        if ticket_required:
+                            seen_managed_operations.add(managed_operation_id)
                         submitted = [item for item in actual_by_operation.get(child_operation_id, [])
                                      if item["event"].get("phase") == "submitted"]
                         if any(item["context"].get("operation") != operation
                                or item["context"].get("readphase") != readphase
+                               or item["context"].get("expected_revision") != expected
+                               or item["context"].get("stage_run_operation_id") != solve_operation_id
                                for item in actual_by_operation.get(child_operation_id, [])):
                             raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "stage output readphase/operation differs from its durable Worker event")
                         returned_workers = step.get("worker_requests")
@@ -2682,15 +2729,24 @@ class ControlDaemon:
                         actual_workers = []
                         for item in submitted:
                             event = item["event"]
+                            metadata = event.get("metadata")
+                            metadata = metadata if isinstance(metadata, Mapping) else {}
+                            model_binding = event.get("w21_stage_output_binding")
+                            model_binding = model_binding if isinstance(model_binding, Mapping) else {}
                             actual_workers.append({
                                 "worker_request_id": event.get("request_id"),
                                 "worker_request_hash": event.get("request_hash"),
-                                "worker_method": (event.get("metadata") or {}).get("method")
-                                    if isinstance(event.get("metadata"), Mapping) else None,
+                                "worker_kind": event.get("kind"),
+                                "worker_model_tag": metadata.get("tag") if event.get("kind") in {"model", "model_snapshot"} else None,
+                                "worker_method": metadata.get("method"),
+                                "worker_receiver": metadata.get("handle"),
+                                "worker_generation": model_binding.get("worker_generation"),
                                 "phase": "submitted",
                             })
                         normalized_returned = [{key: row.get(key) for key in (
-                            "worker_request_id", "worker_request_hash", "worker_method", "phase")}
+                            "worker_request_id", "worker_request_hash", "worker_kind",
+                            "worker_model_tag", "worker_method", "worker_receiver",
+                            "worker_generation", "phase")}
                             for row in returned_workers if isinstance(row, Mapping)]
                         if len(normalized_returned) != len(returned_workers) or normalized_returned != actual_workers:
                             raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "stage output RPC id/hash differs from persisted Worker events")

@@ -575,6 +575,38 @@ def test_w21_strict_field_scalar_limit_includes_real_imag_and_coordinates(values
         assert byte_count <= results.W21_FIELD_READBACK_MAX_JSON_BYTES
 
 
+@pytest.mark.parametrize(("payload", "reported", "expected"), [
+    ({"real": [[[300.0, 301.0]]], "imag": None,
+     "coordinates": [[0.0, 1.0], [0.0, 0.0], [0.0, 0.0]]}, 8, 8),
+    ({"real": [[[300.0, 301.0]]], "imag": [[[0.25, 0.5]]],
+     "coordinates": [[0.0, 1.0], [0.0, 0.0], [0.0, 0.0]]}, 10, 10),
+])
+def test_strict_worker_count_matches_raw_real_imag_and_coordinates(payload, reported, expected):
+    assert results._validate_strict_worker_field_payload_count(payload, reported) == expected
+
+
+def test_strict_worker_count_rejects_fabricated_or_missing_raw_numeric_leaves():
+    payload = {"real": [[[300.0, 301.0]]], "imag": None,
+               "coordinates": [[0.0, 1.0], [0.0, 0.0], [0.0, 0.0]]}
+    with pytest.raises(ExecutionContractError) as excinfo:
+        results._validate_strict_worker_field_payload_count(payload, 10)
+    assert excinfo.value.code == "FIELD_READBACK_COUNT_MISMATCH"
+    assert excinfo.value.details == {
+        "reported_numeric_scalar_count": 10,
+        "raw_payload_numeric_scalar_count": 8,
+    }
+
+
+def test_w21_normalized_preserve_response_counts_derived_imaginary_components_for_cap():
+    values = [{"real": 1.0, "imag": 0.0}] * (results.W21_FIELD_READBACK_MAX_NUMERIC_SCALARS // 2 + 1)
+    response = {"strict_field_readback": {
+        "field_array": {"values": values}, "coordinates": {"values": []},
+    }}
+    with pytest.raises(ExecutionContractError) as excinfo:
+        results._enforce_w21_field_response_limits(response)
+    assert excinfo.value.code == "FIELD_READBACK_LIMIT_EXCEEDED"
+
+
 def test_w21_strict_field_json_limit_fails_closed_without_truncation():
     response = {"strict_field_readback": {
         "field_array": {"values": []}, "coordinates": {"values": []},

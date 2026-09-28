@@ -1,0 +1,92 @@
+{
+  "schema": "W21_OUTPUT_COMPOSITION_REPAIR_CHECKPOINT_V1",
+  "status": "PASS",
+  "scope": "Scoped offline production composition; native and scientific acceptance UNVERIFIED",
+  "source_sha256": {
+    "comsol_mcp/_control_daemon.py": "c8405d0c2a809777dbf8886665d14e1e9392cbcac43203d10446169740b89030",
+    "comsol_mcp/_g3_results.py": "77b8ca5eb94733e155309b82dd42edd87a47bace47f72e868488647800049770",
+    "comsol_mcp/_w21_native_output.py": "c6a9bce945165a726f36c6c575b8a3e00ce32a76069e605529700f939df41d55",
+    "tests/test_stage_definition.py": "66a7d888bff15287ca79d0fac8793d35a6e76f2e335b58434b1ac391590c4390",
+    "tests/test_w21_canonical_contracts.py": "bd65c9e4d770a8ed635fab08bdcf8201ab1456bb72c23466a476eefab3225bf8",
+    "tests/test_w21_native_output.py": "2f28b0b043b437cb837a0ae47778d9f1ee6b9f6beceb39d5e0b6498808e4f31c"
+  },
+  "test_summary": {
+    "unique_passed_across_runs": 160,
+    "unique_count_method": "Deduplicated pytest JUnit testcase classname+name from the focused, producer/stage/domain-outcome, and G3 result selections.",
+    "producer_stage_domain_outcome": {
+      "passed": 142,
+      "deselected": 0,
+      "exit_code": 0
+    },
+    "g3_result_selection": {
+      "passed": 14,
+      "deselected": 16,
+      "exit_code": 0
+    },
+    "focused_producer_and_raw_count_selection": {
+      "passed": 15,
+      "deselected": 61,
+      "exit_code": 0,
+      "overlap_with_producer_stage_domain_outcome": 11,
+      "additional_unique_canonical_contract_cases": 4
+    },
+    "notes": "The 16 deselected G3 tests are reported as deselected, not skipped. No overlap exists between the two regression groups; the focused run overlaps by 11 with the first group and contributes four unique raw-count contract tests."
+  },
+  "fixture_boundaries": [
+    "RemoteJava _request transport is synthetic; execution uses ManagedBackend.stage_output_readback, backend.invoke, ExecutionService evaluate/ticketing, PersistentJavaWorker submission/event persistence, daemon revision-chain validation, and save/no-save production code.",
+    "Stage native admission and owned-server isolation verifier are explicit TEST_FIXTURE stubs; a predecessor source attempt is synthetic. These tests do not establish native COMSOL execution, isolation acceptance, field unit/frame proof, or science acceptance.",
+    "Composition asserts ModelRef generation differs from Worker epoch, model/model_snapshot/call events are persisted before RPC, both result.evaluate operations produce ticket-bound +1 revision steps, inspect reads preserve revision, and injected post-dispatch UNKNOWN prevents save."
+  ],
+  "implemented": [
+    "Persist and validate actual model_snapshot/model/call command kinds before transport",
+    "Separate ModelRef identity from Worker connection epoch",
+    "READ operations preserve revision without write ticket; EVALUATE requires actual ticket and revision increment",
+    "Validate Worker raw payload scalar count independently from normalized preserve output; retain both hard scalar/byte caps",
+    "Actual composed result.evaluate and UNKNOWN no-save regression"
+  ],
+  "main_verified": "Six source hashes, nine test artifact hashes, exitcodes and160 unique JUnit passing cases; substantive diff reviewed; no native/admission relaxation",
+  "receipt": {
+    "path": "/Volumes/CTestEff/w21-stage-output-receipt-20260929T131500Z/receipt.json",
+    "sha256": "128e7473ee7ea61b1d1cc0848b7619282912630d6d50b176b08f3433fdd843ba"
+  },
+  "replay_commands": [
+    {
+      "command": "PYTHONDONTWRITEBYTECODE=1 /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -B -m pytest -q 'tests/test_stage_definition.py::test_stage_output_real_managed_backend_persists_model_snapshot_and_binding_rpc_events' 'tests/test_stage_definition.py::test_stage_output_worker_event_ticket_revision_and_no_save_on_unknown' tests/test_w21_canonical_contracts.py tests/test_w21_native_output.py -k 'stage_output_real_managed_backend or stage_output_worker_event_ticket_revision or strict_worker_count or normalized_preserve_response or max_abs_pairwise_error' --basetemp=/Volumes/CTestEff/w21-stage-output-composed-finalfocused-r3-20260929T125200Z/pytest-tmp --junitxml=/Volumes/CTestEff/w21-stage-output-composed-finalfocused-r3-20260929T125200Z/junit.xml",
+      "passed": 15,
+      "deselected": 61,
+      "exit_code": 0,
+      "stdout": "/Volumes/CTestEff/w21-stage-output-composed-finalfocused-r3-20260929T125200Z/stdout.log",
+      "stdout_sha256": "a24baa5b430c374cc42b5957151060d0f3cdad14b10c40df6d085b9bc2f7a210",
+      "junit": "/Volumes/CTestEff/w21-stage-output-composed-finalfocused-r3-20260929T125200Z/junit.xml",
+      "junit_sha256": "e93e78ee3c6788d40f2801dbcc566b289f39f4ca02c9fa5a3bb12dd725a9ac55",
+      "exitcode_file": "/Volumes/CTestEff/w21-stage-output-composed-finalfocused-r3-20260929T125200Z/exitcode.txt",
+      "exitcode_sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "command": "PYTHONDONTWRITEBYTECODE=1 /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -B -m pytest -q tests/test_w21_native_output.py tests/test_stage_definition.py tests/test_g3_domain_outcome.py --basetemp=/Volumes/CTestEff/w21-stage-output-regression1-20260929T130000Z/pytest-tmp --junitxml=/Volumes/CTestEff/w21-stage-output-regression1-20260929T130000Z/junit.xml",
+      "passed": 142,
+      "deselected": 0,
+      "exit_code": 0,
+      "stdout": "/Volumes/CTestEff/w21-stage-output-regression1-20260929T130000Z/stdout.log",
+      "stdout_sha256": "db58d4dde690e1cf62185cac4575cda604c5d4fb5cdcb6037f5d8f28e548c944",
+      "junit": "/Volumes/CTestEff/w21-stage-output-regression1-20260929T130000Z/junit.xml",
+      "junit_sha256": "ba4a7da4d1edf2b00526e0dd894cc3e59c428cf5920509323fa167ee6572afee",
+      "exitcode_file": "/Volumes/CTestEff/w21-stage-output-regression1-20260929T130000Z/exitcode.txt",
+      "exitcode_sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "command": "PYTHONDONTWRITEBYTECODE=1 /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -B -m pytest -q tests/test_g3_w17.py -k 'result_evaluate or strict_metric or result_at_points or solution_indices or measure_is_engine_read or pinned_selection' --basetemp=/Volumes/CTestEff/w21-stage-output-regression2-20260929T130000Z/pytest-tmp --junitxml=/Volumes/CTestEff/w21-stage-output-regression2-20260929T130000Z/junit.xml",
+      "passed": 14,
+      "deselected": 16,
+      "exit_code": 0,
+      "stdout": "/Volumes/CTestEff/w21-stage-output-regression2-20260929T130000Z/stdout.log",
+      "stdout_sha256": "ac2dccb1f8c18009c504117d43f18e84a054d182969264705b9c58cb6d903393",
+      "junit": "/Volumes/CTestEff/w21-stage-output-regression2-20260929T130000Z/junit.xml",
+      "junit_sha256": "b8a82d511910646af15f29763a48dc33f236eb0edb07976d4f24dea38040e32d",
+      "exitcode_file": "/Volumes/CTestEff/w21-stage-output-regression2-20260929T130000Z/exitcode.txt",
+      "exitcode_sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    }
+  ],
+  "remaining": "Intrinsic field units, mesh/frame/history proof and actual Windows6.4/6.3 minimal stage production chains remain incomplete; W23-W26 and final independent overall review remain required",
+  "next_action": "Freeze new Windows6.4 metadata-only candidate from combined committed repairs; preserve and link original pre-native failure; run within1Server/1Worker/900s/0study-or-solver budget, then calibrate actual admission and separately freeze stage solves."
+}

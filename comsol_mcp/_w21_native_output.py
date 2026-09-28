@@ -279,11 +279,17 @@ def _field_payload(evaluation: Mapping[str, Any], expression: str) -> tuple[dict
         raise _EvidenceUnavailable("strict field/coordinate payload contains nonfinite data") from exc
     if payload_bytes > _MAX_FIELD_JSON_BYTES:
         raise _EvidenceUnavailable("strict field/coordinate JSON cap was exceeded")
-    real_values: list[float] = []
+    real_values: list[Any] = []
     for item in values[0][0][0]:
-        if not _finite(item):
-            raise _EvidenceUnavailable("pointwise field contains a complex or nonfinite value")
-        real_values.append(float(item))
+        if isinstance(item, Mapping):
+            real_part, imaginary_part = item.get("real"), item.get("imag")
+            if not _finite(real_part) or not _finite(imaginary_part):
+                raise _EvidenceUnavailable("pointwise complex field contains a nonfinite or nonnumeric component")
+            real_values.append({"real": float(real_part), "imag": float(imaginary_part)})
+        elif _finite(item):
+            real_values.append(float(item))
+        else:
+            raise _EvidenceUnavailable("pointwise field contains a nonfinite or nonnumeric value")
     coord_rows: list[list[float]] = []
     for row in coords:
         normalized = []
@@ -397,8 +403,20 @@ def _coordinate_frame_matches(payload: Mapping[str, Any], expected_frame: Any) -
 def _max_abs_pairwise_error(source: Sequence[float], target: Sequence[float]) -> tuple[float, float]:
     if not source or len(source) != len(target):
         raise _EvidenceUnavailable("source and target pointwise field shapes do not match")
-    errors = [abs(float(a) - float(b)) for a, b in zip(source, target)]
-    scales = [max(abs(float(a)), abs(float(b))) for a, b in zip(source, target)]
+
+    def scalar(value: Any) -> complex:
+        if isinstance(value, Mapping):
+            real, imaginary = value.get("real"), value.get("imag")
+            if not _finite(real) or not _finite(imaginary):
+                raise _EvidenceUnavailable("pointwise complex field contains a nonfinite component")
+            return complex(float(real), float(imaginary))
+        if not _finite(value):
+            raise _EvidenceUnavailable("pointwise field contains a nonfinite value")
+        return complex(float(value), 0.0)
+
+    pairs = [(scalar(a), scalar(b)) for a, b in zip(source, target)]
+    errors = [abs(a - b) for a, b in pairs]
+    scales = [max(abs(a), abs(b)) for a, b in pairs]
     if any(not math.isfinite(value) for value in errors + scales):
         raise _EvidenceUnavailable("pointwise error or reference scale overflowed")
     return max(errors), max(scales)
@@ -406,7 +424,8 @@ def _max_abs_pairwise_error(source: Sequence[float], target: Sequence[float]) ->
 
 def _artifact_ref(backend: Any, payload: Mapping[str, Any], *, binding: Mapping[str, Any],
                   stage_run_operation_id: str, model_revision: int, child_operation_id: str,
-                  managed_operation_id: str, request_id: str, request_hash: str, readphase: str,
+                  managed_operation_id: str | None, request_id: str, request_hash: str | None,
+                  revision_witness: str, worker_requests: Sequence[Mapping[str, Any]], readphase: str,
                   check_definition_sha256: str, selection_sha256: str,
                   tuple_binding: Mapping[str, Any]) -> dict[str, Any]:
     from ._artifact_store import ArtifactStore, trusted_project_root
@@ -421,6 +440,8 @@ def _artifact_ref(backend: Any, payload: Mapping[str, Any], *, binding: Mapping[
              "model_revision": model_revision, "child_operation_id": child_operation_id,
              "managed_operation_id": managed_operation_id,
              "request_id": request_id, "request_hash": request_hash, "readphase": readphase,
+             "revision_witness": revision_witness,
+             "worker_requests": [dict(row) for row in worker_requests],
              "check_definition_sha256": check_definition_sha256,
              "selection_sha256": selection_sha256, "tuple_binding": dict(tuple_binding),
          }},
@@ -433,6 +454,8 @@ def _artifact_ref(backend: Any, payload: Mapping[str, Any], *, binding: Mapping[
         "model_revision": model_revision, "child_operation_id": child_operation_id,
         "managed_operation_id": managed_operation_id,
         "request_id": request_id, "request_hash": request_hash, "readphase": readphase,
+        "revision_witness": revision_witness,
+        "worker_requests": [dict(row) for row in worker_requests],
         "check_definition_sha256": check_definition_sha256,
         "selection_sha256": selection_sha256, "tuple_binding": dict(tuple_binding),
         "artifact": dict(exported), "sha256": exported["sha256"],
@@ -444,6 +467,8 @@ def _artifact_ref(backend: Any, payload: Mapping[str, Any], *, binding: Mapping[
             "readphase": readphase, "child_operation_id": child_operation_id,
             "managed_operation_id": managed_operation_id,
             "request_id": request_id, "request_hash": request_hash,
+            "revision_witness": revision_witness,
+            "worker_requests": [dict(row) for row in worker_requests],
             "observation_revision": model_revision}
 
 
@@ -503,11 +528,31 @@ def produce_stage_output_readback(
         if callable(authorize_callback):
             authorize_callback(operation, dict(arguments), child_execution)
         events: list[dict[str, Any]] = []
+        worker = getattr(backend, "worker", None)
+        worker_generation = getattr(worker, "generation", None)
+        if callable(worker_generation):
+            worker_generation = worker_generation()
+        if type(worker_generation) is not int or worker_generation < 1:
+            raise ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN",
+                "stage output Worker epoch is unavailable or malformed",
+                stage="pre_dispatch",
+            )
 
         def capture(event: Any) -> None:
             if not isinstance(event, Mapping):
                 raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "Worker output event is malformed", stage="post_dispatch")
             copied = dict(event)
+            # Preserve the Worker's original command kind and RPC metadata. This
+            # sidecar carries the actual managed model binding across command
+            # kinds such as model_snapshot and model, which do not have a Java
+            # receiver/method pair.
+            copied["w21_stage_output_binding"] = {
+                "model_ref": dict(ref), "model_tag": ref.get("model_tag"),
+                "worker_generation": worker_generation,
+                "child_operation_id": child_operation_id,
+                "operation": operation, "readphase": readphase,
+            }
             events.append(copied)
             all_events.append({"readphase": readphase, "operation": operation, "event": copied})
             if copied.get("operation_id") != child_operation_id:
@@ -534,12 +579,16 @@ def produce_stage_output_readback(
         managed_request_id = execution.get("request_id")
         ticket_hash = execution.get("request_hash")
         state_now = backend.service.ledger._state_for(ledger_ref)
-        expected_delta = 1 if _G3_EFFECT_MAP.get(str(operation_effect(operation)).upper()) != "inspect" else 0
+        read_only = _G3_EFFECT_MAP.get(str(operation_effect(operation)).upper()) == "inspect"
+        expected_delta = 0 if read_only else 1
         if (execution.get("model_ref") != ref or execution.get("session_id") != ref.get("session_id")
                 or execution.get("project_id") not in (None, project_id)
-                or managed_operation_id is None or not isinstance(managed_operation_id, str) or not managed_operation_id
-                or managed_request_id != child_request_id
-                or not isinstance(ticket_hash, str) or len(ticket_hash) != 64
+                or (not read_only and (managed_operation_id is None
+                    or not isinstance(managed_operation_id, str) or not managed_operation_id
+                    or managed_request_id != child_request_id
+                    or not isinstance(ticket_hash, str) or len(ticket_hash) != 64))
+                or (read_only and (managed_operation_id is not None
+                    or managed_request_id is not None or ticket_hash is not None))
                 or type(revision) is not int or revision != state_now.revision or state_now.dirty
                 or revision != current_revision + expected_delta):
             raise ExecutionContractError(
@@ -552,24 +601,73 @@ def produce_stage_output_readback(
             )
         event_rows = []
         for event in events:
-            if event.get("kind") != "call" or event.get("phase") != "submitted":
-                continue
+            kind = event.get("kind")
+            if kind not in {"call", "model", "model_snapshot"}:
+                raise ExecutionContractError(
+                    "EXECUTION_STATE_UNKNOWN",
+                    f"managed {operation} emitted an unsupported Worker command kind",
+                    stage="post_dispatch",
+                )
             metadata = event.get("metadata")
+            sidecar = event.get("w21_stage_output_binding")
             request_id = event.get("request_id")
             request_hash = event.get("request_hash")
-            if (not isinstance(metadata, Mapping) or not isinstance(request_id, str)
+            if (not isinstance(metadata, Mapping) or metadata.get("type") != kind
+                    or metadata.get("request_id") != request_id
+                    or not isinstance(request_id, str) or not request_id
                     or not isinstance(request_hash, str) or len(request_hash) != 64
-                    or not isinstance(metadata.get("method"), str)):
-                raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "submitted Worker output request is incomplete", stage="post_dispatch")
-            event_rows.append({"worker_request_id": request_id, "worker_request_hash": request_hash,
-                               "worker_method": metadata["method"], "worker_receiver": metadata.get("handle"),
-                               "worker_generation": metadata.get("generation"), "phase": "submitted"})
+                    or not isinstance(sidecar, Mapping)
+                    or sidecar.get("model_ref") != ref
+                    or sidecar.get("model_tag") != ref.get("model_tag")
+                    or sidecar.get("worker_generation") != worker_generation
+                    or sidecar.get("child_operation_id") != child_operation_id
+                    or sidecar.get("operation") != operation
+                    or sidecar.get("readphase") != readphase):
+                raise ExecutionContractError(
+                    "EXECUTION_STATE_UNKNOWN",
+                    f"managed {operation} Worker command is not bound to its exact model/readphase",
+                    stage="post_dispatch",
+                )
+            if kind == "call":
+                if (metadata.get("generation") != worker_generation
+                        or not isinstance(metadata.get("handle"), str) or not metadata.get("handle")
+                        or not isinstance(metadata.get("method"), str) or not metadata.get("method")
+                        or not isinstance(metadata.get("args"), list)):
+                    raise ExecutionContractError(
+                        "EXECUTION_STATE_UNKNOWN",
+                        "submitted stage output call has no exact receiver/generation/method metadata",
+                        stage="post_dispatch",
+                    )
+                model_tag = None
+                method = metadata["method"]
+                receiver = metadata["handle"]
+            else:
+                if metadata.get("tag") != ref.get("model_tag"):
+                    raise ExecutionContractError(
+                        "EXECUTION_STATE_UNKNOWN",
+                        "stage output model command names a different model tag",
+                        stage="post_dispatch",
+                    )
+                model_tag = metadata["tag"]
+                method = None
+                receiver = None
+            if event.get("phase") != "submitted":
+                continue
+            event_rows.append({
+                "worker_request_id": request_id, "worker_request_hash": request_hash,
+                "worker_kind": kind, "worker_model_tag": model_tag,
+                "worker_method": method, "worker_receiver": receiver,
+                "worker_generation": worker_generation, "phase": "submitted",
+            })
         if not event_rows:
             raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", f"managed {operation} returned without a submitted Worker request", stage="post_dispatch")
         chain_row = {
             "operation": operation, "readphase": readphase,
-            "child_operation_id": child_operation_id, "request_id": child_request_id,
+            "child_operation_id": child_operation_id,
+            "child_request_id": child_request_id, "request_id": child_request_id,
             "managed_operation_id": managed_operation_id, "request_hash": ticket_hash,
+            "managed_request_id": managed_request_id,
+            "revision_witness": "service-inspect-no-ticket" if read_only else "managed-evaluate-ticket",
             "expected_revision": current_revision, "revision": revision,
             "effect": operation_effect(operation), "worker_requests": event_rows,
         }
@@ -631,6 +729,7 @@ def produce_stage_output_readback(
             model_revision=ticket["revision"], child_operation_id=ticket["child_operation_id"],
             managed_operation_id=ticket["managed_operation_id"],
             request_id=ticket["request_id"], request_hash=ticket["request_hash"],
+            revision_witness=ticket["revision_witness"], worker_requests=ticket["worker_requests"],
             readphase=readphase, check_definition_sha256=check_hash,
             selection_sha256=sha256_json(dict(selection)), tuple_binding=tuple_value,
         )
@@ -670,6 +769,7 @@ def produce_stage_output_readback(
             model_revision=ticket["revision"], child_operation_id=ticket["child_operation_id"],
             managed_operation_id=ticket["managed_operation_id"],
             request_id=ticket["request_id"], request_hash=ticket["request_hash"],
+            revision_witness=ticket["revision_witness"], worker_requests=ticket["worker_requests"],
             readphase=readphase, check_definition_sha256=check_hash,
             selection_sha256=sha256_json(dict(term["selection"])), tuple_binding=tuple_value,
         )
@@ -688,6 +788,7 @@ def produce_stage_output_readback(
         model_revision=output_ticket["revision"], child_operation_id=output_ticket["child_operation_id"],
         managed_operation_id=output_ticket["managed_operation_id"],
         request_id=output_ticket["request_id"], request_hash=output_ticket["request_hash"],
+        revision_witness=output_ticket["revision_witness"], worker_requests=output_ticket["worker_requests"],
         readphase="stage-output-tuple",
         check_definition_sha256=sha256_json({"kind": "stage-output-tuple", "target_selection": dict(target_selection)}),
         selection_sha256=sha256_json(dict(target_selection)), tuple_binding=output_tuple,

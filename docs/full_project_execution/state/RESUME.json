@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "phase": "W21_RUNNER_CONTRACT_ACCEPTED_WINDOWS64_REPREPARATION",
+  "phase": "W21_WINDOWS64_COMBINED_REPAIRS_ACCEPTED",
   "task": "W01_W26_CONTINUOUS_IMPLEMENTATION",
   "status": "PARTIAL_EXECUTION_CONTINUING_NATIVE_UNVERIFIED",
   "candidate_source": "docs/full_project_execution/project_session/EXPERIMENT_READS_SOFTWARE_CHECKPOINT.json",
@@ -103,7 +103,7 @@
       "native_acceptance": "NOT_RUN"
     }
   ],
-  "next_action": "Freeze a new isolated Windows6.4 metadata-only run from committed repaired source, link the old failure and preserve its project; no original replay. At most1Server/1Worker/900seconds/0study-or-solver. Output composition repair remains separate; then actual stage chain6.4,6.3,W23-W26.",
+  "next_action": "Freeze new Windows6.4 metadata-only candidate from combined committed repairs; preserve and link original pre-native failure; run within1Server/1Worker/900s/0study-or-solver budget, then calibrate actual admission and separately freeze stage solves. Then Windows6.3 and W23-W26.",
   "active_jobs": [],
   "blockers": [
     "W23 failed setup owned Server 75272 and daemon 75260 remain preserved: cleanup SIGTERM was rejected by automatic approval and explicit authorization is pending; no cleanup or relaunch authorized by elapsed time.",
@@ -132,7 +132,7 @@
     "native_solve_budget_remaining": 0,
     "evidence": "docs/full_project_execution/evidence/luna_process_reconciliation/mac_readonly_snapshot_20260926T2152Z.json"
   },
-  "updated_at": "2026-09-28T16:48:24.232358+00:00",
+  "updated_at": "2026-09-28T16:50:25.034515+00:00",
   "note": "Original scope remains through W26. User explicitly resumed after the test-efficiency analysis; implement efficiency improvements first. OpenViking task-detail retrieval was denied by auto-review because it would disclose internal roadmap identifiers externally; no workaround. Use current frozen workpack and read-only local memory only. Do not rerun bootstrap/init on resume. Source files now contain executor edits; do not rerun bootstrap/init. Git metadata is an APFS pointer managed by main agent; migration requires bundle/source transfer, not copying only the repository pointer. Git metadata migration is documented by evidence/git_metadata_relocation.json and owned by the main agent; do not copy the APFS git pointer to another machine without source bundle/archive. GUI permission boundary and checkpoint solution-scope caveat recorded. This executor has one W24 native setup-only failure with exact cleanup verified; the durable operation/job UNKNOWN records remain unchanged. No W24 solver submission occurred. Saved-MPH readback supplement uses separate time/evidence and zero study/solver calls; run08 remains FAIL_OR_INCOMPLETE. Root raw SQLite recomputation is linked under native_resume_saved_artifact_supplement.raw_recomputation_evidence; original run08 remains FAIL_OR_INCOMPLETE and no solve budget is restored. Latest checkpoint 2026-09-27T03:50:43Z: W24 0334Z setup run failed pre-model due Python 3.14 missing mcp, with exact cleanup; 0346Z candidate pins the validated 3.12.13 environment and passes a production no-engine registry/daemon preflight. Native setup remains pending root review; science implementation continues offline. Latest checkpoint 2026-09-27T09:09:28Z: W24 0841Z candidate was invoked once at 0857Z and failed before any engine/Worker birth because project.inspect received an injected idempotency_key; project.create persisted successfully. Exact read-only SQLite hash and operation result are in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_contract_diagnostic.json. The runner now omits the unnecessary inspect key; actual ControlDaemon focused regression is 2/2 PASS in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_runner_regression_receipt.json. No native retry or acceptance is claimed; release F04 runtime integration is active, so refresh closure and root review are required before another launch. Windows COMSOL 6.3 remains required/unassessed; only macOS 6.3 is USER_REQUESTED_SKIP.",
   "native_resume_smoke": {
     "status": "FAIL_OR_INCOMPLETE_POINT_SCHEMA_FAILURE; SOLVED_CHILD_ARTIFACT_DURABLE; SOLVE_BUDGET_EXHAUSTED; SEPARATE_SAVED_MPH_READBACK_PASS",
@@ -990,10 +990,9 @@
     "next": "Wait for stable F04 runtime handoff; refresh closure and submit a new candidate for root review. No automatic rerun."
   },
   "verified_git_sync": {
-    "head": "3cdc62d0140dd726dc3fd02e36be96905f594901",
-    "origin_main": "3cdc62d0140dd726dc3fd02e36be96905f594901",
-    "status": "HEAD_EQUALS_ORIGIN_MAIN",
-    "checked_at": "2026-09-28T15:47:35.345839+00:00"
+    "head": "0027d85721c3bf05861cbc8327935e44fa4e8a21",
+    "origin_main": "0027d85721c3bf05861cbc8327935e44fa4e8a21",
+    "status": "HEAD_EQUALS_ORIGIN_MAIN"
   },
   "w24_static_shape_science_admission_repair": {
     "status": "SCOPED_SOFTWARE_REPAIR_ACCEPTED_NATIVE_NOT_RUN",
@@ -2358,17 +2357,17 @@
     {
       "stage": "W21_NATIVE_OUTPUT_PRODUCER",
       "agent": "/root/luna_stage_output",
-      "status": "ACCEPTED_SCOPED_OFFLINE_SYNCED",
+      "status": "COMPOSITION_REPAIR_MAIN_VERIFIED",
       "scope": "Actual Worker-driven exact tuple/field/continuity/native-integral readback using existing result/observation routes; new helper+ManagedBackend method+tests",
       "native_status": "NOT_RUN",
       "admission": "UNCHANGED_UNVERIFIED",
-      "next_action": "Native metadata calibration and admission mapping, then source/target real results; native NOT_RUN",
+      "next_action": "Freeze new Windows6.4 metadata-only candidate from combined committed repairs; preserve and link original pre-native failure; run within1Server/1Worker/900s/0study-or-solver budget, then calibrate actual admission and separately freeze stage solves. Then Windows6.3 and W23-W26.",
       "additional_allowed_files": [
         "comsol_mcp/_control_daemon.py:output-phase-only callbacks/revision/UNKNOWN handling",
         "tests/test_stage_definition.py:affected output-phase integration regressions"
       ],
-      "acceptance": "148 unique PASS;16 deselected; main source/artifact/JUnit verification",
-      "checkpoint": "docs/full_project_execution/project_session/NATIVE_OUTPUT_SOFTWARE_CHECKPOINT.json",
+      "acceptance": "160uniquePASS;nativeUNVERIFIED",
+      "checkpoint": "docs/full_project_execution/project_session/OUTPUT_COMPOSITION_REPAIR_CHECKPOINT.json",
       "commit": "52cf463eb116c37d9894a613df1565af3f675e26"
     },
     {
@@ -2407,11 +2406,13 @@
     {
       "stage": "W21_OUTPUT_WORKER_COMMAND_COMPOSITION",
       "agent": "/root/luna_stage_output",
-      "status": "RUNNING",
+      "status": "COMPOSITION_REPAIR_MAIN_VERIFIED",
       "scope": "Real Worker model/model_snapshot command handling in output callbacks and revision chain; true composed transport-stub regression; no native or admission change.",
-      "next_action": "Reproduce then fix and persist focused/regression evidence; replace native-stage candidate before actual solves.",
+      "next_action": "Freeze new Windows6.4 metadata-only candidate from combined committed repairs; preserve and link original pre-native failure; run within1Server/1Worker/900s/0study-or-solver budget, then calibrate actual admission and separately freeze stage solves. Then Windows6.3 and W23-W26.",
       "reproduction_artifact_root": "/Volumes/CTestEff/w21-stage-output-real-stack-red-20260928T151600Z",
-      "reproduction_status": "Agent reports pytest exit1; exact failure inspection and forward repair underway. Not acceptance evidence."
+      "reproduction_status": "Agent reports pytest exit1; exact failure inspection and forward repair underway. Not acceptance evidence.",
+      "acceptance": "160uniquePASS;nativeUNVERIFIED",
+      "checkpoint": "docs/full_project_execution/project_session/OUTPUT_COMPOSITION_REPAIR_CHECKPOINT.json"
     }
   ],
   "windows_readonly_connection_observation": {
@@ -2569,7 +2570,7 @@
     },
     "validator_boundary_decision": "Conservation row.target_tuple retains final-output summary; actual integral tuples come from each term_readback matching its frozen side SolutionSpec. Target terms must bind the same actual solution as final output, but may use a different boundary time. Minimal validator repair authorized; tests pending.",
     "production_composition_review": {
-      "status": "CONFIRMED_SOURCE_DEFECT_REPRODUCTION_AND_FIX_RUNNING",
+      "status": "REPAIRED_MAIN_VERIFIED_OFFLINE",
       "agent": "/root/luna_stage_output",
       "source_commit": "52cf463eb116c37d9894a613df1565af3f675e26",
       "finding": "ExecutionService pre-snapshot emits PersistentJavaWorker kind=model_snapshot, while daemon output event branch accepts only call. Existing stubbed output tests did not cover the real composed route.",
@@ -2582,7 +2583,9 @@
         "Real-only complex_mode=preserve synthesizes zero imaginary components: comparing normalized output count directly to raw Worker scalar count falsely rejects valid real fields. Repair must validate raw payload count against Worker evidence and independently retain normalized response scalar/byte hard caps."
       ],
       "offline_scope": "Actual ManagedBackend/ExecutionService/PersistentJavaWorker and daemon event/revision validation, with explicit synthetic native transport, isolation-verifier boundary, admission/predecessor fixtures. No native or isolation acceptance claimed.",
-      "next_action": "Finish actual composed result.evaluate chain, raw-versus-normalized scalar-count regression and affected result tests; main review exact diff/JUnit/source hashes before acceptance."
+      "next_action": "Finish actual composed result.evaluate chain, raw-versus-normalized scalar-count regression and affected result tests; main review exact diff/JUnit/source hashes before acceptance.",
+      "checkpoint": "docs/full_project_execution/project_session/OUTPUT_COMPOSITION_REPAIR_CHECKPOINT.json",
+      "unique_passed": 160
     }
   },
   "runner_response_contract_checkpoint": "docs/full_project_execution/project_session/RUNNER_RESPONSE_CONTRACT_CHECKPOINT.json"

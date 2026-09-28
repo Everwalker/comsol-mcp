@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import math
 from contextvars import ContextVar
 from copy import deepcopy
 from pathlib import Path
@@ -130,7 +131,7 @@ def _fixture(project_root, *, checks=None, evidence_mode="unverified", fault=Non
     class Backend:
         def __init__(self):
             self.service = service
-            self.worker = SimpleNamespace(paths=SimpleNamespace(resolved_project_root=root))
+            self.worker = SimpleNamespace(paths=SimpleNamespace(resolved_project_root=root), generation=ref.generation)
             self._stage_output_mode_context = context
             self.persisted = {}
             self.calls = []
@@ -264,11 +265,17 @@ def _fixture(project_root, *, checks=None, evidence_mode="unverified", fault=Non
                 returned_revision = state.revision - 1
             else:
                 returned_revision = state.revision
-            return {"success": True, "data": data,
-                    "execution": {"model_ref": ref.as_dict(), "session_id": ref.session_id,
-                                  "project_id": project_id, "revision": returned_revision,
-                                  "operation_id": f"service-ticket-{len(self.calls)}",
-                                  "request_id": execution["request_id"], "request_hash": ticket_hash}}
+            execution_result = {"model_ref": ref.as_dict(), "session_id": ref.session_id,
+                                "project_id": project_id, "revision": returned_revision}
+            # ExecutionService's permission=inspect path is a legitimate
+            # zero-revision read and returns no write-ticket identifiers.
+            # EVALUATE must still carry its real ticket even if a read step
+            # immediately preceded it.
+            if operation != "dataset.solution_indices" and fault != "missing_evaluate_ticket":
+                execution_result.update({"operation_id": f"service-ticket-{len(self.calls)}",
+                                        "request_id": execution["request_id"],
+                                        "request_hash": ticket_hash})
+            return {"success": True, "data": data, "execution": execution_result}
 
     backend = Backend()
     backend.store = SimpleNamespace(persist_artifact=lambda key, metadata: backend.persisted.__setitem__(key, deepcopy(metadata)))
@@ -494,13 +501,25 @@ def test_nonfinite_field_overflow_and_unknown_after_dispatch_fail_closed(project
     output = _produce(fixture)
     assert output["checks"][0]["status"] == "UNVERIFIED"
     assert any("nonfinite" in reason for reason in output["checks"][0]["missing"])
-
     unknown = _fixture(project_root, checks=[_continuity()], fault="unknown_after_submit")
     backend = unknown[0]
     with pytest.raises(ExecutionContractError, match="injected post-submit loss"):
         _produce(unknown)
     assert len([call for call in backend.calls if call[0] == "result.evaluate"]) == 1
     assert len(backend.sent) == 3  # output tuple, field tuple binding, one submitted evaluation; no retry
+
+
+def test_max_abs_pairwise_error_handles_g3_preserve_complex_component_mappings():
+    source = [{"real": 300.0, "imag": 0.0}, {"real": 301.0, "imag": 0.0}]
+    target = [{"real": 299.5, "imag": 0.5}, {"real": 301.0, "imag": 0.0}]
+    error, scale = _max_abs_pairwise_error(source, target)
+    assert error == pytest.approx(math.sqrt(0.5))
+    assert scale == pytest.approx(301.0)
+
+
+def test_max_abs_pairwise_error_rejects_nonfinite_complex_component():
+    with pytest.raises(_EvidenceUnavailable, match="nonfinite"):
+        _max_abs_pairwise_error([{"real": 1.0, "imag": float("inf")}], [1.0])
 
 
 def test_temporary_node_cleanup_unknown_propagates_without_second_read(project_root):
@@ -517,3 +536,12 @@ def test_inconsistent_managed_ticket_revision_is_unknown_without_retry(project_r
     with pytest.raises(ExecutionContractError, match="revision chain is invalid"):
         _produce(fixture)
     assert len([call for call in backend.calls if call[0] == "result.evaluate"]) == 1
+
+
+def test_read_inspect_does_not_substitute_for_evaluate_ticket(project_root):
+    fixture = _fixture(project_root, checks=[_continuity()], fault="missing_evaluate_ticket")
+    backend = fixture[0]
+    with pytest.raises(ExecutionContractError, match="output ticket revision chain is invalid"):
+        _produce(fixture)
+    assert len([call for call in backend.calls if call[0] == "result.evaluate"]) == 1
+    assert backend.sent[0][1] == "dataset.solution_indices"

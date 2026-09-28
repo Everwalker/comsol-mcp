@@ -3994,6 +3994,31 @@ def _count_numeric_scalars(val: Any) -> int:
     return 0
 
 
+def _strict_worker_field_payload_scalar_count(payload: Mapping[str, Any]) -> int:
+    """Count native numeric leaves actually returned by the Worker.
+
+    The strict `preserve` normalization may encode a known-real sample as
+    `{real: x, imag: 0}`. That zero is a Python representation detail; it was
+    not transmitted by the Worker and must not be compared with its raw
+    payload count. The normalized response is counted independently by
+    `_enforce_w21_field_response_limits`.
+    """
+    return sum(_count_numeric_scalars(payload.get(name))
+               for name in ("real", "imag", "coordinates"))
+
+
+def _validate_strict_worker_field_payload_count(payload: Mapping[str, Any], reported: int) -> int:
+    actual = _strict_worker_field_payload_scalar_count(payload)
+    if actual != reported:
+        raise ExecutionContractError(
+            "FIELD_READBACK_COUNT_MISMATCH",
+            "Worker-reported numeric scalar count differs from its raw real/imag/coordinate arrays",
+            details={"reported_numeric_scalar_count": reported,
+                     "raw_payload_numeric_scalar_count": actual},
+        )
+    return actual
+
+
 def _enforce_w21_field_response_limits(response: dict[str, Any]) -> tuple[int, int]:
     """Apply the fixed W21 numeric and serialized-response limits."""
     evidence = response.get("strict_field_readback")
@@ -4717,6 +4742,7 @@ def result_evaluate(
                             or type(payload_bytes) is not int or payload_bytes < 0
                             or payload_bytes > W21_FIELD_READBACK_MAX_JSON_BYTES):
                         raise ExecutionContractError("FIELD_READBACK_LIMIT_EXCEEDED", "Worker payload limit evidence is missing or over the hard cap")
+                    _validate_strict_worker_field_payload_count(payload, scalar_count)
                     strict_worker_payload_info = {
                         "numeric_scalar_count_including_real_imag_and_coordinates": scalar_count,
                         "json_payload_bytes": payload_bytes,
@@ -6006,12 +6032,6 @@ def result_evaluate(
             }
             response["result_budget"] = budget
         _enforce_w21_field_response_limits(response)
-        if (field_evidence["numeric_scalar_count_including_real_imag_and_coordinates"]
-                != strict_worker_payload_info["numeric_scalar_count_including_real_imag_and_coordinates"]):
-            raise ExecutionContractError(
-                "FIELD_READBACK_COUNT_MISMATCH",
-                "Python FieldArray normalization changed the Worker-reported numeric scalar count",
-            )
     return response
 
 
