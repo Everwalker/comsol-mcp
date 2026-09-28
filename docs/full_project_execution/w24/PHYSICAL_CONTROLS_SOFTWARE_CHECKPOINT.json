@@ -1,0 +1,61 @@
+{
+  "schema": "W24_PHYSICAL_CONTROLS_SOFTWARE_CHECKPOINT_V1",
+  "status": "PASS_SCOPED_SOFTWARE",
+  "project_status": "PARTIAL",
+  "native_acceptance": "NOT_RUN",
+  "physical_validation": "UNVERIFIED",
+  "base_commit": "e79f00a6203dd2da89c5e5277b15df76bedb72ca",
+  "candidate_fingerprint": "3eb5929fb65226cc47e5fd9985c0b84ec87c64caad220e5b4c247de6d78821d6",
+  "capabilities": [
+    "Prepared two-control campaign with exact model/runtime/project/source bindings and external approval envelope",
+    "Durable two-slot intent ledger, immediate save and authenticated capture checks; UNKNOWN prevents retry",
+    "Reject non-finite, boolean, invalid and out-of-tolerance actfac; unchanged 1e-15 tolerance"
+  ],
+  "tests": {
+    "required_regression_passed": 271,
+    "focused_passed": 14,
+    "focused_included_in_regression": true,
+    "main_independent_actfac_cases_passed": 4,
+    "main_source_hashes_verified": 127,
+    "main_artifact_hashes_and_junit_verified": true
+  },
+  "receipt": {
+    "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/20260928T090850Z-d3fdd92c.summary.json",
+    "sha256": "c0e0105a53a7c4c70c6efbc8b9ee4f5b81de6d5b19e123b1b78d0f08588a0c48"
+  },
+  "artifacts": [
+    {
+      "bytes": 34,
+      "path": "/Volumes/CTestEff/test-efficiency/runs/20260928T090850Z-d3fdd92c/focus.log",
+      "sha256": "9a729fa0f3e1367bc3e36b25a8921cf5f1b6082ad63967d48fee8dbaae06925d"
+    },
+    {
+      "bytes": 2518,
+      "path": "/Volumes/CTestEff/test-efficiency/runs/20260928T090850Z-d3fdd92c/focus.junit.xml",
+      "sha256": "f72d9041a07ea402ba8d91400b8493570b2854fce8a979072d7c37ff2f25c408"
+    },
+    {
+      "bytes": 293,
+      "path": "/Volumes/CTestEff/test-efficiency/runs/20260928T090850Z-d3fdd92c/required_regression.log",
+      "sha256": "7f77cefbaf45a312d16a66d182faa3959ec77327914bc7c84f80082e6da5725e"
+    },
+    {
+      "bytes": 46358,
+      "path": "/Volumes/CTestEff/test-efficiency/runs/20260928T090850Z-d3fdd92c/required_regression.junit.xml",
+      "sha256": "8af21551ac0cd1f76995ad883e69ec5a74a8324b5e7c0d9389d6f98f7b3adea2"
+    }
+  ],
+  "main_retest": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w24-review-preview/nonfinite_actfac_main_retest.json",
+  "source_manifest": "tools/test_efficiency_w24_baseline.json",
+  "replay": "python3 -B tools/run_bounded_tests.py --baseline tools/test_efficiency_w24_baseline.json --with-required-regression",
+  "failures_preserved": [
+    "20260928T090739Z-e5560caf: overlay preflight FAIL; zero tests",
+    "20260928T090835Z-c4f851dc: focused PASS14, required regression NOT_RUN, overall PARTIAL"
+  ],
+  "limitations": [
+    "No fresh Java compile in integrated run",
+    "No native control solves or physical acceptance",
+    "T047 stage-history and T058 assumptions acceptance remain incomplete"
+  ],
+  "next_action": "Implement T058 assumption provenance presentation and separation from physical conclusions using existing validation reports; retain original T047 native/lifecycle gaps, then continue W21/W23 and MASTER_GOAL."
+}

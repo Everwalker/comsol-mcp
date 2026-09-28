@@ -15,8 +15,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
+import java.nio.channels.OverlappingFileLockException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.security.MessageDigest;
@@ -27,19 +30,25 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.Set;
+import java.time.Instant;
 import java.util.zip.GZIPOutputStream;
 
 /**
- * Build-only W24 cure-law v2 controls. No action in this class submits a solve.
- * Native Activation and Maxwell reference/history semantics remain fail-closed
- * until captured by a separately approved native campaign.
+ * W24 cure-law v2 control builders, exact readbacks, explicitly named solve
+ * action, and read-only captures. No action is executed without a separately
+ * approved public compute request. Native Activation and Maxwell
+ * reference/history semantics remain fail-closed until captured by native
+ * evidence.
  */
 public final class W24CureLawV2ControlFixture {
     private static final String COMPONENT = "comp1";
     private static final String GEOMETRY = "geom1";
     private static final double SIDE_M = 100.0e-6;
     private static final double BOUND_TOL_M = 1.0e-10;
+    private static final int[] CONTROL_GRID_PERCENT = new int[]{25, 50, 75};
 
     private W24CureLawV2ControlFixture() { }
 
@@ -49,6 +58,7 @@ public final class W24CureLawV2ControlFixture {
         if ("readback_maxwell_ramp_hold".equals(action)) return readbackMaxwellRampHold(model);
         if ("build_gel_stress_free".equals(action)) return buildGelStressFree(model);
         if ("readback_gel_stress_free".equals(action)) return readbackGelStressFree(model);
+        if ("study_run_control".equals(action)) return studyRunControl(model, args);
         if ("capture_maxwell_control".equals(action)) return captureControl(model, args, true);
         if ("capture_gel_control".equals(action)) return captureControl(model, args, false);
         if ("solution_snapshot_v2".equals(action)) return solutionSnapshotV2(model, args);
@@ -122,6 +132,7 @@ public final class W24CureLawV2ControlFixture {
         result.put("quasistatic_readback", requireQuasistatic(model));
         result.put("case_id", "maxwell_ramp_hold_control");
         result.put("study_tag", "stdMaxwell");
+        result.put("solver_sequence", model.study("stdMaxwell").getSolverSequences("SolverSequence")[0]);
         result.put("study_output_times", time.getString("tlist"));
         result.put("direction", Arrays.asList(directions));
         result.put("prescribed_displacement", Arrays.asList(displacements));
@@ -143,6 +154,8 @@ public final class W24CureLawV2ControlFixture {
         result.put("tauvm", Arrays.asList(visco.getStringArray("tauvm")));
         result.put("ordered_branch_binding", "index 0 binds Kbranch, Gbranch, tauMaxwell");
         result.put("native_branch_initial_reference_state", "UNVERIFIED_FAIL_CLOSED");
+        result.put("status", "CONTROL_CONFIGURATION_READBACK_NOT_SOLVED");
+        result.put("native_study_run_calls", 0);
         result.put("solver_submissions", 0);
         return result;
     }
@@ -216,6 +229,7 @@ public final class W24CureLawV2ControlFixture {
         result.put("quasistatic_readback", requireQuasistatic(model));
         result.put("case_id", "gel_stress_free_control");
         result.put("study_tag", "stdGel");
+        result.put("solver_sequence", model.study("stdGel").getSolverSequences("SolverSequence")[0]);
         result.put("study_output_times", time.getString("tlist"));
         result.put("gel_time_s", model.param().evaluate("tGel"));
         result.put("pre_gel_affine_strain", model.param().get("epsPreGel"));
@@ -223,18 +237,192 @@ public final class W24CureLawV2ControlFixture {
         result.put("actfac", activation.getString("actfac"));
         result.put("actfac_was_set", false);
         result.put("native_activation_reference_state", "UNVERIFIED_FAIL_CLOSED");
+        result.put("status", "CONTROL_CONFIGURATION_READBACK_NOT_SOLVED");
+        result.put("native_study_run_calls", 0);
         result.put("solver_submissions", 0);
         return result;
+    }
+
+    /** One explicit COMPUTE action for a freshly built Maxwell or gel control.
+     * The durable intent is forced before Study.run and the process lock is held
+     * through the immediate MPH save. Any later UNKNOWN result must retain this
+     * original slot; a second key cannot submit it again.
+     */
+    private static Map<String, Object> studyRunControl(Model model, Map<String, Object> args) {
+        String caseId = safeToken(args.get("case_id"), "case_id");
+        String studyTag = safeToken(args.get("study_tag"), "study_tag");
+        String campaignId = safeToken(args.get("campaign_id"), "campaign_id");
+        String approvalSha = shaToken(args.get("approval_sha256"), "approval_sha256");
+        String controlPlanSha = shaToken(args.get("control_plan_sha256"), "control_plan_sha256");
+        String slotKey = shaToken(args.get("slot_idempotency_key"), "slot_idempotency_key");
+        String ledgerText = String.valueOf(args.getOrDefault("ledger_path", ""));
+        String saveText = String.valueOf(args.getOrDefault("save_after_success_path", ""));
+        boolean maxwell = "maxwell_ramp_hold_control".equals(caseId) && "stdMaxwell".equals(studyTag);
+        boolean gel = "gel_stress_free_control".equals(caseId) && "stdGel".equals(studyTag);
+        if ((!maxwell && !gel) || ledgerText.isBlank() || saveText.isBlank()) {
+            throw new IllegalArgumentException("control Study.run requires one exact approved case/study, ledger, and immediate-save path");
+        }
+        Map<String, Object> config = maxwell ? readbackMaxwellRampHold(model) : readbackGelStressFree(model);
+        if (!caseId.equals(config.get("case_id")) || !studyTag.equals(config.get("study_tag")) ||
+            !"Quasistatic".equals(config.get("quasistatic_readback")) ||
+            !Integer.valueOf(0).equals(config.get("solver_submissions"))) {
+            throw new IllegalStateException("control Study.run model did not pass its exact frozen configuration/readback gate");
+        }
+        Study study = model.study(studyTag);
+        String[] solvers = study.getSolverSequences("SolverSequence");
+        if (solvers.length != 1) throw new IllegalStateException("control Study.run requires exactly one attached SolverSequence");
+        SolverSequence sequence = model.sol(solvers[0]);
+        if (!sequence.isAttached() || !studyTag.equals(sequence.study())) {
+            throw new IllegalStateException("control Study.run SolverSequence is detached or belongs to another study");
+        }
+
+        Path ledger = Path.of(ledgerText).toAbsolutePath().normalize();
+        Path saved = Path.of(saveText).toAbsolutePath().normalize();
+        Path parent = ledger.getParent();
+        if (parent == null || !Files.isDirectory(parent) || !parent.equals(saved.getParent()) ||
+            Files.exists(saved, LinkOption.NOFOLLOW_LINKS) || Files.isSymbolicLink(ledger) ||
+            (Files.exists(ledger, LinkOption.NOFOLLOW_LINKS) &&
+             !Files.isRegularFile(ledger, LinkOption.NOFOLLOW_LINKS))) {
+            throw new IllegalArgumentException("control ledger/save paths must be new project files in one existing real directory");
+        }
+        Path lockPath = ledger.resolveSibling(ledger.getFileName().toString() + ".lock");
+        if (Files.isSymbolicLink(lockPath) || (Files.exists(lockPath, LinkOption.NOFOLLOW_LINKS) &&
+            !Files.isRegularFile(lockPath, LinkOption.NOFOLLOW_LINKS))) {
+            throw new IllegalArgumentException("control solve ledger lock must be a regular nonsymlink file");
+        }
+        try (FileChannel lockChannel = FileChannel.open(lockPath, StandardOpenOption.CREATE,
+                StandardOpenOption.WRITE, LinkOption.NOFOLLOW_LINKS)) {
+            FileLock lock;
+            try {
+                lock = lockChannel.tryLock();
+            } catch (OverlappingFileLockException exception) {
+                throw new IllegalStateException("another W24 control slot owns the solve lock; no second Study.run", exception);
+            }
+            if (lock == null) throw new IllegalStateException("another W24 control slot owns the solve lock; no second Study.run");
+            try (FileLock held = lock) {
+                int ordinal = appendControlStudyIntent(ledger, caseId, studyTag, campaignId,
+                    approvalSha, controlPlanSha, slotKey);
+                long started = System.nanoTime();
+                study.run();
+                double elapsed = (System.nanoTime() - started) / 1.0e9;
+                try {
+                    model.save(saved.toString());
+                } catch (IOException exception) {
+                    throw new IllegalStateException("control Study.run returned but immediate save failed; slot remains consumed", exception);
+                }
+                if (Files.isSymbolicLink(saved) || !Files.isRegularFile(saved, LinkOption.NOFOLLOW_LINKS)) {
+                    throw new IllegalStateException("control Study.run save is not a regular nonsymlink artifact; slot remains consumed");
+                }
+                long sizeBefore = Files.size(saved);
+                String digest = sha256(saved);
+                long sizeAfter = Files.size(saved);
+                if (sizeBefore <= 0 || sizeBefore != sizeAfter) {
+                    throw new IllegalStateException("control MPH changed while its save receipt was created; slot remains consumed");
+                }
+                Map<String, Object> saveReceipt = new LinkedHashMap<>();
+                saveReceipt.put("status", "STUDY_RUN_MPH_SAVED_AND_HASHED");
+                saveReceipt.put("path", saved.toString());
+                saveReceipt.put("size_bytes", sizeAfter);
+                saveReceipt.put("sha256", digest);
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("status", "NATIVE_STUDY_RUN_RETURNED");
+                result.put("case_id", caseId);
+                result.put("study_tag", studyTag);
+                result.put("solver_sequence", solvers[0]);
+                result.put("campaign_id", campaignId);
+                result.put("approval_sha256", approvalSha);
+                result.put("control_plan_sha256", controlPlanSha);
+                result.put("slot_idempotency_key", slotKey);
+                result.put("submission_index", ordinal);
+                result.put("elapsed_s", elapsed);
+                result.put("immediate_save_path", saved.toString());
+                result.put("immediate_save_receipt", saveReceipt);
+                result.put("study_run_calls_from_this_action", 1);
+                result.put("native_study_run_calls", 1);
+                result.put("quasistatic_readback", "Quasistatic");
+                result.put("maxwell_branch_reference_state", "UNVERIFIED_NO_PUBLIC_REFERENCE_STATE_CAPTURE");
+                return result;
+            }
+        } catch (IOException exception) {
+            throw new IllegalStateException("control solve lock/ledger/save evidence failed; no retry", exception);
+        }
+    }
+
+    private static int appendControlStudyIntent(Path path, String caseId, String studyTag,
+                                                String campaignId, String approvalSha,
+                                                String controlPlanSha, String slotKey)
+            throws IOException {
+        int prior = 0;
+        Set<String> cases = new HashSet<>();
+        Set<String> slots = new HashSet<>();
+        if (Files.exists(path, LinkOption.NOFOLLOW_LINKS)) {
+            if (Files.isSymbolicLink(path) || !Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) {
+                throw new IllegalStateException("control solve ledger must be a regular nonsymlink file");
+            }
+            Pattern rowPattern = Pattern.compile("^\\{\\\"event\\\":\\\"study_run_submitted\\\",\\\"submission_index\\\":([1-9][0-9]*),\\\"campaign_id\\\":\\\"([A-Za-z0-9_-]{1,64})\\\",\\\"approval_sha256\\\":\\\"([0-9a-f]{64})\\\",\\\"control_plan_sha256\\\":\\\"([0-9a-f]{64})\\\",\\\"slot_idempotency_key\\\":\\\"([0-9a-f]{64})\\\",\\\"case_id\\\":\\\"([A-Za-z0-9_-]{1,64})\\\",\\\"study_tag\\\":\\\"([A-Za-z0-9_]{1,64})\\\",\\\"at_utc\\\":\\\"([0-9TZ:.+-]+)\\\"\\}$");
+            for (String line : Files.readAllLines(path, StandardCharsets.UTF_8)) {
+                if (line.isEmpty()) continue;
+                Matcher row = rowPattern.matcher(line);
+                if (!row.matches()) {
+                    throw new IllegalStateException("control solve ledger contains an unknown row");
+                }
+                if (!campaignId.equals(row.group(2)) || !approvalSha.equals(row.group(3)) ||
+                    !controlPlanSha.equals(row.group(4))) {
+                    throw new IllegalStateException("control solve ledger belongs to a different campaign, approval, or frozen plan");
+                }
+                String priorCase = row.group(6);
+                String priorStudy = row.group(7);
+                String priorSlot = row.group(5);
+                if (("maxwell_ramp_hold_control".equals(priorCase) && !"stdMaxwell".equals(priorStudy)) ||
+                    ("gel_stress_free_control".equals(priorCase) && !"stdGel".equals(priorStudy)) ||
+                    (!"maxwell_ramp_hold_control".equals(priorCase) && !"gel_stress_free_control".equals(priorCase)) ||
+                    priorSlot == null || !priorSlot.matches("[0-9a-f]{64}") ||
+                    !slots.add(priorSlot) || !cases.add(priorCase)) {
+                    throw new IllegalStateException("control solve ledger has a duplicate or unknown case/slot");
+                }
+                int index = Integer.parseInt(row.group(1));
+                if (index != prior + 1) throw new IllegalStateException("control solve ledger index is not consecutive");
+                prior = index;
+            }
+        }
+        if (prior >= 2 || cases.contains(caseId)) {
+            throw new IllegalStateException("control slot is already consumed or the two-control campaign is complete; no retry");
+        }
+        if ("gel_stress_free_control".equals(caseId) && !cases.contains("maxwell_ramp_hold_control")) {
+            throw new IllegalStateException("gel control must follow the exact Maxwell control slot");
+        }
+        String line = "{\"event\":\"study_run_submitted\",\"submission_index\":" + (prior + 1) +
+            ",\"campaign_id\":\"" + campaignId + "\",\"approval_sha256\":\"" + approvalSha +
+            "\",\"control_plan_sha256\":\"" + controlPlanSha +
+            "\",\"slot_idempotency_key\":\"" + slotKey + "\",\"case_id\":\"" + caseId +
+            "\",\"study_tag\":\"" + studyTag + "\",\"at_utc\":\"" + Instant.now().toString() + "\"}\n";
+        byte[] bytes = line.getBytes(StandardCharsets.UTF_8);
+        try (FileChannel channel = FileChannel.open(path, StandardOpenOption.CREATE,
+                StandardOpenOption.WRITE, StandardOpenOption.APPEND, LinkOption.NOFOLLOW_LINKS)) {
+            ByteBuffer buffer = ByteBuffer.wrap(bytes);
+            while (buffer.hasRemaining()) channel.write(buffer);
+            channel.force(true);
+        }
+        return prior + 1;
     }
 
     /** Capture results from an already-solved frozen control; never calls Study.run. */
     private static Map<String, Object> captureControl(Model model, Map<String, Object> args,
                                                        boolean maxwell) {
         String solverTag = safeToken(args.get("solver_tag"), "solver_tag");
-        String pathText = String.valueOf(args.getOrDefault("path", ""));
-        if (pathText.isBlank()) throw new IllegalArgumentException("control capture requires a new output path");
         String caseId = maxwell ? "maxwell_ramp_hold_control" : "gel_stress_free_control";
         String studyTag = maxwell ? "stdMaxwell" : "stdGel";
+        String campaignId = safeToken(args.get("campaign_id"), "campaign_id");
+        String approvalSha = shaToken(args.get("approval_sha256"), "approval_sha256");
+        String controlPlanSha = shaToken(args.get("control_plan_sha256"), "control_plan_sha256");
+        String slotKey = shaToken(args.get("slot_idempotency_key"), "slot_idempotency_key");
+        String ledgerText = String.valueOf(args.getOrDefault("ledger_path", ""));
+        String pathText = String.valueOf(args.getOrDefault("path", ""));
+        if (pathText.isBlank() || ledgerText.isBlank()) {
+            throw new IllegalArgumentException("control capture requires a new output path and the original solve ledger");
+        }
+        requireControlLedgerSlot(Path.of(ledgerText).toAbsolutePath().normalize(), caseId,
+            studyTag, campaignId, approvalSha, controlPlanSha, slotKey);
         Map<String, Object> configuration = maxwell ? readbackMaxwellRampHold(model) : readbackGelStressFree(model);
         if (!"Quasistatic".equals(configuration.get("quasistatic_readback"))) {
             throw new IllegalStateException("native control capture requires the actual Quasistatic property readback");
@@ -260,7 +448,8 @@ public final class W24CureLawV2ControlFixture {
                 "solid.sxz", "solid.syz", "solid.isactive", "solid.wasactive"};
             units = new String[]{"Pa", "Pa", "Pa", "Pa", "Pa", "Pa", "1", "1"};
         }
-        double[][] coordinates = new double[][]{{SIDE_M / 2.0}, {SIDE_M / 2.0}, {SIDE_M / 2.0}};
+        double[][] coordinates = controlCoordinates();
+        List<List<Double>> coordinateRows = controlCoordinateRows(coordinates);
         String datasetTag = "w24v2d" + Long.toUnsignedString(System.nanoTime(), 36);
         String interpolationTag = "w24v2i" + Long.toUnsignedString(System.nanoTime(), 36);
         boolean datasetCreated = false;
@@ -300,15 +489,20 @@ public final class W24CureLawV2ControlFixture {
                 }
                 List<Object> expressionTimes = new ArrayList<>();
                 for (int time = 0; time < times.length; time++) {
-                    if (raw[expression][time] == null || raw[expression][time].length != 1 ||
-                        !Double.isFinite(raw[expression][time][0])) {
+                    if (raw[expression][time] == null || raw[expression][time].length != coordinates[0].length) {
                         throw new IllegalStateException("native control Interp coordinate/value shape is incomplete or nonfinite");
                     }
-                    double value = raw[expression][time][0];
-                    if ("1".equals(units[expression]) && value != 0.0 && value != 1.0) {
-                        throw new IllegalStateException("native Activation variable is not exactly binary");
+                    List<Double> pointValues = new ArrayList<>();
+                    for (double value : raw[expression][time]) {
+                        if (!Double.isFinite(value)) {
+                            throw new IllegalStateException("native control Interp returned a nonfinite value");
+                        }
+                        if ("1".equals(units[expression]) && value != 0.0 && value != 1.0) {
+                            throw new IllegalStateException("native Activation variable is not exactly binary");
+                        }
+                        pointValues.add(value);
                     }
-                    expressionTimes.add(Arrays.asList(value));
+                    expressionTimes.add(pointValues);
                 }
                 series.add(expressionTimes);
             }
@@ -320,15 +514,18 @@ public final class W24CureLawV2ControlFixture {
             interpolationReadback.put("solnum", interpolation.getString("solnum"));
             interpolationReadback.put("coorderr", interpolation.getString("coorderr"));
             interpolationReadback.put("matherr", interpolation.getString("matherr"));
-            interpolationReadback.put("coordinates_m", Arrays.asList(
-                Arrays.asList(coordinates[0][0], coordinates[1][0], coordinates[2][0])));
-            interpolationReadback.put("coordinate_source", "fixed 3D Java coordinates passed to setInterpolationCoordinates");
-            interpolationReadback.put("shape", Arrays.asList(expressions.length, times.length, 1));
+            interpolationReadback.put("coordinates_m", coordinateRows);
+            interpolationReadback.put("coordinate_source", "frozen 3x3x3 cube fractions 25/50/75 percent passed directly to setInterpolationCoordinates");
+            interpolationReadback.put("shape", Arrays.asList(expressions.length, times.length, coordinates[0].length));
 
             Map<String, Object> artifact = new LinkedHashMap<>();
-            artifact.put("schema", "W24_CURE_V2_NATIVE_CONTROL_CAPTURE_V1");
+            artifact.put("schema", "W24_CURE_V2_NATIVE_CONTROL_CAPTURE_V2");
             artifact.put("status", "NATIVE_CONTROL_CAPTURED_NO_SOLVE_SUBMITTED");
             artifact.put("case_id", caseId);
+            artifact.put("campaign_id", campaignId);
+            artifact.put("approval_sha256", approvalSha);
+            artifact.put("control_plan_sha256", controlPlanSha);
+            artifact.put("slot_idempotency_key", slotKey);
             artifact.put("study_tag", studyTag);
             artifact.put("solver_tag", solverTag);
             artifact.put("dataset_tag", datasetTag);
@@ -338,8 +535,9 @@ public final class W24CureLawV2ControlFixture {
             artifact.put("time_source", "SolverSequence.getPVals");
             artifact.put("expressions", Arrays.asList(expressions));
             artifact.put("units", Arrays.asList(units));
-            artifact.put("coordinates_m", interpolationReadback.get("coordinates_m"));
-            artifact.put("shape", Arrays.asList(expressions.length, times.length, 1));
+            artifact.put("coordinates_m", coordinateRows);
+            artifact.put("coordinate_grid", "uniform 3x3x3 control cube at 25/50/75 percent fractions on every axis");
+            artifact.put("shape", Arrays.asList(expressions.length, times.length, coordinates[0].length));
             artifact.put("data", series);
             artifact.put("feature_readback", interpolationReadback);
             artifact.put("quasistatic_readback", configuration.get("quasistatic_readback"));
@@ -353,6 +551,10 @@ public final class W24CureLawV2ControlFixture {
             Map<String, Object> result = new LinkedHashMap<>();
             result.put("status", "NATIVE_CONTROL_CAPTURE_WRITTEN");
             result.put("case_id", caseId);
+            result.put("campaign_id", campaignId);
+            result.put("approval_sha256", approvalSha);
+            result.put("control_plan_sha256", controlPlanSha);
+            result.put("slot_idempotency_key", slotKey);
             result.put("solver_tag", solverTag);
             result.put("study_tag", studyTag);
             result.put("dataset_tag", datasetTag);
@@ -361,7 +563,7 @@ public final class W24CureLawV2ControlFixture {
             result.put("sha256", sha256(bytes));
             result.put("stored_time_count", times.length);
             result.put("expression_count", expressions.length);
-            result.put("shape", Arrays.asList(expressions.length, times.length, 1));
+            result.put("shape", Arrays.asList(expressions.length, times.length, coordinates[0].length));
             result.put("quasistatic_readback", configuration.get("quasistatic_readback"));
             result.put("native_study_run_calls", 0);
             result.put("maxwell_branch_reference_state", "UNVERIFIED_NO_PUBLIC_REFERENCE_STATE_CAPTURE");
@@ -379,6 +581,53 @@ public final class W24CureLawV2ControlFixture {
             if (cleanupFailure != null) {
                 throw new IllegalStateException("native control artifact may exist but temporary result cleanup failed", cleanupFailure);
             }
+        }
+    }
+
+    private static double[][] controlCoordinates() {
+        int pointCount = CONTROL_GRID_PERCENT.length * CONTROL_GRID_PERCENT.length * CONTROL_GRID_PERCENT.length;
+        double[][] coordinates = new double[3][pointCount];
+        int point = 0;
+        for (int xPercent : CONTROL_GRID_PERCENT) {
+            for (int yPercent : CONTROL_GRID_PERCENT) {
+                for (int zPercent : CONTROL_GRID_PERCENT) {
+                    coordinates[0][point] = SIDE_M * xPercent / 100.0;
+                    coordinates[1][point] = SIDE_M * yPercent / 100.0;
+                    coordinates[2][point] = SIDE_M * zPercent / 100.0;
+                    point++;
+                }
+            }
+        }
+        return coordinates;
+    }
+
+    private static List<List<Double>> controlCoordinateRows(double[][] coordinates) {
+        List<List<Double>> rows = new ArrayList<>();
+        for (int point = 0; point < coordinates[0].length; point++) {
+            rows.add(Arrays.asList(coordinates[0][point], coordinates[1][point], coordinates[2][point]));
+        }
+        return rows;
+    }
+
+    private static void requireControlLedgerSlot(Path ledger, String caseId, String studyTag,
+                                                 String campaignId, String approvalSha,
+                                                 String controlPlanSha, String slotKey) {
+        if (Files.isSymbolicLink(ledger) || !Files.isRegularFile(ledger, LinkOption.NOFOLLOW_LINKS)) {
+            throw new IllegalArgumentException("control capture requires the original regular nonsymlink solve ledger");
+        }
+        try {
+            Pattern pattern = Pattern.compile("^\\{\\\"event\\\":\\\"study_run_submitted\\\",\\\"submission_index\\\":([1-9][0-9]*),\\\"campaign_id\\\":\\\"([A-Za-z0-9_-]{1,64})\\\",\\\"approval_sha256\\\":\\\"([0-9a-f]{64})\\\",\\\"control_plan_sha256\\\":\\\"([0-9a-f]{64})\\\",\\\"slot_idempotency_key\\\":\\\"([0-9a-f]{64})\\\",\\\"case_id\\\":\\\"([A-Za-z0-9_-]{1,64})\\\",\\\"study_tag\\\":\\\"([A-Za-z0-9_]{1,64})\\\",\\\"at_utc\\\":\\\"([0-9TZ:.+-]+)\\\"\\}$");
+            int matches = 0;
+            for (String line : Files.readAllLines(ledger, StandardCharsets.UTF_8)) {
+                Matcher row = pattern.matcher(line);
+                if (!row.matches()) throw new IllegalStateException("control solve ledger contains an unknown row");
+                if (campaignId.equals(row.group(2)) && approvalSha.equals(row.group(3)) &&
+                    controlPlanSha.equals(row.group(4)) && slotKey.equals(row.group(5)) &&
+                    caseId.equals(row.group(6)) && studyTag.equals(row.group(7))) matches++;
+            }
+            if (matches != 1) throw new IllegalStateException("capture slot is not uniquely present in the original solve ledger");
+        } catch (IOException exception) {
+            throw new IllegalStateException("could not authenticate the control solve ledger before capture", exception);
         }
     }
 
@@ -808,6 +1057,13 @@ public final class W24CureLawV2ControlFixture {
             throw new IllegalArgumentException(label + " contains unsupported characters");
         }
         return result;
+    }
+
+    private static String shaToken(Object value, String label) {
+        if (!(value instanceof String) || !((String) value).matches("[0-9a-f]{64}")) {
+            throw new IllegalArgumentException(label + " must be a lowercase SHA-256 token");
+        }
+        return (String) value;
     }
 
     private static void writeNewAndSync(Path output, byte[] bytes) {

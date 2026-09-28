@@ -29,6 +29,7 @@ from tools.w24_cure_v2_capture import (
     CaptureError,
     dispatch_capture,
     validate_capture_artifact,
+    validate_control_configuration_readback,
     _verify_public_capture_record,
     verify_public_capture,
 )
@@ -101,6 +102,50 @@ def _capture_artifact(action):
         branch_key: "UNVERIFIED_NO_PUBLIC_REFERENCE_STATE_CAPTURE",
     }
     return row
+
+
+def _gel_control_configuration(actfac):
+    return {
+        "schema": "W24_CURE_LAW_V2_CONTROL_READBACK_V1",
+        "case_id": "gel_stress_free_control",
+        "geometry_dimension": 3,
+        "geometry_domain_count": 1,
+        "all_six_exterior_faces_selected": True,
+        "quasistatic_readback": "Quasistatic",
+        "solver_submissions": 0,
+        "native_study_run_calls": 0,
+        "bounding_box_m": [0.0, 100e-6, 0.0, 100e-6, 0.0, 100e-6],
+        "thermal_physics": "absent",
+        "chemical_physics": "absent",
+        "absolute_irradiance_or_thermal_load": "absent",
+        "study_tag": "stdGel",
+        "solver_sequence": "solGel",
+        "study_output_times": "range(0[s],0.5[s],3[s])",
+        "activation_expression": "t>=tGel || solid.wasactive",
+        "actfac_was_set": False,
+        "actfac": actfac,
+        "native_activation_reference_state": "UNVERIFIED_FAIL_CLOSED",
+    }
+
+
+@pytest.mark.parametrize("actfac", [
+    float("nan"), float("inf"), float("-inf"), "NaN", "Infinity", "-Infinity",
+    "invalid", True, False, None, 1e-5 + 2e-15, 1e-5 - 2e-15,
+], ids=["float-nan", "float-pos-inf", "float-neg-inf", "string-nan",
+        "string-pos-inf", "string-neg-inf", "invalid-string", "bool-true",
+        "bool-false", "none", "above-tolerance", "below-tolerance"])
+def test_gel_control_actfac_rejects_nonfinite_invalid_types_and_out_of_tolerance(actfac):
+    with pytest.raises(CaptureError):
+        validate_control_configuration_readback(
+            _gel_control_configuration(actfac), case_id="gel_stress_free_control")
+
+
+@pytest.mark.parametrize("actfac", [1e-5, "1e-5"], ids=["number", "string"])
+def test_gel_control_actfac_accepts_frozen_finite_default(actfac):
+    result = validate_control_configuration_readback(
+        _gel_control_configuration(actfac), case_id="gel_stress_free_control")
+    assert result["status"] == "GEL_CONTROL_CONFIGURATION_MATCHED_NOT_SOLVED"
+    assert result["native_acceptance"] == "NOT_RUN"
 
 
 def _write_java_utf(stream, value):

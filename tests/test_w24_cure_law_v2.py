@@ -131,7 +131,9 @@ def test_v2_java_control_capture_binds_dataset_solver_full_times_and_real_quasis
     assert 'interpolation.setInterpolationCoordinates(coordinates)' in source
     assert '"time_source", "SolverSequence.getPVals"' in source
     assert '"native_study_run_calls", 0' in source
-    assert "study.run(" not in source
+    capture_start = source.index("private static Map<String, Object> captureControl(")
+    capture_end = source.index("private static double[][] controlCoordinates()", capture_start)
+    assert "study.run(" not in source[capture_start:capture_end]
     start = science.index("private static Map<String, Object> historyCaptureV2")
     end = science.index("private static final class NumericalValues", start)
     assert "study.run(" not in science[start:end]
@@ -498,6 +500,9 @@ def test_java_v2_fixtures_are_build_only_and_keep_v1_coupon_path():
     ):
         assert token in control
     assert 'activation.set("actfac"' not in control
-    for source in (coupon, control):
-        assert "study.run(" not in source
-        assert ".compute(" not in source
+    assert "study.run(" not in coupon
+    assert control.count("study.run();") == 1
+    run_start = control.index("private static Map<String, Object> studyRunControl(")
+    run_end = control.index("private static int appendControlStudyIntent(", run_start)
+    assert control.count("study.run();", run_start, run_end) == 1
+    assert ".compute(" not in coupon and ".compute(" not in control

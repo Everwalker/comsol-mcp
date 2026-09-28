@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "phase": "TEST_EFFICIENCY_SOFTWARE_CHECKPOINT",
+  "phase": "W24_PHYSICAL_CONTROLS_SOFTWARE_ACCEPTED_T058_NEXT",
   "task": "W01_W26_CONTINUOUS_IMPLEMENTATION",
   "status": "PARTIAL_EXECUTION_CONTINUING_NATIVE_UNVERIFIED",
   "candidate_source": "docs/full_project_execution/project_session/EXPERIMENT_READS_SOFTWARE_CHECKPOINT.json",
@@ -103,7 +103,7 @@
       "native_acceptance": "NOT_RUN"
     }
   ],
-  "next_action": "Use same Luna executor to repair frozen W24 non-finite actfac validation, preserve original failure, and review/integrate physical-controls candidate using explicit next-stage test selection; then continue MASTER_GOAL without stage pauses",
+  "next_action": "Implement T058 assumption provenance presentation and separation from physical conclusions using existing validation reports; retain original T047 native/lifecycle gaps, then continue W21/W23 and MASTER_GOAL.",
   "active_jobs": [],
   "blockers": [
     "W23 failed setup owned Server 75272 and daemon 75260 remain preserved: cleanup SIGTERM was rejected by automatic approval and explicit authorization is pending; no cleanup or relaunch authorized by elapsed time.",
@@ -132,7 +132,7 @@
     "native_solve_budget_remaining": 0,
     "evidence": "docs/full_project_execution/evidence/luna_process_reconciliation/mac_readonly_snapshot_20260926T2152Z.json"
   },
-  "updated_at": "2026-09-28T08:52:16.901799+00:00",
+  "updated_at": "2026-09-28T08:55:38.097557+00:00",
   "note": "Original scope remains through W26. User explicitly resumed after the test-efficiency analysis; implement efficiency improvements first. OpenViking task-detail retrieval was denied by auto-review because it would disclose internal roadmap identifiers externally; no workaround. Use current frozen workpack and read-only local memory only. Do not rerun bootstrap/init on resume. Source files now contain executor edits; do not rerun bootstrap/init. Git metadata is an APFS pointer managed by main agent; migration requires bundle/source transfer, not copying only the repository pointer. Git metadata migration is documented by evidence/git_metadata_relocation.json and owned by the main agent; do not copy the APFS git pointer to another machine without source bundle/archive. GUI permission boundary and checkpoint solution-scope caveat recorded. This executor has one W24 native setup-only failure with exact cleanup verified; the durable operation/job UNKNOWN records remain unchanged. No W24 solver submission occurred. Saved-MPH readback supplement uses separate time/evidence and zero study/solver calls; run08 remains FAIL_OR_INCOMPLETE. Root raw SQLite recomputation is linked under native_resume_saved_artifact_supplement.raw_recomputation_evidence; original run08 remains FAIL_OR_INCOMPLETE and no solve budget is restored. Latest checkpoint 2026-09-27T03:50:43Z: W24 0334Z setup run failed pre-model due Python 3.14 missing mcp, with exact cleanup; 0346Z candidate pins the validated 3.12.13 environment and passes a production no-engine registry/daemon preflight. Native setup remains pending root review; science implementation continues offline. Latest checkpoint 2026-09-27T09:09:28Z: W24 0841Z candidate was invoked once at 0857Z and failed before any engine/Worker birth because project.inspect received an injected idempotency_key; project.create persisted successfully. Exact read-only SQLite hash and operation result are in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_contract_diagnostic.json. The runner now omits the unnecessary inspect key; actual ControlDaemon focused regression is 2/2 PASS in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_runner_regression_receipt.json. No native retry or acceptance is claimed; release F04 runtime integration is active, so refresh closure and root review are required before another launch. Windows COMSOL 6.3 remains required/unassessed; only macOS 6.3 is USER_REQUESTED_SKIP.",
   "native_resume_smoke": {
     "status": "FAIL_OR_INCOMPLETE_POINT_SCHEMA_FAILURE; SOLVED_CHILD_ARTIFACT_DURABLE; SOLVE_BUDGET_EXHAUSTED; SEPARATE_SAVED_MPH_READBACK_PASS",
@@ -991,11 +991,11 @@
   },
   "verified_git_sync": {
     "status": "VERIFIED",
-    "head": "e1d7d6eeae744a5ece21ee4194ef78900fd4bceb",
-    "origin_main": "e1d7d6eeae744a5ece21ee4194ef78900fd4bceb",
-    "verified_at": "2026-09-28T07:07:01.020406+00:00",
+    "head": "e79f00a6203dd2da89c5e5277b15df76bedb72ca",
+    "origin_main": "e79f00a6203dd2da89c5e5277b15df76bedb72ca",
+    "verified_at": "2026-09-28T08:55:38.097469+00:00",
     "method": "post-push fetch; HEAD/origin-main equality",
-    "stage": "W21 state-map selector and durable stage-attempt software"
+    "stage": "test-efficiency scoped offline tooling"
   },
   "w24_static_shape_science_admission_repair": {
     "status": "SCOPED_SOFTWARE_REPAIR_ACCEPTED_NATIVE_NOT_RUN",
@@ -1967,7 +1967,7 @@
         "next_action": "After test-efficiency stage, implement typed read-only Eval for exact dataset/outer/inner/selection, preserving unverified units/frame; investigate exact Xmesh tuple binding; actual stage solve/check/save remains open"
       },
       "W24": {
-        "status": "FROZEN_PENDING_MAIN_REVIEW",
+        "status": "EXECUTING_MAIN_REVIEW_REPAIR_AND_INTEGRATION",
         "checkpoint": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-physical-controls-303198a/checkpoints/w24_physical_controls_20260928T0718Z/software_checkpoint.json",
         "sha256": "f6e9c1ae6ad46a0bb656cb26351a2c53a476c1218300e8f0a10c62339112e868",
         "agent_reported_tests_passed": 257,
@@ -1980,7 +1980,15 @@
           "sha256": "4ea06a9a80cb16b4174cd574dfdaed27d142d425d77c488b012490a08de15d6c",
           "native": "NOT_RUN",
           "next_action": "After tooling stage, repair finite numeric validation and add focused negative controls before final candidate integration"
-        }
+        },
+        "main_nonfinite_retest": {
+          "status": "PASS_FOUR_CASES_FINAL_REGRESSION_PENDING",
+          "source_sha256": "3ded29a6581cc99a2db38db36b16729a96346af9c0544ced557244d4dfb6ab2a",
+          "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w24-review-preview/nonfinite_actfac_main_retest.json",
+          "sha256": "4b0dfcb28d7c0cfb66e5d0d6c26962e70b02e72049dba1db99f98b7e18e520e6",
+          "native": "NOT_RUN"
+        },
+        "original_acceptance_scope_note": "T047 includes flat/step plus UV-thermal-cooling state history; T058 requires explicitly estimated sources, separation of fit/validation and assumption sensitivity. Existing ValidationReport input_assumptions JSON is reusable; Markdown omission identified; no new implementation of that next gap yet."
       },
       "W23": {
         "status": "FROZEN_PENDING_MAIN_REVIEW",
@@ -2009,6 +2017,19 @@
       "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/20260928T085002Z-580f0720.summary.json",
       "sha256": "51b802c5c713d2204cbb27626a6146ea3381bf35feff692b733a707bcd2d3591"
     },
-    "next_action": "Use same Luna executor to repair frozen W24 non-finite actfac validation, preserve original failure, and review/integrate physical-controls candidate using explicit next-stage test selection; then continue MASTER_GOAL without stage pauses"
+    "next_action": "Use same Luna executor to repair frozen W24 non-finite actfac validation, preserve original failure, and review/integrate physical-controls candidate using explicit next-stage test selection; then continue MASTER_GOAL without stage pauses",
+    "main_post_commit_replay": {
+      "status": "PASS",
+      "tests": 9,
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/20260928T085332Z-a5c4d6ce.summary.json",
+      "sha256": "3e525c6eb39b9b5ec69de911707671b86943dc81fbac57fa7da4007eae53a0dd",
+      "native": "NOT_RUN"
+    },
+    "github": "VERIFIED e79f00a6203dd2da89c5e5277b15df76bedb72ca"
+  },
+  "w24_physical_controls_checkpoint": {
+    "status": "PASS_SCOPED_SOFTWARE",
+    "path": "docs/full_project_execution/w24/PHYSICAL_CONTROLS_SOFTWARE_CHECKPOINT.json",
+    "native_acceptance": "NOT_RUN"
   }
 }

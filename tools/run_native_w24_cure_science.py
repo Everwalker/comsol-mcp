@@ -1845,7 +1845,9 @@ class NativeScienceCampaignAdapter:
         return epoch
 
     def _dispatch(self, operation: str, arguments: Mapping[str, Any], *,
-                  binding: ManagedModelBinding | None = None, timeout_s: float = 120.0) -> dict[str, Any]:
+                  binding: ManagedModelBinding | None = None, timeout_s: float = 120.0,
+                  request_id: str | None = None,
+                  idempotency_key: str | None = None) -> dict[str, Any]:
         from tools.run_native_resume_smoke import _dispatch
 
         if self.daemon is None or self.project_id != self._immutable_project_id:
@@ -1856,8 +1858,10 @@ class NativeScienceCampaignAdapter:
                 self.daemon, operation, dict(arguments), project_id=self.project_id,
                 ref=dict(binding.model_ref) if binding is not None else None,
                 revision=binding.revision if binding is not None else None,
-                idempotency_key=f"w24-science-{uuid4()}",
-                request_id=f"w24-science-request-{uuid4()}", rpc_timeout_s=timeout_s),
+                idempotency_key=(idempotency_key if idempotency_key is not None
+                                 else f"w24-science-{uuid4()}"),
+                request_id=(request_id if request_id is not None
+                            else f"w24-science-request-{uuid4()}"), rpc_timeout_s=timeout_s),
             worker_required=operation in {"operation_call", "registry_call", "model_load",
                                           "model.inspect", "study.run"})
 
@@ -1931,7 +1935,9 @@ class NativeScienceCampaignAdapter:
     def _fixture_action(self, binding: ManagedModelBinding, action: str,
                         arguments: Mapping[str, Any], *, timeout_s: float,
                         source_fixture: Path | None = None,
-                        entrypoint: str | None = None) -> tuple[ManagedModelBinding, dict[str, Any], dict[str, Any]]:
+                        entrypoint: str | None = None,
+                        request_id: str | None = None,
+                        idempotency_key: str | None = None) -> tuple[ManagedModelBinding, dict[str, Any], dict[str, Any]]:
         native_arguments = dict(arguments)
         for key in ("path", "output_path", "ledger_path", "save_after_success_path",
                     "equation_view_path"):
@@ -1962,8 +1968,12 @@ class NativeScienceCampaignAdapter:
                           "arguments": {"action": action, **native_arguments},
                           "mode": "trusted"},
         }
-        response = self._dispatch("operation_call", request_arguments,
-                                  binding=binding, timeout_s=timeout_s)
+        dispatch_options: dict[str, Any] = {"binding": binding, "timeout_s": timeout_s}
+        if request_id is not None:
+            dispatch_options["request_id"] = request_id
+        if idempotency_key is not None:
+            dispatch_options["idempotency_key"] = idempotency_key
+        response = self._dispatch("operation_call", request_arguments, **dispatch_options)
         self._log_response(f"java.{action}", response)
         if not self.setup_runner._worker_request_terminal(response):
             raise CampaignError(f"Java action {action} has no observed terminal Worker result; no retry")

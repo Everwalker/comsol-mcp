@@ -24,7 +24,15 @@ from tools.w24_science_acceptance import AcceptanceError
 SHA256_RE = re.compile(r"[0-9a-f]{64}")
 MAXWELL_TIMES_S = tuple(float(i) for i in range(902))
 GEL_TIMES_S = tuple(i * 0.5 for i in range(7))
-CONTROL_COORDINATE_M = ((50e-6, 50e-6, 50e-6),)
+CONTROL_COORDINATE_M = ((50e-6, 50e-6, 50e-6),)  # V1 compatibility only.
+CONTROL_COORDINATES_V2_M = tuple(
+    (100e-6 * x, 100e-6 * y, 100e-6 * z)
+    for x in (0.25, 0.5, 0.75)
+    for y in (0.25, 0.5, 0.75)
+    for z in (0.25, 0.5, 0.75)
+)
+CONTROL_CAPTURE_SCHEMA_V1 = "W24_CURE_V2_NATIVE_CONTROL_CAPTURE_V1"
+CONTROL_CAPTURE_SCHEMA_V2 = "W24_CURE_V2_NATIVE_CONTROL_CAPTURE_V2"
 MAXWELL_EXPRESSIONS = ("solid.sx", "solid.sy")
 MAXWELL_UNITS = ("Pa", "Pa")
 GEL_EXPRESSIONS = (
@@ -45,6 +53,11 @@ ALLOWED_CAPTURE_ACTIONS = {
 }
 ALLOWED_PUBLIC_ACTIONS = {
     **ALLOWED_CAPTURE_ACTIONS,
+    "build_maxwell_ramp_hold": ("W24CureLawV2ControlFixture#run", None),
+    "readback_maxwell_ramp_hold": ("W24CureLawV2ControlFixture#run", None),
+    "build_gel_stress_free": ("W24CureLawV2ControlFixture#run", None),
+    "readback_gel_stress_free": ("W24CureLawV2ControlFixture#run", None),
+    "study_run_control": ("W24CureLawV2ControlFixture#run", None),
     "study_run": ("W24CureScienceFixture#run", None),
     "readback": ("W24CureScienceFixture#run", None),
     "solution_snapshot": ("W24CureScienceFixture#run", None),
@@ -169,11 +182,11 @@ def validate_capture_artifact(artifact: Mapping[str, Any], *, expected_action: s
         raise CaptureError("native Interp coordinate receipt differs from the capture coordinates")
 
     if expected_action == "capture_maxwell_control":
-        schema, case_id = "W24_CURE_V2_NATIVE_CONTROL_CAPTURE_V1", "maxwell_ramp_hold_control"
+        schema, case_id = {CONTROL_CAPTURE_SCHEMA_V1, CONTROL_CAPTURE_SCHEMA_V2}, "maxwell_ramp_hold_control"
         expressions, units, expected_times = list(MAXWELL_EXPRESSIONS), list(MAXWELL_UNITS), MAXWELL_TIMES_S
         expected_tlist = "range(0[s],1[s],901[s])"
     elif expected_action == "capture_gel_control":
-        schema, case_id = "W24_CURE_V2_NATIVE_CONTROL_CAPTURE_V1", "gel_stress_free_control"
+        schema, case_id = {CONTROL_CAPTURE_SCHEMA_V1, CONTROL_CAPTURE_SCHEMA_V2}, "gel_stress_free_control"
         expressions, units, expected_times = list(GEL_EXPRESSIONS), list(GEL_UNITS), GEL_TIMES_S
         expected_tlist = "range(0[s],0.5[s],3[s])"
     elif expected_action == "history_capture_v2":
@@ -184,7 +197,9 @@ def validate_capture_artifact(artifact: Mapping[str, Any], *, expected_action: s
         raise CaptureError("unsupported capture action")
     if expected_action != "history_capture_v2" and row.get("case_id") != case_id:
         raise CaptureError("capture case identity differs from the requested control action")
-    if row.get("schema") != schema:
+    observed_schema = row.get("schema")
+    schema_matches = observed_schema in schema if isinstance(schema, set) else observed_schema == schema
+    if not schema_matches:
         raise CaptureError("capture schema differs from the action's frozen result contract")
     if expected_tlist is not None and row.get("study_tlist_readback") != expected_tlist:
         raise CaptureError("capture study time-list readback differs from the frozen control schedule")
@@ -197,8 +212,22 @@ def validate_capture_artifact(artifact: Mapping[str, Any], *, expected_action: s
     observed_units = row.get("units")
     if observed_expressions != expressions or observed_units != units:
         raise CaptureError("capture omitted, reordered, or changed an exact expression/unit")
-    expected_coords = [list(point) for point in (CONTROL_COORDINATE_M if expected_action != "history_capture_v2" else (
-        (25e-6, 520e-6), (50e-6, 530e-6), (75e-6, 540e-6)))]
+    if expected_action == "history_capture_v2":
+        expected_coords = [[25e-6, 520e-6], [50e-6, 530e-6], [75e-6, 540e-6]]
+    elif observed_schema == CONTROL_CAPTURE_SCHEMA_V2:
+        expected_coords = [list(point) for point in CONTROL_COORDINATES_V2_M]
+        plan_sha = row.get("control_plan_sha256")
+        if (not isinstance(plan_sha, str) or not SHA256_RE.fullmatch(plan_sha) or
+                not isinstance(row.get("campaign_id"), str) or not row.get("campaign_id") or
+                not isinstance(row.get("approval_sha256"), str) or
+                not SHA256_RE.fullmatch(row["approval_sha256"]) or
+                not isinstance(row.get("slot_idempotency_key"), str) or
+                not SHA256_RE.fullmatch(row["slot_idempotency_key"]) or
+                row.get("coordinate_grid") !=
+                "uniform 3x3x3 control cube at 25/50/75 percent fractions on every axis"):
+            raise CaptureError("V2 control capture lacks the exact approved plan/slot and spatial-grid identity")
+    else:
+        expected_coords = [list(point) for point in CONTROL_COORDINATE_M]
     if row.get("coordinates_m") != expected_coords or feature.get("coordinate_source", "").find("setInterpolationCoordinates") < 0:
         raise CaptureError("capture coordinates differ from the exact Java interpolation points")
     times_raw = row.get("stored_times_s")
@@ -258,11 +287,75 @@ def validate_capture_artifact(artifact: Mapping[str, Any], *, expected_action: s
         "stored_time_count": len(times),
         "expression_count": len(expressions),
         "coordinate_count": point_count,
+        "control_capture_schema": observed_schema,
+        "control_plan_sha256": row.get("control_plan_sha256"),
         "shape": expected_shape,
         "quasistatic_readback": "Quasistatic",
         "maxwell_branch_reference_state": "UNVERIFIED",
         "native_execution_performed_by_validator": False,
     }
+
+
+def validate_control_configuration_readback(readback: Mapping[str, Any], *,
+                                            case_id: str) -> dict[str, Any]:
+    """Validate the exact unsolved 3D control-model configuration readback."""
+    row = _require_mapping(readback, "control configuration readback")
+    if (case_id not in {"maxwell_ramp_hold_control", "gel_stress_free_control"} or
+            row.get("schema") != "W24_CURE_LAW_V2_CONTROL_READBACK_V1" or
+            row.get("case_id") != case_id or
+            row.get("geometry_dimension") != 3 or row.get("geometry_domain_count") != 1 or
+            row.get("all_six_exterior_faces_selected") is not True or
+            row.get("quasistatic_readback") != "Quasistatic" or
+            row.get("solver_submissions") != 0 or
+            row.get("native_study_run_calls") != 0):
+        raise CaptureError("control configuration readback is not the exact unsolved 3D quasistatic fixture")
+    bounds = row.get("bounding_box_m")
+    if (not isinstance(bounds, list) or len(bounds) != 6 or
+            any(isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(float(v))
+                for v in bounds) or
+            any(abs(float(actual) - expected) > 1e-12
+                for actual, expected in zip(bounds, (0.0, 100e-6, 0.0, 100e-6, 0.0, 100e-6)))):
+        raise CaptureError("control geometry bounds differ from the frozen 100 um cube")
+    if (row.get("thermal_physics") != "absent" or
+            row.get("chemical_physics") != "absent" or
+            row.get("absolute_irradiance_or_thermal_load") != "absent"):
+        raise CaptureError("uniform mechanics control contains a forbidden thermal/chemical/load term")
+    if case_id == "maxwell_ramp_hold_control":
+        if (row.get("study_tag") != "stdMaxwell" or
+                not isinstance(row.get("solver_sequence"), str) or not row["solver_sequence"] or
+                row.get("study_output_times") != "range(0[s],1[s],901[s])" or
+                row.get("material_model") != "GeneralizedMaxwell" or
+                row.get("deformation_model") != "full" or
+                row.get("E_long_term") != "Einf=0.5[GPa]" or
+                row.get("E_branch_0") != "Ebranch=1.5[GPa]" or
+                row.get("nu") != "nuVisco=0.35" or
+                row.get("Kvm_v") != ["Kbranch"] or row.get("Gvm") != ["Gbranch"] or
+                row.get("tauvm") != ["tauMaxwell"] or
+                row.get("thermal_or_chemical_strain_features") != 0 or
+                row.get("activation_feature") != "none; solid material is active from initial time" or
+                row.get("native_branch_initial_reference_state") != "UNVERIFIED_FAIL_CLOSED"):
+            raise CaptureError("Maxwell control configuration differs from its complete ordered branch/readback contract")
+        return {"status": "MAXWELL_CONTROL_CONFIGURATION_MATCHED_NOT_SOLVED",
+                "branch_reference_state": "UNVERIFIED", "native_acceptance": "NOT_RUN"}
+    raw_actfac = row.get("actfac")
+    if isinstance(raw_actfac, bool) or not isinstance(raw_actfac, (int, float, str)):
+        raise CaptureError("gel control actfac readback must be a finite numeric value")
+    try:
+        actfac = float(raw_actfac)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise CaptureError("gel control actfac readback must be a finite numeric value") from exc
+    if not math.isfinite(actfac):
+        raise CaptureError("gel control actfac readback must be a finite numeric value")
+    if (row.get("study_tag") != "stdGel" or
+            not isinstance(row.get("solver_sequence"), str) or not row["solver_sequence"] or
+            row.get("study_output_times") != "range(0[s],0.5[s],3[s])" or
+            row.get("activation_expression") != "t>=tGel || solid.wasactive" or
+            row.get("actfac_was_set") is not False or
+            abs(actfac - 1e-5) > 1e-15 or
+            row.get("native_activation_reference_state") != "UNVERIFIED_FAIL_CLOSED"):
+        raise CaptureError("gel control configuration differs from the exact activation/reference readback")
+    return {"status": "GEL_CONTROL_CONFIGURATION_MATCHED_NOT_SOLVED",
+            "activation_reference_state": "UNVERIFIED", "native_acceptance": "NOT_RUN"}
 
 
 def validate_cure_law_v2_contract_readback(readback: Mapping[str, Any]) -> dict[str, Any]:
@@ -734,6 +827,93 @@ def _verify_public_capture_record(response: Any, operation_record: Any, *, proje
             "readback_data": dict(readback), "capture_validation": validated,
             "native_acceptance": "NOT_RUN",
         }
+    if expected_action in {"build_maxwell_ramp_hold", "readback_maxwell_ramp_hold",
+                           "build_gel_stress_free", "readback_gel_stress_free"}:
+        readback = _require_mapping(java.get("readback"), "Java control configuration readback")
+        is_maxwell = "maxwell" in expected_action
+        case_id = "maxwell_ramp_hold_control" if is_maxwell else "gel_stress_free_control"
+        expected_status = ("BUILT_NOT_SOLVED" if expected_action.startswith("build_")
+                           else "CONTROL_CONFIGURATION_READBACK_NOT_SOLVED")
+        if (readback.get("case_id") != case_id or
+                readback.get("status") != expected_status or
+                readback.get("native_study_run_calls") != 0 or
+                readback.get("solver_submissions") != 0):
+            raise CaptureError("control setup/readback route changed its exact case or submitted Study.run")
+        validated = validate_control_configuration_readback(readback, case_id=case_id)
+        return {
+            "status": "PUBLIC_CONTROL_CONFIGURATION_OPERATION_AUTHENTICATED_NATIVE_NOT_RUN",
+            "source_path": str(source_path), "source_sha256": observed_source_sha,
+            "project_id": expected_project_id, "session_id": expected_session_id,
+            "model_ref": dict(expected_model_ref), "revision_before": expected_revision,
+            "revision_after": returned_revision, "request_id": record["request_id"],
+            "operation_id": record["operation_id"], "idempotency_key": record["idempotency_key"],
+            "request_hash": record["request_hash"],
+            "job_id": record["result"].get("execution", {}).get("job_id"),
+            "artifact": None, "artifact_receipt": None, "artifact_data": None,
+            "readback_data": dict(readback), "capture_validation": validated,
+            "native_acceptance": "NOT_RUN",
+        }
+    if expected_action == "study_run_control":
+        request_arguments = _require_mapping(arguments, "control Study.run request arguments")
+        readback = _require_mapping(java.get("readback"), "Java control Study.run readback")
+        case_id = request_arguments.get("case_id")
+        study_tag = request_arguments.get("study_tag")
+        expected_pair = {
+            "maxwell_ramp_hold_control": "stdMaxwell",
+            "gel_stress_free_control": "stdGel",
+        }
+        if (case_id not in expected_pair or study_tag != expected_pair[case_id] or
+                readback.get("status") != "NATIVE_STUDY_RUN_RETURNED" or
+                readback.get("case_id") != case_id or readback.get("study_tag") != study_tag or
+                readback.get("study_run_calls_from_this_action") != 1 or
+                readback.get("native_study_run_calls") != 1 or
+                readback.get("quasistatic_readback") != "Quasistatic" or
+                readback.get("solver_sequence") != request_arguments.get("solver_tag") or
+                readback.get("campaign_id") != request_arguments.get("campaign_id") or
+                readback.get("approval_sha256") != request_arguments.get("approval_sha256") or
+                readback.get("control_plan_sha256") != request_arguments.get("control_plan_sha256") or
+                readback.get("slot_idempotency_key") != request_arguments.get("slot_idempotency_key")):
+            raise CaptureError("control Study.run operation differs from its exact case/solver/approval slot")
+        if returned_revision != expected_revision + 1:
+            raise CaptureError("control Study.run did not produce exactly one public model revision transition")
+        requested_save_path = request_arguments.get("save_after_success_path")
+        if not isinstance(requested_save_path, str) or not requested_save_path:
+            raise CaptureError("control Study.run requires the exact immediate saved-MPH target")
+        save_path = _resolve_project_file(
+            project_root, requested_save_path, "control Study.run saved MPH", must_exist=True)
+        save_receipt = _require_mapping(readback.get("immediate_save_receipt"),
+                                        "control Study.run immediate-save receipt")
+        size = save_path.stat().st_size
+        digest = _sha256(save_path)
+        if (readback.get("immediate_save_path") != requested_save_path or
+                save_receipt.get("status") != "STUDY_RUN_MPH_SAVED_AND_HASHED" or
+                save_receipt.get("path") != requested_save_path or
+                not _is_int(save_receipt.get("size_bytes")) or save_receipt.get("size_bytes") != size or
+                save_receipt.get("sha256") != digest or size <= 0):
+            raise CaptureError("control Study.run save receipt differs from the exact request and saved bytes")
+        return {
+            "status": "PUBLIC_CONTROL_STUDY_RUN_AND_SAVE_AUTHENTICATED_NATIVE_REVIEW_REQUIRED",
+            "source_path": str(source_path), "source_sha256": observed_source_sha,
+            "project_id": expected_project_id, "session_id": expected_session_id,
+            "model_ref": dict(expected_model_ref), "revision_before": expected_revision,
+            "revision_after": returned_revision, "request_id": record["request_id"],
+            "operation_id": record["operation_id"], "idempotency_key": record["idempotency_key"],
+            "request_hash": record["request_hash"], "job_id": record["job_id"],
+            "artifact": {"path": str(save_path), "size_bytes": size, "sha256": digest},
+            "artifact_receipt": dict(save_receipt), "artifact_data": None,
+            "readback_data": dict(readback),
+            "capture_validation": {
+                "status": "PUBLIC_CONTROL_STUDY_RUN_RECEIPT_SCHEMA_VALIDATED_NATIVE_NOT_RUN",
+                "case_id": case_id, "study_tag": study_tag,
+                "solver_tag": readback.get("solver_sequence"),
+                "study_run_calls_from_this_action": 1,
+                "approval_sha256": request_arguments.get("approval_sha256"),
+                "control_plan_sha256": request_arguments.get("control_plan_sha256"),
+                "slot_idempotency_key": request_arguments.get("slot_idempotency_key"),
+                "immediate_save": {"path": str(save_path), "size_bytes": size, "sha256": digest},
+            },
+            "native_acceptance": "NOT_RUN",
+        }
     if expected_action == "study_run":
         arguments = _require_mapping(arguments, "Study.run public arguments")
         readback = _require_mapping(java.get("readback"), "Java Study.run readback")
@@ -1062,6 +1242,18 @@ def _verify_public_capture_record(response: Any, operation_record: Any, *, proje
             raise CaptureError("Java public response solver/study receipt differs from the raw artifact")
         if arguments.get("study_tag") is not None and arguments.get("study_tag") != artifact.get("study_tag"):
             raise CaptureError("Java result study tag differs from the exact public request")
+        if expected_action in {"capture_maxwell_control", "capture_gel_control"} and \
+                arguments.get("control_plan_sha256") is not None:
+            expected_identity = {
+                "campaign_id": arguments.get("campaign_id"),
+                "approval_sha256": arguments.get("approval_sha256"),
+                "control_plan_sha256": arguments.get("control_plan_sha256"),
+                "slot_idempotency_key": arguments.get("slot_idempotency_key"),
+            }
+            if (artifact.get("schema") != CONTROL_CAPTURE_SCHEMA_V2 or
+                    any(not isinstance(value, str) or not value or artifact.get(key) != value
+                        for key, value in expected_identity.items())):
+                raise CaptureError("V2 control capture differs from its authenticated approval/plan/slot request")
     return {
         "status": "PUBLIC_CAPTURE_ENVELOPE_AND_ARTIFACT_MATCHED_NATIVE_REVIEW_REQUIRED",
         "source_path": str(source_path),
