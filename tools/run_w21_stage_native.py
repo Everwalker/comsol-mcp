@@ -27,7 +27,7 @@ from typing import Any, Mapping
 from uuid import uuid4
 
 
-SCHEMA = "W21_FIELD_IDENTITY_MCP_RUN_V1"
+SCHEMA = "W21_FIELD_IDENTITY_MCP_RUN_V2"
 RUN_BUDGET_S = 900
 RPC_WAIT_S = 45
 CLEANUP_RESERVE_S = 60
@@ -246,9 +246,133 @@ def _check_64_receipt(path: Path) -> dict[str, Any]:
     return {"path": str(path.resolve()), "sha256": sha256_file(path)}
 
 
+def _task_owned_server_home_root(task_root: Path, requested: Path | None, *,
+                                 create: bool) -> Path:
+    """Resolve a real, non-aliased runtime-home root inside this frozen task root."""
+    root = Path(task_root)
+    if root.is_symlink():
+        raise RunnerError("task root cannot be a symlink")
+    try:
+        root = root.resolve(strict=True)
+    except OSError as exc:
+        raise RunnerError("task root is unavailable") from exc
+    if not root.is_dir():
+        raise RunnerError("task root must be a real directory")
+    raw = Path(requested) if requested is not None else root / "h"
+    candidate = raw if raw.is_absolute() else root / raw
+    candidate = Path(os.path.abspath(str(candidate)))
+    try:
+        relative = candidate.relative_to(root)
+    except ValueError as exc:
+        raise RunnerError("server-home root must remain inside the authorized task root") from exc
+    if not relative.parts:
+        raise RunnerError("server-home root must be a dedicated task subdirectory")
+
+    cursor = root
+    for part in relative.parts:
+        cursor = cursor / part
+        junction_probe = getattr(cursor, "is_junction", None)
+        if (cursor.is_symlink()
+                or (callable(junction_probe) and junction_probe())):
+            raise RunnerError("server-home root cannot contain symlink or junction components")
+        if cursor.exists() and not cursor.is_dir():
+            raise RunnerError("server-home root components must be directories")
+        if cursor.exists():
+            try:
+                resolved_component = cursor.resolve(strict=True)
+                resolved_text = os.path.normcase(os.path.abspath(str(resolved_component)))
+                lexical_text = os.path.normcase(os.path.abspath(str(cursor)))
+                resolved_component.relative_to(root)
+            except (OSError, ValueError) as exc:
+                raise RunnerError("server-home root contains an alias outside the authorized task root") from exc
+            if resolved_text != lexical_text:
+                raise RunnerError("server-home root contains a non-canonical alias or junction")
+    if create:
+        candidate.mkdir(mode=0o700, parents=True, exist_ok=True)
+        cursor = root
+        for part in relative.parts:
+            cursor = cursor / part
+            junction_probe = getattr(cursor, "is_junction", None)
+            if (cursor.is_symlink()
+                    or (callable(junction_probe) and junction_probe())
+                    or not cursor.is_dir()):
+                raise RunnerError("server-home root changed or is not a real directory")
+            try:
+                resolved_component = cursor.resolve(strict=True)
+                resolved_component.relative_to(root)
+            except (OSError, ValueError) as exc:
+                raise RunnerError("server-home root escaped the authorized task root") from exc
+            if os.path.normcase(os.path.abspath(str(resolved_component))) != os.path.normcase(os.path.abspath(str(cursor))):
+                raise RunnerError("server-home root changed to a non-canonical alias or junction")
+    return candidate
+
+
+def _server_home_budget(server_home: Path) -> dict[str, Any]:
+    from comsol_mcp._session_server import windows_owned_server_path_budget
+
+    try:
+        # The real project/session IDs are assigned after public project.create.
+        # The shared session_state_directory helper makes their hash exactly 64
+        # hex characters, so any fixed labels produce the exact path length.
+        return windows_owned_server_path_budget(
+            Path(server_home) / "control-private" / "session-runtime-state",
+            "w21-preflight-project", "w21-preflight-session",
+        )
+    except Exception as exc:
+        if isinstance(exc, RunnerError):
+            raise
+        message = str(exc)
+        if "budget exceeded" in message:
+            raise RunnerError(message) from None
+        raise RunnerError("Windows Server path preflight could not be completed") from None
+
+
+def _validate_frozen_server_home(plan: Mapping[str, Any], *, require_absent: bool = True) -> dict[str, Any]:
+    try:
+        task_root = Path(plan["task_root"])
+        home_root = Path(plan["server_home_root"])
+        server_home_id = plan["server_home_id"]
+        server_home = Path(plan["server_home"])
+    except (KeyError, TypeError) as exc:
+        raise RunnerError("frozen server-home identity is incomplete") from exc
+    if not isinstance(server_home_id, str) or re.fullmatch(r"[0-9a-f]{16}", server_home_id) is None:
+        raise RunnerError("frozen server-home unique id is malformed")
+    resolved_root = _task_owned_server_home_root(task_root, home_root, create=False)
+    expected = resolved_root / server_home_id
+    if os.path.normcase(os.path.abspath(str(server_home))) != os.path.normcase(os.path.abspath(str(expected))):
+        raise RunnerError("frozen server-home path does not match its task-owned root and unique id")
+    run_root_text = plan.get("run_root")
+    if isinstance(run_root_text, str):
+        run_root = Path(os.path.abspath(run_root_text))
+        if (run_root == resolved_root or run_root in resolved_root.parents
+                or resolved_root in run_root.parents):
+            raise RunnerError("server-home root must be separate from the per-run evidence directory")
+    junction_probe = getattr(server_home, "is_junction", None)
+    if (server_home.is_symlink()
+            or (callable(junction_probe) and junction_probe())):
+        raise RunnerError("frozen server-home directory cannot be a symlink or junction")
+    if require_absent and server_home.exists():
+        raise RunnerError("frozen server-home unique directory is no longer fresh")
+    if not require_absent:
+        if not server_home.is_dir():
+            raise RunnerError("created server-home is not a real directory")
+        try:
+            resolved_home = server_home.resolve(strict=True)
+            resolved_home.relative_to(task_root.resolve(strict=True))
+        except (OSError, ValueError) as exc:
+            raise RunnerError("created server-home escaped the authorized task root") from exc
+        if os.path.normcase(os.path.abspath(str(resolved_home))) != os.path.normcase(os.path.abspath(str(server_home))):
+            raise RunnerError("created server-home resolves through an alias or junction")
+    budget = _server_home_budget(server_home)
+    if budget != plan.get("server_home_path_budget"):
+        raise RunnerError("frozen Windows server-home path budget does not match current paths")
+    return budget
+
+
 def prepare(*, version: str, comsol_root: Path, jdk_home: Path,
             evidence_root: Path, source_root: Path = REPOSITORY,
-            prerequisite_64_receipt: Path | None = None) -> dict[str, Any]:
+            prerequisite_64_receipt: Path | None = None,
+            server_home_root: Path | None = None) -> dict[str, Any]:
     if version not in {"6.4", "6.3"}:
         raise RunnerError("selected version must be exactly 6.4 or 6.3")
     if platform.system() != "Windows":
@@ -258,7 +382,11 @@ def prepare(*, version: str, comsol_root: Path, jdk_home: Path,
         sys.path.insert(0, str(source_root))
     if os.environ.get("COMSOL_MCP_TOOL_PROFILE", "full").casefold() != "full":
         raise RunnerError("COMSOL_MCP_TOOL_PROFILE must be full to freeze the published W21 routes")
+    if Path(evidence_root).is_symlink():
+        raise RunnerError("evidence root cannot be a symlink")
     evidence_root = evidence_root.resolve(strict=True)
+    if not evidence_root.is_dir():
+        raise RunnerError("evidence root must be a real directory")
     if evidence_root == source_root or source_root in evidence_root.parents:
         raise RunnerError("evidence root must be outside the source checkout")
 
@@ -281,7 +409,26 @@ def prepare(*, version: str, comsol_root: Path, jdk_home: Path,
     run_root = evidence_root / version / run_id
     if run_root.exists() or run_root.is_symlink():
         raise RunnerError("run evidence path already exists")
+    resolved_server_home_root = _task_owned_server_home_root(
+        evidence_root, server_home_root, create=False,
+    )
+    if (run_root == resolved_server_home_root
+            or run_root in resolved_server_home_root.parents
+            or resolved_server_home_root in run_root.parents):
+        raise RunnerError("server-home root must be separate from the per-run evidence directory")
+    server_home_id = uuid4().hex[:16]
+    server_home = resolved_server_home_root / server_home_id
+    if server_home.exists() or server_home.is_symlink():
+        raise RunnerError("new server-home unique directory already exists")
+    server_home_path_budget = _server_home_budget(server_home)
+
     run_root.mkdir(parents=True, mode=0o700)
+    resolved_server_home_root = _task_owned_server_home_root(
+        evidence_root, resolved_server_home_root, create=True,
+    )
+    server_home = resolved_server_home_root / server_home_id
+    if server_home.exists() or server_home.is_symlink():
+        raise RunnerError("new server-home unique directory was claimed before freeze")
     workspace_root = run_root / "workspaces"
     workspace_root.mkdir(mode=0o700)
     project_workspace = workspace_root / "field-identity-probe"
@@ -300,6 +447,10 @@ def prepare(*, version: str, comsol_root: Path, jdk_home: Path,
     )}
     plan: dict[str, Any] = {
         "schema": SCHEMA, "run_id": run_id, "run_root": str(run_root.resolve()),
+        "task_root": str(evidence_root),
+        "server_home_root": str(resolved_server_home_root),
+        "server_home_id": server_home_id,
+        "server_home_path_budget": server_home_path_budget,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "requested_version": version, "selected_comsol": comsol, "selected_jdk": jdk,
         "python": python_identity, "source_root": str(source_root),
@@ -313,7 +464,7 @@ def prepare(*, version: str, comsol_root: Path, jdk_home: Path,
         "logical_operation_schemas_sha256": sha256_value(operation_schemas),
         "project_workspace": str(project_workspace),
         "stdio_home": str(run_root / "stdio-home"),
-        "server_home": str(run_root / "server-home"),
+        "server_home": str(server_home),
         "isolation_receipt": str(run_root / "owned_server_isolation.json"),
         "scratch": str(run_root / "scratch"),
         "prerequisite_64_receipt": prerequisite,
@@ -350,6 +501,7 @@ def verify_plan(plan: Mapping[str, Any], *, expected_sha256: str,
     observed_hash = candidate.pop("freeze_sha256", None)
     if observed_hash != expected_sha256 or sha256_value(candidate) != expected_sha256:
         raise RunnerError("freeze hash mismatch; execute requires the exact prepared candidate")
+    _validate_frozen_server_home(plan)
     current = source_manifest(source_root)
     if current != plan.get("source_manifest") or sha256_value(current) != plan.get("source_manifest_sha256"):
         raise RunnerError("frozen source manifest drifted; no MCP call was made")
@@ -1254,7 +1406,10 @@ def _load_plan(path: Path, expected: str) -> tuple[dict[str, Any], _RunState]:
         raise RunnerError("state receipt belongs to a different frozen plan")
     if state_value.get("status") != "PREPARED" or state_value.get("action_history"):
         raise RunnerError("state is not pristine PREPARED; replay is forbidden")
-    plan["run_root"] = str(path.parent.resolve(strict=True))
+    actual_run_root = path.parent.resolve(strict=True)
+    if os.path.normcase(os.path.abspath(str(Path(plan["run_root"])))) != os.path.normcase(str(actual_run_root)):
+        raise RunnerError("freeze plan is not located in its exact prepared run root")
+    plan["run_root"] = str(actual_run_root)
     return plan, _RunState(state_path, state_value)
 
 
@@ -1290,12 +1445,16 @@ async def _execute_stdio(plan: dict[str, Any], state: _RunState) -> dict[str, An
     if os.environ.get("COMSOL_MCP_TRUSTED_CODE", "").casefold() not in {"1", "true", "yes"}:
         raise RunnerError("COMSOL_MCP_TRUSTED_CODE grant must be explicitly present in the parent environment")
 
+    _validate_frozen_server_home(plan)
     from mcp import ClientSession, StdioServerParameters
     from mcp.client.stdio import stdio_client
     source_root = Path(plan["source_root"]).resolve(strict=True)
     run_root = Path(plan["run_root"])
-    for dirname in ("stdio-home", "server-home", "scratch", "prefs"):
+    server_home = Path(plan["server_home"])
+    for dirname in ("stdio-home", "scratch", "prefs"):
         (run_root / dirname).mkdir(mode=0o700, exist_ok=True)
+    server_home.mkdir(mode=0o700, parents=False, exist_ok=False)
+    _validate_frozen_server_home(plan, require_absent=False)
     env_names = ("PATH", "SYSTEMROOT", "WINDIR", "TEMP", "TMP", "USERPROFILE", "APPDATA", "LOCALAPPDATA")
     child_env = {name: os.environ[name] for name in env_names if name in os.environ}
     child_env.update({
@@ -1303,7 +1462,7 @@ async def _execute_stdio(plan: dict[str, Any], state: _RunState) -> dict[str, An
         "COMSOL_SERVER_VERSION": plan["selected_comsol"]["version"],
         "JAVA_HOME": plan["selected_jdk"]["home"],
         "COMSOL_JAVA_HOME": plan["selected_jdk"]["home"],
-        "COMSOL_SERVER_MCP_HOME": str(run_root / "server-home"),
+        "COMSOL_SERVER_MCP_HOME": str(server_home),
         "COMSOL_PROJECT_ROOT": str(Path(plan["project_workspace"]).parent),
         "COMSOL_PREFS_DIR": str(run_root / "prefs"),
         "COMSOL_MCP_ISOLATION_RECEIPT": plan["isolation_receipt"],
@@ -1361,6 +1520,8 @@ def _parser() -> argparse.ArgumentParser:
     prep.add_argument("--jdk-home", type=Path, required=True)
     prep.add_argument("--evidence-root", type=Path, required=True)
     prep.add_argument("--source-root", type=Path, default=REPOSITORY)
+    prep.add_argument("--server-home-root", type=Path,
+                      help="optional dedicated directory inside --evidence-root for short task-owned runtime homes")
     prep.add_argument("--prerequisite-64-receipt", type=Path)
     run = commands.add_parser("execute", help="one explicitly frozen metadata-only field probe")
     run.add_argument("--plan", type=Path, required=True)
@@ -1375,7 +1536,8 @@ def main(argv: list[str] | None = None) -> int:
             result = prepare(version=args.version, comsol_root=args.comsol_root,
                              jdk_home=args.jdk_home, evidence_root=args.evidence_root,
                              source_root=args.source_root,
-                             prerequisite_64_receipt=args.prerequisite_64_receipt)
+                             prerequisite_64_receipt=args.prerequisite_64_receipt,
+                             server_home_root=args.server_home_root)
         else:
             plan, state = _load_plan(args.plan, args.freeze_sha256)
             result = asyncio.run(_execute_stdio(plan, state))

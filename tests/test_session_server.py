@@ -11,7 +11,9 @@ import textwrap
 import pytest
 
 from comsol_mcp._platform_process import process_identity
-from comsol_mcp._session_context import CanonicalSocket, OwnedServerProcessIdentity
+from comsol_mcp._session_context import (
+    CanonicalSocket, OwnedServerProcessIdentity, SessionRuntimeConfig,
+)
 from comsol_mcp._session_server import (
     ManagedServerHandle,
     OwnedServerError,
@@ -20,6 +22,7 @@ from comsol_mcp._session_server import (
     _parse_lsof_rows,
     build_server_command,
     prepare_private_loopback_installation,
+    windows_owned_server_path_budget,
 )
 
 
@@ -96,6 +99,54 @@ def test_server_command_is_session_scoped_and_platform_explicit(tmp_path):
     windows = build_server_command(dirs, platform_name="windows")
     assert windows[0] == str(windows_launcher)
     assert "mphserver" not in windows
+
+
+def test_windows_server_budget_uses_full_hashed_session_suffix_and_fails_closed(tmp_path):
+    state_root = tmp_path / "h" / "0123456789abcdef" / "control-private" / "session-runtime-state"
+    budget = windows_owned_server_path_budget(state_root, "project", "session")
+    assert budget["path_limit_utf16_units_including_nul"] == 260
+    assert budget["command_line_limit_utf16_units_including_nul"] == 32767
+    assert budget["path_utf16_units_including_nul"]["launcher"] <= 260
+    assert budget["path_utf16_units_including_nul"]["owned_server_cwd"] <= 260
+    assert budget["command_line_utf16_units_including_nul"] < 32767
+    assert not state_root.exists()
+
+    deep_home = tmp_path / ("r" * 120) / ("s" * 120) / "h" / "0123456789abcdef"
+    deep_state_root = deep_home / "control-private" / "session-runtime-state"
+    with pytest.raises(OwnedServerError, match="path budget exceeded"):
+        windows_owned_server_path_budget(deep_state_root, "project", "session")
+    assert not deep_home.exists()
+
+
+def test_windows_owned_launcher_passes_exact_validated_executable_to_popen(tmp_path):
+    source = _installation(tmp_path / "installed")
+    executable = source / "bin/win64/comsolmphserver.exe"
+    executable.parent.mkdir(parents=True)
+    executable.write_bytes(b"synthetic Windows launcher")
+    state_root = tmp_path / "short" / "h" / "0123456789abcdef" / "control-private" / "session-runtime-state"
+    runtime = SessionRuntimeConfig(
+        runtime_id="fixture-runtime", comsol_version="6.4.0.293",
+        installation_root=source, java_executable=tmp_path / "jdk/bin/java.exe",
+        classpath=(source / "client.jar",), preferences_dir=tmp_path / "prefs",
+        session_state_root=state_root,
+    )
+    calls = []
+
+    def refuse_at_popen(command, **kwargs):
+        calls.append((list(command), dict(kwargs)))
+        raise OSError("synthetic launch boundary; no child created")
+
+    launcher = OwnedServerLauncher(process_factory=refuse_at_popen, platform_name="windows")
+    with pytest.raises(OwnedServerError, match="process creation failed"):
+        launcher.start(runtime, "project", "session")
+
+    assert len(calls) == 1
+    command, options = calls[0]
+    assert options["executable"] == command[0]
+    assert command[0].endswith("/installation/bin/win64/comsolmphserver.exe")
+    assert Path(command[0]).is_file()
+    assert options["creationflags"] == getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+    assert "start_new_session" not in options
 
 
 def test_lsof_field_parser_preserves_pid_and_canonical_socket_rows():

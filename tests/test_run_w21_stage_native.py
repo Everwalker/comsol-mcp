@@ -6,12 +6,14 @@ the native server, Java Worker, COMSOL engine, or solver.
 from __future__ import annotations
 
 import asyncio
+from contextlib import asynccontextmanager
 from concurrent.futures import ThreadPoolExecutor
 import importlib.util
 import json
 from pathlib import Path
+import sys
 import threading
-from types import SimpleNamespace
+from types import ModuleType, SimpleNamespace
 
 import pytest
 
@@ -31,13 +33,23 @@ def _plan(tmp_path: Path, *, worker_epoch: int = 7) -> dict:
     run_root = tmp_path / "run"
     workspace_root = run_root / "workspaces"
     workspace_root.mkdir(parents=True)
+    server_home_root = tmp_path / "h"
+    server_home_root.mkdir()
+    server_home_id = "0123456789abcdef"
+    server_home = server_home_root / server_home_id
     plan = {
         "schema": runner.SCHEMA,
         "run_id": "w21-test-run",
         "run_root": str(run_root),
+        "task_root": str(tmp_path),
+        "server_home_root": str(server_home_root),
+        "server_home_id": server_home_id,
+        "server_home_path_budget": runner._server_home_budget(server_home),
+        "server_home": str(server_home),
         "requested_version": "6.4",
         "selected_comsol": {
-            "runtime_id": "comsol64", "version": "6.4.0.293", "build": "293",
+            "runtime_id": "comsol64", "root": str(tmp_path / "COMSOL64"),
+            "version": "6.4.0.293", "build": "293",
         },
         "selected_jdk": {"home": "offline-test-jdk"},
         "source_root": str(root),
@@ -96,6 +108,29 @@ def _state(tmp_path: Path) -> runner._RunState:
     }
     path.write_text(json.dumps(value), encoding="utf-8")
     return runner._RunState(path, value)
+
+
+def _patch_prepare_environment(monkeypatch):
+    monkeypatch.setattr(runner.platform, "system", lambda: "Windows")
+    monkeypatch.setenv("COMSOL_MCP_TOOL_PROFILE", "full")
+    monkeypatch.setattr(runner, "_comsol_identity", lambda root, version: {
+        "runtime_id": "comsol64", "root": str(root), "version": version + ".0.293",
+        "build": "293", "server_executable_sha256": "a" * 64,
+    })
+    monkeypatch.setattr(runner, "_jdk_identity", lambda home: {
+        "home": str(home), "java_sha256": "b" * 64, "javac_sha256": "c" * 64,
+        "release_sha256": "d" * 64, "java_version": "11",
+    })
+    monkeypatch.setattr(runner, "_python_identity", lambda: {
+        "executable_sha256": "e" * 64, "python_version": "3.12.0",
+        "implementation": "CPython", "mcp_distribution_version": "1.30.0",
+    })
+    monkeypatch.setattr(runner, "_published_tool_schemas", lambda _root: {
+        name: {"type": "object"} for name in runner.REQUIRED_TOOLS
+    })
+    monkeypatch.setattr(runner, "_logical_schemas", lambda _root: {
+        name: {"type": "object"} for name in runner.LOGICAL_OPERATIONS
+    })
 
 
 class _FakeStdioSession:
@@ -360,31 +395,13 @@ def _patch_isolation(monkeypatch):
 
 
 def test_prepare_freezes_full_source_identity_without_starting_services(tmp_path, monkeypatch):
-    monkeypatch.setattr(runner.platform, "system", lambda: "Windows")
-    monkeypatch.setenv("COMSOL_MCP_TOOL_PROFILE", "full")
-    monkeypatch.setattr(runner, "_comsol_identity", lambda root, version: {
-        "runtime_id": "comsol64", "root": str(root), "version": version + ".0.293",
-        "build": "293", "server_executable_sha256": "a" * 64,
-    })
-    monkeypatch.setattr(runner, "_jdk_identity", lambda home: {
-        "home": str(home), "java_sha256": "b" * 64, "javac_sha256": "c" * 64,
-        "release_sha256": "d" * 64, "java_version": "11",
-    })
-    monkeypatch.setattr(runner, "_python_identity", lambda: {
-        "executable_sha256": "e" * 64, "python_version": "3.12.0",
-        "implementation": "CPython", "mcp_distribution_version": "1.30.0",
-    })
-    monkeypatch.setattr(runner, "_published_tool_schemas", lambda _root: {
-        name: {"type": "object"} for name in runner.REQUIRED_TOOLS
-    })
-    monkeypatch.setattr(runner, "_logical_schemas", lambda _root: {
-        name: {"type": "object"} for name in runner.LOGICAL_OPERATIONS
-    })
+    _patch_prepare_environment(monkeypatch)
     evidence = tmp_path / "external-evidence"
     evidence.mkdir()
 
     result = runner.prepare(version="6.4", comsol_root=tmp_path / "COMSOL64",
-                            jdk_home=tmp_path / "JDK11", evidence_root=evidence)
+                            jdk_home=tmp_path / "JDK11", evidence_root=evidence,
+                            server_home_root=evidence / "h")
     plan = result["plan"]
     expected_files = {
         "tools/run_w21_stage_native.py", "tools/java/W21Fixture.java",
@@ -399,10 +416,144 @@ def test_prepare_freezes_full_source_identity_without_starting_services(tmp_path
     assert plan["fixture_sha256"] == plan["source_manifest"]["tools/java/W21Fixture.java"]
     assert plan["probe_sha256"] == plan["source_manifest"]["tools/java/W21FieldIdentityProbe.java"]
     assert plan["budgets"]["study_dispatch"] == plan["budgets"]["solver_dispatch"] == 0
+    assert Path(plan["server_home"]).parent == Path(plan["server_home_root"])
+    assert Path(plan["server_home_root"]).name == "h"
+    assert len(plan["server_home_id"]) == 16
+    assert plan["server_home_path_budget"]["command_line_utf16_units_including_nul"] <= 32767
+    assert max(plan["server_home_path_budget"]["path_utf16_units_including_nul"].values()) <= 260
     assert result["status"] == "PREPARED_ONLY"
     assert not Path(plan["project_workspace"]).exists()
     assert not Path(plan["server_home"]).exists()
     assert json.loads((Path(result["run_root"]) / "state.json").read_text())["status"] == "PREPARED"
+
+
+def test_prepare_accepts_explicit_short_runtime_root_inside_task(tmp_path, monkeypatch):
+    _patch_prepare_environment(monkeypatch)
+    evidence = tmp_path / "task"
+    evidence.mkdir()
+    requested_root = evidence / "runtime"
+    result = runner.prepare(version="6.4", comsol_root=tmp_path / "COMSOL64",
+                            jdk_home=tmp_path / "JDK11", evidence_root=evidence,
+                            server_home_root=requested_root)
+    plan = result["plan"]
+    assert Path(plan["server_home_root"]) == requested_root
+    assert Path(plan["server_home"]).parent == requested_root
+    assert not Path(plan["server_home"]).exists()
+
+
+def test_prepare_assigns_distinct_uncreated_runtime_homes_per_run(tmp_path, monkeypatch):
+    _patch_prepare_environment(monkeypatch)
+    evidence = tmp_path / "task"
+    evidence.mkdir()
+    first = runner.prepare(version="6.4", comsol_root=tmp_path / "COMSOL64",
+                           jdk_home=tmp_path / "JDK11", evidence_root=evidence)
+    second = runner.prepare(version="6.4", comsol_root=tmp_path / "COMSOL64",
+                            jdk_home=tmp_path / "JDK11", evidence_root=evidence)
+    first_home = Path(first["plan"]["server_home"])
+    second_home = Path(second["plan"]["server_home"])
+    assert first_home != second_home
+    assert first_home.parent == second_home.parent == evidence / "h"
+    assert not first_home.exists() and not second_home.exists()
+
+
+@pytest.mark.parametrize("server_home_root_kind", ["outside", "symlink", "junction_alias"])
+def test_prepare_refuses_server_home_root_outside_task_or_aliased(tmp_path, monkeypatch, server_home_root_kind):
+    _patch_prepare_environment(monkeypatch)
+    evidence = tmp_path / "task"
+    evidence.mkdir()
+    if server_home_root_kind == "outside":
+        requested = tmp_path / "outside"
+    elif server_home_root_kind == "symlink":
+        target = tmp_path / "target"
+        target.mkdir()
+        requested = evidence / "h"
+        requested.symlink_to(target, target_is_directory=True)
+    else:
+        requested = evidence / "h"
+        requested.mkdir()
+        target = tmp_path / "junction-target"
+        target.mkdir()
+        original_resolve = Path.resolve
+
+        def resolve_junction(path, *args, **kwargs):
+            if path == requested:
+                return target
+            return original_resolve(path, *args, **kwargs)
+
+        monkeypatch.setattr(Path, "resolve", resolve_junction)
+
+    with pytest.raises(runner.RunnerError, match="inside the authorized task root|symlink|junction|alias"):
+        runner.prepare(version="6.4", comsol_root=tmp_path / "COMSOL64",
+                       jdk_home=tmp_path / "JDK11", evidence_root=evidence,
+                       server_home_root=requested)
+    assert not (evidence / "6.4").exists()
+
+
+def test_prepare_refuses_deep_server_home_before_freezing_or_native_birth(tmp_path, monkeypatch):
+    _patch_prepare_environment(monkeypatch)
+    evidence = tmp_path / ("e" * 120) / ("d" * 120)
+    evidence.mkdir(parents=True)
+
+    with pytest.raises(runner.RunnerError, match="path budget exceeded"):
+        runner.prepare(version="6.4", comsol_root=tmp_path / "COMSOL64",
+                       jdk_home=tmp_path / "JDK11", evidence_root=evidence)
+
+    assert not (evidence / "6.4").exists()
+    assert not (evidence / "h").exists()
+
+
+def test_execute_stdio_uses_the_frozen_server_home(tmp_path, monkeypatch):
+    monkeypatch.setattr(runner.platform, "system", lambda: "Windows")
+    monkeypatch.setenv("COMSOL_MCP_HOST_CONTROL", "1")
+    monkeypatch.setenv("COMSOL_MCP_TRUSTED_CODE", "1")
+    plan = _plan(tmp_path)
+    state = _state(tmp_path)
+    captured = {}
+
+    class FakeStdioServerParameters:
+        def __init__(self, **values):
+            self.__dict__.update(values)
+
+    class FakeClientSession:
+        def __init__(self, *_args):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_args):
+            return None
+
+        async def initialize(self):
+            return None
+
+    @asynccontextmanager
+    async def fake_stdio_client(server):
+        captured["server"] = server
+        yield object(), object()
+
+    async def fake_protocol(_client, _plan, _state, *, preflight=None):
+        return {"status": "OFFLINE_TEST_DOUBLE"}
+
+    mcp_module = ModuleType("mcp")
+    mcp_module.__path__ = []
+    mcp_module.ClientSession = FakeClientSession
+    mcp_module.StdioServerParameters = FakeStdioServerParameters
+    mcp_client_module = ModuleType("mcp.client")
+    mcp_client_module.__path__ = []
+    mcp_stdio_module = ModuleType("mcp.client.stdio")
+    mcp_stdio_module.stdio_client = fake_stdio_client
+    monkeypatch.setitem(sys.modules, "mcp", mcp_module)
+    monkeypatch.setitem(sys.modules, "mcp.client", mcp_client_module)
+    monkeypatch.setitem(sys.modules, "mcp.client.stdio", mcp_stdio_module)
+    monkeypatch.setattr(runner, "run_metadata_protocol", fake_protocol)
+
+    result = asyncio.run(runner._execute_stdio(plan, state))
+
+    assert result == {"status": "OFFLINE_TEST_DOUBLE"}
+    assert captured["server"].env["COMSOL_SERVER_MCP_HOME"] == plan["server_home"]
+    assert Path(plan["server_home"]).is_dir()
+    assert not (Path(plan["run_root"]) / "server-home").exists()
 
 
 def test_project_create_actionresult_contract_and_pending_job_match_public_routes(tmp_path):
@@ -519,8 +670,23 @@ def test_freeze_reads_current_public_stdio_and_logical_query_schemas(monkeypatch
                for schema in tools.values())
 
 
-def test_verify_plan_rejects_hash_mismatch_and_source_manifest_drift(monkeypatch):
+def test_verify_plan_rejects_hash_mismatch_and_source_manifest_drift(tmp_path, monkeypatch):
+    task_root = tmp_path / "task"
+    task_root.mkdir()
+    run_root = task_root / "run"
+    run_root.mkdir()
+    server_home_root = task_root / "h"
+    server_home_root.mkdir()
+    server_home_id = "0123456789abcdef"
+    server_home = server_home_root / server_home_id
     plan = {
+        "schema": runner.SCHEMA,
+        "run_root": str(run_root),
+        "task_root": str(task_root),
+        "server_home_root": str(server_home_root),
+        "server_home_id": server_home_id,
+        "server_home": str(server_home),
+        "server_home_path_budget": runner._server_home_budget(server_home),
         "source_manifest": runner.source_manifest(REPOSITORY),
         "source_manifest_sha256": None,
         "python": {"frozen": True}, "published_tool_schemas": {},
@@ -548,6 +714,13 @@ def test_verify_plan_rejects_hash_mismatch_and_source_manifest_drift(monkeypatch
     drifted["freeze_sha256"] = runner.sha256_value(drifted)
     with pytest.raises(runner.RunnerError, match="source manifest drifted"):
         runner.verify_plan(drifted, expected_sha256=drifted["freeze_sha256"])
+
+    relocated = dict(candidate)
+    relocated["server_home"] = str(server_home_root / "fedcba9876543210")
+    relocated.pop("freeze_sha256")
+    relocated["freeze_sha256"] = runner.sha256_value(relocated)
+    with pytest.raises(runner.RunnerError, match="does not match its task-owned root"):
+        runner.verify_plan(relocated, expected_sha256=relocated["freeze_sha256"])
 
 
 @pytest.mark.parametrize("field", ["project", "session", "server", "generation"])

@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "unit": "W21 Windows owned-server short-home/CreateProcess path hardening",
+  "updated_at_utc": "2026-09-28T23:50:15Z",
+  "status": "PASS_SCOPED_OFFLINE_SOFTWARE",
+  "overall_project_status": "PARTIAL",
+  "native_status": "NOT_RUN",
+  "scope": "Windows CreateProcess path preflight and task-owned frozen server-home; no remote execution or engine launch in this unit.",
+  "prior_windows64_attempt": {
+    "source": "Main-agent-verified Windows6.4 metadata attempt, recorded in RESUME.json::windows_native_preflight.repaired_metadata_execution",
+    "status": "FAILED_TERMINAL",
+    "failure": "WinError206 at CreateProcess; launcher 283 characters, cwd 240, command line 1371.",
+    "project_create": "SUCCEEDED",
+    "server_birth_intents": 1,
+    "server_process_identity_verified": false,
+    "worker_births": 0,
+    "study_dispatches": 0,
+    "solver_dispatches": 0,
+    "unknown": false,
+    "stop_or_replay": "NONE; old frozen candidate is historical and must not be replayed."
+  },
+  "implementation": [
+    "On Windows, OwnedServerLauncher passes the already validated command[0] as Popen(executable=...), avoiding CreateProcessW null-lpApplicationName module-token resolution; POSIX behavior is unchanged.",
+    "The W21 runner freezes an optional task-owned short server-home root and a unique 16-hex child; checks existing path components for symlinks/junctions/canonical escape; execute validates and uses the frozen path rather than a hardcoded replacement.",
+    "Prepare/runtime preflight derives the real session state digest and checks private launcher, cwd, runtime paths and command line with UTF-16 code-unit budgets; no session identity/symlink/owner/loopback rules or system policy were changed.",
+    "Schema V2 rejects old plans rather than silently changing their home path; path tampering and deep-root preflight failure are covered offline."
+  ],
+  "windows_path_budget": {
+    "legacy_path_limit_utf16_units_including_nul": 260,
+    "accepted_path_condition": "strictly less than 260 units including NUL",
+    "command_line_limit_utf16_units_including_nul": 32767,
+    "windows_taskroot_projection_from_parent": {
+      "evidence_root_units": 253,
+      "home_child": "h/<16-hex>",
+      "launcher_units_including_nul": 244
+    },
+    "apfs_synthetic_prepare_projection": {
+      "default_home_launcher_units_including_nul": 246,
+      "cwd_units_including_nul": 203,
+      "maximum_checked_runtime_path_units_including_nul": 246,
+      "command_line_units_including_nul": 1182,
+      "custom_short_root_launcher_units_including_nul": 259,
+      "custom_short_root_cwd_units_including_nul": 216,
+      "custom_short_root_maximum_path_units_including_nul": 259,
+      "custom_short_root_command_line_units_including_nul": 1247
+    },
+    "limitation": "APFS measurements are synthetic UTF-16 length accounting, not Windows execution evidence; parent-provided taskroot projection is likewise a preflight estimate."
+  },
+  "verification": {
+    "python": "/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -B (Python 3.12.13)",
+    "command": "PYTHONDONTWRITEBYTECODE=1 <python> -B -m pytest -q -p no:cacheprovider --basetemp=/Volumes/CTestEff/w26 --junitxml=/Volumes/CTestEff/w21-server-home-preflight-20260929/focused-accepted-r5-junit.xml tests/test_session_server.py tests/test_run_w21_stage_native.py tests/test_session_server_control.py::test_session_start_requires_host_control_before_any_child_birth",
+    "exit_code": 0,
+    "junit": {
+      "path": "/Volumes/CTestEff/w21-server-home-preflight-20260929/focused-accepted-r5-junit.xml",
+      "sha256": "601aa05187cb665f0b58f73357c1ec52257947d3a2b4bcf2b249dd1ba430a1c2",
+      "tests": 44,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "duration": "1.34s"
+    },
+    "scope_note": "Offline unit tests only; one pre-existing test-owned Python loopback fixture is exercised. No COMSOL, Java, SSH or Windows native action."
+  },
+  "source_sha256": {
+    "comsol_mcp/_session_server.py": "7111b53c38b0ed04c66c8887fb0f079956a8e66ada60cc06a904039cd3798b99",
+    "tools/run_w21_stage_native.py": "4b25711b4eaab1f19c9c5a85ce33afa0f7385bbf60a835010f7dc08e74b8d71d",
+    "tests/test_session_server.py": "211855691e0a3a66d140e484395aafac9f2f163b6bc716392375bb732c2d8ab3",
+    "tests/test_run_w21_stage_native.py": "487f53ea01e13fe6a4a9dab276b139d5f6f273249af0b9cb26632ec037b6943a"
+  },
+  "receipt": {
+    "path": "/Volumes/CTestEff/w21-server-home-preflight-20260929/receipt.json",
+    "sha256": "9b8b492fc6e17146f33ed019b0f65eb13e725cb7f94f05c9d1876e930f197dc3"
+  },
+  "preserved_junit_history": [
+    {
+      "file": "focused-junit.xml",
+      "sha256": "863d34444188c8d8758bb1e1024d31e5ba27310e311e9d8b13945efeb895b157",
+      "tests": 41,
+      "failures": 28
+    },
+    {
+      "file": "focused-junit-r2.xml",
+      "sha256": "2d17a6013ef4feeaf6d5f112d2eea9ac9cd440b1a1f41bec8464633691892624",
+      "tests": 42,
+      "failures": 1
+    },
+    {
+      "file": "focused-junit-r3.xml",
+      "sha256": "be510746ff371a17b5cc7ab391c7f871b0f7ee140f841b0542149f53b8496671",
+      "tests": 42,
+      "failures": 1
+    },
+    {
+      "file": "focused-junit-r4.xml",
+      "sha256": "6bc780d38066027ac39ac880f7ddd26705e28cd16adcdd39ef627cc88327378f",
+      "tests": 43,
+      "failures": 0
+    },
+    {
+      "file": "focused-final-junit.xml",
+      "sha256": "6e71b1fe19dc3c01558bc91573f9586fef169c012635a7f1613b0fcc2ac87e8c",
+      "tests": 44,
+      "failures": 0
+    }
+  ],
+  "next_action": "Prepare a fresh Windows6.4 V2 candidate using a short task-owned h/<16-hex> server-home; validate the frozen source closure and path preflight, then proceed to 6.4 and 6.3 native steps only under the separately authorized bounded plan.",
+  "git_sync": "Pending this checkpoint/source commit; verify by fetching origin/main and matching HEAD after push."
+}

@@ -49,6 +49,20 @@ class ServerDirectories:
     log_file: Path
 
 
+def _server_directories(root: Path) -> ServerDirectories:
+    return ServerDirectories(
+        root=root,
+        private_installation=root / "installation",
+        runtime=root / "runtime",
+        preferences=root / "preferences",
+        temporary=root / "tmp",
+        recovery=root / "recovery",
+        logs=root / "logs",
+        port_file=root / "runtime" / "server.port",
+        log_file=root / "logs" / "mphserver.log",
+    )
+
+
 @dataclass
 class ManagedServerHandle:
     """Exact in-memory Popen plus independently verified Server endpoint."""
@@ -92,27 +106,14 @@ def create_server_directories(runtime: SessionRuntimeConfig, project_id: str,
     if root.exists() or root.is_symlink():
         raise OwnedServerError("owned Server state already exists; refusing an implicit restart")
     root.mkdir(mode=0o700)
-    child_paths = {
-        "private_installation": root / "installation",
-        "runtime": root / "runtime",
-        "preferences": root / "preferences",
-        "temporary": root / "tmp",
-        "recovery": root / "recovery",
-        "logs": root / "logs",
-    }
-    for path in child_paths.values():
+    directories = _server_directories(root)
+    for path in (
+        directories.private_installation, directories.runtime,
+        directories.preferences, directories.temporary,
+        directories.recovery, directories.logs,
+    ):
         _safe_directory(path, parents=False)
-    return ServerDirectories(
-        root=root,
-        private_installation=child_paths["private_installation"],
-        runtime=child_paths["runtime"],
-        preferences=child_paths["preferences"],
-        temporary=child_paths["temporary"],
-        recovery=child_paths["recovery"],
-        logs=child_paths["logs"],
-        port_file=child_paths["runtime"] / "server.port",
-        log_file=child_paths["logs"] / "mphserver.log",
-    )
+    return directories
 
 
 def prepare_private_loopback_installation(source_root: Path, private_root: Path) -> dict[str, Any]:
@@ -203,7 +204,8 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def build_server_command(directories: ServerDirectories, *, platform_name: str | None = None) -> list[str]:
+def build_server_command(directories: ServerDirectories, *, platform_name: str | None = None,
+                         validate_launcher: bool = True) -> list[str]:
     selected = platform_name or sys.platform
     root = directories.private_installation
     if selected in {"darwin", "mac", "macos"}:
@@ -214,7 +216,7 @@ def build_server_command(directories: ServerDirectories, *, platform_name: str |
         prefix = [str(launcher)]
     else:
         raise OwnedServerError("owned COMSOL Server launcher is not verified for this platform")
-    if not launcher.is_file():
+    if validate_launcher and not launcher.is_file():
         raise OwnedServerError("private COMSOL Server launcher is missing")
     return [
         *prefix,
@@ -222,6 +224,73 @@ def build_server_command(directories: ServerDirectories, *, platform_name: str |
         "-prefsdir", str(directories.preferences), "-tmpdir", str(directories.temporary),
         "-recoverydir", str(directories.recovery), "-login", "auto", "-silent", "-multi", "on",
     ]
+
+
+_WINDOWS_MAX_PATH_UNITS_WITH_NUL = 260
+_WINDOWS_MAX_COMMAND_LINE_UNITS_WITH_NUL = 32767
+
+
+def _utf16_units_with_nul(value: str) -> int:
+    return len(value.encode("utf-16-le")) // 2 + 1
+
+
+def windows_owned_server_path_budget(session_state_root: Path, project_id: str,
+                                     session_id: str) -> dict[str, Any]:
+    """Preflight every Windows-owned Server path before any child can start.
+
+    The 260-unit path bound is a conservative compatibility guard for COMSOL's
+    legacy path consumers. CreateProcessW's independent command-line ceiling is
+    checked separately. The project/session hash directory is constructed by
+    the same identity helper used by the runtime launcher.
+    """
+    session_root = session_state_directory(Path(session_state_root), project_id, session_id)
+    root = session_root / "owned-server"
+    directories = _server_directories(root)
+    command = build_server_command(
+        directories, platform_name="windows", validate_launcher=False,
+    )
+    state_root = Path(session_state_root)
+    server_home = state_root.parent.parent
+    path_values = {
+        "server_home": server_home,
+        "session_state_root": state_root,
+        "sessions_root": state_root / "sessions",
+        "session_directory": session_root,
+        "owned_server_cwd": directories.root,
+        "private_installation": directories.private_installation,
+        "launcher": Path(command[0]),
+        "runtime_directory": directories.runtime,
+        "port_file": directories.port_file,
+        "preferences": directories.preferences,
+        "temporary": directories.temporary,
+        "recovery": directories.recovery,
+        "logs": directories.logs,
+        "log_file": directories.log_file,
+    }
+    path_units = {name: _utf16_units_with_nul(str(path))
+                  for name, path in path_values.items()}
+    too_long = [(name, units) for name, units in path_units.items()
+                if units > _WINDOWS_MAX_PATH_UNITS_WITH_NUL]
+    if too_long:
+        name, units = too_long[0]
+        raise OwnedServerError(
+            "Windows COMSOL Server path budget exceeded: "
+            f"{name} requires {units} UTF-16 units including NUL "
+            f"(limit {_WINDOWS_MAX_PATH_UNITS_WITH_NUL})",
+        )
+    command_line_units = _utf16_units_with_nul(subprocess.list2cmdline(command))
+    if command_line_units > _WINDOWS_MAX_COMMAND_LINE_UNITS_WITH_NUL:
+        raise OwnedServerError(
+            "Windows COMSOL Server command-line budget exceeded: "
+            f"{command_line_units} UTF-16 units including NUL "
+            f"(limit {_WINDOWS_MAX_COMMAND_LINE_UNITS_WITH_NUL})",
+        )
+    return {
+        "path_limit_utf16_units_including_nul": _WINDOWS_MAX_PATH_UNITS_WITH_NUL,
+        "path_utf16_units_including_nul": path_units,
+        "command_line_limit_utf16_units_including_nul": _WINDOWS_MAX_COMMAND_LINE_UNITS_WITH_NUL,
+        "command_line_utf16_units_including_nul": command_line_units,
+    }
 
 
 def _parse_lsof_rows(output: str) -> list[ListenerRow]:
@@ -346,6 +415,8 @@ class OwnedServerLauncher:
         self.poll_interval_s = poll_interval_s
 
     def start(self, runtime: SessionRuntimeConfig, project_id: str, session_id: str) -> ManagedServerHandle:
+        if self.platform_name in {"win32", "nt", "windows"}:
+            windows_owned_server_path_budget(runtime.session_state_root, project_id, session_id)
         directories = create_server_directories(runtime, project_id, session_id)
         prepare_private_loopback_installation(runtime.installation_root, directories.private_installation)
         command = build_server_command(directories, platform_name=self.platform_name)
@@ -356,6 +427,10 @@ class OwnedServerLauncher:
         }
         if self.platform_name in {"win32", "nt", "windows"}:
             options["creationflags"] = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+            # Supplying lpApplicationName avoids CreateProcessW treating the
+            # first command-line token as the executable and applying its
+            # MAX_PATH module-token limit. Keep argv unchanged for COMSOL.
+            options["executable"] = command[0]
         else:
             options["start_new_session"] = True
         try:
