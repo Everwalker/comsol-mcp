@@ -2048,18 +2048,15 @@ class ControlDaemon:
         try:
             return future.result(timeout=timeouts["rpc_timeout_s"])
         except FutureTimeout:
-            return self._pending(record, rpc_wait_expired=True, engine_dispatched=False)
+            active_attempt = self.store.get_stage_attempt_for_operation(project_id, model_ref.as_dict(), record["operation_id"])
+            return self._pending(record, rpc_wait_expired=True,
+                                 engine_dispatched=bool(active_attempt and active_attempt["engine_dispatched"]),
+                                 stage_attempt=active_attempt)
 
     def _dispatch_experiment_stage_run(
         self, arguments: dict[str, Any], execution: dict[str, Any],
     ) -> dict[str, Any]:
-        """Persist a stage attempt, then fail closed before unsupported native work.
-
-        The current 6.4 adapter can configure one exact Variables initial-solution
-        selector, but it cannot yet prove the field/unit/mesh/frame and saved
-        output evidence required to authorize a solve. This route therefore
-        records an auditable no-dispatch attempt and does not contact a Worker.
-        """
+        """Bind one stage attempt, then require backend-owned native admission."""
         from ._execution_contract import canonical_request_hash, model_ref_from_mapping
         from ._stage_contract import canonical_json
         from ._g2_registry import validate_call
@@ -2142,13 +2139,39 @@ class ControlDaemon:
             "execution": persisted_execution, "effect": "COMPUTE",
             "engine_dispatched": False,
         }
+
+        def pending_attempt_details() -> dict[str, Any]:
+            try:
+                rows = self.store.list_stage_attempts(
+                    project_id, model_ref.as_dict(), stage_id=stage_id,
+                )
+            except Exception:
+                return {
+                    "engine_dispatched": None,
+                    "stage_attempt_id": None,
+                    "stage_attempt_status": "UNKNOWN",
+                }
+            matched = next(
+                (row for row in reversed(rows)
+                 if row.get("request_id") == request_id
+                 and row.get("idempotency_key") == idempotency_key),
+                None,
+            )
+            return {
+                "engine_dispatched": bool(matched and matched.get("engine_dispatched")),
+                "stage_attempt_id": matched.get("attempt_id") if matched else None,
+                "stage_attempt_status": matched.get("status") if matched else None,
+            }
+
         with self.lock:
             record, reused = self.store.begin(
                 request_id=request_id, idempotency_key=idempotency_key, request_hash=digest,
                 operation="experiment.stage_run", metadata=metadata, timeouts=timeouts,
             )
-            if reused and record.get("result") is not None:
-                return record["result"]
+            if reused:
+                if record.get("result") is not None:
+                    return record["result"]
+                return self._pending(record, reused_pending=True, **pending_attempt_details())
 
         try:
             context = self._execution_session_context(normalized_execution)
@@ -2207,49 +2230,75 @@ class ControlDaemon:
                     # the authoritative result. A cross-record reuse here is
                     # a durable consistency error, never a second attempt.
                     raise StagePlanStoreConflict("STAGE_ATTEMPT_STATE_UNKNOWN", "stage attempt exists without its matching operation result")
-                evidence = [{
-                    "kind": "pre-solve-admission",
-                    "status": "NOT_DISPATCHED_UNVERIFIED",
-                    "worker_rpc_performed": False,
-                    "solve_started": False,
-                    "reason": "native field/unit/mesh/frame and exact saved-output evidence are not available to this route",
-                }]
-                attempt = self.store.update_stage_attempt(
-                    project_id, model_ref.as_dict(), attempt["attempt_id"], expected_version=attempt["version"],
-                    status="NOT_DISPATCHED_UNVERIFIED", engine_dispatched=False,
-                    execution_status="NOT_DISPATCHED", acceptance_status="UNVERIFIED",
-                    evidence=evidence,
-                    result={"mapping_status": "UNVERIFIED", "continuity": "NOT_RUN", "conservation": "NOT_RUN"},
-                )
-                result = self._error(
-                    "STAGE_PROFILE_UNVERIFIED",
-                    "stage execution was refused before Worker dispatch because the declared mapping profile has no exact native field, unit, mesh, frame, and saved-output proof",
-                    data={
-                        "stage_id": stage_id,
-                        "plan_id": plan["plan_id"],
-                        "plan_sha256": plan["sha256"],
-                        "attempt": attempt,
-                        "execution_status": "NOT_DISPATCHED",
-                        "acceptance_status": "UNVERIFIED",
-                        "missing_evidence": [
-                            "target Variables belongs to the uniquely attached SolverSequence for study_target",
-                            "source and target variable identity plus native unit readback",
-                            "exact source/target mesh and declared frame identity",
-                            "saved source/output SolutionSpec tuple and same-time continuity or conservation readback",
-                        ],
+                from ._w21_stage_backend import stage_attempt_binding, validate_native_admission
+
+                binding = stage_attempt_binding(attempt)
+                admission_provider = getattr(backend, "stage_native_admission", None)
+                admission = (admission_provider(binding=binding, plan=plan, stage=stage)
+                             if callable(admission_provider) else None)
+                native_admitted, admission_missing = validate_native_admission(admission, binding)
+                if not native_admitted:
+                    admission_summary = {
+                        "kind": "native-stage-admission",
+                        "status": "UNVERIFIED",
+                        "producer": admission.get("producer") if isinstance(admission, Mapping) else None,
+                        "binding_verified": isinstance(admission, Mapping) and admission.get("binding") == binding,
+                        "facts": dict(admission.get("facts", {})) if isinstance(admission, Mapping)
+                                 and isinstance(admission.get("facts"), Mapping) else {},
+                        "missing": admission_missing,
+                    }
+                    evidence = [{
+                        "kind": "pre-solve-admission",
+                        "status": "NOT_DISPATCHED_UNVERIFIED",
                         "worker_rpc_performed": False,
                         "solve_started": False,
+                        "reason": "managed backend cannot prove the exact target field/unit/mesh/frame profile",
+                    }, admission_summary]
+                    attempt = self.store.update_stage_attempt(
+                        project_id, model_ref.as_dict(), attempt["attempt_id"], expected_version=attempt["version"],
+                        status="NOT_DISPATCHED_UNVERIFIED", engine_dispatched=False,
+                        execution_status="NOT_DISPATCHED", acceptance_status="UNVERIFIED",
+                        evidence=evidence,
+                        result={"mapping_status": "UNVERIFIED", "continuity": "NOT_RUN", "conservation": "NOT_RUN",
+                                "native_admission": "UNVERIFIED"},
+                    )
+                    result = self._error(
+                        "STAGE_PROFILE_UNVERIFIED",
+                        "stage execution was refused before Worker dispatch because the managed backend could not produce complete, exact-bound native field/unit/mesh/frame evidence",
+                        data={
+                            "stage_id": stage_id,
+                            "plan_id": plan["plan_id"],
+                            "plan_sha256": plan["sha256"],
+                            "attempt": attempt,
+                            "execution_status": "NOT_DISPATCHED",
+                            "acceptance_status": "UNVERIFIED",
+                            "missing_evidence": [
+                                "target Variables belongs to the uniquely attached SolverSequence for study_target",
+                                "source and target variable identity plus native unit readback",
+                                "exact source/target mesh and declared frame identity",
+                                "saved output SolutionSpec tuple and same-time continuity or conservation readback",
+                            ],
+                            "native_admission_missing": admission_missing,
+                            "worker_rpc_performed": False,
+                            "solve_started": False,
+                            "engine_dispatched": False,
+                        },
+                        engine_dispatched=False,
+                        safe_retry=False,
+                    )
+                    result["execution"] = {
+                        "project_id": project_id, "session_id": session_id,
+                        "model_ref": model_ref.as_dict(), "revision": state.revision,
                         "engine_dispatched": False,
-                    },
-                    engine_dispatched=False,
-                    safe_retry=False,
+                    }
+                    return self._finish(record, result, "FAILED")
+
+                return self._execute_admitted_experiment_stage(
+                    record=record, attempt=attempt, stage=stage, plan=plan, backend=backend,
+                    service=service, project_id=project_id, session_id=session_id,
+                    model_ref=model_ref.as_dict(), normalized_execution=normalized_execution,
+                    binding=binding,
                 )
-                result["execution"] = {
-                    "project_id": project_id, "session_id": session_id,
-                    "model_ref": model_ref.as_dict(), "revision": state.revision,
-                    "engine_dispatched": False,
-                }
-                return self._finish(record, result, "FAILED")
             except StagePlanStoreConflict as exc:
                 result = self._error(exc.code, str(exc), data={
                     "stage_id": stage_id, "engine_dispatched": False,
@@ -2294,7 +2343,357 @@ class ControlDaemon:
         try:
             return future.result(timeout=timeouts["rpc_timeout_s"])
         except FutureTimeout:
-            return self._pending(record, rpc_wait_expired=True, engine_dispatched=False)
+            return self._pending(record, rpc_wait_expired=True, **pending_attempt_details())
+
+    def _execute_admitted_experiment_stage(
+        self, *, record: Mapping[str, Any], attempt: dict[str, Any], stage: Mapping[str, Any],
+        plan: Mapping[str, Any], backend: Any, service: Any, project_id: str,
+        session_id: str, model_ref: dict[str, Any], normalized_execution: dict[str, Any],
+        binding: Mapping[str, Any],
+    ) -> dict[str, Any]:
+        """Run one backend-admitted stage through normal COMPUTE and save tickets.
+
+        This path is deliberately dormant for the current production backend:
+        its native admission facts are UNVERIFIED. Test-only fake backends can
+        exercise the durable dispatch/save mechanics without asserting native
+        COMSOL acceptance.
+        """
+        from ._execution_contract import canonical_project_path
+        from ._execution_contract import model_ref_from_mapping
+        from ._stage_contract import sha256_json
+        from ._w21_stage_backend import (
+            StageWorkerDispatchGate, validate_output_readback, hash_saved_artifact,
+        )
+
+        segments = stage.get("study_target", {}).get("segments", [])
+        if (not isinstance(segments, list) or len(segments) != 1
+                or not isinstance(segments[0], Mapping)
+                or segments[0].get("collection") != "study"
+                or not isinstance(segments[0].get("tag"), str)
+                or not segments[0]["tag"]):
+            evidence = [*attempt["evidence"], {
+                "kind": "pre-solve-admission", "status": "NOT_DISPATCHED_UNVERIFIED",
+                "reason": "only one explicitly resolved study tag is supported by this stage route",
+                "worker_rpc_performed": False,
+            }]
+            attempt = self.store.update_stage_attempt(
+                project_id, model_ref, attempt["attempt_id"], expected_version=attempt["version"],
+                status="NOT_DISPATCHED_UNVERIFIED", engine_dispatched=False,
+                execution_status="NOT_DISPATCHED", acceptance_status="UNVERIFIED",
+                evidence=evidence, result={"reason": "unsupported study target path"},
+            )
+            result = self._error("STAGE_TARGET_UNSUPPORTED", "stage target must identify exactly one study tag",
+                                 data={"attempt": attempt, "engine_dispatched": False}, safe_retry=False)
+            return self._finish(record, result, "FAILED")
+
+        study_tag = segments[0]["tag"]
+        ledger_model_ref = model_ref_from_mapping(model_ref)
+        expected_revision = attempt["expected_revision"]
+        solve_request_id = f"{attempt['attempt_id']}:solve"
+        save_request_id = f"{attempt['attempt_id']}:save"
+        solve_idempotency = f"{attempt['idempotency_key']}:solve"
+        save_idempotency = f"{attempt['idempotency_key']}:save"
+        solve_operation_id = record["operation_id"]
+        worker_dispatch_gate = StageWorkerDispatchGate(
+            operation_id=solve_operation_id, model_tag=model_ref["model_tag"],
+            study_tag=study_tag,
+        )
+        def current_revision(wanted: int) -> None:
+            state = service.ledger._state_for(ledger_model_ref)
+            if state.dirty or state.revision != wanted:
+                raise ExecutionContractError(
+                    "REVISION_CONFLICT",
+                    "stage callback revision changed before its bound Worker request",
+                )
+
+        def validate_backend_reply(reply: Any, *, minimum_revision: int, phase: str) -> int:
+            if not isinstance(reply, Mapping) or not isinstance(reply.get("execution"), Mapping):
+                raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", f"stage {phase} reply has no execution identity")
+            reply_execution = reply["execution"]
+            backend_binding = backend.model_project_binding(model_ref) if callable(
+                getattr(backend, "model_project_binding", None)) else None
+            state = service.ledger._state_for(ledger_model_ref)
+            revision = reply_execution.get("revision")
+            if (reply_execution.get("model_ref") != model_ref
+                    or reply_execution.get("session_id") != session_id
+                    or reply_execution.get("project_id") != project_id
+                    or not isinstance(backend_binding, Mapping)
+                    or backend_binding.get("project_id") != project_id
+                    or backend_binding.get("attribution") != "PROJECT_BOUND"
+                    or type(revision) is not int or revision < minimum_revision
+                    or revision != state.revision or state.dirty
+                    or reply_execution.get("dirty") is True):
+                raise ExecutionContractError(
+                    "MODEL_IDENTITY_MISMATCH",
+                    f"stage {phase} reply does not match its exact project/ModelRef/session/revision binding",
+                )
+            return revision
+
+        def store_worker_event(event: Any, *, request_id: str, phase: str, revision: int) -> None:
+            if not isinstance(event, Mapping):
+                return
+            safe_event = self._redact_session_worker_event(dict(event))
+            self.store.add_event(record["job_id"], "worker_request", safe_event)
+            try:
+                dispatch = worker_dispatch_gate.observe(
+                    event, phase=phase, stage_request_id=request_id,
+                    backend_binding=event.get("w21_backend_binding"),
+                )
+            except Exception as exc:
+                raise ExecutionContractError(
+                    "WORKER_STAGE_BINDING_MISMATCH",
+                    f"actual Worker RPC does not match the bound stage {phase}: {type(exc).__name__}: {exc}",
+                ) from exc
+            if dispatch is None:
+                return
+            if dispatch.get("dispatch") != phase:
+                raise ExecutionContractError(
+                    "WORKER_STAGE_BINDING_MISMATCH",
+                    "actual Worker mutation does not match the active stage phase",
+                )
+            current_revision(revision)
+            current = self.store.get_stage_attempt(project_id, model_ref, attempt["attempt_id"])
+            if phase == "solve":
+                if current is None or current.get("status") != "DISPATCH_INTENT":
+                    raise StagePlanStoreConflict("STAGE_ATTEMPT_STATE_UNKNOWN", "stage dispatch intent changed before Worker submission")
+                status = "RUNNING"
+                dispatched = True
+                execution_status = "RUNNING"
+            else:
+                if current is None or current.get("status") != "RUNNING" or not current.get("engine_dispatched"):
+                    raise StagePlanStoreConflict("STAGE_ATTEMPT_STATE_UNKNOWN", "stage save submission has no dispatched solve attempt")
+                status = "RUNNING"
+                dispatched = True
+                execution_status = "RUNNING"
+            self.store.update_stage_attempt(
+                project_id, model_ref, attempt["attempt_id"], expected_version=current["version"],
+                status=status, engine_dispatched=dispatched, execution_status=execution_status,
+                acceptance_status="NOT_EVALUATED",
+                evidence=[*current["evidence"], {
+                    "kind": "worker-dispatch", "operation": "run_study" if phase == "solve" else "save_model",
+                    "phase": "submitted", "stage_request_id": request_id,
+                    "worker_request_id": dispatch["worker_request_id"],
+                    "worker_request_hash": dispatch.get("worker_request_hash"),
+                    "worker_receiver": dispatch["worker_receiver"],
+                    "worker_generation": dispatch["worker_generation"],
+                    "worker_method": dispatch["worker_method"],
+                    "worker_args": dispatch["worker_args"], "revision": revision,
+                }],
+                result={"solve": "DISPATCHED" if phase == "solve" else "SUCCEEDED",
+                        "output_readback": "NOT_RUN", "saved_artifact": "NOT_RUN" if phase == "solve" else "DISPATCHED"},
+            )
+
+        def unknown_result(exc: Exception) -> dict[str, Any]:
+            current = self.store.get_stage_attempt(project_id, model_ref, attempt["attempt_id"])
+            raw_details = getattr(exc, "details", None)
+            details = {}
+            if isinstance(raw_details, Mapping):
+                details = {
+                    key: str(raw_details[key])[:300]
+                    for key in ("cause_type", "cause_code", "cause_stage", "cause_message")
+                    if raw_details.get(key) is not None
+                }
+            if current is not None and current["status"] in {"DISPATCH_INTENT", "RUNNING"}:
+                try:
+                    self.store.update_stage_attempt(
+                        project_id, model_ref, attempt["attempt_id"], expected_version=current["version"],
+                        status="UNKNOWN", engine_dispatched=current["engine_dispatched"],
+                        execution_status="UNKNOWN", acceptance_status="UNKNOWN",
+                        evidence=[*current["evidence"], {
+                            "kind": "stage-interruption", "phase": "after-dispatch-intent",
+                            "error_type": type(exc).__name__,
+                            "error_code": getattr(exc, "code", None),
+                            "error_message": str(exc)[:300],
+                            "cause": details,
+                        }],
+                        result={"reason": "stage response, output, or saved artifact hash is unresolved"},
+                    )
+                except Exception:
+                    pass
+            final_attempt = self.store.get_stage_attempt(project_id, model_ref, attempt["attempt_id"])
+            result = self._error(
+                "EXECUTION_STATE_UNKNOWN",
+                "stage dispatch or output persistence was interrupted; the durable attempt is not replayable",
+                data={"attempt": final_attempt, "engine_dispatched": bool(final_attempt and final_attempt["engine_dispatched"])},
+                safe_retry=False, type=type(exc).__name__,
+            )
+            return self._finish(record, result, "UNKNOWN")
+
+        try:
+            attempt = self.store.update_stage_attempt(
+                project_id, model_ref, attempt["attempt_id"], expected_version=attempt["version"],
+                status="DISPATCH_INTENT", engine_dispatched=False,
+                execution_status="DISPATCH_INTENT", acceptance_status="NOT_EVALUATED",
+                evidence=[*attempt["evidence"], {
+                    "kind": "dispatch-intent", "operation": "run_study",
+                    "study_tag": study_tag, "revision": expected_revision,
+                    "binding_sha256": sha256_json(dict(binding)),
+                }],
+                result={"solve": "INTENT_RECORDED", "output_readback": "NOT_RUN", "saved_artifact": "NOT_RUN"},
+            )
+            project = self.project_authority.get_project(project_id)
+            if not isinstance(project, Mapping) or not isinstance(project.get("workspace"), str):
+                raise ExecutionContractError("PROJECT_IDENTITY_MISMATCH", "stage project workspace is unavailable")
+            solve_execution = dict(normalized_execution)
+            solve_execution.update({
+                "project_id": project_id, "session_id": session_id, "model_ref": model_ref,
+                "expected_revision": expected_revision, "request_id": solve_request_id,
+                "idempotency_key": solve_idempotency,
+                "_w21_stage_marker": {
+                    "attempt_id": attempt["attempt_id"], "phase": "solve",
+                    "project_id": project_id, "model_ref": dict(model_ref),
+                    "expected_revision": expected_revision, "request_id": solve_request_id,
+                    "operation_id": solve_operation_id, "binding_sha256": sha256_json(dict(binding)),
+                    "study_tag": study_tag,
+                },
+            })
+            solve_arguments = {"study_tag": study_tag}
+            self._authorize_project_execution("run_study", solve_arguments, solve_execution)
+            with backend.project_root_scope(project["workspace"]):
+                # Intent is committed above before entering the only solve call.
+                solve_result = backend.invoke(
+                    "run_study", solve_arguments, solve_execution, solve_operation_id,
+                    lambda event: store_worker_event(event, request_id=solve_request_id,
+                                                     phase="solve", revision=expected_revision),
+                )
+                if not isinstance(solve_result, Mapping) or solve_result.get("success") is not True:
+                    raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "stage solve returned no verified success envelope")
+                current = self.store.get_stage_attempt(project_id, model_ref, attempt["attempt_id"])
+                if current is None or current.get("status") != "RUNNING" or not current.get("engine_dispatched"):
+                    raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "stage solve returned without durable Worker submission evidence")
+                solve_revision = validate_backend_reply(
+                    solve_result, minimum_revision=expected_revision, phase="solve",
+                )
+
+                output_reader = getattr(backend, "stage_output_readback", None)
+                try:
+                    output_readback = (output_reader(
+                        binding=dict(binding), stage=dict(stage), plan=dict(plan),
+                        stage_run_operation_id=solve_operation_id, model_revision=solve_revision,
+                        solve_result=dict(solve_result),
+                    ) if callable(output_reader) else None)
+                    output_valid, output_missing, checks_passed = validate_output_readback(
+                        output_readback, binding=binding, stage_run_operation_id=solve_operation_id,
+                        model_revision=solve_revision, target_selection=stage["target_selection"],
+                        checks=stage["checks"],
+                    )
+                except Exception as output_error:
+                    output_valid = False
+                    checks_passed = False
+                    output_missing = [f"output readback failed: {type(output_error).__name__}"]
+                    output_readback = None
+
+                save_path = f"stage_outputs/{attempt['attempt_id']}.mph"
+                target_path = canonical_project_path(project["workspace"], save_path)
+                worker_dispatch_gate.save_target_path = str(target_path)
+                save_arguments = {"path": save_path}
+                save_execution = dict(normalized_execution)
+                save_execution.update({
+                    "project_id": project_id, "session_id": session_id, "model_ref": model_ref,
+                    "expected_revision": solve_revision, "request_id": save_request_id,
+                    "idempotency_key": save_idempotency,
+                    "_w21_stage_marker": {
+                        "attempt_id": attempt["attempt_id"], "phase": "save",
+                        "project_id": project_id, "model_ref": dict(model_ref),
+                        "expected_revision": solve_revision, "request_id": save_request_id,
+                        "operation_id": solve_operation_id, "binding_sha256": sha256_json(dict(binding)),
+                        "save_path": save_path, "save_target_path": str(target_path),
+                    },
+                })
+                self._authorize_project_execution("save_model", save_arguments, save_execution)
+                current = self.store.get_stage_attempt(project_id, model_ref, attempt["attempt_id"])
+                if current is None or current["status"] != "RUNNING":
+                    raise ExecutionContractError("STAGE_ATTEMPT_STATE_UNKNOWN", "stage attempt changed before output save")
+                current = self.store.update_stage_attempt(
+                    project_id, model_ref, attempt["attempt_id"], expected_version=current["version"],
+                    status="RUNNING", engine_dispatched=True, execution_status="RUNNING",
+                    acceptance_status="NOT_EVALUATED",
+                    evidence=[*current["evidence"], {
+                        "kind": "save-intent", "operation": "save_model",
+                        "relative_path": save_path, "revision": solve_revision,
+                    }],
+                    result={"solve": "SUCCEEDED", "output_readback": "VERIFIED" if output_valid else "UNVERIFIED",
+                            "output_missing": output_missing, "saved_artifact": "SAVE_INTENT"},
+                )
+                current_revision(solve_revision)
+                save_result = backend.invoke(
+                    "save_model", save_arguments, save_execution, solve_operation_id,
+                    lambda event: store_worker_event(event, request_id=save_request_id,
+                                                     phase="save", revision=solve_revision),
+                )
+                if not isinstance(save_result, Mapping) or save_result.get("success") is not True:
+                    raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "stage save returned no verified success envelope")
+                save_revision = validate_backend_reply(
+                    save_result, minimum_revision=solve_revision, phase="save",
+                )
+                save_data = save_result.get("data")
+                saved_value = save_data.get("saved_path") if isinstance(save_data, Mapping) else None
+                observed_path = canonical_project_path(project["workspace"], saved_value) if isinstance(saved_value, str) else None
+                if observed_path != target_path or not target_path.is_file() or target_path.stat().st_size <= 0:
+                    raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "stage output file path or saved bytes could not be verified")
+                artifact_sha256, artifact_size = hash_saved_artifact(target_path)
+                if not isinstance(artifact_sha256, str) or len(artifact_sha256) != 64 or artifact_size <= 0:
+                    raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "stage output hash is malformed")
+                final_state = service.ledger._state_for(ledger_model_ref)
+                if final_state.dirty or final_state.revision != save_revision:
+                    raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "model revision changed while hashing the saved stage output")
+
+                current = self.store.get_stage_attempt(project_id, model_ref, attempt["attempt_id"])
+                if current is None or current["status"] != "RUNNING":
+                    raise ExecutionContractError("STAGE_ATTEMPT_STATE_UNKNOWN", "stage attempt changed before result finalization")
+                final_revision = save_revision
+                output_tuple = output_readback.get("output_tuple") if isinstance(output_readback, Mapping) else None
+                observed_checks = output_readback.get("checks") if isinstance(output_readback, Mapping) else None
+                artifact = {"path": str(target_path), "sha256": artifact_sha256, "size": artifact_size}
+                output_evidence = {
+                    "kind": "stage-output-readback",
+                    "status": "VERIFIED" if output_valid else "UNVERIFIED",
+                    "checks_status": "PASS" if output_valid and checks_passed else
+                                     "FAIL" if output_valid else "UNVERIFIED",
+                    "missing": output_missing,
+                    "output_tuple": dict(output_tuple) if isinstance(output_tuple, Mapping) else None,
+                    "checks": [
+                        {key: item.get(key) for key in ("check_id", "status", "observed_error", "reference_scale", "unit")}
+                        for item in observed_checks if isinstance(item, Mapping)
+                    ] if isinstance(observed_checks, list) else [],
+                    "target_selection_sha256": sha256_json(stage["target_selection"]),
+                }
+                attempt = self.store.update_stage_attempt(
+                    project_id, model_ref, attempt["attempt_id"], expected_version=current["version"],
+                    status="SUCCEEDED_PARTIAL", engine_dispatched=True,
+                    execution_status="SOLVE_SUCCEEDED", acceptance_status="PARTIAL",
+                    evidence=[*current["evidence"], output_evidence, {
+                        "kind": "saved-stage-artifact", **artifact, "model_revision": final_revision,
+                    }],
+                    result={
+                        "solve": "SUCCEEDED", "output_readback": "VERIFIED" if output_valid else "UNVERIFIED",
+                        "checks_status": "PASS" if output_valid and checks_passed else
+                                        "FAIL" if output_valid else "UNVERIFIED",
+                        "output_missing": output_missing, "saved_artifact": artifact,
+                        "acceptance": "PARTIAL", "acceptance_reason": "scientific stage acceptance remains unverified",
+                    },
+                )
+                result = self._error(
+                    "STAGE_ACCEPTANCE_UNVERIFIED",
+                    "the stage solve and saved artifact are recorded, but this route does not certify scientific acceptance",
+                    data={
+                        "stage_id": attempt["stage_id"], "attempt": attempt,
+                        "execution_status": "SOLVE_SUCCEEDED", "acceptance_status": "PARTIAL",
+                        "output_readback_status": "VERIFIED" if output_valid else "UNVERIFIED",
+                        "checks_status": "PASS" if output_valid and checks_passed else
+                                         "FAIL" if output_valid else "UNVERIFIED",
+                        "output_missing": output_missing, "saved_artifact": artifact,
+                        "engine_dispatched": True,
+                    },
+                    engine_dispatched=True, safe_retry=False,
+                )
+                result["execution"] = {
+                    "project_id": project_id, "session_id": session_id, "model_ref": model_ref,
+                    "revision": final_revision, "engine_dispatched": True,
+                }
+                return self._finish(record, result, "FAILED")
+        except Exception as exc:
+            return unknown_result(exc)
 
     def _dispatch_experiment_durable_read(
         self, operation: str, arguments: dict[str, Any], execution: dict[str, Any],

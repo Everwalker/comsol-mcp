@@ -77,6 +77,52 @@ def test_async_public_study_uses_serial_synchronous_callback(tmp_path):
         daemon.close()
 
 
+def test_private_w21_stage_marker_binds_project_reply_without_changing_generic_calls(tmp_path):
+    service = ExecutionService(SessionLedger("s", "srv"), Snapshot(), project_root=tmp_path)
+    store = OperationStore(tmp_path / "operations.sqlite3")
+    calls = []
+    backend = ManagedBackend(tmp_path, store, service=service,
+                             registry={"run_study": lambda args: calls.append(args) or {"success": True, "data": {}}})
+    try:
+        ref = service.bind_model("m")["execution"]["model_ref"]
+        key = backend._model_project_key(ref)
+        store.put_metadata("revisions", key, {"project_id": "project-a", "model_ref": ref, "revision": 0})
+        marker = {
+            "attempt_id": "attempt-a", "phase": "solve", "project_id": "project-a",
+            "model_ref": ref, "expected_revision": 0, "request_id": "attempt-a:solve",
+            "operation_id": "operation-a", "binding_sha256": "a" * 64,
+            "study_tag": "std1",
+        }
+        class Worker:
+            def client(self):
+                return self
+
+            def model(self, _tag):
+                return type("BoundModel", (), {"_handle": "model-h", "_generation": 71})()
+
+            def operation_context(self, *_args, **_kwargs):
+                return nullcontext()
+
+        backend.worker = Worker()
+        execution = {
+            "project_id": "project-a", "session_id": "s", "model_ref": ref,
+            "expected_revision": 0, "request_id": "attempt-a:solve",
+            "_w21_stage_marker": marker,
+        }
+        result = backend.invoke("run_study", {"study_tag": "std1"}, execution, "operation-a", lambda _event: None)
+        assert result["success"] is True
+        assert result["execution"]["project_id"] == "project-a"
+        assert result["execution"]["model_ref"] == ref
+        assert calls == [{"study_tag": "std1"}]
+
+        tampered = {**execution, "_w21_stage_marker": {**marker, "project_id": "project-b"}}
+        with pytest.raises(ExecutionContractError, match="private W21 stage dispatch marker"):
+            backend.invoke("run_study", {"study_tag": "std1"}, tampered, "operation-a", lambda _event: None)
+        assert calls == [{"study_tag": "std1"}]
+    finally:
+        store.close()
+
+
 def test_explicit_reconnect_starts_existing_worker_and_invalidates_old_epoch(tmp_path, monkeypatch):
     import comsol_mcp._server as srv
     for name in ("_remote_client_factory", "_client", "_client_connected", "_connected_host", "_connected_port", "_server_started_by_mcp"):

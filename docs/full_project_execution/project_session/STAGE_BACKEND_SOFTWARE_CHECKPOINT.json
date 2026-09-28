@@ -1,0 +1,124 @@
+{
+  "schema": "W21_STAGE_BACKEND_SOFTWARE_CHECKPOINT_V1",
+  "status": "PASS_SCOPED_SOFTWARE",
+  "overall_w21": "PARTIAL",
+  "native_acceptance": "NOT_RUN",
+  "scientific_acceptance": "UNVERIFIED",
+  "base_commit": "739982c4e3808e89b893dee8c0fc88ceeba6809c",
+  "candidate_fingerprint": "7788f03e1b012aef4e16fafdf29d21f6dc074afc26db5454dea0267ff9869762",
+  "source_manifest": "tools/test_efficiency_w21_stage_backend_baseline.json",
+  "source_manifest_sha256": "deebf524f2c69e0fcb5663284a3a89079e3056bf5e7d67e3b9fda65480f3801c",
+  "source_files_verified": 111,
+  "overlay_paths": [
+    "comsol_mcp/_control_daemon.py",
+    "comsol_mcp/_managed_backend.py",
+    "comsol_mcp/_operation_store.py",
+    "comsol_mcp/_w21_stage_backend.py",
+    "tests/test_managed_backend.py",
+    "tests/test_stage_definition.py",
+    "tests/test_w21_stage_backend.py",
+    "tools/test_efficiency_w21_stage_backend_baseline.json"
+  ],
+  "capabilities": [
+    "Persistent dispatch intent and UNKNOWN no-replay in existing stage attempts",
+    "Existing ManagedBackend and Worker route with exact receiver/generation/method/args binding",
+    "Distinct stage request and actual wrk-UUID/hash evidence committed before run/save transport",
+    "Exact output tuple, boundary-time continuity and conservation validators",
+    "Project-bound atomic artifact save and hash; incomplete output remains SUCCEEDED_PARTIAL"
+  ],
+  "main_review": {
+    "status": "ACCEPTED_SCOPED_SOFTWARE",
+    "closed_findings": [
+      "Conflicting pair/solnum and axis metadata",
+      "Overall UNVERIFIED admission despite VERIFIED fact rows",
+      "Boundary continuity tuple incorrectly equated with final output tuple",
+      "Real Worker per-RPC IDs differed from high-level stage ID; metadata calls must not consume dispatch intent"
+    ],
+    "verification": "111 source hashes, receipt/log/JUnit hashes and 292 unique passing test IDs independently checked; production gate and actual Python Worker transport-stub integration reviewed"
+  },
+  "tests": {
+    "focus": 81,
+    "required_regression": 211,
+    "unique_pass": 292,
+    "fail": 0,
+    "error": 0,
+    "skip": 0,
+    "real_worker_integration": "5 cases: normal, timeout, duplicate run, wrong study receiver, save during solve; transport stub only",
+    "java_compile": "NOT_RUN"
+  },
+  "receipt": {
+    "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/20260928T125952Z-84ca144a.summary.json",
+    "sha256": "a9222a04613372fde9a5bf5019890a79cee9b3e1adda106731d28cb2a0fae08d"
+  },
+  "artifacts": [
+    {
+      "bytes": 101,
+      "path": "/Volumes/CTestEff/test-efficiency/runs/20260928T125952Z-84ca144a/focus.log",
+      "sha256": "ca2f5b741088c84a0fdc95532df8fd5b691f025a65f98372a74dfb2bd74bd0f1"
+    },
+    {
+      "bytes": 12327,
+      "path": "/Volumes/CTestEff/test-efficiency/runs/20260928T125952Z-84ca144a/focus.junit.xml",
+      "sha256": "1d5886448727fa79d7a177cce683ba9213ed0fd7d6adba720c900f03b7beafe7"
+    },
+    {
+      "bytes": 232,
+      "path": "/Volumes/CTestEff/test-efficiency/runs/20260928T125952Z-84ca144a/required_regression.log",
+      "sha256": "55ed6e9ca5217dffe2a7abd09f559aa254d71907cb820092981a5d966b3e698c"
+    },
+    {
+      "bytes": 31633,
+      "path": "/Volumes/CTestEff/test-efficiency/runs/20260928T125952Z-84ca144a/required_regression.junit.xml",
+      "sha256": "b451660619c039f6af5dbf5027ef5c599b754c6d2f31005ec2bd5257aed32c99"
+    }
+  ],
+  "commands": [
+    [
+      "/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python",
+      "-m",
+      "pytest",
+      "-q",
+      "-s",
+      "-p",
+      "no:cacheprovider",
+      "--junitxml",
+      "/Volumes/CTestEff/test-efficiency/runs/20260928T125952Z-84ca144a/focus.junit.xml",
+      "tests/test_stage_definition.py",
+      "tests/test_w21_stage_backend.py"
+    ],
+    [
+      "/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python",
+      "-m",
+      "pytest",
+      "-q",
+      "-s",
+      "-p",
+      "no:cacheprovider",
+      "--junitxml",
+      "/Volumes/CTestEff/test-efficiency/runs/20260928T125952Z-84ca144a/required_regression.junit.xml",
+      "tests/test_w21_canonical_contracts.py",
+      "tests/test_operation_store.py",
+      "tests/test_operation_store_migrations.py",
+      "tests/test_control_daemon.py",
+      "tests/test_control_daemon_sessions.py",
+      "tests/test_control_daemon_projects.py",
+      "tests/test_managed_backend.py",
+      "tests/test_w21_closure.py",
+      "tests/test_g3_w21.py",
+      "tests/test_registration.py::test_all_tools_registered"
+    ]
+  ],
+  "replay": "TMPDIR=/Volumes/CTestEff /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -B tools/run_bounded_tests.py --baseline tools/test_efficiency_w21_stage_backend_baseline.json --with-required-regression",
+  "failure_history": {
+    "prior_reviewed_receipt": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/20260928T121058Z-f73a79c3.summary.json",
+    "worker_debug_directory": "/Volumes/CTestEff/test-efficiency/w21-stage-backend",
+    "policy": "Retain failed iterations locally; historical tests are not added to final unique count"
+  },
+  "remaining": [
+    "Production stage_native_admission remains UNVERIFIED",
+    "Native field intrinsic-unit/topology/frame/history proof and output producer unavailable",
+    "No COMSOL solve or native scientific acceptance",
+    "T021/T047 and original W21 scope remain open"
+  ],
+  "next_action": "Implement and calibrate a documented supported native field/unit/topology/frame profile and actual output producer before opening production stage dispatch; continue remaining MASTER_GOAL scope."
+}

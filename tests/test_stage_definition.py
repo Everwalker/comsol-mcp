@@ -2,16 +2,21 @@ from __future__ import annotations
 
 import asyncio
 from contextlib import nullcontext
+from copy import deepcopy
 import hashlib
 import json
+from pathlib import Path
 import threading
 from types import SimpleNamespace
+from uuid import uuid4
+import zipfile
 
 import pytest
 
 from comsol_mcp._control_daemon import ControlDaemon
 from comsol_mcp._execution_contract import ExecutionContractError, SessionLedger, model_ref_from_mapping
 from comsol_mcp._execution_service import ExecutionService
+from comsol_mcp._java_worker import JavaWorkerTimeout, PersistentJavaWorker, RemoteJava
 from comsol_mcp._g2_registry import operation_describe, validate_call
 from comsol_mcp._mcp_gateway import GatewayRegistry
 from comsol_mcp._operation_store import OperationStore, StagePlanStoreConflict
@@ -22,9 +27,12 @@ from comsol_mcp import _w21_execution
 
 
 class _Adapter:
+    def __init__(self):
+        self.fingerprint = "stage-model-fingerprint"
+
     def model_snapshot(self, tag):
         return {"model_tag": tag, "server_instance_id": "server-stage", "external_event_counter": 0,
-                "fingerprint": "stage-model-fingerprint"}
+                "fingerprint": self.fingerprint}
 
 
 class _Worker:
@@ -963,18 +971,580 @@ def test_public_stage_run_direct_and_fallback_persist_no_dispatch_unverified_att
         reopened.close()
 
 
+def _install_fake_stage_backend(daemon, service, *, mode, monkeypatch=None,
+                                dispatched_event=None, release_event=None):
+    """Install a test-only fake proof/Worker backend; it is never native proof."""
+    from comsol_mcp._w21_stage_backend import ADMISSION_CONTRACT
+
+    backend = daemon.backend
+    calls = []
+
+    def fake_admission(*, binding, plan, stage):
+        del plan, stage
+        return {
+            "contract": ADMISSION_CONTRACT,
+            "producer": "managed-backend-native-readback",
+            "status": "VERIFIED",
+            "binding": deepcopy(binding),
+            "facts": {
+                "source_attempt_binding": "VERIFIED", "target_field_identity": "VERIFIED",
+                "source_target_units": "VERIFIED", "source_target_mesh": "VERIFIED",
+                "frame_identity": "VERIFIED", "history_identity": "VERIFIED",
+            },
+            "evidence_refs": [{"kind": "TEST_FIXTURE", "sha256": "e" * 64}],
+        }
+
+    backend.stage_native_admission = fake_admission
+    backend.stage_output_readback = lambda **_kwargs: None
+
+    def invoke(operation, arguments, execution, operation_id, event_callback):
+        calls.append(operation)
+        if operation == "run_study" and mode == "before_dispatch":
+            current = daemon.store.get_stage_attempt(
+                execution["project_id"], execution["model_ref"],
+                daemon.store.list_stage_attempts(execution["project_id"], execution["model_ref"])[-1]["attempt_id"],
+            )
+            assert current["status"] == "DISPATCH_INTENT"
+            raise RuntimeError("injected failure after persisted intent and before Worker submission")
+
+        ref = model_ref_from_mapping(execution["model_ref"])
+
+        project = daemon.project_authority.get_project(execution["project_id"])
+        save_target = (Path(project["workspace"]) / arguments["path"]).resolve() if operation == "save_model" else None
+        backend_binding = {
+            "phase": "solve" if operation == "run_study" else "save",
+            "model_tag": ref.model_tag,
+            "model_handle": "fake-model-handle",
+            "worker_generation": 71,
+            "save_target_path": str(save_target) if save_target is not None else None,
+        }
+
+        def worker_rpc(method, receiver, args, result=None):
+            import hashlib
+
+            worker_request_id = f"wrk-{uuid4()}"
+            request_hash = hashlib.sha256(json.dumps(
+                {"type": "call", "handle": receiver, "generation": 71, "method": method, "args": args},
+                sort_keys=True, separators=(",", ":"),
+            ).encode()).hexdigest()
+            common = {
+                "request_id": worker_request_id, "kind": "call", "operation_id": operation_id,
+                "request_hash": request_hash,
+                "metadata": {"type": "call", "request_id": worker_request_id, "handle": receiver,
+                             "generation": 71, "method": method, "args": args},
+                "w21_backend_binding": backend_binding,
+            }
+            event_callback({**common, "phase": "submitted"})
+            return_value = result
+            event_callback({
+                **common, "phase": "observed", "status": "ok",
+                "reply": {"ok": True, "status": "ok", "result": return_value},
+            })
+
+        def fake_study_run():
+            worker_rpc("study", "fake-model-handle", [], {
+                "$worker_handle": "fake-study-collection", "generation": 71, "java_type": "StudyList",
+            })
+            worker_rpc("get", "fake-study-collection", [arguments["study_tag"]], {
+                "$worker_handle": "fake-study-handle", "generation": 71, "java_type": "Study",
+            })
+            worker_rpc("label", "fake-study-handle", [], "Study 1")
+            worker_rpc("study", "fake-model-handle", [], {
+                "$worker_handle": "fake-study-collection", "generation": 71, "java_type": "StudyList",
+            })
+            worker_rpc("tags", "fake-study-collection", [], [arguments["study_tag"]])
+            worker_rpc("study", "fake-model-handle", [arguments["study_tag"]], {
+                "$worker_handle": "fake-study-handle", "generation": 71, "java_type": "Study",
+            })
+            worker_rpc("label", "fake-study-handle", [], "Study 1")
+            worker_rpc("study", "fake-model-handle", [arguments["study_tag"]], {
+                "$worker_handle": "fake-study-handle", "generation": 71, "java_type": "Study",
+            })
+            worker_rpc("run", "fake-study-handle", [])
+
+        def fake_model_save():
+            from pathlib import Path as LocalPath
+
+            temp_name = f".{save_target.name}.{uuid4().hex}.tmp.mph"
+            worker_rpc("save", "fake-model-handle", [str(save_target.parent / temp_name), True])
+
+        def perform(args):
+            if operation == "run_study":
+                fake_study_run()
+                if mode == "after_dispatch":
+                    raise RuntimeError("injected loss after Worker submitted solve and before response")
+                if mode == "hold_after_dispatch":
+                    if dispatched_event is not None:
+                        dispatched_event.set()
+                    if release_event is None or not release_event.wait(timeout=3):
+                        raise RuntimeError("test release did not arrive after Worker submission")
+                service.adapter.fingerprint = "after-stage-solve"
+                return {"success": True, "data": {"study_tag": args["study_tag"]}}
+            if operation == "save_model":
+                target = Path(backend.project_root) / args["path"]
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(b"TEST-ONLY-SAVED-MODEL")
+                fake_model_save()
+                return {"success": True, "data": {"saved_path": str(target)}}
+            raise AssertionError(f"unexpected fake backend operation: {operation}")
+
+        result = service.execute_legacy(
+            operation, perform, arguments, model_ref=ref,
+            expected_revision=execution["expected_revision"],
+            request_id=execution["request_id"], session_id=execution["session_id"],
+        )
+        result["execution"] = {
+            **result["execution"], "project_id": execution["project_id"],
+        }
+        phase = "solve" if operation == "run_study" else "save"
+        if mode.startswith(f"bad_{phase}_"):
+            field = mode.removeprefix(f"bad_{phase}_")
+            reply = result["execution"]
+            if field == "project":
+                reply["project_id"] = "wrong-project"
+            elif field == "session":
+                reply["session_id"] = "wrong-session"
+            elif field == "model_ref":
+                reply["model_ref"] = {**reply["model_ref"], "generation": reply["model_ref"]["generation"] + 1}
+            elif field == "revision":
+                reply["revision"] += 1
+            elif field == "dirty":
+                reply["dirty"] = True
+            else:
+                raise AssertionError(f"unknown fake reply tamper field: {field}")
+        return result
+
+    backend.invoke = invoke
+    return calls
+
+
+def _persistent_worker_with_stub(project_root, request):
+    """Build the production Worker/RemoteModel client without starting Java."""
+    worker = PersistentJavaWorker.__new__(PersistentJavaWorker)
+    worker.paths = SimpleNamespace(resolved_project_root=Path(project_root), is_windows=False)
+    worker.state_dir = Path(project_root) / ".stub-worker-state"
+    worker._token = "offline-test-token"
+    worker._process = None
+    worker._port = 1
+    worker._generation = 71
+    worker._classes_dir = None
+    worker._lock = threading.RLock()
+    worker._known_requests = {}
+    worker._next_generation = 72
+    worker._on_request_event = None
+    worker._operation_context = threading.local()
+    worker._request = request
+    return worker
+
+
+def _fake_stage_admission(binding):
+    from comsol_mcp._w21_stage_backend import ADMISSION_CONTRACT
+
+    return {
+        "contract": ADMISSION_CONTRACT,
+        "producer": "managed-backend-native-readback",
+        "status": "VERIFIED",
+        "binding": deepcopy(binding),
+        "facts": {
+            "source_attempt_binding": "VERIFIED", "target_field_identity": "VERIFIED",
+            "source_target_units": "VERIFIED", "source_target_mesh": "VERIFIED",
+            "frame_identity": "VERIFIED", "history_identity": "VERIFIED",
+        },
+        "evidence_refs": [{"kind": "EXPLICIT_FAKE_BACKEND_FIXTURE", "sha256": "e" * 64}],
+    }
+
+
+@pytest.mark.parametrize("mode,expected_runs,expected_save,expected_dispatched", [
+    ("normal", 1, 1, True),
+    ("timeout", 1, 0, True),
+    ("duplicate_run", 1, 0, True),
+    ("wrong_target", 0, 0, False),
+    ("wrong_operation", 0, 0, False),
+])
+def test_stage_uses_real_worker_rpc_identity_and_persists_before_send(
+    tmp_path, mode, expected_runs, expected_save, expected_dispatched,
+):
+    """Exercise submit/RemoteModel/ManagedBackend with only transport stubbed."""
+    import comsol_mcp._server as srv
+    from comsol_mcp._tools_workflow import _run_study_on_model
+
+    daemon, service, _old_worker, project_id, model_ref, execution, _host = _setup(tmp_path)
+    sent = []
+    stage_request = f"actual-worker-{mode}"
+    try:
+        defined = daemon.dispatch({
+            "operation": "experiment.stage_define", "arguments": {"definition": _plan_v2()},
+            "execution": execution,
+        })
+        assert defined["success"] is True, defined
+        project = daemon.project_authority.get_project(project_id)
+
+        def transport(body, *, timeout_s=None):
+            del timeout_s
+            sent.append(dict(body))
+            request_type = body["type"]
+            if request_type == "model":
+                return {"ok": True, "status": "OK", "generation": 71,
+                        "result": {"$worker_handle": "bound-model-handle", "generation": 71,
+                                   "java_type": "Model"}}
+            assert request_type == "call", body
+            method = body["method"]
+            args = body.get("args", [])
+            rows = daemon.store.list_stage_attempts(project_id, model_ref)
+            attempt = rows[-1]
+            if method in {"run", "save"}:
+                assert attempt["status"] == "RUNNING" and attempt["engine_dispatched"] is True
+                dispatch_rows = [item for item in attempt["evidence"] if item.get("kind") == "worker-dispatch"]
+                assert dispatch_rows and dispatch_rows[-1]["worker_request_id"] == body["request_id"]
+                assert dispatch_rows[-1]["worker_request_id"] != dispatch_rows[-1]["stage_request_id"]
+            elif method in {"study", "get", "tags", "label"} and not attempt["engine_dispatched"]:
+                assert attempt["status"] == "DISPATCH_INTENT"
+                assert not any(item.get("kind") == "worker-dispatch" for item in attempt["evidence"])
+
+            if method == "study" and not args:
+                result = {"$worker_handle": "study-collection", "generation": 71, "java_type": "StudyList"}
+            elif method == "study" and args == ["std1"]:
+                result = {"$worker_handle": "study-std1", "generation": 71, "java_type": "Study"}
+            elif method == "get" and args == ["std1"]:
+                result = {"$worker_handle": "study-std1", "generation": 71, "java_type": "Study"}
+            elif method == "tags":
+                result = ["std1"]
+            elif method == "label":
+                result = "Study 1"
+            elif method == "run":
+                if mode == "timeout":
+                    service.adapter.fingerprint = "stage-solve-may-have-run"
+                    raise JavaWorkerTimeout("offline injected response loss")
+                service.adapter.fingerprint = "stage-solve-completed"
+                result = None
+            elif method == "save":
+                assert len(args) == 2 and args[1] is True
+                with zipfile.ZipFile(args[0], "w") as archive:
+                    archive.writestr("synthetic/fixture.txt", "explicit test fixture only")
+                result = None
+            else:
+                raise AssertionError(f"unexpected Worker request: {body}")
+            return {"ok": True, "status": "OK", "generation": 71, "result": result}
+
+        worker = _persistent_worker_with_stub(daemon.backend.project_root, transport)
+        daemon.backend.worker = worker
+        daemon.backend.stage_native_admission = lambda *, binding, **_kwargs: _fake_stage_admission(binding)
+        daemon.backend.stage_output_readback = lambda **_kwargs: None
+
+        def run_callback(args):
+            if mode == "wrong_target":
+                RemoteJava(worker, "unassociated-study-handle", 71, "Study")._call("run")
+            elif mode == "wrong_operation":
+                target = Path(project["workspace"]) / "stage_outputs" / "unauthorized.mph"
+                srv._current_model.save(str(target))
+            else:
+                _run_study_on_model(srv._current_model, args["study_tag"])
+            if mode == "duplicate_run":
+                _run_study_on_model(srv._current_model, args["study_tag"])
+            return {"success": True, "data": {"study_tag": args["study_tag"]}}
+
+        def save_callback(args):
+            target = Path(args["path"])
+            target.parent.mkdir(parents=True, exist_ok=True)
+            srv._current_model.save(str(target))
+            return {"success": True, "data": {"saved_path": str(target)}}
+
+        daemon.backend.registry.update({"run_study": run_callback, "save_model": save_callback})
+        result = daemon.dispatch({
+            "operation": "experiment.stage_run", "arguments": {"stage_id": "preheat"},
+            "execution": {**execution, "request_id": stage_request, "idempotency_key": stage_request},
+        })
+        rows = daemon.store.list_stage_attempts(project_id, model_ref)
+        attempt = rows[-1]
+        actual_runs = [item for item in sent if item.get("method") == "run"]
+        actual_saves = [item for item in sent if item.get("method") == "save"]
+        assert len(actual_runs) == expected_runs, json.dumps({
+            "result": result, "attempt": attempt,
+            "submitted": [item.get("metadata") for item in sent],
+        }, default=str, sort_keys=True)
+        assert len(actual_saves) == expected_save
+        assert attempt["engine_dispatched"] is expected_dispatched
+        assert all(item["request_id"].startswith("wrk-") for item in actual_runs + actual_saves)
+        assert all(item["request_id"] != stage_request for item in actual_runs + actual_saves)
+        if mode == "normal":
+            assert result["success"] is False
+            assert result["error"]["code"] == "STAGE_ACCEPTANCE_UNVERIFIED"
+            assert attempt["status"] == "SUCCEEDED_PARTIAL"
+            assert attempt["acceptance_status"] == "PARTIAL"
+            assert len([item for item in sent if item.get("method") in {"study", "get", "tags", "label"}]) >= 5
+            assert (Path(project["workspace"]) / "stage_outputs" / f"{attempt['attempt_id']}.mph").is_file()
+            dispatch_evidence = [item for item in attempt["evidence"] if item.get("kind") == "worker-dispatch"]
+            assert [item["operation"] for item in dispatch_evidence] == ["run_study", "save_model"]
+            assert all(item.get("worker_request_hash") and item.get("worker_receiver") for item in dispatch_evidence)
+        else:
+            assert result["success"] is False and result["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
+            assert attempt["status"] == "UNKNOWN"
+            retry_id = f"{stage_request}-retry"
+            retried = daemon.dispatch({
+                "operation": "experiment.stage_run", "arguments": {"stage_id": "preheat"},
+                "execution": {**execution, "request_id": retry_id, "idempotency_key": retry_id},
+            })
+            assert retried["success"] is False
+            assert len([item for item in sent if item.get("method") == "run"]) == expected_runs
+            assert all(item["status"] != "ACCEPTED" for item in daemon.store.list_stage_attempts(project_id, model_ref))
+    finally:
+        daemon.close()
+        if "worker" in locals():
+            worker.close()
+
+
+@pytest.mark.parametrize("mode,expected_dispatched", [
+    ("before_dispatch", False),
+    ("after_dispatch", True),
+])
+def test_stage_dispatch_intent_and_unknown_response_are_never_replayed(tmp_path, mode, expected_dispatched):
+    daemon, service, _worker, project_id, model_ref, execution, host = _setup(tmp_path)
+    try:
+        defined = daemon.dispatch({
+            "operation": "experiment.stage_define", "arguments": {"definition": _plan_v2()},
+            "execution": execution,
+        })
+        assert defined["success"] is True, defined
+        calls = _install_fake_stage_backend(daemon, service, mode=mode)
+        first = daemon.dispatch({
+            "operation": "experiment.stage_run", "arguments": {"stage_id": "preheat"},
+            "execution": {**execution, "request_id": f"fault-{mode}", "idempotency_key": f"fault-{mode}"},
+        })
+        assert first["success"] is False and first["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
+        attempt = first["data"]["attempt"]
+        assert attempt["status"] == "UNKNOWN"
+        assert attempt["engine_dispatched"] is expected_dispatched, json.dumps(attempt["evidence"], indent=2, sort_keys=True)
+        assert any(row["kind"] == "dispatch-intent" for row in attempt["evidence"])
+
+        retry = daemon.dispatch({
+            "operation": "experiment.stage_run", "arguments": {"stage_id": "preheat"},
+            "execution": {**execution, "request_id": f"retry-{mode}", "idempotency_key": f"retry-{mode}"},
+        })
+        assert retry["success"] is False
+        assert retry["error"]["code"] in {"STAGE_ATTEMPT_UNRESOLVED", "REVISION_CONFLICT"}
+        assert calls == ["run_study"]
+        assert all(row["status"] != "ACCEPTED" for row in daemon.store.list_stage_attempts(project_id, model_ref))
+    finally:
+        daemon.close()
+
+
+def test_inflight_stage_reentry_reports_dispatch_without_second_solve(tmp_path):
+    daemon, service, _worker, project_id, model_ref, execution, _host = _setup(tmp_path)
+    dispatched = threading.Event()
+    release = threading.Event()
+    try:
+        defined = daemon.dispatch({
+            "operation": "experiment.stage_define", "arguments": {"definition": _plan_v2()},
+            "execution": execution,
+        })
+        assert defined["success"] is True, defined
+        calls = _install_fake_stage_backend(
+            daemon, service, mode="hold_after_dispatch",
+            dispatched_event=dispatched, release_event=release,
+        )
+        request = {
+            "operation": "experiment.stage_run", "arguments": {"stage_id": "preheat"},
+            "execution": {**execution, "request_id": "stage-inflight", "idempotency_key": "stage-inflight",
+                           "rpc_timeout_s": 0.3},
+        }
+        first = daemon.dispatch(request)
+        assert dispatched.wait(timeout=1)
+        assert first["success"] is True and first["data"]["engine_dispatched"] is True
+        assert first["data"]["stage_attempt_status"] == "RUNNING"
+
+        repeated = daemon.dispatch(request)
+        assert repeated["success"] is True and repeated["data"]["engine_dispatched"] is True
+        assert repeated["data"]["stage_attempt_id"] == first["data"]["stage_attempt_id"]
+        assert calls == ["run_study"]
+
+        release.set()
+        for _ in range(200):
+            attempt = daemon.store.get_stage_attempt(project_id, model_ref, first["data"]["stage_attempt_id"])
+            if attempt and attempt["status"] in {"SUCCEEDED_PARTIAL", "UNKNOWN", "FAILED"}:
+                break
+            threading.Event().wait(0.01)
+        assert attempt is not None and attempt["status"] == "SUCCEEDED_PARTIAL", attempt
+        assert calls == ["run_study", "save_model"]
+        assert attempt["acceptance_status"] == "PARTIAL"
+    finally:
+        release.set()
+        daemon.close()
+
+
+def test_stage_save_success_followed_by_hash_failure_is_unknown_and_not_accepted(tmp_path, monkeypatch):
+    from comsol_mcp import _w21_stage_backend
+
+    daemon, service, _worker, project_id, model_ref, execution, _host = _setup(tmp_path)
+    try:
+        defined = daemon.dispatch({
+            "operation": "experiment.stage_define", "arguments": {"definition": _plan_v2()},
+            "execution": execution,
+        })
+        assert defined["success"] is True, defined
+        calls = _install_fake_stage_backend(daemon, service, mode="save_hash_failure")
+
+        def fail_after_save(_path):
+            raise OSError("injected artifact-hash failure")
+
+        monkeypatch.setattr(_w21_stage_backend, "hash_saved_artifact", fail_after_save)
+        result = daemon.dispatch({
+            "operation": "experiment.stage_run", "arguments": {"stage_id": "preheat"},
+            "execution": {**execution, "request_id": "fault-save-hash", "idempotency_key": "fault-save-hash"},
+        })
+        assert result["success"] is False and result["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
+        attempt = result["data"]["attempt"]
+        assert attempt["status"] == "UNKNOWN" and attempt["engine_dispatched"] is True
+        assert calls == ["run_study", "save_model"]
+        assert not any(row["status"] == "ACCEPTED" for row in daemon.store.list_stage_attempts(project_id, model_ref))
+        assert list((Path(daemon.project_authority.get_project(project_id)["workspace"]) / "stage_outputs").glob("*.mph"))
+    finally:
+        daemon.close()
+
+
+@pytest.mark.parametrize("mutation", ["dirty", "revision"])
+def test_stage_ledger_change_during_saved_artifact_hash_blocks_verified_binding(tmp_path, monkeypatch, mutation):
+    from comsol_mcp import _w21_stage_backend
+    from comsol_mcp._execution_contract import model_ref_from_mapping
+
+    daemon, service, _worker, project_id, model_ref, execution, _host = _setup(tmp_path)
+    try:
+        defined = daemon.dispatch({
+            "operation": "experiment.stage_define", "arguments": {"definition": _plan_v2()},
+            "execution": execution,
+        })
+        assert defined["success"] is True, defined
+        calls = _install_fake_stage_backend(daemon, service, mode="save_hash_failure")
+        original_hash = _w21_stage_backend.hash_saved_artifact
+
+        def mutate_ledger_after_hash(path):
+            artifact_hash, size = original_hash(path)
+            state = service.ledger._state_for(model_ref_from_mapping(model_ref))
+            if mutation == "dirty":
+                state.dirty = True
+            else:
+                state.revision += 1
+            return artifact_hash, size
+
+        monkeypatch.setattr(_w21_stage_backend, "hash_saved_artifact", mutate_ledger_after_hash)
+        result = daemon.dispatch({
+            "operation": "experiment.stage_run", "arguments": {"stage_id": "preheat"},
+            "execution": {**execution, "request_id": f"ledger-{mutation}", "idempotency_key": f"ledger-{mutation}"},
+        })
+        assert result["success"] is False and result["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
+        attempt = result["data"]["attempt"]
+        assert attempt["status"] == "UNKNOWN" and attempt["engine_dispatched"] is True
+        assert calls == ["run_study", "save_model"]
+        assert not any(row["kind"] == "saved-stage-artifact" for row in attempt["evidence"])
+        assert all(row["status"] != "ACCEPTED" for row in daemon.store.list_stage_attempts(project_id, model_ref))
+    finally:
+        daemon.close()
+
+
+@pytest.mark.parametrize(
+    "mode,expected_calls",
+    [
+        *((f"bad_solve_{field}", ["run_study"]) for field in ("project", "session", "model_ref", "revision")),
+        *((f"bad_save_{field}", ["run_study", "save_model"])
+          for field in ("project", "session", "model_ref", "revision", "dirty")),
+    ],
+)
+def test_stage_requires_exact_solve_and_save_reply_identity(tmp_path, mode, expected_calls):
+    daemon, service, _worker, project_id, model_ref, execution, _host = _setup(tmp_path)
+    try:
+        defined = daemon.dispatch({
+            "operation": "experiment.stage_define", "arguments": {"definition": _plan_v2()},
+            "execution": execution,
+        })
+        assert defined["success"] is True, defined
+        calls = _install_fake_stage_backend(daemon, service, mode=mode)
+        result = daemon.dispatch({
+            "operation": "experiment.stage_run", "arguments": {"stage_id": "preheat"},
+            "execution": {**execution, "request_id": mode, "idempotency_key": mode},
+        })
+        assert result["success"] is False and result["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
+        attempt = result["data"]["attempt"]
+        assert attempt["status"] == "UNKNOWN" and attempt["engine_dispatched"] is True
+        assert calls == expected_calls
+        assert not any(row["kind"] == "saved-stage-artifact" for row in attempt["evidence"])
+        assert all(row["status"] != "ACCEPTED" for row in daemon.store.list_stage_attempts(project_id, model_ref))
+    finally:
+        daemon.close()
+
+
+def test_stage_contradictory_backend_proof_and_caller_proof_cannot_dispatch(tmp_path):
+    from comsol_mcp._w21_stage_backend import ADMISSION_CONTRACT
+
+    daemon, _service, worker, project_id, model_ref, execution, _host = _setup(tmp_path)
+    try:
+        defined = daemon.dispatch({
+            "operation": "experiment.stage_define", "arguments": {"definition": _plan_v2()},
+            "execution": execution,
+        })
+        assert defined["success"] is True, defined
+        proof_calls = []
+
+        def contradictory(*, binding, **_kwargs):
+            proof_calls.append(True)
+            wrong = deepcopy(binding)
+            wrong["model_ref"]["generation"] += 1
+            return {
+                "contract": ADMISSION_CONTRACT, "producer": "managed-backend-native-readback",
+                "status": "VERIFIED",
+                "binding": wrong,
+                "facts": {name: "VERIFIED" for name in (
+                    "source_attempt_binding", "target_field_identity", "source_target_units",
+                    "source_target_mesh", "frame_identity", "history_identity",
+                )},
+                "evidence_refs": [{"sha256": "f" * 64}],
+            }
+
+        daemon.backend.stage_native_admission = contradictory
+        daemon.backend.invoke = lambda *_args, **_kwargs: pytest.fail("contradictory backend proof must not dispatch")
+        result = daemon.dispatch({
+            "operation": "experiment.stage_run", "arguments": {"stage_id": "preheat"},
+            "execution": {**execution, "request_id": "proof-mismatch", "idempotency_key": "proof-mismatch"},
+        })
+        assert result["success"] is False and result["error"]["code"] == "STAGE_PROFILE_UNVERIFIED"
+        assert result["data"]["attempt"]["status"] == "NOT_DISPATCHED_UNVERIFIED"
+        assert proof_calls == [True] and worker.calls == []
+        assert not any(row["status"] == "ACCEPTED" for row in daemon.store.list_stage_attempts(project_id, model_ref))
+
+        caller_supplied = daemon.dispatch({
+            "operation": "experiment.stage_run",
+            "arguments": {"stage_id": "preheat", "native_admission": {"status": "VERIFIED"}},
+            "execution": {**execution, "request_id": "caller-proof", "idempotency_key": "caller-proof"},
+        })
+        assert caller_supplied["success"] is False
+        assert caller_supplied["error"]["code"] in {"INVALID_REQUEST", "UNKNOWN_ARGUMENT"}
+        assert worker.calls == []
+    finally:
+        daemon.close()
+
+
 def test_public_state_map_direct_and_fallback_read_back_selector_without_solving(tmp_path, monkeypatch):
     daemon, _service, worker, project_id, model_ref, execution, host = _setup(tmp_path)
     model = _StateMapModel()
     sequence_rows = {
         "dataset": "dset1", "solution": "sol2", "binding_complete": True,
         "binding_source": "typed dataset + SolutionInfo.getSolnum(outer, strict)",
+        "pair_mapping_complete": True,
         "parameters_complete": True,
         "parameters": {"by_pair": {"1:1": {"names": [], "values": [], "units": [], "solnum": 1}}},
         "solnum_pairs": [{"outer": 1, "inner": 1, "solnum": 1}],
     }
     monkeypatch.setattr(_w21_execution, "bound_model", lambda _worker, _tag: model)
     monkeypatch.setattr(_w21_execution, "dataset_solution_indices", lambda *_args: sequence_rows)
+    # Exact field selector/cleanup and historical mesh association are tested
+    # independently in test_w21_canonical_contracts; this route test isolates
+    # public direct/fallback plumbing and target Variables readback.
+    monkeypatch.setattr(
+        _w21_execution, "_strict_source_field_readback",
+        lambda *_args: {"status": "VERIFIED", "selection_readback": {"geometry": "geom1"}},
+    )
+    monkeypatch.setattr(
+        _w21_execution, "_read_source_solution_mesh_association",
+        lambda *_args: {"status": "VERIFIED", "mesh_tag": "mesh1"},
+    )
     monkeypatch.setattr(daemon.backend, "_require_g2_isolation", lambda: {"test_only": True})
     # The G3 route enters the persistent Worker's request-event context, but
     # this synthetic test resolves the COMSOL model/solution helpers locally
@@ -984,7 +1554,7 @@ def test_public_state_map_direct_and_fallback_read_back_selector_without_solving
         direct = _call_public(
             host, "experiment_state_map", **_state_map_request(), execution=execution,
         )
-        assert direct["success"] is True, direct
+        assert direct["success"] is True, direct.get("error", direct)
         assert direct["data"]["contract"] == "experiment.state_map/v1"
         assert direct["data"]["coverage_status"] == "PARTIAL"
         assert direct["data"]["target_solver_attachment_readback"]["status"] == "VERIFIED"

@@ -266,6 +266,33 @@ class ManagedBackend:
     def project_root(self, value):
         self._base_project_root = Path(value).resolve()
 
+    def stage_native_admission(self, *, binding, plan, stage):
+        """Return the current fail-closed native admission state for one stage.
+
+        A caller declaration cannot populate these facts.  This build has no
+        verified target field/unit/frame identity reader, so the backend does
+        not authorize a stage solve.  Keeping the response here makes the
+        missing native capability explicit at the dispatch boundary.
+        """
+        from ._w21_stage_backend import ADMISSION_CONTRACT
+
+        del plan, stage
+        return {
+            "contract": ADMISSION_CONTRACT,
+            "producer": "managed-backend-unverified",
+            "binding": dict(binding),
+            "facts": {
+                "source_attempt_binding": "UNVERIFIED",
+                "target_field_identity": "UNVERIFIED",
+                "source_target_units": "UNVERIFIED",
+                "source_target_mesh": "UNVERIFIED",
+                "frame_identity": "UNVERIFIED",
+                "history_identity": "UNVERIFIED",
+            },
+            "evidence_refs": [],
+            "status": "UNVERIFIED",
+        }
+
     @contextmanager
     def project_root_scope(self, root):
         """Apply one registered project path/workflow scope in this context."""
@@ -909,7 +936,64 @@ class ManagedBackend:
         ref = model_ref_from_mapping(execution["model_ref"]) if execution.get("model_ref") else None
         if ref:
             self.service.ledger._state_for(ref)  # reject stale refs before any engine call
-        with self.context(operation_id, event_callback):
+        stage_marker = execution.get("_w21_stage_marker")
+        stage_save_target = None
+        if stage_marker is not None:
+            expected_phase = {"run_study": "solve", "save_model": "save"}.get(operation)
+            if (not isinstance(stage_marker, Mapping) or expected_phase is None
+                    or stage_marker.get("phase") != expected_phase
+                    or not isinstance(stage_marker.get("attempt_id"), str)
+                    or not stage_marker.get("attempt_id")
+                    or stage_marker.get("project_id") != execution.get("project_id")
+                    or ref is None
+                    or stage_marker.get("model_ref") != ref.as_dict()
+                    or stage_marker.get("expected_revision") != execution.get("expected_revision")
+                    or stage_marker.get("request_id") != execution.get("request_id")
+                    or stage_marker.get("operation_id") != operation_id
+                    or not isinstance(stage_marker.get("binding_sha256"), str)
+                    or len(stage_marker.get("binding_sha256", "")) != 64):
+                raise ExecutionContractError(
+                    "MODEL_IDENTITY_MISMATCH",
+                    "private W21 stage dispatch marker does not match its exact operation identity",
+                )
+            if expected_phase == "solve":
+                if (not isinstance(arguments.get("study_tag"), str)
+                        or not arguments.get("study_tag")
+                        or stage_marker.get("study_tag") != arguments.get("study_tag")):
+                    raise ExecutionContractError(
+                        "MODEL_IDENTITY_MISMATCH",
+                        "private W21 solve marker does not match the requested study tag",
+                    )
+            else:
+                relative_path = arguments.get("path")
+                active_project_root = self._project_root_context.get() or self.project_root
+                if (not isinstance(relative_path, str) or not relative_path
+                        or stage_marker.get("save_path") != relative_path):
+                    raise ExecutionContractError(
+                        "PROJECT_IDENTITY_MISMATCH",
+                        "private W21 save marker does not match the requested stage output path",
+                    )
+                stage_save_target = canonical_project_path(active_project_root, relative_path)
+                if stage_marker.get("save_target_path") != str(stage_save_target):
+                    raise ExecutionContractError(
+                        "PROJECT_IDENTITY_MISMATCH",
+                        "private W21 save marker does not match its canonical project output path",
+                    )
+            marker_binding = self.model_project_binding(ref.as_dict())
+            if (marker_binding.get("attribution") != "PROJECT_BOUND"
+                    or marker_binding.get("project_id") != execution.get("project_id")):
+                raise ExecutionContractError(
+                    "PROJECT_IDENTITY_MISMATCH",
+                    "private W21 stage dispatch has no exact registered project/ModelRef binding",
+                )
+        callback_target = [event_callback]
+
+        def dynamic_worker_event(event):
+            callback = callback_target[0]
+            if callable(callback):
+                callback(event)
+
+        with self.context(operation_id, dynamic_worker_event):
             if operation == "model_adopt":
                 return self.adopt(arguments["model_tag"], project_id=execution.get("project_id"))
             if operation == "model_inspect":
@@ -922,8 +1006,33 @@ class ManagedBackend:
                 raise ExecutionContractError("PERMISSION_DENIED", "shared-server lifecycle changes are not enabled by this backend")
             import comsol_mcp._server as srv
             from ._model import _set_current_model
+            bound_model = None
             if ref and self.worker is not None:
-                _set_current_model(self.worker.client().model(ref.model_tag), origin="bound-request")
+                bound_model = self.worker.client().model(ref.model_tag)
+                _set_current_model(bound_model, origin="bound-request")
+            if stage_marker is not None:
+                if (bound_model is None or not isinstance(getattr(bound_model, "_handle", None), str)
+                        or type(getattr(bound_model, "_generation", None)) is not int
+                        or not callable(event_callback)):
+                    raise ExecutionContractError(
+                        "WORKER_IDENTITY_UNAVAILABLE",
+                        "W21 stage dispatch requires the exact managed RemoteModel and Worker event callback",
+                    )
+                backend_binding = {
+                    "phase": stage_marker["phase"],
+                    "model_tag": ref.model_tag,
+                    "model_handle": bound_model._handle,
+                    "worker_generation": bound_model._generation,
+                    "save_target_path": str(stage_save_target) if stage_save_target is not None else None,
+                }
+                original_event_callback = event_callback
+
+                def bound_stage_event(event):
+                    enriched = dict(event) if isinstance(event, Mapping) else {"event": event}
+                    enriched["w21_backend_binding"] = dict(backend_binding)
+                    original_event_callback(enriched)
+
+                callback_target[0] = bound_stage_event
             # Validate configured paths too, not only paths present in this request.
             if self.worker is not None:
                 from ._state import _read_workflow_state
@@ -942,6 +1051,20 @@ class ManagedBackend:
             result = self.service.execute_legacy(actual, callback, arguments, model_ref=ref,
                 expected_revision=execution.get("expected_revision"), request_id=execution.get("request_id"),
                 session_id=session, path_parameters=("path", "current_main_model_path", "snapshot_dir"))
+            if (actual in {"run_study", "save_model"} and result.get("success") is True
+                    and ref is not None and stage_marker is not None):
+                requested_project = execution.get("project_id")
+                project_binding = self.model_project_binding(ref.as_dict())
+                reply_execution = result.get("execution")
+                if (not isinstance(requested_project, str) or not requested_project
+                        or not isinstance(reply_execution, Mapping)
+                        or project_binding.get("attribution") != "PROJECT_BOUND"
+                        or project_binding.get("project_id") != requested_project):
+                    raise ExecutionContractError(
+                        "PROJECT_IDENTITY_MISMATCH",
+                        f"{actual} reply cannot be bound to the exact registered project and ModelRef",
+                    )
+                result["execution"] = {**reply_execution, "project_id": requested_project}
             if not ref and (actual in selections or starter) and result.get("success") and self.worker is not None:
                 tag = str(srv._current_model.java.tag())
                 bound = self.service.bind_model(tag, ownership="mcp_owned" if tag in srv._mcp_owned_model_tags else "user_owned")

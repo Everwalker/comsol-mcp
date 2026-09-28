@@ -47,16 +47,17 @@ STAGE_ATTEMPT_TABLE_COLUMNS = (
     ("updated_at", "TEXT", 1, 0, "CURRENT_TIMESTAMP"),
 )
 STAGE_ATTEMPT_STATUSES = frozenset({
-    "ADMITTED", "RUNNING", "NOT_DISPATCHED_UNVERIFIED",
+    "ADMITTED", "DISPATCH_INTENT", "RUNNING", "NOT_DISPATCHED_UNVERIFIED",
     "MAPPING_CONFIGURED_PARTIAL", "SUCCEEDED_PARTIAL", "ACCEPTED",
     "FAILED", "UNKNOWN", "CANCELLED",
 })
 STAGE_ATTEMPT_TRANSITIONS = {
-    "ADMITTED": frozenset({"RUNNING", "NOT_DISPATCHED_UNVERIFIED", "MAPPING_CONFIGURED_PARTIAL", "FAILED", "UNKNOWN", "CANCELLED"}),
-    "RUNNING": frozenset({"SUCCEEDED_PARTIAL", "FAILED", "UNKNOWN", "CANCELLED"}),
+    "ADMITTED": frozenset({"DISPATCH_INTENT", "RUNNING", "NOT_DISPATCHED_UNVERIFIED", "MAPPING_CONFIGURED_PARTIAL", "FAILED", "UNKNOWN", "CANCELLED"}),
+    "DISPATCH_INTENT": frozenset({"RUNNING", "UNKNOWN", "CANCELLED"}),
+    "RUNNING": frozenset({"RUNNING", "SUCCEEDED_PARTIAL", "FAILED", "UNKNOWN", "CANCELLED"}),
 }
 STAGE_EXECUTION_STATUSES = frozenset({
-    "NOT_STARTED", "NOT_DISPATCHED", "MAPPING_CONFIGURED", "RUNNING",
+    "NOT_STARTED", "NOT_DISPATCHED", "MAPPING_CONFIGURED", "DISPATCH_INTENT", "RUNNING",
     "SOLVE_SUCCEEDED", "FAILED", "UNKNOWN", "CANCELLED",
 })
 STAGE_ACCEPTANCE_STATUSES = frozenset({
@@ -2072,7 +2073,7 @@ class OperationStore:
                 ).fetchall()
                 records = [self._stage_attempt_from_row(row, project_id=project_id, model_ref=model_ref) for row in rows]
                 same_stage = [row for row in records if row["stage_id"] == stage_id]
-                if any(row["status"] in {"ADMITTED", "RUNNING", "UNKNOWN"}
+                if any(row["status"] in {"ADMITTED", "DISPATCH_INTENT", "RUNNING", "UNKNOWN"}
                        or row["engine_dispatched"]
                        for row in same_stage):
                     raise StagePlanStoreConflict("STAGE_ATTEMPT_UNRESOLVED", "a prior stage attempt is active or dispatched; explicit recovery is required before retry")
@@ -2216,6 +2217,10 @@ class OperationStore:
                     raise StagePlanStoreConflict("STAGE_ATTEMPT_STATE_UNKNOWN", "partial mapping status requires a dispatched configuration readback")
                 if status == "RUNNING" and (not engine_dispatched or execution_status != "RUNNING"):
                     raise StagePlanStoreConflict("STAGE_ATTEMPT_STATE_UNKNOWN", "running status requires recorded engine dispatch")
+                if status == "DISPATCH_INTENT" and (
+                        engine_dispatched or execution_status != "DISPATCH_INTENT"
+                        or acceptance_status != "NOT_EVALUATED"):
+                    raise StagePlanStoreConflict("STAGE_ATTEMPT_STATE_UNKNOWN", "dispatch intent must be durably recorded before engine dispatch")
                 if status == "SUCCEEDED_PARTIAL" and (
                         not engine_dispatched or execution_status != "SOLVE_SUCCEEDED"
                         or acceptance_status not in {"PARTIAL", "UNVERIFIED"}):

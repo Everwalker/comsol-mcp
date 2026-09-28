@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "phase": "W21_ACTUAL_STAGE_BACKEND_IMPLEMENTATION",
+  "phase": "W21_STAGE_BACKEND_SOFTWARE_ACCEPTED",
   "task": "W01_W26_CONTINUOUS_IMPLEMENTATION",
   "status": "PARTIAL_EXECUTION_CONTINUING_NATIVE_UNVERIFIED",
   "candidate_source": "docs/full_project_execution/project_session/EXPERIMENT_READS_SOFTWARE_CHECKPOINT.json",
@@ -103,7 +103,7 @@
       "native_acceptance": "NOT_RUN"
     }
   ],
-  "next_action": "Implement actual supported stage backend using existing attempts and managed single-Worker route; establish target field/unit/topology/frame admission before solve, persist dispatch intent, retain UNKNOWN no-retry, then validate exact saved output/continuity/conservation. Keep unsupported profiles explicit and continue MASTER_GOAL.",
+  "next_action": "Implement and calibrate a documented supported native field/unit/topology/frame profile and actual output producer before opening production stage dispatch; continue remaining MASTER_GOAL scope.",
   "active_jobs": [],
   "blockers": [
     "W23 failed setup owned Server 75272 and daemon 75260 remain preserved: cleanup SIGTERM was rejected by automatic approval and explicit authorization is pending; no cleanup or relaunch authorized by elapsed time.",
@@ -990,10 +990,10 @@
     "next": "Wait for stable F04 runtime handoff; refresh closure and submit a new candidate for root review. No automatic rerun."
   },
   "verified_git_sync": {
-    "head": "e22cb62c298c17dc639b44b5ddbfe3c29205ded7",
-    "origin_main": "e22cb62c298c17dc639b44b5ddbfe3c29205ded7",
-    "status": "VERIFIED_EQUAL_AFTER_PUSH",
-    "stage": "W21_STRICT_FIELD_SOFTWARE"
+    "head": "739982c4e3808e89b893dee8c0fc88ceeba6809c",
+    "origin_main": "739982c4e3808e89b893dee8c0fc88ceeba6809c",
+    "checked_at": "2026-09-28T12:15:16.470874+00:00",
+    "status": "HEAD_EQUALS_ORIGIN_MAIN"
   },
   "w24_static_shape_science_admission_repair": {
     "status": "SCOPED_SOFTWARE_REPAIR_ACCEPTED_NATIVE_NOT_RUN",
@@ -2174,7 +2174,43 @@
         "scope": "Early source review only; no runtime acceptance",
         "executor": "Same Luna repairs as part of cohesive implementation"
       },
-      "next_platform_handoff_constraint": "Before future Windows transfer, use a reviewed source allowlist/frozen source manifest: current windows_handoff_snapshot.selected_paths uses git ls-files -co, and its root evidence/ exclusion does not exclude docs/full_project_execution/evidence. Do not archive the current mixed worktree wholesale. No transfer performed by this review."
+      "next_platform_handoff_constraint": "Before future Windows transfer, use a reviewed source allowlist/frozen source manifest: current windows_handoff_snapshot.selected_paths uses git ls-files -co, and its root evidence/ exclusion does not exclude docs/full_project_execution/evidence. Do not archive the current mixed worktree wholesale. No transfer performed by this review.",
+      "next_native_profile_investigation": {
+        "status": "DOCUMENTED_COMPONENTS_FOUND_NOT_IMPLEMENTED_NOT_RUNTIME_VERIFIED",
+        "candidate": "Explicit Heat Transfer temperature-only profile, with authenticated source-solve definition fingerprint and identical target definition; never infer by T variable name",
+        "api": [
+          "AbstractModel.baseSystem() returns UnitSystem",
+          "UnitSystem.baseUnit()/derivedUnit()/additionalUnit() enumerate definitions",
+          "Unit.quantity(),dimension(),symbol(),scale(),offset() permit actual unit-system readback"
+        ],
+        "documents": [
+          {
+            "path": "COMSOL_ReferenceManual.pdf",
+            "page": 1329,
+            "chunk": 13416,
+            "sha256": "3dacc33243911a98cbcac19c6b83c9b662dd0b7c56b880b3a9e6a2ab602e7106",
+            "finding": "Heat Transfer dependent field is temperature; names can change and matching fields can share DOFs"
+          },
+          {
+            "path": "api/com/comsol/model/AbstractModel.html",
+            "sha256": "de5cdd05c8ed879e990f299859e84323452ff07bf9fcce6e9d53acab36e72a36"
+          },
+          {
+            "path": "api/com/comsol/model/UnitSystem.html",
+            "sha256": "80b47d350af25f45496cd8a40f282d6f9b35390149836e4c71734826ab8f0c62"
+          },
+          {
+            "path": "api/com/comsol/model/Unit.html",
+            "sha256": "e5077f1cb55100c79a672b09ec0cb4842e0f685fac5f1ada12d9e69b9636a4fc"
+          }
+        ],
+        "unresolved": [
+          "Must connect actual physics field to physical quantity, reject ambiguous/shared DOFs, custom units or unsupported equation overrides",
+          "Actual source-solve fingerprint and target equality missing",
+          "Actual topology/frame proof and bounded native calibration still required"
+        ],
+        "dispatch_permission": "UNCHANGED_CLOSED"
+      }
     }
   },
   "w21_strict_field_checkpoint": {
@@ -2187,14 +2223,16 @@
     {
       "stage": "W21",
       "agent": "/root/luna_test_efficiency",
-      "status": "IMPLEMENTING_AND_TESTING",
+      "status": "ACCEPTED_SCOPED_SOFTWARE_PENDING_GIT_SYNC",
       "scope": "Native-admission-gated existing-Worker stage dispatch/check/save with durable no-replay transitions",
-      "acceptance": "PENDING; native NOT_RUN"
+      "acceptance": "292 unique PASS; production native admission UNVERIFIED",
+      "receipt": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/20260928T125952Z-84ca144a.summary.json",
+      "reported_tests": 292
     },
     {
       "stage": "W26_WINDOWS_HANDOFF",
       "agent": "/root/luna_handoff_scope",
-      "status": "ACCEPTED_SCOPED_SOFTWARE",
+      "status": "ACCEPTED_SCOPED_SOFTWARE_SYNCED",
       "scope": "Explicit source-manifest archive selection and scoped patch; source-hash validation; synthetic create/verify/extract tests",
       "owned_files": [
         "tools/windows_handoff_snapshot.py",
@@ -2217,7 +2255,16 @@
         "receipt_sha256": "b7ed9b3ddb3be1bc0e2c431b24f433784decee2f4e96b2cf9f9f41f213580a13",
         "final_checkpoint": "docs/full_project_execution/release/WINDOWS_HANDOFF_SOURCE_CHECKPOINT.json"
       },
-      "next_action": "Prepare exact reviewed source handoff after GitHub synchronization"
+      "next_action": "Prepare exact reviewed source handoff after GitHub synchronization",
+      "commit": "739982c4e3808e89b893dee8c0fc88ceeba6809c"
+    },
+    {
+      "stage": "WINDOWS_NATIVE_PREFLIGHT",
+      "agent": "/root/luna_handoff_scope",
+      "status": "READ_ONLY_INVENTORY_COMPLETE_RUNNER_REPAIR_RUNNING",
+      "scope": "Existing Windows COMSOL6.3/6.4 installation metadata and test-entrypoint discovery; no engine, Worker, solve, upload, install or termination",
+      "acceptance": "PASS scoped file metadata; native NOT_RUN",
+      "next_action": "Repair runner process metadata output boundary offline, then freeze current source and minimal native preconditions/budget; do not reuse old candidate PASS as current acceptance."
     }
   ],
   "windows_readonly_connection_observation": {
@@ -2245,6 +2292,53 @@
     "checkpoint": "docs/full_project_execution/release/WINDOWS_HANDOFF_SOURCE_CHECKPOINT.json",
     "tests": 88,
     "native": "NOT_RUN",
-    "git_sync": "PENDING_POST_PUSH_VERIFICATION"
+    "git_sync": "VERIFIED_HEAD_EQUALS_ORIGIN_MAIN",
+    "commit": "739982c4e3808e89b893dee8c0fc88ceeba6809c"
+  },
+  "w21_stage_backend_final_review": {
+    "status": "ACCEPTED_SCOPED_SOFTWARE",
+    "candidate_receipt": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/20260928T121058Z-f73a79c3.summary.json",
+    "receipt_sha256": "f92396e3ef742d8bea6fcaa5def52e883a6286deb41a0451f7c0abccb291509e",
+    "verified_evidence": "111 source hashes and artifact/JUnit hashes;285 unique tests passed",
+    "findings": [
+      "Conflicting same outer/inner pair with different solnum accepted as verified",
+      "Overall UNVERIFIED native admission accepted when individual facts say VERIFIED",
+      "Continuity check incorrectly equated boundary tuple with stage output tuple; original contract permits distinct times and requires actual source/target boundary-time readback",
+      "Actual PersistentJavaWorker.submit generates per-RPC wrk-UUID; daemon expects high-level attempt:solve/save. Legacy solve contains multiple metadata calls; fake backend single event masks mismatch."
+    ],
+    "next_action": "Implement and calibrate a documented supported native field/unit/topology/frame profile and actual output producer before opening production stage dispatch; continue remaining MASTER_GOAL scope.",
+    "native_status": "NOT_RUN",
+    "actual_class_reproducer": {
+      "class": "PersistentJavaWorker.submit with real operation_context/event emission and stubbed _request transport",
+      "observed": "submitted call.run carries operation_id=stage-operation and request_id=wrk-UUID, not attempt:solve",
+      "native_started": false
+    },
+    "final_checkpoint": "docs/full_project_execution/project_session/STAGE_BACKEND_SOFTWARE_CHECKPOINT.json",
+    "final_receipt": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/20260928T125952Z-84ca144a.summary.json",
+    "final_receipt_sha256": "a9222a04613372fde9a5bf5019890a79cee9b3e1adda106731d28cb2a0fae08d",
+    "final_unique_tests": 292,
+    "verified_source_files": 111
+  },
+  "windows_native_preflight": {
+    "status": "PASS_SCOPED_READ_ONLY_FILE_METADATA",
+    "native_status": "NOT_RUN",
+    "receipt": "/Volumes/SSD/Comsol-MCP/execution-scratch/windows-native-preflight/20260928T123940Z/receipt.json",
+    "receipt_sha256": "692c41c2d56521d05f9ac8174e1adad9897e6e9758a059c187606bb74443c448",
+    "builds": {
+      "6.3": "6.3.0.290",
+      "6.4": "6.4.0.293"
+    },
+    "classpath_paths_present": {
+      "6.3": "26/26",
+      "6.4": "25/25"
+    },
+    "unverified": [
+      "COMSOL license/feature availability",
+      "current native engine startup",
+      "current Python environment package health",
+      "current process ownership/quiescence (only parent-reported name-only snapshot is attached)",
+      "full Windows 6.3/6.4 platform acceptance"
+    ],
+    "next_action": "Repair runner process metadata output boundary offline, then freeze current source and minimal native preconditions/budget; do not reuse old candidate PASS as current acceptance."
   }
 }
