@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "phase": "W21_WINDOWS64_COMBINED_REPAIRS_ACCEPTED",
+  "phase": "W21_WINDOWS64_UPLOAD_APPROVAL_PENDING",
   "task": "W01_W26_CONTINUOUS_IMPLEMENTATION",
   "status": "PARTIAL_EXECUTION_CONTINUING_NATIVE_UNVERIFIED",
   "candidate_source": "docs/full_project_execution/project_session/EXPERIMENT_READS_SOFTWARE_CHECKPOINT.json",
@@ -103,7 +103,7 @@
       "native_acceptance": "NOT_RUN"
     }
   ],
-  "next_action": "Freeze new Windows6.4 metadata-only candidate from combined committed repairs; preserve and link original pre-native failure; run within1Server/1Worker/900s/0study-or-solver budget, then calibrate actual admission and separately freeze stage solves. Then Windows6.3 and W23-W26.",
+  "next_action": "Await explicit user approval of this concrete SCP archive and extractor upload after automatic approval review rejection. Do not switch transport or retry before approval. Archive0501e8c verified105Git source files+3metadata; remote new task directories exist but source/archive/extractor absent. Once approved, upload into the same new task root, prepare frozen metadata-only run, main review, execute within existing budget; then actual stage chain6.4/6.3,W23-W26.",
   "active_jobs": [],
   "blockers": [
     "W23 failed setup owned Server 75272 and daemon 75260 remain preserved: cleanup SIGTERM was rejected by automatic approval and explicit authorization is pending; no cleanup or relaunch authorized by elapsed time.",
@@ -132,7 +132,7 @@
     "native_solve_budget_remaining": 0,
     "evidence": "docs/full_project_execution/evidence/luna_process_reconciliation/mac_readonly_snapshot_20260926T2152Z.json"
   },
-  "updated_at": "2026-09-28T16:50:25.034515+00:00",
+  "updated_at": "2026-09-28T17:06:52.272124+00:00",
   "note": "Original scope remains through W26. User explicitly resumed after the test-efficiency analysis; implement efficiency improvements first. OpenViking task-detail retrieval was denied by auto-review because it would disclose internal roadmap identifiers externally; no workaround. Use current frozen workpack and read-only local memory only. Do not rerun bootstrap/init on resume. Source files now contain executor edits; do not rerun bootstrap/init. Git metadata is an APFS pointer managed by main agent; migration requires bundle/source transfer, not copying only the repository pointer. Git metadata migration is documented by evidence/git_metadata_relocation.json and owned by the main agent; do not copy the APFS git pointer to another machine without source bundle/archive. GUI permission boundary and checkpoint solution-scope caveat recorded. This executor has one W24 native setup-only failure with exact cleanup verified; the durable operation/job UNKNOWN records remain unchanged. No W24 solver submission occurred. Saved-MPH readback supplement uses separate time/evidence and zero study/solver calls; run08 remains FAIL_OR_INCOMPLETE. Root raw SQLite recomputation is linked under native_resume_saved_artifact_supplement.raw_recomputation_evidence; original run08 remains FAIL_OR_INCOMPLETE and no solve budget is restored. Latest checkpoint 2026-09-27T03:50:43Z: W24 0334Z setup run failed pre-model due Python 3.14 missing mcp, with exact cleanup; 0346Z candidate pins the validated 3.12.13 environment and passes a production no-engine registry/daemon preflight. Native setup remains pending root review; science implementation continues offline. Latest checkpoint 2026-09-27T09:09:28Z: W24 0841Z candidate was invoked once at 0857Z and failed before any engine/Worker birth because project.inspect received an injected idempotency_key; project.create persisted successfully. Exact read-only SQLite hash and operation result are in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_contract_diagnostic.json. The runner now omits the unnecessary inspect key; actual ControlDaemon focused regression is 2/2 PASS in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_runner_regression_receipt.json. No native retry or acceptance is claimed; release F04 runtime integration is active, so refresh closure and root review are required before another launch. Windows COMSOL 6.3 remains required/unassessed; only macOS 6.3 is USER_REQUESTED_SKIP.",
   "native_resume_smoke": {
     "status": "FAIL_OR_INCOMPLETE_POINT_SCHEMA_FAILURE; SOLVED_CHILD_ARTIFACT_DURABLE; SOLVE_BUDGET_EXHAUSTED; SEPARATE_SAVED_MPH_READBACK_PASS",
@@ -990,9 +990,10 @@
     "next": "Wait for stable F04 runtime handoff; refresh closure and submit a new candidate for root review. No automatic rerun."
   },
   "verified_git_sync": {
-    "head": "0027d85721c3bf05861cbc8327935e44fa4e8a21",
-    "origin_main": "0027d85721c3bf05861cbc8327935e44fa4e8a21",
-    "status": "HEAD_EQUALS_ORIGIN_MAIN"
+    "head": "0501e8cb643b973c286b266eaae9e460e5bd1f38",
+    "origin_main": "0501e8cb643b973c286b266eaae9e460e5bd1f38",
+    "status": "HEAD_EQUALS_ORIGIN_MAIN",
+    "checked_at": "2026-09-28T16:51:46.675181+00:00"
   },
   "w24_static_shape_science_admission_repair": {
     "status": "SCOPED_SOFTWARE_REPAIR_ACCEPTED_NATIVE_NOT_RUN",
@@ -2331,7 +2332,7 @@
     {
       "stage": "W21_PRODUCTION_MCP_RUNNER",
       "agent": "/root/luna_test_efficiency",
-      "status": "RESPONSE_CONTRACT_REPAIR_MAIN_VERIFIED",
+      "status": "REPAIR_SYNCED_NEW_PREPARATION_RUNNING",
       "scope": "New runner+tests through actual public stdioMCP/session-owned lifecycle; nativeexecute not authorized to agent yet",
       "native_status": "NOT_RUN",
       "limits_for_proposed_discovery": {
@@ -2352,12 +2353,13 @@
       },
       "checkpoint": "docs/full_project_execution/project_session/RUNNER_RESPONSE_CONTRACT_CHECKPOINT.json",
       "next_action": "Freeze a new isolated Windows6.4 metadata-only run from committed repaired source, link the old failure and preserve its project; no original replay. At most1Server/1Worker/900seconds/0study-or-solver. Output composition repair remains separate; then actual stage chain6.4,6.3,W23-W26.",
-      "commit": "52cf463eb116c37d9894a613df1565af3f675e26"
+      "commit": "0027d85721c3bf05861cbc8327935e44fa4e8a21",
+      "candidate_commit": "0501e8cb643b973c286b266eaae9e460e5bd1f38"
     },
     {
       "stage": "W21_NATIVE_OUTPUT_PRODUCER",
       "agent": "/root/luna_stage_output",
-      "status": "COMPOSITION_REPAIR_MAIN_VERIFIED",
+      "status": "REPAIR_SYNCED",
       "scope": "Actual Worker-driven exact tuple/field/continuity/native-integral readback using existing result/observation routes; new helper+ManagedBackend method+tests",
       "native_status": "NOT_RUN",
       "admission": "UNCHANGED_UNVERIFIED",
@@ -2368,7 +2370,7 @@
       ],
       "acceptance": "160uniquePASS;nativeUNVERIFIED",
       "checkpoint": "docs/full_project_execution/project_session/OUTPUT_COMPOSITION_REPAIR_CHECKPOINT.json",
-      "commit": "52cf463eb116c37d9894a613df1565af3f675e26"
+      "commit": "0501e8cb643b973c286b266eaae9e460e5bd1f38"
     },
     {
       "stage": "W21_WINDOWS_CONTROL_BREAKAWAY",
@@ -2406,13 +2408,14 @@
     {
       "stage": "W21_OUTPUT_WORKER_COMMAND_COMPOSITION",
       "agent": "/root/luna_stage_output",
-      "status": "COMPOSITION_REPAIR_MAIN_VERIFIED",
+      "status": "REPAIR_SYNCED",
       "scope": "Real Worker model/model_snapshot command handling in output callbacks and revision chain; true composed transport-stub regression; no native or admission change.",
       "next_action": "Freeze new Windows6.4 metadata-only candidate from combined committed repairs; preserve and link original pre-native failure; run within1Server/1Worker/900s/0study-or-solver budget, then calibrate actual admission and separately freeze stage solves. Then Windows6.3 and W23-W26.",
       "reproduction_artifact_root": "/Volumes/CTestEff/w21-stage-output-real-stack-red-20260928T151600Z",
       "reproduction_status": "Agent reports pytest exit1; exact failure inspection and forward repair underway. Not acceptance evidence.",
       "acceptance": "160uniquePASS;nativeUNVERIFIED",
-      "checkpoint": "docs/full_project_execution/project_session/OUTPUT_COMPOSITION_REPAIR_CHECKPOINT.json"
+      "checkpoint": "docs/full_project_execution/project_session/OUTPUT_COMPOSITION_REPAIR_CHECKPOINT.json",
+      "commit": "0501e8cb643b973c286b266eaae9e460e5bd1f38"
     }
   ],
   "windows_readonly_connection_observation": {
@@ -2487,7 +2490,18 @@
       "current process ownership/quiescence (only parent-reported name-only snapshot is attached)",
       "full Windows 6.3/6.4 platform acceptance"
     ],
-    "next_action": "Repair runner process metadata output boundary offline, then freeze current source and minimal native preconditions/budget; do not reuse old candidate PASS as current acceptance."
+    "next_action": "Repair runner process metadata output boundary offline, then freeze current source and minimal native preconditions/budget; do not reuse old candidate PASS as current acceptance.",
+    "current_upload_approval": {
+      "status": "PENDING_USER_INPUT",
+      "reason": "Automatic approval review rejected SCP source export, recognizing only read-only dependency permission",
+      "archive_sha256": "1d20c776c1d8c7867a12b9510916212fcc9ea76e1f051e1c10a3563c13503649",
+      "source_commit": "0501e8cb643b973c286b266eaae9e460e5bd1f38",
+      "remote_root": "C:\\Temp\\w21_win64_metadata_prepare_20260928T1655Z_0501e8c",
+      "upload": "NOT_RUN",
+      "native": "NOT_RUN",
+      "blocked_audit_turns": 1,
+      "checkpoint": "docs/full_project_execution/project_session/WINDOWS64_REPAIRED_UPLOAD_CHECKPOINT.json"
+    }
   },
   "windows_preflight_privacy_checkpoint": {
     "status": "PASS_SCOPED_SOFTWARE",

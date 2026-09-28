@@ -1,0 +1,63 @@
+{
+  "schema": "W21_WINDOWS64_REPAIRED_UPLOAD_CHECKPOINT_V1",
+  "status": "PARTIAL",
+  "source_commit": "0501e8cb643b973c286b266eaae9e460e5bd1f38",
+  "local_archive_status": "PASS; main verified105 exact Git blobs+3metadata",
+  "archive": {
+    "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-20260928T1655Z-0501e8c/w21-windows64-metadata-0501e8c-20260928T1655Z.tar.gz",
+    "sha256": "1d20c776c1d8c7867a12b9510916212fcc9ea76e1f051e1c10a3563c13503649",
+    "sha256_expected_from_archive_receipt": "1d20c776c1d8c7867a12b9510916212fcc9ea76e1f051e1c10a3563c13503649",
+    "member_file_count": 108,
+    "source_file_count": 105,
+    "metadata_member_count": 3,
+    "git_blob_exact_source_count": 105,
+    "parent_independent_verification": "105 source + 3 metadata members; all source members match Git blobs at frozen commit; archive not re-created"
+  },
+  "source_manifest": {
+    "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-20260928T1655Z-0501e8c/w21_source_manifest.json",
+    "sha256": "fa6ee7d61bdeb1ee20d52ada9a0115e9f60c2b54f05644fbad5537320e3145a3",
+    "canonical_sha256": "68102bef2f4aa3aace3c435571a9b9678c8b65f8637adc600cc04db94e78abf7",
+    "validation_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-20260928T1655Z-0501e8c/source_manifest_validation.json",
+    "validation_sha256": "da6a761cd7e2e0535dadcb9591e3760bd8edeeb2bb128c1dd6b378ef0f4ebf41",
+    "runner_closure_count": 103,
+    "file_count": 105
+  },
+  "remote_state": {
+    "endpoint": "everwalker@192.168.100.2",
+    "root": "C:\\Temp\\w21_win64_metadata_prepare_20260928T1655Z_0501e8c",
+    "method": "saved read-only SSH path-state check",
+    "stdout_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-20260928T1655Z-0501e8c/remote_root_state_check.stdout",
+    "stdout_sha256": "6c503b9333d4fd7f885a2522c21d563e2edbd744859779c748650bffa8d6136a",
+    "stderr_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-20260928T1655Z-0501e8c/remote_root_state_check.stderr",
+    "stderr_sha256": "8dfb508cf16102da95328f32d419965488b906a802133148ef1bbedc96a41f6c",
+    "observed": {
+      "status": "READ_ONLY_PATH_STATE",
+      "root": true,
+      "source": false,
+      "evidence": true,
+      "home": true,
+      "temp": true,
+      "scratch": true,
+      "archive": false,
+      "extractor": false
+    },
+    "interpretation": "task root and task-only evidence/home/temp/scratch directories exist; source, archive, and extractor are absent; no source payload was uploaded"
+  },
+  "transfer": {
+    "status": "NOT_RUN_BLOCKED_BY_AUTO_REVIEW",
+    "rejection_summary_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-20260928T1655Z-0501e8c/transfer_auto_review_rejection_summary.json",
+    "rejection_summary_sha256": "062870bc3928f3418a724ba7076cdddb5d0a689ecbfea9081dfef70b737b428b"
+  },
+  "native": {
+    "status": "NOT_RUN",
+    "server_births": 0,
+    "worker_births": 0,
+    "study_dispatches": 0,
+    "solver_dispatches": 0
+  },
+  "receipt": {
+    "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-20260928T1655Z-0501e8c/local_preparation_receipt.json",
+    "sha256": "9674c31224b7e826127d1bccf62598c6b941f4e64e0f4e6effcba89b53ca5e70"
+  },
+  "next_action": "Pending concrete user approval requested for SCP archive and extractor upload. Once approved, revalidate no-overwrite destinations, upload/verify/prepare same unique root; main reviews freeze before execute under existing task scope and1Server/1Worker/900s/0study-or-solver budget. Do not rerun old failed freeze or switch transports to bypass review."
+}
