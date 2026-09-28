@@ -46,6 +46,14 @@ class JobCleanupError(RuntimeError):
         self.code = code
 
 
+class StagePlanStoreConflict(RuntimeError):
+    """A plan or stage ID is already bound to different immutable content."""
+
+    def __init__(self, code: str, message: str):
+        super().__init__(message)
+        self.code = code
+
+
 class JobList(list):
     def __init__(self, items: list[dict[str, Any]], total: int, offset: int, limit: int):
         super().__init__(items)
@@ -1589,6 +1597,302 @@ class OperationStore:
                 if self.db.in_transaction:
                     self.db.execute("ROLLBACK")
                 raise
+
+    @staticmethod
+    def _stage_scope_digest(project_id: str, model_ref: dict[str, Any]) -> str:
+        from ._stage_contract import sha256_json
+        return sha256_json({"project_id": project_id, "model_ref": model_ref})
+
+    @classmethod
+    def stage_plan_key(cls, project_id: str, model_ref: dict[str, Any], plan_id: str) -> str:
+        return f"w21-stage-plan:{cls._stage_scope_digest(project_id, model_ref)}:{plan_id}"
+
+    @classmethod
+    def stage_id_key(cls, project_id: str, model_ref: dict[str, Any], stage_id: str) -> str:
+        return f"w21-stage-id:{cls._stage_scope_digest(project_id, model_ref)}:{stage_id}"
+
+    @staticmethod
+    def _validate_stage_plan_record(record: Any) -> dict[str, Any]:
+        from ._stage_contract import sha256_json, validate_stage_plan_definition
+        if not isinstance(record, dict):
+            raise StagePlanStoreConflict("STAGE_PLAN_STATE_UNKNOWN", "stored stage plan is malformed")
+        payload = dict(record)
+        observed = payload.pop("sha256", None)
+        definition = record.get("definition")
+        try:
+            normalized_definition = validate_stage_plan_definition(definition)
+        except Exception as exc:
+            raise StagePlanStoreConflict("STAGE_PLAN_STATE_UNKNOWN", "stored stage plan definition is malformed") from exc
+        if (type(record.get("schema_version")) is not int or record.get("schema_version") != 1
+                or record.get("kind") != "w21_stage_plan"
+                or not isinstance(record.get("project_id"), str)
+                or not isinstance(record.get("model_ref"), dict)
+                or not isinstance(record.get("plan_id"), str)
+                or record.get("plan_id") != normalized_definition.get("plan_id")
+                or type(record.get("declaration_revision")) is not int
+                or record.get("declaration_revision") < 0
+                or record.get("declaration_status") != "DECLARED_UNVERIFIED"
+                or not isinstance(record.get("declaration_evidence"), dict)
+                or normalized_definition != definition
+                or record.get("definition_sha256") != sha256_json(definition)
+                or not isinstance(observed, str) or observed != sha256_json(payload)):
+            raise StagePlanStoreConflict("STAGE_PLAN_STATE_UNKNOWN", "stored stage plan failed its integrity check")
+        return record
+
+    @staticmethod
+    def _stage_json_equal(left: Any, right: Any) -> bool:
+        """Compare persisted JSON identities without Python bool/int aliasing."""
+        from ._stage_contract import canonical_json
+
+        try:
+            return canonical_json(left) == canonical_json(right)
+        except (TypeError, ValueError):
+            return False
+
+    @staticmethod
+    def _stage_index_record(project_id: str, model_ref: dict[str, Any], plan_record: dict[str, Any],
+                            stage: dict[str, Any]) -> dict[str, Any]:
+        from ._stage_contract import sha256_json
+
+        index = {
+            "schema_version": 1,
+            "kind": "w21_stage_id_index",
+            "project_id": project_id,
+            "model_ref": dict(model_ref),
+            "plan_id": plan_record["plan_id"],
+            "plan_sha256": plan_record["sha256"],
+            "definition_sha256": plan_record["definition_sha256"],
+            "stage_id": stage["stage_id"],
+            "ordinal": stage["ordinal"],
+        }
+        index["sha256"] = sha256_json(index)
+        return index
+
+    def _load_validated_stage_scope_locked(
+        self, project_id: str, model_ref: dict[str, Any],
+    ) -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, Any]]]:
+        """Read every plan and index in one stable project/ModelRef scope.
+
+        Multiple plans may coexist in a scope. Every plan must own exactly the
+        indexes named by its definition, and every index must bind back to its
+        owner plan and exact stage ordinal. This detects missing, extra, stale,
+        or cross-owned rows without treating valid indexes from another plan
+        as corruption of the current plan.
+        """
+        from ._stage_contract import sha256_json
+
+        digest = self._stage_scope_digest(project_id, model_ref)
+        column = self._metadata_column("artifacts")
+        plan_rows = self.db.execute(
+            f"SELECT {column},metadata FROM artifacts WHERE {column} LIKE ? ORDER BY {column}",
+            (f"w21-stage-plan:{digest}:%",),
+        ).fetchall()
+        index_rows = self.db.execute(
+            f"SELECT {column},metadata FROM artifacts WHERE {column} LIKE ? ORDER BY {column}",
+            (f"w21-stage-id:{digest}:%",),
+        ).fetchall()
+
+        plans: dict[str, dict[str, Any]] = {}
+        for row in plan_rows:
+            key = row[0]
+            try:
+                record = json.loads(row[1])
+            except (TypeError, ValueError) as exc:
+                raise StagePlanStoreConflict("STAGE_PLAN_STATE_UNKNOWN", "stored stage plan metadata is unreadable") from exc
+            record = self._validate_stage_plan_record(record)
+            plan_id = record["plan_id"]
+            if (key != self.stage_plan_key(project_id, model_ref, plan_id)
+                    or record.get("project_id") != project_id
+                    or not self._stage_json_equal(record.get("model_ref"), model_ref)
+                    or plan_id in plans):
+                raise StagePlanStoreConflict("STAGE_PLAN_STATE_UNKNOWN", "stored plan ownership or key is inconsistent")
+            plans[plan_id] = record
+
+        indexes: dict[str, dict[str, Any]] = {}
+        indexes_by_plan: dict[str, dict[str, dict[str, Any]]] = {}
+        for row in index_rows:
+            key = row[0]
+            try:
+                index = self._validate_stage_index_record(json.loads(row[1]))
+            except (TypeError, ValueError) as exc:
+                raise StagePlanStoreConflict("STAGE_PLAN_STATE_UNKNOWN", "stored stage index metadata is unreadable") from exc
+            stage_id = index.get("stage_id")
+            plan_id = index.get("plan_id")
+            if (not isinstance(stage_id, str) or not stage_id
+                    or not isinstance(plan_id, str) or not plan_id
+                    or type(index.get("ordinal")) is not int or index["ordinal"] < 1
+                    or key != self.stage_id_key(project_id, model_ref, stage_id)
+                    or index.get("project_id") != project_id
+                    or not self._stage_json_equal(index.get("model_ref"), model_ref)
+                    or stage_id in indexes):
+                raise StagePlanStoreConflict("STAGE_PLAN_STATE_UNKNOWN", "stored stage index ownership or key is inconsistent")
+            indexes[stage_id] = index
+            indexes_by_plan.setdefault(plan_id, {})[stage_id] = index
+
+        if set(indexes_by_plan) - set(plans):
+            raise StagePlanStoreConflict("STAGE_PLAN_STATE_UNKNOWN", "stored stage index refers to a missing plan")
+
+        for plan_id, plan in plans.items():
+            stages = plan["definition"]["stages"]
+            expected_ids = {stage["stage_id"] for stage in stages}
+            actual_for_plan = indexes_by_plan.get(plan_id, {})
+            if set(actual_for_plan) != expected_ids:
+                raise StagePlanStoreConflict("STAGE_PLAN_STATE_UNKNOWN", "stored stage index set differs from its owning plan")
+            for stage in stages:
+                expected = self._stage_index_record(project_id, model_ref, plan, stage)
+                if actual_for_plan.get(stage["stage_id"]) != expected:
+                    raise StagePlanStoreConflict("STAGE_PLAN_STATE_UNKNOWN", "stored stage index binding differs from its owning plan")
+
+        return plans, indexes
+
+    def _read_validated_stage_scope(
+        self, project_id: str, model_ref: dict[str, Any],
+    ) -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, Any]]]:
+        """Read a consistent scope snapshot, preserving an enclosing transaction."""
+        with self.lock:
+            started_transaction = not self.db.in_transaction
+            if started_transaction:
+                self.db.execute("BEGIN")
+            try:
+                result = self._load_validated_stage_scope_locked(project_id, model_ref)
+                if started_transaction:
+                    self.db.execute("COMMIT")
+                return result
+            except BaseException:
+                if started_transaction and self.db.in_transaction:
+                    self.db.execute("ROLLBACK")
+                raise
+
+    def register_stage_plan(self, *, project_id: str, model_ref: dict[str, Any],
+                            plan_record: dict[str, Any]) -> tuple[dict[str, Any], bool]:
+        """Atomically register a complete immutable plan and all stage IDs.
+
+        ``model_ref`` is the complete stable ModelRef identity. Its generation
+        and server instance are part of the scope; a later managed revision is
+        recorded separately and does not change plan identity.
+        """
+        from ._stage_contract import canonical_json, sha256_json
+
+        if not isinstance(plan_record, dict):
+            raise StagePlanStoreConflict("INVALID_REQUEST", "stage plan registration payload is malformed")
+        plan_id = plan_record.get("plan_id")
+        definition = plan_record.get("definition")
+        definition_sha = plan_record.get("definition_sha256")
+        stages = definition.get("stages") if isinstance(definition, dict) else None
+        if (not isinstance(project_id, str) or not project_id
+                or not isinstance(model_ref, dict)
+                or not isinstance(plan_id, str) or not plan_id
+                or type(plan_record.get("schema_version")) is not int
+                or plan_record.get("schema_version") != 1
+                or plan_record.get("kind") != "w21_stage_plan"
+                or plan_record.get("project_id") != project_id
+                or not self._stage_json_equal(plan_record.get("model_ref"), model_ref)
+                or not isinstance(definition, dict)
+                or definition.get("plan_id") != plan_id
+                or definition_sha != sha256_json(definition)
+                or not isinstance(stages, list) or not stages):
+            raise StagePlanStoreConflict("INVALID_REQUEST", "stage plan registration payload is malformed")
+        try:
+            self._validate_stage_plan_record(plan_record)
+        except StagePlanStoreConflict as exc:
+            raise StagePlanStoreConflict("INVALID_REQUEST", "stage plan registration payload failed validation") from exc
+        plan_key = self.stage_plan_key(project_id, model_ref, plan_id)
+        plan_encoded = canonical_json(plan_record)
+        plan_column = self._metadata_column("artifacts")
+        index_records: list[tuple[str, str]] = []
+        for stage in stages:
+            if not isinstance(stage, dict):
+                raise StagePlanStoreConflict("INVALID_REQUEST", "stage plan stage index is malformed")
+            try:
+                index = self._stage_index_record(project_id, model_ref, plan_record, stage)
+            except (KeyError, TypeError) as exc:
+                raise StagePlanStoreConflict("INVALID_REQUEST", "stage plan stage index is malformed") from exc
+            if type(index["ordinal"]) is not int:
+                raise StagePlanStoreConflict("INVALID_REQUEST", "stage plan stage index is malformed")
+            index_records.append((self.stage_id_key(project_id, model_ref, index["stage_id"]), canonical_json(index)))
+
+        with self.lock:
+            self.db.execute("BEGIN IMMEDIATE")
+            try:
+                existing_row = self.db.execute(
+                    f"SELECT metadata FROM artifacts WHERE {plan_column}=?", (plan_key,),
+                ).fetchone()
+                if existing_row is not None:
+                    existing = self._validate_stage_plan_record(json.loads(existing_row[0]))
+                    if (existing.get("project_id") != project_id
+                            or not self._stage_json_equal(existing.get("model_ref"), model_ref)
+                            or existing.get("plan_id") != plan_id):
+                        raise StagePlanStoreConflict("STAGE_PLAN_STATE_UNKNOWN", "stored plan scope is inconsistent")
+                    if existing.get("definition_sha256") != definition_sha or existing.get("definition") != definition:
+                        raise StagePlanStoreConflict("STAGE_PLAN_CONFLICT", "plan_id is already registered with different definition content")
+                    # Same plan ID and definition is idempotent. Validate all
+                    # coexisting plans and their own complete index sets.
+                    plans, _indexes = self._load_validated_stage_scope_locked(project_id, model_ref)
+                    stored = plans.get(plan_id)
+                    if stored is None:
+                        raise StagePlanStoreConflict("STAGE_PLAN_STATE_UNKNOWN", "stored plan is absent from its model scope")
+                    self.db.execute("COMMIT")
+                    return stored, False
+
+                # Reject corruption anywhere in this identity scope before
+                # adding another plan; valid disjoint plans remain allowed.
+                _plans, existing_indexes = self._load_validated_stage_scope_locked(project_id, model_ref)
+                if any(stage_id in existing_indexes for stage_id in (stage["stage_id"] for stage in stages)):
+                    raise StagePlanStoreConflict("STAGE_ID_CONFLICT", "stage_id is already registered in this project and model scope")
+
+                plan_sha = plan_record.get("sha256")
+                if not isinstance(plan_sha, str) or plan_sha != sha256_json({k: v for k, v in plan_record.items() if k != "sha256"}):
+                    raise StagePlanStoreConflict("INVALID_REQUEST", "stage plan record hash is invalid")
+                self.db.execute(
+                    f"INSERT INTO artifacts({plan_column},metadata) VALUES(?,?)", (plan_key, plan_encoded),
+                )
+                for stage_key, encoded in index_records:
+                    self.db.execute(
+                        f"INSERT INTO artifacts({plan_column},metadata) VALUES(?,?)", (stage_key, encoded),
+                    )
+                self.db.execute("COMMIT")
+                return plan_record, True
+            except Exception:
+                if self.db.in_transaction:
+                    self.db.execute("ROLLBACK")
+                raise
+
+    def get_stage_plan(self, project_id: str, model_ref: dict[str, Any], plan_id: str) -> dict[str, Any] | None:
+        """Read a plan only after verifying all plans and indexes in its scope."""
+        plans, _indexes = self._read_validated_stage_scope(project_id, model_ref)
+        return plans.get(plan_id)
+
+    @staticmethod
+    def _validate_stage_index_record(record: Any) -> dict[str, Any]:
+        from ._stage_contract import sha256_json
+        if not isinstance(record, dict):
+            raise StagePlanStoreConflict("STAGE_PLAN_STATE_UNKNOWN", "stored stage ID index is malformed")
+        payload = dict(record)
+        observed = payload.pop("sha256", None)
+        if (type(record.get("schema_version")) is not int or record.get("schema_version") != 1
+                or record.get("kind") != "w21_stage_id_index"
+                or not isinstance(observed, str) or observed != sha256_json(payload)):
+            raise StagePlanStoreConflict("STAGE_PLAN_STATE_UNKNOWN", "stored stage ID index failed its integrity check")
+        return record
+
+    def get_stage_id_index(self, project_id: str, model_ref: dict[str, Any], stage_id: str) -> dict[str, Any] | None:
+        """Read one index only after validating its owner plan and complete scope."""
+        resolved = self.resolve_stage(project_id, model_ref, stage_id)
+        return resolved["index"] if resolved is not None else None
+
+    def resolve_stage(self, project_id: str, model_ref: dict[str, Any], stage_id: str) -> dict[str, Any] | None:
+        """Resolve an index to its exact persisted plan and stage declaration."""
+        plans, indexes = self._read_validated_stage_scope(project_id, model_ref)
+        index = indexes.get(stage_id)
+        if index is None:
+            return None
+        plan = plans.get(index["plan_id"])
+        if plan is None:
+            raise StagePlanStoreConflict("STAGE_PLAN_STATE_UNKNOWN", "stored stage index owner plan is unavailable")
+        matches = [stage for stage in plan["definition"]["stages"] if stage["stage_id"] == stage_id]
+        if len(matches) != 1:
+            raise StagePlanStoreConflict("STAGE_PLAN_STATE_UNKNOWN", "stored stage index does not resolve uniquely in its plan")
+        return {"index": index, "plan": plan, "stage": matches[0]}
 
     @staticmethod
     def _metric_scope_digest(project_id: str, metric_id: str) -> str:

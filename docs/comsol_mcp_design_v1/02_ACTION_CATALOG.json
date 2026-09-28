@@ -14658,38 +14658,83 @@
                     "definition_sha256"
                   ],
                   "properties": {
-                    "metric_id": {"type": "string", "minLength": 1},
-                    "version": {"type": "integer", "minimum": 1},
-                    "definition_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+                    "metric_id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "version": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "definition_sha256": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
+                    }
                   },
                   "additionalProperties": false
                 }
               },
               "objective": {
                 "type": "object",
-                "required": ["metric_ref", "tuple", "direction", "unit"],
+                "required": [
+                  "metric_ref",
+                  "tuple",
+                  "direction",
+                  "unit"
+                ],
                 "properties": {
                   "metric_ref": {
                     "type": "object",
-                    "required": ["metric_id", "version", "definition_sha256"],
+                    "required": [
+                      "metric_id",
+                      "version",
+                      "definition_sha256"
+                    ],
                     "properties": {
-                      "metric_id": {"type": "string", "minLength": 1},
-                      "version": {"type": "integer", "minimum": 1},
-                      "definition_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+                      "metric_id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "version": {
+                        "type": "integer",
+                        "minimum": 1
+                      },
+                      "definition_sha256": {
+                        "type": "string",
+                        "pattern": "^[0-9a-f]{64}$"
+                      }
                     },
                     "additionalProperties": false
                   },
                   "tuple": {
                     "type": "object",
-                    "required": ["outer", "inner"],
+                    "required": [
+                      "outer",
+                      "inner"
+                    ],
                     "properties": {
-                      "outer": {"type": "integer", "minimum": 1},
-                      "inner": {"type": "integer", "minimum": 1}
+                      "outer": {
+                        "type": "integer",
+                        "minimum": 1
+                      },
+                      "inner": {
+                        "type": "integer",
+                        "minimum": 1
+                      }
                     },
                     "additionalProperties": false
                   },
-                  "direction": {"type": "string", "enum": ["minimize", "maximize"]},
-                  "unit": {"type": "string", "minLength": 1}
+                  "direction": {
+                    "type": "string",
+                    "enum": [
+                      "minimize",
+                      "maximize"
+                    ]
+                  },
+                  "unit": {
+                    "type": "string",
+                    "minLength": 1
+                  }
                 },
                 "additionalProperties": false
               },
@@ -14697,39 +14742,88 @@
                 "type": "array",
                 "items": {
                   "type": "object",
-                  "required": ["constraint_id", "metric_ref", "tuple", "relation", "value", "unit"],
+                  "required": [
+                    "constraint_id",
+                    "metric_ref",
+                    "tuple",
+                    "relation",
+                    "value",
+                    "unit"
+                  ],
                   "properties": {
-                    "constraint_id": {"type": "string", "minLength": 1},
+                    "constraint_id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
                     "metric_ref": {
                       "type": "object",
-                      "required": ["metric_id", "version", "definition_sha256"],
+                      "required": [
+                        "metric_id",
+                        "version",
+                        "definition_sha256"
+                      ],
                       "properties": {
-                        "metric_id": {"type": "string", "minLength": 1},
-                        "version": {"type": "integer", "minimum": 1},
-                        "definition_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+                        "metric_id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "definition_sha256": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{64}$"
+                        }
                       },
                       "additionalProperties": false
                     },
                     "tuple": {
                       "type": "object",
-                      "required": ["outer", "inner"],
+                      "required": [
+                        "outer",
+                        "inner"
+                      ],
                       "properties": {
-                        "outer": {"type": "integer", "minimum": 1},
-                        "inner": {"type": "integer", "minimum": 1}
+                        "outer": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "inner": {
+                          "type": "integer",
+                          "minimum": 1
+                        }
                       },
                       "additionalProperties": false
                     },
-                    "relation": {"type": "string", "enum": ["<", "<=", ">", ">="]},
-                    "value": {"type": "number"},
-                    "unit": {"type": "string", "minLength": 1}
+                    "relation": {
+                      "type": "string",
+                      "enum": [
+                        "<",
+                        "<=",
+                        ">",
+                        ">="
+                      ]
+                    },
+                    "value": {
+                      "type": "number"
+                    },
+                    "unit": {
+                      "type": "string",
+                      "minLength": 1
+                    }
                   },
                   "additionalProperties": false
                 }
               }
             },
             "dependentRequired": {
-              "objective": ["constraints"],
-              "constraints": ["objective"]
+              "objective": [
+                "constraints"
+              ],
+              "constraints": [
+                "objective"
+              ]
             }
           }
         },
@@ -14910,8 +15004,8 @@
       "effect": "STATE_WRITE",
       "scope": "model",
       "gate": "G5",
-      "implementation_status": "PROPOSED_NOT_IMPLEMENTED",
-      "route": "control orchestration + versioned engine calls; scientific rules are explicit",
+      "implementation_status": "SOFTWARE_CONTROL_ROUTE_IMPLEMENTED_NATIVE_UNVERIFIED",
+      "route": "durable plan registration; no Worker RPC or solve; future study/solution/mapping existence is DECLARED_UNVERIFIED",
       "capability_requirements": "common target with version capability probe",
       "input_schema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -14938,7 +15032,315 @@
             "type": "string"
           },
           "definition": {
-            "type": "object"
+            "type": "object",
+            "properties": {
+              "plan_id": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
+              },
+              "stages": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "stage_id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
+                    },
+                    "ordinal": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "depends_on": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
+                      },
+                      "uniqueItems": true
+                    },
+                    "study_target": {
+                      "$ref": "common.schema.json#/$defs/NodePath"
+                    },
+                    "source_selection": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "const": "initial_state"
+                            },
+                            "strategy": {
+                              "const": "declared_initial"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "strategy"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "const": "stage"
+                            },
+                            "stage_id": {
+                              "type": "string",
+                              "minLength": 1,
+                              "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
+                            },
+                            "selection": {
+                              "$ref": "common.schema.json#/$defs/SolutionSpec"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "stage_id",
+                            "selection"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    "target_selection": {
+                      "$ref": "common.schema.json#/$defs/SolutionSpec"
+                    },
+                    "variable_mappings": {
+                      "type": "array",
+                      "minItems": 1,
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "source_variable": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "target_variable": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "source_unit": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "target_unit": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "mapping_method": {
+                            "enum": [
+                              "identity",
+                              "interpolate",
+                              "projection"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "source_variable",
+                          "target_variable",
+                          "source_unit",
+                          "target_unit",
+                          "mapping_method"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "reference_state": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "strategy": {
+                              "const": "initial_state"
+                            }
+                          },
+                          "required": [
+                            "strategy"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "strategy": {
+                              "const": "predecessor_stage"
+                            },
+                            "source_stage_id": {
+                              "type": "string",
+                              "minLength": 1,
+                              "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
+                            }
+                          },
+                          "required": [
+                            "strategy",
+                            "source_stage_id"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    "checks": {
+                      "type": "array",
+                      "items": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "const": "continuity"
+                              },
+                              "check_id": {
+                                "type": "string",
+                                "minLength": 1,
+                                "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
+                              },
+                              "source_variable": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "target_variable": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "unit": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "tolerance": {
+                                "type": "object",
+                                "properties": {
+                                  "absolute": {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  "relative": {
+                                    "type": "number",
+                                    "minimum": 0
+                                  }
+                                },
+                                "required": [
+                                  "absolute",
+                                  "relative"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "check_id",
+                              "source_variable",
+                              "target_variable",
+                              "unit",
+                              "tolerance"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "const": "conservation"
+                              },
+                              "check_id": {
+                                "type": "string",
+                                "minLength": 1,
+                                "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
+                              },
+                              "quantity": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "terms": {
+                                "type": "array",
+                                "minItems": 2,
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "side": {
+                                      "enum": [
+                                        "source",
+                                        "target"
+                                      ]
+                                    },
+                                    "variable": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "coefficient": {
+                                      "type": "number"
+                                    }
+                                  },
+                                  "required": [
+                                    "side",
+                                    "variable",
+                                    "coefficient"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "unit": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "tolerance": {
+                                "type": "object",
+                                "properties": {
+                                  "absolute": {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  "relative": {
+                                    "type": "number",
+                                    "minimum": 0
+                                  }
+                                },
+                                "required": [
+                                  "absolute",
+                                  "relative"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "check_id",
+                              "quantity",
+                              "terms",
+                              "unit",
+                              "tolerance"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "stage_id",
+                    "ordinal",
+                    "depends_on",
+                    "study_target",
+                    "source_selection",
+                    "target_selection",
+                    "variable_mappings",
+                    "reference_state",
+                    "checks"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "plan_id",
+              "stages"
+            ],
+            "additionalProperties": false
           }
         },
         "required": [
@@ -14950,13 +15352,13 @@
         ],
         "additionalProperties": false
       },
-      "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+      "output_contract": "immutable project/model-scoped stage plan, declaration revision and hash; all engine-facing targets remain DECLARED_UNVERIFIED",
       "required_tests": [
         "schema_valid",
         "normal_path",
         "failure_is_truthful"
       ],
-      "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read."
+      "notes": "Definition-only control route. No Worker RPC, solve, target-existence probe, or executable state mapping occurs."
     },
     {
       "operation_id": "experiment.stage_run",

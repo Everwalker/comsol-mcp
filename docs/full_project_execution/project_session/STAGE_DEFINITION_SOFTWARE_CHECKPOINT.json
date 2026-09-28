@@ -1,0 +1,146 @@
+{
+  "schema_version": 1,
+  "stage": "W21 immutable complete stage-plan declaration",
+  "status": "PASS_SCOPED_SOFTWARE",
+  "project_status": "PARTIAL",
+  "base_commit": "d181e61672c4596ba8196aa21f24a0aea9300003",
+  "overlay": [
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "sha256": "b579aea1882d0928e0f67fba1900e4d0944070e7e8892a1c046e0bb72fa3516d"
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "sha256": "36bfda855e6c62d109634c12ba1b6cb7426aca875d6c859f1f967f45bcd6e828"
+    },
+    {
+      "path": "comsol_mcp/_operation_store.py",
+      "sha256": "28eaa3cfc3ead22092fc94271ce96f2014967aff1f25dd077c73f911e3004201"
+    },
+    {
+      "path": "comsol_mcp/_stage_contract.py",
+      "sha256": "edf816690717a66c5afb533ab5c6df4ebf0940a1adeec77188ab005f4d86e24d"
+    },
+    {
+      "path": "comsol_mcp/_tools_w21.py",
+      "sha256": "4332f2879ff35b79d58d2afc179abdb598ef1ba4307d3c1c81340e0f0e9dc724"
+    },
+    {
+      "path": "comsol_mcp/data/g2/02_ACTION_CATALOG.json",
+      "sha256": "dc50aa8840a35c064c436cdd93352a93a752ff2d43dfe98390145203324c3f97"
+    },
+    {
+      "path": "docs/comsol_mcp_design_v1/02_ACTION_CATALOG.json",
+      "sha256": "dc50aa8840a35c064c436cdd93352a93a752ff2d43dfe98390145203324c3f97"
+    },
+    {
+      "path": "tests/test_registration.py",
+      "sha256": "97ec898e42e00646ee5a69b003e17e050b3cffc435093d71dd73233d1b523078"
+    },
+    {
+      "path": "tests/test_stage_definition.py",
+      "sha256": "e157e89d20158a97aec9e5c1c8ecb29a6aede0e85a92b3775752dc1d8097e06e"
+    }
+  ],
+  "capabilities": [
+    "Strict complete-plan declaration schema with ordered dependencies, SolutionSpec/NodePath, variable/unit/reference policy and predeclared tolerances.",
+    "Public MCP, direct and two fallback routes use the same scheduled no-Worker durable callback.",
+    "Atomic SQLite plan plus stage indexes scoped to project and full ModelRef, revision recorded separately.",
+    "Multiple disjoint plans coexist and retry independently, with complete index ownership and corruption checks across restart."
+  ],
+  "tests": {
+    "isolated": {
+      "errors": 0,
+      "failed": 0,
+      "passed": 267,
+      "skipped": 0,
+      "tests": 267
+    },
+    "deselected": [
+      {
+        "id": "tests/test_operation_store_migrations.py::test_historical_fixture_commit_and_blob_identity_resolve",
+        "reason": "excluded from this repair closure per parent request; prior frozen receipt records isolated 1P with GIT_DIR scoped to that test only"
+      },
+      {
+        "id": "tests/test_registry_job_control_fallback.py::test_job_status_log_cancel_are_responsive_through_all_three_entrypoints",
+        "reason": "unrelated known d181e61 baseline KeyError cursor defect; base/candidate reproduction and hashes preserved in prior receipt"
+      }
+    ],
+    "main": {
+      "tests": 25,
+      "failures": 0
+    },
+    "main_original_reproducer": "FIXED; both disjoint plans create and independently return IDEMPOTENT_EXISTING on new requests; zero Worker calls.",
+    "integrity": {
+      "base_files": 306,
+      "overlay_files": 9
+    }
+  },
+  "known_baseline_failure": {
+    "candidate": {
+      "command": "cd /private/tmp/w21-stage-define-d181e61-rKs8S6 && /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -m pytest -q tests/test_registry_job_control_fallback.py::test_job_status_log_cancel_are_responsive_through_all_three_entrypoints --junitxml=/private/tmp/w21-stage-define-candidate-cursor-failure-junit.xml",
+      "junit_sha256": "0a4b5c4314e0ea98a5a1737e4e31f1faf5af6455e44980feb0958ee13da3d81e",
+      "junit_xml": "/private/tmp/w21-stage-define-candidate-cursor-failure-junit.xml",
+      "result": {
+        "failed": 1,
+        "passed": 0
+      },
+      "stdout_log": "/private/tmp/w21-stage-define-candidate-cursor-failure.log",
+      "stdout_log_sha256": "1ad64d0184b3bd12fa8ead3bfcdf475797ec96c2d1981a06caaed4fdf697c214"
+    },
+    "classification": "unrelated pre-existing registry contract assertion; preserve as open baseline defect, not counted as candidate PASS",
+    "clean_base": {
+      "command": "cd /private/tmp/w21-stage-define-d181e61-base-check && /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -m pytest -q tests/test_registry_job_control_fallback.py::test_job_status_log_cancel_are_responsive_through_all_three_entrypoints --junitxml=/private/tmp/w21-stage-define-base-cursor-failure-junit.xml",
+      "junit_sha256": "4e6d9f6805c1d2639085db7099cc4406e6c20322376726fc98656ec12eb337fe",
+      "junit_xml": "/private/tmp/w21-stage-define-base-cursor-failure-junit.xml",
+      "result": {
+        "failed": 1,
+        "passed": 0
+      },
+      "stdout_log": "/private/tmp/w21-stage-define-base-cursor-failure.log",
+      "stdout_log_sha256": "34fd5177cda7033d5c71b3840b9fc9509fe1d4b8ef643da5807b06891fd54f43"
+    },
+    "error": "KeyError: 'cursor' at assertion described[\"runtime_dispatch_contract\"][\"cursor\"].startswith(\"Base-10\") (test_registry_job_control_fallback.py:108)",
+    "id": "tests/test_registry_job_control_fallback.py::test_job_status_log_cancel_are_responsive_through_all_three_entrypoints"
+  },
+  "replay": {
+    "cwd": "repository root",
+    "focused": "python -m pytest -q tests/test_stage_definition.py",
+    "isolated_command": "cd /private/tmp/w21-stage-define-multiplan-fix-20260928 && /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -m pytest -q tests/test_stage_definition.py tests/test_registration.py tests/test_w21_canonical_contracts.py tests/test_g3_metrics.py tests/test_experiment_durable_reads.py tests/test_g2_w08_w12.py tests/test_control_daemon_projects.py tests/test_operation_store.py tests/test_operation_store_migrations.py tests/test_control_daemon.py tests/test_control_queue.py tests/test_control_client.py tests/test_registry_job_control_fallback.py tests/test_g2_registry_packaging.py tests/test_g2_security_guards.py tests/test_g2_remote_isolation.py tests/test_project_authority.py tests/test_execution_contract.py --deselect=tests/test_operation_store_migrations.py::test_historical_fixture_commit_and_blob_identity_resolve --deselect=tests/test_registry_job_control_fallback.py::test_job_status_log_cancel_are_responsive_through_all_three_entrypoints --junitxml=/private/tmp/w21-stage-define-multiplan-final3-junit.xml"
+  },
+  "local_evidence": [
+    {
+      "path": "/private/tmp/w21-stage-define-multiplan-receipt.json",
+      "sha256": "5510e8154c1fa395a1deb82ec79fe0a48ad5f94c2bb1b49875779294cb9ddc9c"
+    },
+    {
+      "path": "/private/tmp/w21-stage-define-multiplan-final3-junit.xml",
+      "sha256": "d0f0184398bc863076f7b7570912d08af3c97e5420e6d5fb003be9e0ecbf7d8d"
+    },
+    {
+      "path": "/private/tmp/w21-stage-main-integrity.json",
+      "sha256": "1d8536bac583aa47826994d41becd377f9d8dc7e6b60c6ca10c09116a71c1680"
+    },
+    {
+      "path": "/private/tmp/w21-stage-main-junit.xml",
+      "sha256": "e52f6d2daad264963a1ed035e1c6da67d8336eb3eec1b18f82415992581a2546"
+    },
+    {
+      "path": "/private/tmp/w21-multiple-plans-main-reproducer.json",
+      "sha256": "1b75bc45ef748fa8a3e85e55517d6eab6e11d82bdba21d8a57164dc6b051c2ef"
+    },
+    {
+      "path": "/private/tmp/w21-multiple-plans-main-retest.json",
+      "sha256": "7b53cbac76a412b4fbcdd1fd664bac64fd3e4f016c2b13b6a3ae6cf96cb44e73"
+    }
+  ],
+  "limits": {
+    "declaration_status": "DECLARED_UNVERIFIED",
+    "native": "NOT_RUN",
+    "stage_run": "NOT_IMPLEMENTED",
+    "state_map": "NOT_IMPLEMENTED",
+    "native_mapping_and_conservation": "NOT_RUN",
+    "T021_T047": "UNCHANGED"
+  },
+  "next_action": "Implement original WRITE state_map and COMPUTE stage_run against the persisted plan without substituting legacy transfer APIs; resolve the preserved job.list cursor baseline defect; continue original W01-W26 and native acceptance."
+}

@@ -82,7 +82,7 @@ CONTROL_IMPLEMENTED_OPERATIONS = frozenset({
     "job.wait", "job.cancel", "job.cleanup",
     "project.create", "project.inspect", "project.contract_set",
     "project.policy_set", "project.permissions", "project.state_export",
-    "experiment.inspect", "experiment.case_result",
+    "experiment.inspect", "experiment.case_result", "experiment.stage_define",
     # Durable project-scoped lifecycle snapshots and process-birth fenced
     # owned Server lifecycle.
     "session.list", "session.inspect", "session.health", "session.connect",
@@ -968,6 +968,11 @@ def _validate_operation_shape(operation_id: str, arguments: Mapping[str, Any]) -
     malformed typed action before the no-model gate reports ENGINE_UNRESPONSIVE.
     """
     from ._g2_contract import NodePath, validate_property_set, validate_typed_value
+
+    if operation_id == "experiment.stage_define":
+        from ._stage_contract import validate_stage_plan_definition
+        validate_stage_plan_definition(arguments.get("definition"))
+        return
 
     if operation_id in {"metric.define", "metric.list", "metric.evaluate", "metric.remove", "metric.compare"}:
         from ._metric_contract import normalize_arguments

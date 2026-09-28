@@ -43,6 +43,7 @@ from ._session_context import (
     SessionBindingBusy,
     SessionRuntimeRegistry,
     SessionSchedulerClosed,
+    SessionIdentityConflict,
     active_session_context,
     use_session_context,
 )
@@ -354,6 +355,8 @@ class ControlDaemon:
             if not isinstance(operation, str) or not isinstance(arguments, dict) or not isinstance(execution, dict):
                 raise ExecutionContractError("INVALID_REQUEST", "invalid operation/arguments/execution")
             operation = SESSION_ALIASES.get(operation, operation)
+            if operation in {"experiment.stage_define", "experiment_stage_define"}:
+                return self._dispatch_experiment_stage_define(arguments, execution)
             timeouts = self._timeouts(execution)
             if operation in SESSION_OPERATIONS:
                 return self._dispatch_session_control(operation, arguments, execution)
@@ -615,6 +618,13 @@ class ControlDaemon:
             if not isinstance(inner_arguments, dict):
                 raise ExecutionContractError("INVALID_REQUEST", "registry call arguments must be an object")
             return self._dispatch_experiment_durable_read(inner_operation, inner_arguments, execution)
+        if inner_operation in {"experiment.stage_define", "experiment_stage_define"}:
+            if extra_outer:
+                raise ExecutionContractError("INVALID_REQUEST", f"{outer_operation} has unsupported arguments: {', '.join(extra_outer)}")
+            inner_arguments = outer_arguments.get("arguments", {})
+            if not isinstance(inner_arguments, dict):
+                raise ExecutionContractError("INVALID_REQUEST", "registry call arguments must be an object")
+            return self._dispatch_experiment_stage_define(inner_arguments, execution)
         if inner_operation in PROJECT_OPERATIONS:
             inner_arguments = outer_arguments.get("arguments", {})
             if not isinstance(inner_arguments, dict):
@@ -1795,6 +1805,241 @@ class ControlDaemon:
         if remaining_grid:
             return None
         return planned
+
+    def _dispatch_experiment_stage_define(
+        self, arguments: dict[str, Any], execution: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Persist one immutable W21 stage plan without calling a Worker.
+
+        Admission uses the existing per-endpoint scheduler so declaration
+        revision checks cannot race an earlier accepted model write. The
+        callback reads only the in-memory managed ledger and the SQLite
+        revision binding; it does not invoke model snapshots or Java methods.
+        """
+        from ._execution_contract import canonical_request_hash, model_ref_from_mapping
+        from ._stage_contract import sha256_json, validate_stage_plan_definition
+        from ._operation_store import StagePlanStoreConflict
+        from ._g2_registry import validate_call
+
+        identity_fields = (
+            "project_id", "session_id", "model_ref", "expected_revision",
+            "idempotency_key", "request_id",
+        )
+        scoped_arguments = dict(arguments)
+        normalized_execution = dict(execution)
+        for field in identity_fields:
+            body_value = scoped_arguments.get(field)
+            outer_value = normalized_execution.get(field)
+            if body_value is not None and outer_value is not None and body_value != outer_value:
+                code = "IDEMPOTENCY_CONFLICT" if field == "idempotency_key" else "MODEL_IDENTITY_MISMATCH"
+                raise ExecutionContractError(code, f"experiment.stage_define {field} differs between arguments and execution envelope")
+            value = outer_value if outer_value is not None else body_value
+            if value is not None:
+                scoped_arguments[field] = value
+                normalized_execution[field] = value
+
+        entry = validate_call("experiment.stage_define", scoped_arguments)
+        if entry.effect.upper() != "STATE_WRITE" or entry.scope != "model":
+            raise ExecutionContractError("UNSUPPORTED_OPERATION", "stage plan route has an unexpected catalog effect or scope")
+        project_id = scoped_arguments.get("project_id")
+        session_id = scoped_arguments.get("session_id")
+        model_ref_value = scoped_arguments.get("model_ref")
+        expected_revision = scoped_arguments.get("expected_revision")
+        idempotency_key = scoped_arguments.get("idempotency_key")
+        if not isinstance(project_id, str) or not project_id:
+            raise ExecutionContractError("PROJECT_IDENTITY_REQUIRED", "experiment.stage_define requires project_id")
+        if not isinstance(session_id, str) or not session_id:
+            raise ExecutionContractError("MODEL_IDENTITY_REQUIRED", "experiment.stage_define requires session_id")
+        if not isinstance(model_ref_value, Mapping):
+            raise ExecutionContractError("MODEL_IDENTITY_REQUIRED", "experiment.stage_define requires a production ModelRef object")
+        model_ref = model_ref_from_mapping(model_ref_value)
+        if model_ref.session_id != session_id:
+            raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "ModelRef session_id differs from the execution session")
+        if isinstance(expected_revision, bool) or not isinstance(expected_revision, int) or expected_revision < 0:
+            raise ExecutionContractError("REVISION_CONFLICT", "experiment.stage_define requires a non-negative expected_revision")
+        if not isinstance(idempotency_key, str) or not idempotency_key:
+            raise ExecutionContractError("INVALID_REQUEST", "experiment.stage_define requires a non-empty idempotency_key")
+
+        definition = validate_stage_plan_definition(scoped_arguments.get("definition"))
+        request_id = scoped_arguments.get("request_id") or normalized_execution.get("request_id") or str(uuid4())
+        if not isinstance(request_id, str) or not request_id:
+            raise ExecutionContractError("INVALID_REQUEST", "request_id must be a non-empty string")
+        normalized_execution.update({
+            "project_id": project_id,
+            "session_id": session_id,
+            "model_ref": model_ref.as_dict(),
+            "expected_revision": expected_revision,
+            "idempotency_key": idempotency_key,
+            "request_id": request_id,
+        })
+        timeouts = self._timeouts(normalized_execution)
+        operation_arguments = {"definition": definition}
+
+        # Enforce project/model attribution and project_write policy before
+        # looking up a plan key, so foreign and missing plan IDs are not an
+        # enumeration channel.
+        self._authorize_project_execution("experiment.stage_define", operation_arguments, normalized_execution)
+        timeouts = self.project_authority.apply_timeout_caps(project_id, timeouts)
+        digest = canonical_request_hash(
+            "experiment.stage_define", operation_arguments, model_ref.as_dict(), expected_revision,
+            project_id=project_id, session_id=session_id,
+            queue_timeout_s=timeouts["queue_timeout_s"],
+            execution_timeout_s=timeouts["execution_timeout_s"],
+            no_progress_warning_s=timeouts["no_progress_warning_s"],
+        )
+        persisted_execution = {
+            key: value for key, value in normalized_execution.items()
+            if key not in {"rpc_timeout_s", "queue_timeout_s", "execution_timeout_s", "no_progress_warning_s"}
+        }
+        record_metadata = {
+            "operation": "experiment.stage_define",
+            "arguments": operation_arguments,
+            "execution": persisted_execution,
+            "effect": "STATE_WRITE",
+            "engine_dispatched": False,
+        }
+        with self.lock:
+            record, reused = self.store.begin(
+                request_id=request_id,
+                idempotency_key=idempotency_key,
+                request_hash=digest,
+                operation="experiment.stage_define",
+                metadata=record_metadata,
+                timeouts=timeouts,
+            )
+            if reused and record.get("result") is not None:
+                return record["result"]
+
+        try:
+            context = self._execution_session_context(normalized_execution)
+        except ExecutionContractError as exc:
+            result = self._exception(exc)
+            return self._finish(record, result, "FAILED")
+
+        def register_definition() -> dict[str, Any]:
+            try:
+                # Recheck policy and revision after scheduler admission, when
+                # preceding accepted model writes have completed.
+                self._authorize_project_execution("experiment.stage_define", operation_arguments, normalized_execution)
+                backend = context.backend if context is not None else self._default_backend
+                service = context.service if context is not None else getattr(backend, "service", None)
+                if service is None or getattr(service, "ledger", None) is None:
+                    raise ExecutionContractError("SESSION_NOT_CONNECTED", "stage definition requires a current managed model ledger")
+                if context is not None and (context.project_id != project_id or context.session_id != session_id):
+                    raise ExecutionContractError("PROJECT_IDENTITY_MISMATCH", "stage definition session context differs from its project binding")
+                if service.ledger.session_id != session_id:
+                    raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "ModelRef session does not match the selected managed ledger")
+                state = service.ledger._state_for(model_ref)
+                if state.active_operation_id is not None:
+                    raise ExecutionContractError("ENGINE_BUSY", "model has an active operation; stage plan was not registered")
+                if state.dirty:
+                    raise ExecutionContractError("REVISION_CONFLICT", "model requires reconciliation before stage plan definition")
+                if state.revision != expected_revision:
+                    raise ExecutionContractError("REVISION_CONFLICT", "expected_revision does not match the current managed model revision")
+                revision_key = backend._model_project_key(model_ref.as_dict())
+                revision_record = self.store.get_metadata("revisions", revision_key)
+                if (not isinstance(revision_record, Mapping)
+                        or revision_record.get("model_ref") != model_ref.as_dict()
+                        or revision_record.get("project_id") != project_id
+                        or revision_record.get("attribution") != "PROJECT_BOUND"
+                        or revision_record.get("revision") != state.revision
+                        or revision_record.get("dirty") is not False):
+                    raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "durable revision binding does not match the selected project ModelRef")
+
+                plan_payload: dict[str, Any] = {
+                    "schema_version": 1,
+                    "kind": "w21_stage_plan",
+                    "project_id": project_id,
+                    "model_ref": model_ref.as_dict(),
+                    "plan_id": definition["plan_id"],
+                    "declaration_revision": state.revision,
+                    "definition": definition,
+                    "definition_sha256": sha256_json(definition),
+                    "declaration_status": "DECLARED_UNVERIFIED",
+                    "declaration_evidence": {
+                        "schema_and_internal_plan_consistency": "VALIDATED",
+                        "study_solution_variable_existence": "NOT_CHECKED",
+                        "mapping_method_execution": "NOT_CHECKED",
+                        "worker_rpc_performed": False,
+                        "solve_started": False,
+                    },
+                }
+                plan_payload["sha256"] = sha256_json(plan_payload)
+                stored, created = self.store.register_stage_plan(
+                    project_id=project_id,
+                    model_ref=model_ref.as_dict(),
+                    plan_record=plan_payload,
+                )
+                data = {
+                    "plan_id": stored["plan_id"],
+                    "project_id": project_id,
+                    "model_ref": stored["model_ref"],
+                    "stable_model_identity": {
+                        "session_id": model_ref.session_id,
+                        "server_instance_id": model_ref.server_instance_id,
+                        "model_tag": model_ref.model_tag,
+                        "generation": model_ref.generation,
+                    },
+                    "declaration_revision": stored["declaration_revision"],
+                    "definition_sha256": stored["definition_sha256"],
+                    "sha256": stored["sha256"],
+                    "stage_ids": [stage["stage_id"] for stage in stored["definition"]["stages"]],
+                    "registration": "CREATED" if created else "IDEMPOTENT_EXISTING",
+                    "declaration_status": stored["declaration_status"],
+                    "declaration_evidence": stored["declaration_evidence"],
+                    "worker_rpc_performed": False,
+                    "solve_started": False,
+                }
+                result = {
+                    "success": True,
+                    "data": data,
+                    "execution": {
+                        "project_id": project_id,
+                        "session_id": session_id,
+                        "model_ref": model_ref.as_dict(),
+                        "revision": state.revision,
+                        "engine_dispatched": False,
+                    },
+                }
+                return self._finish(record, result, "SUCCEEDED")
+            except StagePlanStoreConflict as exc:
+                error = ExecutionContractError(exc.code, str(exc))
+                return self._finish(record, self._exception(error), "FAILED")
+            except ExecutionContractError as exc:
+                return self._finish(record, self._exception(exc), "FAILED")
+            except Exception as exc:
+                self._log_exception()
+                unknown = self._error(
+                    "EXECUTION_STATE_UNKNOWN",
+                    "stage plan registration state could not be established; replay with the same idempotency key",
+                    engine_dispatched=False,
+                    safe_retry=False,
+                    type=type(exc).__name__,
+                )
+                return self._finish(record, unknown, "UNKNOWN")
+
+        try:
+            future = self.session_scheduler.submit(context, register_definition)
+        except SessionSchedulerClosed:
+            result = self._error(
+                "SESSION_BINDING_FENCED",
+                "selected model session is fenced and cannot admit a stage definition",
+                data={"engine_dispatched": False},
+                safe_retry=False,
+            )
+            return self._finish(record, result, "FAILED")
+        except SessionIdentityConflict:
+            result = self._error(
+                "SESSION_IDENTITY_CONFLICT",
+                "selected model endpoint conflicts with an existing scheduler identity",
+                data={"engine_dispatched": False},
+                safe_retry=False,
+            )
+            return self._finish(record, result, "FAILED")
+        try:
+            return future.result(timeout=timeouts["rpc_timeout_s"])
+        except FutureTimeout:
+            return self._pending(record, rpc_wait_expired=True, engine_dispatched=False)
 
     def _dispatch_experiment_durable_read(
         self, operation: str, arguments: dict[str, Any], execution: dict[str, Any],

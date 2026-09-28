@@ -14,6 +14,7 @@ from ._g3_w21 import (
     _GLOBAL_CACHE,
     _GLOBAL_STATE_XFER,
 )
+from ._stage_contract import StagePlanDefinition
 
 
 def parameter_case_manage(
@@ -188,6 +189,19 @@ def experiment_case_result(
     return result
 
 
+def experiment_stage_define(definition: StagePlanDefinition) -> dict[str, Any]:
+    """Register a complete immutable multi-stage plan as a declaration only."""
+    if isinstance(definition, StagePlanDefinition):
+        normalized = definition.model_dump(mode="json", exclude_none=True)
+    elif isinstance(definition, dict):
+        # Direct function callers and compatibility hosts can provide the same
+        # JSON shape without constructing the Pydantic MCP model themselves.
+        normalized = definition
+    else:
+        raise TypeError("definition must be a strict StagePlanDefinition object")
+    return {"definition": normalized}
+
+
 def register(registry: Any) -> None:
     tools = [
         ("parameter.case_manage", parameter_case_manage),
@@ -208,3 +222,4 @@ def register(registry: Any) -> None:
         registry.add_tool(fn, name=name)
     registry.add_tool(experiment_inspect, name="experiment_inspect", operation_id="experiment.inspect")
     registry.add_tool(experiment_case_result, name="experiment_case_result", operation_id="experiment.case_result")
+    registry.add_tool(experiment_stage_define, name="experiment_stage_define", operation_id="experiment.stage_define")

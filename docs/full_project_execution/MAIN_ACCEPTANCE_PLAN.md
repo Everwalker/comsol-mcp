@@ -510,3 +510,19 @@ The additive private snapshot v3 candidate must capture all stored Sol vectors t
 ### W23 explicit map software stage accepted
 
 Three overlay and three base-file hashes verified; 9 isolated and 9 main tests PASS. Main independently evaluated all 798 generated region expressions at interior sample points against the numeric map, with no discrepancy. Java probe source/class/compile receipt hashes verified. The probe preserves raw property/Equation View evidence and never claims complex-map support or actual physics adoption. Native geometry, domain binding, fields, reflection and power balance remain open. Compact checkpoint: `docs/full_project_execution/w23_overlap/EXPLICIT_SCALING_MAP_SOFTWARE_CHECKPOINT.json`.
+
+### W21 identity clarification and W23 continuation
+
+The stage-definition scope uses project plus full ModelRef (session, server instance, model tag, generation, schema version), excluding revision. Session and tag alone can alias a new native model after restart/reuse and are insufficient. No implicit plan migration across generations is accepted. W23 next addresses actual CV surface flux, absorption, positive input power and area receipts with exact solve/selection identity; neither analytic area nor unthresholded balance residual establishes native scientific acceptance.
+
+### W23 loss-density mapping boundary
+
+Same-version evidence supports wave-optics Poynting components and driven-frequency-domain input power. Exact local KB lookup did not establish ewfd.Qh. The production absorption route therefore remains expression-neutral and requires authenticated field/unit mapping; absent evidence is NOT_AVAILABLE/UNVERIFIED, never zero absorption. An explicitly unverified Qh probe hypothesis is not a supported production default. Native CV inventory, adjacency, surface integrals of one and volume integral of one must accompany flux/absorption to expose missing or duplicate domains. Balance acceptance thresholds remain unfrozen; only diagnostic residuals may be reported.
+
+### W21 stage-definition multi-plan retry finding
+
+The 259-test candidate is CHANGES_REQUIRED. Main reproduced through actual ControlDaemon/SQLite: two disjoint plans in one project/full-ModelRef scope both register, then exact same-definition registration of the first using a new request fails STAGE_PLAN_STATE_UNKNOWN. The existing-plan check compares every stage index in the model scope against one plan. Repair must validate the exact current-plan index set while allowing other valid plans, retaining missing/extra/corrupt ownership checks. Zero Worker calls occurred. Frozen receipt and counterexample hashes are in RESUME.json; no candidate source has been published.
+
+### W21 stage-definition software closure
+
+Main verified 9 overlay files and306 unchanged dependency files;25 critical tests PASS. The original two-plan retry counterexample now returns IDEMPOTENT_EXISTING independently for both plans. The267-test isolated closure retains2 documented exclusions and the prior historical Git test result; job.list cursor KeyError is a preserved baseline defect, not a PASS. Declaration registration is complete only at software scope. Native semantics and original state_map/stage_run remain open. Compact checkpoint: `docs/full_project_execution/project_session/STAGE_DEFINITION_SOFTWARE_CHECKPOINT.json`.
