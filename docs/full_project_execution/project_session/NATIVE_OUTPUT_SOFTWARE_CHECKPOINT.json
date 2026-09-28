@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "stage": "W21_MANAGED_OUTPUT_READBACK",
+  "status": "PASS_SCOPED_OFFLINE",
+  "overall_status": "PARTIAL",
+  "native_status": "NOT_RUN",
+  "source_hashes": {
+    "comsol_mcp/_w21_native_output.py": "36dc28599ab2f88be2dfe46a35b876907b53f21831996d29f824bb0fb465e90c",
+    "comsol_mcp/_managed_backend.py": "3b9b6c59b5919d4d556858b714901dee348a8ba6575209015ffc6a3ccdf57275",
+    "comsol_mcp/_control_daemon.py": "1b133894874e7e7f7b08e1db052c4453b318425f141de9cc27d75b56d530a93e",
+    "comsol_mcp/_w21_stage_backend.py": "ef9db758400b983a4fae5660703ee5b486d684730717d30f8520fd37a72b55e9",
+    "tests/test_w21_native_output.py": "5123bfeba047c7dbce18e2330d3b205ce912e39088377efc82c1114fb47c1269",
+    "tests/test_stage_definition.py": "50ef7bdd56e6758d2fe4ff5901da216db517f4172b6c63210e3149b547246132"
+  },
+  "tests": {
+    "unique_passed": 148,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "deselected": 16,
+    "groups": [
+      {
+        "scope": "producer + stage_definition + domain_outcome",
+        "passed": 134,
+        "exit_code": 0
+      },
+      {
+        "scope": "G3 selected result/metric/solution-index tests",
+        "passed": 14,
+        "deselected": 16,
+        "exit_code": 0
+      }
+    ]
+  },
+  "receipt": {
+    "path": "/Volumes/CTestEff/w21-output-compat-rerun-20260928T150607Z/compact-receipt.txt",
+    "sha256": "347a8f1ce14c7977a43c896fef8646cd4c939605d12e54bce289d86c0e11a162"
+  },
+  "manifest": {
+    "path": "/Volumes/CTestEff/w21-output-compat-rerun-20260928T150607Z/SHA256SUMS.txt",
+    "sha256": "85149d1be74fe5aec2887141e8e32b034ee63296556ad0c0cafee05871c4ffaf"
+  },
+  "local_artifact_hashes": {
+    "/Volumes/CTestEff/w21-output-compat-rerun-20260928T150607Z/group1.stdout.log": "e16ba881d9cf9208b30c9574922cee4aa07197699e77c160da79ebd9b53e1d44",
+    "/Volumes/CTestEff/w21-output-compat-rerun-20260928T150607Z/group1-junit.xml": "3e2570d73087a2ec9d801f23440aaeba2e94db694e4fac3d72e6562ebee6db21",
+    "/Volumes/CTestEff/w21-output-compat-rerun-20260928T150607Z/group1.exitcode": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "/Volumes/CTestEff/w21-output-compat-rerun-20260928T150607Z/group2.stdout.log": "d4dfcb23834aaa097f9249253f874ed3455ad799f5bdfd68fc22f5cb3a654720",
+    "/Volumes/CTestEff/w21-output-compat-rerun-20260928T150607Z/group2-junit.xml": "661ca92edace7e4385798aee4935f80a80fd343b912bf891d4776cdf5b550d8d",
+    "/Volumes/CTestEff/w21-output-compat-rerun-20260928T150607Z/group2.exitcode": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "/Volumes/CTestEff/w21-output-compat-rerun-20260928T150607Z/compact-receipt.txt": "347a8f1ce14c7977a43c896fef8646cd4c939605d12e54bce289d86c0e11a162"
+  },
+  "capabilities": [
+    "Backend-owned field/native-integral reads through existing managed G3 routes.",
+    "Each observation retains its own managed ticket, Worker RPC identity, actual revision, selector/check hashes and artifact reference.",
+    "Daemon persists submitted output events before transport and verifies revision chain; uncertainty stops save.",
+    "Conservation target boundary tuples can differ from final output time within the same solution; legacy envelopes need no new auxiliary fields."
+  ],
+  "main_review": "Reviewed final diff, closed provenance/tuple/unit/compatibility findings; verified all source/artifact manifest hashes and 148 unique JUnit cases. Backend/transport and native data are stubbed in tests; no engine or scientific acceptance.",
+  "limitations": [
+    "Intrinsic field/integral unit proof and coordinate frame remain UNVERIFIED.",
+    "Production native admission is unchanged UNVERIFIED.",
+    "APFS test scratch required for ArtifactStore hard-link publication; exFAT returns EOPNOTSUPP."
+  ],
+  "failure_history": "Initial test failures repaired; first successful runs had tool-only output. Following compatibility repair, the same selected scope was rerun with persistent JUnit/log/exit receipts. No original failure is promoted to PASS.",
+  "next_action": "Calibrate actual Windows6.4 field/unit/mesh identities, then enable only proven admission and execute frozen source/target stage checks; Windows6.3 follows."
+}

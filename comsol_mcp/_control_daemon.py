@@ -2398,6 +2398,7 @@ class ControlDaemon:
             operation_id=solve_operation_id, model_tag=model_ref["model_tag"],
             study_tag=study_tag,
         )
+        output_worker_events: list[dict[str, Any]] = []
         def current_revision(wanted: int) -> None:
             state = service.ledger._state_for(ledger_model_ref)
             if state.dirty or state.revision != wanted:
@@ -2429,10 +2430,49 @@ class ControlDaemon:
                 )
             return revision
 
-        def store_worker_event(event: Any, *, request_id: str, phase: str, revision: int) -> None:
+        def store_worker_event(event: Any, *, request_id: str, phase: str, revision: int,
+                               readphase: str | None = None, operation: str | None = None,
+                               child_operation_id: str | None = None,
+                               expected_revision: int | None = None) -> None:
             if not isinstance(event, Mapping):
                 return
             safe_event = self._redact_session_worker_event(dict(event))
+            if phase == "output":
+                stage_output = {
+                    "stage_run_operation_id": solve_operation_id,
+                    "readphase": readphase,
+                    "operation": operation,
+                    "child_operation_id": child_operation_id,
+                    "expected_revision": expected_revision,
+                }
+                safe_event["w21_stage_output"] = stage_output
+                # Persist the exact Worker event synchronously in the same
+                # stage job before returning to the Worker callback. In
+                # particular, a submitted event is durable before its RPC is
+                # sent; output reads do not pass through the solve/save gate.
+                self.store.add_event(record["job_id"], "worker_request", safe_event)
+                output_worker_events.append({"context": stage_output, "event": safe_event})
+                if (safe_event.get("operation_id") != child_operation_id
+                        or safe_event.get("kind") != "call"
+                        or not isinstance(operation, str) or not operation
+                        or not isinstance(readphase, str) or not readphase):
+                    raise ExecutionContractError(
+                        "WORKER_OUTPUT_BINDING_MISMATCH",
+                        "stage output Worker event differs from its managed child operation",
+                    )
+                if safe_event.get("phase") == "submitted":
+                    current_revision(expected_revision)
+                    metadata = safe_event.get("metadata")
+                    if (not isinstance(metadata, Mapping)
+                            or not isinstance(metadata.get("method"), str)
+                            or not isinstance(safe_event.get("request_id"), str)
+                            or not isinstance(safe_event.get("request_hash"), str)
+                            or len(safe_event["request_hash"]) != 64):
+                        raise ExecutionContractError(
+                            "WORKER_OUTPUT_BINDING_MISMATCH",
+                            "submitted stage output Worker event has no actual RPC id/hash/method",
+                        )
+                return
             self.store.add_event(record["job_id"], "worker_request", safe_event)
             try:
                 dispatch = worker_dispatch_gate.observe(
@@ -2566,22 +2606,120 @@ class ControlDaemon:
                 )
 
                 output_reader = getattr(backend, "stage_output_readback", None)
-                try:
-                    output_readback = (output_reader(
-                        binding=dict(binding), stage=dict(stage), plan=dict(plan),
-                        stage_run_operation_id=solve_operation_id, model_revision=solve_revision,
-                        solve_result=dict(solve_result),
-                    ) if callable(output_reader) else None)
-                    output_valid, output_missing, checks_passed = validate_output_readback(
-                        output_readback, binding=binding, stage_run_operation_id=solve_operation_id,
-                        model_revision=solve_revision, target_selection=stage["target_selection"],
-                        checks=stage["checks"],
-                    )
-                except Exception as output_error:
-                    output_valid = False
-                    checks_passed = False
-                    output_missing = [f"output readback failed: {type(output_error).__name__}"]
-                    output_readback = None
+                output_readback = (output_reader(
+                    binding=dict(binding), stage=dict(stage), plan=dict(plan),
+                    stage_run_operation_id=solve_operation_id, model_revision=solve_revision,
+                    solve_result=dict(solve_result),
+                    event_callback=lambda event, **context: store_worker_event(
+                        event, request_id=str(context.get("child_operation_id") or ""),
+                        phase="output", revision=int(context.get("expected_revision", solve_revision)),
+                        readphase=context.get("readphase"), operation=context.get("operation"),
+                        child_operation_id=context.get("child_operation_id"),
+                        expected_revision=context.get("expected_revision"),
+                    ),
+                    authorize_callback=self._authorize_project_execution,
+                ) if callable(output_reader) else None)
+
+                def validate_output_revision_chain(value: Any) -> int:
+                    state = service.ledger._state_for(ledger_model_ref)
+                    if state.dirty:
+                        raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "stage output left the model ledger dirty")
+                    if not isinstance(value, Mapping) or value.get("contract") != "w21-stage-output-readback/v1":
+                        if output_worker_events or state.revision != solve_revision:
+                            raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "stage output events have no returned revision chain")
+                        return solve_revision
+                    chain = value.get("revision_chain")
+                    if not isinstance(chain, list):
+                        raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "stage output revision chain is malformed")
+                    from ._g3_ops import EFFECTS as g3_effects
+                    cursor = solve_revision
+                    seen_operations: set[str] = set()
+                    seen_managed_operations: set[str] = set()
+                    actual_by_operation: dict[str, list[dict[str, Any]]] = {}
+                    for captured in output_worker_events:
+                        context = captured.get("context")
+                        event = captured.get("event")
+                        if not isinstance(context, Mapping) or not isinstance(event, Mapping):
+                            raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "durable stage output event is malformed")
+                        operation_id = context.get("child_operation_id")
+                        if not isinstance(operation_id, str):
+                            raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "durable stage output event has no child operation")
+                        actual_by_operation.setdefault(operation_id, []).append(captured)
+                    for step in chain:
+                        if not isinstance(step, Mapping):
+                            raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "stage output revision step is malformed")
+                        operation = step.get("operation")
+                        readphase = step.get("readphase")
+                        child_operation_id = step.get("child_operation_id")
+                        managed_operation_id = step.get("managed_operation_id")
+                        request_id = step.get("request_id")
+                        request_hash = step.get("request_hash")
+                        expected = step.get("expected_revision")
+                        revision = step.get("revision")
+                        effect = g3_effects.get(operation) if isinstance(operation, str) else None
+                        delta = 0 if effect == "READ" else 1 if effect == "EVALUATE" else None
+                        if (delta is None or not isinstance(readphase, str) or not readphase
+                                or not isinstance(child_operation_id, str)
+                                or child_operation_id in seen_operations
+                                or not isinstance(managed_operation_id, str) or not managed_operation_id
+                                or managed_operation_id in seen_managed_operations
+                                or not isinstance(request_id, str)
+                                or not isinstance(request_hash, str) or len(request_hash) != 64
+                                or expected != cursor or type(revision) is not int
+                                or revision != cursor + delta):
+                            raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "stage output ticket/revision sequence is invalid")
+                        seen_operations.add(child_operation_id)
+                        seen_managed_operations.add(managed_operation_id)
+                        submitted = [item for item in actual_by_operation.get(child_operation_id, [])
+                                     if item["event"].get("phase") == "submitted"]
+                        if any(item["context"].get("operation") != operation
+                               or item["context"].get("readphase") != readphase
+                               for item in actual_by_operation.get(child_operation_id, [])):
+                            raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "stage output readphase/operation differs from its durable Worker event")
+                        returned_workers = step.get("worker_requests")
+                        if not isinstance(returned_workers, list) or not returned_workers or len(submitted) != len(returned_workers):
+                            raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "stage output child RPC evidence is incomplete")
+                        actual_workers = []
+                        for item in submitted:
+                            event = item["event"]
+                            actual_workers.append({
+                                "worker_request_id": event.get("request_id"),
+                                "worker_request_hash": event.get("request_hash"),
+                                "worker_method": (event.get("metadata") or {}).get("method")
+                                    if isinstance(event.get("metadata"), Mapping) else None,
+                                "phase": "submitted",
+                            })
+                        normalized_returned = [{key: row.get(key) for key in (
+                            "worker_request_id", "worker_request_hash", "worker_method", "phase")}
+                            for row in returned_workers if isinstance(row, Mapping)]
+                        if len(normalized_returned) != len(returned_workers) or normalized_returned != actual_workers:
+                            raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "stage output RPC id/hash differs from persisted Worker events")
+                        cursor = revision
+                    if set(actual_by_operation) != seen_operations:
+                        raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "stage output has unbound Worker events")
+                    output_revision = value.get("output_revision")
+                    if (type(output_revision) is not int or output_revision != cursor
+                            or state.revision != cursor
+                            or value.get("solve_revision") != solve_revision
+                            or value.get("model_revision") != solve_revision
+                            or value.get("stage_run_operation_id") != solve_operation_id
+                            or value.get("binding") != dict(binding)):
+                        raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "stage output revision chain does not match the live managed ledger")
+                    backend_binding = backend.model_project_binding(model_ref) if callable(
+                        getattr(backend, "model_project_binding", None)) else None
+                    if (not isinstance(backend_binding, Mapping)
+                            or backend_binding.get("attribution") != "PROJECT_BOUND"
+                            or backend_binding.get("project_id") != project_id
+                            or service.ledger._state_for(ledger_model_ref).ref.as_dict() != model_ref):
+                        raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "stage output ModelRef/project binding changed")
+                    return output_revision
+
+                output_revision = validate_output_revision_chain(output_readback)
+                output_valid, output_missing, checks_passed = validate_output_readback(
+                    output_readback, binding=binding, stage_run_operation_id=solve_operation_id,
+                    model_revision=solve_revision, target_selection=stage["target_selection"],
+                    checks=stage["checks"],
+                )
 
                 save_path = f"stage_outputs/{attempt['attempt_id']}.mph"
                 target_path = canonical_project_path(project["workspace"], save_path)
@@ -2590,12 +2728,12 @@ class ControlDaemon:
                 save_execution = dict(normalized_execution)
                 save_execution.update({
                     "project_id": project_id, "session_id": session_id, "model_ref": model_ref,
-                    "expected_revision": solve_revision, "request_id": save_request_id,
+                    "expected_revision": output_revision, "request_id": save_request_id,
                     "idempotency_key": save_idempotency,
                     "_w21_stage_marker": {
                         "attempt_id": attempt["attempt_id"], "phase": "save",
                         "project_id": project_id, "model_ref": dict(model_ref),
-                        "expected_revision": solve_revision, "request_id": save_request_id,
+                        "expected_revision": output_revision, "request_id": save_request_id,
                         "operation_id": solve_operation_id, "binding_sha256": sha256_json(dict(binding)),
                         "save_path": save_path, "save_target_path": str(target_path),
                     },
@@ -2610,21 +2748,21 @@ class ControlDaemon:
                     acceptance_status="NOT_EVALUATED",
                     evidence=[*current["evidence"], {
                         "kind": "save-intent", "operation": "save_model",
-                        "relative_path": save_path, "revision": solve_revision,
+                        "relative_path": save_path, "revision": output_revision,
                     }],
                     result={"solve": "SUCCEEDED", "output_readback": "VERIFIED" if output_valid else "UNVERIFIED",
                             "output_missing": output_missing, "saved_artifact": "SAVE_INTENT"},
                 )
-                current_revision(solve_revision)
+                current_revision(output_revision)
                 save_result = backend.invoke(
                     "save_model", save_arguments, save_execution, solve_operation_id,
                     lambda event: store_worker_event(event, request_id=save_request_id,
-                                                     phase="save", revision=solve_revision),
+                                                     phase="save", revision=output_revision),
                 )
                 if not isinstance(save_result, Mapping) or save_result.get("success") is not True:
                     raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "stage save returned no verified success envelope")
                 save_revision = validate_backend_reply(
-                    save_result, minimum_revision=solve_revision, phase="save",
+                    save_result, minimum_revision=output_revision, phase="save",
                 )
                 save_data = save_result.get("data")
                 saved_value = save_data.get("saved_path") if isinstance(save_data, Mapping) else None
@@ -2651,6 +2789,9 @@ class ControlDaemon:
                     "checks_status": "PASS" if output_valid and checks_passed else
                                      "FAIL" if output_valid else "UNVERIFIED",
                     "missing": output_missing,
+                    "output_revision": output_revision,
+                    "revision_chain": output_readback.get("revision_chain", [])
+                        if isinstance(output_readback, Mapping) else [],
                     "output_tuple": dict(output_tuple) if isinstance(output_tuple, Mapping) else None,
                     "checks": [
                         {key: item.get(key) for key in ("check_id", "status", "observed_error", "reference_scale", "unit")}

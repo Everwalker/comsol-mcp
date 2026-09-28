@@ -1293,6 +1293,149 @@ def test_stage_uses_real_worker_rpc_identity_and_persists_before_send(
             worker.close()
 
 
+@pytest.mark.parametrize("output_mode", ["valid", "wrong_revision", "unknown_after_submit", "cleanup_unknown"])
+def test_stage_output_worker_event_ticket_revision_and_no_save_on_unknown(tmp_path, output_mode):
+    """Exercise output callback persistence and revision checks with a real ledger ticket."""
+    from comsol_mcp._stage_contract import sha256_json
+
+    daemon, service, _worker, project_id, model_ref, execution, _host = _setup(tmp_path)
+    # The G3 EVALUATE permission is an explicit managed-session capability;
+    # project policy still checks the operation's project_write scope.
+    service.ledger.permissions.add("evaluate")
+    sent_output_rpcs = []
+    durable_before_send = []
+    try:
+        defined = daemon.dispatch({
+            "operation": "experiment.stage_define", "arguments": {"definition": _plan_v2()},
+            "execution": execution,
+        })
+        assert defined["success"] is True, defined
+        calls = _install_fake_stage_backend(daemon, service, mode="normal")
+
+        def output_reader(*, binding, stage, plan, stage_run_operation_id, model_revision,
+                          solve_result, event_callback, authorize_callback):
+            del plan, solve_result
+            from comsol_mcp._execution_contract import model_ref_from_mapping
+
+            child_operation_id = f"output-child-{output_mode}"
+            ticket_request_id = f"output-ticket-{output_mode}"
+            operation = "result.evaluate"
+            readphase = "stage-output-final-tuple"
+            arguments = {"spec": {"expressions": ["T"], "aggregate": "none"}}
+            child_execution = {
+                "project_id": project_id, "session_id": service.ledger.session_id,
+                "model_ref": dict(binding["model_ref"]), "expected_revision": model_revision,
+                "request_id": ticket_request_id,
+                "idempotency_key": f"{binding['attempt_id']}:output:test",
+            }
+            authorize_callback(operation, arguments, child_execution)
+            worker_id = f"worker-output-{output_mode}"
+            worker_hash = hashlib.sha256(worker_id.encode()).hexdigest()
+            event = {
+                "kind": "call", "phase": "submitted", "operation_id": child_operation_id,
+                "request_id": worker_id, "request_hash": worker_hash,
+                "metadata": {"type": "call", "request_id": worker_id,
+                             "handle": "fake-model-handle", "generation": 71,
+                             "method": "getData", "args": []},
+            }
+            event_context = {
+                "readphase": readphase, "operation": operation,
+                "child_operation_id": child_operation_id,
+                "expected_revision": model_revision,
+            }
+            event_callback(event, **event_context)
+            job_row = daemon.store.db.execute(
+                "SELECT job_id FROM jobs WHERE operation_id=?", (stage_run_operation_id,),
+            ).fetchone()
+            assert job_row is not None
+            stored = [row for row in daemon.store.events(job_row["job_id"], limit=1000)
+                      if row["event"] == "worker_request"
+                      and row["metadata"].get("request_id") == worker_id]
+            assert len(stored) == 1
+            metadata = stored[0]["metadata"]
+            assert metadata["w21_stage_output"] == {
+                "stage_run_operation_id": stage_run_operation_id,
+                "readphase": readphase, "operation": operation,
+                "child_operation_id": child_operation_id,
+                "expected_revision": model_revision,
+            }
+            # The stub marks the RPC as sent only after the callback returned
+            # and the matching event was observable from durable job storage.
+            durable_before_send.append(metadata["request_id"] == worker_id
+                                       and metadata["request_hash"] == worker_hash)
+            sent_output_rpcs.append(worker_id)
+            event_callback({**event, "phase": "observed", "status": "ok"}, **event_context)
+
+            if output_mode in {"unknown_after_submit", "cleanup_unknown"}:
+                message = ("injected temporary-node cleanup failure" if output_mode == "cleanup_unknown"
+                           else "injected post-submit output transport loss")
+                raise ExecutionContractError(
+                    "EXECUTION_STATE_UNKNOWN", message,
+                    stage="post_dispatch",
+                )
+
+            # This uses the actual ExecutionService ticket and ledger finish
+            # path; only the numerical Worker transport is represented by a
+            # deterministic callback fixture.
+            ticket = service.execute_legacy(
+                "result_evaluate",
+                lambda _args: {"success": True, "data": {"values": [1.0]}},
+                arguments, model_ref=model_ref_from_mapping(binding["model_ref"]),
+                expected_revision=model_revision, request_id=ticket_request_id,
+                session_id=service.ledger.session_id, effect="evaluate",
+            )
+            assert ticket["success"] is True, ticket
+            ticket_execution = ticket["execution"]
+            step_revision = ticket_execution["revision"]
+            reported_revision = step_revision
+            if output_mode == "wrong_revision":
+                step_revision += 1
+                reported_revision += 1
+            return {
+                "contract": "w21-stage-output-readback/v1", "status": "UNVERIFIED",
+                "binding": dict(binding), "stage_run_operation_id": stage_run_operation_id,
+                "solve_revision": model_revision, "model_revision": model_revision,
+                "output_revision": reported_revision,
+                "target_selection_sha256": sha256_json(stage["target_selection"]),
+                "output_tuple": None, "solution_binding": None, "checks": [],
+                "evidence_refs": [],
+                "revision_chain": [{
+                    "operation": operation, "readphase": readphase,
+                    "child_operation_id": child_operation_id,
+                    "managed_operation_id": ticket_execution["operation_id"],
+                    "request_id": ticket_execution["request_id"],
+                    "request_hash": ticket_execution["request_hash"],
+                    "expected_revision": model_revision, "revision": step_revision,
+                    "effect": "EVALUATE", "worker_requests": [{
+                        "worker_request_id": worker_id, "worker_request_hash": worker_hash,
+                        "worker_method": "getData", "phase": "submitted",
+                    }],
+                }],
+            }
+
+        daemon.backend.stage_output_readback = output_reader
+        stage_request = f"output-phase-{output_mode}"
+        result = daemon.dispatch({
+            "operation": "experiment.stage_run", "arguments": {"stage_id": "preheat"},
+            "execution": {**execution, "request_id": stage_request, "idempotency_key": stage_request},
+        })
+        attempt = result["data"]["attempt"]
+        assert durable_before_send == [True]
+        assert sent_output_rpcs == [f"worker-output-{output_mode}"]
+        if output_mode == "valid":
+            assert result["success"] is False and result["error"]["code"] == "STAGE_ACCEPTANCE_UNVERIFIED"
+            assert attempt["status"] == "SUCCEEDED_PARTIAL"
+            assert calls == ["run_study", "save_model"]
+            dispatches = [row for row in attempt["evidence"] if row.get("kind") == "worker-dispatch"]
+            assert [row["operation"] for row in dispatches] == ["run_study", "save_model"]
+        else:
+            assert result["success"] is False and result["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
+            assert attempt["status"] == "UNKNOWN"
+            assert calls == ["run_study"]  # invalid revision / unknown output cannot reach save
+    finally:
+        daemon.close()
+
+
 @pytest.mark.parametrize("mode,expected_dispatched", [
     ("before_dispatch", False),
     ("after_dispatch", True),

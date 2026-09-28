@@ -233,6 +233,10 @@ class ManagedBackend:
                 raise ValueError("host_permission_ceiling must be a trusted permission set")
             self.host_permission_ceiling = set(host_permission_ceiling)
         self._project_root_context = ContextVar(f"comsol_project_root_{id(self)}", default=None)
+        # Strict field/integral modes are available only to the backend-owned
+        # W21 output reader. They are kept in a context variable instead of a
+        # request flag, so public result.evaluate callers cannot enable them.
+        self._stage_output_mode_context = ContextVar(f"comsol_w21_output_mode_{id(self)}", default=None)
         self._model_project_bindings: dict[str, str | None] = {}
 
         help_roots = default_comsol_help_roots(self.project_root)
@@ -292,6 +296,24 @@ class ManagedBackend:
             "evidence_refs": [],
             "status": "UNVERIFIED",
         }
+
+    def stage_output_readback(self, *, binding, stage, plan, stage_run_operation_id,
+                              model_revision, solve_result, event_callback=None,
+                              authorize_callback=None):
+        """Read stage outputs through managed G3 result operations.
+
+        The producer uses ordinary service tickets and the current Worker. Its
+        private strict modes are scoped to this call and cannot be requested in
+        an MCP argument or execution envelope.
+        """
+        from ._w21_native_output import produce_stage_output_readback
+
+        return produce_stage_output_readback(
+            self, binding=binding, stage=stage, plan=plan,
+            stage_run_operation_id=stage_run_operation_id,
+            model_revision=model_revision, solve_result=solve_result,
+            event_callback=event_callback, authorize_callback=authorize_callback,
+        )
 
     @contextmanager
     def project_root_scope(self, root):
@@ -2289,7 +2311,13 @@ class ManagedBackend:
                     domain_body.pop("recovery_policy", None)
                 if registered_import is not None:
                     domain_body = dict(import_body)
-                data = function(self.worker, model_tag, domain_body)
+                output_mode = self._stage_output_mode_context.get(None)
+                if operation == "result.evaluate" and output_mode == "strict_field_readback":
+                    data = function(self.worker, model_tag, domain_body, strict_field_readback=True)
+                elif operation == "result.evaluate" and output_mode == "strict_metric_evidence":
+                    data = function(self.worker, model_tag, domain_body, strict_metric_evidence=True)
+                else:
+                    data = function(self.worker, model_tag, domain_body)
                 if registered_import is not None and isinstance(data, dict):
                     # The public identity remains the registered digest.  Do
                     # not return the absolute Worker-visible filename from the

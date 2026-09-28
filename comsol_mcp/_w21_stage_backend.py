@@ -604,12 +604,6 @@ def validate_output_readback(
                         expected_status = None
                 elif check.get("kind") == "conservation":
                     if (observed.get("target_tuple") != tuple_value
-                            or (isinstance(target_spec, Mapping)
-                                and (observed.get("target_solution_binding") != solution_binding
-                                     or not _actual_pair_matches_solution_spec(
-                                         observed.get("target_tuple"), observed.get("target_solution_binding"),
-                                         target_spec, target_selection_sha256=sha256_json(dict(target_spec))
-                                     )))
                             or (isinstance(source_spec, Mapping)
                                 and not _actual_pair_matches_solution_spec(
                                     observed.get("source_tuple"), observed.get("source_solution_binding"),
@@ -638,6 +632,11 @@ def validate_output_readback(
                                     )):
                                 expected_status = None
                                 break
+                            if term.get("side") == "target" and (
+                                    not _binding_matches_same_solution(term_row.get("solution_binding"), solution_binding)
+                                    or term_row["solution_tuple"].get("solution") != tuple_value.get("solution")):
+                                expected_status = None
+                                break
                             coefficient = term.get("coefficient")
                             contribution = float(coefficient) * float(term_row["integral_value"])
                             if not math.isfinite(contribution):
@@ -645,6 +644,25 @@ def validate_output_readback(
                                 break
                             coefficients.append(float(coefficient))
                             integral_values.append(float(term_row["integral_value"]))
+                        if expected_status is not None:
+                            target_rows = [term_row for term, term_row in zip(terms, term_rows)
+                                           if isinstance(term, Mapping) and term.get("side") == "target"]
+                            target_tuples = [term_row.get("solution_tuple") for term_row in target_rows]
+                            target_bindings = [term_row.get("solution_binding") for term_row in target_rows]
+                            expected_single_tuple = target_tuples[0] if len(target_tuples) == 1 else None
+                            expected_single_binding = target_bindings[0] if len(target_bindings) == 1 else None
+                            # Older valid envelopes may contain only the authoritative
+                            # term_readbacks. Validate these producer convenience
+                            # summaries when supplied, without making them required.
+                            target_term_summaries = {
+                                "target_term_tuples": target_tuples,
+                                "target_term_solution_bindings": target_bindings,
+                                "target_term_tuple": expected_single_tuple,
+                                "target_term_solution_binding": expected_single_binding,
+                            }
+                            if any(key in observed and observed.get(key) != expected
+                                   for key, expected in target_term_summaries.items()):
+                                expected_status = None
                         if expected_status is not None:
                             computed_error = abs(sum(c * v for c, v in zip(coefficients, integral_values)))
                             computed_scale = sum(abs(c * v) for c, v in zip(coefficients, integral_values))

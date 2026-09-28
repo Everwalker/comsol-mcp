@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "phase": "W21_PRODUCTION_RUNNER_AND_ACTUAL_OUTPUT_IMPLEMENTATION",
+  "phase": "W21_WINDOWS64_NATIVE_METADATA_PREPARATION",
   "task": "W01_W26_CONTINUOUS_IMPLEMENTATION",
   "status": "PARTIAL_EXECUTION_CONTINUING_NATIVE_UNVERIFIED",
   "candidate_source": "docs/full_project_execution/project_session/EXPERIMENT_READS_SOFTWARE_CHECKPOINT.json",
@@ -103,7 +103,7 @@
       "native_acceptance": "NOT_RUN"
     }
   ],
-  "next_action": "Implement and offline-verify a frozen-source Windows production stdio MCP runner via existing project/runtime/session.start/connect/model/Java routes. First native discovery substep has0study/solver dispatch,1ownedserverbirth,15min cap; no native launch until reviewed freeze. Then use observed metadata to implement real field/unit/mesh mapping and output readback, freeze actual source+target solve budget and validate6.4 then6.3. ContinueW23-W26.",
+  "next_action": "Archive exact accepted committed source, stage it in a unique Windows project directory using existing SSH, run metadata-only prepare with isolated project/home/scratch, inspect the freeze, then run the 0-study/solver, 1-Server/1-Worker, 900-second Windows6.4 field metadata discovery. Native stage admission remains UNVERIFIED until actual field/unit/mesh/frame proof; separately freeze source+target solves, validate6.4 then6.3, continueW23-W26.",
   "active_jobs": [],
   "blockers": [
     "W23 failed setup owned Server 75272 and daemon 75260 remain preserved: cleanup SIGTERM was rejected by automatic approval and explicit authorization is pending; no cleanup or relaunch authorized by elapsed time.",
@@ -990,10 +990,10 @@
     "next": "Wait for stable F04 runtime handoff; refresh closure and submit a new candidate for root review. No automatic rerun."
   },
   "verified_git_sync": {
-    "head": "b3af9e52f2f5674b9c02ef525a8d92b00794dbf9",
-    "origin_main": "b3af9e52f2f5674b9c02ef525a8d92b00794dbf9",
+    "head": "56e275f1e28924502aa24199c04a296d856412e8",
+    "origin_main": "56e275f1e28924502aa24199c04a296d856412e8",
     "status": "HEAD_EQUALS_ORIGIN_MAIN",
-    "checked_at": "2026-09-28T13:55:39.211014+00:00"
+    "checked_at": "2026-09-28T14:47:31.407945+00:00"
   },
   "w24_static_shape_science_admission_repair": {
     "status": "SCOPED_SOFTWARE_REPAIR_ACCEPTED_NATIVE_NOT_RUN",
@@ -2332,7 +2332,7 @@
     {
       "stage": "W21_PRODUCTION_MCP_RUNNER",
       "agent": "/root/luna_test_efficiency",
-      "status": "IMPLEMENTATION_AND_OFFLINE_TEST_RUNNING",
+      "status": "ACCEPTED_SCOPED_OFFLINE_PENDING_GIT_SYNC",
       "scope": "New runner+tests through actual public stdioMCP/session-owned lifecycle; nativeexecute not authorized to agent yet",
       "native_status": "NOT_RUN",
       "limits_for_proposed_discovery": {
@@ -2340,9 +2340,9 @@
         "study_solver_dispatch": 0,
         "seconds": 900
       },
-      "acceptance": "PENDING; nativefield/units/mesh/output remain open",
+      "acceptance": "15 unique PASS; main hashes/JUnit verified; target Windows prepare/native NOT_RUN",
       "implementation_review": {
-        "status": "FINDINGS_SENT_TO_EXECUTOR_TESTS_PENDING",
+        "status": "REPAIRED_VERIFIED",
         "findings": [
           "Record recovery request IDs from actual dispatched envelope, not mismatched action-label keys.",
           "Validate probe execution exact ModelRef/project/session and resulting revision; pure inspect must not drift revision.",
@@ -2350,28 +2350,33 @@
           "Use only original-request read-only status query on timeout; no replay.",
           "Verify stdio teardown preserves UNKNOWN Worker/Server resources."
         ]
-      }
+      },
+      "checkpoint": "docs/full_project_execution/project_session/PRODUCTION_RUNNER_SOFTWARE_CHECKPOINT.json",
+      "next_action": "Archive exact accepted committed source, stage it in a unique Windows project directory using existing SSH, run metadata-only prepare with isolated project/home/scratch, inspect the freeze, then run the 0-study/solver, 1-Server/1-Worker, 900-second Windows6.4 field metadata discovery. Native stage admission remains UNVERIFIED until actual field/unit/mesh/frame proof; separately freeze source+target solves, validate6.4 then6.3, continueW23-W26."
     },
     {
       "stage": "W21_NATIVE_OUTPUT_PRODUCER",
       "agent": "/root/luna_stage_output",
-      "status": "IMPLEMENTATION_AND_OFFLINE_TEST_RUNNING",
+      "status": "ACCEPTED_SCOPED_OFFLINE_PENDING_GIT_SYNC",
       "scope": "Actual Worker-driven exact tuple/field/continuity/native-integral readback using existing result/observation routes; new helper+ManagedBackend method+tests",
       "native_status": "NOT_RUN",
       "admission": "UNCHANGED_UNVERIFIED",
-      "next_action": "Same executor implements/tests/debugs; main reviews production authority/identity/evidence and focused regression before stage sync.",
+      "next_action": "Native metadata calibration and admission mapping, then source/target real results; native NOT_RUN",
       "additional_allowed_files": [
         "comsol_mcp/_control_daemon.py:output-phase-only callbacks/revision/UNKNOWN handling",
         "tests/test_stage_definition.py:affected output-phase integration regressions"
-      ]
+      ],
+      "acceptance": "148 unique PASS;16 deselected; main source/artifact/JUnit verification",
+      "checkpoint": "docs/full_project_execution/project_session/NATIVE_OUTPUT_SOFTWARE_CHECKPOINT.json"
     },
     {
       "stage": "W21_WINDOWS_CONTROL_BREAKAWAY",
       "agent": "/root/luna_handoff_scope",
-      "status": "ACCEPTED_SCOPED_OFFLINE_PENDING_GIT_SYNC",
+      "status": "ACCEPTED_SCOPED_OFFLINE_SYNCED",
       "acceptance": "8 unique PASS; source/JUnit/receipt hashes verified; native NOT_RUN",
       "checkpoint": "docs/full_project_execution/project_session/WINDOWS_CONTROL_BREAKAWAY_CHECKPOINT.json",
-      "next_action": "Synchronize this accepted prerequisite while runner/output implementation continues."
+      "next_action": "Continue production runner/output implementation; native metadata capture awaits frozen reviewed candidate.",
+      "commit": "56e275f1e28924502aa24199c04a296d856412e8"
     }
   ],
   "windows_readonly_connection_observation": {
@@ -2509,7 +2514,7 @@
     "git_sync": "VERIFIED"
   },
   "w21_native_output_architecture": {
-    "status": "DECIDED_IMPLEMENTATION_IN_PROGRESS",
+    "status": "IMPLEMENTED_SCOPED_OFFLINE_VERIFIED_NATIVE_PENDING",
     "execution_agent": "/root/luna_stage_output",
     "producer_route": "Existing ManagedBackend/_invoke_g3_model/result.evaluate and managed service tickets, actual SolutionBinding/selection/readbacks and existing observation evidence. No direct caller-array acceptance.",
     "worker_events": "Output-phase event callback persists/redacts each actual WorkerRPC in same stage job before send; no solve/save dispatch gate or solve-budget consumption.",
@@ -2518,7 +2523,7 @@
     "required_dimension": "Minimal W21fixture is3D; investigate native IntVolume/existing generic integral path, not sample sums or blindly inheritingW23dimension1/2 limit.",
     "admission": "UNCHANGED_UNVERIFIED; nativefield/unit/mesh/frame proof remains required.",
     "implementation_review": {
-      "status": "FINDINGS_SENT_TO_EXECUTOR_TESTS_PENDING",
+      "status": "REPAIRED_VERIFIED_148_PASS",
       "findings": [
         "Bind source and target observations to their own managed child ticket/request hash, not the last target read ticket.",
         "Persist actual observation revision per artifact; preserve solve revision separately without relabelling observations.",

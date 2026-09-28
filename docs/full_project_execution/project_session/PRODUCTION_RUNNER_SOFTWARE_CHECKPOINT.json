@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "stage": "W21_PRODUCTION_MCP_METADATA_RUNNER",
+  "status": "PASS_SCOPED_OFFLINE",
+  "native_status": "NOT_RUN",
+  "candidate_files": {
+    "tests/test_run_w21_stage_native.py": "3c025caae10dc4fd0dc98d8c9c69b7d31f2ae8b41d817ad198382afb14a3cf03",
+    "tools/run_w21_stage_native.py": "01bf8b598f4b086ed623127c0511e5b860e7987aa9ca972a938d9b11127fbe83"
+  },
+  "tests": {
+    "errors": 0,
+    "failures": 0,
+    "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-mcp-runner-candidate/focused-final-3.xml",
+    "sha256": "73a0e4cada390573d0fc72abd06779e6b77ea2ea121cfd3df9165c4ebf52e460",
+    "skipped": 0,
+    "tests": 15
+  },
+  "test_command": "PYTHONDONTWRITEBYTECODE=1 /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -m pytest -q -p no:cacheprovider --basetemp=/Volumes/CTestEff/w21-stage-runner-offline/final-receipt-4 --junitxml=/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-mcp-runner-candidate/focused-final-3.xml tests/test_run_w21_stage_native.py",
+  "raw_log": {
+    "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-mcp-runner-candidate/focused-final-3.log",
+    "sha256": "e75361b4dbe7ce948e5285875831849fc87cea285d79b727d70d268790633f0f"
+  },
+  "receipt": {
+    "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-mcp-runner-candidate/offline_candidate_receipt_compact.json",
+    "sha256": "7f5024e8be0f37a71dbdba3c96d5b396cc27225e33475bbe66eb505f0e21108f"
+  },
+  "source_manifest": {
+    "file_count": 103,
+    "includes_current_comsol_mcp_worktree": true,
+    "manifest_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-mcp-runner-candidate/candidate_source_manifest_final.json",
+    "manifest_sha256": "4c89bf47a5b5bf9afe14eeecc91f755d9c2ecc35efb9aa9d7058bb03d51d954b"
+  },
+  "main_review": "15 unique JUnit cases; receipt, source, log and manifest hashes verified. 103 source entries matched before the separately tested output-validator compatibility repair. This manifest is not the final Windows candidate.",
+  "repairs": [
+    "Keep model generation distinct from Worker epoch.",
+    "Exact inspect/probe binding and revision.",
+    "Recover original request ID; one read-only query on timeout/UNKNOWN, no replay or cleanup.",
+    "Windows breakaway failure refuses unsafe fallback (56e275f)."
+  ],
+  "scope": "Uses production stdio tool schemas and exact project/session/ModelRef routes. Tests stub transport/lifecycle; no target Windows prepare or native execution.",
+  "next_action": "Freeze committed current source, stage to a unique Windows project directory, run prepare only and inspect freeze before zero-solve metadata execution."
+}
