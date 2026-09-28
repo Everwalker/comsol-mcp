@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "phase": "W21_STAGE_BACKEND_SOFTWARE_ACCEPTED",
+  "phase": "WINDOWS_PREFLIGHT_PRIVACY_SOFTWARE_ACCEPTED",
   "task": "W01_W26_CONTINUOUS_IMPLEMENTATION",
   "status": "PARTIAL_EXECUTION_CONTINUING_NATIVE_UNVERIFIED",
   "candidate_source": "docs/full_project_execution/project_session/EXPERIMENT_READS_SOFTWARE_CHECKPOINT.json",
@@ -990,9 +990,8 @@
     "next": "Wait for stable F04 runtime handoff; refresh closure and submit a new candidate for root review. No automatic rerun."
   },
   "verified_git_sync": {
-    "head": "739982c4e3808e89b893dee8c0fc88ceeba6809c",
-    "origin_main": "739982c4e3808e89b893dee8c0fc88ceeba6809c",
-    "checked_at": "2026-09-28T12:15:16.470874+00:00",
+    "head": "11a3284b03de65c8641ea41ac6b09b4714aa6450",
+    "origin_main": "11a3284b03de65c8641ea41ac6b09b4714aa6450",
     "status": "HEAD_EQUALS_ORIGIN_MAIN"
   },
   "w24_static_shape_science_admission_repair": {
@@ -2223,11 +2222,12 @@
     {
       "stage": "W21",
       "agent": "/root/luna_test_efficiency",
-      "status": "ACCEPTED_SCOPED_SOFTWARE_PENDING_GIT_SYNC",
+      "status": "ACCEPTED_SCOPED_SOFTWARE_SYNCED",
       "scope": "Native-admission-gated existing-Worker stage dispatch/check/save with durable no-replay transitions",
       "acceptance": "292 unique PASS; production native admission UNVERIFIED",
       "receipt": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/20260928T125952Z-84ca144a.summary.json",
-      "reported_tests": 292
+      "reported_tests": 292,
+      "commit": "11a3284b03de65c8641ea41ac6b09b4714aa6450"
     },
     {
       "stage": "W26_WINDOWS_HANDOFF",
@@ -2261,10 +2261,10 @@
     {
       "stage": "WINDOWS_NATIVE_PREFLIGHT",
       "agent": "/root/luna_handoff_scope",
-      "status": "READ_ONLY_INVENTORY_COMPLETE_RUNNER_REPAIR_RUNNING",
+      "status": "ACCEPTED_SCOPED_READ_ONLY_AND_PRIVACY_SOFTWARE",
       "scope": "Existing Windows COMSOL6.3/6.4 installation metadata and test-entrypoint discovery; no engine, Worker, solve, upload, install or termination",
-      "acceptance": "PASS scoped file metadata; native NOT_RUN",
-      "next_action": "Repair runner process metadata output boundary offline, then freeze current source and minimal native preconditions/budget; do not reuse old candidate PASS as current acceptance."
+      "acceptance": "Read-only installation metadata and 10 offline privacy tests PASS; native NOT_RUN",
+      "next_action": "Freeze current source manifest and Windows handoff archive; verify package/stdio/import identity and two-version Java compilation before any bounded current-source native run. Do not repeat historical function tests to claim whole-platform acceptance."
     }
   ],
   "windows_readonly_connection_observation": {
@@ -2340,5 +2340,12 @@
       "full Windows 6.3/6.4 platform acceptance"
     ],
     "next_action": "Repair runner process metadata output boundary offline, then freeze current source and minimal native preconditions/budget; do not reuse old candidate PASS as current acceptance."
+  },
+  "windows_preflight_privacy_checkpoint": {
+    "status": "PASS_SCOPED_SOFTWARE",
+    "checkpoint": "docs/full_project_execution/function_evaluate/WINDOWS_PREFLIGHT_PRIVACY_CHECKPOINT.json",
+    "tests": 10,
+    "native_status": "NOT_RUN",
+    "next_action": "Freeze current source manifest and Windows handoff archive; verify package/stdio/import identity and two-version Java compilation before any bounded current-source native run. Do not repeat historical function tests to claim whole-platform acceptance."
   }
 }

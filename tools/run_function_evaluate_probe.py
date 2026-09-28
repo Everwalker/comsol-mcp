@@ -16,6 +16,7 @@ import json
 import math
 import os
 import platform
+import re
 import subprocess
 import sys
 import time
@@ -51,30 +52,116 @@ def load_server_class(w21_runner: Path):
     return module.LiveComsolServerInstance
 
 
-def assert_no_existing_comsol_processes() -> list[str]:
-    result = subprocess.run(
-        ["powershell.exe", "-NoProfile", "-Command",
-         "Get-CimInstance Win32_Process | Where-Object {$_.Name -in @('comsolmphserver.exe','comsol.exe','comsolbatch.exe')} | ForEach-Object {$_.ProcessId.ToString() + '|' + $_.Name + '|' + $_.ExecutablePath}"],
-        check=True, capture_output=True, text=True, timeout=15,
+def _parse_process_metadata(
+    stdout: str,
+    *,
+    include_creation_date: bool = False,
+    allowed_names: set[str] | None = None,
+) -> list[dict[str, Any]]:
+    if not isinstance(stdout, str):
+        raise ValueError("process metadata query returned invalid text")
+    lines = [line for line in stdout.splitlines() if line.strip() and not line.startswith("#< CLIXML")]
+    if not lines:
+        return []
+    try:
+        value = json.loads("\n".join(lines))
+    except (json.JSONDecodeError, TypeError):
+        raise ValueError("process metadata query returned malformed data") from None
+    if value is None:
+        return []
+    rows = value if isinstance(value, list) else [value]
+    safe_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            raise ValueError("process metadata query returned an invalid row")
+        pid = row.get("ProcessId")
+        name = row.get("Name")
+        path_missing = row.get("PathMissing")
+        command_line_missing = row.get("CommandLineMissing")
+        if type(pid) is not int or not isinstance(name, str) or not name:
+            raise ValueError("process metadata query omitted its name or PID")
+        if re.fullmatch(r"[A-Za-z0-9_.-]{1,128}", name) is None:
+            raise ValueError("process metadata query returned a non-name value")
+        if allowed_names is not None and name.casefold() not in allowed_names:
+            raise ValueError("process metadata query returned an unexpected process name")
+        if type(path_missing) is not bool or type(command_line_missing) is not bool:
+            raise ValueError("process metadata query omitted its missing-path indicators")
+        safe_row: dict[str, Any] = {
+            "process_id": pid,
+            "name": name,
+            "path_missing": path_missing,
+            "command_line_missing": command_line_missing,
+        }
+        if include_creation_date:
+            creation_date = row.get("CreationDate")
+            if creation_date is not None and (
+                not isinstance(creation_date, str)
+                or re.fullmatch(r"[0-9TtZz:+.\-]{1,64}", creation_date) is None
+            ):
+                raise ValueError("process metadata query returned an invalid creation date")
+            safe_row["creation_date"] = creation_date
+        safe_rows.append(safe_row)
+    return safe_rows
+
+
+def assert_no_existing_comsol_processes() -> list[dict[str, Any]]:
+    command = (
+        "$ErrorActionPreference='Stop'; "
+        "Get-CimInstance Win32_Process | "
+        "Where-Object {$_.Name -in @('comsolmphserver.exe','comsol.exe','comsolbatch.exe')} | "
+        "Select-Object ProcessId,Name,"
+        "@{Name='PathMissing';Expression={[string]::IsNullOrWhiteSpace([string]$_.ExecutablePath)}},"
+        "@{Name='CommandLineMissing';Expression={[string]::IsNullOrWhiteSpace([string]$_.CommandLine)}} | "
+        "ConvertTo-Json -Compress"
     )
-    lines = [line.strip() for line in result.stdout.splitlines() if line.strip() and not line.startswith("#< CLIXML")]
-    if lines:
-        raise RuntimeError("pre-existing COMSOL processes detected; left untouched: " + " ; ".join(lines))
-    return lines
+    try:
+        result = subprocess.run(
+            ["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", command],
+            check=False, capture_output=True, text=True, timeout=15,
+        )
+    except Exception:
+        raise RuntimeError("could not verify existing COMSOL processes; refusing to start") from None
+    if result.returncode != 0:
+        raise RuntimeError("could not verify existing COMSOL processes; refusing to start")
+    try:
+        rows = _parse_process_metadata(
+            result.stdout,
+            allowed_names={"comsolmphserver.exe", "comsol.exe", "comsolbatch.exe"},
+        )
+    except ValueError:
+        raise RuntimeError("could not verify existing COMSOL processes; refusing to start") from None
+    if rows:
+        details = " ; ".join(
+            f"{row['name']} PID={row['process_id']} "
+            f"PathMissing={row['path_missing']} CommandLineMissing={row['command_line_missing']}"
+            for row in rows
+        )
+        raise RuntimeError("pre-existing COMSOL process(es) detected; left untouched: " + details)
+    return rows
 
 
 def cim_process(pid: int) -> dict[str, Any] | None:
+    command_text = (
+        "$ErrorActionPreference='Stop'; "
+        f"Get-CimInstance Win32_Process -Filter 'ProcessId = {pid}' | "
+        "Select-Object ProcessId,Name,CreationDate,"
+        "@{Name='PathMissing';Expression={[string]::IsNullOrWhiteSpace([string]$_.ExecutablePath)}},"
+        "@{Name='CommandLineMissing';Expression={[string]::IsNullOrWhiteSpace([string]$_.CommandLine)}} | "
+        "ConvertTo-Json -Compress"
+    )
     command = [
-        "powershell.exe", "-NoProfile", "-NonInteractive", "-Command",
-        f"Get-CimInstance Win32_Process -Filter 'ProcessId = {pid}' | Select-Object ProcessId,ExecutablePath,CommandLine,CreationDate | ConvertTo-Json -Compress",
+        "powershell.exe", "-NoProfile", "-NonInteractive", "-Command", command_text,
     ]
-    result = subprocess.run(command, capture_output=True, text=True, timeout=15, check=False)
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, timeout=15, check=False)
+    except Exception:
+        return None
     if result.returncode != 0 or not result.stdout.strip():
         return None
     try:
-        value = json.loads(result.stdout.strip())
-        return value if isinstance(value, dict) else None
-    except json.JSONDecodeError:
+        rows = _parse_process_metadata(result.stdout, include_creation_date=True)
+        return rows[0] if len(rows) == 1 and rows[0]["process_id"] == pid else None
+    except ValueError:
         return None
 
 

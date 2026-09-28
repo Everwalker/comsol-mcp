@@ -1,0 +1,91 @@
+{
+  "schema": "WINDOWS_PREFLIGHT_PRIVACY_CHECKPOINT_V1",
+  "status": "PASS_SCOPED_OFFLINE_AND_READ_ONLY_METADATA",
+  "native_status": "NOT_RUN",
+  "platform_acceptance": "PARTIAL",
+  "implementation": {
+    "creation_date_limit": "PowerShell 5.1 may serialize CreationDate as /Date(ms)/; the parser conservatively returns None for that form. CreationDate is not the primary birth identity; process_identity birth data remains unchanged.",
+    "locations": {
+      "fixed_owned_launcher_identity": "tools/run_function_evaluate_probe.py:316-318",
+      "owned_cim": "tools/run_function_evaluate_probe.py:143",
+      "owned_summary_assignment": "tools/run_function_evaluate_probe.py:319",
+      "preexisting_query": "tools/run_function_evaluate_probe.py:107",
+      "process_identity_dependency": "comsol_mcp/_platform_process.py:163"
+    },
+    "owned_process_cim": "Summary retains process_id, name, creation_date, path_missing, command_line_missing only; paths and command lines are not persisted.",
+    "preexisting_process_query": "Returns only Name, ProcessId, PathMissing, CommandLineMissing; found COMSOL process remains fail-closed and untouched.",
+    "preserved_identity": "Fixed self-owned launcher path comparison, process birth identity, lifecycle ownership and native budget code were not changed.",
+    "process_identity_dependency": "comsol_mcp/_platform_process.py was read-only inspected; process_identity returns alive/start_epoch_ms only. It was not edited.",
+    "query_errors": "Nonzero, timeout/exception, malformed JSON, unexpected names or missing indicators refuse start with generic messages that do not echo stdout/stderr."
+  },
+  "tests": {
+    "command": "PYTHONDONTWRITEBYTECODE=1 /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -B -m pytest -p no:cacheprovider -q tests/test_function_evaluate_probe_process_privacy.py --junitxml=/Volumes/CTestEff/execution-scratch/windows-native-process-privacy/20260928T125917Z/junit.xml",
+    "exit_code": 0,
+    "junit": "/Volumes/CTestEff/execution-scratch/windows-native-process-privacy/20260928T125917Z/junit.xml",
+    "junit_count_source": "Aggregated nested testsuite elements; pytest emitted a testsuites wrapper without aggregate counters.",
+    "junit_counts": {
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "tests": 10
+    },
+    "junit_sha256": "41688f1cd37ad18917d3f29dd282f68b19def5f8eb04576d7157372937dcc1c6",
+    "python_version": "3.12.13",
+    "source_hashes_after": {
+      "tests/test_function_evaluate_probe_process_privacy.py": "255ada85b7ab60ddeec058bf3239c3363e35b4683769b3808edc886e5a2ce383",
+      "tools/run_function_evaluate_probe.py": "d4d182bb9b81072637aff71b4ba4e8478c58783f39c96b9379ec40a6f25368d9"
+    },
+    "source_hashes_before": {
+      "tests/test_function_evaluate_probe_process_privacy.py": "255ada85b7ab60ddeec058bf3239c3363e35b4683769b3808edc886e5a2ce383",
+      "tools/run_function_evaluate_probe.py": "d4d182bb9b81072637aff71b4ba4e8478c58783f39c96b9379ec40a6f25368d9"
+    },
+    "source_unchanged_during_test": true,
+    "stderr_bytes": 0,
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stdout_bytes": 99,
+    "stdout_sha256": "9b1781e2b9299adb3e2d7e29ce949b681ed28362fa62c1ba6941ac870d80cac8"
+  },
+  "receipt": {
+    "path": "/Volumes/CTestEff/execution-scratch/windows-native-process-privacy/20260928T125917Z/receipt.json",
+    "sha256": "a890f411c3265e26f686e323666162f6e8dfa2880388e427143feb293ed37c90"
+  },
+  "installation_metadata": {
+    "status": "PASS_READ_ONLY_FILE_QUERY",
+    "receipt": "/Volumes/SSD/Comsol-MCP/execution-scratch/windows-native-preflight/20260928T123940Z/receipt.json",
+    "receipt_sha256": "692c41c2d56521d05f9ac8174e1adad9897e6e9758a059c187606bb74443c448",
+    "builds": {
+      "6.3": "6.3.0.290",
+      "6.4": "6.4.0.293"
+    },
+    "classpath_presence": {
+      "6.3": "26/26",
+      "6.4": "25/25"
+    },
+    "java_javac_file_version": "11.0.32.1",
+    "python_file_version": "3.12.10",
+    "limitations": [
+      "COMSOL license/feature availability",
+      "current native engine startup",
+      "current Python environment package health",
+      "current process ownership/quiescence (only parent-reported name-only snapshot is attached)",
+      "full Windows 6.3/6.4 platform acceptance"
+    ]
+  },
+  "main_review": "Runner diff/tests reviewed; source, receipt and JUnit hashes plus ten unique passing cases verified. Existing owned fixed-path/birth/ownership/budget logic unchanged. No native or broad platform acceptance.",
+  "failure_history": {
+    "final_focus_failures": 0,
+    "preliminary_focus_run": {
+      "junit_sha256": "c23fff1e85e3257bfe8fd3fd5170f2e93b134b610187739ef42e747a42b876e7",
+      "result": "8 passed before the final fail-closed PowerShell error-action and CreationDate validation refinements",
+      "run_id": "20260928T125613Z"
+    },
+    "related_windows_preflight_command_length_failure": {
+      "decoded_error": "命令行太长。；same read-only query later succeeded after gzip compression",
+      "receipt": "/Volumes/SSD/Comsol-MCP/execution-scratch/windows-native-preflight/20260928T123536Z/receipt.json",
+      "receipt_sha256": "4105cba76b79ffb3d4b964b11beaec9edece05d6f550b939cb07b7c2d91ccdf4",
+      "successful_preflight_receipt": "/Volumes/SSD/Comsol-MCP/execution-scratch/windows-native-preflight/20260928T123940Z/receipt.json",
+      "successful_preflight_receipt_sha256": "692c41c2d56521d05f9ac8174e1adad9897e6e9758a059c187606bb74443c448"
+    }
+  },
+  "next_action": "Freeze current source manifest and Windows handoff archive; verify package/stdio/import identity and two-version Java compilation before any bounded current-source native run. Do not repeat historical function tests to claim whole-platform acceptance."
+}
