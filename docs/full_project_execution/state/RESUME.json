@@ -103,7 +103,7 @@
       "native_acceptance": "NOT_RUN"
     }
   ],
-  "next_action": "Freeze original W21 stage API contract from gap audit; continue W23 explicit Scaling candidate and W24 native branch-state implementation. Native process/platform gates remain; complete all W01-W26 and final independent review.",
+  "next_action": "Continue original W21 stage APIs and W24 internal-state capture; W23 native Scaling compatibility remains gated, prepare power-balance production evidence. Preserve all original W01-W26 requirements and final independent review.",
   "active_jobs": [],
   "blockers": [
     "W23 failed setup owned Server 75272 and daemon 75260 remain preserved: cleanup SIGTERM was rejected by automatic approval and explicit authorization is pending; no cleanup or relaunch authorized by elapsed time.",
@@ -132,7 +132,7 @@
     "native_solve_budget_remaining": 0,
     "evidence": "docs/full_project_execution/evidence/luna_process_reconciliation/mac_readonly_snapshot_20260926T2152Z.json"
   },
-  "updated_at": "2026-09-28T03:30:35.439110+00:00",
+  "updated_at": "2026-09-28T03:45:00.994377+00:00",
   "note": "Continuous authorized execution through W26. OpenViking task-detail retrieval was denied by auto-review because it would disclose internal roadmap identifiers externally; no workaround. Use current frozen workpack and read-only local memory only. Do not rerun bootstrap/init on resume. Source files now contain executor edits; do not rerun bootstrap/init. Git metadata is an APFS pointer managed by main agent; migration requires bundle/source transfer, not copying only the repository pointer. Git metadata migration is documented by evidence/git_metadata_relocation.json and owned by the main agent; do not copy the APFS git pointer to another machine without source bundle/archive. GUI permission boundary and checkpoint solution-scope caveat recorded. This executor has one W24 native setup-only failure with exact cleanup verified; the durable operation/job UNKNOWN records remain unchanged. No W24 solver submission occurred. Saved-MPH readback supplement uses separate time/evidence and zero study/solver calls; run08 remains FAIL_OR_INCOMPLETE. Root raw SQLite recomputation is linked under native_resume_saved_artifact_supplement.raw_recomputation_evidence; original run08 remains FAIL_OR_INCOMPLETE and no solve budget is restored. Latest checkpoint 2026-09-27T03:50:43Z: W24 0334Z setup run failed pre-model due Python 3.14 missing mcp, with exact cleanup; 0346Z candidate pins the validated 3.12.13 environment and passes a production no-engine registry/daemon preflight. Native setup remains pending root review; science implementation continues offline. Latest checkpoint 2026-09-27T09:09:28Z: W24 0841Z candidate was invoked once at 0857Z and failed before any engine/Worker birth because project.inspect received an injected idempotency_key; project.create persisted successfully. Exact read-only SQLite hash and operation result are in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_contract_diagnostic.json. The runner now omits the unnecessary inspect key; actual ControlDaemon focused regression is 2/2 PASS in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_runner_regression_receipt.json. No native retry or acceptance is claimed; release F04 runtime integration is active, so refresh closure and root review are required before another launch. Windows COMSOL 6.3 remains required/unassessed; only macOS 6.3 is USER_REQUESTED_SKIP.",
   "native_resume_smoke": {
     "status": "FAIL_OR_INCOMPLETE_POINT_SCHEMA_FAILURE; SOLVED_CHILD_ARTIFACT_DURABLE; SOLVE_BUDGET_EXHAUSTED; SEPARATE_SAVED_MPH_READBACK_PASS",
@@ -746,7 +746,7 @@
     "cleanup": "exact PID and ports absent; global COMSOL/Worker inventory quiescent",
     "scope": "API-only evidence; no optical, numerical, or physical acceptance"
   },
-  "recent_checkpoint": "docs/full_project_execution/w24/SAVED_PRODUCER_CHAIN_CHECKPOINT.json",
+  "recent_checkpoint": "docs/full_project_execution/w23_overlap/EXPLICIT_SCALING_MAP_SOFTWARE_CHECKPOINT.json",
   "root_resume_summary_correction": {
     "at": "2026-09-27T05:10:40.509110+00:00",
     "reason": "Prevent stale0346 relaunch from oldtop-level recovery summary; historical evidence retained",
@@ -991,11 +991,11 @@
   },
   "verified_git_sync": {
     "status": "VERIFIED",
-    "head": "6dba12d0259e477311ec97eb94400bc493fb4e9a",
-    "origin_main": "6dba12d0259e477311ec97eb94400bc493fb4e9a",
-    "verified_at": "2026-09-28T03:19:40.099198+00:00",
+    "head": "d181e61672c4596ba8196aa21f24a0aea9300003",
+    "origin_main": "d181e61672c4596ba8196aa21f24a0aea9300003",
+    "verified_at": "2026-09-28T03:31:36.212575+00:00",
     "method": "post-push git fetch origin main; git rev-parse HEAD; git rev-parse origin/main",
-    "stage": "F16 objective and case artifact software"
+    "stage": "W24 actual saved producer software"
   },
   "w24_static_shape_science_admission_repair": {
     "status": "SCOPED_SOFTWARE_REPAIR_ACCEPTED_NATIVE_NOT_RUN",
@@ -1109,7 +1109,16 @@
   },
   "w24_next_implementation": {
     "status": "IMPLEMENTING_NATIVE_HISTORY_AND_REFERENCE_ORCHESTRATION",
-    "scope": "Reuse existing campaign adapter/journal for explicitly identified v2 cases: exact two-source manifest, public V2 DOF and history capture with operation/job/model/revision/study/solver/time lineage, then stage/continuous/reopen comparisons. Preserve v1; investigate native Maxwell state without claiming behavior-only evidence establishes hidden-state continuity."
+    "scope": "Reuse existing campaign adapter/journal for explicitly identified v2 cases: exact two-source manifest, public V2 DOF and history capture with operation/job/model/revision/study/solver/time lineage, then stage/continuous/reopen comparisons. Preserve v1; investigate native Maxwell state without claiming behavior-only evidence establishes hidden-state continuity.",
+    "internal_state_capture_decision": {
+      "status": "IN_PROGRESS_SOFTWARE_NATIVE_UNVERIFIED",
+      "scope": "Additive private fixture solution_snapshot_v3 with full stored Sol vectors, fieldNames/fieldNDofs/nDofs, Xmesh-to-vector indices and element-local field/DOF layout. Preserve existing v1/v2 behavior.",
+      "identity_limit": "Element-local classification and name hints do not establish Maxwell branch identity or reference-state persistence. These remain UNVERIFIED until actual native evidence.",
+      "coverage_rule": "Retain native mapping including missing/eliminated/duplicate cases. No silent dropping or assumed bijection. Any required unobservable state prevents a full-branch capture claim.",
+      "comparison_rule": "For unchanged save/reopen and exact same study/solver/layout/config/stored times, strict finite double-value equality can establish the scoped persistence comparison. For continuous/staged comparisons report per-field differences only until verified field identity/units and frozen physical tolerances exist; otherwise TOLERANCE_NOT_FROZEN/UNVERIFIED. No blanket dimensionless vector tolerance.",
+      "native": "NOT_RUN",
+      "next_action": "Luna implements decoder, production receipt binding, complete layout capture, reset negatives and offline compile in a minimal isolated candidate; no native launch."
+    }
   },
   "f16_next_implementation": {
     "status": "PASS_SCOPED_SOFTWARE_NATIVE_REMAINS_NOT_RUN",
@@ -1383,7 +1392,7 @@
     },
     "github_sync": "VERIFIED",
     "local_cap_proposal_review": {
-      "status": "MATHEMATICAL_CANDIDATE_NATIVE_API_UNVERIFIED",
+      "status": "PASS_SCOPED_EXPLICIT_MAP_SOFTWARE_NATIVE_UNVERIFIED",
       "script": "/private/tmp/w23_full_port_local_cap_transition_20260928/verify_proposal.py",
       "script_sha256": "feb56d8d3f5798d250445914b032176b11f15ba397e3fc18c9b742925faab6cd",
       "data": "/private/tmp/w23_full_port_local_cap_transition_20260928/cap_transition_19case_math.json",
@@ -1402,7 +1411,7 @@
           "sha256": "dc141c7bbd5bc2b41ce1524740f6378215df19010259975e62085a46dbb5ac6e"
         }
       ],
-      "next_action": "Same Luna implements bounded same-version evidence lookup, explicit-map expressions and 19-case recipe/tests, and compile-only Java probe with property/physics-transform validation gates. No native launch until existing process/permission gate resolves; native reflection and power balance remain separate.",
+      "next_action": "Resolve native complex-map and actual physics transformation support under resource authorization; prepare real CV surface/absorption/input-power production readback and conservation evidence without treating analytic area, compile or synthetic fields as native acceptance.",
       "architecture_direction": "Explicit complete complex Scaling map G=r+sum Delta_i*grad(d_i), without an additional built-in PML node. This is an API candidate only: complex map support and actual physics coordinate transformation remain UNVERIFIED. The blended fields are not asserted to be Euclidean distances.",
       "candidate_alternative": "Evaluate explicit global-x smoothstep blending of global transverse coordinates/bounds into true-axis Port coordinates/bounds before the minimum actual Port-corner x; retain global coordinates at x<=19 and fixed true-axis coordinates through full swept cap. This is a proposed mathematical alternative, not accepted geometry/API/native execution.",
       "gradient_candidate": {
@@ -1432,6 +1441,16 @@
         "complex_determinant_magnitude_lower_bound": 1.0108166084,
         "scope": "19 frozen one-factor cases; no compound tilt; full aperture and unchanged straight physical fibers required",
         "native_result": "NOT_RUN"
+      },
+      "checkpoint": "docs/full_project_execution/w23_overlap/EXPLICIT_SCALING_MAP_SOFTWARE_CHECKPOINT.json",
+      "explicit_scaling_candidate": {
+        "receipt": "/private/tmp/w23_scaling_map_candidate_20260928/candidate_receipt.json",
+        "sha256": "3cb5d0dd4836ebf21364f917acd0051e0db8a843a4c687823294ef5acf9ae7be",
+        "isolated_tests": 9,
+        "main_tests": 9,
+        "main_expression_maps_checked": 798,
+        "native": "NOT_RUN",
+        "complex_map_and_physics_support": "UNVERIFIED"
       }
     }
   },
@@ -1511,5 +1530,16 @@
       "integration_base": "6dba12d0259e477311ec97eb94400bc493fb4e9a",
       "native": "NOT_RUN"
     }
+  },
+  "w21_original_stage_api_followup": {
+    "status": "IN_PROGRESS_SOFTWARE_DEFINITION_ROUTE",
+    "gap_plan": {
+      "path": "/private/tmp/w01-w22-stage-gap-plan-20260928.md",
+      "sha256": "c57b03d63cbfc18c81a48b6784f90bd95e210daa4120d73379bf7f6de663e782"
+    },
+    "finding": "Canonical experiment.stage_define/stage_run/state_map have catalog schemas but lack production routes. Existing selector-only solution_transfer and COMPUTE stage.state_transfer do not satisfy the original WRITE mapping contract.",
+    "decision": "Register one immutable complete plan per stage_define call. Preserve outer schemas; stage IDs unique across plans within project and stable model identity, so stage_run(stage_id) unambiguously resolves plan/hash. Atomic graph registration; exact retries idempotent, conflicting plan or stage IDs rejected.",
+    "scope": "Definition registration only, no Worker/solve; declaration is not native capability validation. Original stage_run, state_map and T021/T047 remain incomplete.",
+    "next_action": "Same Luna implements strict nested schema, durable atomic route and public/reopen/isolation/idempotency/negative tests on d181e61. Then implement remaining original stage APIs and native continuity/conservation evidence."
   }
 }

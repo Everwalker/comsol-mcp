@@ -1,0 +1,158 @@
+{
+  "schema_version": 1,
+  "stage": "W23 explicit raw-gradient complex Scaling-map software candidate",
+  "status": "PASS_SCOPED_SOFTWARE",
+  "project_status": "PARTIAL",
+  "base_commit": "3d63ad9f8bfe8d04903e1a09b1b1aee4e103a959",
+  "source_allowlist": [
+    {
+      "bytes": 1373,
+      "path": "pyproject.toml",
+      "role": "base",
+      "sha256": "1355011f7551f62f3411e1ad0cc79f23dda42b3c90578c8669b3e685f0c1bd5c"
+    },
+    {
+      "bytes": 40159,
+      "path": "tools/w23_full3d.py",
+      "role": "base",
+      "sha256": "be98f8b8521daa578f16fcc419a3c2019ee297acc75983b753c45488d24eaed9"
+    },
+    {
+      "bytes": 104962,
+      "path": "tools/w23_radiation_geometry_v2.py",
+      "role": "base",
+      "sha256": "3322560a8956c974c478d9d4880da6a51b953667967a2db6c3a7f752fab85732"
+    },
+    {
+      "bytes": 23150,
+      "path": "tools/w23_scaling_map_candidate.py",
+      "role": "overlay",
+      "sha256": "9ea2b6d10cd0555893f1a919ad5e1199ebc31ac87c12c640ff2891c086360692"
+    },
+    {
+      "bytes": 9729,
+      "path": "tools/java/NativeW23ScalingMapProbe.java",
+      "role": "overlay",
+      "sha256": "df9c95cf62b1d57e9fdaff517990420ca356c5ccf868aa0cb683c6a7158ee304"
+    },
+    {
+      "bytes": 9422,
+      "path": "tests/test_w23_scaling_map_candidate.py",
+      "role": "overlay",
+      "sha256": "2b4884519d8c1cfc416bff440845ffcd216f41aeeaedd8648a4a30b02177ab1c"
+    }
+  ],
+  "tests": {
+    "isolated": {
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "suite_names": [
+        "pytest"
+      ],
+      "tests": 9
+    },
+    "main": {
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "main_render_equivalence": {
+      "region_maps": 798,
+      "failures": 0,
+      "scope": "One interior point per registered region, offline expression evaluation in um units against independent numeric map; not COMSOL expression parsing or physics proof."
+    },
+    "java": "PASS_COMPILE_ONLY_JAVA_11_COMSOL_6_4"
+  },
+  "same_version_static_evidence": [
+    {
+      "sha256": "3dacc33243911a98cbcac19c6b83c9b662dd0b7c56b880b3a9e6a2ab602e7106",
+      "source": "COMSOL 6.4 Reference Manual, doc3627, p.482 / chunk12568",
+      "supports": "raw-gradient PML map formula G=r+sum Delta(d)*grad(d); no normalization term"
+    },
+    {
+      "sha256": "9226846efcdba58c118cf2e7fec11a93186efdf1a205b2121c50eebef0d00204",
+      "source": "COMSOL 6.4 Reference Manual, doc5110 / chunk18223",
+      "supports": "Scaling System concept and compatible-physics coordinate transformation generally"
+    },
+    {
+      "sha256": "59ad2af4bb66fafc8a17494078d9b42f912cfeab3d95e60f0ed19a4760e87bff",
+      "source": "COMSOL 6.4 Java API, doc4096 / chunk16736",
+      "supports": "create Scaling coordinate system and map property example"
+    },
+    {
+      "sha256": "affe616ad0ba2b9f1030d6c7e66be826602b1cb267d97a944493de7766dbaee7",
+      "source": "COMSOL 6.4 Reference Manual, doc5881 / chunk19298",
+      "supports": "generic expressions may accept complex values; does not prove Scaling.map"
+    },
+    {
+      "result": "no direct complex Scaling.map acceptance or physics-consumption example found",
+      "scope": "tools/**, tests/**, local COMSOL 6.4 source/API examples",
+      "source": "bounded local 6.4 repository/docs example search"
+    }
+  ],
+  "generated_manifest": {
+    "bytes": 1524131,
+    "case_count": 19,
+    "expression_hash_count": 798,
+    "path": "/private/tmp/w23_scaling_map_candidate_20260928/candidate_map_manifest.json",
+    "region_map_count": 798,
+    "sha256": "090376b660d9d9761f8c07f029df44b80e3cf42a028df0c34cc70299419440fe"
+  },
+  "local_evidence": [
+    {
+      "path": "/private/tmp/w23_scaling_map_candidate_20260928/candidate_receipt.json",
+      "sha256": "3cb5d0dd4836ebf21364f917acd0051e0db8a843a4c687823294ef5acf9ae7be"
+    },
+    {
+      "path": "/private/tmp/w23_scaling_map_candidate_20260928/junit.xml",
+      "sha256": "453592d523c4881c73f55b9a6d7fe5589128f90f750c733f58aeb97b610dce8e"
+    },
+    {
+      "path": "/private/tmp/w23_scaling_map_candidate_20260928/javac_receipt.json",
+      "sha256": "4b554f41ab8292384eddacd05baeaeeb751b189ac9ed0980f7230e015945f1fa"
+    },
+    {
+      "path": "/private/tmp/w23-scaling-main-integrity.json",
+      "sha256": "d1676fc064602f36c10752e702affc1ac4c1bf2e7d13d058ad2a6167b3472d04"
+    },
+    {
+      "path": "/private/tmp/w23-scaling-main-junit.xml",
+      "sha256": "8926731016fe1d37afe59864f7b0132bb5feb96f2d8816e7acfe21d850edd76c"
+    },
+    {
+      "path": "/private/tmp/w23-scaling-render-main-review.json",
+      "sha256": "35df5314343770713ee8f986244e726c38f2b79fa9b6868b8e555e2efff538be"
+    }
+  ],
+  "replay": {
+    "cwd": "repository root",
+    "tests": "python -m pytest -q tests/test_w23_scaling_map_candidate.py",
+    "manifest": "python -c \"import json; from tools.w23_scaling_map_candidate import build_candidate_manifest; print(json.dumps(build_candidate_manifest(), indent=2))\"",
+    "java_recipe": "/private/tmp/w23_scaling_map_candidate_20260928/javac_receipt.json",
+    "future_probe_entrypoint": "NativeW23ScalingMapProbe.inspectExistingManagedModel; requires separately authorized existing managed model and authenticated real domain/physics bindings; no main/server/solve entrypoint"
+  },
+  "limits": {
+    "complex_coordinate_runtime_support": "UNVERIFIED",
+    "complex_scaling_property_acceptance": "UNVERIFIED",
+    "mesh_or_solve": "NOT_RUN",
+    "native_field_reflection_or_sampling": "NOT_RUN",
+    "native_geometry_or_domain_readback": "NOT_RUN",
+    "physics_equation_transform_adoption": "UNVERIFIED",
+    "power_balance": "NOT_RUN",
+    "raw_gradient_jacobian_finite_difference": "PASS",
+    "scientific_acceptance": "NOT_ESTABLISHED",
+    "software_map_generation": "PASS"
+  },
+  "preserved_failure_evidence": {
+    "python": "/private/tmp/w23_scaling_map_candidate_20260928/first_failed_junit.xml",
+    "python_sha256": "daac823bfd66ea0ddfe2498ba686edd5e6fcfa7dc4ae5f69d0a1cea5db2c01b2",
+    "javac": {
+      "cause": "nonexistent com.comsol.model.Component reference; javap confirmed model.component(tag) returns ModelNode; corrected type and recompiled",
+      "receipt_path": "/private/tmp/w23_scaling_map_candidate_20260928/first_failed_javac_receipt.json",
+      "receipt_sha256": "186a85c35b10b94429f5de91d0dceefb4769c3e33ef14307bbc430035ccd8ee6"
+    }
+  },
+  "next_action": "Resolve native complex-map and actual physics transformation support under resource authorization; prepare real CV surface/absorption/input-power production readback and conservation evidence without treating analytic area, compile or synthetic fields as native acceptance."
+}
