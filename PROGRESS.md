@@ -4,6 +4,10 @@ Updated 2026-09-28 UTC. **Overall PARTIAL; W21 runner and output producer accept
 
 ## Current stage
 
+**W21 runner response-contract repair: PASS scoped offline; native NOT_RUN.** Corrected actual `data.project`, bounded exact-job waiting and original-request recovery. **45 unique tests PASS** on isolated Git `3cdc62d` plus only the two runner files; main verified 110 source/test fingerprints and linked artifacts. The earlier Windows attempt created its project successfully but failed locally before any native birth. [Evidence and replay](docs/full_project_execution/project_session/RUNNER_RESPONSE_CONTRACT_CHECKPOINT.json). Next: new frozen Windows6.4 metadata run; preserve the old run without replay.
+
+**Windows6.4 metadata attempt: PARTIAL; failed before native startup.** The sole dispatched `project.create` returned a job ID, but the runner incorrectly expected `data.project_id` instead of the production `data.project.project_id`. Original request/job are retained in RESUME; **0 Server/Worker births, 0 study/solver dispatch**. Original run will not be replayed. Luna is repairing actual response-contract composition and targeted tests before a reviewed continuation.
+
 **Windows6.4 preparation: PASS scoped checks; native execution pending.** Main verified 106 source files against Git `52cf463`, 3 explicit archive metadata files, all 103 frozen source hashes and the pristine run state. Windows symlink preflight passed and removed its three new items. Existing frozen metadata run is now delegated: at most 1 Server/1 Worker, 900 seconds, geometry/mesh once, **0 study/solver dispatch**. [Evidence and exact recovery entry](docs/full_project_execution/project_session/WINDOWS64_METADATA_PREPARE_CHECKPOINT.json). No repeat preparation or UNKNOWN replay.
 
 **New production-composition finding: PARTIAL, repair in progress.** The real output path emits `model_snapshot` events that the new callback currently rejects; the 163 offline tests did not cover this composition. A real backend/Worker transport-stub regression and forward fix are underway. Metadata-only Windows preparation is independent; actual stage solve must use the repaired candidate.

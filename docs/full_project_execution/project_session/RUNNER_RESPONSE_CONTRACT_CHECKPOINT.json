@@ -1,0 +1,139 @@
+{
+  "schema": "W21_RUNNER_RESPONSE_CONTRACT_CHECKPOINT_V1",
+  "status": "PASS",
+  "scope": "Offline runner response-contract repair; native NOT_RUN, W21/project PARTIAL",
+  "base_commit": "3cdc62d0140dd726dc3fd02e36be96905f594901",
+  "changed_files": {
+    "tests/test_run_w21_stage_native.py": "8174bdb425900cf335898eb41636f8b798aa01aacb76e17dab5c932bfbab1586",
+    "tools/run_w21_stage_native.py": "68276fe2f14b56d3f0fedc651117adf4a022cec5ee8687394f9b9ca49d5fbaf6"
+  },
+  "implemented": [
+    "Explicit data.project extraction and exact workspace/request binding",
+    "One frozen 30-second job.wait only for exact pending project.create job",
+    "Read-only timeout recovery uses durable original request/idempotency; no replay",
+    "Bounded runner-owned ExceptionGroup cause summary"
+  ],
+  "actual_tests": {
+    "unique_pass": 45,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "runner": 29,
+    "existing_route_cases": 16,
+    "scope": "Actual ProjectAuthority/ControlDaemon project direct/pending composition plus protocol negative controls and existing lifecycle/artifact/gateway/model/security route tests; synthetic engine boundaries"
+  },
+  "main_verification": "45 unique JUnit cases; 14 receipt-linked artifact hashes; all 110 isolated candidate source/test hashes verified against Git base plus exactly two overlays",
+  "receipt": {
+    "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-runner-contract-fix-20260929-final/final_receipt.json",
+    "sha256": "7ae219851f2b9e07f06fa2d144194e311a1f9dd9b9e31708d457397af8cea16e"
+  },
+  "source_manifest": {
+    "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-runner-contract-fix-20260929-final/isolated-3cdc62d/after_manifest.json",
+    "sha256": "1383d56978cf12c1f6c045d08c9263190c2ede9a9848a5dbf6506ed4f9ea118b"
+  },
+  "tests": {
+    "command": [
+      "PYTHONDONTWRITEBYTECODE=1",
+      "/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python",
+      "-B",
+      "-m",
+      "pytest",
+      "-p",
+      "no:cacheprovider",
+      "tests/test_run_w21_stage_native.py",
+      "tests/test_session_server_control.py::test_public_owned_server_start_attach_disconnect_retire_stop",
+      "tests/test_artifact_registration_import.py::test_artifact_register_uses_canonical_nested_schema_and_outer_idempotency",
+      "tests/test_mcp_gateway.py::test_business_failure_has_outer_error_and_preserves_partial_evidence",
+      "tests/test_mcp_gateway.py::test_invalid_backend_result_fails_closed",
+      "tests/test_mcp_gateway.py::test_legacy_tool_schema_and_real_dispatch_route",
+      "tests/test_control_daemon_projects.py::test_managed_model_creation_persists_project_binding_and_rejects_foreign_project",
+      "tests/test_r01_fixes.py::TestGatewayArgumentNormalization::test_p02_code_execute_java_preserves_arguments_map",
+      "tests/test_g2_security_guards.py::test_sensitive_g2_operations_require_owned_receipt_before_engine_calls",
+      "tests/test_g2_security_guards.py::test_sensitive_g2_permissions_fail_before_engine_calls",
+      "-q",
+      "--basetemp=/Volumes/CTestEff/w21-runner-final-basetemp-3cdc62d",
+      "--junitxml=/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-runner-contract-fix-20260929-final/isolated-3cdc62d/route-closure-isolated.xml"
+    ],
+    "coverage_breakdown": {
+      "runner_protocol_details": {
+        "actual_control_daemon_project_authority_direct_and_pending_create_contract_test": 1
+      },
+      "unique_tests_by_group": {
+        "existing_artifact_register_routes": 2,
+        "existing_g2_java_security_gate_cases": 8,
+        "existing_java_argument_gateway_route": 1,
+        "existing_mcp_gateway_routes": 3,
+        "existing_model_binding_route": 1,
+        "existing_owned_lifecycle_route": 1,
+        "runner_protocol_suite_including_project_create_integration": 29
+      }
+    },
+    "exit_code": 0,
+    "junit": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-runner-contract-fix-20260929-final/isolated-3cdc62d/route-closure-isolated.xml",
+      "sha256": "530b38afbc2c5d49c42df6ecb1380f521b19198557e9b9b3d917c4aadbb27dae",
+      "summary": {
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0,
+        "tests": 45
+      }
+    },
+    "raw_log": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-runner-contract-fix-20260929-final/isolated-3cdc62d/route-closure-isolated.log",
+      "sha256": "09fc6904418707f34ee9089bb560220d27d88e978aa00268044b562edfc3d582"
+    },
+    "unique_test_count": 45,
+    "working_directory": "/Volumes/CTestEff/w21-runner-final-candidate-3cdc62d014"
+  },
+  "original_failure": {
+    "request_id": "7e20aac9-d107-4070-bfc6-d2df94a1ae76",
+    "job_id": "613c6f57-ed8b-473b-8ce9-73579c68752d",
+    "project_id": "717d425d-039f-4664-87d6-595bdca0ac3e",
+    "job_status": "SUCCEEDED",
+    "runner_status": "FAILED_LOCAL_PROJECT_RESPONSE_PARSE",
+    "server_worker_births": 0,
+    "study_solver_dispatch": 0,
+    "evidence": {
+      "focused_runner_green_after_fix": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-runner-contract-fix-20260929/focus4.xml",
+        "sha256": "f0d918a61b12ded8911f607257d51c3a4d0c25bb71a4b02009f8cb6d8d7ff5b5",
+        "summary": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 29
+        }
+      },
+      "intermediate_negative_test_failure": {
+        "disposition": "preserved; exposed lost idempotency on fixture.execute read-only status path; fixed before final rerun",
+        "junit": {
+          "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-runner-contract-fix-20260929/focus3.xml",
+          "sha256": "a98bff9de4a58d529fd1dca912087bb5d21b169392e1e2309db8c44e8e4a1338",
+          "summary": {
+            "errors": 0,
+            "failures": 1,
+            "skipped": 0,
+            "tests": 29
+          }
+        },
+        "raw_log": {
+          "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-runner-contract-fix-20260929/focus3.log",
+          "sha256": "76e96126f94300d3dc0f3e88291eaef3a036dd0d57f0b6157540b824ce8d94b0"
+        }
+      },
+      "original_failure_classification": "deterministic local project.create envelope parsing failure after project creation; no Server/Worker birth or solve",
+      "original_windows_execute_state": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-prepare-20260928T151415Z/execute_state.json",
+        "sha256": "152d4031d03eda1fe9b290bec2e827637b2b1e1e282971fe3efd2ad0bc44ea5e"
+      },
+      "original_windows_freeze_sha256": "81d81c46e32239dc4a9557b1abcab55603e538098816ec7fc3f81b9de2b5e81a",
+      "original_windows_job_snapshot": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-prepare-20260928T151415Z/execute_job_snapshot.json",
+        "sha256": "2598f85bc6e807f304d6c8103a2fb16b4f945cfc20c078b502d52474985be928"
+      },
+      "original_windows_project_id": "717d425d-039f-4664-87d6-595bdca0ac3e"
+    }
+  },
+  "next_action": "Freeze a new isolated Windows6.4 metadata-only run from committed repaired source, link the old failure and preserve its project; no original replay. At most1Server/1Worker/900seconds/0study-or-solver. Output composition repair remains separate; then actual stage chain6.4,6.3,W23-W26."
+}

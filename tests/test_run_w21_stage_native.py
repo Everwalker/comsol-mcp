@@ -6,12 +6,16 @@ the native server, Java Worker, COMSOL engine, or solver.
 from __future__ import annotations
 
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 import importlib.util
 import json
 from pathlib import Path
+import threading
 from types import SimpleNamespace
 
 import pytest
+
+from comsol_mcp._control_daemon import ControlDaemon
 
 
 REPOSITORY = Path(__file__).resolve().parents[1]
@@ -47,10 +51,13 @@ def _plan(tmp_path: Path, *, worker_epoch: int = 7) -> dict:
             "operation_describe": {"type": "object", "properties": {}},
             "model_create": {"type": "object", "properties": {}},
         },
-        "logical_operation_schemas": {"job.list": {"type": "object"}, "job.status": {"type": "object"}},
+        "logical_operation_schemas": {
+            "job.list": {"type": "object"}, "job.status": {"type": "object"},
+            "job.wait": {"type": "object"},
+        },
         "request_ids": {
             name: f"req-{name}" for name in (
-                "project_create", "session_start", "session_connect", "model_create",
+                "project_create", "project_create_wait", "session_start", "session_connect", "model_create",
                 "model_inspect_before_fixture", "fixture_register", "fixture_execute",
                 "model_inspect_after_fixture", "probe_register", "probe_execute",
                 "session_disconnect", "session_stop", "unknown_query",
@@ -69,6 +76,8 @@ def _plan(tmp_path: Path, *, worker_epoch: int = 7) -> dict:
             "server_births_max": 1, "worker_births_max": 1,
             "seconds_from_session_start_dispatch": 900,
             "ordinary_rpc_wait_seconds": 45,
+            "project_create_wait_calls_max": 1,
+            "project_create_wait_timeout_seconds": 30,
             "geometry_run": 1, "mesh_run": 1, "study_dispatch": 0, "solver_dispatch": 0,
         },
         "_worker_epoch": worker_epoch,
@@ -96,6 +105,9 @@ class _FakeStdioSession:
                  wrong_model_field: str | None = None,
                  inspect_drift: bool = False,
                  probe_revision_drift: bool = False,
+                 project_create_pending: bool = False,
+                 project_create_fault: str | None = None,
+                 project_wait_fault: str | None = None,
                  unknown_on: str | None = None,
                  timeout_on: str | None = None):
         self.plan = plan
@@ -103,6 +115,9 @@ class _FakeStdioSession:
         self.wrong_model_field = wrong_model_field
         self.inspect_drift = inspect_drift
         self.probe_revision_drift = probe_revision_drift
+        self.project_create_pending = project_create_pending
+        self.project_create_fault = project_create_fault
+        self.project_wait_fault = project_wait_fault
         self.unknown_on = unknown_on
         self.timeout_on = timeout_on
         self.calls: list[tuple[str, dict]] = []
@@ -165,6 +180,8 @@ class _FakeStdioSession:
             action = "fixture.register" if Path(inner["path"]).name == "W21Fixture.java" else "probe.register"
         elif operation == "code.execute_java":
             action = "fixture.execute" if inner.get("entrypoint") == "W21Fixture" else "probe.execute"
+        elif operation == "job.wait":
+            action = "project.create.wait"
         else:
             action = operation or ("model_create" if name == "model_create" else None)
         if action in {"job.list", "job.status"}:
@@ -187,7 +204,70 @@ class _FakeStdioSession:
 
         if action == "project.create":
             Path(self.plan["project_workspace"]).mkdir(parents=True)
-            return {"success": True, "data": {"project_id": self.project_id}}
+            project = {"project_id": self.project_id,
+                       "workspace": str(Path(self.plan["project_workspace"]).resolve()),
+                       "revision": 1}
+            if self.project_create_pending:
+                request_id, idempotency_key = self._identity_in_params(params)
+                job_id = "project-create-job"
+                execution = {"request_id": request_id,
+                             "idempotency_key": idempotency_key,
+                             "operation_id": "op-project-create",
+                             "job_id": job_id}
+                if self.project_create_fault == "wrong_request":
+                    execution["request_id"] = "different-request"
+                elif self.project_create_fault == "wrong_idempotency":
+                    execution["idempotency_key"] = "different-idem"
+                elif self.project_create_fault == "wrong_job_binding":
+                    execution["job_id"] = "different-job"
+                return {"success": True,
+                        "data": {"job_id": job_id, "status": "RUNNING"},
+                        "execution": execution}
+            request_id, idempotency_key = self._identity_in_params(params)
+            if self.project_create_fault == "wrong_request":
+                request_id = "different-request"
+            elif self.project_create_fault == "wrong_idempotency":
+                idempotency_key = "different-idem"
+            elif self.project_create_fault == "flat_project":
+                return {"success": True, "data": {"project_id": self.project_id},
+                        "execution": {"request_id": request_id,
+                                      "idempotency_key": idempotency_key,
+                                      "operation_id": "op-project-create"}}
+            return {"success": True, "data": {"project": project},
+                    "execution": {"request_id": request_id,
+                                  "idempotency_key": idempotency_key,
+                                  "operation_id": "op-project-create"}}
+        if action == "project.create.wait":
+            original_request = self.plan["request_ids"]["project_create"]
+            original_key = self.plan["idempotency_keys"]["project_create"]
+            job_id = inner.get("job_id")
+            if self.project_wait_fault == "wrong_job":
+                job_id = "other-job"
+            operation_id = "op-project-create"
+            if self.project_wait_fault == "wrong_operation_id":
+                operation_id = "other-operation"
+            result_data = {"project": {
+                "project_id": self.project_id,
+                "workspace": str(Path(self.plan["project_workspace"]).resolve()),
+                "revision": 1,
+            }}
+            result_execution = {"request_id": original_request,
+                                "idempotency_key": original_key,
+                                "job_id": "project-create-job",
+                                "operation_id": "op-project-create"}
+            operation = {"operation": "project.create", "status": "SUCCEEDED",
+                         "request_id": original_request, "idempotency_key": original_key,
+                         "operation_id": "op-project-create"}
+            if self.project_wait_fault == "wrong_request":
+                operation["request_id"] = "different-request"
+            if self.project_wait_fault == "failed":
+                operation["status"] = "FAILED"
+            return {"success": True, "data": {
+                "job_id": job_id, "operation_id": operation_id, "status": "SUCCEEDED",
+                "operation": operation,
+                "result": {"success": True, "data": result_data,
+                           "execution": result_execution},
+            }}
         if action == "session.start":
             return {"success": True, "data": {
                 "project_id": self.project_id, "session_id": self.session_id,
@@ -237,14 +317,33 @@ class _FakeStdioSession:
                 },
             }, "execution": execution}
         if action == "job.status":
-            return {"success": True, "data": {"job_id": "job-test", "status": "RUNNING",
-                                                 "project_id": self.project_id}}
+            query = self.state.value["recovery"]["read_only_query"]
+            if query.get("action") == "project.create.wait":
+                original_request = self.plan["request_ids"]["project_create"]
+                original_key = self.plan["idempotency_keys"]["project_create"]
+                job_id, project_id = "project-create-job", None
+            else:
+                original_request = self.plan["request_ids"]["fixture_execute"]
+                original_key = self.plan["idempotency_keys"]["fixture_execute"]
+                job_id, project_id = "job-test", self.project_id
+            return {"success": True, "data": {
+                "job_id": job_id, "status": "RUNNING", "project_id": project_id,
+                "operation": {"request_id": original_request,
+                              "idempotency_key": original_key},
+            }}
         if action == "job.list":
-            original_id = self.plan["request_ids"]["fixture_execute"]
-            return {"success": True, "data": {"jobs": [{
-                "job_id": "job-test", "status": "RUNNING", "request_id": original_id,
-                "project_id": self.project_id,
-            }]}}
+            query = self.state.value["recovery"]["read_only_query"]
+            original_id = query["original_request_id"]
+            if original_id == self.plan["request_ids"]["project_create"]:
+                job = {"job_id": "job-created-before-timeout", "status": "RUNNING",
+                       "request_id": original_id,
+                       "idempotency_key": self.plan["idempotency_keys"]["project_create"],
+                       "project_id": None}
+            else:
+                job = {"job_id": "job-test", "status": "RUNNING", "request_id": original_id,
+                       "idempotency_key": self.plan["idempotency_keys"]["fixture_execute"],
+                       "project_id": self.project_id}
+            return {"success": True, "data": {"jobs": [job]}}
         if action == "session.disconnect":
             return {"success": True, "data": {"project_id": self.project_id,
                 "session_id": self.session_id, "worker_handle_preserved": False}}
@@ -306,6 +405,85 @@ def test_prepare_freezes_full_source_identity_without_starting_services(tmp_path
     assert json.loads((Path(result["run_root"]) / "state.json").read_text())["status"] == "PREPARED"
 
 
+def test_project_create_actionresult_contract_and_pending_job_match_public_routes(tmp_path):
+    project_root = tmp_path / "authorized-projects"
+    project_root.mkdir()
+    daemon = ControlDaemon(tmp_path / "control", project_root=project_root)
+    entered = threading.Event()
+    release = threading.Event()
+    original_dispatch = daemon.project_authority.dispatch
+
+    def gated_dispatch(operation, arguments):
+        if operation == "project.create":
+            entered.set()
+            if not release.wait(timeout=5):
+                raise AssertionError("test gate timed out")
+        return original_dispatch(operation, arguments)
+
+    daemon.project_authority.dispatch = gated_dispatch
+    request_id, idempotency_key = "project-create-request", "project-create-idem"
+    create_args = {
+        "label": "W21 response contract",
+        "workspace": "field-identity-probe",
+        "policy": {"permissions": ["inspect", "project_write"]},
+        "request_id": request_id,
+        "idempotency_key": idempotency_key,
+    }
+    create_request = {
+        "operation": "operation_call",
+        "arguments": {"operation_id": "project.create", "arguments": create_args},
+        "execution": {"request_id": request_id, "idempotency_key": idempotency_key},
+    }
+    try:
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            first_call = pool.submit(daemon.dispatch, create_request)
+            assert entered.wait(timeout=5)
+            pending = daemon.dispatch(create_request)
+            assert pending["success"] is True
+            assert pending["data"]["status"] == "RUNNING"
+            pending_job_id = pending["data"]["job_id"]
+            assert pending["execution"]["job_id"] == pending_job_id
+            assert pending["execution"]["request_id"] == request_id
+            assert pending["execution"]["idempotency_key"] == idempotency_key
+
+            release.set()
+            terminal = first_call.result(timeout=5)
+            project = terminal["data"]["project"]
+            assert terminal["execution"]["request_id"] == request_id
+            assert terminal["execution"]["idempotency_key"] == idempotency_key
+            assert terminal["execution"]["operation_id"]
+            assert project["workspace"] == str((project_root / "field-identity-probe").resolve())
+
+        wait_response = daemon.dispatch({
+            "operation": "operation_call",
+            "arguments": {"operation_id": "job.wait", "arguments": {
+                "job_id": pending_job_id, "timeout_s": 2, "poll_interval_s": 0.01,
+            }},
+            "execution": {"request_id": "project-create-readonly-wait"},
+        })
+        assert wait_response["success"] is True
+        assert wait_response["data"]["job_id"] == pending_job_id
+        assert wait_response["data"]["operation"]["operation"] == "project.create"
+        assert wait_response["data"]["result"]["data"]["project"] == project
+
+        async def read_exact_job(job_id):
+            assert job_id == pending_job_id
+            return wait_response
+
+        resolved = asyncio.run(runner._resolve_project_create_response(
+            pending, request_id=request_id, idempotency_key=idempotency_key,
+            wait_for_job=read_exact_job))
+        assert resolved == project
+        direct = asyncio.run(runner._resolve_project_create_response(
+            terminal, request_id=request_id, idempotency_key=idempotency_key,
+            wait_for_job=lambda _job_id: pytest.fail("terminal project response must not poll")))
+        assert direct == project
+        assert daemon.backend.worker is None
+    finally:
+        release.set()
+        daemon.close()
+
+
 def test_python_identity_freezes_interpreter_import_origin_and_dependency_inventory(monkeypatch):
     inventory = [
         SimpleNamespace(metadata={"Name": "mcp"}, version="1.30.0"),
@@ -336,7 +514,7 @@ def test_freeze_reads_current_public_stdio_and_logical_query_schemas(monkeypatch
     tools = runner._published_tool_schemas(REPOSITORY)
     logical = runner._logical_schemas(REPOSITORY)
     assert set(tools) == set(runner.REQUIRED_TOOLS)
-    assert {"job.list", "job.status"} <= set(logical)
+    assert {"job.list", "job.status", "job.wait"} <= set(logical)
     assert all(isinstance(schema, dict) and schema.get("type") == "object"
                for schema in tools.values())
 
@@ -417,8 +595,91 @@ def test_metadata_only_protocol_binds_model_generation_separately_from_worker_ep
     assert report["cleanup"]["status"] == "CLEANUP_COMPLETE"
     assert state.value["status"] == "FIELD_PROBE_CAPTURED_ONLY_NOT_ADMISSION"
     assert not any(action in {"study.run", "solver.run"} for action, _ in fake.calls)
+    assert "project.create.wait" not in [action for action, _ in fake.calls]
     assert any(action == "session.disconnect" for action, _ in fake.calls)
     assert any(action == "session.stop" for action, _ in fake.calls)
+
+
+def test_project_create_pending_response_uses_one_frozen_readonly_wait(tmp_path, monkeypatch):
+    _patch_isolation(monkeypatch)
+    plan = _plan(tmp_path)
+    state = _state(tmp_path)
+    fake = _FakeStdioSession(plan, state, project_create_pending=True)
+    report = asyncio.run(runner.run_metadata_protocol(runner._MCPCalls(fake), plan, state,
+        clock=lambda: 100.0, preflight=lambda: []))
+    calls = [(action, params) for action, params in fake.calls if action == "project.create.wait"]
+    assert len(calls) == 1
+    action, params = calls[0]
+    assert params["arguments"]["job_id"] == "project-create-job"
+    assert params["arguments"]["timeout_s"] == plan["budgets"]["project_create_wait_timeout_seconds"]
+    assert params["execution"]["request_id"] == plan["request_ids"]["project_create_wait"]
+    intent = state.value["actions"]["project.create.wait"]
+    assert intent["request_id"] == plan["request_ids"]["project_create_wait"]
+    assert intent["status"] == "RESPONSE_RECORDED"
+    assert report["project_id"] == fake.project_id
+
+
+@pytest.mark.parametrize("fault", ["wrong_request", "wrong_idempotency", "wrong_job_binding"])
+def test_project_create_pending_envelope_binding_mismatch_refuses_before_session_start(fault, tmp_path, monkeypatch):
+    _patch_isolation(monkeypatch)
+    plan = _plan(tmp_path)
+    state = _state(tmp_path)
+    fake = _FakeStdioSession(plan, state, project_create_pending=True,
+                             project_create_fault=fault)
+    with pytest.raises(runner.RunnerError, match="exact request/job binding"):
+        asyncio.run(runner.run_metadata_protocol(runner._MCPCalls(fake), plan, state,
+            clock=lambda: 100.0, preflight=lambda: []))
+    assert "session.start" not in [action for action, _ in fake.calls]
+
+
+@pytest.mark.parametrize("fault", ["wrong_job", "wrong_request", "wrong_operation_id", "failed"])
+def test_project_create_wait_mismatch_refuses_without_starting_session(fault, tmp_path, monkeypatch):
+    _patch_isolation(monkeypatch)
+    plan = _plan(tmp_path)
+    state = _state(tmp_path)
+    fake = _FakeStdioSession(plan, state, project_create_pending=True,
+                             project_wait_fault=fault)
+    with pytest.raises(runner.RunnerError):
+        asyncio.run(runner.run_metadata_protocol(runner._MCPCalls(fake), plan, state,
+            clock=lambda: 100.0, preflight=lambda: []))
+    assert [action for action, _ in fake.calls].count("project.create.wait") == 1
+    assert "session.start" not in [action for action, _ in fake.calls]
+    assert state.value["failure_cleanup"]["status"] == "NOT_POSSIBLE_UNVERIFIED_SESSION_BINDING"
+
+
+def test_project_create_legacy_flat_response_is_not_recursively_unwrapped(tmp_path, monkeypatch):
+    _patch_isolation(monkeypatch)
+    plan = _plan(tmp_path)
+    state = _state(tmp_path)
+    fake = _FakeStdioSession(plan, state, project_create_fault="flat_project")
+    with pytest.raises(runner.RunnerError, match="neither data.project nor a pending job envelope"):
+        asyncio.run(runner.run_metadata_protocol(runner._MCPCalls(fake), plan, state,
+            clock=lambda: 100.0, preflight=lambda: []))
+    assert "session.start" not in [action for action, _ in fake.calls]
+
+
+def test_project_create_wait_budget_is_frozen_and_bounded(tmp_path, monkeypatch):
+    _patch_isolation(monkeypatch)
+    plan = _plan(tmp_path)
+    plan["budgets"]["project_create_wait_timeout_seconds"] = runner.RPC_WAIT_S + 1
+    state = _state(tmp_path)
+    fake = _FakeStdioSession(plan, state, project_create_pending=True)
+    with pytest.raises(runner.RunnerError, match="wait budget is invalid"):
+        asyncio.run(runner.run_metadata_protocol(runner._MCPCalls(fake), plan, state,
+            clock=lambda: 100.0, preflight=lambda: []))
+    assert "project.create.wait" not in [action for action, _ in fake.calls]
+    assert "session.start" not in [action for action, _ in fake.calls]
+
+
+def test_exception_group_exposes_only_runner_owned_cause_summary():
+    error = ExceptionGroup("task failure", [
+        runner.RunnerError("project.create omitted its durable operation identity"),
+        ValueError("secret C:\\Users\\person\\private value"),
+    ])
+    assert runner._safe_runner_error_causes(error) == [{
+        "type": "RunnerError",
+        "message": "project.create omitted its durable operation identity",
+    }]
 
 
 def test_pure_inspect_revision_drift_refuses_before_fixture(tmp_path, monkeypatch):
@@ -483,10 +744,59 @@ def test_transport_timeout_queries_project_jobs_for_exact_request_without_retry(
     assert query["status"] == "QUERY_RESPONSE_RECORDED"
     assert query["matching_job_rows"] == [{
         "job_id": "job-test", "status": "RUNNING",
-        "request_id": plan["request_ids"]["fixture_execute"], "project_id": "project-test",
+        "request_id": plan["request_ids"]["fixture_execute"],
+        "idempotency_key": plan["idempotency_keys"]["fixture_execute"],
+        "project_id": "project-test",
     }]
     assert state.value["job_ids"] == ["job-test"]
     assert state.value["recovery"]["job_ids"] == ["job-test"]
+    assert state.value["status"] == "UNKNOWN"
+
+
+def test_project_create_timeout_queries_once_by_frozen_request_without_none_project_match(tmp_path, monkeypatch):
+    _patch_isolation(monkeypatch)
+    plan = _plan(tmp_path)
+    state = _state(tmp_path)
+    fake = _FakeStdioSession(plan, state, timeout_on="project.create")
+    with pytest.raises(runner.RunnerError, match="transport outcome is UNKNOWN"):
+        asyncio.run(runner.run_metadata_protocol(runner._MCPCalls(fake), plan, state,
+            clock=lambda: 100.0, preflight=lambda: []))
+    operations = [action for action, _ in fake.calls]
+    assert operations.count("project.create") == 1
+    assert operations.count("job.list") == 1
+    assert "session.start" not in operations
+    query = state.value["recovery"]["read_only_query"]
+    assert query["original_request_id"] == plan["request_ids"]["project_create"]
+    assert query["original_idempotency_key"] == plan["idempotency_keys"]["project_create"]
+    assert query["matching_job_rows"] == [{
+        "job_id": "job-created-before-timeout", "status": "RUNNING",
+        "request_id": plan["request_ids"]["project_create"],
+        "idempotency_key": plan["idempotency_keys"]["project_create"],
+        "project_id": None,
+    }]
+
+
+def test_project_create_wait_timeout_queries_original_job_once_without_replaying_wait(tmp_path, monkeypatch):
+    _patch_isolation(monkeypatch)
+    plan = _plan(tmp_path)
+    state = _state(tmp_path)
+    fake = _FakeStdioSession(plan, state, project_create_pending=True,
+                             timeout_on="project.create.wait")
+    with pytest.raises(runner.RunnerError, match="transport outcome is UNKNOWN"):
+        asyncio.run(runner.run_metadata_protocol(runner._MCPCalls(fake), plan, state,
+            clock=lambda: 100.0, preflight=lambda: []))
+    operations = [action for action, _ in fake.calls]
+    assert operations.count("project.create") == 1
+    assert operations.count("project.create.wait") == 1
+    assert operations.count("job.status") == 1
+    assert "session.start" not in operations
+    query = state.value["recovery"]["read_only_query"]
+    assert query["action"] == "project.create.wait"
+    assert query["job_id"] == "project-create-job"
+    assert query["original_request_id"] == plan["request_ids"]["project_create"]
+    assert query["original_idempotency_key"] == plan["idempotency_keys"]["project_create"]
+    assert query["exact_job_identity_confirmed"] is True
+    assert query["observed_request_id"] == plan["request_ids"]["project_create"]
     assert state.value["status"] == "UNKNOWN"
 
 

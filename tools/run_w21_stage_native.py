@@ -18,6 +18,7 @@ import json
 import os
 from pathlib import Path
 import platform
+import re
 import shutil
 import sys
 import textwrap
@@ -38,12 +39,37 @@ REQUIRED_TOOLS = ("operation_call", "operation_describe", "model_create")
 LOGICAL_OPERATIONS = (
     "project.create", "session.start", "session.connect", "model.inspect",
     "artifact.register", "code.execute_java", "session.disconnect", "session.stop",
-    "job.list", "job.status",
+    "job.list", "job.status", "job.wait",
 )
 
 
 class RunnerError(RuntimeError):
     """A frozen-input, public-route, identity, or bounded-run refusal."""
+
+
+def _safe_runner_error_causes(exc: BaseException, *, limit: int = 3) -> list[dict[str, str]]:
+    """Expose only known runner-owned leaf failures from wrapped task groups."""
+    found: list[dict[str, str]] = []
+
+    def visit(error: BaseException) -> None:
+        if len(found) >= limit:
+            return
+        if isinstance(error, RunnerError):
+            message = " ".join(str(error).split())[:500]
+            message = re.sub(
+                r"(?i)(?:[a-z]:[\\/]|/)(?:[^\\/\s\"']+[\\/])*[^\\/\s\"']*",
+                "<path>", message,
+            )
+            found.append({"type": "RunnerError", "message": message})
+            return
+        if isinstance(error, BaseExceptionGroup):
+            for nested in error.exceptions:
+                visit(nested)
+                if len(found) >= limit:
+                    return
+
+    visit(exc)
+    return found
 
 
 def canonical_bytes(value: Any) -> bytes:
@@ -261,7 +287,7 @@ def prepare(*, version: str, comsol_root: Path, jdk_home: Path,
     project_workspace = workspace_root / "field-identity-probe"
 
     request_ids = {name: str(uuid4()) for name in (
-        "project_create", "session_start", "session_connect", "model_create",
+        "project_create", "project_create_wait", "session_start", "session_connect", "model_create",
         "model_inspect_before_fixture", "fixture_register", "fixture_execute",
         "model_inspect_after_fixture", "probe_register", "probe_execute",
         "session_disconnect", "session_stop", "unknown_query",
@@ -296,6 +322,8 @@ def prepare(*, version: str, comsol_root: Path, jdk_home: Path,
             "server_births_max": 1, "worker_births_max": 1,
             "seconds_from_session_start_dispatch": RUN_BUDGET_S,
             "ordinary_rpc_wait_seconds": RPC_WAIT_S,
+            "project_create_wait_calls_max": 1,
+            "project_create_wait_timeout_seconds": 30,
             "geometry_run": 1, "mesh_run": 1, "study_dispatch": 0, "solver_dispatch": 0,
         },
         "route": "public stdio MCP; ControlDaemon; OwnedServerLauncher; one registered session",
@@ -501,7 +529,83 @@ def _assert_success(response: Mapping[str, Any], label: str) -> Mapping[str, Any
         code = error.get("code") if isinstance(error, Mapping) else "ROUTE_FAILED"
         raise RunnerError(f"{label} failed deterministically: {code}")
     data = response.get("data")
-    return data if isinstance(data, Mapping) else {}
+    if not isinstance(data, Mapping):
+        raise RunnerError(f"{label} returned no ActionResult data object")
+    return data
+
+
+def _require_execution_binding(response: Mapping[str, Any], *, label: str,
+                               request_id: str, idempotency_key: str | None = None,
+                               job_id: str | None = None) -> Mapping[str, Any]:
+    execution = response.get("execution")
+    if (not isinstance(execution, Mapping)
+            or execution.get("request_id") != request_id
+            or (idempotency_key is not None
+                and execution.get("idempotency_key") != idempotency_key)
+            or (job_id is not None and execution.get("job_id") != job_id)):
+        raise RunnerError(f"{label} omitted or changed its exact request/job binding")
+    return execution
+
+
+async def _resolve_project_create_response(
+        response: Mapping[str, Any], *, request_id: str, idempotency_key: str,
+        wait_for_job) -> dict[str, Any]:
+    """Resolve only the registered project.create and job.wait response shapes.
+
+    ProjectAuthority returns ``data.project``. If the public route returns its
+    documented pending job envelope, wait once on that exact durable job and
+    read ``data.result.data.project``. No generic recursive unwrapping or
+    operation replay is allowed.
+    """
+    data = _assert_success(response, "project.create")
+    project = data.get("project")
+    if isinstance(project, Mapping):
+        execution = _require_execution_binding(response, label="project.create",
+                                               request_id=request_id,
+                                               idempotency_key=idempotency_key)
+        if not isinstance(execution.get("operation_id"), str) or not execution["operation_id"]:
+            raise RunnerError("project.create omitted its durable operation identity")
+        return dict(project)
+
+    job_id = data.get("job_id")
+    if (not isinstance(job_id, str) or not job_id
+            or data.get("status") not in {"QUEUED", "RUNNING"}):
+        raise RunnerError("project.create returned neither data.project nor a pending job envelope")
+    pending_execution = _require_execution_binding(
+        response, label="project.create pending response", request_id=request_id,
+        idempotency_key=idempotency_key, job_id=job_id)
+    pending_operation_id = pending_execution.get("operation_id")
+    if not isinstance(pending_operation_id, str) or not pending_operation_id:
+        raise RunnerError("project.create pending response omitted its durable operation identity")
+
+    wait_response = await wait_for_job(job_id)
+    wait_data = _assert_success(wait_response, "project.create job.wait")
+    if (wait_data.get("job_id") != job_id
+            or wait_data.get("operation_id") != pending_operation_id
+            or wait_data.get("status") != "SUCCEEDED"):
+        raise RunnerError("project.create job.wait did not return the exact succeeded job")
+    operation = wait_data.get("operation")
+    if (not isinstance(operation, Mapping)
+            or operation.get("operation") != "project.create"
+            or operation.get("status") != "SUCCEEDED"
+            or operation.get("request_id") != request_id
+            or operation.get("idempotency_key") != idempotency_key):
+        raise RunnerError("project.create job.wait operation binding differs from the frozen request")
+    result = wait_data.get("result")
+    if not isinstance(result, Mapping) or result.get("success") is not True:
+        raise RunnerError("project.create job.wait omitted a successful original business result")
+    result_execution = _require_execution_binding(
+        result, label="project.create terminal result", request_id=request_id,
+        idempotency_key=idempotency_key, job_id=job_id,
+    )
+    if (operation.get("operation_id") != pending_operation_id
+            or result_execution.get("operation_id") != pending_operation_id):
+        raise RunnerError("project.create job and terminal result operation identities differ")
+    result_data = result.get("data")
+    project = result_data.get("project") if isinstance(result_data, Mapping) else None
+    if not isinstance(project, Mapping):
+        raise RunnerError("project.create terminal result omitted data.project")
+    return dict(project)
 
 
 async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
@@ -530,7 +634,55 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
         summary = _response_summary(response or {})
         reported_job_id = summary.get("job_id")
         reported_project_id = summary.get("project_id")
-        if (isinstance(reported_job_id, str) and reported_job_id
+        query_target_request_id = request_id
+        action_record = state.value.get("actions", {}).get(name, {})
+        query_target_idempotency_key = (
+            action_record.get("idempotency_key")
+            if isinstance(action_record, Mapping) else None
+        )
+        query_target_project_id = project_id
+        if name == "project.create":
+            query_target_request_id = request_ids["project_create"]
+            query_target_idempotency_key = keys["project_create"]
+            if isinstance(reported_job_id, str) and reported_job_id:
+                operation = "job.status"
+                arguments = {"job_id": reported_job_id}
+            else:
+                # The initial route may time out before returning its job ID.
+                # Search once by its unique frozen request identity.
+                operation = "job.list"
+                arguments = {"limit": 100}
+                reported_job_id = None
+        elif name == "project.create.wait":
+            create_action = state.value.get("actions", {}).get("project.create", {})
+            create_summary = (create_action.get("response")
+                              if isinstance(create_action, Mapping) else None)
+            original_job_id = (create_summary.get("job_id")
+                               if isinstance(create_summary, Mapping) else None)
+            if (isinstance(reported_job_id, str) and reported_job_id
+                    and isinstance(original_job_id, str) and reported_job_id != original_job_id):
+                state.value["recovery"]["read_only_query"] = {
+                    "status": "RESPONSE_JOB_ID_MISMATCH", "action": name,
+                    "reported_job_id": reported_job_id,
+                    "original_job_id": original_job_id,
+                }
+                state.save()
+                return
+            reported_job_id = original_job_id
+            query_target_request_id = request_ids["project_create"]
+            query_target_idempotency_key = keys["project_create"]
+            query_target_project_id = None
+            if isinstance(reported_job_id, str) and reported_job_id:
+                operation = "job.status"
+                arguments = {"job_id": reported_job_id}
+            else:
+                state.value["recovery"]["read_only_query"] = {
+                    "status": "NOT_AVAILABLE_FOR_ACTION", "action": name,
+                }
+                state.save()
+                return
+        elif (isinstance(reported_job_id, str) and reported_job_id
+                and isinstance(project_id, str) and project_id
                 and reported_project_id == project_id):
             operation = "job.status"
             arguments = {"job_id": reported_job_id}
@@ -545,15 +697,18 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
             return
 
         query_id = request_ids.get("unknown_query")
-        params = _operation_params(operation, arguments, {
-            "project_id": project_id, "request_id": query_id,
-            **({"session_id": session_id} if isinstance(session_id, str) else {}),
-            "rpc_timeout_s": RPC_WAIT_S,
-        })
+        query_execution = {"request_id": query_id, "rpc_timeout_s": RPC_WAIT_S}
+        if isinstance(query_target_project_id, str) and query_target_project_id:
+            query_execution["project_id"] = query_target_project_id
+        if isinstance(session_id, str):
+            query_execution["session_id"] = session_id
+        params = _operation_params(operation, arguments, query_execution)
         query_record = {
             "status": "READ_ONLY_QUERY_INTENT", "operation": operation,
+            "action": name,
             "params_sha256": sha256_value(params), "request_id": query_id,
-            "original_request_id": request_id,
+            "original_request_id": query_target_request_id,
+            "original_idempotency_key": query_target_idempotency_key,
             "job_id": reported_job_id if isinstance(reported_job_id, str) else None,
         }
         state.value["recovery"]["read_only_query"] = query_record
@@ -569,12 +724,30 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
         query_record["status"] = "QUERY_RESPONSE_RECORDED"
         query_data = query_response.get("data")
         if operation == "job.status":
-            observed_project_id = (query_data.get("project_id")
-                                   if isinstance(query_data, Mapping) else None)
             observed_job_id = (query_data.get("job_id")
                                if isinstance(query_data, Mapping) else None)
-            query_record["exact_job_identity_confirmed"] = (
-                observed_project_id == project_id and observed_job_id == reported_job_id)
+            observed_operation = (query_data.get("operation")
+                                  if isinstance(query_data, Mapping) else None)
+            observed_request_id = (observed_operation.get("request_id")
+                                   if isinstance(observed_operation, Mapping) else None)
+            observed_idempotency_key = (observed_operation.get("idempotency_key")
+                                        if isinstance(observed_operation, Mapping) else None)
+            observed_project_id = (query_data.get("project_id")
+                                   if isinstance(query_data, Mapping) else None)
+            project_matches = (
+                query_target_project_id is None
+                or (isinstance(query_target_project_id, str) and query_target_project_id
+                    and observed_project_id == query_target_project_id)
+            )
+            query_record["exact_job_identity_confirmed"] = bool(
+                isinstance(query_target_request_id, str) and query_target_request_id
+                and isinstance(query_target_idempotency_key, str) and query_target_idempotency_key
+                and observed_job_id == reported_job_id
+                and observed_request_id == query_target_request_id
+                and observed_idempotency_key == query_target_idempotency_key
+                and project_matches)
+            query_record["observed_request_id"] = observed_request_id
+            query_record["observed_idempotency_key"] = observed_idempotency_key
         if operation == "job.list" and isinstance(query_data, Mapping):
             rows = query_data.get("jobs")
             matches = []
@@ -584,12 +757,20 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
                         continue
                     metadata = row.get("metadata") if isinstance(row.get("metadata"), Mapping) else {}
                     execution = metadata.get("execution") if isinstance(metadata.get("execution"), Mapping) else {}
+                    operation_record = row.get("operation") if isinstance(row.get("operation"), Mapping) else {}
                     observed_request = (row.get("request_id") or metadata.get("request_id")
-                                        or execution.get("request_id"))
-                    if request_id and observed_request == request_id:
+                                        or execution.get("request_id") or operation_record.get("request_id"))
+                    observed_idempotency = (row.get("idempotency_key")
+                                            or metadata.get("idempotency_key")
+                                            or execution.get("idempotency_key")
+                                            or operation_record.get("idempotency_key"))
+                    if (query_target_request_id and observed_request == query_target_request_id
+                            and (query_target_idempotency_key is None
+                                 or observed_idempotency == query_target_idempotency_key)):
                         matches.append(row)
             query_record["matching_job_rows"] = [
-                {key: row.get(key) for key in ("job_id", "status", "request_id", "project_id")}
+                {key: row.get(key) for key in (
+                    "job_id", "status", "request_id", "idempotency_key", "project_id")}
                 for row in matches
             ]
             for row in matches:
@@ -747,11 +928,25 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
                                 "policy": {"permissions": ["inspect", "project_write", "trusted_code", "host_control"]},
                                 "idempotency_key": keys["project_create"],
                                 "request_id": request_ids["project_create"]}, env_project))
-        data = _assert_success(create_response, "project.create")
-        project_id = data.get("project_id")
+        async def wait_for_project_create(job_id: str) -> Mapping[str, Any]:
+            wait_id = request_ids["project_create_wait"]
+            timeout_s = plan.get("budgets", {}).get("project_create_wait_timeout_seconds")
+            max_waits = plan.get("budgets", {}).get("project_create_wait_calls_max")
+            if (type(timeout_s) is not int or not 1 <= timeout_s <= RPC_WAIT_S
+                    or max_waits != 1):
+                raise RunnerError("frozen project.create wait budget is invalid")
+            arguments = {"job_id": job_id, "timeout_s": timeout_s, "poll_interval_s": 0.05}
+            return await dispatch("project.create.wait", "operation_call", _operation_params(
+                "job.wait", arguments, {"request_id": wait_id, "rpc_timeout_s": RPC_WAIT_S}))
+
+        project_record = await _resolve_project_create_response(
+            create_response, request_id=request_ids["project_create"],
+            idempotency_key=keys["project_create"], wait_for_job=wait_for_project_create)
+        project_id = project_record.get("project_id")
         if not isinstance(project_id, str) or not project_id:
             raise RunnerError("project.create omitted its minted project_id")
-        if not project_workspace.is_dir() or project_workspace.is_symlink():
+        if (project_record.get("workspace") != str(project_workspace.resolve())
+                or not project_workspace.is_dir() or project_workspace.is_symlink()):
             raise RunnerError("project.create did not create the exact task-owned workspace")
 
         start_args = {"project_id": project_id, "runtime_id": plan["selected_comsol"]["runtime_id"],
@@ -1189,11 +1384,14 @@ def main(argv: list[str] | None = None) -> int:
                          ensure_ascii=False, sort_keys=True, allow_nan=False))
         return 0
     except Exception as exc:
-        print(json.dumps({"status": "FAILED" if not isinstance(exc, RunnerError) else "REFUSED_OR_FAILED",
-                          "error_type": type(exc).__name__,
-                          "message": (str(exc)[:500] if isinstance(exc, RunnerError)
-                                      else "unexpected local failure; inspect the durable run state")},
-                         ensure_ascii=False, sort_keys=True))
+        payload = {"status": "FAILED" if not isinstance(exc, RunnerError) else "REFUSED_OR_FAILED",
+                   "error_type": type(exc).__name__,
+                   "message": (str(exc)[:500] if isinstance(exc, RunnerError)
+                               else "unexpected local failure; inspect the durable run state")}
+        causes = _safe_runner_error_causes(exc)
+        if causes:
+            payload["cause_summary"] = causes
+        print(json.dumps(payload, ensure_ascii=False, sort_keys=True))
         return 2
 
 

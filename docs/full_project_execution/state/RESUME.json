@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "phase": "W21_WINDOWS64_NATIVE_METADATA_EXECUTION",
+  "phase": "W21_RUNNER_CONTRACT_ACCEPTED_WINDOWS64_REPREPARATION",
   "task": "W01_W26_CONTINUOUS_IMPLEMENTATION",
   "status": "PARTIAL_EXECUTION_CONTINUING_NATIVE_UNVERIFIED",
   "candidate_source": "docs/full_project_execution/project_session/EXPERIMENT_READS_SOFTWARE_CHECKPOINT.json",
@@ -103,7 +103,7 @@
       "native_acceptance": "NOT_RUN"
     }
   ],
-  "next_action": "Execute existing frozen Windows6.4 metadata-only plan once; no reprepare or solve. UNKNOWN requires original request/job recovery, no replay. Repair output composition before actual stage solve. Then calibrate actual field/unit/mesh/frame admission, separately freeze source/target solve budget, validate Windows6.4 then6.3, continueW23-W26.",
+  "next_action": "Freeze a new isolated Windows6.4 metadata-only run from committed repaired source, link the old failure and preserve its project; no original replay. At most1Server/1Worker/900seconds/0study-or-solver. Output composition repair remains separate; then actual stage chain6.4,6.3,W23-W26.",
   "active_jobs": [],
   "blockers": [
     "W23 failed setup owned Server 75272 and daemon 75260 remain preserved: cleanup SIGTERM was rejected by automatic approval and explicit authorization is pending; no cleanup or relaunch authorized by elapsed time.",
@@ -132,7 +132,7 @@
     "native_solve_budget_remaining": 0,
     "evidence": "docs/full_project_execution/evidence/luna_process_reconciliation/mac_readonly_snapshot_20260926T2152Z.json"
   },
-  "updated_at": "2026-09-28T15:46:14.816708+00:00",
+  "updated_at": "2026-09-28T16:48:24.232358+00:00",
   "note": "Original scope remains through W26. User explicitly resumed after the test-efficiency analysis; implement efficiency improvements first. OpenViking task-detail retrieval was denied by auto-review because it would disclose internal roadmap identifiers externally; no workaround. Use current frozen workpack and read-only local memory only. Do not rerun bootstrap/init on resume. Source files now contain executor edits; do not rerun bootstrap/init. Git metadata is an APFS pointer managed by main agent; migration requires bundle/source transfer, not copying only the repository pointer. Git metadata migration is documented by evidence/git_metadata_relocation.json and owned by the main agent; do not copy the APFS git pointer to another machine without source bundle/archive. GUI permission boundary and checkpoint solution-scope caveat recorded. This executor has one W24 native setup-only failure with exact cleanup verified; the durable operation/job UNKNOWN records remain unchanged. No W24 solver submission occurred. Saved-MPH readback supplement uses separate time/evidence and zero study/solver calls; run08 remains FAIL_OR_INCOMPLETE. Root raw SQLite recomputation is linked under native_resume_saved_artifact_supplement.raw_recomputation_evidence; original run08 remains FAIL_OR_INCOMPLETE and no solve budget is restored. Latest checkpoint 2026-09-27T03:50:43Z: W24 0334Z setup run failed pre-model due Python 3.14 missing mcp, with exact cleanup; 0346Z candidate pins the validated 3.12.13 environment and passes a production no-engine registry/daemon preflight. Native setup remains pending root review; science implementation continues offline. Latest checkpoint 2026-09-27T09:09:28Z: W24 0841Z candidate was invoked once at 0857Z and failed before any engine/Worker birth because project.inspect received an injected idempotency_key; project.create persisted successfully. Exact read-only SQLite hash and operation result are in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_contract_diagnostic.json. The runner now omits the unnecessary inspect key; actual ControlDaemon focused regression is 2/2 PASS in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_runner_regression_receipt.json. No native retry or acceptance is claimed; release F04 runtime integration is active, so refresh closure and root review are required before another launch. Windows COMSOL 6.3 remains required/unassessed; only macOS 6.3 is USER_REQUESTED_SKIP.",
   "native_resume_smoke": {
     "status": "FAIL_OR_INCOMPLETE_POINT_SCHEMA_FAILURE; SOLVED_CHILD_ARTIFACT_DURABLE; SOLVE_BUDGET_EXHAUSTED; SEPARATE_SAVED_MPH_READBACK_PASS",
@@ -990,10 +990,10 @@
     "next": "Wait for stable F04 runtime handoff; refresh closure and submit a new candidate for root review. No automatic rerun."
   },
   "verified_git_sync": {
-    "head": "52cf463eb116c37d9894a613df1565af3f675e26",
-    "origin_main": "52cf463eb116c37d9894a613df1565af3f675e26",
+    "head": "3cdc62d0140dd726dc3fd02e36be96905f594901",
+    "origin_main": "3cdc62d0140dd726dc3fd02e36be96905f594901",
     "status": "HEAD_EQUALS_ORIGIN_MAIN",
-    "checked_at": "2026-09-28T15:13:33.934611+00:00"
+    "checked_at": "2026-09-28T15:47:35.345839+00:00"
   },
   "w24_static_shape_science_admission_repair": {
     "status": "SCOPED_SOFTWARE_REPAIR_ACCEPTED_NATIVE_NOT_RUN",
@@ -2332,7 +2332,7 @@
     {
       "stage": "W21_PRODUCTION_MCP_RUNNER",
       "agent": "/root/luna_test_efficiency",
-      "status": "ACCEPTED_SCOPED_OFFLINE_SYNCED",
+      "status": "RESPONSE_CONTRACT_REPAIR_MAIN_VERIFIED",
       "scope": "New runner+tests through actual public stdioMCP/session-owned lifecycle; nativeexecute not authorized to agent yet",
       "native_status": "NOT_RUN",
       "limits_for_proposed_discovery": {
@@ -2340,7 +2340,7 @@
         "study_solver_dispatch": 0,
         "seconds": 900
       },
-      "acceptance": "15 unique PASS; main hashes/JUnit verified; target Windows prepare/native NOT_RUN",
+      "acceptance": "45 isolated unique PASS;110 source/test fingerprints verified;nativeNOT_RUN",
       "implementation_review": {
         "status": "REPAIRED_VERIFIED",
         "findings": [
@@ -2351,8 +2351,8 @@
           "Verify stdio teardown preserves UNKNOWN Worker/Server resources."
         ]
       },
-      "checkpoint": "docs/full_project_execution/project_session/PRODUCTION_RUNNER_SOFTWARE_CHECKPOINT.json",
-      "next_action": "Archive exact accepted committed source, stage it in a unique Windows project directory using existing SSH, run metadata-only prepare with isolated project/home/scratch, inspect the freeze, then run the 0-study/solver, 1-Server/1-Worker, 900-second Windows6.4 field metadata discovery. Native stage admission remains UNVERIFIED until actual field/unit/mesh/frame proof; separately freeze source+target solves, validate6.4 then6.3, continueW23-W26.",
+      "checkpoint": "docs/full_project_execution/project_session/RUNNER_RESPONSE_CONTRACT_CHECKPOINT.json",
+      "next_action": "Freeze a new isolated Windows6.4 metadata-only run from committed repaired source, link the old failure and preserve its project; no original replay. At most1Server/1Worker/900seconds/0study-or-solver. Output composition repair remains separate; then actual stage chain6.4,6.3,W23-W26.",
       "commit": "52cf463eb116c37d9894a613df1565af3f675e26"
     },
     {
@@ -2383,16 +2383,26 @@
     {
       "stage": "W21_WINDOWS64_METADATA_PREPARE",
       "agent": "/root/luna_test_efficiency",
-      "status": "MAIN_VERIFIED_EXECUTION_DELEGATED",
+      "status": "EXECUTION_FAILED_BEFORE_NATIVE_BIRTH",
       "source_commit": "52cf463eb116c37d9894a613df1565af3f675e26",
       "scope": "Exact source archive, unique no-overwrite Windows upload via existing SSH, prepare only with isolated project/home/scratch and existing Python/JDK. No native/Worker/COMSOL/execute/install/process termination.",
-      "next_action": "Execute existing frozen Windows6.4 metadata-only plan once; no reprepare or solve. UNKNOWN requires original request/job recovery, no replay. Repair output composition before actual stage solve.",
+      "next_action": "Repair Windows runner explicit project.create data.project response contract and audit remaining actual public route shapes using composed tests. Original Windows run failed after project.create response; zero Server/Worker births and zero study/solver dispatch. Preserve original request/job; no replay. Complete output Worker/READ/EVALUATE composition fix, then freeze reviewed continuation for Windows6.4 metadata and actual field/unit/mesh mapping; Windows6.3 follows, then W23-W26.",
       "native_status": "NOT_RUN",
       "remote_run_root": "C:\\Temp\\w21_win64_metadata_prepare_20260928T151415Z\\evidence\\6.4\\w21-64-20260928T152755Z-48612216",
       "reported_result": "PREPARED_ONLY; remote106 archive files and103 runner source files verified; no COMSOL/Worker born",
       "preparation_failures": "Two wrapper-only failures reported before successful prepare: stdin script not executed; PowerShell reserved HOME variable. No runner/native startup in those failures.",
       "checkpoint": "docs/full_project_execution/project_session/WINDOWS64_METADATA_PREPARE_CHECKPOINT.json",
-      "freeze_sha256": "81d81c46e32239dc4a9557b1abcab55603e538098816ec7fc3f81b9de2b5e81a"
+      "freeze_sha256": "81d81c46e32239dc4a9557b1abcab55603e538098816ec7fc3f81b9de2b5e81a",
+      "request_id": "7e20aac9-d107-4070-bfc6-d2df94a1ae76",
+      "job_id": "613c6f57-ed8b-473b-8ce9-73579c68752d",
+      "server_births_possible": 0,
+      "worker_births_possible": 0,
+      "original_job_status": "SUCCEEDED",
+      "operation_id": "4a9e7763-9010-44da-9326-e194ad389d5b",
+      "project_id": "717d425d-039f-4664-87d6-595bdca0ac3e",
+      "engine_dispatched": false,
+      "failure_classification": "LOCAL_RESPONSE_CONTRACT_PARSE_FAILURE_NOT_UNKNOWN",
+      "readonly_verification": "Agent recovered exact terminal operation/job and original data.project result from task-owned OperationsStore; main source contract confirmed"
     },
     {
       "stage": "W21_OUTPUT_WORKER_COMMAND_COMPOSITION",
@@ -2565,7 +2575,15 @@
       "finding": "ExecutionService pre-snapshot emits PersistentJavaWorker kind=model_snapshot, while daemon output event branch accepts only call. Existing stubbed output tests did not cover the real composed route.",
       "repair": "Persist and validate actual model/model_snapshot/call events and bind revision chain; add real ManagedBackend->ExecutionService->PersistentJavaWorker test with only underlying transport stubbed. Preserve UNKNOWN no further RPC/save.",
       "native_status": "NOT_RUN",
-      "metadata_prepare_impact": "52cf463 zero-solve metadata-only runner does not invoke stage_output, so its preparation can continue from exact Git blobs. Real stage solve requires subsequent repaired candidate."
+      "metadata_prepare_impact": "52cf463 zero-solve metadata-only runner does not invoke stage_output, so its preparation can continue from exact Git blobs. Real stage solve requires subsequent repaired candidate.",
+      "additional_findings": [
+        "ModelRef generation and Worker connection epoch are independent; remove equality constraint, verify each exact identity and test distinct values.",
+        "READ inspect path legitimately has no write ticket; preserve actual child request/Worker event chain, zero revision delta; EVALUATE requires real ticket and +1.",
+        "Real-only complex_mode=preserve synthesizes zero imaginary components: comparing normalized output count directly to raw Worker scalar count falsely rejects valid real fields. Repair must validate raw payload count against Worker evidence and independently retain normalized response scalar/byte hard caps."
+      ],
+      "offline_scope": "Actual ManagedBackend/ExecutionService/PersistentJavaWorker and daemon event/revision validation, with explicit synthetic native transport, isolation-verifier boundary, admission/predecessor fixtures. No native or isolation acceptance claimed.",
+      "next_action": "Finish actual composed result.evaluate chain, raw-versus-normalized scalar-count regression and affected result tests; main review exact diff/JUnit/source hashes before acceptance."
     }
-  }
+  },
+  "runner_response_contract_checkpoint": "docs/full_project_execution/project_session/RUNNER_RESPONSE_CONTRACT_CHECKPOINT.json"
 }
