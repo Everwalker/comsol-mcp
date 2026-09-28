@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "phase": "W21_FIELD_IDENTITY_PROBE_OFFLINE_ACCEPTED",
+  "phase": "W21_PRODUCTION_MCP_NATIVE_RUNNER_IMPLEMENTATION",
   "task": "W01_W26_CONTINUOUS_IMPLEMENTATION",
   "status": "PARTIAL_EXECUTION_CONTINUING_NATIVE_UNVERIFIED",
   "candidate_source": "docs/full_project_execution/project_session/EXPERIMENT_READS_SOFTWARE_CHECKPOINT.json",
@@ -103,7 +103,7 @@
       "native_acceptance": "NOT_RUN"
     }
   ],
-  "next_action": "Finish bounded W21 field/unit probe and Windows dependency repair; freeze a minimal production-MCP native recipe in6.4→6.3 order with current source/fixture/thresholds/dispatch budget. Reuse safe owned lifecycle paths, not old runner blind terminate/kill. Implement actual field/unit/topology/frame admission and exact output producer; no synthetic evidence may open production dispatch.",
+  "next_action": "Implement and offline-verify a frozen-source Windows production stdio MCP runner via existing project/runtime/session.start/connect/model/Java routes. First native discovery substep has0study/solver dispatch,1ownedserverbirth,15min cap; no native launch until reviewed freeze. Then use observed metadata to implement real field/unit/mesh mapping and output readback, freeze actual source+target solve budget and validate6.4 then6.3. ContinueW23-W26.",
   "active_jobs": [],
   "blockers": [
     "W23 failed setup owned Server 75272 and daemon 75260 remain preserved: cleanup SIGTERM was rejected by automatic approval and explicit authorization is pending; no cleanup or relaunch authorized by elapsed time.",
@@ -990,10 +990,10 @@
     "next": "Wait for stable F04 runtime handoff; refresh closure and submit a new candidate for root review. No automatic rerun."
   },
   "verified_git_sync": {
-    "head": "80a057f0d40283e44875ae05ebff7b9b6ed58cec",
-    "origin_main": "80a057f0d40283e44875ae05ebff7b9b6ed58cec",
+    "head": "e96786440d0f234c7775dba48e904eb388bf5349",
+    "origin_main": "e96786440d0f234c7775dba48e904eb388bf5349",
     "status": "HEAD_EQUALS_ORIGIN_MAIN",
-    "checked_at": "2026-09-28T13:07:56.841419+00:00"
+    "checked_at": "2026-09-28T13:38:44.174096+00:00"
   },
   "w24_static_shape_science_admission_repair": {
     "status": "SCOPED_SOFTWARE_REPAIR_ACCEPTED_NATIVE_NOT_RUN",
@@ -2301,19 +2301,42 @@
     {
       "stage": "WINDOWS_NATIVE_PREFLIGHT",
       "agent": "/root/luna_handoff_scope",
-      "status": "CURRENT_SOURCE_CANDIDATE_PREPARATION_RUNNING",
+      "status": "SOURCE_AND_PIN_PREPARATION_ACCEPTED_PENDING_SYNC",
       "scope": "Local committed source manifest/archive and dependency closure; no SSH/upload/Java/native engine in this unit",
-      "acceptance": "Read-only installation metadata and 10 offline privacy tests PASS; native NOT_RUN",
-      "next_action": "Freeze minimal current committed Windows source manifest/archive with complete runner/fixture dependency closure on external SSD. Main reviews concrete two-version compile/stdio/native recipe and budget before execution; W21 native admission/output producer remains open and production dispatch closed. Continue MASTER_GOAL without waiting for stage approval.",
+      "acceptance": "117archivefiles/gitblobs and33pin versions verified;installPARTIAL;nativeNOT_RUN",
+      "next_action": "Finish actual production MCP runner and output producer, freeze exact new candidate and first metadata discovery request sequence, validate Windows6.4 before6.3. Native field/unit/mesh mapping remains required before stage solve acceptance.",
       "commit": "80a057f0d40283e44875ae05ebff7b9b6ed58cec"
     },
     {
       "stage": "W21_FIELD_IDENTITY_PROBE",
       "agent": "/root/luna_test_efficiency",
-      "status": "ACCEPTED_SCOPED_OFFLINE_PENDING_GIT_SYNC",
+      "status": "ACCEPTED_SCOPED_OFFLINE_SYNCED",
       "scope": "New bounded metadata Java probe and necessary offline tests; no production admission changes or native launch",
       "acceptance": "Corretto11/COMSOL6.4 static compile,38 harness assertions and10 envelopes; nativeNOT_RUN",
-      "next_action": "Use current-source production MCP path to capture/calibrate field-unit metadata on a task-owned Windows6.4 fixture; implement authenticated field/unit/mesh mapping and exact result producer, verify6.4 then6.3 within frozen budget. Then continue W23-W26."
+      "next_action": "Use current-source production MCP path to capture/calibrate field-unit metadata on a task-owned Windows6.4 fixture; implement authenticated field/unit/mesh mapping and exact result producer, verify6.4 then6.3 within frozen budget. Then continue W23-W26.",
+      "commit": "e96786440d0f234c7775dba48e904eb388bf5349"
+    },
+    {
+      "stage": "W21_PRODUCTION_MCP_RUNNER",
+      "agent": "/root/luna_test_efficiency",
+      "status": "IMPLEMENTATION_AND_OFFLINE_TEST_RUNNING",
+      "scope": "New runner+tests through actual public stdioMCP/session-owned lifecycle; nativeexecute not authorized to agent yet",
+      "native_status": "NOT_RUN",
+      "limits_for_proposed_discovery": {
+        "server_births": 1,
+        "study_solver_dispatch": 0,
+        "seconds": 900
+      },
+      "acceptance": "PENDING; nativefield/units/mesh/output remain open"
+    },
+    {
+      "stage": "W21_NATIVE_OUTPUT_PRODUCER",
+      "agent": "/root/luna_stage_output",
+      "status": "IMPLEMENTATION_AND_OFFLINE_TEST_RUNNING",
+      "scope": "Actual Worker-driven exact tuple/field/continuity/native-integral readback using existing result/observation routes; new helper+ManagedBackend method+tests",
+      "native_status": "NOT_RUN",
+      "admission": "UNCHANGED_UNVERIFIED",
+      "next_action": "Same executor implements/tests/debugs; main reviews production authority/identity/evidence and focused regression before stage sync."
     }
   ],
   "windows_readonly_connection_observation": {
@@ -2400,12 +2423,13 @@
     "git_sync": "VERIFIED"
   },
   "windows_current_source_dependency_finding": {
-    "status": "REPAIR_RUNNING",
+    "status": "REPAIRED_SCOPED_CONFIG_VERIFIED",
     "source_head": "80a057f0d40283e44875ae05ebff7b9b6ed58cec",
     "finding": "requirements-windows-cp312.txt pins mcp==1.29.1 but pyproject requires mcp>=1.30,<2",
-    "acceptance": "INSTALL_PARTIAL; current Windows installation not validated",
+    "acceptance": "33tested-resolutionoverlap versions consistent;WindowsinstallationPARTIAL",
     "executor": "/root/luna_handoff_scope",
-    "next_action": "Complete frozen80a057f archive checks, then repair dependency configuration without lowering project constraint and verify against available pinned1.30 metadata/locks; no network install or old runtime mutation."
+    "next_action": "Complete frozen80a057f archive checks, then repair dependency configuration without lowering project constraint and verify against available pinned1.30 metadata/locks; no network install or old runtime mutation.",
+    "checkpoint": "docs/full_project_execution/project_session/WINDOWS_STAGE_SOURCE_DEPENDENCIES_CHECKPOINT.json"
   },
   "priority_order": [
     "W21 stage field/unit/mesh mapping and actual output readback",
@@ -2423,12 +2447,28 @@
     "checkpoint": "docs/full_project_execution/project_session/FIELD_IDENTITY_PROBE_SOFTWARE_CHECKPOINT.json",
     "receipt_sha256": "69ef0decb21b2a444c74d0869a6a8661ed6d6b336ff190faa1772aeda6dd75a6",
     "native_status": "NOT_RUN",
-    "next_action": "Use current-source production MCP path to capture/calibrate field-unit metadata on a task-owned Windows6.4 fixture; implement authenticated field/unit/mesh mapping and exact result producer, verify6.4 then6.3 within frozen budget. Then continue W23-W26."
+    "next_action": "Use current-source production MCP path to capture/calibrate field-unit metadata on a task-owned Windows6.4 fixture; implement authenticated field/unit/mesh mapping and exact result producer, verify6.4 then6.3 within frozen budget. Then continue W23-W26.",
+    "commit": "e96786440d0f234c7775dba48e904eb388bf5349",
+    "git_sync": "VERIFIED"
   },
   "windows_dependency_metadata_query": {
-    "status": "AUTO_REVIEW_REJECTED_PENDING_EXPLICIT_AUTHORIZATION",
-    "executed": false,
-    "reason": "Existing explicit Windows authorization covered process metadata; proposed environment query receipt included executable path. Specific read-only distribution metadata authorization requested, with only alias/command hash in receipt.",
-    "no_workaround": true
+    "status": "PASS_USER_EXPLICITLY_AUTHORIZED_READ_ONLY_METADATA",
+    "executed": true,
+    "no_workaround": true,
+    "prior_rejection": "Existing explicit Windows authorization covered process metadata; proposed environment query receipt included executable path. Specific read-only distribution metadata authorization requested, with only alias/command hash in receipt.",
+    "receipt": "/Volumes/SSD/Comsol-MCP/execution-scratch/windows-native-preflight/production-env-metadata-authorized-20260928/receipt.json",
+    "receipt_sha256": "fb126587ac67f06f25b93c1e6a9b98974b61e56529783a5068fa15488c5dd2e1",
+    "environment_alias": "existing-function-evaluate-cp312-venv",
+    "python": "3.12.10",
+    "machine": "AMD64",
+    "mcp": "1.30.0",
+    "pytest": "MISSING",
+    "limitations": "Metadata only; no pip check, import/stdio, source identity or new installation validation. No package mutation or COMSOL launch."
+  },
+  "windows_stage_source_dependencies_checkpoint": {
+    "status": "PASS_SCOPED_SOURCE_PIN_CONSISTENCY",
+    "checkpoint": "docs/full_project_execution/project_session/WINDOWS_STAGE_SOURCE_DEPENDENCIES_CHECKPOINT.json",
+    "native_status": "NOT_RUN",
+    "install_status": "PARTIAL"
   }
 }

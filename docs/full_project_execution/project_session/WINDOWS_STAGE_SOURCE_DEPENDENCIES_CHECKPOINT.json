@@ -1,0 +1,87 @@
+{
+  "schema": "WINDOWS_STAGE_SOURCE_DEPENDENCIES_CHECKPOINT_V1",
+  "status": "PASS_SCOPED_SOURCE_AND_PIN_CONSISTENCY",
+  "installation_status": "PARTIAL",
+  "native_status": "NOT_RUN",
+  "requirements": {
+    "path": "requirements-windows-cp312.txt",
+    "sha256": "9942348ecd8ee5048cc8355657d75439c849f85d9437adc7ef32c2b280ac8880",
+    "changed_pins": {
+      "PyJWT": [
+        "2.14.0",
+        "2.15.0"
+      ],
+      "mcp": [
+        "1.29.1",
+        "1.30.0"
+      ],
+      "starlette": [
+        "1.6.0",
+        "1.7.0"
+      ],
+      "uvicorn": [
+        "0.53.0",
+        "0.54.0"
+      ]
+    },
+    "pyproject_constraint": "mcp>=1.30,<2 unchanged",
+    "reference_checkpoint": "docs/full_project_execution/w23_overlap/REGISTERED_V2_CHECKPOINT.json",
+    "reference_sha256": "60810cba3675fa046bae49dbfd454fd0293afb9b00f88e03959cd30ca7bc9372",
+    "validated_resolution_overlap": 33,
+    "additional_windows_dev_pins": [
+      "colorama",
+      "iniconfig",
+      "pluggy",
+      "pygments",
+      "pytest",
+      "pywin32"
+    ],
+    "scope": "Exact pin consistency against prior validated resolver only, not a fresh Windows dependency resolution/install."
+  },
+  "source_archive": {
+    "base_commit": "80a057f0d40283e44875ae05ebff7b9b6ed58cec",
+    "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/windows-current-source/20260928T132141Z-80a057f/windows-current-source-80a057f0.tar.gz",
+    "sha256": "17ede0c9855728e4098a10e00aa26dca1dfb0415078bc430d36d9f0cc2e6e53f",
+    "bytes": 968021,
+    "manifest_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/windows-current-source/20260928T132141Z-80a057f/source-manifest.json",
+    "manifest_sha256": "c8d888f369df7289eb0c3a75cb68f35ce08644039ef8276e61fe2f566a9ce4dc",
+    "selected_files": 117,
+    "selected_bytes": 4910483,
+    "python_modules": 94,
+    "java_json_package_data": 6,
+    "patch_bytes": 0,
+    "new_files": 0,
+    "important": "Frozen80a057f archive deliberately excludes the subsequent field probe, this repaired requirements file and future production runner/output producer; do not execute it as the final current-source chain candidate."
+  },
+  "main_review": {
+    "status": "ACCEPTED_SCOPED_CONFIG_PREPARATION",
+    "verification": "All117 extracted file hashes independently compared to source manifest and Git80a057f blobs; archive/manifest/receipt hashes verified;39pins parsed and33common versions matched validated resolution;pyproject unchanged. No tests rerun for declarative config edit.",
+    "run_manifest_limit": "Advisory discovery record only, not executable freeze or new native authorization. Its old NOT_FROZEN budget and no-connect-before-admission wording are superseded by the planned production metadata-only runner: connection/readback precedes solve admission; solve dispatch remains closed."
+  },
+  "receipts": [
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/windows-current-source/20260928T132141Z-80a057f/receipt.json",
+      "sha256": "2da6e5daf6f0f6cf5b322546281c915a1ae11dfed3605c4b46fafce32592df42"
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/windows-current-source/20260928T132141Z-80a057f/dependency_closure.json",
+      "sha256": "2c79b6b820fd3010aa048da284166a076b719e3e712a76d551455edc3949fe63"
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/windows-current-source/20260928T132141Z-80a057f/run_manifest.json",
+      "sha256": "510548ab27e1e002a2421ffcc0b0abfe7e6fff385e54aed44adb10bf16217832"
+    }
+  ],
+  "windows_environment_metadata": {
+    "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/windows-native-preflight/production-env-metadata-authorized-20260928/receipt.json",
+    "scope": "metadata only",
+    "sha256": "fb126587ac67f06f25b93c1e6a9b98974b61e56529783a5068fa15488c5dd2e1"
+  },
+  "remaining": [
+    "Windows wheelhouse artifact/hash set is absent",
+    "Existing Windows venv reports pytest missing; pip check/full dependency health not run",
+    "Current-source production stdio/import/Java/native chain not yet executed",
+    "Windows private installation symlink permissions unverified"
+  ],
+  "next_action": "Finish actual production MCP runner and output producer, freeze exact new candidate and first metadata discovery request sequence, validate Windows6.4 before6.3. Native field/unit/mesh mapping remains required before stage solve acceptance."
+}
