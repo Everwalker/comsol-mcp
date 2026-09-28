@@ -204,6 +204,11 @@ class FNumericalFeature(FNode):
 
     def getStringArray(self, name: str) -> list[str]:
         self._guard("getStringArray", (name,))
+        if name == "expr":
+            expressions = self.props.get("expr", [])
+            if isinstance(expressions, Sequence) and not isinstance(expressions, (str, bytes)):
+                return [str(expression) for expression in expressions]
+            return [str(expressions)] if expressions is not None else []
         if name == "unit":
             expressions = self.props.get("expr", [])
             count = len(expressions) if isinstance(expressions, Sequence) and not isinstance(expressions, (str, bytes)) else 1

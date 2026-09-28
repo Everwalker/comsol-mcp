@@ -1,0 +1,69 @@
+{
+  "schema": "W21_STRICT_FIELD_SOFTWARE_CHECKPOINT_V1",
+  "status": "PASS_SCOPED_SOFTWARE",
+  "original_W21_status": "PARTIAL",
+  "native_acceptance": "NOT_RUN",
+  "base_commit": "7b85a27ee8206886763ca442061c8e3f9deb0a3f",
+  "candidate_fingerprint": "cc13a0d76d5c02ed42ed7d092b8de9c8def40db835e48b907eca3927dbca63ee",
+  "capabilities": [
+    "Private strict Eval binds dataset and one outer/inner tuple with manual-mode and actual selector readback",
+    "Production Worker checks complete real/imag/coordinates shape, finite values, 65536 scalars and 8MiB data-payload limit before returning; Python final response also bounded",
+    "Exact source tuple to zero-based solution object and associated mesh tag readback before target selector writes",
+    "Structured Worker errors preserved with bounded details; failed source/cleanup cannot authorize target writes"
+  ],
+  "tests": {
+    "focused_passed": 138,
+    "registration_passed": 1,
+    "unique_tests_passed": 139,
+    "main_source_hashes_verified": 108,
+    "main_junit_and_artifact_hashes_verified": true,
+    "java": "Production Worker compiled and payload harness executed offline within tests"
+  },
+  "receipt": {
+    "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/20260928T105701Z-eecafbc2.summary.json",
+    "sha256": "47579f4d45a5042be128f54fbaa69266582e9c027e8989f6938e2c3cb0746499"
+  },
+  "artifacts": [
+    {
+      "bytes": 159,
+      "path": "/Volumes/CTestEff/test-efficiency/runs/20260928T105701Z-eecafbc2/focus.log",
+      "sha256": "3f026c98312cf6559fee4beedf83f594e1478eb9c31547b70a713c5739a89c3c"
+    },
+    {
+      "bytes": 19208,
+      "path": "/Volumes/CTestEff/test-efficiency/runs/20260928T105701Z-eecafbc2/focus.junit.xml",
+      "sha256": "4a48d7d8a0a363b390eb08128d84bce9d2933281413d6423485b0f38e2cb527b"
+    },
+    {
+      "bytes": 20,
+      "path": "/Volumes/CTestEff/test-efficiency/runs/20260928T105701Z-eecafbc2/required_regression.log",
+      "sha256": "1880c32109e0af6599caf38cd0a39771ce38fc25620c3313515368500019c4cd"
+    },
+    {
+      "bytes": 349,
+      "path": "/Volumes/CTestEff/test-efficiency/runs/20260928T105701Z-eecafbc2/required_regression.junit.xml",
+      "sha256": "99ceef53a2b24c4f90442b2458dd9c9508eecbd7793418fb859dacd6cfa38b8b"
+    }
+  ],
+  "manifest": "tools/test_efficiency_w21_baseline.json",
+  "replay": "python3 -B tools/run_bounded_tests.py --baseline tools/test_efficiency_w21_baseline.json --with-required-regression",
+  "baseline_failure": {
+    "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21/baseline-crud-20260928T1910Z.xml",
+    "sha256": "7e7d616d2f8cdfab0acef71ff9ae670421696a6fec0d980e4f16b84a0313bfc0",
+    "result": "Published7b85a27 also failed fake expr readback; only fake getStringArray(expr) corrected"
+  },
+  "api_evidence": {
+    "SolutionInfo.html": "94d28f308be1be1b57d81c40932be6aebfd91e134c221b8e2f7e2235d51b9abb",
+    "SolverSequence.html": "8fcefe8e2f2171858f49fe53ad6210d4231a6a28651766db67effc39c327a2c5",
+    "NumericalFeature_Eval": "fac523ec294d51ec3f22fc693d6fc89ebbff431479a63abb1883737e326c7054",
+    "scope": "Installed COMSOL6.4 public API docs; raw commercial docs remain local"
+  },
+  "limitations": [
+    "Output-unit readback is not intrinsic field dimensionality proof",
+    "Source mesh association does not prove target topology/DOF/frame/history equivalence",
+    "Per-variable target mapping and actual stage solve/check/save backend remain incomplete",
+    "8MiB Worker data payload excludes small RPC envelope; cap does not bound engine allocation",
+    "Java harness is not COMSOL native acceptance"
+  ],
+  "next_action": "Implement actual supported stage backend using existing attempts and managed single-Worker route; establish target field/unit/topology/frame admission before solve, persist dispatch intent, retain UNKNOWN no-retry, then validate exact saved output/continuity/conservation. Keep unsupported profiles explicit and continue MASTER_GOAL."
+}

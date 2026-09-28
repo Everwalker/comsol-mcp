@@ -44,6 +44,8 @@ import javax.tools.ToolProvider;
  * a solve is running.</p>
  */
 public final class PersistentComsolWorker {
+  private static final long W21_FIELD_MAX_NUMERIC_SCALARS = 65_536L;
+  private static final int W21_FIELD_MAX_JSON_BYTES = 8 * 1024 * 1024;
   private static final Set<String> METHODS = new HashSet<>(Arrays.asList(
       "active", "author", "batch", "bem", "clear", "clearAll", "component", "coeff",
       "comments", "create", "createAutoSequences", "dataset", "descr", "disableUpdates",
@@ -105,6 +107,10 @@ public final class PersistentComsolWorker {
       // returns only a validated [dimension, point_count] shape, never the
       // coordinate matrix itself.
       "setInterpolationCoordinates", "getCoordinates", "getCoordinatesShape", "getNData",
+      // W21-only bounded field payload adapter. Unlike the generic getters,
+      // this returns real/imaginary field values and coordinates only after
+      // enforcing a complete-payload scalar and serialized-JSON byte limit.
+      "getStrictFieldReadback",
       // Restart/model inspection needs only the embedded Model.FileResourceList
       // tag inventory. This narrow adapter is type-checked below and returns
       // strings; it does not expose FileResourceList or a generic file() handle.
@@ -132,6 +138,12 @@ public final class PersistentComsolWorker {
       // G3.3 independent 6.4 javap verification: native geometry and per-solution metadata.
       "isAxisymmetric", "getSolnum", "getSolnums", "getPvals", "getUnits", "getUnit",
       "getPNamesOuter", "getPUnitsOuter", "getSolverSequence",
+      // W21 selected historical solution→mesh association (COMSOL 6.4
+      // Programming Reference p.546/549; javap of the installed public API):
+      // SolutionInfo.getISol(outer,inner) returns zero-based [iMulti,iSol], and
+      // SolverSequence.getMesh(geometry,iMulti) returns the associated mesh tag.
+      // This does not prove topology, DOF, frame, or history equivalence.
+      "getISol", "getMesh",
       // W18: plot group, geometry/mesh image, and export inspection/execution
       "isPlotGroup", "axis", "camera", "showFrame", "image", "plot",
       // ProbeFeature.genResult(String): explicit write, never history-read preparation.
@@ -610,6 +622,10 @@ public final class PersistentComsolWorker {
       if (!args.isEmpty()) throw new IllegalArgumentException("getCoordinatesShape takes no arguments");
       return getCoordinatesShape(target);
     }
+    if ("getStrictFieldReadback".equals(method)) {
+      if (!args.isEmpty()) throw new IllegalArgumentException("getStrictFieldReadback takes no arguments");
+      return getStrictFieldReadback(target);
+    }
     if ("getFileResourceTags".equals(method)) {
       if (!args.isEmpty()) throw new IllegalArgumentException("getFileResourceTags takes no arguments");
       return getFileResourceTags(target);
@@ -760,6 +776,167 @@ public final class PersistentComsolWorker {
         "source", "native NumericalFeature.getCoordinates()",
         "values_transmitted", false,
         "wire_payload", "shape-only");
+  }
+
+  /**
+   * Return the exact W21 numerical field payload only if its complete JSON
+   * representation fits the hard scalar and byte limits. This special path
+   * runs before the ordinary Worker response encoder, so an oversized matrix
+   * is rejected without crossing the process boundary.
+   */
+  private Object getStrictFieldReadback(Object target) throws Exception {
+    if (!(target instanceof NumericalFeature)) {
+      throw new WorkerFailure("FIELD_READBACK_TARGET_INVALID",
+          "getStrictFieldReadback is only valid for a NumericalFeature handle");
+    }
+    NumericalFeature feature = (NumericalFeature) target;
+    double[][] coordinates = feature.getCoordinates();
+    double[][][] real = feature.getData();
+    boolean complex = feature.isComplex();
+    double[][][] imaginary = complex ? feature.getImagData() : null;
+    return strictFieldPayload(real, imaginary, coordinates, complex,
+        W21_FIELD_MAX_NUMERIC_SCALARS, W21_FIELD_MAX_JSON_BYTES);
+  }
+
+  /** Package-visible for the offline Java contract harness; production uses fixed limits above. */
+  static Map<String, Object> strictFieldPayload(
+      double[][][] real, double[][][] imaginary, double[][] coordinates,
+      boolean complex, long maxNumericScalars, int maxJsonBytes) {
+    if (real == null || real.length == 0 || coordinates == null || coordinates.length == 0
+        || maxNumericScalars < 1 || maxJsonBytes < 1) {
+      throw new WorkerFailure("FIELD_READBACK_INVALID_SHAPE",
+          "field and coordinate arrays must be nonempty and the response limits positive");
+    }
+    int expressions = real.length;
+    int solutions = -1;
+    int points = -1;
+    for (int expression = 0; expression < expressions; expression++) {
+      double[][] bySolution = real[expression];
+      if (bySolution == null || bySolution.length == 0) {
+        throw new WorkerFailure("FIELD_READBACK_INVALID_SHAPE", "real field data contains an empty solution axis");
+      }
+      if (solutions < 0) solutions = bySolution.length;
+      if (bySolution.length != solutions) {
+        throw new WorkerFailure("FIELD_READBACK_INVALID_SHAPE", "real field data has a ragged solution axis");
+      }
+      for (double[] row : bySolution) {
+        if (row == null || row.length == 0) {
+          throw new WorkerFailure("FIELD_READBACK_INVALID_SHAPE", "real field data contains an empty point axis");
+        }
+        if (points < 0) points = row.length;
+        if (row.length != points) {
+          throw new WorkerFailure("FIELD_READBACK_INVALID_SHAPE", "real field data has a ragged point axis");
+        }
+        for (double value : row) {
+          if (!Double.isFinite(value)) {
+            throw new WorkerFailure("FIELD_READBACK_INVALID_NUMERIC", "real field data contains a non-finite value");
+          }
+        }
+      }
+    }
+    if (complex != (imaginary != null)) {
+      throw new WorkerFailure("FIELD_READBACK_INVALID_SHAPE", "complex flag and imaginary field array disagree");
+    }
+    if (imaginary != null) {
+      if (imaginary.length != expressions) {
+        throw new WorkerFailure("FIELD_READBACK_INVALID_SHAPE", "imaginary field expression count differs from real data");
+      }
+      for (int expression = 0; expression < expressions; expression++) {
+        if (imaginary[expression] == null || imaginary[expression].length != solutions) {
+          throw new WorkerFailure("FIELD_READBACK_INVALID_SHAPE", "imaginary field solution count differs from real data");
+        }
+        for (int solution = 0; solution < solutions; solution++) {
+          double[] row = imaginary[expression][solution];
+          if (row == null || row.length != points) {
+            throw new WorkerFailure("FIELD_READBACK_INVALID_SHAPE", "imaginary field point count differs from real data");
+          }
+          for (double value : row) {
+            if (!Double.isFinite(value)) {
+              throw new WorkerFailure("FIELD_READBACK_INVALID_NUMERIC", "imaginary field data contains a non-finite value");
+            }
+          }
+        }
+      }
+    }
+    for (double[] row : coordinates) {
+      if (row == null || row.length != points) {
+        throw new WorkerFailure("FIELD_READBACK_INVALID_SHAPE",
+            "coordinate point count differs from the selected field data");
+      }
+      for (double value : row) {
+        if (!Double.isFinite(value)) {
+          throw new WorkerFailure("FIELD_READBACK_INVALID_NUMERIC", "coordinate matrix contains a non-finite value");
+        }
+      }
+    }
+    long fieldScalars = (long) expressions * (long) solutions * (long) points * (complex ? 2L : 1L);
+    long coordinateScalars = (long) coordinates.length * (long) points;
+    long totalScalars = fieldScalars + coordinateScalars;
+    if (totalScalars > maxNumericScalars) {
+      throw new WorkerFailure("FIELD_READBACK_LIMIT_EXCEEDED",
+          "real/imaginary field values and coordinates exceed the numeric scalar limit",
+          map("numeric_scalar_count", totalScalars, "max_numeric_scalars", maxNumericScalars));
+    }
+
+    List<Object> realJson = toJson(real);
+    List<Object> imaginaryJson = imaginary == null ? null : toJson(imaginary);
+    List<Object> coordinatesJson = toJson(coordinates);
+    Map<String, Object> payload = map(
+        "real", realJson,
+        "imag", imaginaryJson,
+        "coordinates", coordinatesJson,
+        "is_complex", complex,
+        "layout", "expression,solnum,point",
+        "shape", Arrays.asList((long) expressions, (long) solutions, (long) points),
+        "numeric_scalar_count", totalScalars,
+        "json_payload_bytes", 0L);
+    String serialized;
+    try {
+      // This is the exact bounded data payload; only a small Worker response
+      // envelope is added after this check.
+      for (int attempt = 0; attempt < 4; attempt++) {
+        serialized = Json.write(payload);
+        int byteCount = serialized.getBytes(StandardCharsets.UTF_8).length;
+        if (number(payload.get("json_payload_bytes"), -1) == byteCount) break;
+        payload.put("json_payload_bytes", (long) byteCount);
+      }
+      serialized = Json.write(payload);
+    } catch (Json.NonFiniteJsonValue failure) {
+      throw new WorkerFailure("FIELD_READBACK_INVALID_NUMERIC",
+          "strict field payload cannot be encoded as finite JSON");
+    }
+    int payloadBytes = serialized.getBytes(StandardCharsets.UTF_8).length;
+    if (payloadBytes > maxJsonBytes) {
+      throw new WorkerFailure("FIELD_READBACK_LIMIT_EXCEEDED",
+          "strict field JSON payload exceeds the byte limit",
+          map("json_payload_bytes", (long) payloadBytes, "max_json_payload_bytes", (long) maxJsonBytes));
+    }
+    payload.put("json_payload_bytes", (long) payloadBytes);
+    return payload;
+  }
+
+  private static List<Object> toJson(double[][][] values) {
+    List<Object> expressions = new ArrayList<>();
+    for (double[][] expression : values) {
+      List<Object> solutions = new ArrayList<>();
+      for (double[] solution : expression) {
+        List<Object> points = new ArrayList<>();
+        for (double value : solution) points.add(value);
+        solutions.add(points);
+      }
+      expressions.add(solutions);
+    }
+    return expressions;
+  }
+
+  private static List<Object> toJson(double[][] values) {
+    List<Object> dimensions = new ArrayList<>();
+    for (double[] dimension : values) {
+      List<Object> points = new ArrayList<>();
+      for (double value : dimension) points.add(value);
+      dimensions.add(points);
+    }
+    return dimensions;
   }
 
   // ---- G3 R02: batch collection discovery and a deterministic tree walk ----
@@ -1265,7 +1442,7 @@ public final class PersistentComsolWorker {
     boolean active(){return "QUEUED".equals(status)||"RUNNING".equals(status);}
     Map<String,Object> snapshot(){Map<String,Object> out=map("ok",!"FAILED".equals(status),"request_id",id,"type",type,"status",status,"queued_at_ms",queuedAt,"started_at_ms",startedAt,"completed_at_ms",completedAt);if(result!=null)out.put("result",result);if(failure!=null)out.put("failure",failure);return out;}
   }
-  private static final class WorkerFailure extends RuntimeException {
+  static final class WorkerFailure extends RuntimeException {
     final String code; final Map<String,Object> details;
     WorkerFailure(String code,String message){this(code,message,null);}
     WorkerFailure(String code,String message,Map<String,Object> details){super(message);this.code=code;this.details=details;}

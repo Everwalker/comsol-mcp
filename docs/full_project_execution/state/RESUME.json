@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "phase": "W23_SOFTWARE_ACCEPTED_W21_BACKEND_NEXT",
+  "phase": "W21_STRICT_FIELD_ACCEPTED_STAGE_BACKEND_NEXT",
   "task": "W01_W26_CONTINUOUS_IMPLEMENTATION",
   "status": "PARTIAL_EXECUTION_CONTINUING_NATIVE_UNVERIFIED",
   "candidate_source": "docs/full_project_execution/project_session/EXPERIMENT_READS_SOFTWARE_CHECKPOINT.json",
@@ -103,7 +103,7 @@
       "native_acceptance": "NOT_RUN"
     }
   ],
-  "next_action": "Same Luna implements W21 actual field/unit/tuple/mesh evidence and supported single-Worker stage solve/check/save backend, preserving unsupported-profile and UNKNOWN refusal; then remaining MASTER_GOAL and final independent review.",
+  "next_action": "Implement actual supported stage backend using existing attempts and managed single-Worker route; establish target field/unit/topology/frame admission before solve, persist dispatch intent, retain UNKNOWN no-retry, then validate exact saved output/continuity/conservation. Keep unsupported profiles explicit and continue MASTER_GOAL.",
   "active_jobs": [],
   "blockers": [
     "W23 failed setup owned Server 75272 and daemon 75260 remain preserved: cleanup SIGTERM was rejected by automatic approval and explicit authorization is pending; no cleanup or relaunch authorized by elapsed time.",
@@ -990,10 +990,10 @@
     "next": "Wait for stable F04 runtime handoff; refresh closure and submit a new candidate for root review. No automatic rerun."
   },
   "verified_git_sync": {
-    "head": "3ce18d796170b6b35c782e41cb17898a6a33c7ab",
-    "origin_main": "3ce18d796170b6b35c782e41cb17898a6a33c7ab",
+    "head": "7b85a27ee8206886763ca442061c8e3f9deb0a3f",
+    "origin_main": "7b85a27ee8206886763ca442061c8e3f9deb0a3f",
     "status": "VERIFIED_EQUAL_AFTER_PUSH",
-    "stage": "T058_ASSUMPTION_REPORT_SOFTWARE"
+    "stage": "W23_QABS_FREQUENCY_SOFTWARE"
   },
   "w24_static_shape_science_admission_repair": {
     "status": "SCOPED_SOFTWARE_REPAIR_ACCEPTED_NATIVE_NOT_RUN",
@@ -1957,12 +1957,12 @@
     "preserve": "Active process state, unique source/results/failure evidence; no blanket tmp deletion; original-to-destination map required",
     "round_checkpoints": {
       "W21": {
-        "status": "QUEUED_AFTER_CURRENT_W24_AND_W23_INTEGRATION",
+        "status": "STRICT_FIELD_SOFTWARE_ACCEPTED_STAGE_BACKEND_NEXT",
         "candidate": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-runtime/stage-mapping-backend-e1d7d6",
-        "base": "e1d7d6eeae744a5ece21ee4194ef78900fd4bceb",
-        "implementation": "NO_NEW_CODE",
-        "tests": "NOT_RUN",
-        "next_action": "After current W24 and W23 integration, implement typed read-only Eval for exact dataset/outer/inner/selection, preserving unverified units/frame; investigate exact Xmesh tuple binding; actual stage solve/check/save remains open"
+        "base": "7b85a27ee8206886763ca442061c8e3f9deb0a3f",
+        "implementation": "FIRST_SOURCE_DIFF_PRESENT_NOT_ACCEPTED",
+        "tests": "139_UNIQUE_PASS_SCOPED_SOFTWARE",
+        "next_action": "Same Luna completes bounded strict field readback and tuple-mesh association, Worker/tests/compile; main reviews before stage publication, then actual stage backend"
       },
       "W24": {
         "status": "SOFTWARE_ACCEPTED_SYNCED_T058_NEXT_UNIT_EXECUTING",
@@ -2051,7 +2051,8 @@
         "summary": "Successful native run would fail downstream route validation; existing synthetic PASS does not prove Java/Python serialization contract"
       }
     ],
-    "accepted_checkpoint": "docs/full_project_execution/w23_overlap/QABS_FREQUENCY_SOFTWARE_CHECKPOINT.json"
+    "accepted_checkpoint": "docs/full_project_execution/w23_overlap/QABS_FREQUENCY_SOFTWARE_CHECKPOINT.json",
+    "github_sync": "7b85a27ee8206886763ca442061c8e3f9deb0a3f"
   },
   "t058_assumption_report_checkpoint": {
     "status": "PASS_SCOPED_SOFTWARE",
@@ -2076,6 +2077,88 @@
       "Exercise actual successful supported path and negative/unknown/partial-save cases; retain native and W24 hidden-history acceptance separately"
     ],
     "acceptance_warning": "Selector roundtrip, declarations, and synthetic tests cannot establish actual stage/history transfer",
-    "next_after": "Current W23 candidate integration"
+    "next_after": "Current W23 candidate integration",
+    "current_unit": {
+      "status": "ACCEPTED_SCOPED_SOFTWARE",
+      "api_investigation": "Executor reports COMSOL6.4 SolutionInfo.getISol(outer,inner) to SolverSequence.getMesh(geom,iMulti) association; exact method/docs evidence to be reviewed with candidate",
+      "scope": [
+        "Explicit dataset/outer/inner/selection and applied-selector readback",
+        "Exact tuple to solution object and associated mesh tag with documented index bases",
+        "Numerical evaluation output unit readback, not inferred intrinsic field units"
+      ],
+      "limits": [
+        "Associated mesh tag alone does not establish topology or DOF equivalence",
+        "Adapted or multi-object profiles must follow verified indexing or refuse",
+        "No native execution or actual stage solve accepted yet"
+      ],
+      "next": "Implement/test/compile bounded unit, review/publish, then continue actual stage backend",
+      "architecture_decision": {
+        "entrypoint": "W21-private strict-field path reusing _g3_results SolutionBinding and selector evidence; public result.evaluate semantics unchanged",
+        "max_numeric_scalars": 65536,
+        "max_serialized_response_bytes": 8388608,
+        "overflow": "FIELD_READBACK_LIMIT_EXCEEDED; no truncation/sampling or acceptance",
+        "enforcement": "Worker before cross-process serialization; preallocate checks where documented; RPC cap is not an engine-memory guarantee",
+        "required_checks": [
+          "exact tuple/index convention",
+          "dataset/selector mismatch",
+          "real+imag+coordinate aggregate cap",
+          "cleanup after failures"
+        ],
+        "documented_api_evidence_pending_main_review": [
+          "COMSOL6.4 Programming Reference p549 getISol zero-based returned pair",
+          "p546 SolverSequence.getMesh association; doc7714/chunk23081"
+        ],
+        "status": "DECIDED_IMPLEMENTATION_PENDING"
+      },
+      "main_pre_review": {
+        "status": "REPAIRED_VERIFIED_WITH_JAVA_EXECUTION_AND_REGRESSION",
+        "finding": "Initial 8MiB gate ran in Python after Worker data crossed RPC; not a Worker transport cap",
+        "agreed_repair": "Private NumericalFeature getStrictFieldReadback Worker adapter gathers complete real/imag/coordinates, counts scalars and checks full data-payload JSON before returning; strict Python path must not fetch same arrays through generic getters first",
+        "limits": {
+          "numeric_scalars": 65536,
+          "worker_data_payload_bytes": 8388608,
+          "python_final_response_bytes": 8388608
+        },
+        "native_scope": "No guarantee on COMSOL array-allocation memory; no actual native solve acceptance",
+        "required_verification": [
+          "Worker production Java compilation",
+          "Executable adapter tests for exact limit, overflow, nonfinite and malformed shape",
+          "Python strict path invokes adapter and fails closed; public getter behavior unchanged"
+        ],
+        "resolved": true,
+        "worker_static_review": {
+          "status": "SOURCE_PATH_REVIEWED_EXECUTION_TESTS_PENDING",
+          "source_sha256": "3a985a433d4c1240770887c56a27232f722b35f18ec79021904b41c696167a9d",
+          "checks": [
+            "production adapter calls strictFieldPayload before return",
+            "real/imag/coordinate rectangular finite arrays and combined count checked",
+            "JSON payload size checked before Worker result serialization",
+            "overflow WorkerFailure contains counts only, no original arrays"
+          ],
+          "not_proven": [
+            "COMSOL native behavior",
+            "executable boundary tests",
+            "final Python integration regression"
+          ]
+        }
+      },
+      "executor_first_test_checkpoint": {
+        "status": "REPORTED_PASS_PENDING_FINAL_REVIEW",
+        "passed": 48,
+        "evidence_prefix": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21/focused-20260928T1845Z",
+        "scope": "focused software plus production Worker compile/executable payload limits; native NOT_RUN"
+      },
+      "main_error_contract_finding": {
+        "status": "REPAIRED_TESTED",
+        "location": "_g3_results.py strict field adapter exception handling",
+        "issue": "Known Worker FIELD_READBACK_LIMIT_EXCEEDED/INVALID_NUMERIC/INVALID_SHAPE converted to generic UNAVAILABLE",
+        "required_fix": "Preserve known deterministic codes with bounded non-array details; unknown transport failures remain unavailable; add Python consumer regression"
+      }
+    }
+  },
+  "w21_strict_field_checkpoint": {
+    "status": "PASS_SCOPED_SOFTWARE",
+    "path": "docs/full_project_execution/project_session/STRICT_FIELD_READBACK_SOFTWARE_CHECKPOINT.json",
+    "native_acceptance": "NOT_RUN"
   }
 }

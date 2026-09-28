@@ -13,6 +13,7 @@ from comsol_mcp._g3_w21 import ALIASES
 from comsol_mcp._observation_store import observation_context
 from comsol_mcp._operation_store import OperationStore
 from comsol_mcp import _w21_execution as execution
+from comsol_mcp import _g3_results as results
 
 
 def _identity(project="project-a", model="model-a"):
@@ -210,6 +211,7 @@ def _state_map_arguments():
 def _bound_indices():
     return {
         "dataset": "dset1", "solution": "sol2", "binding_complete": True,
+        "pair_mapping_complete": True,
         "binding_source": "typed dataset + SolutionInfo.getSolnum(outer, strict)",
         "parameters_complete": True,
         "parameters": {"by_pair": {"2:3": {
@@ -320,6 +322,26 @@ def test_experiment_state_map_configures_selector_and_reports_partial_native_evi
     model = _Model({"sol2": _Solver("std1"), "sol3": _Solver("std2", {"v1": variables})})
     monkeypatch.setattr(execution, "bound_model", lambda worker, tag: model)
     monkeypatch.setattr(execution, "dataset_solution_indices", lambda *args: _bound_indices())
+    field = {
+        "status": "VERIFIED",
+        "scope": "selected_source_field_values_and_native_coordinate_payload_only",
+        "solution_tuple": {"outer": 2, "inner": 3, "solnum": 3,
+                           "source": "SolutionInfo.getSolnum(outer, strict)"},
+        "selector_readback": {
+            "dataset": "dset1", "outerinput": "manual", "outersolnum": 2,
+            "innerinput": "manual", "solnum": 3,
+        },
+        "selection_readback": {"geometry": "geom1", "entities": [1, 2]},
+        "expression_unit_readback": {"values": {"T": "K"}, "field_dimensionality": "UNVERIFIED"},
+        "coordinates": {"values": [[0.0, 1.0]], "shape": [1, 2], "coordinate_frame": "UNVERIFIED"},
+        "field_array": {"values": [[[[300.0, 301.0]]]], "shape": [1, 1, 1, 2]},
+        "numeric_scalar_count_including_real_imag_and_coordinates": 4,
+        "json_response_bytes": 512,
+    }
+    mesh = {"status": "VERIFIED", "mesh_tag": "mesh1", "topology": "UNVERIFIED",
+            "dof_equivalence": "UNVERIFIED", "coordinate_frame": "UNVERIFIED"}
+    monkeypatch.setattr(execution, "_strict_source_field_readback", lambda *args: field)
+    monkeypatch.setattr(execution, "_read_source_solution_mesh_association", lambda *args: mesh)
 
     result = execution.op_experiment_state_map(object(), "model-a", _state_map_arguments())
 
@@ -336,15 +358,273 @@ def test_experiment_state_map_configures_selector_and_reports_partial_native_evi
     assert result["declared_variable_mappings"] == _state_map_arguments()["mapping"]["variables"]
     assert result["variable_mapping_applied"] is False
     assert result["mapping_evidence"] == {
-        "status": "UNVERIFIED",
-        "reason": "the documented Variables initial-solution selector does not expose a per-variable mapping readback in the available adapter",
-        "source_field_identity": "UNVERIFIED", "target_field_identity": "UNVERIFIED",
+        "status": "PARTIAL",
+        "reason": "source field values and source solution-to-mesh association were read back; the per-variable target mapping remains unapplied and unverified",
+        "source_field_identity": "VERIFIED_FOR_REQUESTED_EXPRESSIONS_AND_SELECTION", "target_field_identity": "UNVERIFIED",
         "source_target_units": "UNVERIFIED", "source_target_mesh_identity": "UNVERIFIED",
+        "source_mesh_association": "VERIFIED", "source_mesh_tag": "mesh1",
+        "target_mesh_association": "UNVERIFIED", "mesh_topology": "UNVERIFIED",
+        "dof_equivalence": "UNVERIFIED",
         "frame_equivalence": "UNVERIFIED", "hidden_solver_history": "NOT_VERIFIED",
     }
+    assert result["source_field_readback"] == field
+    assert result["source_solution_mesh_association"] == mesh
+    assert result["declared_units"] == [{
+        "source_variable": "T", "source_unit": "K", "target_variable": "T",
+        "target_unit": "K", "status": "DECLARATION_ONLY_UNITS_NOT_VERIFIED",
+    }]
     assert result["solve_dispatched"] is False
     assert variables.set_calls
     assert model.solvers.get("sol3").run_calls == 0
+
+
+@pytest.mark.parametrize("failed_stage", ["field", "mesh"])
+def test_experiment_state_map_source_readback_failure_does_not_write_target(monkeypatch, failed_stage):
+    variables = _Variables()
+    model = _Model({"sol2": _Solver("std1"), "sol3": _Solver("std2", {"v1": variables})})
+    monkeypatch.setattr(execution, "bound_model", lambda worker, tag: model)
+    monkeypatch.setattr(execution, "dataset_solution_indices", lambda *args: _bound_indices())
+
+    def field_readback(*args):
+        if failed_stage == "field":
+            raise ExecutionContractError("FIELD_READBACK_INCOMPLETE", "injected field failure")
+        return {"selection_readback": {"geometry": "geom1"}}
+
+    def mesh_readback(*args):
+        if failed_stage == "mesh":
+            raise ExecutionContractError("SOLUTION_MESH_ASSOCIATION_UNAVAILABLE", "injected mesh failure")
+        return {"status": "VERIFIED", "mesh_tag": "mesh1"}
+
+    monkeypatch.setattr(execution, "_strict_source_field_readback", field_readback)
+    monkeypatch.setattr(execution, "_read_source_solution_mesh_association", mesh_readback)
+    with pytest.raises(ExecutionContractError):
+        execution.op_experiment_state_map(object(), "model-a", _state_map_arguments())
+    assert variables.set_calls == []
+    assert model.solvers.get("sol3").run_calls == 0
+
+
+def test_state_map_source_tuple_resolution_is_exact_and_time_quantity_bound():
+    assert execution._resolve_state_map_source_pair(_bound_indices(), _state_map_arguments()["source"]) == {
+        "dataset": "dset1", "solution": "sol2", "outer": 2, "inner": 3, "solnum": 3,
+    }
+    by_time = {"dataset": "dset1", "solution": "sol2", "outer": 2,
+               "time": [{"value": 0.2, "unit": "s"}]}
+    assert execution._resolve_state_map_source_pair(_bound_indices(), by_time)["inner"] == 3
+    with pytest.raises(ExecutionContractError):
+        execution._resolve_state_map_source_pair(_bound_indices(), {**by_time, "dataset": "other"})
+    duplicate = dict(_bound_indices(), solnum_pairs=[
+        {"outer": 2, "inner": 3, "solnum": 3}, {"outer": 2, "inner": 3, "solnum": 4},
+    ])
+    with pytest.raises(ExecutionContractError):
+        execution._resolve_state_map_source_pair(duplicate, _state_map_arguments()["source"])
+
+
+def test_source_mesh_association_uses_zero_based_solution_object_index_and_exact_geometry():
+    calls = []
+
+    class SolutionInfo:
+        def getISol(self, outer, inner):
+            calls.append(("getISol", outer, inner))
+            return [4, 7]
+
+    class Solver:
+        def getSolutioninfo(self):
+            return SolutionInfo()
+
+        def getMesh(self, geometry, i_multi):
+            calls.append(("getMesh", geometry, i_multi))
+            return "mesh_hist_4"
+
+    class Model:
+        def sol(self, tag):
+            assert tag == "sol2"
+            return Solver()
+
+    result = execution._read_source_solution_mesh_association(Model(), "sol2", "geom1", 2, 3)
+    assert calls == [("getISol", 2, 3), ("getMesh", "geom1", 4)]
+    assert result["status"] == "VERIFIED"
+    assert result["solution_object_index_zero_based"] == 4
+    assert result["solution_index_within_object_zero_based"] == 7
+    assert result["mesh_tag"] == "mesh_hist_4"
+    assert result["topology"] == "UNVERIFIED"
+
+
+def test_strict_eval_selector_uses_and_reads_manual_modes_and_exact_tuple():
+    class Eval:
+        def __init__(self, wrong_inner_mode=False):
+            self.properties = {
+                "data": "dset1", "outerinput": "all", "outersolnum": 1,
+                "innerinput": "all", "solnum": 1,
+            }
+            self.set_calls = []
+            self.wrong_inner_mode = wrong_inner_mode
+
+        def set(self, name, value):
+            self.set_calls.append((name, value))
+            if not (self.wrong_inner_mode and name == "innerinput"):
+                self.properties[name] = value
+
+        def getString(self, name):
+            return self.properties[name]
+
+        def getInt(self, name):
+            return self.properties[name]
+
+    feature = Eval()
+    assert results._set_strict_eval_selectors(feature, "dset1", 2, 3) == {
+        "dataset": "dset1", "outerinput": "manual", "outersolnum": 2,
+        "innerinput": "manual", "solnum": 3,
+    }
+    assert feature.set_calls == [
+        ("outerinput", "manual"), ("outersolnum", 2),
+        ("innerinput", "manual"), ("solnum", 3),
+    ]
+
+    wrong_mode = Eval(wrong_inner_mode=True)
+    with pytest.raises(ExecutionContractError) as excinfo:
+        results._set_strict_eval_selectors(wrong_mode, "dset1", 2, 3)
+    assert excinfo.value.code == "SOLUTION_SELECTION_MISMATCH"
+
+    wrong_dataset = Eval()
+    with pytest.raises(ExecutionContractError) as excinfo:
+        results._set_strict_eval_selectors(wrong_dataset, "dset2", 2, 3)
+    assert excinfo.value.code == "DATASET_SELECTION_MISMATCH"
+    assert wrong_dataset.set_calls == []
+
+
+@pytest.mark.parametrize("indices", [[4], [4, -1], [True, 1], [0, 2.5]])
+def test_source_mesh_association_rejects_malformed_native_tuple_indices(indices):
+    class SolutionInfo:
+        def getISol(self, outer, inner):
+            return indices
+
+    class Solver:
+        def getSolutioninfo(self):
+            return SolutionInfo()
+
+        def getMesh(self, geometry, i_multi):
+            pytest.fail("getMesh must not run after malformed getISol indices")
+
+    class Model:
+        def sol(self, tag):
+            return Solver()
+
+    with pytest.raises(ExecutionContractError, match="zero-based"):
+        execution._read_source_solution_mesh_association(Model(), "sol2", "geom1", 2, 3)
+
+
+def test_strict_source_field_readback_checks_selectors_and_cleanup_before_accepting(monkeypatch):
+    dataset_node = object()
+    dataset_list = _Collection({"dset1": dataset_node})
+    model = SimpleNamespace(result=lambda: SimpleNamespace(dataset=lambda: dataset_list))
+    monkeypatch.setattr(execution, "_resolve_dataset_binding", lambda *args, **kwargs: {"binding_complete": True})
+    monkeypatch.setattr(execution, "_coordinate_context", lambda *args, **kwargs: {
+        "component": "comp1", "geometry": "geom1", "space_dimension": 2,
+    })
+    pair = {"dataset": "dset1", "solution": "sol2", "outer": 2, "inner": 3, "solnum": 3}
+    evidence = {
+        "status": "VERIFIED", "solution_tuple": {"outer": 2, "inner": 3, "solnum": 3},
+        "selector_readback": {
+            "dataset": "dset1", "outerinput": "manual", "outersolnum": 2,
+            "innerinput": "manual", "solnum": 3,
+        },
+        "selection_readback": {"geometry": "geom1"},
+    }
+    response = {"strict_field_readback": evidence, "cleanup": {"created": True, "removed": True, "cleanup_failed": False},
+                "status": {"ok": True}}
+    calls = []
+
+    def evaluate(worker, model_tag, arguments, *, strict_field_readback=False):
+        calls.append((arguments["spec"], strict_field_readback))
+        return response
+
+    monkeypatch.setattr(execution, "result_evaluate", evaluate)
+    returned = execution._strict_source_field_readback(
+        object(), "model-a", model, {"dataset": "dset1"}, _state_map_arguments()["source"], pair, ["T"]
+    )
+    assert returned == evidence
+    spec, strict = calls[0]
+    assert strict is True
+    assert spec["expressions"] == ["T"]
+    assert spec["solution"] == {"dataset": "dset1", "solution": "sol2", "outer": 2, "inner": 3}
+    assert spec["selection"] == {"kind": "all", "component": "comp1", "geometry": "geom1", "entity_dimension": 2}
+
+    response["cleanup"]["cleanup_failed"] = True
+    with pytest.raises(ExecutionContractError, match="clean transient-node removal"):
+        execution._strict_source_field_readback(
+            object(), "model-a", model, {"dataset": "dset1"}, _state_map_arguments()["source"], pair, ["T"]
+        )
+
+
+@pytest.mark.parametrize("values,coordinates,expected", [
+    ([0.0] * 65_536, [], 65_536),
+    ([0.0] * 65_537, [], None),
+    ([{"real": 1.0, "imag": 0.0}], [[0.0, 1.0]], 4),
+])
+def test_w21_strict_field_scalar_limit_includes_real_imag_and_coordinates(values, coordinates, expected):
+    response = {"strict_field_readback": {
+        "field_array": {"values": values}, "coordinates": {"values": coordinates},
+    }}
+    if expected is None:
+        with pytest.raises(ExecutionContractError) as excinfo:
+            results._enforce_w21_field_response_limits(response)
+        assert excinfo.value.code == "FIELD_READBACK_LIMIT_EXCEEDED"
+    else:
+        scalar_count, byte_count = results._enforce_w21_field_response_limits(response)
+        assert scalar_count == expected
+        assert byte_count <= results.W21_FIELD_READBACK_MAX_JSON_BYTES
+
+
+def test_w21_strict_field_json_limit_fails_closed_without_truncation():
+    response = {"strict_field_readback": {
+        "field_array": {"values": []}, "coordinates": {"values": []},
+    }, "padding": "x" * (results.W21_FIELD_READBACK_MAX_JSON_BYTES + 1)}
+    with pytest.raises(ExecutionContractError) as excinfo:
+        results._enforce_w21_field_response_limits(response)
+    assert excinfo.value.code == "FIELD_READBACK_LIMIT_EXCEEDED"
+
+
+def test_w21_strict_field_json_exact_limit_is_admitted():
+    import json
+
+    base = {"strict_field_readback": {
+        "field_array": {"values": []}, "coordinates": {"values": []},
+        "numeric_scalar_count_including_real_imag_and_coordinates": 0, "json_response_bytes": 0,
+    }, "padding": ""}
+    baseline = len(json.dumps(base, allow_nan=False, separators=(",", ":")).encode("utf-8"))
+    approximate_padding = results.W21_FIELD_READBACK_MAX_JSON_BYTES - baseline
+    candidate = {**base, "strict_field_readback": dict(base["strict_field_readback"]),
+                 "padding": "x" * (approximate_padding - 6)}
+    _scalar_count, measured = results._enforce_w21_field_response_limits(candidate)
+    assert measured == results.W21_FIELD_READBACK_MAX_JSON_BYTES
+
+
+def test_strict_worker_field_error_preserves_structured_limit_code_and_safe_details(monkeypatch):
+    class WorkerFailure(RuntimeError):
+        failure = {
+            "code": "FIELD_READBACK_LIMIT_EXCEEDED",
+            "numeric_scalar_count": 65_537,
+            "max_numeric_scalars": 65_536,
+            "raw_array": [1.0, 2.0],
+        }
+
+    wrapped = ExecutionContractError("ENGINE_CALL_FAILED", "transport wrapper")
+    wrapped.__cause__ = WorkerFailure("limit exceeded")
+    monkeypatch.setattr(results, "_call", lambda *_args: (_ for _ in ()).throw(wrapped))
+    with pytest.raises(ExecutionContractError) as excinfo:
+        results._call_strict_worker_field_readback(object())
+    assert excinfo.value.code == "FIELD_READBACK_LIMIT_EXCEEDED"
+    assert excinfo.value.details == {
+        "source": "structured_worker_failure",
+        "numeric_scalar_count": 65_537,
+        "max_numeric_scalars": 65_536,
+    }
+    assert "raw_array" not in excinfo.value.details
+
+
+def test_strict_worker_unknown_failure_uses_unavailable_error():
+    error = results._strict_worker_readback_failure(RuntimeError("unknown local exception"))
+    assert error.code == "FIELD_READBACK_UNAVAILABLE"
 
 
 @pytest.mark.parametrize("target_solver", [

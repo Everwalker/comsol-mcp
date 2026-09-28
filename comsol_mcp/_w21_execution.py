@@ -18,7 +18,13 @@ from ._g2_engine import _call
 from ._g3_common import bound_model, tag_list
 from ._g3_w13 import parameter_get, parameter_set
 from ._g3_w16 import study_run
-from ._g3_results import result_at_points, dataset_solution_indices
+from ._g3_results import (
+    result_at_points,
+    result_evaluate,
+    dataset_solution_indices,
+    _coordinate_context,
+    _resolve_dataset_binding,
+)
 from ._observation_store import current_context, register_observation, resolve_observation, numeric_values
 
 
@@ -1082,6 +1088,189 @@ def _attached_solver_sequence_evidence(model, target_solver_tag):
     }
 
 
+def _resolve_state_map_source_pair(indices, source):
+    """Resolve the requested source tuple from the actual SolutionInfo map."""
+    if (not isinstance(indices, Mapping) or indices.get("binding_complete") is not True
+            or indices.get("pair_mapping_complete") is not True):
+        raise PreWriteRefusal(
+            "SOLUTION_AXIS_METADATA_UNAVAILABLE",
+            "state-map source field readback requires a complete dataset and SolutionInfo tuple binding",
+        )
+    dataset = source["dataset"]
+    if indices.get("dataset") != dataset:
+        raise PreWriteRefusal("DATASET_BINDING_MISMATCH", "source tuple metadata belongs to a different dataset")
+    source_solution = indices.get("solution")
+    if not isinstance(source_solution, str) or not source_solution:
+        raise PreWriteRefusal("DATASET_BINDING_INCOMPLETE", "source dataset has no unique solver-sequence binding")
+    if source.get("solution") is not None and source.get("solution") != source_solution:
+        raise PreWriteRefusal("SOLUTION_MISMATCH", "source dataset is bound to a different solver sequence")
+
+    pairs = [row for row in indices.get("solnum_pairs", [])
+             if isinstance(row, Mapping) and row.get("outer") == source.get("outer")]
+    if source.get("inner") is not None:
+        pairs = [row for row in pairs if row.get("inner") == source["inner"]]
+    else:
+        quantity = source["time"][0]
+        parameters = indices.get("parameters")
+        by_pair = parameters.get("by_pair") if isinstance(parameters, Mapping) else None
+        if not isinstance(by_pair, Mapping):
+            pairs = []
+        else:
+            time_matches = []
+            for row in pairs:
+                pair_data = by_pair.get(f"{row.get('outer')}:{row.get('inner')}")
+                if not isinstance(pair_data, Mapping):
+                    continue
+                names, values, units = pair_data.get("names"), pair_data.get("values"), pair_data.get("units")
+                if not (isinstance(names, list) and isinstance(values, list) and isinstance(units, list)
+                        and len(names) == len(values) == len(units)):
+                    continue
+                matches = []
+                for name, value, unit in zip(names, values, units):
+                    if isinstance(name, str) and name.lower() in {"t", "time"}:
+                        if (isinstance(value, (int, float)) and not isinstance(value, bool)
+                                and math.isfinite(float(value)) and isinstance(unit, str)):
+                            matches.append(unit == quantity["unit"] and math.isclose(
+                                float(value), float(quantity["value"]), rel_tol=1e-12, abs_tol=1e-15
+                            ))
+                if len(matches) == 1 and matches[0]:
+                    time_matches.append(row)
+            pairs = time_matches
+    if len(pairs) != 1:
+        raise PreWriteRefusal(
+            "SOLUTION_AXIS_METADATA_UNAVAILABLE",
+            "the requested state-map source tuple does not resolve uniquely to one native Solnum",
+            details={"outer": source.get("outer"), "inner": source.get("inner"), "candidate_count": len(pairs)},
+        )
+    row = pairs[0]
+    if (type(row.get("outer")) is not int or type(row.get("inner")) is not int
+            or type(row.get("solnum")) is not int or min(row["outer"], row["inner"], row["solnum"]) < 1):
+        raise PreWriteRefusal("SOLUTION_AXIS_METADATA_UNAVAILABLE", "native source tuple contains invalid indices")
+    return {"dataset": dataset, "solution": source_solution,
+            "outer": row["outer"], "inner": row["inner"], "solnum": row["solnum"]}
+
+
+def _read_source_solution_mesh_association(model, solution_tag, geometry_tag, outer, inner):
+    """Read the historical solution object's mesh association for one tuple.
+
+    COMSOL 6.4 SolutionInfo.getISol returns zero-based [iMulti,iSol]. The
+    solver's getMesh(geometry,iMulti) returns the mesh associated with that
+    multisolution object. This proves association only; topology, DOFs, frame,
+    and hidden history remain separate unverified facts.
+    """
+    if not isinstance(geometry_tag, str) or not geometry_tag:
+        raise PreWriteRefusal("DATASET_BINDING_INCOMPLETE", "source geometry tag is unavailable")
+    try:
+        solver = _call(model, "sol", solution_tag)
+        solution_info = _call(solver, "getSolutioninfo")
+        raw_indices = _call(solution_info, "getISol", int(outer), int(inner))
+    except Exception as exc:
+        raise PreWriteRefusal(
+            "SOLUTION_MESH_ASSOCIATION_UNAVAILABLE",
+            "COMSOL could not read the historical solution-object indices for the exact source tuple",
+            details={"cause_type": type(exc).__name__, "cause_code": getattr(exc, "code", None)},
+        ) from exc
+    if (not isinstance(raw_indices, (list, tuple)) or len(raw_indices) != 2
+            or any(type(value) is not int or value < 0 for value in raw_indices)):
+        raise PreWriteRefusal(
+            "SOLUTION_MESH_ASSOCIATION_INVALID",
+            "SolutionInfo.getISol must return exactly two non-negative zero-based integer indices",
+            details={"returned_type": type(raw_indices).__name__},
+        )
+    i_multi, i_solution = raw_indices
+    try:
+        mesh_tag = _call(solver, "getMesh", geometry_tag, i_multi)
+    except Exception as exc:
+        raise PreWriteRefusal(
+            "SOLUTION_MESH_ASSOCIATION_UNAVAILABLE",
+            "SolverSequence.getMesh(geometry,iMulti) could not read the mesh associated with the selected solution object",
+            details={"geometry": geometry_tag, "iMulti_zero_based": i_multi,
+                     "cause_type": type(exc).__name__, "cause_code": getattr(exc, "code", None)},
+        ) from exc
+    if not isinstance(mesh_tag, str) or not mesh_tag:
+        raise PreWriteRefusal(
+            "SOLUTION_MESH_ASSOCIATION_INVALID",
+            "SolverSequence.getMesh(geometry,iMulti) returned no mesh tag",
+        )
+    return {
+        "status": "VERIFIED",
+        "solution_tuple": {"outer": int(outer), "inner": int(inner)},
+        "solution_object_index_zero_based": i_multi,
+        "solution_index_within_object_zero_based": i_solution,
+        "geometry": geometry_tag,
+        "mesh_tag": mesh_tag,
+        "readback_methods": ["SolutionInfo.getISol(outer,inner)", "SolverSequence.getMesh(geometry,iMulti)"],
+        "index_basis": "zero_based as returned by COMSOL public API",
+        "claim_scope": "historical solution-object to mesh association only",
+        "topology": "UNVERIFIED",
+        "dof_equivalence": "UNVERIFIED",
+        "coordinate_frame": "UNVERIFIED",
+    }
+
+
+def _strict_source_field_readback(worker, model_tag, model, indices, source, pair, expressions):
+    """Run a bounded, selector- and selection-readback-bound numerical Eval."""
+    dataset_list = _call(_call(model, "result"), "dataset")
+    if source["dataset"] not in tag_list(dataset_list):
+        raise PreWriteRefusal("NODE_NOT_FOUND", "state-map source dataset is no longer present")
+    dataset_node = _call(dataset_list, "get", source["dataset"])
+    dataset_binding = _resolve_dataset_binding(
+        model, source["dataset"], requested_solution=pair["solution"]
+    )
+    context = _coordinate_context(model, dataset_node, [], dataset_binding=dataset_binding)
+    if (not isinstance(context.get("component"), str) or not context["component"]
+            or not isinstance(context.get("geometry"), str) or not context["geometry"]
+            or type(context.get("space_dimension")) is not int or context["space_dimension"] < 1):
+        raise PreWriteRefusal("DATASET_BINDING_INCOMPLETE", "source field geometry context is not fully resolved")
+    selection = {
+        "kind": "all",
+        "component": context["component"],
+        "geometry": context["geometry"],
+        "entity_dimension": context["space_dimension"],
+    }
+    result = result_evaluate(worker, model_tag, {
+        "spec": {
+            "expressions": list(expressions),
+            "solution": {
+                "dataset": source["dataset"],
+                "solution": pair["solution"],
+                "outer": pair["outer"],
+                "inner": pair["inner"],
+            },
+            "aggregate": "none",
+            "complex_mode": "preserve",
+            "storage": "inline",
+            "selection": selection,
+        },
+    }, strict_field_readback=True)
+    evidence = result.get("strict_field_readback") if isinstance(result, Mapping) else None
+    status = result.get("status") if isinstance(result, Mapping) else None
+    cleanup = result.get("cleanup") if isinstance(result, Mapping) else None
+    expected_selector = {
+        "dataset": pair["dataset"],
+        "outerinput": "manual", "outersolnum": pair["outer"],
+        "innerinput": "manual", "solnum": pair["solnum"],
+    }
+    observed_tuple = evidence.get("solution_tuple") if isinstance(evidence, Mapping) else None
+    observed_selectors = evidence.get("selector_readback") if isinstance(evidence, Mapping) else None
+    if (not isinstance(evidence, Mapping) or evidence.get("status") != "VERIFIED"
+            or not isinstance(status, Mapping) or status.get("ok") is not True
+            or not isinstance(cleanup, Mapping) or cleanup.get("cleanup_failed") is not False
+            or cleanup.get("created") is not True or cleanup.get("removed") is not True
+            or not isinstance(observed_tuple, Mapping)
+            or (observed_tuple.get("outer"), observed_tuple.get("inner"), observed_tuple.get("solnum"))
+               != (pair["outer"], pair["inner"], pair["solnum"])
+            or observed_selectors != expected_selector):
+        raise PreWriteRefusal(
+            "FIELD_READBACK_INCOMPLETE",
+            "strict source field Eval did not return exact selector/tuple, bounded data, and clean transient-node removal evidence",
+            details={"result_status": status,
+                     "cleanup_failed": cleanup.get("cleanup_failed") if isinstance(cleanup, Mapping) else None,
+                     "field_status": evidence.get("status") if isinstance(evidence, Mapping) else None},
+        )
+    return dict(evidence)
+
+
 def op_experiment_state_map(worker, model_tag, arguments):
     """Configure the documented initial-solution selector for a strict identity profile.
 
@@ -1103,16 +1292,45 @@ def op_experiment_state_map(worker, model_tag, arguments):
     target_solver_tag = normalized['target']['segments'][0]['tag']
     attachment = _attached_solver_sequence_evidence(model, target_solver_tag)
 
+    # Read the exact source values and historical mesh association before the
+    # target Variables selector is changed. These are source-side proofs only;
+    # neither a matching tag nor the caller's unit declaration proves target
+    # field identity, topology, frame, DOFs, or solver-history continuity.
+    source = normalized['source']
+    source_indices = dataset_solution_indices(worker, model_tag, {'path': source['dataset']})
+    source_pair = _resolve_state_map_source_pair(source_indices, source)
+    declarations = normalized['mapping']['variables']
+    source_field = _strict_source_field_readback(
+        worker, model_tag, model, source_indices, source, source_pair,
+        [item['source_variable'] for item in declarations],
+    )
+    selection_readback = source_field.get('selection_readback')
+    geometry_tag = selection_readback.get('geometry') if isinstance(selection_readback, Mapping) else None
+    source_mesh = _read_source_solution_mesh_association(
+        model, source_pair['solution'], geometry_tag,
+        source_pair['outer'], source_pair['inner'],
+    )
+
     # The established adapter performs exact dataset/solution/tuple resolution,
     # checks the Variables feature subtype, and reads back every documented
     # initial-solution selector.  The high-level identity declaration is never
     # forwarded as proof or as a per-variable mapping instruction.
     configured = op_solver_solution_transfer(worker, model_tag, {
-        'source': normalized['source'],
+        'source': source,
         'target': normalized['target'],
         'mapping': {},
     })
-    declarations = normalized['mapping']['variables']
+    configured_source = configured.get('source') if isinstance(configured, Mapping) else None
+    if (not isinstance(configured_source, Mapping)
+            or configured_source.get('dataset') != source_pair['dataset']
+            or configured_source.get('solution') != source_pair['solution']
+            or configured_source.get('outer') != source_pair['outer']
+            or configured_source.get('inner') != source_pair['inner']
+            or configured_source.get('manualsolnum') != source_pair['solnum']):
+        raise PreWriteRefusal(
+            'SOLUTION_SELECTION_MISMATCH',
+            'target Variables selector write did not use the exact tuple proved by the source field readback',
+        )
     configured.update({
         'contract': 'experiment.state_map/v1',
         'profile': normalized['mapping']['profile'],
@@ -1121,16 +1339,30 @@ def op_experiment_state_map(worker, model_tag, arguments):
         'declared_variable_mappings': copy.deepcopy(declarations),
         'variable_mapping_applied': False,
         'mapping_evidence': {
-            'status': 'UNVERIFIED',
-            'reason': ('the documented Variables initial-solution selector does not expose a per-variable '
-                       'mapping readback in the available adapter'),
-            'source_field_identity': 'UNVERIFIED',
+            'status': 'PARTIAL',
+            'reason': ('source field values and source solution-to-mesh association were read back; '
+                       'the per-variable target mapping remains unapplied and unverified'),
+            'source_field_identity': 'VERIFIED_FOR_REQUESTED_EXPRESSIONS_AND_SELECTION',
             'target_field_identity': 'UNVERIFIED',
             'source_target_units': 'UNVERIFIED',
             'source_target_mesh_identity': 'UNVERIFIED',
+            'source_mesh_association': 'VERIFIED',
+            'source_mesh_tag': source_mesh['mesh_tag'],
+            'target_mesh_association': 'UNVERIFIED',
+            'mesh_topology': 'UNVERIFIED',
+            'dof_equivalence': 'UNVERIFIED',
             'frame_equivalence': 'UNVERIFIED',
             'hidden_solver_history': 'NOT_VERIFIED',
         },
+        'source_field_readback': source_field,
+        'source_solution_mesh_association': source_mesh,
+        'declared_units': [{
+            'source_variable': item['source_variable'],
+            'source_unit': item['source_unit'],
+            'target_variable': item['target_variable'],
+            'target_unit': item['target_unit'],
+            'status': 'DECLARATION_ONLY_UNITS_NOT_VERIFIED',
+        } for item in declarations],
         'solve_dispatched': False,
         'api_basis': {
             'variables': {

@@ -128,7 +128,7 @@ import uuid
 
 from ._execution_contract import PreWriteRefusal
 from ._g2_contract import ExecutionContractError, NodePath
-from ._g2_engine import _call
+from ._g2_engine import _call, _worker_failure_code
 from ._artifact_store import ArtifactStore, trusted_project_root
 from ._result_budget import (
     ResultBudgetRefused,
@@ -171,6 +171,8 @@ from ._probe_manage import (
 # engine's internal cache are outside this estimate and remain unmeasured.
 RESULT_NUMERIC_PAYLOAD_MAX_ELEMENTS = 1_000_000
 RESULT_NUMERIC_PAYLOAD_MAX_BYTES = 64 * 1024 * 1024
+W21_FIELD_READBACK_MAX_NUMERIC_SCALARS = 65_536
+W21_FIELD_READBACK_MAX_JSON_BYTES = 8 * 1024 * 1024
 
 OPERATION_ID = "result.sample_path"
 
@@ -2891,6 +2893,7 @@ def _make_result_budget_guard(
     point_count: int | None = None,
     max_elements: int = RESULT_NUMERIC_PAYLOAD_MAX_ELEMENTS,
     max_bytes: int = RESULT_NUMERIC_PAYLOAD_MAX_BYTES,
+    include_coordinate_scalars: bool = False,
     records: list[dict[str, Any]] | None = None,
 ) -> Any:
     """Create a per-outer raw-array admission callback.
@@ -3022,6 +3025,41 @@ def _make_result_budget_guard(
         if decision.get("status") != "PASS" or decision.get("allowed") is not True:
             raise ResultBudgetRefused(decision)
         computed = decision.get("computed") or {}
+        if include_coordinate_scalars:
+            # W21's strict field response contains both field samples and the
+            # actual native coordinates. The shape-only Worker witness is
+            # available before getData(), so include coordinate numbers in the
+            # same hard cap before either large getter is called.
+            coordinate_scalars = int(shape_witness["shape"][0]) * int(shape_witness["shape"][1])
+            combined_elements = int(computed.get("elements", 0)) + coordinate_scalars
+            combined_bytes = int(computed.get("bytes", 0)) + coordinate_scalars * 8
+            if combined_elements > max_elements or combined_bytes > max_bytes:
+                decision.update({
+                    "status": "BLOCKED",
+                    "allowed": False,
+                    "publish_allowed": False,
+                    "reason_code": "FIELD_READBACK_LIMIT_EXCEEDED",
+                    "reason": "field values plus native coordinates exceed the strict W21 readback limit",
+                    "computed": {
+                        **dict(computed),
+                        "coordinate_scalars": coordinate_scalars,
+                        "combined_numeric_scalars": combined_elements,
+                        "combined_numeric_bytes": combined_bytes,
+                    },
+                    "limits": {
+                        "max_elements": max_elements,
+                        "max_bytes": max_bytes,
+                        "scope": "field_values_real_imag_plus_native_coordinates",
+                    },
+                })
+                raise ResultBudgetRefused(decision)
+            computed = {
+                **dict(computed),
+                "coordinate_scalars": coordinate_scalars,
+                "combined_numeric_scalars": combined_elements,
+                "combined_numeric_bytes": combined_bytes,
+            }
+            decision["computed"] = computed
         consumed_elements += int(computed.get("elements", 0))
         consumed_bytes += int(computed.get("bytes", 0))
         decision["request_progress"] = {
@@ -3866,9 +3904,15 @@ def _run_bound_feature(
     point_feature: bool = False,
     budget_guard: Any | None = None,
     outer_getters: bool = False,
+    strict_field_reader: Any | None = None,
 ) -> tuple[Any, Any, bool, str]:
     """Run a feature once per typed outer and return explicit layout data."""
     if binding and len(binding.get("outer_indices", [])) > 1:
+        if strict_field_reader is not None:
+            raise ExecutionContractError(
+                "SOLUTION_AXIS_METADATA_UNAVAILABLE",
+                "strict W21 field readback is limited to one exact outer/inner tuple",
+            )
         rows: list[tuple[Any, Any, str]] = []
         statuses: list[bool] = []
         for outer in binding["outer_indices"]:
@@ -3907,6 +3951,8 @@ def _run_bound_feature(
     outer_label = None
     if binding and binding.get("outer_indices"):
         outer_label = int(binding["outer_indices"][0])
+    if strict_field_reader is not None:
+        return strict_field_reader(feature, outer_label, budget_guard)
     budget_decision = budget_guard(feature, outer_label) if budget_guard is not None else None
     real, imag, status, layout = _feature_components(
         feature,
@@ -3932,6 +3978,152 @@ def _count_elements(val: Any) -> int:
         return sum(_count_elements(v) for v in val.values())
     if isinstance(val, Sequence) and not isinstance(val, (str, bytes)):
         return sum(_count_elements(item) for item in val)
+    return 0
+
+
+def _count_numeric_scalars(val: Any) -> int:
+    """Count only numeric payload leaves (including real/imag components)."""
+    if isinstance(val, bool):
+        return 0
+    if isinstance(val, (int, float)):
+        return 1
+    if isinstance(val, Mapping):
+        return sum(_count_numeric_scalars(item) for item in val.values())
+    if isinstance(val, Sequence) and not isinstance(val, (str, bytes, bytearray)):
+        return sum(_count_numeric_scalars(item) for item in val)
+    return 0
+
+
+def _enforce_w21_field_response_limits(response: dict[str, Any]) -> tuple[int, int]:
+    """Apply the fixed W21 numeric and serialized-response limits."""
+    evidence = response.get("strict_field_readback")
+    if not isinstance(evidence, dict):
+        raise ExecutionContractError("FIELD_READBACK_INCOMPLETE", "strict field evidence is missing")
+    field = evidence.get("field_array")
+    coordinates = evidence.get("coordinates")
+    if not isinstance(field, Mapping) or not isinstance(coordinates, Mapping):
+        raise ExecutionContractError("FIELD_READBACK_INCOMPLETE", "field or coordinate payload is missing")
+    scalar_count = (
+        _count_numeric_scalars(field.get("values"))
+        + _count_numeric_scalars(coordinates.get("values"))
+    )
+    if scalar_count > W21_FIELD_READBACK_MAX_NUMERIC_SCALARS:
+        raise ExecutionContractError(
+            "FIELD_READBACK_LIMIT_EXCEEDED",
+            "strict W21 field values plus coordinates exceed the hard scalar limit",
+            details={"numeric_scalar_count": scalar_count,
+                     "max_numeric_scalars": W21_FIELD_READBACK_MAX_NUMERIC_SCALARS},
+        )
+    evidence["numeric_scalar_count_including_real_imag_and_coordinates"] = scalar_count
+    evidence["json_response_bytes"] = 0
+    response_bytes = 0
+    try:
+        # The evidence reports its own serialized size. Iterate to the tiny
+        # fixed point where that decimal field is included in the byte count.
+        for _ in range(4):
+            response_bytes = len(json.dumps(response, allow_nan=False, separators=(",", ":")).encode("utf-8"))
+            if evidence["json_response_bytes"] == response_bytes:
+                break
+            evidence["json_response_bytes"] = response_bytes
+    except (TypeError, ValueError) as exc:
+        raise ExecutionContractError(
+            "FIELD_READBACK_INVALID_NUMERIC",
+            "strict W21 field readback is not finite JSON data",
+        ) from exc
+    if response_bytes > W21_FIELD_READBACK_MAX_JSON_BYTES:
+        raise ExecutionContractError(
+            "FIELD_READBACK_LIMIT_EXCEEDED",
+            "strict W21 field response exceeds the hard JSON byte limit",
+            details={"json_response_bytes": response_bytes,
+                     "max_json_response_bytes": W21_FIELD_READBACK_MAX_JSON_BYTES},
+        )
+    evidence["json_response_bytes"] = response_bytes
+    return scalar_count, response_bytes
+
+
+def _strict_worker_readback_failure(exc: BaseException) -> ExecutionContractError:
+    """Preserve structured Worker failures without exposing raw field arrays."""
+    worker_code = _worker_failure_code(exc)
+    if not worker_code:
+        return ExecutionContractError(
+            "FIELD_READBACK_UNAVAILABLE",
+            "Worker could not return the bounded strict field/coordinate payload",
+        )
+
+    allowed_detail_keys = {
+        "numeric_scalar_count", "max_numeric_scalars", "json_payload_bytes",
+        "max_json_payload_bytes", "dimension", "point_count", "shape",
+    }
+    details: dict[str, Any] = {"source": "structured_worker_failure"}
+    seen: set[int] = set()
+    cause: BaseException | None = exc
+    while cause is not None and id(cause) not in seen:
+        seen.add(id(cause))
+        failure = getattr(cause, "failure", None)
+        if isinstance(failure, Mapping):
+            for key in allowed_detail_keys:
+                value = failure.get(key)
+                if key == "shape":
+                    if (isinstance(value, (list, tuple)) and len(value) <= 4
+                            and all(type(item) is int and 0 <= item <= W21_FIELD_READBACK_MAX_NUMERIC_SCALARS
+                                    for item in value)):
+                        details[key] = list(value)
+                elif type(value) is int and 0 <= value <= max(
+                    W21_FIELD_READBACK_MAX_NUMERIC_SCALARS,
+                    W21_FIELD_READBACK_MAX_JSON_BYTES,
+                ):
+                    details[key] = value
+            break
+        cause = cause.__cause__
+    return ExecutionContractError(
+        worker_code,
+        "Worker rejected the bounded strict field/coordinate readback",
+        details=details,
+    )
+
+
+def _call_strict_worker_field_readback(target_feature: Any) -> Any:
+    """Invoke the private Worker adapter and retain structured rejection codes."""
+    try:
+        return _call(target_feature, "getStrictFieldReadback")
+    except Exception as exc:
+        raise _strict_worker_readback_failure(exc) from exc
+
+
+def _set_strict_eval_selectors(feature: Any, dataset: str, outer: int, solnum: int) -> dict[str, Any]:
+    """Select one exact Eval dataset/tuple and verify both selector modes."""
+    dataset_readback = _call(feature, "getString", "data")
+    if dataset_readback != dataset:
+        raise ExecutionContractError(
+            "DATASET_SELECTION_MISMATCH",
+            "strict W21 Eval dataset readback differs from the requested exact dataset",
+        )
+    _call(feature, "set", "outerinput", "manual")
+    _call(feature, "set", "outersolnum", outer)
+    _call(feature, "set", "innerinput", "manual")
+    _call(feature, "set", "solnum", solnum)
+    observed = {
+        "dataset": dataset_readback,
+        "outerinput": _call(feature, "getString", "outerinput"),
+        "outersolnum": _call(feature, "getInt", "outersolnum"),
+        "innerinput": _call(feature, "getString", "innerinput"),
+        "solnum": _call(feature, "getInt", "solnum"),
+    }
+    expected = {
+        "dataset": dataset,
+        "outerinput": "manual",
+        "outersolnum": outer,
+        "innerinput": "manual",
+        "solnum": solnum,
+    }
+    if observed != expected:
+        raise ExecutionContractError(
+            "SOLUTION_SELECTION_MISMATCH",
+            "strict W21 transient Eval selector readback differs from the exact requested tuple",
+        )
+    return observed
+
+
 def _preview_values(val: Any, max_points: int = 4) -> Any:
     if isinstance(val, (list, tuple)):
         if len(val) <= max_points:
@@ -4044,6 +4236,7 @@ def result_evaluate(
     arguments: Mapping[str, Any],
     *,
     strict_metric_evidence: bool = False,
+    strict_field_readback: bool = False,
 ) -> dict[str, Any]:
     """Global, point, line, surface, and volume evaluation with complex modes and statistics."""
     spec = require_mapping(arguments.get("spec", {}), "spec")
@@ -4132,6 +4325,25 @@ def result_evaluate(
         raise ExecutionContractError("INVALID_REQUEST", "spec.weight_expression must not be empty")
 
     storage = spec.get("storage", "auto")
+    if strict_field_readback:
+        if strict_metric_evidence:
+            raise ExecutionContractError("INVALID_REQUEST", "strict field readback and strict metric evidence are separate internal modes")
+        if aggregate != "none" or spec.get("complex_mode", "preserve") != "preserve":
+            raise ExecutionContractError("INVALID_REQUEST", "strict W21 field readback requires aggregate='none' and complex_mode='preserve'")
+        for selector in ("outer", "inner"):
+            value = solution_spec.get(selector)
+            if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+                raise ExecutionContractError("INVALID_REQUEST", f"strict W21 field readback requires one positive integer {selector} selector")
+        selection = spec.get("selection")
+        if not isinstance(selection, Mapping) or not all(
+            name in selection for name in ("component", "geometry", "entity_dimension", "kind")
+        ):
+            raise ExecutionContractError("INVALID_SELECTION", "strict W21 field readback requires a component-, geometry-, and dimension-bound selection")
+        if storage not in ("auto", "inline"):
+            raise ExecutionContractError("INVALID_REQUEST", "strict W21 field readback only supports bounded inline storage")
+        # Force inline result handling; this path has its own immutable hard
+        # limit and must never spill a partial/oversized read into an artifact.
+        storage = "inline"
 
     model = bound_model(worker, model_tag)
     results = _call(model, "result")
@@ -4184,9 +4396,10 @@ def result_evaluate(
         or _string_or_none(dset_node, "data", [])
     )
     solution_binding = _result_solution_binding(model, solution_tag)
-    if strict_metric_evidence:
+    strict_selection_enabled = strict_metric_evidence or strict_field_readback
+    if strict_selection_enabled:
         strict_selection = spec.get("selection")
-        if aggregate in {"none", "global"}:
+        if strict_metric_evidence and aggregate in {"none", "global"}:
             raise ExecutionContractError(
                 "API_UNSUPPORTED",
                 "strict metric evaluation requires an explicit spatial aggregate; global/none has no declared ROI measure",
@@ -4203,6 +4416,38 @@ def result_evaluate(
                 "INVALID_SELECTION",
                 "strict metric evaluation requires a component-, geometry-, and dimension-bound selection",
             )
+    strict_pair: dict[str, Any] | None = None
+    strict_selector_readback: dict[str, Any] | None = None
+    if strict_field_readback:
+        requested_outer = int(solution_spec["outer"])
+        requested_inner = int(solution_spec["inner"])
+        matching_pairs = [
+            pair for pair in solution_binding.get("solnum_pairs", [])
+            if isinstance(pair, Mapping)
+            and pair.get("outer") == requested_outer
+            and pair.get("inner") == requested_inner
+        ]
+        if len(matching_pairs) != 1:
+            raise ExecutionContractError(
+                "SOLUTION_AXIS_METADATA_UNAVAILABLE",
+                "strict W21 field readback must resolve exactly one requested outer/inner tuple",
+            )
+        strict_pair = dict(matching_pairs[0])
+        if (isinstance(strict_pair.get("solnum"), bool)
+                or not isinstance(strict_pair.get("solnum"), int)
+                or strict_pair["solnum"] < 1):
+            raise ExecutionContractError(
+                "SOLUTION_AXIS_METADATA_UNAVAILABLE",
+                "strict W21 field readback has no valid Solnum for the requested tuple",
+            )
+        strict_binding = dict(solution_binding)
+        strict_binding["outer_indices"] = [requested_outer]
+        strict_binding["inner_indices"] = [requested_inner]
+        strict_binding["inner_indices_by_outer"] = {requested_outer: [requested_inner]}
+        strict_binding["solnum_pairs"] = [strict_pair]
+        strict_binding["pair_mapping_complete"] = True
+        strict_binding["outer_count"] = 1
+        solution_binding = strict_binding
     if solution_spec.get("outer") is not None and not solution_binding:
         raise ExecutionContractError(
             "SOLUTION_AXIS_METADATA_UNAVAILABLE",
@@ -4218,7 +4463,7 @@ def result_evaluate(
 
     # Check spatial dimension & axisymmetry
     context = _coordinate_context(model, dset_node, [], dataset_binding=dataset_binding)
-    if strict_metric_evidence:
+    if strict_selection_enabled:
         requested_selection = spec["selection"]
         if (context.get("component") != requested_selection.get("component")
                 or context.get("geometry") != requested_selection.get("geometry")):
@@ -4290,6 +4535,9 @@ def result_evaluate(
     is_complex: bool | None = None
     field_array_payload: Any = None
     pending_field_selectors: dict[str, Any] = {}
+    strict_native_coordinates: list[list[float]] | None = None
+    strict_shape_witness: dict[str, Any] | None = None
+    strict_worker_payload_info: dict[str, Any] | None = None
     raw_layout = "expression,solnum,point"
     expression_units: dict[str, Any] = {}
     result_budget_records: list[dict[str, Any]] = []
@@ -4313,7 +4561,7 @@ def result_evaluate(
     selection_measure_error = None
 
     def _apply_feature_selection(target_feature: Any, role: str) -> None:
-        if not strict_metric_evidence:
+        if not strict_selection_enabled:
             ms.apply_selection(target_feature)
             return
         from ._g3_common import resolve_selection_entities, selection_state
@@ -4371,6 +4619,13 @@ def result_evaluate(
         if spec.get("units"):
             _call(feature, "set", "unit", spec["units"])
         _apply_feature_selection(feature, "primary")
+        if strict_field_readback:
+            assert strict_pair is not None
+            requested_outer = int(strict_pair["outer"])
+            requested_solnum = int(strict_pair["solnum"])
+            strict_selector_readback = _set_strict_eval_selectors(
+                feature, dataset_tag, requested_outer, requested_solnum
+            )
 
         try:
             feat_props = list(_call(feature, "properties"))
@@ -4399,8 +4654,77 @@ def result_evaluate(
                 feature_kind="Eval",
                 expressions=expressions,
                 binding=solution_binding,
+                max_elements=(W21_FIELD_READBACK_MAX_NUMERIC_SCALARS
+                              if strict_field_readback else RESULT_NUMERIC_PAYLOAD_MAX_ELEMENTS),
+                max_bytes=(W21_FIELD_READBACK_MAX_JSON_BYTES
+                           if strict_field_readback else RESULT_NUMERIC_PAYLOAD_MAX_BYTES),
+                include_coordinate_scalars=strict_field_readback,
                 records=result_budget_records,
             )
+            if strict_field_readback:
+                shape_budget_guard = result_budget_guard
+
+                def _strict_field_reader(target_feature: Any, outer: int | None, budget_guard: Any) -> tuple[Any, Any, bool, str]:
+                    nonlocal strict_native_coordinates, strict_shape_witness, strict_worker_payload_info
+                    assert shape_budget_guard is not None
+                    decision = budget_guard(target_feature, outer)
+                    witness = decision.get("raw_point_shape_witness")
+                    if not isinstance(witness, Mapping):
+                        raise ExecutionContractError(
+                            "RAW_POINT_SHAPE_UNAVAILABLE",
+                            "strict W21 field readback lost its pre-getData coordinate shape witness",
+                        )
+                    strict_shape_witness = dict(witness)
+                    payload = _call_strict_worker_field_readback(target_feature)
+                    if not isinstance(payload, Mapping):
+                        raise ExecutionContractError("FIELD_READBACK_INVALID_SHAPE", "Worker strict field payload is not an object")
+                    expected_complex = _call(target_feature, "isComplex")
+                    payload_complex = payload.get("is_complex")
+                    if not isinstance(expected_complex, bool) or payload_complex is not expected_complex:
+                        raise ExecutionContractError("COMPLEX_STATUS_UNAVAILABLE", "Worker strict field complex status changed")
+                    if payload.get("layout") != "expression,solnum,point":
+                        raise ExecutionContractError("FIELD_READBACK_INVALID_SHAPE", "Worker strict field payload has an unsupported layout")
+                    shape = payload.get("shape")
+                    if (not isinstance(shape, Sequence) or isinstance(shape, (str, bytes)) or len(shape) != 3
+                            or any(type(value) is not int or value < 1 for value in shape)):
+                        raise ExecutionContractError("FIELD_READBACK_INVALID_SHAPE", "Worker strict field payload has an invalid data shape")
+                    expected_dim, expected_points = witness["shape"]
+                    if (shape != [len(expressions), 1, expected_points]
+                            or shape[2] != expected_points
+                            or len(payload.get("coordinates", [])) != expected_dim
+                            or any(not isinstance(row, Sequence) or isinstance(row, (str, bytes))
+                                   or len(row) != expected_points for row in payload.get("coordinates", []))):
+                        raise ExecutionContractError(
+                            "FIELD_READBACK_SHAPE_MISMATCH",
+                            "Worker field/coordinate arrays do not match the exact tuple and preflight shape",
+                        )
+                    normalized_rows: list[list[float]] = []
+                    for row in payload["coordinates"]:
+                        normalized_row = []
+                        for value in row:
+                            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)):
+                                raise ExecutionContractError(
+                                    "COORDINATE_READBACK_INVALID",
+                                    "native coordinate matrix contains a non-finite or non-numeric value",
+                                )
+                            normalized_row.append(float(value))
+                        normalized_rows.append(normalized_row)
+                    strict_native_coordinates = normalized_rows
+                    scalar_count = payload.get("numeric_scalar_count")
+                    payload_bytes = payload.get("json_payload_bytes")
+                    if (type(scalar_count) is not int or scalar_count < 0
+                            or scalar_count > W21_FIELD_READBACK_MAX_NUMERIC_SCALARS
+                            or type(payload_bytes) is not int or payload_bytes < 0
+                            or payload_bytes > W21_FIELD_READBACK_MAX_JSON_BYTES):
+                        raise ExecutionContractError("FIELD_READBACK_LIMIT_EXCEEDED", "Worker payload limit evidence is missing or over the hard cap")
+                    strict_worker_payload_info = {
+                        "numeric_scalar_count_including_real_imag_and_coordinates": scalar_count,
+                        "json_payload_bytes": payload_bytes,
+                        "max_numeric_scalars": W21_FIELD_READBACK_MAX_NUMERIC_SCALARS,
+                        "max_json_payload_bytes": W21_FIELD_READBACK_MAX_JSON_BYTES,
+                        "enforced_in": "PersistentComsolWorker before response encoding",
+                    }
+                    return payload["real"], payload.get("imag"), payload_complex, "expression,solnum,point"
 
         # A numerical feature is scoped to one outer solution.  The helper
         # selects each real outer label and preserves the feature's documented
@@ -4413,6 +4737,7 @@ def result_evaluate(
             point_feature=ms.entity_dim == 0,
             budget_guard=result_budget_guard,
             outer_getters=feat_type not in {"Eval", "Interp", "EvalGlobal"},
+            strict_field_reader=(_strict_field_reader if strict_field_readback else None),
         )
         expression_units = _feature_units(feature, expressions)
 
@@ -5544,7 +5869,7 @@ def result_evaluate(
                 "same_dataset_solution_tuple_and_selection": True,
             }
 
-    return {
+    response = {
         **result_payload,
         "expressions": expressions,
         "dataset": dataset_tag,
@@ -5612,6 +5937,82 @@ def result_evaluate(
             "execution_state_unknown": cleanup["cleanup_failed"],
         },
     }
+    if strict_field_readback:
+        if (field_array_payload is None or strict_pair is None
+                or strict_selector_readback is None or strict_native_coordinates is None
+                or strict_shape_witness is None or strict_worker_payload_info is None
+                or not strict_selection_evidence):
+            raise ExecutionContractError(
+                "FIELD_READBACK_INCOMPLETE",
+                "strict W21 field readback did not produce a complete field, selector, selection, and coordinate witness",
+                stage="post_dispatch",
+            )
+        if engine_error is not None or cleanup["cleanup_failed"]:
+            raise ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN",
+                "strict W21 field readback did not complete with verified engine and cleanup status",
+                stage="post_dispatch",
+            )
+        field_payload = {
+            "values": field_array_payload.values,
+            "axes": list(field_array_payload.axes),
+            "shape": list(field_array_payload.shape),
+            "coords": field_array_payload.coords,
+            "units": field_array_payload.units,
+            "metadata": field_array_payload.metadata,
+            "is_complex": field_array_payload.is_complex,
+        }
+        field_evidence = {
+            "status": "VERIFIED",
+            "scope": "selected_source_field_values_and_native_coordinate_payload_only",
+            "solution_tuple": {
+                "outer": int(strict_pair["outer"]),
+                "inner": int(strict_pair["inner"]),
+                "solnum": int(strict_pair["solnum"]),
+                "source": "SolutionInfo.getSolnum(outer, strict)",
+            },
+            "selector_readback": dict(strict_selector_readback),
+            "selection_readback": strict_selection_evidence[0],
+            "expression_unit_readback": {
+                "values": dict(expression_units),
+                "source": "NumericalFeature.getStringArray('unit')",
+                "interpretation": "configured or model-dependent output units; not intrinsic field-unit verification",
+                "field_dimensionality": "UNVERIFIED",
+            },
+            "coordinates": {
+                "values": strict_native_coordinates,
+                "shape": list(strict_shape_witness["shape"]),
+                "source": "PersistentComsolWorker.getStrictFieldReadback -> NumericalFeature.getCoordinates()",
+                "coordinate_frame": "UNVERIFIED",
+            },
+            "field_array": field_payload,
+            "worker_payload_limits": dict(strict_worker_payload_info),
+            "limits": {
+                "max_numeric_scalars_including_real_imag_and_coordinates": W21_FIELD_READBACK_MAX_NUMERIC_SCALARS,
+                "max_json_response_bytes": W21_FIELD_READBACK_MAX_JSON_BYTES,
+                "engine_internal_memory": "UNMEASURED",
+            },
+        }
+        response["strict_field_readback"] = field_evidence
+        response["values"] = None
+        response["field_array"] = None
+        if isinstance(response.get("result_budget"), Mapping):
+            budget = dict(response["result_budget"])
+            budget["limits"] = {
+                "max_elements": W21_FIELD_READBACK_MAX_NUMERIC_SCALARS,
+                "max_bytes": W21_FIELD_READBACK_MAX_JSON_BYTES,
+                "scope": "field_values_real_imag_plus_native_coordinates_and_json_response",
+                "engine_internal_cache": "UNMEASURED",
+            }
+            response["result_budget"] = budget
+        _enforce_w21_field_response_limits(response)
+        if (field_evidence["numeric_scalar_count_including_real_imag_and_coordinates"]
+                != strict_worker_payload_info["numeric_scalar_count_including_real_imag_and_coordinates"]):
+            raise ExecutionContractError(
+                "FIELD_READBACK_COUNT_MISMATCH",
+                "Python FieldArray normalization changed the Worker-reported numeric scalar count",
+            )
+    return response
 
 
 
