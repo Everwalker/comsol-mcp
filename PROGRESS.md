@@ -4,6 +4,8 @@ Updated 2026-09-28 UTC. **Overall PARTIAL; W21 runner and output producer accept
 
 ## Current stage
 
+**Windows6.4 repaired metadata attempt: PARTIAL, startup failed.** `project.create` succeeded; `session.start` is terminal FAILED with WinError206 at CreateProcess. Actual launcher path283 characters, cwd240, commandline1371; no Server process identity retained, 1 counted birth intent, 0 Worker/study/solver. No UNKNOWN, replay, disconnect or stop. Windows launcher/path repair is next; existing freeze remains preserved.
+
 **Repaired Windows6.4 preparation: PASS scoped preparation; native execution pending.** Explicit upload approval was accepted in the main thread. Remote archive/extractor hashes and source imports passed; main verified all 103 frozen source hashes against Git `0501e8c`, runtime identity, schema hashes and pristine state. Exact freeze `75adad90…` is delegated for one metadata-only run: 1 Server/Worker, 900 seconds, **0 study/solver dispatch**. [Exact candidate and recovery](docs/full_project_execution/project_session/WINDOWS64_REPAIRED_UPLOAD_CHECKPOINT.json).
 
 **W21 runner response-contract repair: PASS scoped offline; native NOT_RUN.** Corrected actual `data.project`, bounded exact-job waiting and original-request recovery. **45 unique tests PASS** on isolated Git `3cdc62d` plus only the two runner files; main verified 110 source/test fingerprints and linked artifacts. The earlier Windows attempt created its project successfully but failed locally before any native birth. [Evidence and replay](docs/full_project_execution/project_session/RUNNER_RESPONSE_CONTRACT_CHECKPOINT.json). Next: new frozen Windows6.4 metadata run; preserve the old run without replay.
