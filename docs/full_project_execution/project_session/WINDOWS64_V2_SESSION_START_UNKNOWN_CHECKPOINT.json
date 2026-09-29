@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "unit": "W21 Windows6.4 V2 short-home current-source attempt",
-  "updated_at_utc": "2026-09-29T00:50:38Z",
+  "updated_at_utc": "2026-09-29T02:08:23.339137+00:00",
   "overall_status": "PARTIAL",
   "source_package_status": "PASS_MAIN_VERIFIED",
   "native_status": "NOT_ACCEPTED_SESSION_START_UNKNOWN",
-  "next_action": "Await the pending narrow read-only daemon-liveness authorization; then reconcile the same original operation/job/daemon and investigate the image-library/startup-class error. Preserve UNKNOWN; do not start, replay, stop or clean up another session.",
+  "next_action": "Read-only reconciliation of the original Windows6.4 UNKNOWN operation: correlate remaining COMSOL processes, descendants, listeners and task logs; repair startup-failure state reconciliation and separate non-sensitive process diagnostics from token storage. No restart, replay or cleanup before original-operation quiescence is established. Then perform one authorized short-root native startup comparison, followed by Windows6.4 and 6.3 start/connect/small-model solve/result readback. W23 analytic geometry work continues independently; no new acceptance gates.",
   "candidate": {
     "source_commit": "9c5ced6272dd876cf9c28c6c6f73b943bd76b96c",
     "evidence_root": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-v2-20260928T235840Z-9c5ced6",
@@ -98,14 +98,24 @@
     "owned_server_directory_exists": true,
     "server_port_file_exists": false,
     "exact_private_executable_path_match_count": 0,
-    "daemon_liveness": "UNVERIFIED",
-    "daemon_pid_query": "Not completed: parsing PID from token-bearing control.json was rejected by automatic review; no workaround used."
+    "daemon_liveness": "RECORDED_PID_NOT_FOUND_AT_READONLY_OBSERVATION",
+    "daemon_pid_query": {
+      "pid": 20888,
+      "expected_start_epoch_ms": 1790641470225,
+      "query_status": "PROCESS_NOT_FOUND",
+      "process_alive": false,
+      "identity_match": false,
+      "native_descendant_quiescence": "UNVERIFIED",
+      "query_script_sha256": "e1eb0e53883e16468c7d195bef83b0dd38e8ac7731975a19a14992cddf8f3ada",
+      "wrapper_sha256": "b975c1d9159bc0730d0f3d756ad664c748eb4bfb29804b5e197ada1c244bb14c",
+      "prior_transport_attempt": "SSH_TIMEOUT; fixed-output SSH succeeded; same script returned via bounded in-memory gzip transport"
+    }
   },
   "permission_boundary": {
     "native_execute_authorization": "AUTHORIZED_AND_USED_ONCE; this is not blocked.",
-    "limited_read_only_daemon_liveness_authorization": "REQUESTED_FROM_USER; RESPONSE_PENDING",
+    "limited_read_only_daemon_liveness_authorization": "USER_APPROVED_AND_EXECUTED_VIA_OFFICIAL_APPROVAL",
     "review_rejection": "Automatic approval review rejected the PID extraction from token-bearing control.json.",
-    "effect": "Daemon liveness remains UNVERIFIED; no process was started, stopped or cleaned up by the rejected query."
+    "effect": "PID projection completed without token output or persistence; recorded PID absent, native quiescence not established. Historical refusal retained."
   },
   "candidate_after_diagnosis_only": {
     "taskroot_example": "C:\\Temp\\w21v3_9c5ced6",
