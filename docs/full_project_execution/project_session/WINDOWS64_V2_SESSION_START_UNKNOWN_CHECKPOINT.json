@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "unit": "W21 Windows6.4 V2 short-home current-source attempt",
-  "updated_at_utc": "2026-09-29T09:12:16Z",
+  "updated_at_utc": "2026-09-29T09:36:10Z",
   "overall_status": "PARTIAL",
   "source_package_status": "PASS_MAIN_VERIFIED",
-  "native_status": "CONNECT_RECOVERY_PUBLIC_SUCCESS_READBACK_NOT_VERIFIED_SOURCE_UNKNOWN_RESULT_PRESERVED_SOLVE_READBACK_NOT_RUN",
-  "next_action": "The local read-only recovery verifier/status-fix is main-reviewed with 5 unique offline tests PASS, but Windows readback remains NOT_VERIFIED. The exact three-file SCP was rejected by automatic approval review over project-identity/path scope and nothing was uploaded; exact user authorization is pending. Do not retry the rejected transfer or redispatch session.recover. If authorized, transfer the pinned verifier material for a read-only query only; preserve the source RECONCILING state, original UNKNOWN result hashes and STOPPED lifecycle until proof is accepted. Solve/readback remains NOT_RUN.",
+  "native_status": "CONNECT_UNKNOWN_PRESERVED; RECOVERY_QUIESCENCE_READ_ONLY_VERIFIED; SOLVE_READBACK_NOT_RUN",
+  "next_action": "The original 164eec3 session.connect remains UNKNOWN and its original result is preserved. The sole session.recover operation/job succeeded and its corrected independent read-only verifier now passes for ABANDONED_UNKNOWN_CONNECT_CURRENT_HOST_QUIESCENCE: source remains RECONCILING with canonical/raw result hashes unchanged, lifecycle is STOPPED with no endpoint/identity, complete process/listener inventories have zero matches, and recovery caused no native birth. The earlier verifier exit 3 was only an incorrect nested stdout path; the task-root file hash matched and corrected read-only verification exited 0 without redispatch. Prepare the new Windows 6.4 candidate from source HEAD 31607303 for one bounded minimal chain; preparation is in progress and no native action has run. This does not establish connect or solve success; solve/readback remains NOT_RUN.",
   "candidate": {
     "source_commit": "9c5ced6272dd876cf9c28c6c6f73b943bd76b96c",
     "evidence_root": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-v2-20260928T235840Z-9c5ced6",
@@ -262,7 +262,7 @@
     "next_action": "Wire daemon identity sidecar and original-job startup events; finish existing session.recover same-host quiescence reconciliation before a fresh native comparison."
   },
   "next_native_minimal_chain": {
-    "status": "CONNECT_UNKNOWN_READ_ONLY_DIAGNOSED_DURABLE_RECONCILIATION_PENDING_SOLVE_READBACK_NOT_RUN",
+    "status": "CONNECT_UNKNOWN_QUIESCENCE_READ_ONLY_VERIFIED_SOLVE_READBACK_NOT_RUN_MINIMAL_CHAIN_PREPARATION",
     "entrypoint": "tools/run_w21_stage_native.py",
     "mode": "solve-readback (separately frozen; existing metadata-only mode remains zero-solve)",
     "sequence": [
@@ -289,7 +289,7 @@
       "queue_timeout_seconds": 30,
       "execution_timeout_seconds": 240
     },
-    "limits": "The solve-readback runner passed scoped offline software review (90 unique tests). The original Windows V2 UNKNOWN now has a verified same-host quiescence disposition but remains the historical UNKNOWN. The 9d5aab1 prepare and source/plan review passed; one execute attempt failed before stdio because the entrypoint imported an older installed package. No COMSOL/Worker/native birth occurred. Fix candidate binding and create a new reviewed freeze; do not replay the old freeze. Native acceptance remains NOT_RUN.",
+    "limits": "The source package at HEAD 31607303 is the basis for the new Windows 6.4 prepare. The recovery proof is scoped to current-host quiescence only; the original connect remains UNKNOWN, and native solve/readback acceptance remains NOT_RUN.",
     "unknown_behavior": "Preserve exact original job identity and stop dependent actions; never replay an uncertain solve or launch.",
     "executor": "/root/luna_stage_output",
     "main_review": {
@@ -315,7 +315,7 @@
         }
       }
     },
-    "next_action": "Continue read-only source/config root-cause analysis of the credential-acquisition failure. Current process/listener observation is not a durable reconciliation; no replay, reconnect, stop, cleanup or new launch. Main decides any subsequent controlled action."
+    "next_action": "Prepare the Windows 6.4 candidate from source HEAD 31607303 for one bounded minimal chain. Preparation is in progress; no native action has run. Keep the original session.connect UNKNOWN and solve/readback NOT_RUN. Do not redispatch recovery or claim connection/solve acceptance from the quiescence proof."
   },
   "startup_recovery_software": {
     "status": "PASS_SCOPED_OFFLINE",
@@ -1146,7 +1146,7 @@
   },
   "connect_unknown_recovery_software": {
     "status": "PASS_SCOPED_SOFTWARE_MAIN_ACCEPTED",
-    "native_recovery_status": "DISPATCHED_ONCE_PUBLIC_SUCCESS_READBACK_NOT_VERIFIED",
+    "native_recovery_status": "DISPATCHED_ONCE_PUBLIC_SUCCESS_READ_ONLY_QUIESCENCE_VERIFIED",
     "native_connect_status": "UNKNOWN_PRESERVED",
     "solve_readback_status": "NOT_RUN",
     "unique_final_integration_tests": 133,
@@ -1219,7 +1219,7 @@
     "execution_note": "This local UNFROZEN driver-preparation record predates the separately uploaded 3160730 package. The package was dispatched once; see connect_recovery_attempt_20260929T085118Z. Its readback is NOT_VERIFIED; do not redispatch."
   },
   "connect_recovery_attempt_20260929T085118Z": {
-    "status": "PUBLIC_RECOVERY_SUCCEEDED_READBACK_NOT_VERIFIED",
+    "status": "PUBLIC_RECOVERY_SUCCEEDED_READ_ONLY_QUIESCENCE_VERIFIED_CONNECT_UNKNOWN_PRESERVED",
     "native_status": "NOT_RUN",
     "source_head": "31607303dc92b3131a34c17fea659ce0c41b46cb",
     "source_archive_sha256": "29bdfa932f7d29bb6c4f1c7347c99fe6a34fcaf95aba77533ad3e4fba2cd3f6b",
@@ -1292,47 +1292,103 @@
         "no_redispatch": true
       }
     },
-    "interpretation": "One public recovery request returned success and its operation/job read back SUCCEEDED, but the independent driver proof checks failed. Preserve the original source result and treat recovery closure as NOT_VERIFIED until the current read-only verifier resolves the mismatch. Do not dispatch again; no connection, solve, or readback acceptance is implied."
+    "interpretation": "The sole public recovery request returned success. Its immediate driver readback was NOT_VERIFIED because the verifier CLI named a nonexistent nested stdout path; that failure and artifact are preserved. The corrected independent read-only verifier used the task-root stdout whose SHA256 matched, exited 0, and verified only ABANDONED_UNKNOWN_CONNECT_CURRENT_HOST_QUIESCENCE. No recovery was redispatched. The source remains RECONCILING with its original canonical/raw UNKNOWN result hashes, lifecycle is STOPPED with no endpoint/identity, and there was no native birth. This does not prove session.connect succeeded or any solve/readback passed.",
+    "final_readonly_verification": {
+      "status": "READ_ONLY_VERIFIED",
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-connect-recovery-readonly-statusfix-v1/readonly-verification-authoritative-20260929.json",
+      "sha256": "0e0911e95a3555098b3ad779347f178b7ca29f4b4b4ba36aa57be6536246e60f",
+      "remote_stdout_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-connect-recovery-readonly-statusfix-v1/readonly-verification-authoritative-20260929.stdout",
+      "remote_stdout_sha256": "a85cc515aa735238b8e455a36f66212a29ebe208156d128db53bbf52002dfe26",
+      "remote_exit_code": 0,
+      "proof_scope": "ABANDONED_UNKNOWN_CONNECT_CURRENT_HOST_QUIESCENCE",
+      "request_id": "bfb6e8fb-f504-4d08-837c-a75d3a3b7996",
+      "recovery_operation_id": "39b8a015-7452-483b-9b33-638fa1409938",
+      "recovery_job_id": "235ba7b5-8fb1-47dc-8852-1a93bee830c1",
+      "source_status": "RECONCILING",
+      "source_canonical_result_sha256": "c446c5e5d8cd2647af3ef7383ba553e8f5408c58707748390e58e36ce837ef2a",
+      "source_raw_result_sha256": "0b367dc91452878cba69b230ba195ea490b907b2c219a315baf8002de1a868e7",
+      "source_result_preserved": true,
+      "lifecycle": "STOPPED_NO_ENDPOINT_OR_IDENTITY",
+      "process_inventory": "COMPLETE_ZERO_MATCHES",
+      "listener_inventory": "COMPLETE_ZERO_MATCHES",
+      "native_birth_by_recovery": false,
+      "recovery_redispatched": false,
+      "native_status": "NOT_RUN"
+    }
   },
   "connect_recovery_readonly_statusfix": {
-    "status": "PREPARED_LOCAL_ONLY_EXACT_UPLOAD_SCOPE_PENDING",
+    "status": "READ_ONLY_VERIFIED_SCOPED_QUIESCENCE_DISPOSITION",
+    "main_review": "ACCEPTED_SCOPED_READ_ONLY_VERIFICATION",
     "native_status": "NOT_RUN",
     "evidence_directory": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-connect-recovery-readonly-statusfix-v1",
     "preparation_receipt": {
       "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-connect-recovery-readonly-statusfix-v1/readonly-statusfix-preparation-receipt.json",
       "sha256": "750b2d46d40c77c2ed62656e1041d0a044c482e15b4c8cf7e3a308cd5dfccff5"
     },
-    "driver": {
-      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-connect-recovery-readonly-statusfix-v1/run_session_connect_recovery_once_v2_statusfix.py",
-      "sha256": "20392f102a03cb77fb7e51c0d2c61b0a3a019773b5443c3f0484b0a82e5b7b5e"
-    },
-    "readonly_helper": {
-      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-connect-recovery-readonly-statusfix-v1/readonly_verify_connect_recovery_v1.py",
-      "sha256": "74639e03ba1df335129d064903f13974cf1c77690d28792394638a513d304aa8"
-    },
-    "junit": {
+    "offline_junit": {
       "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-connect-recovery-readonly-statusfix-v1/pytest-results.xml",
       "sha256": "5cca1663aa9ed51e177f30c389628a71b84132bdf807a62057e167b4a8f3eb55",
       "unique_tests": 5,
       "passed": 5,
       "failures": 0,
       "errors": 0,
-      "skipped": 0
+      "skipped": 0,
+      "counting": "Preparation tests; not repeated for this read-only Windows verification."
     },
-    "retained_execution_stdout": {
-      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-connect-recovery-handoff-3160730/execute-recovery-envfix.stdout",
-      "sha256": "994f5cd8d2610bd6ab68df3124dca08cd24955c21cfd628c71dc76bef001dd0b"
+    "driver_sha256": "20392f102a03cb77fb7e51c0d2c61b0a3a019773b5443c3f0484b0a82e5b7b5e",
+    "readonly_helper_sha256": "74639e03ba1df335129d064903f13974cf1c77690d28792394638a513d304aa8",
+    "authoritative_receipt": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-connect-recovery-readonly-statusfix-v1/readonly-verification-authoritative-20260929.json",
+      "sha256": "0e0911e95a3555098b3ad779347f178b7ca29f4b4b4ba36aa57be6536246e60f"
     },
-    "upload_attempt": {
-      "status": "REJECTED_BY_AUTO_REVIEW_NOT_UPLOADED",
-      "target": "everwalker@192.168.100.2:C:/Temp/w21r03/",
-      "file_count": 3,
-      "includes_retained_execution_stdout": true,
-      "reason": "Source/receipt project-identity and path scope was judged outside the broad upload authorization; exact user authorization is pending.",
-      "remote_verification": "NOT_RUN"
+    "authoritative_stdout": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-connect-recovery-readonly-statusfix-v1/readonly-verification-authoritative-20260929.stdout",
+      "sha256": "a85cc515aa735238b8e455a36f66212a29ebe208156d128db53bbf52002dfe26",
+      "remote_exit_code": 0
     },
-    "next_action": "Do not retry the rejected transfer or redispatch recovery. Resolve the pending exact user authorization; if authorized, transfer the pinned verifier material and perform only its read-only Windows verification.",
-    "main_review": "ACCEPTED_SCOPED_OFFLINE",
-    "original_stdout_sha256": "994f5cd8d2610bd6ab68df3124dca08cd24955c21cfd628c71dc76bef001dd0b"
+    "source_result_hashes": {
+      "canonical_sha256": "c446c5e5d8cd2647af3ef7383ba553e8f5408c58707748390e58e36ce837ef2a",
+      "raw_sha256": "0b367dc91452878cba69b230ba195ea490b907b2c219a315baf8002de1a868e7",
+      "preserved": true
+    },
+    "verification": {
+      "status": "READ_ONLY_VERIFIED",
+      "all_checks_pass": true,
+      "proof_scope": "ABANDONED_UNKNOWN_CONNECT_CURRENT_HOST_QUIESCENCE",
+      "source_status": "RECONCILING",
+      "recovery_operation": "39b8a015-7452-483b-9b33-638fa1409938 SUCCEEDED",
+      "recovery_job": "235ba7b5-8fb1-47dc-8852-1a93bee830c1 SUCCEEDED",
+      "lifecycle": "STOPPED_NO_ENDPOINT_OR_IDENTITY",
+      "complete_process_inventory": "ZERO_MATCHES",
+      "complete_listener_inventory": "ZERO_MATCHES",
+      "native_birth_by_recovery": false,
+      "connect_status": "UNKNOWN_PRESERVED",
+      "solve_readback": "NOT_RUN"
+    },
+    "transfer_history": [
+      {
+        "status": "REJECTED_BY_AUTO_REVIEW_NOT_UPLOADED",
+        "target": "everwalker@192.168.100.2:C:/Temp/w21r03/",
+        "note": "Historical first attempt; auto-review judged project-identity/path scope exceeded broad upload authorization."
+      },
+      {
+        "status": "USER_APPROVED_FORMAL_APPROVAL_EXIT_0_HASHES_CONFIRMED",
+        "file_count": 3,
+        "target": "everwalker@192.168.100.2:C:/Temp/w21r03/",
+        "hashes_confirmed": {
+          "statusfix_driver": "20392f102a03cb77fb7e51c0d2c61b0a3a019773b5443c3f0484b0a82e5b7b5e",
+          "readonly_helper": "74639e03ba1df335129d064903f13974cf1c77690d28792394638a513d304aa8",
+          "prior_execution_stdout": "994f5cd8d2610bd6ab68df3124dca08cd24955c21cfd628c71dc76bef001dd0b"
+        }
+      }
+    ],
+    "preserved_first_verifier_attempt": {
+      "status": "NOT_VERIFIED",
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-connect-recovery-readonly-statusfix-v1/readonly-verification-attempt-20260929.json",
+      "sha256": "d93790db9f563a2e06e38802111baf68bc9565313d976267f5a702914e8c318a",
+      "remote_exit_code": 3,
+      "cause": "CLI stdout argument pointed to absent nested directory; the correct uploaded stdout was at task root. This was a read-only path error, not a database/recovery failure; no recovery was redispatched."
+    },
+    "next_action": "Prepare the Windows 6.4 candidate from source HEAD 31607303 for one bounded minimal chain. Preparation is in progress; no native action has run."
   }
 }

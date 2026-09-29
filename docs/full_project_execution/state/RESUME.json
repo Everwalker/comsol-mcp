@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "phase": "W21_WINDOWS64_CONNECT_RECOVERY_READBACK_REVIEW",
+  "phase": "W21_WINDOWS64_MINIMAL_CHAIN_PREPARATION",
   "task": "W01_W26_CONTINUOUS_IMPLEMENTATION",
-  "status": "RECOVERY_PUBLIC_SUCCESS_READBACK_NOT_VERIFIED_EXACT_VERIFIER_UPLOAD_SCOPE_PENDING_CONNECT_UNKNOWN_PRESERVED_SOLVE_READBACK_NOT_RUN",
+  "status": "CONNECT_UNKNOWN_PRESERVED_RECOVERY_QUIESCENCE_READ_ONLY_VERIFIED_MINIMAL_CHAIN_PREPARATION_NATIVE_NOT_RUN_SOLVE_READBACK_NOT_RUN",
   "candidate_source": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-import-fix-handoff-164eec3/w21-import-fix-handoff-164eec3.tar.gz (sha256 1c6819c7735a46e1c3e169b178b955e40fb5196ac33547e670a22a804299aeef; source 164eec3c131c45cc61a41d62bd02606ea41e7d88; freeze c6047af8857cf00cba4f0c8f6d6a9744980f19a677b8ecfb6382800f04d901b2)",
   "completed_work": [
     "PIN source restoration completed and verified: 10832 files, zero missing LFS backing objects; repository HEAD matches pinned commit/tree.",
@@ -148,10 +148,9 @@
       "checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json"
     }
   ],
-  "next_action": "The local read-only recovery verifier/status-fix is main-reviewed with 5 unique offline tests PASS, but Windows readback remains NOT_VERIFIED. The exact three-file SCP was rejected by automatic approval review over project-identity/path scope and nothing was uploaded; exact user authorization is pending. Do not retry the rejected transfer or redispatch session.recover. If authorized, transfer the pinned verifier material for a read-only query only; preserve the source RECONCILING state, original UNKNOWN result hashes and STOPPED lifecycle until proof is accepted. Solve/readback remains NOT_RUN.",
+  "next_action": "The original 164eec3 session.connect remains UNKNOWN and its original result is preserved. The sole session.recover operation/job succeeded and its corrected independent read-only verifier now passes for ABANDONED_UNKNOWN_CONNECT_CURRENT_HOST_QUIESCENCE: source remains RECONCILING with canonical/raw result hashes unchanged, lifecycle is STOPPED with no endpoint/identity, complete process/listener inventories have zero matches, and recovery caused no native birth. The earlier verifier exit 3 was only an incorrect nested stdout path; the task-root file hash matched and corrected read-only verification exited 0 without redispatch. Prepare the new Windows 6.4 candidate from source HEAD 31607303 for one bounded minimal chain; preparation is in progress and no native action has run. This does not establish connect or solve success; solve/readback remains NOT_RUN.",
   "active_jobs": [],
   "blockers": [
-    "The exact three-file SCP for the read-only recovery verifier/status-fix was rejected by automatic approval review over project-identity/path scope; nothing was uploaded. Exact user authorization is pending. Recovery readback remains NOT_VERIFIED; no redispatch.",
     "W23 failed setup owned Server 75272 and daemon 75260 remain preserved: cleanup SIGTERM was rejected by automatic approval and explicit authorization is pending; no cleanup or relaunch authorized by elapsed time.",
     "W24 managed setup and sensitivity software can be frozen from published baselines; native 14-case setup/readmission/science remains NOT_RUN. New-epoch budget identity software is main-reviewed PASS; production orchestration software is main-reviewed PASS at a4684f8; actual native evidence remains required; historical 10-solve budget is not authorization for 14 solves.",
     "Earlier W24 0841Z/0857Z pre-birth failure and 0517Z ExternalStrain FAIL/UNKNOWN/safe_retry=false remain historical failures; full cure/reference-state/viscoelastic/static-shape acceptance is open.",
@@ -178,7 +177,7 @@
     "native_solve_budget_remaining": 0,
     "evidence": "docs/full_project_execution/evidence/luna_process_reconciliation/mac_readonly_snapshot_20260926T2152Z.json"
   },
-  "updated_at": "2026-09-29T09:12:16Z",
+  "updated_at": "2026-09-29T09:36:10Z",
   "note": "Original scope remains through W26. User explicitly resumed after the test-efficiency analysis; implement efficiency improvements first. OpenViking task-detail retrieval was denied by auto-review because it would disclose internal roadmap identifiers externally; no workaround. Use current frozen workpack and read-only local memory only. Do not rerun bootstrap/init on resume. Source files now contain executor edits; do not rerun bootstrap/init. Git metadata is an APFS pointer managed by main agent; migration requires bundle/source transfer, not copying only the repository pointer. Git metadata migration is documented by evidence/git_metadata_relocation.json and owned by the main agent; do not copy the APFS git pointer to another machine without source bundle/archive. GUI permission boundary and checkpoint solution-scope caveat recorded. This executor has one W24 native setup-only failure with exact cleanup verified; the durable operation/job UNKNOWN records remain unchanged. No W24 solver submission occurred. Saved-MPH readback supplement uses separate time/evidence and zero study/solver calls; run08 remains FAIL_OR_INCOMPLETE. Root raw SQLite recomputation is linked under native_resume_saved_artifact_supplement.raw_recomputation_evidence; original run08 remains FAIL_OR_INCOMPLETE and no solve budget is restored. Latest checkpoint 2026-09-27T03:50:43Z: W24 0334Z setup run failed pre-model due Python 3.14 missing mcp, with exact cleanup; 0346Z candidate pins the validated 3.12.13 environment and passes a production no-engine registry/daemon preflight. Native setup remains pending root review; science implementation continues offline. Latest checkpoint 2026-09-27T09:09:28Z: W24 0841Z candidate was invoked once at 0857Z and failed before any engine/Worker birth because project.inspect received an injected idempotency_key; project.create persisted successfully. Exact read-only SQLite hash and operation result are in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_contract_diagnostic.json. The runner now omits the unnecessary inspect key; actual ControlDaemon focused regression is 2/2 PASS in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_runner_regression_receipt.json. No native retry or acceptance is claimed; release F04 runtime integration is active, so refresh closure and root review are required before another launch. Windows COMSOL 6.3 remains required/unassessed; only macOS 6.3 is USER_REQUESTED_SKIP.",
   "native_resume_smoke": {
     "status": "FAIL_OR_INCOMPLETE_POINT_SCHEMA_FAILURE; SOLVED_CHILD_ARTIFACT_DURABLE; SOLVE_BUDGET_EXHAUSTED; SEPARATE_SAVED_MPH_READBACK_PASS",
@@ -1038,9 +1037,13 @@
   "acceptance_cells_changed": false,
   "current_execution_checkpoint": {
     "path": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json",
-    "status": "RECOVERY_PUBLIC_SUCCESS_READBACK_NOT_VERIFIED_CONNECT_UNKNOWN_RESULT_PRESERVED_SOLVE_READBACK_NOT_RUN",
+    "status": "RECOVERY_QUIESCENCE_READ_ONLY_VERIFIED_CONNECT_UNKNOWN_PRESERVED_SOLVE_READBACK_NOT_RUN",
     "unique_software_tests": 133,
-    "native_recovery": "DISPATCHED_ONCE; READBACK NOT_VERIFIED"
+    "read_only_verification_receipt": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-connect-recovery-readonly-statusfix-v1/readonly-verification-authoritative-20260929.json",
+      "sha256": "0e0911e95a3555098b3ad779347f178b7ca29f4b4b4ba36aa57be6536246e60f"
+    },
+    "native_recovery": "ONE_DISPATCH; READ_ONLY_QUIESCENCE_VERIFIED"
   },
   "w24_setup_candidate_0841z_native_attempt": {
     "candidate_id": "W24-CURE-HIST-AXISYM-01",
@@ -2821,7 +2824,7 @@
     "solver_dispatches": 0,
     "replay_permitted": false,
     "cleanup_permitted": false,
-    "next_action": "The original session.start remains UNKNOWN/NOT_ACCEPTED and is separately reconciled by the verified V3 quiescence proof; do not replay it. The newer 164eec3 session.connect also remains UNKNOWN and has only read-only current-host diagnostics, not durable reconciliation. See windows64_latest_connect_attempt and the checkpoint diagnostic; no retry or cleanup.",
+    "next_action": "The original session.start remains UNKNOWN/NOT_ACCEPTED and its separate V3 quiescence disposition remains verified. The newer 164eec3 session.connect also remains UNKNOWN; its sole recovery is now read-only verified for current-host quiescence only, with source RECONCILING/result preserved and lifecycle STOPPED. Prepare the Windows 6.4 candidate from source HEAD 31607303 for one bounded minimal chain; no native action has run.",
     "image_library_basename": "CORE_RL_magick_.dll",
     "image_library_relative_alias": "ext\\graphicsmagick\\win64\\CORE_RL_magick_.dll",
     "image_library_exists": true,
@@ -2859,10 +2862,10 @@
       "checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json"
     },
     "next_native_minimal_chain": {
-      "status": "164EEC3_CONNECT_UNKNOWN_DIAGNOSTICS_PENDING_SOLVE_READBACK_NOT_RUN",
+      "status": "CONNECT_UNKNOWN_QUIESCENCE_READ_ONLY_VERIFIED_SOLVE_READBACK_NOT_RUN_MINIMAL_CHAIN_PREPARATION",
       "checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json",
       "executor": "/root/luna_stage_output",
-      "next_action": "Current action is read-only diagnosis of the separate 164eec3 session.connect UNKNOWN. No replay, cleanup, or new native launch. Solve/readback is NOT_RUN; main decides after diagnosis. Preserve the original V3 recovery disposition and prior failed-freeze history."
+      "next_action": "Prepare the Windows 6.4 candidate from source HEAD 31607303 for one bounded minimal chain. This is preparation only; do not redispatch recovery. Preserve session.connect UNKNOWN and solve/readback NOT_RUN."
     },
     "startup_recovery_software": {
       "status": "PASS_SCOPED_OFFLINE",
@@ -2994,8 +2997,8 @@
     "checkpoint": "docs/full_project_execution/project_session/PRODUCTION_RUNNER_SOFTWARE_CHECKPOINT.json#candidate_import_binding_repair"
   },
   "windows64_latest_connect_attempt": {
-    "status": "SESSION_CONNECT_UNKNOWN_RECOVERY_PUBLIC_SUCCESS_READBACK_NOT_VERIFIED",
-    "native_status": "CONNECT_UNKNOWN_RESULT_PRESERVED; CONNECT_RECOVERY_READBACK_NOT_VERIFIED; SOLVE_READBACK_NOT_RUN",
+    "status": "SESSION_CONNECT_UNKNOWN_RECOVERY_QUIESCENCE_READ_ONLY_VERIFIED",
+    "native_status": "CONNECT_UNKNOWN_RESULT_PRESERVED; RECOVERY_QUIESCENCE_READ_ONLY_VERIFIED; SOLVE_READBACK_NOT_RUN",
     "checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json#latest_native_attempt_164eec3",
     "evidence_root": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-import-fix-handoff-164eec3",
     "source_head": "164eec3c131c45cc61a41d62bd02606ea41e7d88",
@@ -3020,7 +3023,7 @@
     "cleanup_permitted": false,
     "execute_receipt_sha256": "461bd61db71372733ff4afc7f3fb5b5d6f40f4edc70a914c3e671c2ee2fe628a",
     "state_after_execute_sha256": "7ddd5d10720285d6160d5e68966a7db171d2ab2d583f8c8075cfc43297f34d16",
-    "next_action": "Recovery public response succeeded once, but readback is still NOT_VERIFIED. The locally prepared verifier has 5 unique offline PASS; its exact three-file SCP was rejected by automatic approval review and no Windows query ran. Await exact user authorization; do not retry the rejected transfer or redispatch recovery. Preserve the original UNKNOWN result, source RECONCILING state and STOPPED lifecycle.",
+    "next_action": "The sole recovery operation/job succeeded and the corrected read-only verifier confirms ABANDONED_UNKNOWN_CONNECT_CURRENT_HOST_QUIESCENCE. The original session.connect result remains UNKNOWN; source state is RECONCILING with original hashes preserved; lifecycle is STOPPED with no endpoint/identity. Prepare the Windows 6.4 candidate from source HEAD 31607303 for one bounded minimal chain; no native action has run.",
     "diagnostic_checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json#connect_readonly_diagnostic_v1",
     "worker_failure_code": "ENGINE_CALL_FAILED",
     "persisted_operation_and_job_status": "UNKNOWN",
@@ -3029,7 +3032,8 @@
     "native_retry_or_cleanup_performed": false,
     "auth_preferences_software_checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json#auth_preferences_binding_software",
     "recovery_software_checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json#connect_unknown_recovery_software",
-    "recovery_attempt_checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json#connect_recovery_attempt_20260929T085118Z"
+    "recovery_attempt_checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json#connect_recovery_attempt_20260929T085118Z",
+    "recovery_readonly_verification_checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json#connect_recovery_readonly_statusfix"
   },
   "latest_runner_compute_policy_repair": {
     "status": "PASS_SCOPED_OFFLINE_MAIN_REVIEWED",
@@ -3074,7 +3078,7 @@
   },
   "connect_unknown_recovery_software": {
     "status": "PASS_SCOPED_SOFTWARE_MAIN_ACCEPTED",
-    "native_recovery_status": "DISPATCHED_ONCE_PUBLIC_SUCCESS_READBACK_NOT_VERIFIED",
+    "native_recovery_status": "DISPATCHED_ONCE_PUBLIC_SUCCESS_READ_ONLY_QUIESCENCE_VERIFIED",
     "connect_unknown_preserved": true,
     "unique_final_integration_tests": 133,
     "failures": 0,
@@ -3129,7 +3133,7 @@
     "execution_note": "The UNFROZEN local-driver preparation record is historical. A separate source package at HEAD 31607303 was uploaded and dispatched once; see connect_recovery_attempt_20260929T085118Z. Its driver readback is NOT_VERIFIED and must not be redispatched."
   },
   "connect_recovery_attempt_20260929T085118Z": {
-    "status": "PUBLIC_RECOVERY_SUCCEEDED_READBACK_NOT_VERIFIED",
+    "status": "PUBLIC_RECOVERY_SUCCEEDED_READ_ONLY_QUIESCENCE_VERIFIED_CONNECT_UNKNOWN_PRESERVED",
     "native_status": "NOT_RUN",
     "source_head": "31607303dc92b3131a34c17fea659ce0c41b46cb",
     "source_archive_sha256": "29bdfa932f7d29bb6c4f1c7347c99fe6a34fcaf95aba77533ad3e4fba2cd3f6b",
@@ -3202,15 +3206,36 @@
         "no_redispatch": true
       }
     },
-    "interpretation": "One public recovery request returned success and its operation/job read back SUCCEEDED, but the independent driver proof checks failed. Preserve the original source result and treat recovery closure as NOT_VERIFIED until the current read-only verifier resolves the mismatch. Do not dispatch again; no connection, solve, or readback acceptance is implied."
+    "interpretation": "The sole public recovery request returned success. Its immediate driver readback was NOT_VERIFIED because the verifier CLI named a nonexistent nested stdout path; that failure and artifact are preserved. The corrected independent read-only verifier used the task-root stdout whose SHA256 matched, exited 0, and verified only ABANDONED_UNKNOWN_CONNECT_CURRENT_HOST_QUIESCENCE. No recovery was redispatched. The source remains RECONCILING with its original canonical/raw UNKNOWN result hashes, lifecycle is STOPPED with no endpoint/identity, and there was no native birth. This does not prove session.connect succeeded or any solve/readback passed.",
+    "final_readonly_verification": {
+      "status": "READ_ONLY_VERIFIED",
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-connect-recovery-readonly-statusfix-v1/readonly-verification-authoritative-20260929.json",
+      "sha256": "0e0911e95a3555098b3ad779347f178b7ca29f4b4b4ba36aa57be6536246e60f",
+      "remote_stdout_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-connect-recovery-readonly-statusfix-v1/readonly-verification-authoritative-20260929.stdout",
+      "remote_stdout_sha256": "a85cc515aa735238b8e455a36f66212a29ebe208156d128db53bbf52002dfe26",
+      "remote_exit_code": 0,
+      "proof_scope": "ABANDONED_UNKNOWN_CONNECT_CURRENT_HOST_QUIESCENCE",
+      "request_id": "bfb6e8fb-f504-4d08-837c-a75d3a3b7996",
+      "recovery_operation_id": "39b8a015-7452-483b-9b33-638fa1409938",
+      "recovery_job_id": "235ba7b5-8fb1-47dc-8852-1a93bee830c1",
+      "source_status": "RECONCILING",
+      "source_canonical_result_sha256": "c446c5e5d8cd2647af3ef7383ba553e8f5408c58707748390e58e36ce837ef2a",
+      "source_raw_result_sha256": "0b367dc91452878cba69b230ba195ea490b907b2c219a315baf8002de1a868e7",
+      "source_result_preserved": true,
+      "lifecycle": "STOPPED_NO_ENDPOINT_OR_IDENTITY",
+      "process_inventory": "COMPLETE_ZERO_MATCHES",
+      "listener_inventory": "COMPLETE_ZERO_MATCHES",
+      "native_birth_by_recovery": false,
+      "recovery_redispatched": false,
+      "native_status": "NOT_RUN"
+    }
   },
   "connect_recovery_readonly_statusfix": {
-    "status": "PREPARED_LOCAL_ONLY_EXACT_UPLOAD_SCOPE_PENDING",
-    "main_review": "ACCEPTED_SCOPED_OFFLINE",
+    "status": "READ_ONLY_VERIFIED_SCOPED_QUIESCENCE_DISPOSITION",
     "native_status": "NOT_RUN",
     "checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json#connect_recovery_readonly_statusfix",
-    "unique_offline_tests": "5 PASS; no Windows query",
-    "upload_attempt": "REJECTED_BY_AUTO_REVIEW_NOT_UPLOADED; exact user authorization pending",
-    "next_action": "If authorized, transfer pinned verifier material for a read-only query only; no recovery redispatch."
+    "receipt_sha256": "0e0911e95a3555098b3ad779347f178b7ca29f4b4b4ba36aa57be6536246e60f",
+    "scope": "ABANDONED_UNKNOWN_CONNECT_CURRENT_HOST_QUIESCENCE",
+    "next_action": "Prepare Windows 6.4 from source HEAD 31607303 for one bounded minimal chain; preparation only, no native action yet."
   }
 }
