@@ -5,7 +5,7 @@
   "overall_status": "PARTIAL",
   "source_package_status": "PASS_MAIN_VERIFIED",
   "native_status": "NOT_ACCEPTED_SESSION_START_UNKNOWN",
-  "next_action": "Repair the solve-readback entrypoint to bind plan imports to the hash-verified 9d5aab1 candidate. The 9d5aab1 prepare and source/plan review passed, but the single execute attempt failed before stdio dispatch because import resolution used an older installed package lacking comsol_mcp._session_server; the candidate source itself passed all 104 source checks. Preserve that run and freeze. Main reviews a new freeze after the candidate-binding fix, then one fresh Windows 6.4 solve-readback may run under the frozen budget. Do not rerun the old freeze or replay the original session.start or prior session.recover requests. Windows 6.3 follows only after 6.4 is successfully closed, then continue W23-W26. Native status remains NOT_RUN.",
+  "next_action": "Create and verify a fresh source snapshot with the main-reviewed candidate-import binding repair (94 related tests); upload under existing authorization, prepare a new Windows6.4 solve-readback freeze, review its exact source/runtime/budgets, then execute once. Do not replay freeze9cd78ad3 or any old request. Original UNKNOWN is durably quiescent with history retained; Windows6.3 follows actual6.4 safe completion, then W23-W26.",
   "candidate": {
     "source_commit": "9c5ced6272dd876cf9c28c6c6f73b943bd76b96c",
     "evidence_root": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-v2-20260928T235840Z-9c5ced6",
@@ -743,7 +743,7 @@
         }
       ]
     },
-    "next_action": "Repair the entrypoint so plan loading imports from the hash-verified candidate; add the targeted regression, then make a new source freeze and obtain main review. Run one fresh Windows 6.4 solve-readback only against that new freeze. Do not replay this PREPARED run/freeze. Native status remains NOT_RUN."
+    "next_action": "Create and verify a fresh source snapshot with the main-reviewed candidate-import binding repair (94 related tests); upload under existing authorization, prepare a new Windows6.4 solve-readback freeze, review its exact source/runtime/budgets, then execute once. Do not replay freeze9cd78ad3 or any old request. Original UNKNOWN is durably quiescent with history retained; Windows6.3 follows actual6.4 safe completion, then W23-W26."
   },
   "fresh_recovery_attempt_20260929T061208Z": {
     "status": "UNKNOWN_NO_RETRY_RECOVERY_REJECTED",

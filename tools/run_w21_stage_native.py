@@ -71,6 +71,12 @@ def _safe_runner_error_causes(exc: BaseException, *, limit: int = 3) -> list[dic
     def visit(error: BaseException) -> None:
         if len(found) >= limit:
             return
+        if isinstance(error, ModuleNotFoundError):
+            module = error.name if isinstance(error.name, str) else ""
+            if re.fullmatch(r"[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*", module) is None:
+                module = "unknown"
+            found.append({"type": "ModuleNotFoundError", "module": module})
+            return
         if isinstance(error, RunnerError):
             message = " ".join(str(error).split())[:500]
             message = re.sub(
@@ -156,6 +162,45 @@ def source_manifest(root: Path) -> dict[str, str]:
     root = root.resolve(strict=True)
     return {path.relative_to(root).as_posix(): sha256_file(path)
             for path in _source_files(root)}
+
+
+def _bind_candidate_source(root: Path) -> Path:
+    """Put the explicit candidate first and reject already-loaded foreign code."""
+    resolved = Path(root).resolve(strict=True)
+    package_init = resolved / "comsol_mcp" / "__init__.py"
+    if not package_init.is_file():
+        raise RunnerError("selected source root has no regular comsol_mcp package")
+    for name, module in tuple(sys.modules.items()):
+        if name != "comsol_mcp" and not name.startswith("comsol_mcp."):
+            continue
+        origin = getattr(module, "__file__", None)
+        if not isinstance(origin, str):
+            raise RunnerError("a loaded comsol_mcp module has no verifiable source origin")
+        try:
+            Path(origin).resolve(strict=False).relative_to(resolved)
+        except (OSError, ValueError) as exc:
+            raise RunnerError("a loaded comsol_mcp module came from outside the selected source root") from exc
+    root_text = str(resolved)
+    if sys.path and sys.path[0] == root_text:
+        return resolved
+    sys.path.insert(0, root_text)
+    return resolved
+
+
+def _assert_frozen_source(plan: Mapping[str, Any], source_root: Path) -> Path:
+    """Validate the frozen path and complete source closure before importing it."""
+    try:
+        declared = Path(plan.get("source_root", source_root)).resolve(strict=True)
+        selected = Path(source_root).resolve(strict=True)
+    except (OSError, TypeError) as exc:
+        raise RunnerError("frozen source root is unavailable") from exc
+    if declared != selected:
+        raise RunnerError("source root differs from the frozen candidate")
+    current = source_manifest(selected)
+    if (current != plan.get("source_manifest")
+            or sha256_value(current) != plan.get("source_manifest_sha256")):
+        raise RunnerError("frozen source manifest drifted; no MCP call was made")
+    return _bind_candidate_source(selected)
 
 
 def _python_identity() -> dict[str, Any]:
@@ -441,7 +486,13 @@ def _task_owned_server_home_root(task_root: Path, requested: Path | None, *,
 
 
 def _server_home_budget(server_home: Path) -> dict[str, Any]:
-    from comsol_mcp._session_server import windows_owned_server_path_budget
+    try:
+        from comsol_mcp._session_server import windows_owned_server_path_budget
+    except ModuleNotFoundError as exc:
+        module = exc.name if isinstance(exc.name, str) else "unknown"
+        if re.fullmatch(r"[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*", module) is None:
+            module = "unknown"
+        raise RunnerError(f"Windows Server path preflight could not import module: {module}") from None
 
     try:
         # The real project/session IDs are assigned after public project.create.
@@ -513,8 +564,7 @@ def prepare(*, version: str, comsol_root: Path, jdk_home: Path,
     if platform.system() != "Windows":
         raise RunnerError("prepare is metadata-only but must run on the target Windows host")
     source_root = source_root.resolve(strict=True)
-    if str(source_root) not in sys.path:
-        sys.path.insert(0, str(source_root))
+    _bind_candidate_source(source_root)
     if os.environ.get("COMSOL_MCP_TOOL_PROFILE", "full").casefold() != "full":
         raise RunnerError("COMSOL_MCP_TOOL_PROFILE must be full to freeze the published W21 routes")
     if Path(evidence_root).is_symlink():
@@ -539,6 +589,8 @@ def prepare(*, version: str, comsol_root: Path, jdk_home: Path,
     tool_schemas = _published_tool_schemas(source_root, _mode_tools(mode))
     operation_schemas = _logical_schemas(source_root, _mode_operations(mode))
     python_identity = _python_identity()
+    if source_manifest(source_root) != manifest:
+        raise RunnerError("source manifest changed while prepare was freezing runtime schemas")
 
     run_id = f"w21-{version.replace('.', '')}-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}-{uuid4().hex[:8]}"
     run_root = evidence_root / version / run_id
@@ -647,10 +699,8 @@ def verify_plan(plan: Mapping[str, Any], *, expected_sha256: str,
     observed_hash = candidate.pop("freeze_sha256", None)
     if observed_hash != expected_sha256 or sha256_value(candidate) != expected_sha256:
         raise RunnerError("freeze hash mismatch; execute requires the exact prepared candidate")
+    selected_source_root = _assert_frozen_source(plan, source_root)
     _validate_frozen_server_home(plan)
-    current = source_manifest(source_root)
-    if current != plan.get("source_manifest") or sha256_value(current) != plan.get("source_manifest_sha256"):
-        raise RunnerError("frozen source manifest drifted; no MCP call was made")
     if _python_identity() != plan.get("python"):
         raise RunnerError("Python/interpreter identity differs from the frozen candidate")
     if _published_tool_schemas(source_root, _mode_tools(mode)) != plan.get("published_tool_schemas"):
@@ -662,6 +712,8 @@ def verify_plan(plan: Mapping[str, Any], *, expected_sha256: str,
         raise RunnerError("COMSOL installation/build identity differs from the frozen candidate")
     if _jdk_identity(Path(plan["selected_jdk"]["home"])) != plan.get("selected_jdk"):
         raise RunnerError("JDK identity differs from the frozen candidate")
+    if source_manifest(selected_source_root) != plan.get("source_manifest"):
+        raise RunnerError("frozen source manifest changed during candidate validation")
 
 
 def validate_model_binding(response: Mapping[str, Any], *, project_id: str,

@@ -148,7 +148,7 @@
       "checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json"
     }
   ],
-  "next_action": "V3 session.recover durably verified exact same-host quiescence while retaining the original session.start UNKNOWN result. The 9d5aab1 short-path prepare and source/plan review passed, but its one execute attempt failed before stdio: plan loading resolved an older installed package without comsol_mcp._session_server; the verified candidate itself passed all 104 file checks and contains that module. Durable run state remains PREPARED with empty action history and zero possible dispatches/births. Repair candidate import binding and targeted tests, create and review a new freeze, then perform one fresh Windows 6.4 solve-readback. Never replay the original session.start, either prior recover request, or the failed freeze/run. Windows 6.3 follows only after 6.4 closure, then W23-W26.",
+  "next_action": "Create and verify a fresh source snapshot with the main-reviewed candidate-import binding repair (94 related tests); upload under existing authorization, prepare a new Windows6.4 solve-readback freeze, review its exact source/runtime/budgets, then execute once. Do not replay freeze9cd78ad3 or any old request. Original UNKNOWN is durably quiescent with history retained; Windows6.3 follows actual6.4 safe completion, then W23-W26.",
   "active_jobs": [],
   "blockers": [
     "W23 failed setup owned Server 75272 and daemon 75260 remain preserved: cleanup SIGTERM was rejected by automatic approval and explicit authorization is pending; no cleanup or relaunch authorized by elapsed time.",
@@ -2982,5 +2982,11 @@
     "scope": "This and future source uploads for this project",
     "date": "2026-09-29",
     "limits": "No authorization inferred for unrelated data transfer, UNKNOWN replay, or native acceptance."
+  },
+  "candidate_import_binding_repair": {
+    "status": "PASS_SCOPED_OFFLINE_MAIN_REVIEWED",
+    "tests": 94,
+    "native_status": "NOT_RUN",
+    "checkpoint": "docs/full_project_execution/project_session/PRODUCTION_RUNNER_SOFTWARE_CHECKPOINT.json#candidate_import_binding_repair"
   }
 }

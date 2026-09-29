@@ -80,5 +80,22 @@
     "limits": "Synthetic MCP transport/payload only. Windows/COMSOL/SSH/native execution NOT_RUN; existing Windows V2 session.start UNKNOWN remains unrecovered. Intrinsic field unit, coordinate frame and mesh identity remain UNVERIFIED; no stage admission or scientific acceptance.",
     "test_command": "PYTHONDONTWRITEBYTECODE=1 /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -B -m pytest -p no:cacheprovider --basetemp=/Volumes/CTestEff/g --junitxml=/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback/runner-final4.xml -q tests/test_run_w21_stage_native.py",
     "reproduce": "PYTHONDONTWRITEBYTECODE=1 /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -B -m pytest -p no:cacheprovider --basetemp=/Volumes/CTestEff/g --junitxml=/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback/runner-final4.xml -q tests/test_run_w21_stage_native.py"
+  },
+  "candidate_import_binding_repair": {
+    "status": "PASS_SCOPED_OFFLINE_MAIN_REVIEWED",
+    "native_status": "NOT_RUN",
+    "source_hashes": {
+      "tools/run_w21_stage_native.py": "b5a86342e376b75f44323e44c8f03e381cfe5cbb6d9dfc64b389745b92cbf3d8",
+      "tests/test_run_w21_stage_native.py": "99cfe69fad197fd914a5c2f6ed4ced5c6bccd0868c3f149874cd19d631393e32"
+    },
+    "junit_path": "/Volumes/CTestEff/w21v-junit.xml",
+    "junit_sha256": "f04a3600cc09296289ef72f0306175e172017acfd6a074e49fe8f1568ad05fda",
+    "unique_tests_passed": 94,
+    "limits": "Actual isolated subprocess executes CLI source binding with runtime identity/schema mocks and forced non-Windows guard; no native engine. Source closure checked before import; foreign cached modules rejected; safe missing-module name retained.",
+    "historical_failed_junit": [
+      "/Volumes/CTestEff/w21-runner-source-origin-fix-20260929T01/junit.xml",
+      "/Volumes/CTestEff/w21q-focus.xml"
+    ],
+    "prior_failures": "Overlong pytest scratch paths rejected by unchanged 260-unit path guard; corrected short fixture/basetemp. No Windows native acceptance."
   }
 }

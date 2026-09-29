@@ -13,7 +13,9 @@ from concurrent.futures import ThreadPoolExecutor
 import importlib.util
 import json
 from pathlib import Path
+import subprocess
 import sys
+import textwrap
 import threading
 from types import ModuleType, SimpleNamespace
 
@@ -1203,6 +1205,105 @@ def test_python_identity_fails_closed_on_unreadable_distribution_metadata(monkey
     monkeypatch.setattr(runner.importlib.metadata, "distributions", lambda: [UnreadableDistribution()])
     with pytest.raises(runner.RunnerError, match="dependency inventory is unreadable"):
         runner._python_identity()
+
+
+def test_bind_candidate_source_refuses_a_cached_foreign_package(tmp_path, monkeypatch):
+    stale = ModuleType("comsol_mcp")
+    stale.__file__ = str(tmp_path / "old-wheel" / "comsol_mcp" / "__init__.py")
+    monkeypatch.setitem(sys.modules, "comsol_mcp", stale)
+    with pytest.raises(runner.RunnerError, match="loaded comsol_mcp module came from outside"):
+        runner._bind_candidate_source(REPOSITORY)
+
+
+def test_prepare_bind_root(tmp_path, monkeypatch):
+    _patch_prepare_environment(monkeypatch)
+    monkeypatch.setattr(runner.sys, "path", [str(tmp_path / "unrelated-cwd"), *runner.sys.path])
+    observed = []
+    original = runner._bind_candidate_source
+
+    def record_binding(root):
+        resolved = original(root)
+        observed.append(runner.sys.path[0])
+        return resolved
+
+    monkeypatch.setattr(runner, "_bind_candidate_source", record_binding)
+    evidence = tmp_path / "e"
+    evidence.mkdir()
+    prepared = runner.prepare(
+        version="6.4", comsol_root=tmp_path / "COMSOL64",
+        jdk_home=tmp_path / "jdk", evidence_root=evidence,
+        source_root=REPOSITORY,
+    )
+    assert observed == [str(REPOSITORY.resolve())]
+    assert prepared["status"] == "PREPARED_ONLY"
+
+
+def test_external_cwd_load_plan_candidate(tmp_path):
+    plan = _plan(tmp_path)
+    plan["python"] = {"offline-test": True}
+    plan["source_manifest_sha256"] = runner.sha256_value(plan["source_manifest"])
+    plan.pop("freeze_sha256")
+    plan["freeze_sha256"] = runner.sha256_value(plan)
+    run_root = Path(plan["run_root"])
+    (run_root / "freeze.json").write_text(json.dumps(plan), encoding="utf-8")
+    state = {
+        "schema": plan["schema"], "run_id": plan["run_id"],
+        "freeze_sha256": plan["freeze_sha256"], "status": "PREPARED",
+        "action_history": [],
+    }
+    (run_root / "state.json").write_text(json.dumps(state), encoding="utf-8")
+    outside = tmp_path / "outside-checkout"
+    outside.mkdir()
+    child = textwrap.dedent("""\
+        import importlib.util, json, pathlib, sys
+        plan_path = pathlib.Path(sys.argv[1])
+        expected = sys.argv[2]
+        runner_path = pathlib.Path(sys.argv[3])
+        spec = importlib.util.spec_from_file_location("w21_cli_runner", runner_path)
+        runner = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(runner)
+        plan = json.loads(plan_path.read_text(encoding="utf-8"))
+        runner._python_identity = lambda: plan["python"]
+        runner._published_tool_schemas = lambda _root, _names=None: plan["published_tool_schemas"]
+        runner._logical_schemas = lambda _root, _operations=None: plan["logical_operation_schemas"]
+        runner._comsol_identity = lambda *_args: plan["selected_comsol"]
+        runner._jdk_identity = lambda _home: plan["selected_jdk"]
+        runner.platform.system = lambda: "Linux"
+        runner_exit = runner.main(["execute", "--plan", str(plan_path),
+                                   "--freeze-sha256", expected])
+        import comsol_mcp
+        origin = pathlib.Path(comsol_mcp.__file__).resolve()
+        expected_origin = pathlib.Path(plan["source_root"], "comsol_mcp", "__init__.py").resolve()
+        if origin != expected_origin:
+            raise SystemExit("wrong candidate import origin")
+        print(json.dumps({"runner_exit": runner_exit, "origin": str(origin)}))
+    """)
+    completed = subprocess.run(
+        [sys.executable, "-I", "-B", "-c", child,
+         str(run_root / "freeze.json"), plan["freeze_sha256"],
+         str(REPOSITORY / "tools/run_w21_stage_native.py")],
+        cwd=outside, capture_output=True, text=True, timeout=30,
+    )
+    assert completed.returncode == 0, completed.stderr or completed.stdout
+    output_lines = completed.stdout.splitlines()
+    cli_result = json.loads(output_lines[-2])
+    result = json.loads(output_lines[-1])
+    assert cli_result["status"] == "REFUSED_OR_FAILED"
+    assert cli_result["message"] == "execute refuses non-Windows hosts before any MCP process is started"
+    assert result == {
+        "runner_exit": 2,
+        "origin": str(REPOSITORY / "comsol_mcp/__init__.py"),
+    }
+    unchanged = json.loads((run_root / "state.json").read_text(encoding="utf-8"))
+    assert unchanged["status"] == "PREPARED"
+    assert unchanged["action_history"] == []
+
+
+def test_missing_module_cause_summary_keeps_only_safe_module_name():
+    exc = ModuleNotFoundError("missing private module path", name="comsol_mcp._session_server")
+    assert runner._safe_runner_error_causes(exc) == [{
+        "type": "ModuleNotFoundError", "module": "comsol_mcp._session_server",
+    }]
 
 
 def test_freeze_reads_current_public_stdio_and_logical_query_schemas(monkeypatch):
