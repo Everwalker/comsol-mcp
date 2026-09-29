@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "unit": "W21 Windows6.4 V2 short-home current-source attempt",
-  "updated_at_utc": "2026-09-29T02:42:36.081627+00:00",
+  "updated_at_utc": "2026-09-29T04:17:46Z",
   "overall_status": "PARTIAL",
   "source_package_status": "PASS_MAIN_VERIFIED",
   "native_status": "NOT_ACCEPTED_SESSION_START_UNKNOWN",
-  "next_action": "Freeze and verify a current-source recovery driver; consistent SQLite backup before starting a fresh controller on the old task home; run existing authenticated session.recover once. After actual reconciliation, one short-root Windows 6.4 solve-readback attempt, then 6.3.",
+  "next_action": "Await exact-source upload authorization. Preserve the original session.start UNKNOWN without replay, stop or cleanup. Once authorized, freeze/verify the current-source recovery driver and a consistent SQLite backup, then run the existing authenticated session.recover once. Only after durable reconciliation may the bounded short-root Windows 6.4 solve-readback chain be considered, followed by 6.3.",
   "candidate": {
     "source_commit": "9c5ced6272dd876cf9c28c6c6f73b943bd76b96c",
     "evidence_root": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-v2-20260928T235840Z-9c5ced6",
@@ -260,7 +260,7 @@
     "next_action": "Wire daemon identity sidecar and original-job startup events; finish existing session.recover same-host quiescence reconciliation before a fresh native comparison."
   },
   "next_native_minimal_chain": {
-    "status": "SOFTWARE_IMPLEMENTATION_IN_PROGRESS_NATIVE_NOT_RUN",
+    "status": "PASS_SCOPED_OFFLINE_NATIVE_NOT_RUN",
     "entrypoint": "tools/run_w21_stage_native.py",
     "mode": "solve-readback (separately frozen; existing metadata-only mode remains zero-solve)",
     "sequence": [
@@ -287,18 +287,31 @@
       "queue_timeout_seconds": 30,
       "execution_timeout_seconds": 240
     },
-    "limits": "Original Windows V2 budget is used, not reset. No new native invocation has occurred. Actual field/unit/mesh evidence must be distinguished from configured expectations. A smoke receipt is not stage-run admission, stage transfer, physical acceptance or overall W21 completion.",
+    "limits": "The solve-readback runner passed scoped offline software review (90 unique tests); no new native invocation occurred. Original Windows V2 UNKNOWN remains unrecovered and exact-source upload authorization is pending. Actual field/unit/mesh evidence must be distinguished from configured expectations. A smoke receipt is not stage-run admission, stage transfer, physical acceptance or overall W21 completion.",
     "unknown_behavior": "Preserve exact original job identity and stop dependent actions; never replay an uncertain solve or launch.",
     "executor": "/root/luna_stage_output",
     "main_review": {
-      "status": "REPAIRS_IN_PROGRESS_NOT_ACCEPTED",
-      "findings": [
+      "status": "PASS_SCOPED_SOFTWARE",
+      "actual_read_strategy": "Public result.evaluate returns a complete dataset FieldArray. Match the selected actual SolutionInfo tuple against returned axes/coordinates/solution_pairs and reject incomplete, malformed, nonfinite or over-budget payloads. No internal stage selector/admission bypass.",
+      "native_status": "NOT_RUN",
+      "prior_status": "REPAIRS_IN_PROGRESS_NOT_ACCEPTED",
+      "closed_findings": [
         "Keep the old metadata-only Windows 6.3 prerequisite contract; require the new solve/readback receipt only for solve-readback mode.",
         "Persist possible study/solver and read dispatch consumption before sending; UNKNOWN must not imply zero consumed budget.",
         "Bound the server-side queue/execution envelope by the remaining work window, not only the client RPC wait."
       ],
-      "actual_read_strategy": "Public result.evaluate returns a complete dataset FieldArray. Match the selected actual SolutionInfo tuple against returned axes/coordinates/solution_pairs and reject incomplete, malformed, nonfinite or over-budget payloads. No internal stage selector/admission bypass.",
-      "native_status": "NOT_RUN"
+      "resolution": "All three findings are closed: metadata-only 6.3 keeps its prior contract; solve/tuple/field possible-dispatch is persisted before calls; queue+execution=30+240 seconds must fit the remaining 900-second work window after the 60-second cleanup reserve.",
+      "reviewed_at_utc": "2026-09-29T04:17:46Z",
+      "evidence": {
+        "software_checkpoint": "docs/full_project_execution/project_session/PRODUCTION_RUNNER_SOFTWARE_CHECKPOINT.json",
+        "runner_receipt": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback/receipt-server-budget.json",
+        "runner_receipt_sha256": "c6bec4dfa52c9f1513283c6d17ab660bbe7f9b47aa02bd9f4be531cb9726bbfa",
+        "unique_runner_tests_passed": 90,
+        "candidate_source_sha256": {
+          "tests/test_run_w21_stage_native.py": "2cde2c18d4a1cd3f4769389175fdd41b7cfa9b6aa279c446d5dbee1840e7a62c",
+          "tools/run_w21_stage_native.py": "b9d0866c8af46fd6876865adf8adbce7b50bbf998f467db2ea490f02c76d1d14"
+        }
+      }
     }
   },
   "startup_recovery_software": {

@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Prepare and explicitly execute the bounded W21 field-identity MCP probe.
+"""Prepare and explicitly execute bounded W21 public-MCP runs.
 
-``prepare`` is metadata-only. ``execute`` uses the public stdio MCP surface,
-the production project/session routes, and the daemon-owned Server/Worker
-lifecycle. It builds one task-owned HeatTransfer fixture and captures the
-read-only W21 field-identity probe; it never runs a Study or solver.
+The default metadata-only mode builds one task-owned HeatTransfer fixture and
+captures field-identity metadata without solving. The separately frozen
+solve-readback mode performs one public Study solve and captures actual
+dataset/FieldArray output. Neither mode establishes native admission or
+physical validation.
 """
 from __future__ import annotations
 
@@ -15,6 +16,7 @@ import hashlib
 import importlib.metadata
 import importlib.util
 import json
+import math
 import os
 from pathlib import Path
 import platform
@@ -23,11 +25,15 @@ import shutil
 import sys
 import textwrap
 import time
-from typing import Any, Mapping
+from typing import Any, Mapping, Sequence
 from uuid import uuid4
 
 
 SCHEMA = "W21_FIELD_IDENTITY_MCP_RUN_V2"
+SOLVE_READBACK_SCHEMA = "W21_SOLVE_READBACK_MCP_RUN_V1"
+METADATA_MODE = "metadata-only"
+SOLVE_READBACK_MODE = "solve-readback"
+SOLVE_READBACK_KIND = "W21_PUBLIC_SOLVE_READBACK_CAPTURE_ONLY"
 RUN_BUDGET_S = 900
 RPC_WAIT_S = 45
 CLEANUP_RESERVE_S = 60
@@ -41,6 +47,17 @@ LOGICAL_OPERATIONS = (
     "artifact.register", "code.execute_java", "session.disconnect", "session.stop",
     "job.list", "job.status", "job.wait",
 )
+SOLVE_READBACK_LOGICAL_OPERATIONS = (
+    "dataset.solution_indices", "result.evaluate",
+)
+SOLVE_READBACK_TOOLS = (*REQUIRED_TOOLS, "run_study")
+STAGE_READ_ACTION_COUNTERS = {
+    "study.solve": ("study_dispatch", "solver_dispatch"),
+    "solution_indices": ("solution_tuple_reads",),
+    "result.evaluate": ("field_reads",),
+}
+W21_FIELD_READBACK_MAX_NUMERIC_SCALARS = 65_536
+W21_FIELD_READBACK_MAX_JSON_BYTES = 8 * 1024 * 1024
 
 
 class RunnerError(RuntimeError):
@@ -167,7 +184,52 @@ def _python_identity() -> dict[str, Any]:
     }
 
 
-def _published_tool_schemas(root: Path) -> dict[str, Any]:
+def _mode_schema(mode: str) -> str:
+    if mode == METADATA_MODE:
+        return SCHEMA
+    if mode == SOLVE_READBACK_MODE:
+        return SOLVE_READBACK_SCHEMA
+    raise RunnerError("mode must be exactly metadata-only or solve-readback")
+
+
+def _mode_kind(mode: str) -> str:
+    return ("W21_FIELD_IDENTITY_METADATA_PROBE" if mode == METADATA_MODE
+            else SOLVE_READBACK_KIND if mode == SOLVE_READBACK_MODE
+            else _mode_schema(mode))
+
+
+def _mode_tools(mode: str) -> tuple[str, ...]:
+    return SOLVE_READBACK_TOOLS if mode == SOLVE_READBACK_MODE else REQUIRED_TOOLS
+
+
+def _mode_operations(mode: str) -> tuple[str, ...]:
+    return (LOGICAL_OPERATIONS + SOLVE_READBACK_LOGICAL_OPERATIONS
+            if mode == SOLVE_READBACK_MODE else LOGICAL_OPERATIONS)
+
+
+def _mode_budgets(mode: str) -> dict[str, Any]:
+    common = {
+        "server_births_max": 1, "worker_births_max": 1,
+        "seconds_from_session_start_dispatch": RUN_BUDGET_S,
+        "ordinary_rpc_wait_seconds": RPC_WAIT_S,
+        "project_create_wait_calls_max": 1,
+        "project_create_wait_timeout_seconds": 30,
+        "geometry_run": 1, "mesh_run": 1,
+    }
+    if mode == METADATA_MODE:
+        return {**common, "study_dispatch": 0, "solver_dispatch": 0}
+    if mode == SOLVE_READBACK_MODE:
+        return {
+            **common, "study_dispatch": 1, "solver_dispatch": 1,
+            "solution_tuple_reads": 1, "field_reads": 1,
+            "queue_timeout_seconds": 30, "execution_timeout_seconds": 240,
+            "cleanup_reserve_seconds": CLEANUP_RESERVE_S,
+        }
+    _mode_schema(mode)
+    raise AssertionError("unreachable")
+
+
+def _published_tool_schemas(root: Path, names: tuple[str, ...] | None = None) -> dict[str, Any]:
     """Read the schemas from the actual registered FastMCP tool registry."""
     root_text = str(root.resolve(strict=True))
     if root_text not in sys.path:
@@ -176,7 +238,7 @@ def _published_tool_schemas(root: Path) -> dict[str, Any]:
 
     schemas = {}
     tools = server.mcp._tool_manager._tools
-    for name in REQUIRED_TOOLS:
+    for name in names or REQUIRED_TOOLS:
         item = tools.get(name)
         if item is None or not isinstance(item.parameters, dict):
             raise RunnerError(f"required public MCP tool is not registered: {name}")
@@ -184,14 +246,14 @@ def _published_tool_schemas(root: Path) -> dict[str, Any]:
     return schemas
 
 
-def _logical_schemas(root: Path) -> dict[str, Any]:
+def _logical_schemas(root: Path, operation_ids: tuple[str, ...] | None = None) -> dict[str, Any]:
     root_text = str(root.resolve(strict=True))
     if root_text not in sys.path:
         sys.path.insert(0, root_text)
     from comsol_mcp import _g2_registry
 
     result: dict[str, Any] = {}
-    for operation in LOGICAL_OPERATIONS:
+    for operation in operation_ids or LOGICAL_OPERATIONS:
         entry = _g2_registry.BY_ID.get(operation)
         if entry is None or not isinstance(entry.input_schema, Mapping):
             raise RunnerError(f"logical operation schema is unavailable: {operation}")
@@ -235,15 +297,86 @@ def _comsol_identity(root: Path, version: str) -> dict[str, Any]:
     }
 
 
-def _check_64_receipt(path: Path) -> dict[str, Any]:
+def _check_64_receipt(path: Path, *, mode: str = METADATA_MODE) -> dict[str, Any]:
     if path.is_symlink() or not path.is_file():
-        raise RunnerError("6.3 preparation requires a real 6.4 probe receipt")
+        label = "solve-readback" if mode == SOLVE_READBACK_MODE else "metadata-only probe"
+        raise RunnerError(f"6.3 preparation requires a real 6.4 {label} receipt")
     value = json.loads(path.read_text(encoding="utf-8"))
-    if (value.get("schema") != SCHEMA or value.get("status") != "FIELD_PROBE_CAPTURED_ONLY_NOT_ADMISSION"
-            or value.get("selected_comsol", {}).get("version", "").startswith("6.4") is False
-            or value.get("cleanup", {}).get("status") != "CLEANUP_COMPLETE"):
-        raise RunnerError("6.3 preparation requires a cleaned-up 6.4 metadata-only probe receipt")
-    return {"path": str(path.resolve()), "sha256": sha256_file(path)}
+    if not isinstance(value, Mapping):
+        label = "solve-readback" if mode == SOLVE_READBACK_MODE else "metadata-only probe"
+        raise RunnerError(f"6.3 preparation requires a complete actual 6.4 {label} receipt")
+    if mode == METADATA_MODE:
+        selected_comsol = value.get("selected_comsol")
+        cleanup = value.get("cleanup")
+        if (value.get("schema") != SCHEMA
+                or value.get("status") != "FIELD_PROBE_CAPTURED_ONLY_NOT_ADMISSION"
+                or not isinstance(selected_comsol, Mapping)
+                or not str(selected_comsol.get("version", "")).startswith("6.4")
+                or not isinstance(cleanup, Mapping)
+                or cleanup.get("status") != "CLEANUP_COMPLETE"):
+            raise RunnerError("6.3 preparation requires a cleaned-up 6.4 metadata-only probe receipt")
+        return {"path": str(path.resolve()), "sha256": sha256_file(path)}
+    if mode != SOLVE_READBACK_MODE:
+        raise RunnerError("6.3 receipt mode is unsupported")
+    solve_readback = value.get("solve_readback")
+    tuple_readback = value.get("solution_tuple_readback")
+    cleanup = value.get("cleanup")
+    selected_comsol = value.get("selected_comsol")
+    if (value.get("schema") != SOLVE_READBACK_SCHEMA
+            or value.get("kind") != SOLVE_READBACK_KIND
+            or value.get("mode") != SOLVE_READBACK_MODE
+            or value.get("status") != "SOLVE_READBACK_CAPTURED_ONLY_NOT_ADMISSION"
+            or not isinstance(selected_comsol, Mapping)
+            or not str(selected_comsol.get("version", "")).startswith("6.4")
+            or value.get("study_dispatch") != 1 or value.get("solver_dispatch") != 1
+            or not isinstance(solve_readback, Mapping) or solve_readback.get("status") != "CAPTURED"
+            or not isinstance(solve_readback.get("field_sha256"), str)
+            or not re.fullmatch(r"[0-9a-f]{64}", solve_readback["field_sha256"])
+            or not isinstance(tuple_readback, Mapping) or tuple_readback.get("status") != "VERIFIED"
+            or not isinstance(cleanup, Mapping) or cleanup.get("status") != "CLEANUP_COMPLETE"
+            or cleanup.get("worker_retired") is not True
+            or cleanup.get("owned_server_stopped") is not True):
+        raise RunnerError("6.3 preparation requires a complete actual 6.4 solve-readback receipt")
+    receipt_hash = sha256_file(path)
+    state_path = path.parent / "state.json"
+    if state_path.is_symlink() or not state_path.is_file():
+        raise RunnerError("6.4 solve-readback receipt lacks its durable matching state")
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    if not isinstance(state, Mapping):
+        raise RunnerError("6.4 solve-readback receipt does not match its durable completion state")
+    if (state.get("schema") != SOLVE_READBACK_SCHEMA
+            or state.get("status") != value.get("status")
+            or state.get("receipt_path") != str(path.resolve())
+            or state.get("receipt_sha256") != receipt_hash):
+        raise RunnerError("6.4 solve-readback receipt does not match its durable completion state")
+    expected_accounting = {
+        "study_dispatch": 1, "study_dispatch_possible": 1,
+        "study_dispatch_status": "CONFIRMED",
+        "solver_dispatch": 1, "solver_dispatch_possible": 1,
+        "solver_dispatch_status": "CONFIRMED",
+        "solution_tuple_reads": 1, "solution_tuple_reads_possible": 1,
+        "solution_tuple_reads_status": "CONFIRMED",
+        "field_reads": 1, "field_reads_possible": 1,
+        "field_reads_status": "CONFIRMED",
+    }
+    if any(state.get(key) != expected for key, expected in expected_accounting.items()):
+        raise RunnerError("6.4 solve-readback durable state lacks complete confirmed dispatch accounting")
+    tuple_progress = state.get("solution_tuple_readback_progress")
+    field_progress = state.get("field_readback_progress")
+    if (not isinstance(tuple_progress, Mapping) or tuple_progress.get("status") != "VERIFIED"
+            or tuple_progress.get("tuple") != tuple_readback.get("target_tuple")
+            or not isinstance(field_progress, Mapping) or field_progress.get("status") != "VERIFIED"
+            or field_progress.get("field_sha256") != solve_readback.get("field_sha256")):
+        raise RunnerError("6.4 solve-readback durable state lacks its exact tuple/field evidence")
+    isolation_path = path.parent / "owned_server_isolation.json"
+    if isolation_path.is_symlink() or not isolation_path.is_file():
+        raise RunnerError("6.4 solve-readback receipt lacks the owned-server cleanup record")
+    isolation = json.loads(isolation_path.read_text(encoding="utf-8"))
+    if not isinstance(isolation, Mapping) or isolation.get("status") != "STOPPED":
+        raise RunnerError("6.4 solve-readback owned-server record is not safely stopped")
+    return {"path": str(path.resolve()), "sha256": receipt_hash,
+            "mode": SOLVE_READBACK_MODE, "kind": SOLVE_READBACK_KIND,
+            "cleanup_status": "CLEANUP_COMPLETE"}
 
 
 def _task_owned_server_home_root(task_root: Path, requested: Path | None, *,
@@ -372,9 +505,11 @@ def _validate_frozen_server_home(plan: Mapping[str, Any], *, require_absent: boo
 def prepare(*, version: str, comsol_root: Path, jdk_home: Path,
             evidence_root: Path, source_root: Path = REPOSITORY,
             prerequisite_64_receipt: Path | None = None,
-            server_home_root: Path | None = None) -> dict[str, Any]:
+            server_home_root: Path | None = None,
+            mode: str = METADATA_MODE) -> dict[str, Any]:
     if version not in {"6.4", "6.3"}:
         raise RunnerError("selected version must be exactly 6.4 or 6.3")
+    schema = _mode_schema(mode)
     if platform.system() != "Windows":
         raise RunnerError("prepare is metadata-only but must run on the target Windows host")
     source_root = source_root.resolve(strict=True)
@@ -394,15 +529,15 @@ def prepare(*, version: str, comsol_root: Path, jdk_home: Path,
     if version == "6.3":
         if prerequisite_64_receipt is None:
             raise RunnerError("6.3 cannot be prepared before a successful cleaned-up 6.4 probe")
-        prerequisite = _check_64_receipt(prerequisite_64_receipt)
+        prerequisite = _check_64_receipt(prerequisite_64_receipt, mode=mode)
     elif prerequisite_64_receipt is not None:
         raise RunnerError("6.4 is the first-version step and accepts no earlier receipt")
 
     comsol = _comsol_identity(comsol_root, version)
     jdk = _jdk_identity(jdk_home)
     manifest = source_manifest(source_root)
-    tool_schemas = _published_tool_schemas(source_root)
-    operation_schemas = _logical_schemas(source_root)
+    tool_schemas = _published_tool_schemas(source_root, _mode_tools(mode))
+    operation_schemas = _logical_schemas(source_root, _mode_operations(mode))
     python_identity = _python_identity()
 
     run_id = f"w21-{version.replace('.', '')}-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}-{uuid4().hex[:8]}"
@@ -433,20 +568,26 @@ def prepare(*, version: str, comsol_root: Path, jdk_home: Path,
     workspace_root.mkdir(mode=0o700)
     project_workspace = workspace_root / "field-identity-probe"
 
-    request_ids = {name: str(uuid4()) for name in (
+    request_names = (
         "project_create", "project_create_wait", "session_start", "session_connect", "model_create",
         "model_inspect_before_fixture", "fixture_register", "fixture_execute",
         "model_inspect_after_fixture", "probe_register", "probe_execute",
         "session_disconnect", "session_stop", "unknown_query",
         "failure_session_disconnect", "failure_session_stop",
-    )}
-    idempotency = {name: str(uuid4()) for name in (
+    )
+    idempotency_names = (
         "project_create", "session_start", "session_connect", "fixture_register",
         "fixture_execute", "probe_register", "probe_execute", "session_disconnect", "session_stop",
         "failure_session_disconnect", "failure_session_stop",
-    )}
+    )
+    if mode == SOLVE_READBACK_MODE:
+        request_names += ("study_solve", "solution_indices", "result_evaluate")
+        idempotency_names += ("study_solve", "solution_indices", "result_evaluate")
+    request_ids = {name: str(uuid4()) for name in request_names}
+    idempotency = {name: str(uuid4()) for name in idempotency_names}
     plan: dict[str, Any] = {
-        "schema": SCHEMA, "run_id": run_id, "run_root": str(run_root.resolve()),
+        "schema": schema, "mode": mode, "kind": _mode_kind(mode),
+        "run_id": run_id, "run_root": str(run_root.resolve()),
         "task_root": str(evidence_root),
         "server_home_root": str(resolved_server_home_root),
         "server_home_id": server_home_id,
@@ -469,24 +610,24 @@ def prepare(*, version: str, comsol_root: Path, jdk_home: Path,
         "scratch": str(run_root / "scratch"),
         "prerequisite_64_receipt": prerequisite,
         "request_ids": request_ids, "idempotency_keys": idempotency,
-        "budgets": {
-            "server_births_max": 1, "worker_births_max": 1,
-            "seconds_from_session_start_dispatch": RUN_BUDGET_S,
-            "ordinary_rpc_wait_seconds": RPC_WAIT_S,
-            "project_create_wait_calls_max": 1,
-            "project_create_wait_timeout_seconds": 30,
-            "geometry_run": 1, "mesh_run": 1, "study_dispatch": 0, "solver_dispatch": 0,
-        },
+        "budgets": _mode_budgets(mode),
         "route": "public stdio MCP; ControlDaemon; OwnedServerLauncher; one registered session",
         "prepare_side_effects": "filesystem receipts/directories only; no MCP call or COMSOL process",
-        "acceptance_scope": "field identity metadata capture only; native admission remains UNVERIFIED",
+        "acceptance_scope": ("field identity metadata capture only; native admission remains UNVERIFIED"
+                             if mode == METADATA_MODE else
+                             "one public Study solve and actual dataset/FieldArray capture; native admission and physical validation remain UNVERIFIED"),
     }
     plan["freeze_sha256"] = sha256_value(plan)
     write_json_atomic(run_root / "freeze.json", plan)
     state = {
-        "schema": SCHEMA, "run_id": run_id, "freeze_sha256": plan["freeze_sha256"],
+        "schema": schema, "run_id": run_id, "freeze_sha256": plan["freeze_sha256"],
         "status": "PREPARED", "action_history": [], "server_births_possible": 0,
         "worker_births_possible": 0, "study_dispatch": 0, "solver_dispatch": 0,
+        "study_dispatch_possible": 0, "solver_dispatch_possible": 0,
+        "study_dispatch_status": "NOT_DISPATCHED", "solver_dispatch_status": "NOT_DISPATCHED",
+        "solution_tuple_reads": 0, "solution_tuple_reads_possible": 0,
+        "solution_tuple_reads_status": "NOT_DISPATCHED",
+        "field_reads": 0, "field_reads_possible": 0, "field_reads_status": "NOT_DISPATCHED",
         "job_ids": [], "unknown_action": None,
     }
     write_json_atomic(run_root / "state.json", state)
@@ -497,6 +638,11 @@ def prepare(*, version: str, comsol_root: Path, jdk_home: Path,
 
 def verify_plan(plan: Mapping[str, Any], *, expected_sha256: str,
                 source_root: Path = REPOSITORY) -> None:
+    mode = plan.get("mode", METADATA_MODE)
+    if plan.get("schema") != _mode_schema(mode) or plan.get("kind") not in (None, _mode_kind(mode)):
+        raise RunnerError("frozen mode/schema/kind identity is inconsistent")
+    if plan.get("budgets") != _mode_budgets(mode):
+        raise RunnerError("frozen mode budgets differ from the bounded runner contract")
     candidate = dict(plan)
     observed_hash = candidate.pop("freeze_sha256", None)
     if observed_hash != expected_sha256 or sha256_value(candidate) != expected_sha256:
@@ -507,9 +653,9 @@ def verify_plan(plan: Mapping[str, Any], *, expected_sha256: str,
         raise RunnerError("frozen source manifest drifted; no MCP call was made")
     if _python_identity() != plan.get("python"):
         raise RunnerError("Python/interpreter identity differs from the frozen candidate")
-    if _published_tool_schemas(source_root) != plan.get("published_tool_schemas"):
+    if _published_tool_schemas(source_root, _mode_tools(mode)) != plan.get("published_tool_schemas"):
         raise RunnerError("registered MCP tool schemas differ from the frozen candidate")
-    if _logical_schemas(source_root) != plan.get("logical_operation_schemas"):
+    if _logical_schemas(source_root, _mode_operations(mode)) != plan.get("logical_operation_schemas"):
         raise RunnerError("logical operation schemas differ from the frozen candidate")
     observed = _comsol_identity(Path(plan["selected_comsol"]["root"]), plan["requested_version"])
     if observed != plan.get("selected_comsol"):
@@ -558,12 +704,221 @@ def _validate_model_inspect(response: Mapping[str, Any], binding: Mapping[str, A
     return execution["revision"]
 
 
+def _valid_sha256(value: Any) -> bool:
+    return isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value) is not None
+
+
+def _validate_managed_result_ticket(response: Mapping[str, Any], binding: Mapping[str, Any], *,
+                                    request_id: str, idempotency_key: str,
+                                    expected_revision: int, label: str,
+                                    allow_one_revision_advance: bool = False) -> Mapping[str, Any]:
+    execution = response.get("execution")
+    if (response.get("success") is not True or not isinstance(execution, Mapping)
+            or execution.get("project_id") != binding["project_id"]
+            or execution.get("session_id") != binding["session_id"]
+            or execution.get("model_ref") != binding["model_ref"]
+            or execution.get("request_id") != request_id
+            or execution.get("idempotency_key") != idempotency_key
+            or not isinstance(execution.get("operation_id"), str) or not execution["operation_id"]
+            or not _valid_sha256(execution.get("request_hash"))
+            or not isinstance(execution.get("job_id"), str) or not execution["job_id"]
+            or type(execution.get("revision")) is not int):
+        raise RunnerError(f"{label} omitted or changed its managed request/ticket/model binding")
+    revision = execution["revision"]
+    allowed = {expected_revision, expected_revision + 1} if allow_one_revision_advance else {expected_revision}
+    if revision not in allowed:
+        raise RunnerError(f"{label} returned a revision outside its exact bounded revision chain")
+    return execution
+
+
+def _numeric_payload_count(value: Any, *, finite: bool = False) -> int:
+    if isinstance(value, bool):
+        raise RunnerError("field readback contains a boolean instead of a numeric scalar")
+    if isinstance(value, (int, float)):
+        if finite:
+            try:
+                is_finite = math.isfinite(value)
+            except (OverflowError, TypeError, ValueError):
+                is_finite = False
+            if not is_finite:
+                raise RunnerError("field readback contains a nonfinite or overflowing numeric value")
+        return 1
+    if isinstance(value, Mapping):
+        return sum(_numeric_payload_count(item, finite=finite) for item in value.values())
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        return sum(_numeric_payload_count(item, finite=finite) for item in value)
+    raise RunnerError("field readback contains a non-numeric value")
+
+
+def _nested_shape(value: Any) -> tuple[int, ...]:
+    if not isinstance(value, list):
+        return ()
+    if not value:
+        return (0,)
+    child_shapes = [_nested_shape(item) for item in value]
+    if any(shape != child_shapes[0] for shape in child_shapes[1:]):
+        raise RunnerError("field readback array is ragged")
+    return (len(value), *child_shapes[0])
+
+
+def _resolve_solve_tuple(solution_data: Mapping[str, Any], *,
+                         dataset: str) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Resolve last/last only from a complete public SolutionInfo pair table."""
+    from comsol_mcp._w21_native_output import _check_tuple
+
+    try:
+        return _check_tuple(
+            {"dataset": dataset, "outer": "last", "inner": "last"}, solution_data,
+        )
+    except Exception as exc:
+        raise RunnerError(f"dataset.solution_indices did not resolve one actual tuple: {type(exc).__name__}") from None
+
+
+def _extract_solve_field(solution_data: Mapping[str, Any], field_data: Mapping[str, Any], *,
+                         dataset: str,
+                         resolved_tuple: tuple[dict[str, Any], dict[str, Any]] | None = None
+                         ) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Bind the selected actual SolutionInfo tuple to one returned FieldArray row."""
+    from comsol_mcp._g3_results import (
+        W21_FIELD_READBACK_MAX_JSON_BYTES,
+        W21_FIELD_READBACK_MAX_NUMERIC_SCALARS,
+    )
+
+    selected, binding = resolved_tuple or _resolve_solve_tuple(solution_data, dataset=dataset)
+
+    field = field_data.get("field_array")
+    status_witness = field_data.get("status")
+    if (not isinstance(status_witness, Mapping) or status_witness.get("ok") is not True
+            or field_data.get("dataset") != dataset
+            or field_data.get("solution") != selected["solution"]
+            or field_data.get("storage") != "inline"
+            or not isinstance(field, Mapping)):
+        raise RunnerError("result.evaluate did not return the expected successful inline FieldArray")
+    result_budget = field_data.get("result_budget")
+    if (not isinstance(result_budget, Mapping) or result_budget.get("status") != "PASS"
+            or result_budget.get("publish_allowed") is not True
+            or not isinstance(result_budget.get("records"), list)
+            or not result_budget["records"]
+            or any(not isinstance(row, Mapping) or row.get("status") != "PASS"
+                   or row.get("allowed") is not True or row.get("publish_allowed") is not True
+                   for row in result_budget["records"])):
+        raise RunnerError("result.evaluate budget witness does not prove a complete, untruncated payload")
+    if field.get("is_complex") is not False:
+        raise RunnerError("W21 T readback is not a real-valued FieldArray")
+    axes = field.get("axes")
+    shape = field.get("shape")
+    values = field.get("values")
+    coords = field.get("coords")
+    metadata = field.get("metadata")
+    if (axes != ["expression", "outer", "inner", "point"]
+            or not isinstance(values, list) or not isinstance(coords, Mapping)
+            or not isinstance(metadata, Mapping) or metadata.get("pair_mapping_complete") is not True
+            or not isinstance(metadata.get("solution_pairs"), list)
+            or not isinstance(shape, list) or tuple(shape) != _nested_shape(values)
+            or len(shape) != 4
+            or any(type(size) is not int or size < 1 for size in shape)
+            or shape[0] != 1):
+        raise RunnerError("result.evaluate FieldArray axes, shape, or native solution-pair metadata are incomplete")
+    if (field_data.get("expressions") != ["T"]
+            or coords.get("expression") != ["T"]
+            or not isinstance(coords.get("outer"), list)
+            or coords["outer"] != binding.get("outer_indices")
+            or not isinstance(coords.get("inner"), list)
+            or coords["inner"] != binding.get("inner_indices")
+            or len(coords["outer"]) != shape[1] or len(coords["inner"]) != shape[2]
+            or selected["outer"] not in coords["outer"]
+            or selected["inner"] not in coords["inner"]):
+        raise RunnerError("result.evaluate FieldArray coordinates do not contain the exact resolved tuple")
+    point_coordinates = coords.get("point")
+    if (not isinstance(point_coordinates, list)
+            or len(point_coordinates) != shape[3]
+            or point_coordinates != list(range(1, shape[3] + 1))):
+        raise RunnerError("result.evaluate FieldArray point coordinate axis is incomplete")
+
+    actual_pairs = []
+    for pair in metadata["solution_pairs"]:
+        if not isinstance(pair, Mapping):
+            raise RunnerError("result.evaluate FieldArray contains a malformed solution-pair witness")
+        actual = {key: pair.get(key) for key in ("outer", "inner", "solnum")}
+        if any(type(actual[key]) is not int or actual[key] < 1 for key in actual):
+            raise RunnerError("result.evaluate FieldArray contains an invalid solution-pair witness")
+        actual_pairs.append(actual)
+    solution_pairs = [{key: row[key] for key in ("outer", "inner", "solnum")}
+                      for row in binding["solnum_pairs"]]
+    if (len(actual_pairs) != len(solution_pairs)
+            or actual_pairs != solution_pairs
+            or actual_pairs.count({"outer": selected["outer"], "inner": selected["inner"],
+                                   "solnum": selected["solnum"]}) != 1):
+        raise RunnerError("result.evaluate FieldArray pair mapping differs from dataset.solution_indices")
+    selected_field = values[0][coords["outer"].index(selected["outer"])][
+        coords["inner"].index(selected["inner"])
+    ]
+    if not isinstance(selected_field, list) or not selected_field:
+        raise RunnerError("resolved solution tuple has no nonempty field values")
+    count = _numeric_payload_count(values, finite=True)
+    spatial_coordinates = coords.get("spatial")
+    if spatial_coordinates is not None:
+        if (not isinstance(spatial_coordinates, list)
+                or len(spatial_coordinates) != shape[3]
+                or any(not isinstance(point, list) or not point for point in spatial_coordinates)):
+            raise RunnerError("result.evaluate spatial coordinates do not match its point axis")
+        coordinate_dimensions = len(spatial_coordinates[0])
+        if any(len(point) != coordinate_dimensions for point in spatial_coordinates):
+            raise RunnerError("result.evaluate spatial coordinate rows are incomplete")
+        count += _numeric_payload_count(spatial_coordinates, finite=True)
+    if count < 1 or count > W21_FIELD_READBACK_MAX_NUMERIC_SCALARS:
+        raise RunnerError("result.evaluate numeric field/coordinate payload exceeds the W21 output cap")
+    try:
+        response_bytes = len(canonical_bytes(dict(field_data)))
+    except (TypeError, ValueError, OverflowError):
+        raise RunnerError("result.evaluate payload is not finite canonical JSON") from None
+    if response_bytes > W21_FIELD_READBACK_MAX_JSON_BYTES:
+        raise RunnerError("result.evaluate response exceeds the W21 8 MiB output cap")
+    if not isinstance(field_data.get("observation_ref"), Mapping):
+        raise RunnerError("result.evaluate omitted its persisted observation reference")
+    observation_ref = field_data["observation_ref"]
+    if (set(observation_ref) != {"observation_id", "sha256"}
+            or not isinstance(observation_ref.get("observation_id"), str)
+            or not observation_ref["observation_id"]
+            or not _valid_sha256(observation_ref.get("sha256"))):
+        raise RunnerError("result.evaluate persisted observation reference is incomplete")
+    selected_output = {
+        "dataset": dataset, "solution": selected["solution"],
+        "tuple": {key: selected[key] for key in ("outer", "inner", "solnum")},
+        "tuple_source": binding["selection_resolution"]["source"],
+        "tuple_binding_sha256": sha256_value(binding),
+        "field_array_axes": list(axes), "field_array_shape": list(shape),
+        "field_values": selected_field,
+        "field_values_sha256": sha256_value(selected_field),
+        "field_units": field.get("units"),
+        "field_metadata": field.get("metadata"),
+        "actual_spatial_coordinates": spatial_coordinates,
+        "observation_ref": dict(observation_ref),
+        "full_dataset_field_sha256": sha256_value(field),
+        "numeric_scalar_count": count,
+        "response_json_bytes": response_bytes,
+        "unit_acceptance": "UNVERIFIED_CONFIGURED_OR_MODEL_DEPENDENT",
+        "coordinate_frame_acceptance": "UNVERIFIED",
+        "mesh_intrinsic_identity": "UNVERIFIED",
+        "read_scope": "complete returned dataset FieldArray; target tuple extracted by exact native pair witness",
+    }
+    return selected_output, binding
+
+
 def _is_unknown(response: Mapping[str, Any]) -> bool:
     data = response.get("data")
     error = response.get("error")
+    status = data.get("status") if isinstance(data, Mapping) else None
+    cleanup = data.get("cleanup") if isinstance(data, Mapping) else None
     return bool(response.get("execution_state_unknown") is True
                 or (isinstance(data, Mapping) and (
-                    data.get("execution_state_unknown") is True or data.get("status") == "UNKNOWN"))
+                    data.get("execution_state_unknown") is True
+                    or data.get("cleanup_failed") is True
+                    or data.get("status") == "UNKNOWN"
+                    or (isinstance(status, Mapping) and (
+                        status.get("execution_state_unknown") is True
+                        or status.get("cleanup_failed") is True))
+                    or (isinstance(cleanup, Mapping) and cleanup.get("cleanup_failed") is True)))
                 or (isinstance(error, Mapping) and error.get("execution_state_unknown") is True))
 
 
@@ -643,9 +998,10 @@ class _MCPCalls:
     def __init__(self, session: Any):
         self.session = session
 
-    async def call(self, name: str, params: Mapping[str, Any]) -> dict[str, Any]:
+    async def call(self, name: str, params: Mapping[str, Any], *,
+                   timeout_s: float = RPC_WAIT_S) -> dict[str, Any]:
         result = await asyncio.wait_for(
-            self.session.call_tool(name, dict(params)), timeout=RPC_WAIT_S,
+            self.session.call_tool(name, dict(params)), timeout=timeout_s,
         )
         return _public_payload(result)
 
@@ -659,7 +1015,7 @@ async def _validate_live_tools(client: _MCPCalls, expected: Mapping[str, Any]) -
     for row in rows or ():
         name = getattr(row, "name", None) if not isinstance(row, Mapping) else row.get("name")
         schema = getattr(row, "inputSchema", None) if not isinstance(row, Mapping) else row.get("inputSchema")
-        if isinstance(name, str) and isinstance(schema, Mapping) and name in REQUIRED_TOOLS:
+        if isinstance(name, str) and isinstance(schema, Mapping) and name in expected:
             actual[name] = dict(schema)
     if actual != expected:
         raise RunnerError("live stdio tools/list schemas differ from the frozen source registry")
@@ -766,6 +1122,11 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
     """Run one prepared route sequence; tests inject only the stdio transport."""
     if state.value.get("status") != "PREPARED" or state.value.get("action_history"):
         raise RunnerError("state is not pristine PREPARED; replay is forbidden")
+    mode = plan.get("mode", METADATA_MODE)
+    if (plan.get("schema") != _mode_schema(mode)
+            or plan.get("kind") not in (None, _mode_kind(mode))
+            or plan.get("budgets") != _mode_budgets(mode)):
+        raise RunnerError("prepared mode/schema/budget identity is invalid")
     preflight_records = preflight() if preflight is not None else []
     await _validate_live_tools(client, plan["published_tool_schemas"])
 
@@ -779,6 +1140,17 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
     deadline: float | None = None
     any_unknown = False
     owned_session_verified = False
+
+    def record_stage_dispatch(name: str, status: str, *, possible: bool = False,
+                              confirmed: bool = False) -> None:
+        for counter in STAGE_READ_ACTION_COUNTERS.get(name, ()):
+            state.value.setdefault(counter, 0)
+            state.value.setdefault(f"{counter}_possible", 0)
+            if possible:
+                state.value[f"{counter}_possible"] = 1
+            if confirmed:
+                state.value[counter] = 1
+            state.value[f"{counter}_status"] = status
 
     async def query_unknown_once(name: str, request_id: str | None,
                                  response: Mapping[str, Any] | None) -> None:
@@ -867,7 +1239,8 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
                 and reported_project_id == project_id):
             operation = "job.status"
             arguments = {"job_id": reported_job_id}
-        elif name in {"fixture.execute", "probe.execute"} and isinstance(project_id, str):
+        elif name in {"fixture.execute", "probe.execute", "study.solve",
+                      "solution_indices", "result.evaluate"} and isinstance(project_id, str):
             operation = "job.list"
             arguments = {"limit": 100, "project_id": project_id}
         else:
@@ -905,8 +1278,15 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
                 query_record["match_resolution"] = "NOT_QUERIED"
         state.value["recovery"]["read_only_query"] = query_record
         state.save()
+        query_timeout = float(plan.get("budgets", {}).get("ordinary_rpc_wait_seconds", RPC_WAIT_S))
+        if deadline is not None:
+            query_timeout = min(query_timeout, deadline - CLEANUP_RESERVE_S - clock())
+        if query_timeout <= 0:
+            query_record.update({"status": "NOT_RUN_BUDGET_RESERVE", "exception_type": None})
+            state.save()
+            return
         try:
-            query_response = await client.call("operation_call", params)
+            query_response = await client.call("operation_call", params, timeout_s=query_timeout)
         except BaseException as exc:
             query_record.update({"status": "QUERY_UNKNOWN", "exception_type": type(exc).__name__})
             state.save()
@@ -1100,10 +1480,10 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
         nonlocal any_unknown, deadline
         if any_unknown or state.value.get("status") == "UNKNOWN":
             raise RunnerError("UNKNOWN is terminal; no retry, cleanup, or later mutation is allowed")
-        if deadline is not None:
-            is_cleanup = (name in {"session.disconnect", "session.stop"}
+        cleanup_action = (name in {"session.disconnect", "session.stop"}
                           or name.startswith("failure_cleanup."))
-            limit = deadline if is_cleanup else deadline - CLEANUP_RESERVE_S
+        if deadline is not None:
+            limit = deadline if cleanup_action else deadline - CLEANUP_RESERVE_S
             if clock() >= limit:
                 raise RunnerError("15-minute birth budget reached its work/cleanup boundary")
         # The request identity and possible birth are durable before MCP can
@@ -1123,17 +1503,59 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
         state.value["actions"] = state.value.get("actions", {})
         if name in state.value["actions"]:
             raise RunnerError(f"action already has a durable intent: {name}")
+        stage_action = name in STAGE_READ_ACTION_COUNTERS
+        if stage_action:
+            execution = params.get("execution")
+            budgets = plan.get("budgets", {})
+            queue_timeout = execution.get("queue_timeout_s") if isinstance(execution, Mapping) else None
+            execution_timeout = execution.get("execution_timeout_s") if isinstance(execution, Mapping) else None
+            if (mode != SOLVE_READBACK_MODE or deadline is None
+                    or type(queue_timeout) is not int or type(execution_timeout) is not int
+                    or queue_timeout != budgets.get("queue_timeout_seconds")
+                    or execution_timeout != budgets.get("execution_timeout_seconds")):
+                state.value["actions"][name] = {
+                    "status": "NOT_DISPATCHED_SERVER_BUDGET", **intent,
+                }
+                record_stage_dispatch(name, "NOT_DISPATCHED_BUDGET")
+                state.save()
+                raise RunnerError(f"{name} lacks its exact frozen server execution budget")
+            remaining_server_window = deadline - CLEANUP_RESERVE_S - clock()
+            if queue_timeout + execution_timeout > remaining_server_window:
+                state.value["actions"][name] = {
+                    "status": "NOT_DISPATCHED_SERVER_BUDGET", **intent,
+                    "server_queue_timeout_s": queue_timeout,
+                    "server_execution_timeout_s": execution_timeout,
+                    "remaining_work_window_s": max(0.0, remaining_server_window),
+                }
+                record_stage_dispatch(name, "NOT_DISPATCHED_BUDGET")
+                state.save()
+                raise RunnerError(f"{name} server queue+execution budget exceeds the remaining work window")
         state.value["actions"][name] = {"status": "DISPATCH_INTENT", **intent}
+        if stage_action:
+            record_stage_dispatch(name, "DISPATCH_INTENT", possible=True)
         if counted_server_birth:
             state.value["server_births_possible"] = 1
             deadline = clock() + RUN_BUDGET_S
         if counted_worker_birth:
             state.value["worker_births_possible"] = 1
         state.save()
+        rpc_timeout = float(plan.get("budgets", {}).get("ordinary_rpc_wait_seconds", RPC_WAIT_S))
+        if deadline is not None:
+            limit = deadline if cleanup_action else deadline - CLEANUP_RESERVE_S
+            rpc_timeout = min(rpc_timeout, limit - clock())
+        if rpc_timeout <= 0:
+            state.value["actions"][name]["status"] = "NOT_DISPATCHED_BUDGET"
+            record_stage_dispatch(name, "NOT_DISPATCHED_BUDGET")
+            if stage_action:
+                for counter in STAGE_READ_ACTION_COUNTERS[name]:
+                    state.value[f"{counter}_possible"] = 0
+            state.save()
+            raise RunnerError("remaining W21 birth window cannot cover another bounded RPC")
         try:
-            response = await client.call(tool, params)
+            response = await client.call(tool, params, timeout_s=rpc_timeout)
         except BaseException as exc:
             state.value["actions"][name].update({"status": "UNKNOWN", "exception_type": type(exc).__name__})
+            record_stage_dispatch(name, "UNKNOWN")
             state.value["status"] = "UNKNOWN"
             state.value["unknown_action"] = name
             state.value["recovery"] = {"request_id": request_id,
@@ -1153,6 +1575,7 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
             state.value["job_ids"].append(job_id)
         if unknown_response:
             state.value["actions"][name]["status"] = "UNKNOWN"
+            record_stage_dispatch(name, "UNKNOWN")
             state.value["status"] = "UNKNOWN"
             state.value["unknown_action"] = name
             state.value["recovery"] = {"request_id": request_id,
@@ -1163,6 +1586,7 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
             await query_unknown_once(name, request_id, response)
             raise RunnerError(f"{name} returned UNKNOWN; no later mutation is allowed")
         state.value["actions"][name]["status"] = "RESPONSE_RECORDED"
+        record_stage_dispatch(name, "RESPONSE_RECEIVED")
         state.save()
         return response
 
@@ -1207,7 +1631,7 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
             stopped_response = await dispatch("failure_cleanup.session_stop", "operation_call",
                 _operation_params("session.stop", {
                     "project_id": project_id, "session_id": session_id,
-                    "authorization_ref": f"Task-scoped W21 metadata probe cleanup {plan['run_id']}",
+                    "authorization_ref": f"Task-scoped W21 {plan.get('mode', METADATA_MODE)} cleanup {plan['run_id']}",
                     "idempotency_key": keys["failure_session_stop"],
                     "request_id": request_ids["failure_session_stop"],
                 }, {"project_id": project_id, "session_id": session_id,
@@ -1326,7 +1750,10 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
         fixture_dir = project_workspace / "fixtures"
         fixture_dir.mkdir(mode=0o700)
         staged: dict[str, str] = {}
-        for short_name, source in (("W21Fixture.java", FIXTURE), ("W21FieldIdentityProbe.java", PROBE)):
+        source_items = (("W21Fixture.java", FIXTURE),)
+        if plan.get("mode", METADATA_MODE) == METADATA_MODE:
+            source_items += (("W21FieldIdentityProbe.java", PROBE),)
+        for short_name, source in source_items:
             source_hash = plan["source_manifest"][f"tools/java/{short_name}"]
             if sha256_file(source) != source_hash:
                 raise RunnerError("Java source changed after prepare; no execution is allowed")
@@ -1388,47 +1815,228 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
              "expected_revision": binding["revision"], "request_id": request_ids["model_inspect_after_fixture"],
              "rpc_timeout_s": RPC_WAIT_S}))
         binding["revision"] = _validate_model_inspect(after_fixture, binding)
-        await register_source("probe.register", keys["probe_register"],
-                              request_ids["probe_register"], staged["W21FieldIdentityProbe.java"])
-        probe_response = await dispatch("probe.execute", "operation_call", _operation_params(
-            "code.execute_java", {"source_artifact": staged["W21FieldIdentityProbe.java"],
-                "entrypoint": "W21FieldIdentityProbe", "arguments": {
-                    "expected_model_tag": binding["model_tag"], "physics_tag": "ht"},
-                "mode": "trusted", "timeout_s": 240},
-            {"project_id": project_id, "session_id": session_id, "model_ref": binding["model_ref"],
-             "expected_revision": binding["revision"], "idempotency_key": keys["probe_execute"],
-             "request_id": request_ids["probe_execute"], "rpc_timeout_s": RPC_WAIT_S}))
-        probe_data = _assert_success(probe_response, "code.execute_java(W21FieldIdentityProbe)")
-        if probe_data.get("execution_success") is not True:
-            raise RunnerError("field identity probe did not return execution_success=true")
-        probe_execution = probe_response.get("execution")
-        if (not isinstance(probe_execution, Mapping)
-                or probe_execution.get("project_id") != project_id
-                or probe_execution.get("session_id") != session_id
-                or probe_execution.get("model_ref") != binding["model_ref"]
-                or type(probe_execution.get("revision")) is not int
-                or probe_execution.get("revision") != binding["revision"]):
-            raise RunnerError("probe reply omitted the exact project/session/ModelRef/revision")
-        binding["revision"] = probe_execution["revision"]
-        raw_probe = probe_data.get("readback")
-        if isinstance(raw_probe, str):
-            try:
-                probe = json.loads(raw_probe)
-            except json.JSONDecodeError as exc:
-                raise RunnerError("field identity probe returned malformed JSON") from exc
-        elif isinstance(raw_probe, Mapping):
-            probe = dict(raw_probe)
+        mode = plan.get("mode", METADATA_MODE)
+        probe = None
+        solve_readback = None
+        tuple_readback = None
+        if mode == METADATA_MODE:
+            await register_source("probe.register", keys["probe_register"],
+                                  request_ids["probe_register"], staged["W21FieldIdentityProbe.java"])
+            probe_response = await dispatch("probe.execute", "operation_call", _operation_params(
+                "code.execute_java", {"source_artifact": staged["W21FieldIdentityProbe.java"],
+                    "entrypoint": "W21FieldIdentityProbe", "arguments": {
+                        "expected_model_tag": binding["model_tag"], "physics_tag": "ht"},
+                    "mode": "trusted", "timeout_s": 240},
+                {"project_id": project_id, "session_id": session_id, "model_ref": binding["model_ref"],
+                 "expected_revision": binding["revision"], "idempotency_key": keys["probe_execute"],
+                 "request_id": request_ids["probe_execute"], "rpc_timeout_s": RPC_WAIT_S}))
+            probe_data = _assert_success(probe_response, "code.execute_java(W21FieldIdentityProbe)")
+            if probe_data.get("execution_success") is not True:
+                raise RunnerError("field identity probe did not return execution_success=true")
+            probe_execution = probe_response.get("execution")
+            if (not isinstance(probe_execution, Mapping)
+                    or probe_execution.get("project_id") != project_id
+                    or probe_execution.get("session_id") != session_id
+                    or probe_execution.get("model_ref") != binding["model_ref"]
+                    or type(probe_execution.get("revision")) is not int
+                    or probe_execution.get("revision") != binding["revision"]):
+                raise RunnerError("probe reply omitted the exact project/session/ModelRef/revision")
+            binding["revision"] = probe_execution["revision"]
+            raw_probe = probe_data.get("readback")
+            if isinstance(raw_probe, str):
+                try:
+                    probe = json.loads(raw_probe)
+                except json.JSONDecodeError as exc:
+                    raise RunnerError("field identity probe returned malformed JSON") from exc
+            elif isinstance(raw_probe, Mapping):
+                probe = dict(raw_probe)
+            else:
+                raise RunnerError("field identity probe returned no structured payload")
+            if (probe.get("probe") != "W21FieldIdentityProbe"
+                    or probe.get("status") != "STRUCTURE_CAPTURED_ONLY"
+                    or probe.get("native_admission") != "UNVERIFIED"
+                    or probe.get("identity", {}).get("model_tag") != binding["model_tag"]):
+                raise RunnerError("probe output is incomplete or claims a scope outside metadata capture")
+            status = "FIELD_PROBE_CAPTURED_ONLY_NOT_ADMISSION"
+            state.value["probe_capture"] = {"status": "CAPTURED", "payload_sha256": sha256_value(probe)}
+        elif mode == SOLVE_READBACK_MODE:
+            budgets = plan["budgets"]
+            if (budgets.get("study_dispatch") != 1 or budgets.get("solver_dispatch") != 1
+                    or budgets.get("solution_tuple_reads") != 1 or budgets.get("field_reads") != 1
+                    or budgets.get("queue_timeout_seconds") != 30
+                    or budgets.get("execution_timeout_seconds") != 240
+                    or budgets.get("ordinary_rpc_wait_seconds") != 45
+                    or budgets.get("cleanup_reserve_seconds") != 60):
+                raise RunnerError("frozen solve-readback action budgets differ from the runner contract")
+            solve_request = request_ids["study_solve"]
+            solve_key = keys["study_solve"]
+            solve_revision_before = binding["revision"]
+            solve_params = {
+                "study_tag": "std1",
+                "execution": {
+                    "project_id": project_id, "session_id": session_id,
+                    "model_ref": binding["model_ref"], "expected_revision": solve_revision_before,
+                    "request_id": solve_request, "idempotency_key": solve_key,
+                    "queue_timeout_s": budgets["queue_timeout_seconds"],
+                    "execution_timeout_s": budgets["execution_timeout_seconds"],
+                    "rpc_timeout_s": budgets["ordinary_rpc_wait_seconds"],
+                },
+            }
+            solve_response = await dispatch("study.solve", "run_study", solve_params)
+            solve_data = _assert_success(solve_response, "run_study(std1)")
+            if solve_data.get("study_tag") != "std1":
+                raise RunnerError("public run_study did not confirm the frozen std1 target")
+            solve_ticket = _validate_managed_result_ticket(
+                solve_response, binding, request_id=solve_request, idempotency_key=solve_key,
+                expected_revision=solve_revision_before, label="run_study(std1)",
+                allow_one_revision_advance=True,
+            )
+            if solve_ticket["revision"] != solve_revision_before + 1:
+                raise RunnerError("run_study(std1) did not advance the exact ModelRef revision once")
+            binding["revision"] = solve_ticket["revision"]
+            record_stage_dispatch("study.solve", "CONFIRMED", confirmed=True)
+            state.value["study_solve_progress"] = {
+                "status": "CONFIRMED",
+                "request_id": solve_request, "idempotency_key": solve_key,
+                "operation_id": solve_ticket["operation_id"],
+                "request_hash": solve_ticket["request_hash"], "job_id": solve_ticket["job_id"],
+                "revision_before": solve_revision_before,
+                "revision_after": solve_ticket["revision"],
+            }
+            state.save()
+
+            tuple_request = request_ids["solution_indices"]
+            tuple_key = keys["solution_indices"]
+            tuple_params = _operation_params("dataset.solution_indices", {"path": "dset1"}, {
+                "project_id": project_id, "session_id": session_id,
+                "model_ref": binding["model_ref"], "expected_revision": binding["revision"],
+                "request_id": tuple_request, "idempotency_key": tuple_key,
+                "queue_timeout_s": budgets["queue_timeout_seconds"],
+                "execution_timeout_s": budgets["execution_timeout_seconds"],
+                "rpc_timeout_s": budgets["ordinary_rpc_wait_seconds"],
+            })
+            tuple_response = await dispatch("solution_indices", "operation_call", tuple_params)
+            tuple_data = _assert_success(tuple_response, "dataset.solution_indices(dset1)")
+            tuple_ticket = _validate_managed_result_ticket(
+                tuple_response, binding, request_id=tuple_request, idempotency_key=tuple_key,
+                expected_revision=binding["revision"], label="dataset.solution_indices(dset1)",
+            )
+            target_solution = tuple_data.get("solution")
+            if not isinstance(target_solution, str) or not target_solution:
+                raise RunnerError("dataset.solution_indices omitted the actual solution tag")
+            resolved_tuple = _resolve_solve_tuple(tuple_data, dataset="dset1")
+            selected_tuple, exact_binding = resolved_tuple
+            if selected_tuple.get("solution") != target_solution:
+                raise RunnerError("dataset.solution_indices tuple resolved against another solution tag")
+            record_stage_dispatch("solution_indices", "CONFIRMED", confirmed=True)
+            state.value["solution_tuple_readback_progress"] = {
+                "status": "VERIFIED", "dataset": "dset1", "solution": target_solution,
+                "tuple": {key: selected_tuple[key] for key in ("outer", "inner", "solnum")},
+                "tuple_binding_sha256": sha256_value(exact_binding),
+                "request_id": tuple_request, "idempotency_key": tuple_key,
+                "operation_id": tuple_ticket["operation_id"],
+                "request_hash": tuple_ticket["request_hash"], "job_id": tuple_ticket["job_id"],
+                "revision": tuple_ticket["revision"],
+            }
+            state.save()
+
+            result_request = request_ids["result_evaluate"]
+            result_key = keys["result_evaluate"]
+            result_revision_before = binding["revision"]
+            result_params = _operation_params("result.evaluate", {
+                "spec": {
+                    "expressions": ["T"],
+                    "solution": {"dataset": "dset1", "solution": target_solution},
+                    "aggregate": "none", "complex_mode": "preserve", "storage": "inline",
+                },
+            }, {
+                "project_id": project_id, "session_id": session_id,
+                "model_ref": binding["model_ref"], "expected_revision": result_revision_before,
+                "request_id": result_request, "idempotency_key": result_key,
+                "queue_timeout_s": budgets["queue_timeout_seconds"],
+                "execution_timeout_s": budgets["execution_timeout_seconds"],
+                "rpc_timeout_s": budgets["ordinary_rpc_wait_seconds"],
+            })
+            result_response = await dispatch("result.evaluate", "operation_call", result_params)
+            result_data = _assert_success(result_response, "result.evaluate(T)")
+            result_ticket = _validate_managed_result_ticket(
+                result_response, binding, request_id=result_request, idempotency_key=result_key,
+                expected_revision=result_revision_before, label="result.evaluate(T)",
+                allow_one_revision_advance=True,
+            )
+            cleanup = result_data.get("cleanup")
+            if (not isinstance(cleanup, Mapping) or cleanup.get("cleanup_failed") is not False
+                    or result_data.get("execution_state_unknown") is True):
+                raise RunnerError("result.evaluate temporary-node cleanup is incomplete or unknown")
+            solve_readback, exact_binding = _extract_solve_field(
+                tuple_data, result_data, dataset="dset1", resolved_tuple=resolved_tuple,
+            )
+            if exact_binding.get("selection_resolution", {}).get("status") != "VERIFIED":
+                raise RunnerError("result field tuple did not retain its exact SolutionInfo selection witness")
+            binding["revision"] = result_ticket["revision"]
+            record_stage_dispatch("result.evaluate", "CONFIRMED", confirmed=True)
+            state.value["field_readback_progress"] = {
+                "status": "VERIFIED", "observation_ref": solve_readback["observation_ref"],
+                "field_sha256": solve_readback["full_dataset_field_sha256"],
+                "selected_tuple_field_sha256": solve_readback["field_values_sha256"],
+                "request_id": result_request, "idempotency_key": result_key,
+                "operation_id": result_ticket["operation_id"],
+                "request_hash": result_ticket["request_hash"], "job_id": result_ticket["job_id"],
+                "revision_before": result_revision_before,
+                "revision_after": result_ticket["revision"],
+            }
+            state.save()
+            tuple_readback = {
+                "status": "VERIFIED", "dataset": "dset1", "solution": target_solution,
+                "target_tuple": solve_readback["tuple"],
+                "source": exact_binding["selection_resolution"]["source"],
+                "operation": {
+                    "request_id": tuple_request, "idempotency_key": tuple_key,
+                    "operation_id": tuple_ticket["operation_id"],
+                    "request_hash": tuple_ticket["request_hash"], "job_id": tuple_ticket["job_id"],
+                    "revision": tuple_ticket["revision"],
+                    "raw_binding_sha256": sha256_value(tuple_data),
+                },
+            }
+            result_evidence = {
+                "request_id": result_request, "idempotency_key": result_key,
+                "operation_id": result_ticket["operation_id"],
+                "request_hash": result_ticket["request_hash"], "job_id": result_ticket["job_id"],
+                "revision_before": result_revision_before,
+                "revision_after": result_ticket["revision"],
+                "worker_observation_ref": solve_readback["observation_ref"],
+                "field_sha256": solve_readback["full_dataset_field_sha256"],
+                "selected_tuple_field_sha256": solve_readback["field_values_sha256"],
+            }
+            solve_readback.update({
+                "status": "CAPTURED", "study_tag": "std1",
+                "field_sha256": solve_readback["full_dataset_field_sha256"],
+                "solve_operation": {
+                    "request_id": solve_request, "idempotency_key": solve_key,
+                    "operation_id": solve_ticket["operation_id"],
+                    "request_hash": solve_ticket["request_hash"], "job_id": solve_ticket["job_id"],
+                    "revision_before": solve_revision_before,
+                    "revision_after": solve_ticket["revision"],
+                },
+                "tuple_readback": tuple_readback,
+                "field_operation": result_evidence,
+                "cleanup": dict(cleanup),
+            })
+            status = "SOLVE_READBACK_CAPTURED_ONLY_NOT_ADMISSION"
+            state.value["solve_readback_capture"] = {
+                "status": "CAPTURED", "field_sha256": solve_readback["full_dataset_field_sha256"],
+                "selected_tuple_field_sha256": solve_readback["field_values_sha256"],
+                "tuple": solve_readback["tuple"], "request_id": result_request,
+                "operation_id": result_ticket["operation_id"],
+            }
+            state.save()
         else:
-            raise RunnerError("field identity probe returned no structured payload")
-        if (probe.get("probe") != "W21FieldIdentityProbe"
-                or probe.get("status") != "STRUCTURE_CAPTURED_ONLY"
-                or probe.get("native_admission") != "UNVERIFIED"
-                or probe.get("identity", {}).get("model_tag") != binding["model_tag"]):
-            raise RunnerError("probe output is incomplete or claims a scope outside metadata capture")
+            raise RunnerError("prepared mode is unsupported")
 
         report = {
-            "schema": SCHEMA, "run_id": plan["run_id"], "freeze_sha256": plan["freeze_sha256"],
-            "status": "FIELD_PROBE_CAPTURED_ONLY_NOT_ADMISSION", "requested_version": plan["requested_version"],
+            "schema": plan["schema"], "mode": mode, "kind": plan["kind"],
+            "run_id": plan["run_id"], "freeze_sha256": plan["freeze_sha256"],
+            "status": status, "requested_version": plan["requested_version"],
             "selected_comsol": plan["selected_comsol"], "selected_jdk": plan["selected_jdk"],
             "project_id": project_id, "session_id": session_id,
             "owned_server": {"pid": server_identity.get("pid"),
@@ -1438,13 +2046,19 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
             "remote_engine_version": connected["remote_engine_version"],
             "remote_engine_build": connected["remote_engine_build"],
             "worker_epoch": worker_epoch, "model_binding": binding,
-            "fixture_sha256": plan["fixture_sha256"], "probe_sha256": plan["probe_sha256"],
-            "fixture_readback": dict(fixture_readback), "probe_readback": probe,
+            "fixture_sha256": plan["fixture_sha256"],
+            "fixture_readback": dict(fixture_readback),
             "budgets": dict(plan["budgets"]), "native_admission": "UNVERIFIED",
-            "physical_validation": "UNVERIFIED", "study_dispatch": 0, "solver_dispatch": 0,
+            "physical_validation": "UNVERIFIED",
+            "study_dispatch": state.value.get("study_dispatch", 0),
+            "solver_dispatch": state.value.get("solver_dispatch", 0),
             "cleanup": {"status": "PENDING"},
         }
-        state.value["probe_capture"] = {"status": "CAPTURED", "payload_sha256": sha256_value(probe)}
+        if mode == METADATA_MODE:
+            report.update({"probe_sha256": plan["probe_sha256"], "probe_readback": probe})
+        else:
+            report.update({"solution_tuple_readback": tuple_readback,
+                           "solve_readback": solve_readback})
         state.save()
 
         # Do not issue lifecycle cleanup after any ambiguous operation. The
@@ -1464,7 +2078,7 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
                 or disconnected.get("worker_handle_preserved") is not False):
             raise RunnerError("session.disconnect did not prove exact Worker retirement")
 
-        stop_ref = f"Task-scoped W21 metadata probe cleanup {plan['run_id']}"
+        stop_ref = f"Task-scoped W21 {mode} cleanup {plan['run_id']}"
         stop_args = {"project_id": project_id, "session_id": session_id,
                      "authorization_ref": stop_ref, "idempotency_key": keys["session_stop"],
                      "request_id": request_ids["session_stop"]}
@@ -1480,7 +2094,9 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
         _mark_isolation_receipt_stopped(Path(plan["isolation_receipt"]))
         report["cleanup"] = {"status": "CLEANUP_COMPLETE", "worker_retired": True,
                              "owned_server_stopped": True, "server_stop_evidence": stopped_data.get("stop_evidence")}
-        report_path = Path(plan["run_root"]) / "field_probe_receipt.json"
+        report_path = Path(plan["run_root"]) / (
+            "field_probe_receipt.json" if mode == METADATA_MODE else "solve_readback_receipt.json"
+        )
         # run_root is derived from the frozen evidence paths, not a caller path.
         write_json_atomic(report_path, report)
         state.value["status"] = report["status"]
@@ -1561,7 +2177,8 @@ def _load_plan(path: Path, expected: str) -> tuple[dict[str, Any], _RunState]:
     if path.is_symlink() or not path.is_file():
         raise RunnerError("freeze plan must be a regular file")
     plan = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(plan, dict) or plan.get("schema") != SCHEMA:
+    if (not isinstance(plan, dict)
+            or plan.get("schema") != _mode_schema(plan.get("mode", METADATA_MODE))):
         raise RunnerError("unsupported freeze plan")
     verify_plan(plan, expected_sha256=expected, source_root=Path(plan["source_root"]))
     state_path = path.parent / "state.json"
@@ -1682,6 +2299,7 @@ def _parser() -> argparse.ArgumentParser:
     commands = parser.add_subparsers(dest="command", required=True)
     prep = commands.add_parser("prepare", help="freeze source/runtime identity; never launches MCP or COMSOL")
     prep.add_argument("--version", choices=("6.4", "6.3"), required=True)
+    prep.add_argument("--mode", choices=(METADATA_MODE, SOLVE_READBACK_MODE), default=METADATA_MODE)
     prep.add_argument("--comsol-root", type=Path, required=True)
     prep.add_argument("--jdk-home", type=Path, required=True)
     prep.add_argument("--evidence-root", type=Path, required=True)
@@ -1689,7 +2307,7 @@ def _parser() -> argparse.ArgumentParser:
     prep.add_argument("--server-home-root", type=Path,
                       help="optional dedicated directory inside --evidence-root for short task-owned runtime homes")
     prep.add_argument("--prerequisite-64-receipt", type=Path)
-    run = commands.add_parser("execute", help="one explicitly frozen metadata-only field probe")
+    run = commands.add_parser("execute", help="one explicitly frozen W21 public MCP run")
     run.add_argument("--plan", type=Path, required=True)
     run.add_argument("--freeze-sha256", required=True)
     return parser
@@ -1703,12 +2321,13 @@ def main(argv: list[str] | None = None) -> int:
                              jdk_home=args.jdk_home, evidence_root=args.evidence_root,
                              source_root=args.source_root,
                              prerequisite_64_receipt=args.prerequisite_64_receipt,
-                             server_home_root=args.server_home_root)
+                             server_home_root=args.server_home_root,
+                             mode=args.mode)
         else:
             plan, state = _load_plan(args.plan, args.freeze_sha256)
             result = asyncio.run(_execute_stdio(plan, state))
         print(json.dumps({key: value for key, value in result.items()
-                          if key not in {"plan", "probe_readback", "fixture_readback"}},
+                          if key not in {"plan", "probe_readback", "fixture_readback", "solve_readback"}},
                          ensure_ascii=False, sort_keys=True, allow_nan=False))
         return 0
     except Exception as exc:

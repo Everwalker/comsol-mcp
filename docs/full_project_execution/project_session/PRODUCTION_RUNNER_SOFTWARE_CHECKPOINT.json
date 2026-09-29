@@ -56,5 +56,29 @@
     "final_junit_sha256": "92d98fac7a54f0c2af47860df3ee8f5644f7b8722a0bc6f2c90e0765e3cacb8e",
     "reproduce": "PYTHONDONTWRITEBYTECODE=1 /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -B -m pytest -q tests/test_run_w21_stage_native.py -p no:cacheprovider --basetemp=/Volumes/CTestEff/g --junitxml=/Volumes/CTestEff/w21-session-start-recovery-module-final-20260929T165000Z/junit.xml",
     "limits": "Synthetic stdio transport only; original Windows V2 operation remains UNKNOWN, no native startup/result acceptance."
+  },
+  "latest_solve_readback": {
+    "status": "PASS_SCOPED_OFFLINE",
+    "native_status": "NOT_RUN",
+    "mode": "solve-readback; metadata-only remains the default and retains zero solve budget",
+    "unique_tests_passed": 90,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "main_reviewed": true,
+    "candidate_source_sha256": {
+      "tests/test_run_w21_stage_native.py": "2cde2c18d4a1cd3f4769389175fdd41b7cfa9b6aa279c446d5dbee1840e7a62c",
+      "tools/run_w21_stage_native.py": "b9d0866c8af46fd6876865adf8adbce7b50bbf998f467db2ea490f02c76d1d14"
+    },
+    "receipt": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback/receipt-server-budget.json",
+    "receipt_sha256": "c6bec4dfa52c9f1513283c6d17ab660bbe7f9b47aa02bd9f4be531cb9726bbfa",
+    "junit": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback/runner-final4.xml",
+    "junit_sha256": "727e47b38540abac9ad50c9d43bd4ea7248cec0ed0c09fb8e830aa9c87d908cc",
+    "stdout_log": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback/runner-final4.stdout.log",
+    "stdout_sha256": "06d4ac38d4e2e7b6cabbaa2a33d85942e36eaaba2446127af513da91f45ec67c",
+    "review_scope": "Public MCP solve/readback runner; durable possible-dispatch budget, actual returned FieldArray identity/shape checks, and server queue+execution bounded by remaining work window.",
+    "limits": "Synthetic MCP transport/payload only. Windows/COMSOL/SSH/native execution NOT_RUN; existing Windows V2 session.start UNKNOWN remains unrecovered. Intrinsic field unit, coordinate frame and mesh identity remain UNVERIFIED; no stage admission or scientific acceptance.",
+    "test_command": "PYTHONDONTWRITEBYTECODE=1 /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -B -m pytest -p no:cacheprovider --basetemp=/Volumes/CTestEff/g --junitxml=/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback/runner-final4.xml -q tests/test_run_w21_stage_native.py",
+    "reproduce": "PYTHONDONTWRITEBYTECODE=1 /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -B -m pytest -p no:cacheprovider --basetemp=/Volumes/CTestEff/g --junitxml=/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback/runner-final4.xml -q tests/test_run_w21_stage_native.py"
   }
 }

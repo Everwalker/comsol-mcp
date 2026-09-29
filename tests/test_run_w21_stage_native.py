@@ -2,6 +2,8 @@
 
 The transport double below models public MCP envelopes only. It never starts
 the native server, Java Worker, COMSOL engine, or solver.
+Solve-readback values are synthetic transport payloads and prove parser/binding
+behavior only; they are not native numerical or scientific evidence.
 """
 from __future__ import annotations
 
@@ -28,7 +30,8 @@ assert SPEC.loader is not None
 SPEC.loader.exec_module(runner)
 
 
-def _plan(tmp_path: Path, *, worker_epoch: int = 7) -> dict:
+def _plan(tmp_path: Path, *, worker_epoch: int = 7,
+          mode: str = runner.METADATA_MODE) -> dict:
     root = REPOSITORY
     run_root = tmp_path / "run"
     workspace_root = run_root / "workspaces"
@@ -38,7 +41,7 @@ def _plan(tmp_path: Path, *, worker_epoch: int = 7) -> dict:
     server_home_id = "0123456789abcdef"
     server_home = server_home_root / server_home_id
     plan = {
-        "schema": runner.SCHEMA,
+        "schema": runner._mode_schema(mode), "mode": mode, "kind": runner._mode_kind(mode),
         "run_id": "w21-test-run",
         "run_root": str(run_root),
         "task_root": str(tmp_path),
@@ -84,27 +87,38 @@ def _plan(tmp_path: Path, *, worker_epoch: int = 7) -> dict:
                 "failure_session_stop",
             )
         },
-        "budgets": {
-            "server_births_max": 1, "worker_births_max": 1,
-            "seconds_from_session_start_dispatch": 900,
-            "ordinary_rpc_wait_seconds": 45,
-            "project_create_wait_calls_max": 1,
-            "project_create_wait_timeout_seconds": 30,
-            "geometry_run": 1, "mesh_run": 1, "study_dispatch": 0, "solver_dispatch": 0,
-        },
+        "budgets": runner._mode_budgets(mode),
         "_worker_epoch": worker_epoch,
     }
+    if mode == runner.SOLVE_READBACK_MODE:
+        plan["published_tool_schemas"]["run_study"] = {"type": "object", "properties": {}}
+        plan["logical_operation_schemas"]["dataset.solution_indices"] = {"type": "object"}
+        plan["logical_operation_schemas"]["result.evaluate"] = {"type": "object"}
+        plan["request_ids"].update({
+            name: f"req-{name}" for name in ("study_solve", "solution_indices", "result_evaluate")
+        })
+        plan["idempotency_keys"].update({
+            name: f"idem-{name}" for name in ("study_solve", "solution_indices", "result_evaluate")
+        })
     plan["freeze_sha256"] = runner.sha256_value(plan)
     return plan
 
 
-def _state(tmp_path: Path) -> runner._RunState:
+def _state(tmp_path: Path, *, schema: str = runner.SCHEMA) -> runner._RunState:
     path = tmp_path / "run" / "state.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     value = {
-        "schema": runner.SCHEMA, "run_id": "w21-test-run",
+        "schema": schema, "run_id": "w21-test-run",
         "freeze_sha256": "frozen-test-hash", "status": "PREPARED",
         "action_history": [], "job_ids": [],
+        "study_dispatch": 0, "study_dispatch_possible": 0,
+        "study_dispatch_status": "NOT_DISPATCHED",
+        "solver_dispatch": 0, "solver_dispatch_possible": 0,
+        "solver_dispatch_status": "NOT_DISPATCHED",
+        "solution_tuple_reads": 0, "solution_tuple_reads_possible": 0,
+        "solution_tuple_reads_status": "NOT_DISPATCHED",
+        "field_reads": 0, "field_reads_possible": 0,
+        "field_reads_status": "NOT_DISPATCHED",
     }
     path.write_text(json.dumps(value), encoding="utf-8")
     return runner._RunState(path, value)
@@ -125,11 +139,11 @@ def _patch_prepare_environment(monkeypatch):
         "executable_sha256": "e" * 64, "python_version": "3.12.0",
         "implementation": "CPython", "mcp_distribution_version": "1.30.0",
     })
-    monkeypatch.setattr(runner, "_published_tool_schemas", lambda _root: {
-        name: {"type": "object"} for name in runner.REQUIRED_TOOLS
+    monkeypatch.setattr(runner, "_published_tool_schemas", lambda _root, names=None: {
+        name: {"type": "object"} for name in (names or runner.REQUIRED_TOOLS)
     })
-    monkeypatch.setattr(runner, "_logical_schemas", lambda _root: {
-        name: {"type": "object"} for name in runner.LOGICAL_OPERATIONS
+    monkeypatch.setattr(runner, "_logical_schemas", lambda _root, operation_ids=None: {
+        name: {"type": "object"} for name in (operation_ids or runner.LOGICAL_OPERATIONS)
     })
 
 
@@ -149,7 +163,8 @@ class _FakeStdioSession:
                  job_list_has_more: bool = False,
                  job_list_timeout: bool = False,
                  session_start_unknown_job_id: str | None = None,
-                 job_status_fault: str | None = None):
+                 job_status_fault: str | None = None,
+                 solve_fault: str | None = None):
         self.plan = plan
         self.state = state
         self.wrong_model_field = wrong_model_field
@@ -165,6 +180,7 @@ class _FakeStdioSession:
         self.job_list_timeout = job_list_timeout
         self.session_start_unknown_job_id = session_start_unknown_job_id
         self.job_status_fault = job_status_fault
+        self.solve_fault = solve_fault
         self.calls: list[tuple[str, dict]] = []
         self.project_id = "project-test"
         self.session_id = "session-test"
@@ -213,6 +229,18 @@ class _FakeStdioSession:
         execution["revision"] = execution.pop("expected_revision")
         return execution
 
+    def _ticket_reply(self, params: dict, *, revision: int, operation_id: str,
+                      job_id: str) -> dict:
+        execution = dict(params["execution"])
+        execution.pop("expected_revision", None)
+        execution.update({
+            "project_id": self.project_id, "session_id": self.session_id,
+            "model_ref": dict(self.model_ref), "revision": revision,
+            "operation_id": operation_id, "request_hash": "a" * 64,
+            "job_id": job_id,
+        })
+        return execution
+
     async def call_tool(self, name: str, params: dict):
         operation = params.get("operation_id")
         inner = params.get("arguments", {})
@@ -227,6 +255,8 @@ class _FakeStdioSession:
             action = "fixture.execute" if inner.get("entrypoint") == "W21Fixture" else "probe.execute"
         elif operation == "job.wait":
             action = "project.create.wait"
+        elif name == "run_study":
+            action = "study.solve"
         else:
             action = operation or ("model_create" if name == "model_create" else None)
         if action in {"job.list", "job.status"}:
@@ -369,6 +399,131 @@ class _FakeStdioSession:
                     "identity": {"model_tag": "w21model"},
                 },
             }, "execution": execution}
+        if action == "study.solve":
+            execution = self._ticket_reply(
+                params, revision=params["execution"]["expected_revision"] + 1,
+                operation_id="op-study-solve", job_id="job-study-solve",
+            )
+            data = {"study_tag": inner.get("study_tag", params.get("study_tag"))}
+            if self.solve_fault == "wrong_request":
+                execution["request_id"] = "foreign-request"
+            elif self.solve_fault == "wrong_project":
+                execution["project_id"] = "foreign-project"
+            elif self.solve_fault == "wrong_revision":
+                execution["revision"] += 1
+            elif self.solve_fault == "solve_bad_hash":
+                execution["request_hash"] = "not-a-sha256"
+            if self.solve_fault == "wrong_study_tag":
+                data["study_tag"] = "std2"
+            return {"success": True, "data": data, "execution": execution}
+        if action == "dataset.solution_indices":
+            execution = self._ticket_reply(
+                params, revision=params["execution"]["expected_revision"],
+                operation_id="op-solution-indices", job_id="job-solution-indices",
+            )
+            data = {
+                "dataset": "dset1", "solution": "sol1", "binding_complete": True,
+                "pair_mapping_complete": True,
+                "binding_source": "SolutionInfo.getSolnum(outer, strict)",
+                "outer_indices": [1], "inner_indices": [1, 2],
+                "solnum_pairs": [
+                    {"outer": 1, "inner": 1, "solnum": 1},
+                    {"outer": 1, "inner": 2, "solnum": 2},
+                ],
+            }
+            if self.solve_fault == "tuple_wrong_request":
+                execution["request_id"] = "foreign-request"
+            elif self.solve_fault == "tuple_wrong_project":
+                execution["project_id"] = "foreign-project"
+            elif self.solve_fault == "tuple_wrong_revision":
+                execution["revision"] += 1
+            return {"success": True, "data": data, "execution": execution}
+        if action == "result.evaluate":
+            revision = params["execution"]["expected_revision"]
+            if self.solve_fault in {"wrong_result_revision", "result_wrong_revision"}:
+                revision += 2
+            elif self.solve_fault == "result_revision_advance":
+                revision += 1
+            execution = self._ticket_reply(
+                params, revision=revision,
+                operation_id="op-result-evaluate", job_id="job-result-evaluate",
+            )
+            if self.solve_fault in {"wrong_request", "result_wrong_request"}:
+                execution["request_id"] = "foreign-request"
+            elif self.solve_fault == "result_wrong_project":
+                execution["project_id"] = "foreign-project"
+            elif self.solve_fault == "result_wrong_key":
+                execution["idempotency_key"] = "foreign-idempotency"
+            elif self.solve_fault == "result_bad_hash":
+                execution["request_hash"] = "not-a-sha256"
+            point_count = 32769 if self.solve_fault == "numeric_cap" else 2
+            if point_count == 2:
+                values = [[[[300.0, 301.0], [302.0, 303.0]]]]
+            else:
+                values = [[[[300.0] * point_count, [302.0] * point_count]]]
+            if self.solve_fault == "nonfinite":
+                values[0][0][1][0] = float("nan")
+            elif self.solve_fault == "overflow":
+                values[0][0][1][0] = 10 ** 400
+            pairs = [
+                {"outer": 1, "inner": 1, "solnum": 1, "parameters": {"t": 0.0}},
+                {"outer": 1, "inner": 2, "solnum": 2, "parameters": {"t": 0.5}},
+            ]
+            if self.solve_fault == "wrong_tuple":
+                pairs[1]["solnum"] = 7
+            field_array = {
+                "values": values, "axes": ["expression", "outer", "inner", "point"],
+                "shape": [1, 1, 2, point_count], "coords": {
+                    "expression": ["T"], "outer": [1], "inner": [1, 2],
+                    "point": list(range(1, point_count + 1)),
+                    "spatial": ([[0.0, 0.0, 0.0], [0.05, 0.0, 0.0]]
+                                if point_count == 2 else None),
+                }, "units": {"expression": {"T": "K"}, "point": "m"},
+                "metadata": {"pair_mapping_complete": True, "solution_pairs": pairs,
+                              "unit_readback_status": "VERIFIED"},
+                "is_complex": False,
+            }
+            budget_record = {"status": "PASS", "allowed": True, "publish_allowed": True}
+            budget_status = "PASS"
+            budget_publish = True
+            if self.solve_fault == "truncated":
+                budget_record["publish_allowed"] = False
+                budget_status = "BLOCKED"
+                budget_publish = False
+            data = {
+                "status": {"ok": True}, "dataset": "dset1", "solution": "sol1",
+                "expressions": ["T"],
+                "storage": "inline", "values": values, "field_array": field_array,
+                "solution_axes": {"outer": [1], "inner": [1, 2], "pair_mapping_complete": True},
+                "expression_units": {"T": "K"},
+                "result_budget": {"status": budget_status, "publish_allowed": budget_publish,
+                                  "records": [budget_record]},
+                "cleanup": {"cleanup_failed": self.solve_fault in {"cleanup_unknown", "cleanup_failed_only"}},
+                "execution_state_unknown": self.solve_fault == "cleanup_unknown",
+                "observation_ref": {"observation_id": "obs-test", "sha256": "b" * 64},
+            }
+            if self.solve_fault in {"cleanup_unknown", "cleanup_failed_only"}:
+                data["status"] = {"ok": False, "cleanup_failed": True,
+                                  "execution_state_unknown": self.solve_fault == "cleanup_unknown"}
+            if self.solve_fault == "result_wrong_outer_axis":
+                field_array["coords"]["outer"] = [2]
+            elif self.solve_fault == "result_wrong_shape":
+                field_array["shape"][3] -= 1
+            elif self.solve_fault == "result_missing_pair":
+                field_array["metadata"]["solution_pairs"].pop()
+            elif self.solve_fault == "result_wrong_point_axis":
+                field_array["coords"]["point"] = [0] * point_count
+            elif self.solve_fault == "result_wrong_spatial_shape":
+                field_array["coords"]["spatial"] = [[0.0, 0.0, 0.0]]
+            elif self.solve_fault == "result_wrong_expression":
+                field_array["coords"]["expression"] = ["u"]
+            elif self.solve_fault == "result_oversized_json":
+                field_array["metadata"]["padding"] = "x" * (8 * 1024 * 1024)
+            elif self.solve_fault == "result_unit_metadata_conflict":
+                field_array["units"]["expression"]["T"] = "degC"
+            if self.solve_fault == "missing_observation":
+                data.pop("observation_ref")
+            return {"success": True, "data": data, "execution": execution}
         if action == "job.status":
             query = self.state.value["recovery"]["read_only_query"]
             if query.get("action") == "project.create.wait":
@@ -454,6 +609,331 @@ class _FakeStdioSession:
 def _patch_isolation(monkeypatch):
     monkeypatch.setattr(runner, "_write_isolation_receipt", lambda *_args: None)
     monkeypatch.setattr(runner, "_mark_isolation_receipt_stopped", lambda *_args: None)
+
+
+def _run_solve_readback(tmp_path, monkeypatch, *, solve_fault=None, unknown_on=None):
+    _patch_isolation(monkeypatch)
+    plan = _plan(tmp_path, mode=runner.SOLVE_READBACK_MODE)
+    state = _state(tmp_path, schema=runner.SOLVE_READBACK_SCHEMA)
+    fake = _FakeStdioSession(plan, state, solve_fault=solve_fault, unknown_on=unknown_on)
+    report = asyncio.run(runner.run_metadata_protocol(
+        runner._MCPCalls(fake), plan, state, clock=lambda: 100.0, preflight=lambda: [],
+    ))
+    return plan, state, fake, report
+
+
+def test_srb_ok(tmp_path, monkeypatch):
+    plan, state, fake, report = _run_solve_readback(
+        tmp_path, monkeypatch, solve_fault="result_unit_metadata_conflict",
+    )
+    actions = [action for action, _ in fake.calls]
+    assert actions.count("study.solve") == 1
+    assert actions.count("dataset.solution_indices") == 1
+    assert actions.count("result.evaluate") == 1
+    assert "probe.register" not in actions and "probe.execute" not in actions
+    assert report["mode"] == runner.SOLVE_READBACK_MODE
+    assert report["kind"] == runner.SOLVE_READBACK_KIND
+    assert report["study_dispatch"] == report["solver_dispatch"] == 1
+    assert report["native_admission"] == report["physical_validation"] == "UNVERIFIED"
+    assert report["status"] == "SOLVE_READBACK_CAPTURED_ONLY_NOT_ADMISSION"
+    captured = report["solve_readback"]
+    assert captured["tuple"] == {"outer": 1, "inner": 2, "solnum": 2}
+    assert captured["field_values"] == [302.0, 303.0]
+    assert captured["field_units"]["expression"]["T"] == "degC"
+    assert captured["unit_acceptance"] == "UNVERIFIED_CONFIGURED_OR_MODEL_DEPENDENT"
+    assert captured["coordinate_frame_acceptance"] == "UNVERIFIED"
+    assert captured["mesh_intrinsic_identity"] == "UNVERIFIED"
+    assert captured["read_scope"].startswith("complete returned dataset FieldArray")
+    assert captured["tuple_readback"]["operation"]["request_id"] == plan["request_ids"]["solution_indices"]
+    assert captured["field_operation"]["request_id"] == plan["request_ids"]["result_evaluate"]
+    assert captured["field_operation"]["revision_after"] in {
+        captured["field_operation"]["revision_before"],
+        captured["field_operation"]["revision_before"] + 1,
+    }
+    assert captured["cleanup"]["cleanup_failed"] is False
+    assert report["cleanup"]["status"] == "CLEANUP_COMPLETE"
+    solve_params = next(params for action, params in fake.calls if action == "study.solve")
+    tuple_params = next(params for action, params in fake.calls
+                        if action == "dataset.solution_indices")
+    result_params = next(params for action, params in fake.calls if action == "result.evaluate")
+    assert solve_params["study_tag"] == "std1"
+    for params in (solve_params, tuple_params, result_params):
+        assert params["execution"]["queue_timeout_s"] == 30
+        assert params["execution"]["execution_timeout_s"] == 240
+    assert result_params["arguments"]["spec"] == {
+        "expressions": ["T"],
+        "solution": {"dataset": "dset1", "solution": "sol1"},
+        "aggregate": "none", "complex_mode": "preserve", "storage": "inline",
+    }
+    assert state.value["study_dispatch"] == state.value["solver_dispatch"] == 1
+
+
+def test_srb_eval_revision_advance_is_bound_into_the_report(tmp_path, monkeypatch):
+    _plan, _state, _fake, report = _run_solve_readback(
+        tmp_path, monkeypatch, solve_fault="result_revision_advance",
+    )
+    capture = report["solve_readback"]
+    operation = capture["field_operation"]
+    assert operation["revision_after"] == operation["revision_before"] + 1
+    assert report["model_binding"]["revision"] == operation["revision_after"]
+
+
+def test_srb_freeze(tmp_path, monkeypatch):
+    _patch_prepare_environment(monkeypatch)
+    evidence = tmp_path / "e"
+    evidence.mkdir()
+    result = runner.prepare(
+        version="6.4", mode=runner.SOLVE_READBACK_MODE,
+        comsol_root=tmp_path / "COMSOL64", jdk_home=tmp_path / "JDK11",
+        evidence_root=evidence, server_home_root=evidence / "h",
+    )
+    plan = result["plan"]
+    assert plan["schema"] == runner.SOLVE_READBACK_SCHEMA
+    assert plan["kind"] == runner.SOLVE_READBACK_KIND
+    assert plan["mode"] == runner.SOLVE_READBACK_MODE
+    assert plan["budgets"] == runner._mode_budgets(runner.SOLVE_READBACK_MODE)
+    assert plan["budgets"]["study_dispatch"] == plan["budgets"]["solver_dispatch"] == 1
+    assert plan["budgets"]["solution_tuple_reads"] == plan["budgets"]["field_reads"] == 1
+    assert plan["budgets"]["queue_timeout_seconds"] == 30
+    assert plan["budgets"]["execution_timeout_seconds"] == 240
+    assert plan["budgets"]["ordinary_rpc_wait_seconds"] == 45
+    assert plan["budgets"]["cleanup_reserve_seconds"] == 60
+    assert "run_study" in plan["published_tool_schemas"]
+    assert {"dataset.solution_indices", "result.evaluate"} <= plan["logical_operation_schemas"].keys()
+    assert {"study_solve", "solution_indices", "result_evaluate"} <= plan["request_ids"].keys()
+    assert {"study_solve", "solution_indices", "result_evaluate"} <= plan["idempotency_keys"].keys()
+    assert result["status"] == "PREPARED_ONLY"
+
+    metadata_receipt = evidence / "metadata-only-receipt.json"
+    metadata_receipt.write_text(json.dumps({
+        "schema": runner.SCHEMA,
+        "status": "FIELD_PROBE_CAPTURED_ONLY_NOT_ADMISSION",
+        "selected_comsol": {"version": "6.4.0.293"},
+        "cleanup": {"status": "CLEANUP_COMPLETE"},
+    }), encoding="utf-8")
+    metadata_step = runner.prepare(
+        version="6.3", comsol_root=tmp_path / "COMSOL63", jdk_home=tmp_path / "JDK11",
+        evidence_root=evidence, server_home_root=evidence / "h63",
+        prerequisite_64_receipt=metadata_receipt,
+    )
+    assert metadata_step["plan"]["mode"] == runner.METADATA_MODE
+    assert metadata_step["plan"]["budgets"]["study_dispatch"] == 0
+    assert metadata_step["plan"]["budgets"]["solver_dispatch"] == 0
+    with pytest.raises(runner.RunnerError, match="solve-readback receipt"):
+        runner.prepare(
+            version="6.3", mode=runner.SOLVE_READBACK_MODE,
+            comsol_root=tmp_path / "COMSOL63", jdk_home=tmp_path / "JDK11",
+            evidence_root=evidence, server_home_root=evidence / "h63-solve",
+            prerequisite_64_receipt=metadata_receipt,
+        )
+
+
+@pytest.mark.parametrize(("fault", "message"), [
+    ("wrong_tuple", "pair mapping"),
+    ("tuple_wrong_request", "managed request/ticket/model binding"),
+    ("tuple_wrong_project", "managed request/ticket/model binding"),
+    ("tuple_wrong_revision", "revision outside"),
+    ("result_wrong_request", "managed request/ticket/model binding"),
+    ("result_wrong_project", "managed request/ticket/model binding"),
+    ("result_wrong_key", "managed request/ticket/model binding"),
+    ("result_bad_hash", "managed request/ticket/model binding"),
+    ("result_wrong_revision", "revision outside"),
+    ("result_wrong_outer_axis", "coordinates do not contain"),
+    ("result_wrong_shape", "axes, shape"),
+    ("result_missing_pair", "pair mapping"),
+    ("result_wrong_point_axis", "point coordinate axis"),
+    ("result_wrong_spatial_shape", "spatial coordinates"),
+    ("result_wrong_expression", "coordinates do not contain"),
+    ("nonfinite", "nonfinite"),
+    ("overflow", "overflowing"),
+    ("numeric_cap", "exceeds the W21 output cap"),
+    ("truncated", "budget witness"),
+    ("missing_observation", "persisted observation reference"),
+    ("result_oversized_json", "8 MiB output cap"),
+], ids=[
+    "pair", "tuple-req", "tuple-project", "tuple-rev", "field-req", "field-project",
+    "field-key", "field-hash", "field-rev", "outer-axis", "shape", "missing-pair",
+    "point-axis", "spatial", "expression", "nan", "overflow", "scalar-cap", "truncated",
+    "observation", "json-cap",
+])
+def test_srb_rejects_incomplete_or_misbound_readback(fault, message, tmp_path, monkeypatch):
+    _patch_isolation(monkeypatch)
+    plan = _plan(tmp_path, mode=runner.SOLVE_READBACK_MODE)
+    state = _state(tmp_path, schema=runner.SOLVE_READBACK_SCHEMA)
+    fake = _FakeStdioSession(plan, state, solve_fault=fault)
+    with pytest.raises(runner.RunnerError, match=message):
+        asyncio.run(runner.run_metadata_protocol(
+            runner._MCPCalls(fake), plan, state, clock=lambda: 100.0, preflight=lambda: [],
+        ))
+    assert state.value["status"] == "FAILED"
+    assert "session.stop" in [action for action, _ in fake.calls]
+
+
+@pytest.mark.parametrize(("unknown_on", "expected_action", "state_action"), [
+    ("study.solve", "study.solve", "study.solve"),
+    ("dataset.solution_indices", "dataset.solution_indices", "solution_indices"),
+    ("result.evaluate", "result.evaluate", "result.evaluate"),
+], ids=["solve", "tuple", "field"])
+def test_srb_unknown_stops_after_one_readonly_query(
+        unknown_on, expected_action, state_action, tmp_path, monkeypatch):
+    _patch_isolation(monkeypatch)
+    plan = _plan(tmp_path, mode=runner.SOLVE_READBACK_MODE)
+    state = _state(tmp_path, schema=runner.SOLVE_READBACK_SCHEMA)
+    fake = _FakeStdioSession(plan, state, unknown_on=unknown_on)
+    with pytest.raises(runner.RunnerError, match="UNKNOWN"):
+        asyncio.run(runner.run_metadata_protocol(
+            runner._MCPCalls(fake), plan, state, clock=lambda: 100.0, preflight=lambda: [],
+        ))
+    actions = [action for action, _ in fake.calls]
+    unknown_index = actions.index(expected_action)
+    assert actions[unknown_index + 1:] == ["job.list"]
+    assert actions.count("job.list") == 1
+    assert "session.disconnect" not in actions and "session.stop" not in actions
+    assert state.value["status"] == "UNKNOWN"
+    assert state.value["recovery"]["replay_permitted"] is False
+    assert state.value["recovery"]["cleanup_permitted"] is False
+    assert state.value["actions"][state_action]["status"] == "UNKNOWN"
+    if expected_action == "study.solve":
+        assert state.value["study_dispatch_possible"] == 1
+        assert state.value["solver_dispatch_possible"] == 1
+        assert state.value["study_dispatch"] == state.value["solver_dispatch"] == 0
+        assert state.value["study_dispatch_status"] == state.value["solver_dispatch_status"] == "UNKNOWN"
+    elif expected_action == "dataset.solution_indices":
+        assert state.value["study_dispatch"] == state.value["solver_dispatch"] == 1
+        assert state.value["solution_tuple_reads_possible"] == 1
+        assert state.value["solution_tuple_reads"] == 0
+        assert state.value["solution_tuple_reads_status"] == "UNKNOWN"
+        assert state.value["field_reads_possible"] == 0
+    else:
+        assert state.value["study_dispatch"] == state.value["solver_dispatch"] == 1
+        assert state.value["solution_tuple_reads"] == 1
+        assert state.value["field_reads_possible"] == 1
+        assert state.value["field_reads"] == 0
+        assert state.value["field_reads_status"] == "UNKNOWN"
+
+
+@pytest.mark.parametrize(("blocked_action", "state_action", "call_threshold", "counter"), [
+    ("study.solve", "study.solve", 8, "study_dispatch"),
+    ("dataset.solution_indices", "solution_indices", 9, "solution_tuple_reads"),
+    ("result.evaluate", "result.evaluate", 10, "field_reads"),
+], ids=["solve", "tuple", "field"])
+def test_srb_late_server_budget_refuses_before_stage_dispatch(
+        blocked_action, state_action, call_threshold, counter, tmp_path, monkeypatch):
+    _patch_isolation(monkeypatch)
+    plan = _plan(tmp_path, mode=runner.SOLVE_READBACK_MODE)
+    state = _state(tmp_path, schema=runner.SOLVE_READBACK_SCHEMA)
+    fake = _FakeStdioSession(plan, state)
+
+    def near_work_boundary():
+        return 100.0 if len(fake.calls) < call_threshold else 730.0
+
+    with pytest.raises(runner.RunnerError, match=r"server queue\+execution budget exceeds"):
+        asyncio.run(runner.run_metadata_protocol(
+            runner._MCPCalls(fake), plan, state, clock=near_work_boundary, preflight=lambda: [],
+        ))
+    actions = [action for action, _ in fake.calls]
+    assert blocked_action not in actions
+    assert "session.disconnect" in actions and "session.stop" in actions
+    action_state = state.value["actions"][state_action]
+    assert action_state["status"] == "NOT_DISPATCHED_SERVER_BUDGET"
+    assert action_state["server_queue_timeout_s"] == 30
+    assert action_state["server_execution_timeout_s"] == 240
+    assert action_state["remaining_work_window_s"] < 270
+    assert state.value[f"{counter}_possible"] == 0
+    assert state.value[counter] == 0
+    assert state.value[f"{counter}_status"] == "NOT_DISPATCHED_BUDGET"
+
+
+def test_srb_cleanup_unknown_has_no_followup_cleanup(tmp_path, monkeypatch):
+    _patch_isolation(monkeypatch)
+    plan = _plan(tmp_path, mode=runner.SOLVE_READBACK_MODE)
+    state = _state(tmp_path, schema=runner.SOLVE_READBACK_SCHEMA)
+    fake = _FakeStdioSession(plan, state, solve_fault="cleanup_failed_only")
+    with pytest.raises(runner.RunnerError, match="result.evaluate returned UNKNOWN"):
+        asyncio.run(runner.run_metadata_protocol(
+            runner._MCPCalls(fake), plan, state, clock=lambda: 100.0, preflight=lambda: [],
+        ))
+    actions = [action for action, _ in fake.calls]
+    result_index = actions.index("result.evaluate")
+    assert actions[result_index + 1:] == ["job.status"]
+    assert "session.disconnect" not in actions and "session.stop" not in actions
+    assert state.value["field_reads_possible"] == 1
+    assert state.value["field_reads"] == 0
+    assert state.value["field_reads_status"] == "UNKNOWN"
+
+
+def test_srb_receipt_gate_requires_durable_solve_capture_and_cleanup(tmp_path):
+    run_root = tmp_path / "v6.4"
+    run_root.mkdir()
+    receipt_path = run_root / "solve_readback_receipt.json"
+    state_path = run_root / "state.json"
+    isolation_path = run_root / "owned_server_isolation.json"
+    receipt = {
+        "schema": runner.SOLVE_READBACK_SCHEMA, "kind": runner.SOLVE_READBACK_KIND,
+        "mode": runner.SOLVE_READBACK_MODE,
+        "status": "SOLVE_READBACK_CAPTURED_ONLY_NOT_ADMISSION",
+        "selected_comsol": {"version": "6.4.0.293"},
+        "study_dispatch": 1, "solver_dispatch": 1,
+        "solve_readback": {"status": "CAPTURED", "field_sha256": "a" * 64},
+        "solution_tuple_readback": {
+            "status": "VERIFIED", "target_tuple": {"outer": 1, "inner": 2, "solnum": 2},
+        },
+        "cleanup": {"status": "CLEANUP_COMPLETE", "worker_retired": True,
+                     "owned_server_stopped": True},
+    }
+    durable_state = {
+        "schema": runner.SOLVE_READBACK_SCHEMA,
+        "status": receipt["status"], "receipt_path": str(receipt_path.resolve()),
+        "study_dispatch": 1, "study_dispatch_possible": 1,
+        "study_dispatch_status": "CONFIRMED",
+        "solver_dispatch": 1, "solver_dispatch_possible": 1,
+        "solver_dispatch_status": "CONFIRMED",
+        "solution_tuple_reads": 1, "solution_tuple_reads_possible": 1,
+        "solution_tuple_reads_status": "CONFIRMED",
+        "field_reads": 1, "field_reads_possible": 1,
+        "field_reads_status": "CONFIRMED",
+        "solution_tuple_readback_progress": {
+            "status": "VERIFIED", "tuple": {"outer": 1, "inner": 2, "solnum": 2},
+        },
+        "field_readback_progress": {"status": "VERIFIED", "field_sha256": "a" * 64},
+    }
+    receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
+    durable_state["receipt_sha256"] = runner.sha256_file(receipt_path)
+    state_path.write_text(json.dumps({
+        **durable_state,
+    }), encoding="utf-8")
+    isolation_path.write_text(json.dumps({"status": "STOPPED"}), encoding="utf-8")
+    checked = runner._check_64_receipt(receipt_path, mode=runner.SOLVE_READBACK_MODE)
+    assert checked["mode"] == runner.SOLVE_READBACK_MODE
+    assert checked["sha256"] == runner.sha256_file(receipt_path)
+
+    state_path.write_text(json.dumps({
+        **durable_state, "receipt_sha256": "0" * 64,
+    }), encoding="utf-8")
+    with pytest.raises(runner.RunnerError, match="durable completion state"):
+        runner._check_64_receipt(receipt_path, mode=runner.SOLVE_READBACK_MODE)
+
+    state_path.write_text(json.dumps({
+        **durable_state,
+    }), encoding="utf-8")
+    isolation_path.write_text(json.dumps({"status": "RUNNING"}), encoding="utf-8")
+    with pytest.raises(runner.RunnerError, match="not safely stopped"):
+        runner._check_64_receipt(receipt_path, mode=runner.SOLVE_READBACK_MODE)
+
+    metadata_receipt = dict(receipt)
+    metadata_receipt.update({"schema": runner.SCHEMA,
+                             "kind": "W21_FIELD_IDENTITY_METADATA_PROBE",
+                             "mode": runner.METADATA_MODE,
+                             "status": "FIELD_PROBE_CAPTURED_ONLY_NOT_ADMISSION",
+                             "study_dispatch": 0, "solver_dispatch": 0})
+    metadata_path = run_root / "metadata_receipt.json"
+    metadata_path.write_text(json.dumps(metadata_receipt), encoding="utf-8")
+    metadata_checked = runner._check_64_receipt(metadata_path, mode=runner.METADATA_MODE)
+    assert metadata_checked["sha256"] == runner.sha256_file(metadata_path)
+    with pytest.raises(runner.RunnerError, match="cleaned-up 6.4 metadata-only"):
+        runner._check_64_receipt(receipt_path, mode=runner.METADATA_MODE)
+    with pytest.raises(runner.RunnerError, match="complete actual 6.4 solve-readback"):
+        runner._check_64_receipt(metadata_path, mode=runner.SOLVE_READBACK_MODE)
 
 
 def test_prepare_freezes_full_source_identity_without_starting_services(tmp_path, monkeypatch):
@@ -745,7 +1225,7 @@ def test_verify_plan_rejects_hash_mismatch_and_source_manifest_drift(tmp_path, m
     server_home_id = "0123456789abcdef"
     server_home = server_home_root / server_home_id
     plan = {
-        "schema": runner.SCHEMA,
+        "schema": runner.SCHEMA, "mode": runner.METADATA_MODE,
         "run_root": str(run_root),
         "task_root": str(task_root),
         "server_home_root": str(server_home_root),
@@ -756,13 +1236,14 @@ def test_verify_plan_rejects_hash_mismatch_and_source_manifest_drift(tmp_path, m
         "source_manifest_sha256": None,
         "python": {"frozen": True}, "published_tool_schemas": {},
         "logical_operation_schemas": {},
+        "budgets": runner._mode_budgets(runner.METADATA_MODE),
         "selected_comsol": {"root": "frozen-root"}, "requested_version": "6.4",
         "selected_jdk": {"home": "frozen-jdk"},
     }
     plan["source_manifest_sha256"] = runner.sha256_value(plan["source_manifest"])
     monkeypatch.setattr(runner, "_python_identity", lambda: plan["python"])
-    monkeypatch.setattr(runner, "_published_tool_schemas", lambda _root: plan["published_tool_schemas"])
-    monkeypatch.setattr(runner, "_logical_schemas", lambda _root: plan["logical_operation_schemas"])
+    monkeypatch.setattr(runner, "_published_tool_schemas", lambda _root, _names=None: plan["published_tool_schemas"])
+    monkeypatch.setattr(runner, "_logical_schemas", lambda _root, _operations=None: plan["logical_operation_schemas"])
     monkeypatch.setattr(runner, "_comsol_identity", lambda *_args: plan["selected_comsol"])
     monkeypatch.setattr(runner, "_jdk_identity", lambda _home: plan["selected_jdk"])
     candidate = dict(plan)
@@ -902,7 +1383,7 @@ def test_project_create_wait_budget_is_frozen_and_bounded(tmp_path, monkeypatch)
     plan["budgets"]["project_create_wait_timeout_seconds"] = runner.RPC_WAIT_S + 1
     state = _state(tmp_path)
     fake = _FakeStdioSession(plan, state, project_create_pending=True)
-    with pytest.raises(runner.RunnerError, match="wait budget is invalid"):
+    with pytest.raises(runner.RunnerError, match="prepared mode/schema/budget identity is invalid"):
         asyncio.run(runner.run_metadata_protocol(runner._MCPCalls(fake), plan, state,
             clock=lambda: 100.0, preflight=lambda: []))
     assert "project.create.wait" not in [action for action, _ in fake.calls]
