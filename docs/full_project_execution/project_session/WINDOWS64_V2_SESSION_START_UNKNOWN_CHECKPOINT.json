@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "unit": "W21 Windows6.4 V2 short-home current-source attempt",
-  "updated_at_utc": "2026-09-29T09:36:10Z",
+  "updated_at_utc": "2026-09-29T09:56:32Z",
   "overall_status": "PARTIAL",
   "source_package_status": "PASS_MAIN_VERIFIED",
-  "native_status": "CONNECT_UNKNOWN_PRESERVED; RECOVERY_QUIESCENCE_READ_ONLY_VERIFIED; SOLVE_READBACK_NOT_RUN",
-  "next_action": "The original 164eec3 session.connect remains UNKNOWN and its original result is preserved. The sole session.recover operation/job succeeded and its corrected independent read-only verifier now passes for ABANDONED_UNKNOWN_CONNECT_CURRENT_HOST_QUIESCENCE: source remains RECONCILING with canonical/raw result hashes unchanged, lifecycle is STOPPED with no endpoint/identity, complete process/listener inventories have zero matches, and recovery caused no native birth. The earlier verifier exit 3 was only an incorrect nested stdout path; the task-root file hash matched and corrected read-only verification exited 0 without redispatch. Prepare the new Windows 6.4 candidate from source HEAD 31607303 for one bounded minimal chain; preparation is in progress and no native action has run. This does not establish connect or solve success; solve/readback remains NOT_RUN.",
+  "native_status": "LATEST_3160730_RUN_IDENTITY_MISMATCH_STOP_UNKNOWN; PRIOR_CONNECT_QUIESCENCE_VERIFIED; SOLVE_READBACK_NOT_RUN",
+  "next_action": "Repair localized remote version/build parsing and Windows empty-listener enumeration; add source-bound abandoned-stop quiescence recovery using the existing atomic proof system. Preserve the original stop UNKNOWN. Do not restart, replay or clean up until durable disposition is verified; then use a new reviewed Windows6.4 freeze, followed by6.3 and W23-W26.",
   "candidate": {
     "source_commit": "9c5ced6272dd876cf9c28c6c6f73b943bd76b96c",
     "evidence_root": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-v2-20260928T235840Z-9c5ced6",
@@ -1390,5 +1390,139 @@
       "cause": "CLI stdout argument pointed to absent nested directory; the correct uploaded stdout was at task root. This was a read-only path error, not a database/recovery failure; no recovery was redispatched."
     },
     "next_action": "Prepare the Windows 6.4 candidate from source HEAD 31607303 for one bounded minimal chain. Preparation is in progress; no native action has run."
+  },
+  "latest_windows64_minimal_chain_attempt_20260929T094158Z": {
+    "schema": "COMSOL_W21_WINDOWS64_MINIMAL_CHAIN_ATTEMPT_V1",
+    "run_id": "w21-64-20260929T094158Z-808f9cde",
+    "source_head": "31607303dc92b3131a34c17fea659ce0c41b46cb",
+    "source_archive_sha256": "29bdfa932f7d29bb6c4f1c7347c99fe6a34fcaf95aba77533ad3e4fba2cd3f6b",
+    "source_manifest_sha256": "54142c8b7304fce170221c817948b0aa79a7a9e98df6e6d92cc1d4d2bf5d766f",
+    "probe_integration_in_freeze": false,
+    "freeze_sha256": "8a9b9aa813bc82795f2f896095ba7a2a417187dd48e5bb26f3485cd5ed777704",
+    "freeze_file_sha256": "8563eb9354a4dfc4fc47930e0dfbe2e445b2afde657c8e0c43ed255ae1727cc8",
+    "fixture_sha256": "7a17cc4a8e68b0aaf7c3fcd89e320732a49041f65e10f2d9a066e409e5fbcd51",
+    "prepare_review_receipt": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback-prepare-review-20260929/prepare-review-receipt.json",
+      "sha256": "31ba60176c893aa649cb96c67f9dfbf0fdcc4b486f0ac5b84ea90cad49a70db5",
+      "all_checks_pass": true,
+      "archive_members": 104
+    },
+    "execute_receipt": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback-prepare-review-20260929/execute64-receipt.json",
+      "sha256": "9eac8341013a7f3cfabd8648e7855fa37ce645650556a67b205f551b1f2623cf",
+      "remote_exit_code": 2,
+      "outer_capture_exit_code": 0,
+      "replay": false,
+      "command_sha256": "4401a123e8c537fc234536bb4e78f34e2e4d4196f4b7b334eb9b0f4662e0627e"
+    },
+    "stdout": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback-prepare-review-20260929/execute64.stdout",
+      "sha256": "f1e2e03d4ba6540755d66cb9c50aede2c86abe07ee7f46cfd5c55e8a47b767d1"
+    },
+    "stderr": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback-prepare-review-20260929/execute64.stderr",
+      "sha256": "ffccaca718fb391766bf847609f91647260d155ac66c6665b98278142bc95fd4"
+    },
+    "state_after_execute": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback-prepare-review-20260929/state-after-execute.json",
+      "sha256": "013872b80d779c759af1a7ee81a0c202382bccd9bd70a9ddcbb5b1e27e114f68"
+    },
+    "outcome": "FAILED_RUNNER_IDENTITY_PATH_MISMATCH_WITH_SESSION_STOP_UNKNOWN",
+    "public_route_outcomes": {
+      "project.create": {
+        "status": "SUCCESS",
+        "request_id": "e34326d3-8e6c-4b7e-93fe-1ee7b6285b0b",
+        "job_id": "bbbca5b7-06bd-4e9d-9219-489f7c8d6a3c"
+      },
+      "session.start": {
+        "status": "SUCCESS",
+        "request_id": "3e9b685f-c917-4a11-bd92-ccd18f5325b9",
+        "job_id": "053fe9f0-005f-412c-9c56-7ee4c747d6fa",
+        "session_id": "session-e53e069680b5427989e300fc0c55299c",
+        "project_id": "aaa90cfc-7a33-4f43-ab2d-4914a945f6a6"
+      },
+      "session.connect": {
+        "status": "SUCCESS",
+        "request_id": "07914530-ffe3-4369-9743-efdfd51aa884",
+        "job_id": "6751d9e3-3648-455c-aee2-0a6d744376c3",
+        "identity_version_build": "NOT_VERIFIED"
+      },
+      "failure_cause": {
+        "type": "RunnerError",
+        "message": "session.connect identity<path> differs from the frozen Server<path>",
+        "interpretation": "Runner reported an identity-path mismatch after public connect success. Complete connect identity/version/build readback and root-cause diagnosis remain pending; authentication is not established as the cause."
+      },
+      "failure_cleanup.session_disconnect": {
+        "status": "DISCONNECTED",
+        "success": true,
+        "request_id": "9bfe33f4-763f-45c5-b7cf-a0ec77028757",
+        "job_id": "18588a3a-da3f-4163-92ec-cd2a2a1fefdc"
+      },
+      "failure_cleanup.session_stop": {
+        "status": "UNKNOWN",
+        "success": false,
+        "error_code": "EXECUTION_STATE_UNKNOWN",
+        "request_id": "d26119c9-2727-4f16-b57f-091add8c1815",
+        "job_id": "e2d821c1-9a30-4561-ae73-0c9a022e9df5",
+        "idempotency_key": "ce17ffc1-da7f-41e5-9d13-3dea6b73a492",
+        "followup_permitted": false
+      }
+    },
+    "possible_resource_counts": {
+      "server_births": 1,
+      "worker_births": 1,
+      "study_dispatches": 0,
+      "solver_dispatches": 0,
+      "solution_tuple_reads": 0,
+      "field_reads": 0
+    },
+    "current_process_disposition": "NOT_YET_READ_ONLY_VERIFIED; handoff diagnostics pending",
+    "next_action": "Repair localized remote version/build parsing and Windows empty-listener enumeration; add source-bound abandoned-stop quiescence recovery using the existing atomic proof system. Preserve the original stop UNKNOWN. Do not restart, replay or clean up until durable disposition is verified; then use a new reviewed Windows6.4 freeze, followed by6.3 and W23-W26.",
+    "readonly_diagnostics": {
+      "status": "PASS_READONLY_OBSERVATION_ONLY",
+      "connect_result": "SUCCEEDED",
+      "remote_engine_version": "COMSOL Multiphysics 6.4 (开发版本: 293)",
+      "remote_engine_build": null,
+      "remote_engine_build_source": "NOT_REPORTED",
+      "runner_defect": "Numeric-prefix and mandatory separate build comparison reject the actual localized remote version string.",
+      "stop_operation_id": "8f91a0ec-ab71-41c4-90f2-a00bee016733",
+      "stop_status": "UNKNOWN",
+      "stop_cause_type": "OwnedServerError",
+      "stop_result_reports_server_stopped": false,
+      "stop_result_reports_handle_preserved": true,
+      "lifecycle_revision": 8,
+      "lifecycle_state": "UNKNOWN",
+      "observed_server_pid": 34348,
+      "server_currently_present": false,
+      "observed_daemon_pid": 34772,
+      "daemon_currently_present": false,
+      "tcp_inventory_rows": 258,
+      "target_port": 11961,
+      "target_listeners": 0,
+      "old_filtered_listener_query_error": "CmdletizationQuery_NotFound,Get-NetTCPConnection",
+      "listener_defect": "Filtered Windows provider query errors on normal absence; complete enumeration followed by filtering succeeds. This reproduces a stop-path defect, but the original result did not retain the precise OwnedServerError message.",
+      "limitations": [
+        "Current absence is not an observed historical exit code.",
+        "These read-only observations do not durably reconcile the stop UNKNOWN.",
+        "No recovery, restart, replay or cleanup was dispatched."
+      ],
+      "evidence": {
+        "read_identity_stop.stdout": {
+          "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback-prepare-review-20260929/read_identity_stop.stdout",
+          "sha256": "87a77a9631611f0422b77621118d706bfc66e6a3bfc1861ccd9f7c871809e231",
+          "remote_exit_code": 0
+        },
+        "read_identity_stop_detail.stdout": {
+          "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback-prepare-review-20260929/read_identity_stop_detail.stdout",
+          "sha256": "bc5e0f8ef4cdafb8fd2c26961df184bb6978a39e6d69111cde097b3c624fc81d",
+          "remote_exit_code": 0
+        },
+        "read_listener_absence.stdout": {
+          "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback-prepare-review-20260929/read_listener_absence.stdout",
+          "sha256": "ceda9cee0bbe4f061187b18af284e1506bf20b49c8959bd104fafeb199088946",
+          "remote_exit_code": 0
+        }
+      }
+    }
   }
 }

@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "phase": "W21_WINDOWS64_MINIMAL_CHAIN_PREPARATION",
+  "phase": "W21_WINDOWS64_STOP_UNKNOWN_READONLY_DIAGNOSTICS",
   "task": "W01_W26_CONTINUOUS_IMPLEMENTATION",
-  "status": "CONNECT_UNKNOWN_PRESERVED_RECOVERY_QUIESCENCE_READ_ONLY_VERIFIED_MINIMAL_CHAIN_PREPARATION_NATIVE_NOT_RUN_SOLVE_READBACK_NOT_RUN",
+  "status": "LATEST_3160730_RUN_CONNECT_IDENTITY_MISMATCH_STOP_UNKNOWN_READONLY_DIAGNOSTICS_PENDING_SOLVE_READBACK_NOT_RUN; PRIOR_RECOVERY_QUIESCENCE_VERIFIED",
   "candidate_source": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-import-fix-handoff-164eec3/w21-import-fix-handoff-164eec3.tar.gz (sha256 1c6819c7735a46e1c3e169b178b955e40fb5196ac33547e670a22a804299aeef; source 164eec3c131c45cc61a41d62bd02606ea41e7d88; freeze c6047af8857cf00cba4f0c8f6d6a9744980f19a677b8ecfb6382800f04d901b2)",
   "completed_work": [
     "PIN source restoration completed and verified: 10832 files, zero missing LFS backing objects; repository HEAD matches pinned commit/tree.",
@@ -149,9 +149,10 @@
     },
     "W21 solve-readback probe integration: 98 unique offline protocol tests PASS (96 existing module cases plus 2 new tests); 64 KiB raw observation/hash is bound to exact project/session/ModelRef/revision before solve; UNKNOWN halts later solve dispatch. Synthetic transport only, native NOT_RUN, admission UNVERIFIED. Evidence is in PRODUCTION_RUNNER_SOFTWARE_CHECKPOINT.json#latest_solve_readback."
   ],
-  "next_action": "After synchronizing the reviewed runner/test and canonical state updates, prepare and review a fresh Windows 6.4 freeze that includes the solve-readback probe integration; the fixed 3160730 recovery package predates these runner changes. Then run the single bounded minimal chain. Preparation is underway and no native action has run. Keep the original session.connect UNKNOWN and solve/readback NOT_RUN until actual execution/readback.",
+  "next_action": "Repair localized remote version/build parsing and Windows empty-listener enumeration; add source-bound abandoned-stop quiescence recovery using the existing atomic proof system. Preserve the original stop UNKNOWN. Do not restart, replay or clean up until durable disposition is verified; then use a new reviewed Windows6.4 freeze, followed by6.3 and W23-W26.",
   "active_jobs": [],
   "blockers": [
+    "Latest Windows 6.4 run has session.stop UNKNOWN after a runner identity-path mismatch; process disposition and full connect identity/version/build readback are pending read-only diagnostics. No restart/replay/cleanup; solve actions are zero.",
     "W23 failed setup owned Server 75272 and daemon 75260 remain preserved: cleanup SIGTERM was rejected by automatic approval and explicit authorization is pending; no cleanup or relaunch authorized by elapsed time.",
     "W24 managed setup and sensitivity software can be frozen from published baselines; native 14-case setup/readmission/science remains NOT_RUN. New-epoch budget identity software is main-reviewed PASS; production orchestration software is main-reviewed PASS at a4684f8; actual native evidence remains required; historical 10-solve budget is not authorization for 14 solves.",
     "Earlier W24 0841Z/0857Z pre-birth failure and 0517Z ExternalStrain FAIL/UNKNOWN/safe_retry=false remain historical failures; full cure/reference-state/viscoelastic/static-shape acceptance is open.",
@@ -178,7 +179,7 @@
     "native_solve_budget_remaining": 0,
     "evidence": "docs/full_project_execution/evidence/luna_process_reconciliation/mac_readonly_snapshot_20260926T2152Z.json"
   },
-  "updated_at": "2026-09-29T09:48:43Z",
+  "updated_at": "2026-09-29T09:56:32Z",
   "note": "Original scope remains through W26. User explicitly resumed after the test-efficiency analysis; implement efficiency improvements first. OpenViking task-detail retrieval was denied by auto-review because it would disclose internal roadmap identifiers externally; no workaround. Use current frozen workpack and read-only local memory only. Do not rerun bootstrap/init on resume. Source files now contain executor edits; do not rerun bootstrap/init. Git metadata is an APFS pointer managed by main agent; migration requires bundle/source transfer, not copying only the repository pointer. Git metadata migration is documented by evidence/git_metadata_relocation.json and owned by the main agent; do not copy the APFS git pointer to another machine without source bundle/archive. GUI permission boundary and checkpoint solution-scope caveat recorded. This executor has one W24 native setup-only failure with exact cleanup verified; the durable operation/job UNKNOWN records remain unchanged. No W24 solver submission occurred. Saved-MPH readback supplement uses separate time/evidence and zero study/solver calls; run08 remains FAIL_OR_INCOMPLETE. Root raw SQLite recomputation is linked under native_resume_saved_artifact_supplement.raw_recomputation_evidence; original run08 remains FAIL_OR_INCOMPLETE and no solve budget is restored. Latest checkpoint 2026-09-27T03:50:43Z: W24 0334Z setup run failed pre-model due Python 3.14 missing mcp, with exact cleanup; 0346Z candidate pins the validated 3.12.13 environment and passes a production no-engine registry/daemon preflight. Native setup remains pending root review; science implementation continues offline. Latest checkpoint 2026-09-27T09:09:28Z: W24 0841Z candidate was invoked once at 0857Z and failed before any engine/Worker birth because project.inspect received an injected idempotency_key; project.create persisted successfully. Exact read-only SQLite hash and operation result are in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_contract_diagnostic.json. The runner now omits the unnecessary inspect key; actual ControlDaemon focused regression is 2/2 PASS in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_runner_regression_receipt.json. No native retry or acceptance is claimed; release F04 runtime integration is active, so refresh closure and root review are required before another launch. Windows COMSOL 6.3 remains required/unassessed; only macOS 6.3 is USER_REQUESTED_SKIP.",
   "native_resume_smoke": {
     "status": "FAIL_OR_INCOMPLETE_POINT_SCHEMA_FAILURE; SOLVED_CHILD_ARTIFACT_DURABLE; SOLVE_BUDGET_EXHAUSTED; SEPARATE_SAVED_MPH_READBACK_PASS",
@@ -1038,13 +1039,10 @@
   "acceptance_cells_changed": false,
   "current_execution_checkpoint": {
     "path": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json",
-    "status": "RECOVERY_QUIESCENCE_READ_ONLY_VERIFIED_CONNECT_UNKNOWN_PRESERVED_SOLVE_READBACK_NOT_RUN",
-    "unique_software_tests": 133,
-    "read_only_verification_receipt": {
-      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-connect-recovery-readonly-statusfix-v1/readonly-verification-authoritative-20260929.json",
-      "sha256": "0e0911e95a3555098b3ad779347f178b7ca29f4b4b4ba36aa57be6536246e60f"
-    },
-    "native_recovery": "ONE_DISPATCH; READ_ONLY_QUIESCENCE_VERIFIED"
+    "status": "NEW_RUN_IDENTITY_MISMATCH_STOP_UNKNOWN; PRIOR_RECOVERY_QUIESCENCE_READ_ONLY_VERIFIED; SOLVE_READBACK_NOT_RUN",
+    "latest_run_id": "w21-64-20260929T094158Z-808f9cde",
+    "latest_run_checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json#latest_windows64_minimal_chain_attempt_20260929T094158Z",
+    "prior_recovery_verification": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json#connect_recovery_readonly_statusfix"
   },
   "w24_setup_candidate_0841z_native_attempt": {
     "candidate_id": "W24-CURE-HIST-AXISYM-01",
@@ -2825,7 +2823,7 @@
     "solver_dispatches": 0,
     "replay_permitted": false,
     "cleanup_permitted": false,
-    "next_action": "The original session.start remains UNKNOWN/NOT_ACCEPTED and its separate V3 quiescence disposition remains verified. The newer 164eec3 session.connect also remains UNKNOWN; its sole recovery is now read-only verified for current-host quiescence only, with source RECONCILING/result preserved and lifecycle STOPPED. Prepare the Windows 6.4 candidate from source HEAD 31607303 for one bounded minimal chain; no native action has run.",
+    "next_action": "The original session.start UNKNOWN remains historical and its separate V3 quiescence disposition is verified. The older 164eec3 session.connect recovery proof remains verified for current-host quiescence only. Separately, run w21-64-20260929T094158Z-808f9cde has a connect identity-path mismatch, successful failure-disconnect, and session.stop UNKNOWN. Follow only read-only diagnostics; no restart/replay/cleanup.",
     "image_library_basename": "CORE_RL_magick_.dll",
     "image_library_relative_alias": "ext\\graphicsmagick\\win64\\CORE_RL_magick_.dll",
     "image_library_exists": true,
@@ -3024,7 +3022,7 @@
     "cleanup_permitted": false,
     "execute_receipt_sha256": "461bd61db71372733ff4afc7f3fb5b5d6f40f4edc70a914c3e671c2ee2fe628a",
     "state_after_execute_sha256": "7ddd5d10720285d6160d5e68966a7db171d2ab2d583f8c8075cfc43297f34d16",
-    "next_action": "The recovery proof remains READ_ONLY_VERIFIED for current-host quiescence only; connect remains UNKNOWN and solve/readback NOT_RUN. The 98-test runner probe integration passed scoped offline review but is not in the fixed 3160730 recovery package. After source/test/state synchronization, prepare and review a fresh Windows 6.4 freeze that includes it; no native action has run.",
+    "next_action": "This 164eec3 connect UNKNOWN and its recovery proof are historical separate records. A later 3160730 run now has a new session.stop UNKNOWN after a runner identity-path mismatch; follow only the handed-off read-only diagnostics, no restart/replay/cleanup.",
     "diagnostic_checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json#connect_readonly_diagnostic_v1",
     "worker_failure_code": "ENGINE_CALL_FAILED",
     "persisted_operation_and_job_status": "UNKNOWN",
@@ -3252,6 +3250,140 @@
       "tools/java/W21FieldIdentityProbe.java": "632f6657c98752b1522d30ce75840dcc9dc16e52c54fabcd8232ab250bbbcbbf",
       "tools/run_w21_stage_native.py": "48bb7215340b042677c76640461c639911e1127d07f99c6e093dce8832ef70b5"
     },
-    "next_action": "After Git synchronization, prepare and review a fresh Windows 6.4 freeze containing these changes; the fixed 3160730 recovery package predates this integration. Then one bounded minimal chain; no native action has run."
+    "next_action": "The 3160730 Windows freeze predates this probe integration and did not exercise it. Follow the current handed-off read-only diagnostics for the new session.stop UNKNOWN first; do not restart/replay/cleanup. After safe disposition, prepare/review a fresh source freeze containing the integration before another bounded minimal-chain attempt."
+  },
+  "latest_windows64_minimal_chain_attempt_20260929T094158Z": {
+    "schema": "COMSOL_W21_WINDOWS64_MINIMAL_CHAIN_ATTEMPT_V1",
+    "run_id": "w21-64-20260929T094158Z-808f9cde",
+    "source_head": "31607303dc92b3131a34c17fea659ce0c41b46cb",
+    "source_archive_sha256": "29bdfa932f7d29bb6c4f1c7347c99fe6a34fcaf95aba77533ad3e4fba2cd3f6b",
+    "source_manifest_sha256": "54142c8b7304fce170221c817948b0aa79a7a9e98df6e6d92cc1d4d2bf5d766f",
+    "probe_integration_in_freeze": false,
+    "freeze_sha256": "8a9b9aa813bc82795f2f896095ba7a2a417187dd48e5bb26f3485cd5ed777704",
+    "freeze_file_sha256": "8563eb9354a4dfc4fc47930e0dfbe2e445b2afde657c8e0c43ed255ae1727cc8",
+    "fixture_sha256": "7a17cc4a8e68b0aaf7c3fcd89e320732a49041f65e10f2d9a066e409e5fbcd51",
+    "prepare_review_receipt": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback-prepare-review-20260929/prepare-review-receipt.json",
+      "sha256": "31ba60176c893aa649cb96c67f9dfbf0fdcc4b486f0ac5b84ea90cad49a70db5",
+      "all_checks_pass": true,
+      "archive_members": 104
+    },
+    "execute_receipt": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback-prepare-review-20260929/execute64-receipt.json",
+      "sha256": "9eac8341013a7f3cfabd8648e7855fa37ce645650556a67b205f551b1f2623cf",
+      "remote_exit_code": 2,
+      "outer_capture_exit_code": 0,
+      "replay": false,
+      "command_sha256": "4401a123e8c537fc234536bb4e78f34e2e4d4196f4b7b334eb9b0f4662e0627e"
+    },
+    "stdout": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback-prepare-review-20260929/execute64.stdout",
+      "sha256": "f1e2e03d4ba6540755d66cb9c50aede2c86abe07ee7f46cfd5c55e8a47b767d1"
+    },
+    "stderr": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback-prepare-review-20260929/execute64.stderr",
+      "sha256": "ffccaca718fb391766bf847609f91647260d155ac66c6665b98278142bc95fd4"
+    },
+    "state_after_execute": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback-prepare-review-20260929/state-after-execute.json",
+      "sha256": "013872b80d779c759af1a7ee81a0c202382bccd9bd70a9ddcbb5b1e27e114f68"
+    },
+    "outcome": "FAILED_RUNNER_IDENTITY_PATH_MISMATCH_WITH_SESSION_STOP_UNKNOWN",
+    "public_route_outcomes": {
+      "project.create": {
+        "status": "SUCCESS",
+        "request_id": "e34326d3-8e6c-4b7e-93fe-1ee7b6285b0b",
+        "job_id": "bbbca5b7-06bd-4e9d-9219-489f7c8d6a3c"
+      },
+      "session.start": {
+        "status": "SUCCESS",
+        "request_id": "3e9b685f-c917-4a11-bd92-ccd18f5325b9",
+        "job_id": "053fe9f0-005f-412c-9c56-7ee4c747d6fa",
+        "session_id": "session-e53e069680b5427989e300fc0c55299c",
+        "project_id": "aaa90cfc-7a33-4f43-ab2d-4914a945f6a6"
+      },
+      "session.connect": {
+        "status": "SUCCESS",
+        "request_id": "07914530-ffe3-4369-9743-efdfd51aa884",
+        "job_id": "6751d9e3-3648-455c-aee2-0a6d744376c3",
+        "identity_version_build": "NOT_VERIFIED"
+      },
+      "failure_cause": {
+        "type": "RunnerError",
+        "message": "session.connect identity<path> differs from the frozen Server<path>",
+        "interpretation": "Runner reported an identity-path mismatch after public connect success. Complete connect identity/version/build readback and root-cause diagnosis remain pending; authentication is not established as the cause."
+      },
+      "failure_cleanup.session_disconnect": {
+        "status": "DISCONNECTED",
+        "success": true,
+        "request_id": "9bfe33f4-763f-45c5-b7cf-a0ec77028757",
+        "job_id": "18588a3a-da3f-4163-92ec-cd2a2a1fefdc"
+      },
+      "failure_cleanup.session_stop": {
+        "status": "UNKNOWN",
+        "success": false,
+        "error_code": "EXECUTION_STATE_UNKNOWN",
+        "request_id": "d26119c9-2727-4f16-b57f-091add8c1815",
+        "job_id": "e2d821c1-9a30-4561-ae73-0c9a022e9df5",
+        "idempotency_key": "ce17ffc1-da7f-41e5-9d13-3dea6b73a492",
+        "followup_permitted": false
+      }
+    },
+    "possible_resource_counts": {
+      "server_births": 1,
+      "worker_births": 1,
+      "study_dispatches": 0,
+      "solver_dispatches": 0,
+      "solution_tuple_reads": 0,
+      "field_reads": 0
+    },
+    "current_process_disposition": "NOT_YET_READ_ONLY_VERIFIED; handoff diagnostics pending",
+    "next_action": "Repair localized remote version/build parsing and Windows empty-listener enumeration; add source-bound abandoned-stop quiescence recovery using the existing atomic proof system. Preserve the original stop UNKNOWN. Do not restart, replay or clean up until durable disposition is verified; then use a new reviewed Windows6.4 freeze, followed by6.3 and W23-W26.",
+    "readonly_diagnostics": {
+      "status": "PASS_READONLY_OBSERVATION_ONLY",
+      "connect_result": "SUCCEEDED",
+      "remote_engine_version": "COMSOL Multiphysics 6.4 (开发版本: 293)",
+      "remote_engine_build": null,
+      "remote_engine_build_source": "NOT_REPORTED",
+      "runner_defect": "Numeric-prefix and mandatory separate build comparison reject the actual localized remote version string.",
+      "stop_operation_id": "8f91a0ec-ab71-41c4-90f2-a00bee016733",
+      "stop_status": "UNKNOWN",
+      "stop_cause_type": "OwnedServerError",
+      "stop_result_reports_server_stopped": false,
+      "stop_result_reports_handle_preserved": true,
+      "lifecycle_revision": 8,
+      "lifecycle_state": "UNKNOWN",
+      "observed_server_pid": 34348,
+      "server_currently_present": false,
+      "observed_daemon_pid": 34772,
+      "daemon_currently_present": false,
+      "tcp_inventory_rows": 258,
+      "target_port": 11961,
+      "target_listeners": 0,
+      "old_filtered_listener_query_error": "CmdletizationQuery_NotFound,Get-NetTCPConnection",
+      "listener_defect": "Filtered Windows provider query errors on normal absence; complete enumeration followed by filtering succeeds. This reproduces a stop-path defect, but the original result did not retain the precise OwnedServerError message.",
+      "limitations": [
+        "Current absence is not an observed historical exit code.",
+        "These read-only observations do not durably reconcile the stop UNKNOWN.",
+        "No recovery, restart, replay or cleanup was dispatched."
+      ],
+      "evidence": {
+        "read_identity_stop.stdout": {
+          "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback-prepare-review-20260929/read_identity_stop.stdout",
+          "sha256": "87a77a9631611f0422b77621118d706bfc66e6a3bfc1861ccd9f7c871809e231",
+          "remote_exit_code": 0
+        },
+        "read_identity_stop_detail.stdout": {
+          "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback-prepare-review-20260929/read_identity_stop_detail.stdout",
+          "sha256": "bc5e0f8ef4cdafb8fd2c26961df184bb6978a39e6d69111cde097b3c624fc81d",
+          "remote_exit_code": 0
+        },
+        "read_listener_absence.stdout": {
+          "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback-prepare-review-20260929/read_listener_absence.stdout",
+          "sha256": "ceda9cee0bbe4f061187b18af284e1506bf20b49c8959bd104fafeb199088946",
+          "remote_exit_code": 0
+        }
+      }
+    }
   }
 }
