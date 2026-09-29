@@ -184,5 +184,71 @@
       "PYTHONDONTWRITEBYTECODE=1 /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -m pytest -p no:cacheprovider --basetemp=/Volumes/CTestEff/d4 -q tests/test_w23_port_transition.py --junitxml=/Volumes/SSD/Comsol-MCP/execution-scratch/w23-port-transition/focus-classifier-final03-junit.xml"
     ],
     "next_action": "Implement a versioned COMSOL geometry/selection/PML adapter using verified same-version APIs; preserve v2 evidence. Native geometry and field acceptance require actual production execution; Qabs/units/optical acceptance remain open."
+  },
+  "latest_port_transition_adapter_candidate": {
+    "status": "PASS_SCOPED_OFFLINE_ADAPTER_SOFTWARE",
+    "source_sha256": {
+      "tools/java/NativeW23PortTransitionV1.java": "c1758575c60559eb3fdb2ba625a3db7de9bb26b80964732a0899ea24534e307c",
+      "tools/w23_port_transition_science.py": "1f9901c65af00f0e098d50e4b90038b770b3816b13b8972a09865a7284f8caa7",
+      "tests/test_w23_port_transition_science.py": "6a997254b88afd04712c4b4ffcbafe677223a17429e9616f5137f23fcbcd91f5",
+      "tests/run_w23_port_transition_contracts.py": "9b71e6bb6a0f2c369129dbab3cdd2accb8744c799927eca6c9da35f91938b018"
+    },
+    "focused_pytest": {
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "junit_path": "/Volumes/CTestEff/w23-port-transition-v1-perimeter-fix-20260929T1216Z/pytest-junit.xml",
+      "junit_sha256": "0754f2308a5526f5d447a059d08e8d23deb5a76368bc92a0781a1e3b56f3c88b"
+    },
+    "production_java_helper_contracts": {
+      "positive_controls": 3,
+      "negative_controls": 10,
+      "breakdown": {
+        "perimeter_positive": 2,
+        "perimeter_negative": 6,
+        "pml_direction_positive": 1,
+        "pml_direction_negative": 4
+      },
+      "compile_exit_code": 0,
+      "run_exit_code": 0,
+      "result": "W23_PORT_TRANSITION_CONTRACTS_PASS perimeter_positive=2 perimeter_negative=6 pml_positive=1 pml_negative=4 engine=NOT_STARTED",
+      "receipt_path": "/Volumes/CTestEff/w23-port-transition-v1-perimeter-fix-20260929T1216Z-retest/w23-java-contracts/receipt.json",
+      "receipt_sha256": "82dfd837c9a8a6a15aaa06ee16bfb7b0f1034882e5c6ca641eea2e2c75c61c46",
+      "final_receipt_path": "/Volumes/CTestEff/w23-port-transition-v1-perimeter-fix-20260929T1216Z-retest/final-receipt.json",
+      "final_receipt_sha256": "8c050c91b123bf11d677ce5f6ae87fcb41daad7af6ec0044c858a5355eaebdce",
+      "scope": "Compiled the production adapter with the COMSOL 6.4 Java classpath and ran its extracted pure helper harness; no Model construction or COMSOL engine start."
+    },
+    "preserved_failed_attempt": {
+      "tests": 5,
+      "failures": 2,
+      "junit_path": "/Volumes/CTestEff/w23-port-transition-v1-20260929T0000Z/pytest-junit.xml",
+      "junit_sha256": "1ad6c030953ef4352ea0cc88c774f8f15c3e8a54507e97631d0a4f3def04299e",
+      "disposition": "Preserved unchanged; superseded by the final focused pass."
+    },
+    "rebuild_commands": [
+      "env PYTHONDONTWRITEBYTECODE=1 /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -B -m pytest -q -p no:cacheprovider --basetemp=<fresh-external-APFS-temp> --junitxml=<external-SSD-junit-path> tests/test_w23_port_transition_science.py",
+      "env PYTHONDONTWRITEBYTECODE=1 /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -B tests/run_w23_port_transition_contracts.py --java /Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home/bin/java --javac /Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home/bin/javac --comsol-root /Applications/COMSOL64/Multiphysics --scratch <fresh-empty-external-APFS-directory>"
+    ],
+    "native_engine": "NOT_RUN",
+    "native_geometry_and_pml_compatibility": "UNVERIFIED",
+    "historical_classifier": {
+      "schema_id": "urn:comsol-mcp:w23:port-transition-plan:1.0.0",
+      "case_count": 19,
+      "historical_unique_tests": 75,
+      "receipt_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w23-port-transition/executable_partition_classifier_receipt_20260929.json",
+      "receipt_sha256": "850a115ef04f6ca1ce1b883d2a4abd5f986edcad9a9577bdefd06de375043f6a",
+      "relationship": "Independent prior geometry-plan/classifier validation. It was not rerun against the final adapter source hashes above and does not establish native geometry/PML compatibility."
+    },
+    "historical_java_recipe_harness": {
+      "recipes_accepted": 19,
+      "negative_controls_rejected": 2,
+      "receipt_path": "/Volumes/CTestEff/w23-port-transition-v1-20260929T0000Z/receipt.json",
+      "receipt_sha256": "74163e2ec16c048d0e7cf4fbd3659691c1e819cbf214f713e2b2ef234538bd8f",
+      "adapter_sha256": "d3dbc14516b34a328148c543227530de643ce9889e15502d433046a5498fa91f",
+      "scope": "Earlier adapter hash only; not rerun on final helper-repaired adapter. No native execution."
+    },
+    "main_review": "Closed signed perimeter-side classification and PML expected-versus-actual readback findings; verified final four source hashes, JUnit and Java receipts. Scoped offline software only.",
+    "next_action": "After Windows6.4/6.3 startup recovery and minimal production chain, perform permitted native geometry/PML readback for the new adapter; actual compatibility, material/Port topology and optics remain unverified."
   }
 }
