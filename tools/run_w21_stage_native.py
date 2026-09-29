@@ -1155,6 +1155,65 @@ def _parse_field_identity_probe(raw_payload: Any, *, expected_model_tag: str) ->
     }
 
 
+def _project_relative_file(project_root: Path, source: Path) -> str:
+    """Return the exact regular project file as a traversal-free POSIX path."""
+    root = project_root.resolve(strict=True)
+    if source.is_symlink():
+        raise RunnerError("staged Java source must not be a symlink")
+    resolved = source.resolve(strict=True)
+    if not resolved.is_file():
+        raise RunnerError("staged Java source is not a regular file")
+    try:
+        relative = resolved.relative_to(root)
+    except ValueError as exc:
+        raise RunnerError("staged Java source escaped the frozen project workspace") from exc
+    path = relative.as_posix()
+    if not path or path == "." or any(part in {"", ".", ".."} for part in relative.parts):
+        raise RunnerError("staged Java source did not produce a canonical project-relative path")
+    return path
+
+
+def _validate_java_execution_data(data: Mapping[str, Any], *, expected_source_sha256: str,
+                                  expected_entrypoint: str, expected_model_tag: str,
+                                  label: str) -> tuple[Any, dict[str, Any]]:
+    """Validate the actual G2/Worker response nesting and retain its provenance."""
+    if data.get("execution_success") is not True:
+        raise RunnerError(f"{label} Java execution did not return execution_success=true")
+    if (data.get("source_sha256") != expected_source_sha256
+            or data.get("entrypoint") != expected_entrypoint):
+        raise RunnerError(f"{label} execution_result source identity differs from the frozen Java input")
+    worker_reply = data.get("worker")
+    worker_result = worker_reply.get("result") if isinstance(worker_reply, Mapping) else None
+    if (not isinstance(worker_reply, Mapping)
+            or worker_reply.get("ok", worker_reply.get("success")) is not True
+            or not isinstance(worker_result, Mapping)):
+        raise RunnerError(f"{label} omitted the successful Worker execution result")
+    if data.get("readback") != worker_result:
+        raise RunnerError(f"{label} execution_result did not preserve the Worker result envelope")
+    if (worker_result.get("executed") is not True
+            or worker_result.get("model_tag") != expected_model_tag
+            or worker_result.get("source_sha256") != expected_source_sha256
+            or worker_result.get("entrypoint") != expected_entrypoint
+            or "readback" not in worker_result):
+        raise RunnerError(f"{label} Worker identity/source/entrypoint evidence is incomplete or mismatched")
+    before, after = data.get("before"), data.get("after")
+    if not isinstance(before, Mapping) or not isinstance(after, Mapping):
+        raise RunnerError(f"{label} execution_result omitted its before/after Worker observations")
+    evidence = {
+        "source_sha256": expected_source_sha256,
+        "entrypoint": expected_entrypoint,
+        "worker": {
+            "executed": True,
+            "model_tag": expected_model_tag,
+            "source_sha256": worker_result["source_sha256"],
+            "entrypoint": worker_result["entrypoint"],
+        },
+        "before": dict(before),
+        "after": dict(after),
+    }
+    return worker_result["readback"], evidence
+
+
 class _RunState:
     def __init__(self, path: Path, state: dict[str, Any]):
         self.path = path
@@ -1940,6 +1999,7 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
         fixture_dir = project_workspace / "fixtures"
         fixture_dir.mkdir(mode=0o700)
         staged: dict[str, str] = {}
+        staged_relative: dict[str, str] = {}
         source_items = (("W21Fixture.java", FIXTURE), ("W21FieldIdentityProbe.java", PROBE))
         for short_name, source in source_items:
             source_hash = plan["source_manifest"][f"tools/java/{short_name}"]
@@ -1950,22 +2010,25 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
             if sha256_file(destination) != source_hash:
                 raise RunnerError("project-local Java source copy failed exact hash verification")
             staged[short_name] = str(destination)
+            staged_relative[short_name] = _project_relative_file(project_workspace, destination)
 
-        async def register_source(label: str, key: str, request_id: str, path: str) -> dict[str, Any]:
+        async def register_source(label: str, key: str, request_id: str,
+                                  absolute_path: str, relative_path: str) -> dict[str, Any]:
             response = await dispatch(label, "operation_call", _operation_params(
-                "artifact.register", {"project_id": project_id, "path": path,
+                "artifact.register", {"project_id": project_id, "path": relative_path,
                     "role": "w21_probe_source", "classification": "task_owned_frozen_java_source",
                     "idempotency_key": key, "request_id": request_id},
                 {"project_id": project_id, "session_id": session_id,
                  "idempotency_key": key, "request_id": request_id,
                  "rpc_timeout_s": RPC_WAIT_S}))
             result = _assert_success(response, label)
-            if result.get("sha256") != sha256_file(Path(path)):
+            if result.get("sha256") != sha256_file(Path(absolute_path)):
                 raise RunnerError("artifact.register hash differs from staged frozen Java source")
             return response
 
         await register_source("fixture.register", keys["fixture_register"],
-                              request_ids["fixture_register"], staged["W21Fixture.java"])
+                              request_ids["fixture_register"], staged["W21Fixture.java"],
+                              staged_relative["W21Fixture.java"])
 
         # Production code.execute_java requires an independently checked owned
         # Server isolation receipt. It is configured before the stdio child
@@ -1974,15 +2037,17 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
         _write_isolation_receipt(Path(plan["isolation_receipt"]), server_identity, endpoint)
 
         fixture_response = await dispatch("fixture.execute", "operation_call", _operation_params(
-            "code.execute_java", {"source_artifact": staged["W21Fixture.java"],
+            "code.execute_java", {"source_artifact": staged_relative["W21Fixture.java"],
                 "entrypoint": "W21Fixture", "arguments": {}, "mode": "trusted", "timeout_s": 240},
             {"project_id": project_id, "session_id": session_id, "model_ref": binding["model_ref"],
              "expected_revision": binding["revision"], "idempotency_key": keys["fixture_execute"],
              "request_id": request_ids["fixture_execute"], "rpc_timeout_s": RPC_WAIT_S}))
         fixture_data = _assert_success(fixture_response, "code.execute_java(W21Fixture)")
-        if fixture_data.get("execution_success") is not True:
-            raise RunnerError("fixture Java execution did not return execution_success=true")
-        fixture_readback = fixture_data.get("readback")
+        fixture_readback, fixture_execution_proof = _validate_java_execution_data(
+            fixture_data, expected_source_sha256=plan["fixture_sha256"],
+            expected_entrypoint="W21Fixture", expected_model_tag=binding["model_tag"],
+            label="fixture",
+        )
         if not isinstance(fixture_readback, Mapping) or fixture_readback.get("status") != "BUILT_NOT_SOLVED":
             raise RunnerError("fixture did not prove BUILT_NOT_SOLVED")
         fixture_execution = fixture_response.get("execution")
@@ -1991,7 +2056,7 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
                 or fixture_execution.get("session_id") != session_id
                 or fixture_execution.get("model_ref") != binding["model_ref"]
                 or type(fixture_execution.get("revision")) is not int
-                or fixture_execution["revision"] < binding["revision"]):
+                or fixture_execution["revision"] != binding["revision"] + 1):
             raise RunnerError("fixture reply omitted its exact model binding or resulting revision")
         binding["revision"] = fixture_execution["revision"]
         state.value["geometry_run"] = 1
@@ -2015,10 +2080,11 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
         # the exact model revision used by the subsequent solve. The probe
         # never runs geometry, mesh, a Study, or a result field read.
         await register_source("probe.register", keys["probe_register"],
-                              request_ids["probe_register"], staged["W21FieldIdentityProbe.java"])
+                              request_ids["probe_register"], staged["W21FieldIdentityProbe.java"],
+                              staged_relative["W21FieldIdentityProbe.java"])
         probe_revision_before = binding["revision"]
         probe_response = await dispatch("probe.execute", "operation_call", _operation_params(
-            "code.execute_java", {"source_artifact": staged["W21FieldIdentityProbe.java"],
+            "code.execute_java", {"source_artifact": staged_relative["W21FieldIdentityProbe.java"],
                 "entrypoint": "W21FieldIdentityProbe", "arguments": {
                     "expected_model_tag": binding["model_tag"], "physics_tag": "ht"},
                 "mode": "trusted", "timeout_s": 240},
@@ -2026,19 +2092,22 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
              "expected_revision": probe_revision_before, "idempotency_key": keys["probe_execute"],
              "request_id": request_ids["probe_execute"], "rpc_timeout_s": RPC_WAIT_S}))
         probe_data = _assert_success(probe_response, "code.execute_java(W21FieldIdentityProbe)")
-        if probe_data.get("execution_success") is not True:
-            raise RunnerError("field identity probe did not return execution_success=true")
+        probe_payload, probe_execution_proof = _validate_java_execution_data(
+            probe_data, expected_source_sha256=plan["probe_sha256"],
+            expected_entrypoint="W21FieldIdentityProbe", expected_model_tag=binding["model_tag"],
+            label="field identity probe",
+        )
         probe_execution = probe_response.get("execution")
         if (not isinstance(probe_execution, Mapping)
                 or probe_execution.get("project_id") != project_id
                 or probe_execution.get("session_id") != session_id
                 or probe_execution.get("model_ref") != binding["model_ref"]
                 or type(probe_execution.get("revision")) is not int
-                or probe_execution.get("revision") != probe_revision_before):
+                or probe_execution.get("revision") != probe_revision_before + 1):
             raise RunnerError("probe reply omitted the exact project/session/ModelRef/revision")
         binding["revision"] = probe_execution["revision"]
         parsed_probe = _parse_field_identity_probe(
-            probe_data.get("readback"), expected_model_tag=binding["model_tag"],
+            probe_payload, expected_model_tag=binding["model_tag"],
         )
         probe = parsed_probe["payload"]
         probe_observation = {
@@ -2053,6 +2122,7 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
             "revision": probe_execution["revision"],
             "request_id": request_ids["probe_execute"],
             "idempotency_key": keys["probe_execute"],
+            "worker_execution": probe_execution_proof,
         }
         if mode == SOLVE_READBACK_MODE:
             probe_observation["raw_payload_json"] = parsed_probe["raw_payload_json"]
@@ -2066,6 +2136,7 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
             "revision": probe_execution["revision"],
             "request_id": request_ids["probe_execute"],
             "idempotency_key": keys["probe_execute"],
+            "worker_execution": probe_execution_proof,
         }
         if mode == SOLVE_READBACK_MODE:
             # Keep the raw bounded JSON durable before any solve intent can be
@@ -2269,6 +2340,7 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
             "worker_epoch": worker_epoch, "model_binding": binding,
             "fixture_sha256": plan["fixture_sha256"],
             "fixture_readback": dict(fixture_readback),
+            "fixture_worker_execution": fixture_execution_proof,
             "budgets": dict(plan["budgets"]), "native_admission": "UNVERIFIED",
             "physical_validation": "UNVERIFIED",
             "study_dispatch": state.value.get("study_dispatch", 0),

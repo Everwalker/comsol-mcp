@@ -452,5 +452,46 @@
     },
     "native_after_fix": "NOT_RUN",
     "original_unknown": "PRESERVED; CURRENT_HOST_QUIESCENCE_VERIFIED_READONLY"
+  },
+  "canonical_runner_production_contract_repair": {
+    "status": "PASS_SCOPED_OFFLINE_MAIN_REVIEWED",
+    "changes": [
+      "Project-relative POSIX Java registration/execution paths retain actual file hashes and project containment.",
+      "Decode production execution_result Worker wrapper before fixture/probe business readback; preserve source/model/entrypoint provenance.",
+      "Fixture/probe trusted_code each advance ledger revision once; subsequent solve uses resulting revision."
+    ],
+    "source_sha256": {
+      "tests/test_run_w21_stage_native.py": "8df7f6d804910e500b27c1e17992a85b6ce1137e55d3916c9d735ee9a1530d53",
+      "tools/run_w21_stage_native.py": "8d775fd1e2c60a91a0b4f3144b8bd85ed946eb379c5600a6635ed549566ba506"
+    },
+    "tests": {
+      "command": "PYTHONDONTWRITEBYTECODE=1 TMPDIR=/Volumes/CTestEff/c /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -B -m pytest tests/test_artifact_registration_import.py tests/test_run_w21_stage_native.py -q -p no:cacheprovider --basetemp=/Volumes/CTestEff/a7 --junitxml=/Volumes/SSD/Comsol-MCP/execution-scratch/w21-artifact-register-20260929/affected-final3.xml",
+      "counts": {
+        "errors": 0,
+        "failures": 0,
+        "passed": 127,
+        "skipped": 0,
+        "tests": 127
+      },
+      "junit": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-artifact-register-20260929/affected-final3.xml",
+        "sha256": "8617b3e074b9bafe2626e30c145095c010d9519f39850c3a60e1572889d5d67d"
+      },
+      "log": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-artifact-register-20260929/affected-final3.log",
+        "sha256": "4ad7ad3105236e80eb5683803a280add9c3db7d215f50c59a4ba3559b0550ad1"
+      }
+    },
+    "receipt": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-artifact-register-20260929/runner-contract-repair-receipt.json",
+      "sha256": "e813d07667e1e1a8b732e147c2ffc8996a87922c18d8fa91da68094f8d0cc996"
+    },
+    "prior_failed_test_evidence_note": {
+      "junit_note": "The initial affected-final.xml was overwritten by the corrected rerun; this summary preserves its sole stale-revision assertion failure.",
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-artifact-register-20260929/affected-initial-failure.json",
+      "sha256": "d61557c77f5808bff340313f85ab6f8ce069fdf2f14ff3bff142a995b661590b"
+    },
+    "native_after_fix": "NOT_RUN",
+    "scope": "Existing canonical chain compatibility only; no new acceptance gate or capability."
   }
 }

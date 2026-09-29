@@ -24,7 +24,9 @@ from typing import Any
 import pytest
 
 from comsol_mcp._control_daemon import ControlDaemon
-from comsol_mcp._execution_contract import ExecutionContractError
+from comsol_mcp._execution_contract import ExecutionContractError, SessionLedger, model_ref_from_mapping
+from comsol_mcp._execution_service import ExecutionService
+from comsol_mcp._g2_code import describe_source, execution_result
 
 
 REPOSITORY = Path(__file__).resolve().parents[1]
@@ -258,6 +260,32 @@ class _FakeStdioSession:
         })
         return execution
 
+    def _java_execution_response(self, params: dict, payload: Any) -> dict:
+        arguments = params["arguments"]
+        description = describe_source(
+            self.plan["project_workspace"], arguments["source_artifact"], arguments["entrypoint"],
+        )
+        worker_result = {
+            "executed": True,
+            "model_tag": "w21model",
+            "source_sha256": description["source_sha256"],
+            "entrypoint": description["entrypoint"],
+            "readback": payload,
+        }
+        produced = execution_result(
+            description=description,
+            worker_reply={"ok": True, "result": worker_result},
+            before={"model_tag": "w21model", "revision": params["execution"]["expected_revision"]},
+            after={"model_tag": "w21model", "revision": params["execution"]["expected_revision"]},
+        )
+        # ExecutionService preserves this non-business success marker inside
+        # the public ActionResult data mapping.
+        public_data = {**produced["data"], "execution_success": produced["execution_success"]}
+        execution = self._execution_reply(params)
+        execution["revision"] += 1
+        return {"success": produced["success"], "data": public_data,
+                "error": produced["error"], "execution": execution}
+
     async def call_tool(self, name: str, params: dict):
         operation = params.get("operation_id")
         inner = params.get("arguments", {})
@@ -269,8 +297,12 @@ class _FakeStdioSession:
         elif operation == "artifact.register":
             assert execution.get("project_id") == self.project_id
             assert execution.get("session_id") == self.session_id
+            assert not Path(inner["path"]).is_absolute()
+            assert ".." not in Path(inner["path"]).parts
             action = "fixture.register" if Path(inner["path"]).name == "W21Fixture.java" else "probe.register"
         elif operation == "code.execute_java":
+            assert not Path(inner["source_artifact"]).is_absolute()
+            assert ".." not in Path(inner["source_artifact"]).parts
             action = "fixture.execute" if inner.get("entrypoint") == "W21Fixture" else "probe.execute"
         elif operation == "job.wait":
             action = "project.create.wait"
@@ -425,18 +457,13 @@ class _FakeStdioSession:
                 execution["revision"] += 1
             return {"success": True, "execution": execution, "data": {"model_tag": "w21model"}}
         if action in {"fixture.register", "probe.register"}:
-            path = Path(inner["path"])
+            path = Path(self.plan["project_workspace"]) / inner["path"]
             return {"success": True, "data": {"sha256": runner.sha256_file(path)}}
         if action == "fixture.execute":
-            execution = self._execution_reply(params)
-            execution["revision"] += 1
-            return {"success": True, "data": {
-                "execution_success": True, "readback": {"status": "BUILT_NOT_SOLVED"},
-            }, "execution": execution}
+            return self._java_execution_response(
+                params, {"status": "BUILT_NOT_SOLVED"},
+            )
         if action == "probe.execute":
-            execution = self._execution_reply(params)
-            if self.probe_revision_drift:
-                execution["revision"] += 1
             payload = self.probe_payload_override
             if payload is None:
                 payload = json.dumps({
@@ -444,10 +471,10 @@ class _FakeStdioSession:
                     "native_admission": "UNVERIFIED",
                     "identity": {"model_tag": "w21model"},
                 }, ensure_ascii=False, separators=(",", ":"))
-            return {"success": True, "data": {
-                "execution_success": True,
-                "readback": payload,
-            }, "execution": execution}
+            response = self._java_execution_response(params, payload)
+            if self.probe_revision_drift:
+                response["execution"]["revision"] += 1
+            return response
         if action == "study.solve":
             execution = self._ticket_reply(
                 params, revision=params["execution"]["expected_revision"] + 1,
@@ -717,6 +744,7 @@ def test_srb_ok(tmp_path, monkeypatch):
     }
     assert captured["cleanup"]["cleanup_failed"] is False
     assert report["cleanup"]["status"] == "CLEANUP_COMPLETE"
+    assert state.value["study_dispatch"] == state.value["solver_dispatch"] == 1
     solve_params = next(params for action, params in fake.calls if action == "study.solve")
     probe_params = next(params for action, params in fake.calls if action == "probe.execute")
     tuple_params = next(params for action, params in fake.calls
@@ -726,7 +754,11 @@ def test_srb_ok(tmp_path, monkeypatch):
     assert probe_params["execution"]["request_id"] == plan["request_ids"]["probe_execute"]
     assert probe_params["execution"]["idempotency_key"] == plan["idempotency_keys"]["probe_execute"]
     assert probe_params["execution"]["model_ref"] == solve_params["execution"]["model_ref"]
-    assert probe_params["execution"]["expected_revision"] == solve_params["execution"]["expected_revision"]
+    assert probe_params["execution"]["expected_revision"] + 1 == solve_params["execution"]["expected_revision"]
+    assert report["probe_observation"]["revision"] == solve_params["execution"]["expected_revision"]
+    assert report["probe_observation"]["worker_execution"]["entrypoint"] == "W21FieldIdentityProbe"
+    assert set(report["probe_observation"]["worker_execution"]["before"]) == {"model_tag", "revision"}
+    assert report["fixture_worker_execution"]["worker"]["source_sha256"] == plan["fixture_sha256"]
     for params in (solve_params, tuple_params, result_params):
         assert params["execution"]["queue_timeout_s"] == 30
         assert params["execution"]["execution_timeout_s"] == 240
@@ -735,7 +767,122 @@ def test_srb_ok(tmp_path, monkeypatch):
         "solution": {"dataset": "dset1", "solution": "sol1"},
         "aggregate": "none", "complex_mode": "preserve", "storage": "inline",
     }
-    assert state.value["study_dispatch"] == state.value["solver_dispatch"] == 1
+
+
+def test_trusted_code_ticket_advances_real_execution_service_revision_and_unwraps_worker_result(tmp_path):
+    """Exercise the actual trusted-code ledger and G2 result constructors offline."""
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    source = project_root / "W21FieldIdentityProbe.java"
+    source.write_text("public final class W21FieldIdentityProbe {}\n", encoding="utf-8")
+    description = describe_source(project_root, source.name, "W21FieldIdentityProbe")
+
+    class SnapshotAdapter:
+        def model_snapshot(self, model_tag):
+            return {"model_tag": model_tag, "server_instance_id": "server-test",
+                    "external_event_counter": 0, "fingerprint": "snapshot-test"}
+
+    ledger = SessionLedger(
+        "session-test", "server-test", server_ownership="mcp_managed",
+        permissions={"inspect", "project_write", "compute", "trusted_code"},
+    )
+    service = ExecutionService(ledger, SnapshotAdapter(), project_root=project_root)
+    bound = service.bind_model("w21model", ownership="mcp_owned")
+    model_ref = model_ref_from_mapping(bound["execution"]["model_ref"])
+    revision_before = bound["execution"]["revision"]
+    raw_probe = json.dumps({"probe": "W21FieldIdentityProbe", "status": "STRUCTURE_CAPTURED_ONLY",
+                            "native_admission": "UNVERIFIED",
+                            "identity": {"model_tag": "w21model"}}, separators=(",", ":"))
+
+    def callback(_arguments):
+        return execution_result(
+            description=description,
+            worker_reply={"ok": True, "result": {
+                "executed": True, "model_tag": "w21model",
+                "source_sha256": description["source_sha256"],
+                "entrypoint": "W21FieldIdentityProbe", "readback": raw_probe,
+            }},
+            before={"model_tag": "w21model", "revision": revision_before},
+            after={"model_tag": "w21model", "revision": revision_before},
+        )
+
+    response = service.execute_legacy(
+        "code_execute_java", callback, {"source_artifact": source.name},
+        model_ref=model_ref, expected_revision=revision_before,
+        request_id="probe-ticket-test", session_id="session-test", effect="trusted_code",
+    )
+    assert response["success"] is True
+    assert response["execution"]["revision"] == revision_before + 1
+    payload, evidence = runner._validate_java_execution_data(
+        response["data"], expected_source_sha256=description["source_sha256"],
+        expected_entrypoint="W21FieldIdentityProbe", expected_model_tag="w21model",
+        label="field identity probe",
+    )
+    assert payload == raw_probe
+    assert evidence["worker"]["source_sha256"] == description["source_sha256"]
+    assert evidence["before"]["revision"] == evidence["after"]["revision"] == revision_before
+
+
+def test_runner_relative_artifact_registration_reaches_real_public_route(tmp_path):
+    """Use runner params against ControlDaemon's actual artifact.register route."""
+    project_container = tmp_path / "projects"
+    project_container.mkdir()
+
+    class SnapshotAdapter:
+        def model_snapshot(self, model_tag):
+            return {"model_tag": model_tag, "server_instance_id": "server-test",
+                    "external_event_counter": 0, "fingerprint": "snapshot-test"}
+
+    ledger = SessionLedger("session-test", "server-test",
+                           permissions={"inspect", "project_write", "compute"})
+    service = ExecutionService(ledger, SnapshotAdapter(), project_root=project_container)
+    daemon = ControlDaemon(
+        tmp_path / "control", service=service, registry={}, worker=None,
+        project_root=project_container,
+    )
+    daemon.backend.endpoint_key = "127.0.0.1:2036"
+    try:
+        created = daemon.dispatch({
+            "operation": "project.create",
+            "arguments": {"label": "runner-registration-test", "workspace": "runner-registration-test",
+                          "policy": {"permissions": ["project_write", "compute"]}},
+            "execution": {"request_id": "create-runner-registration-test",
+                          "idempotency_key": "create-runner-registration-test"},
+        })
+        assert created["success"] is True
+        project = created["data"]["project"]
+        project_id = project["project_id"]
+        workspace = Path(project["workspace"])
+        fixture_dir = workspace / "fixtures"
+        fixture_dir.mkdir()
+        source = fixture_dir / "W21Fixture.java"
+        source.write_text("public final class W21Fixture {}\n", encoding="utf-8")
+        relative = runner._project_relative_file(workspace, source)
+        assert relative == "fixtures/W21Fixture.java"
+
+        params = runner._operation_params("artifact.register", {
+            "project_id": project_id, "path": relative, "role": "w21_probe_source",
+            "classification": "task_owned_frozen_java_source",
+            "idempotency_key": "fixture-register-runner-test",
+            "request_id": "fixture-register-runner-test",
+        }, {
+            "project_id": project_id, "session_id": "session-test",
+            "idempotency_key": "fixture-register-runner-test",
+            "request_id": "fixture-register-runner-test", "rpc_timeout_s": 45,
+        })
+        response = daemon.dispatch({
+            "operation": "operation_call",
+            "arguments": {"operation_id": params["operation_id"],
+                           "arguments": params["arguments"]},
+            "execution": params["execution"],
+        })
+        assert response["success"] is True
+        assert response["data"]["sha256"] == runner.sha256_file(source)
+        record = daemon.store.get_metadata("artifacts", response["data"]["artifact_id"])
+        assert record["provenance"]["source_project_relative_path"] == relative
+        assert record["project_id"] == project_id
+    finally:
+        daemon.close()
 
 
 def test_srb_probe_unknown_is_durable_and_never_reaches_solve(tmp_path, monkeypatch):
@@ -1609,7 +1756,9 @@ def test_metadata_only_protocol_binds_model_generation_separately_from_worker_ep
     binding = report["model_binding"]
     assert binding["worker_epoch"] == 7
     assert binding["model_ref"]["generation"] == 1
-    assert binding["revision"] == 1
+    # Fixture and probe each use a trusted_code write ticket, so both advance
+    # the ledger revision once even though the probe's Java body is read-only.
+    assert binding["revision"] == 2
     assert report["owned_server"] == {
         "pid": 9876, "birth": "start_epoch_ms:1700000000000",
         "host": "127.0.0.1", "port": 2036,

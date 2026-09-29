@@ -4,8 +4,8 @@
   "updated_at_utc": "2026-09-29T11:36:36.583380+00:00",
   "overall_status": "PARTIAL",
   "source_package_status": "PASS_MAIN_VERIFIED",
-  "native_status": "PARTIAL_MODEL_CREATE_INSPECT_PASS_ARTIFACT_REGISTER_UNKNOWN_CURRENT_HOST_QUIESCENT",
-  "next_action": "Repair artifact registration session context and public/durable unknown-state consistency; preserve old UNKNOWN, then test a separate 6.4 candidate. No old-session reuse.",
+  "native_status": "PARTIAL_MODEL_CREATE_INSPECT_PASS_ARTIFACT_REGISTER_FAILED_CLEANUP_COMPLETE",
+  "next_action": "Use project-relative fixture/probe registration paths, verify downstream real production input/output contracts offline, then run a separate 6.4 candidate. Do not loosen path guards.",
   "candidate": {
     "source_commit": "9c5ced6272dd876cf9c28c6c6f73b943bd76b96c",
     "evidence_root": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-v2-20260928T235840Z-9c5ced6",
@@ -2126,5 +2126,80 @@
       }
     },
     "next_action": "Repair artifact registration session context and public/durable unknown-state consistency; preserve old UNKNOWN, then test a separate 6.4 candidate. No old-session reuse."
+  },
+  "native_attempt_20260929T121941Z": {
+    "run_id": "w21-64-20260929T121941Z-f2ce9cb2",
+    "source_head": "bc0563ea69d327714af50168c87a534a018ee3ad",
+    "freeze_sha256": "01b193719912bc1c05676a9bd70dc4adbd7d1a9a523a1d2c5fcb3f3368ffcdb3",
+    "status": "PARTIAL_MODEL_CREATE_INSPECT_PASS_ARTIFACT_REGISTER_FAILED_CLEANUP_COMPLETE",
+    "execute_exit_code": 2,
+    "failure": {
+      "job_id": "ffd5d739-3e04-45ba-a878-c8cc9b3559d3",
+      "job_status": "FAILED",
+      "operation": "operation_call",
+      "operation_id": "453fda96-196e-462d-8c7a-5ff6f6556896",
+      "request_id": "6e1af5b2-d727-4dfd-b356-b2147217fb1f",
+      "result": {
+        "data": {},
+        "error": {
+          "code": "ACCESS_VIOLATION",
+          "message": "artifact.register accepts only project-relative paths without traversal",
+          "safe_retry": false,
+          "stage": "validation"
+        },
+        "execution": {
+          "idempotency_key": "0bf0c957-44a7-4e78-96f4-135cb5a93eaf",
+          "job_id": "ffd5d739-3e04-45ba-a878-c8cc9b3559d3",
+          "operation_id": "453fda96-196e-462d-8c7a-5ff6f6556896",
+          "request_hash": "99f510815f6cf132b2a443353694c7f35c7d94eefae08d87d946d13282090854",
+          "request_id": "6e1af5b2-d727-4dfd-b356-b2147217fb1f"
+        },
+        "success": false
+      },
+      "result_sha256": "251655d0f5d9f2161322c1df4c22bbc8e7cd47b25f44bd550a0a54b5e1fd0a78",
+      "status": "FAILED"
+    },
+    "finding": "Runner artifact.register supplied absolute staged source path; production requires project-relative traversal-free path. Session binding repair passed this runtime guard.",
+    "cleanup": {
+      "project_id": "1fc8fb25-343a-4fdf-bb0c-cf1bb32a3b18",
+      "server_stopped": true,
+      "session_id": "session-2ac2236f5b524832a44d6cd6aea0cebc",
+      "state": "STOPPED",
+      "stop_evidence": {
+        "birth": "start_epoch_ms:1790684456418",
+        "child_reaped": true,
+        "exit_confirmed": true,
+        "listener_absent": true,
+        "pid": 29960,
+        "returncode": 1,
+        "server_stopped": true
+      },
+      "worker_client_state": "RETIRED"
+    },
+    "study_solver_tuple_field_counts": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "evidence": {
+      "freeze64.json": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-artifact-session-w21r07/freeze64.json",
+        "sha256": "95c4fb06d002d7339ce28d9831f875e3479889dbd06c0a17d94892ac0c8ee743"
+      },
+      "state64-after-execute.json": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-artifact-session-w21r07/state64-after-execute.json",
+        "sha256": "8d0f4603156c1331c4c8d57045bd3f1f8920f56bc55a8b1203d258bc7330a1a2"
+      },
+      "read_fixture_result.stdout": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-artifact-session-w21r07/read_fixture_result.stdout",
+        "sha256": "58d0af84507db16f34a5d2235893dfdd0b795353581b45677d897c81623403c1"
+      },
+      "read_stop_result.stdout": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-artifact-session-w21r07/read_stop_result.stdout",
+        "sha256": "36deccc2925920ec59881adb51ba47336ac18c88014be006d496ba6aa53103f5"
+      }
+    },
+    "next_action": "Use project-relative fixture/probe registration paths, verify downstream real production input/output contracts offline, then run a separate 6.4 candidate. Do not loosen path guards."
   }
 }
