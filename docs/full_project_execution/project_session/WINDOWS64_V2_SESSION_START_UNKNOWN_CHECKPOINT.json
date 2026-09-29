@@ -4,8 +4,8 @@
   "updated_at_utc": "2026-09-29T11:36:36.583380+00:00",
   "overall_status": "PARTIAL",
   "source_package_status": "PASS_MAIN_VERIFIED",
-  "native_status": "PARTIAL_MODEL_CREATE_INSPECT_PASS_ARTIFACT_REGISTER_FAILED_CLEANUP_COMPLETE",
-  "next_action": "Use project-relative fixture/probe registration paths, verify downstream real production input/output contracts offline, then run a separate 6.4 candidate. Do not loosen path guards.",
+  "native_status": "PARTIAL_NATIVE_FIXTURE_BUILT_PROBE_OUTPUT_LIMIT_SOLVE_NOT_RUN",
+  "next_action": "Keep bounded probe refusal PARTIAL; assess RAW_UNINTERPRETED solve-readback observation handling without raising limits or changing metadata-only acceptance; continue canonical solve/readback with separate candidate.",
   "candidate": {
     "source_commit": "9c5ced6272dd876cf9c28c6c6f73b943bd76b96c",
     "evidence_root": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-v2-20260928T235840Z-9c5ced6",
@@ -2201,5 +2201,83 @@
       }
     },
     "next_action": "Use project-relative fixture/probe registration paths, verify downstream real production input/output contracts offline, then run a separate 6.4 candidate. Do not loosen path guards."
+  },
+  "native_attempt_20260929T124807Z": {
+    "run_id": "w21-64-20260929T124807Z-0c308f9c",
+    "source_head": "cda6c11c23a4f5b85078f8877658a19e0a7fd35e",
+    "freeze_sha256": "1871a836dd55c83df5a77c74de016b6da86e3d857f3b802943a127d513614579",
+    "status": "PARTIAL_NATIVE_FIXTURE_BUILT_PROBE_OUTPUT_LIMIT_SOLVE_NOT_RUN",
+    "execute_exit_code": 2,
+    "actual_completed": [
+      "project.create",
+      "session.start",
+      "session.connect",
+      "model_create",
+      "model.inspect",
+      "fixture.register",
+      "fixture.execute",
+      "model.inspect.after_fixture",
+      "probe.register",
+      "probe.execute"
+    ],
+    "counts": {
+      "geometry_run": 1,
+      "mesh_run": 1,
+      "study_dispatch": 0,
+      "solver_dispatch": 0,
+      "solution_tuple_reads": 0,
+      "field_reads": 0
+    },
+    "probe": {
+      "job_id": "28c5ae6a-e5a4-4e6b-822d-3fa56f29b077",
+      "request_id": "5075f99f-d0f1-49e7-9e79-1d86e3869d49",
+      "operation_id": "0e594257-e8ac-40c3-9ad7-c88ec2d5996a",
+      "status": "SUCCEEDED",
+      "result_sha256": "eeedd59c001de0375ad074be3c408bc3e6d97b1b8f518814e400da2227182dae",
+      "raw_payload": {
+        "probe": "W21FieldIdentityProbe",
+        "status": "OUTPUT_LIMIT_EXCEEDED",
+        "code": "TABLE_ROW_LIMIT_EXCEEDED",
+        "native_admission": "UNVERIFIED",
+        "payload_complete": false
+      },
+      "raw_payload_sha256": "b647c343040ac6636dd474b810e40d7cc3753a7e38659965c9c5b252ee50b9a5",
+      "interpretation": "Bounded metadata capture incomplete; no complete-probe or native admission PASS."
+    },
+    "cleanup": {
+      "project_id": "2490f367-a6b3-47fa-bab7-d7e558d2bcab",
+      "server_stopped": true,
+      "session_id": "session-2a8b08246b6e4f8086c014005dcde70d",
+      "state": "STOPPED",
+      "stop_evidence": {
+        "birth": "start_epoch_ms:1790686161596",
+        "child_reaped": true,
+        "exit_confirmed": true,
+        "listener_absent": true,
+        "pid": 5644,
+        "returncode": 1,
+        "server_stopped": true
+      },
+      "worker_client_state": "RETIRED"
+    },
+    "evidence": {
+      "freeze64.json": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-runner-contract-w21r08/freeze64.json",
+        "sha256": "a339e4a73c8420db9c62e4063b9e028ea0b8d25b062bfa8405d02e667be35dc4"
+      },
+      "state64-after-execute.json": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-runner-contract-w21r08/state64-after-execute.json",
+        "sha256": "2b789450fab5c8e5cbbf9946a00e439d0e9fc701a601df1f6d7b04dd02ac0bc4"
+      },
+      "read_probe_result.stdout": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-runner-contract-w21r08/read_probe_result.stdout",
+        "sha256": "be0fb8621dd42d77baae1301836178c1e596b93796175a721a4deac3d4cfca20"
+      },
+      "read_stop_result.stdout": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-runner-contract-w21r08/read_stop_result.stdout",
+        "sha256": "fd598e4edeec6af1130699b68f05b0708fe35e256f1ce733db7421c779f2d5e4"
+      }
+    },
+    "next_action": "Keep bounded probe refusal PARTIAL; assess RAW_UNINTERPRETED solve-readback observation handling without raising limits or changing metadata-only acceptance; continue canonical solve/readback with separate candidate."
   }
 }

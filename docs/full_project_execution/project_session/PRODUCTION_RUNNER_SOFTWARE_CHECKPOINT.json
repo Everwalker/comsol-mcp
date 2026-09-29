@@ -493,5 +493,51 @@
     },
     "native_after_fix": "NOT_RUN",
     "scope": "Existing canonical chain compatibility only; no new acceptance gate or capability."
+  },
+  "bounded_partial_probe_observation": {
+    "status": "PASS_SCOPED_OFFLINE_MAIN_REVIEWED",
+    "behavior": {
+      "accepted_only_in": "solve-readback",
+      "accepted_probe_envelope": {
+        "code": "TABLE_ROW_LIMIT_EXCEEDED",
+        "exact_keys_only": true,
+        "native_admission": "UNVERIFIED",
+        "payload_complete": false,
+        "probe": "W21FieldIdentityProbe",
+        "status": "OUTPUT_LIMIT_EXCEEDED"
+      },
+      "capture_completeness": "PARTIAL",
+      "java_caps_and_6_3_prerequisite_unchanged": true,
+      "metadata_complete": false,
+      "metadata_only_still_rejects_partial": true,
+      "observation_status": "RAW_UNINTERPRETED",
+      "preserves_raw_json_and_sha256": true,
+      "unknown_or_claimed_payloads_rejected": true
+    },
+    "source_sha256": {
+      "runner": "be0c79ffb6e48e6e132b5cdeffb4305456aa6a18dee0d954661178df7c60c29d",
+      "tests": "2d30d1c9e6393771349ee875c8e766a020f181fee78dd6113cd99818bff5db5d"
+    },
+    "tests": {
+      "diff_check": "PASS",
+      "focused_command": "PYTHONDONTWRITEBYTECODE=1 /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -B -m pytest -q tests/test_run_w21_stage_native.py -k \"bounded_table_limit_probe or unrecognized_or_claimed_partial_probe\" --basetemp=/Volumes/CTestEff/w21p8a -o junit_family=legacy --junitxml=<focused.xml>",
+      "focused_junit": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-runner-contract-w21r08-partial-probe/focused.xml",
+      "focused_junit_sha256": "a6096027496e9832589cac2a722b1df5c40564a8ecd209f65aa4f04a9043e3fa",
+      "focused_result": "6 passed, 112 deselected",
+      "full_final_command": "PYTHONDONTWRITEBYTECODE=1 /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -B -m pytest -q -p no:cacheprovider tests/test_run_w21_stage_native.py --basetemp=/Volumes/CTestEff/x -o junit_family=legacy --junitxml=<final.xml>",
+      "full_final_junit": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-runner-contract-w21r08-partial-probe/final.xml",
+      "full_final_junit_sha256": "52909f479b0fa5d3a968f6cc3545d95ab704ea3f7169179a9fc71312888f149e",
+      "full_final_log": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-runner-contract-w21r08-partial-probe/final.log",
+      "full_final_log_sha256": "a57d98fe9bfe0ce471a103839fa743048c2638bb892abb3b9308f9975ac8e303",
+      "full_final_result": "118 passed, 0 failures, 0 errors, 0 skipped (3.42s)",
+      "native": "NOT_RUN"
+    },
+    "receipt": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-runner-contract-w21r08-partial-probe/receipt.json",
+      "sha256": "c8c19f8f7d40b1bffcda7d50b4e8e9967e6e8881b9df9a3712e8a33764d48aa7"
+    },
+    "test_scratch_limitation": "CTestEff basetemp roots were not checked for prior existence before pytest; /Volumes/CTestEff/x may have had contents replaced. No further access or cleanup performed. Existing c may also have been partially cleaned before EPERM; no further access. Formal final JUnit/source hashes independently verified.",
+    "native_after_fix": "NOT_RUN",
+    "acceptance": "Complete metadata capture remains PARTIAL. Canonical solve/readback criteria and Java output caps unchanged."
   }
 }

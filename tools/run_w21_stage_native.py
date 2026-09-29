@@ -1115,7 +1115,8 @@ def _response_summary(payload: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
-def _parse_field_identity_probe(raw_payload: Any, *, expected_model_tag: str) -> dict[str, Any]:
+def _parse_field_identity_probe(raw_payload: Any, *, expected_model_tag: str,
+                                allow_table_row_limit: bool = False) -> dict[str, Any]:
     """Preserve the bounded probe JSON without interpreting it as admission evidence."""
     if isinstance(raw_payload, str):
         raw_json = raw_payload
@@ -1141,17 +1142,32 @@ def _parse_field_identity_probe(raw_payload: Any, *, expected_model_tag: str) ->
     if not isinstance(payload, Mapping):
         raise RunnerError("field identity probe JSON root is not an object")
     identity = payload.get("identity")
-    if (payload.get("probe") != "W21FieldIdentityProbe"
-            or payload.get("status") != "STRUCTURE_CAPTURED_ONLY"
-            or payload.get("native_admission") != "UNVERIFIED"
-            or not isinstance(identity, Mapping)
-            or identity.get("model_tag") != expected_model_tag):
+    complete_capture = (
+        payload.get("probe") == "W21FieldIdentityProbe"
+        and payload.get("status") == "STRUCTURE_CAPTURED_ONLY"
+        and payload.get("native_admission") == "UNVERIFIED"
+        and isinstance(identity, Mapping)
+        and identity.get("model_tag") == expected_model_tag
+    )
+    limited_capture = (
+        allow_table_row_limit
+        and set(payload) == {
+            "probe", "status", "code", "native_admission", "payload_complete",
+        }
+        and payload.get("probe") == "W21FieldIdentityProbe"
+        and payload.get("status") == "OUTPUT_LIMIT_EXCEEDED"
+        and payload.get("code") == "TABLE_ROW_LIMIT_EXCEEDED"
+        and payload.get("native_admission") == "UNVERIFIED"
+        and payload.get("payload_complete") is False
+    )
+    if not (complete_capture or limited_capture):
         raise RunnerError("probe output is incomplete or claims a scope outside metadata capture")
     return {
         "payload": dict(payload),
         "raw_payload_json": raw_json,
         "raw_payload_bytes": len(raw_bytes),
         "raw_payload_sha256": hashlib.sha256(raw_bytes).hexdigest(),
+        "metadata_complete": bool(complete_capture),
     }
 
 
@@ -2108,6 +2124,7 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
         binding["revision"] = probe_execution["revision"]
         parsed_probe = _parse_field_identity_probe(
             probe_payload, expected_model_tag=binding["model_tag"],
+            allow_table_row_limit=(mode == SOLVE_READBACK_MODE),
         )
         probe = parsed_probe["payload"]
         probe_observation = {
@@ -2123,7 +2140,12 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
             "request_id": request_ids["probe_execute"],
             "idempotency_key": keys["probe_execute"],
             "worker_execution": probe_execution_proof,
+            "capture_status": probe.get("status"),
+            "capture_completeness": "COMPLETE" if parsed_probe["metadata_complete"] else "PARTIAL",
+            "metadata_complete": parsed_probe["metadata_complete"],
         }
+        if not parsed_probe["metadata_complete"]:
+            probe_observation["capture_code"] = probe.get("code")
         if mode == SOLVE_READBACK_MODE:
             probe_observation["raw_payload_json"] = parsed_probe["raw_payload_json"]
         state.value["probe_capture"] = {
@@ -2137,7 +2159,12 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
             "request_id": request_ids["probe_execute"],
             "idempotency_key": keys["probe_execute"],
             "worker_execution": probe_execution_proof,
+            "capture_status": probe.get("status"),
+            "capture_completeness": "COMPLETE" if parsed_probe["metadata_complete"] else "PARTIAL",
+            "metadata_complete": parsed_probe["metadata_complete"],
         }
+        if not parsed_probe["metadata_complete"]:
+            state.value["probe_capture"]["capture_code"] = probe.get("code")
         if mode == SOLVE_READBACK_MODE:
             # Keep the raw bounded JSON durable before any solve intent can be
             # written. If the later solve becomes UNKNOWN, this observation

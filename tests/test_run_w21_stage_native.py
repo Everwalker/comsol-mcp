@@ -769,6 +769,102 @@ def test_srb_ok(tmp_path, monkeypatch):
     }
 
 
+def test_srb_preserves_bounded_table_limit_probe_and_continues_readback(tmp_path, monkeypatch):
+    limited_probe = (
+        '{"probe":"W21FieldIdentityProbe","status":"OUTPUT_LIMIT_EXCEEDED",'
+        '"code":"TABLE_ROW_LIMIT_EXCEEDED","native_admission":"UNVERIFIED",'
+        '"payload_complete":false}'
+    )
+    assert len(limited_probe.encode("utf-8")) == 157
+    _patch_isolation(monkeypatch)
+    plan = _plan(tmp_path, mode=runner.SOLVE_READBACK_MODE)
+    state = _state(tmp_path, schema=runner.SOLVE_READBACK_SCHEMA)
+    fake = _FakeStdioSession(plan, state, probe_payload_override=limited_probe)
+
+    report = asyncio.run(runner.run_metadata_protocol(
+        runner._MCPCalls(fake), plan, state, clock=lambda: 100.0, preflight=lambda: [],
+    ))
+
+    actions = [action for action, _ in fake.calls]
+    assert actions.count("probe.execute") == 1
+    assert actions.count("study.solve") == 1
+    assert actions.count("dataset.solution_indices") == 1
+    assert actions.count("result.evaluate") == 1
+    observation = report["probe_observation"]
+    assert observation["status"] == "RAW_UNINTERPRETED"
+    assert observation["capture_status"] == "OUTPUT_LIMIT_EXCEEDED"
+    assert observation["capture_code"] == "TABLE_ROW_LIMIT_EXCEEDED"
+    assert observation["capture_completeness"] == "PARTIAL"
+    assert observation["metadata_complete"] is False
+    assert observation["raw_payload_json"] == limited_probe
+    assert observation["raw_payload_bytes"] == 157
+    assert hashlib.sha256(limited_probe.encode("utf-8")).hexdigest() == observation["raw_payload_sha256"]
+    durable = json.loads(state.path.read_text(encoding="utf-8"))["probe_capture"]
+    assert durable["capture_completeness"] == "PARTIAL"
+    assert durable["metadata_complete"] is False
+    assert durable["raw_payload_json"] == limited_probe
+    assert report["native_admission"] == report["physical_validation"] == "UNVERIFIED"
+
+
+def test_metadata_only_rejects_bounded_table_limit_probe(tmp_path, monkeypatch):
+    limited_probe = (
+        '{"probe":"W21FieldIdentityProbe","status":"OUTPUT_LIMIT_EXCEEDED",'
+        '"code":"TABLE_ROW_LIMIT_EXCEEDED","native_admission":"UNVERIFIED",'
+        '"payload_complete":false}'
+    )
+    _patch_isolation(monkeypatch)
+    plan = _plan(tmp_path, mode=runner.METADATA_MODE)
+    state = _state(tmp_path)
+    fake = _FakeStdioSession(plan, state, probe_payload_override=limited_probe)
+
+    with pytest.raises(runner.RunnerError, match="probe output is incomplete"):
+        asyncio.run(runner.run_metadata_protocol(
+            runner._MCPCalls(fake), plan, state, clock=lambda: 100.0, preflight=lambda: [],
+        ))
+
+    actions = [action for action, _ in fake.calls]
+    assert actions.count("probe.execute") == 1
+    assert "study.solve" not in actions
+    assert "dataset.solution_indices" not in actions
+    assert "result.evaluate" not in actions
+    assert state.value["status"] == "FAILED"
+
+
+@pytest.mark.parametrize("change", ["unknown_code", "claimed_admission", "complete_flag", "extra_identity"])
+def test_srb_rejects_unrecognized_or_claimed_partial_probe(tmp_path, monkeypatch, change):
+    payload = {
+        "probe": "W21FieldIdentityProbe",
+        "status": "OUTPUT_LIMIT_EXCEEDED",
+        "code": "TABLE_ROW_LIMIT_EXCEEDED",
+        "native_admission": "UNVERIFIED",
+        "payload_complete": False,
+    }
+    if change == "unknown_code":
+        payload["code"] = "UNIT_ROW_LIMIT_EXCEEDED"
+    elif change == "claimed_admission":
+        payload["native_admission"] = "VERIFIED"
+    elif change == "complete_flag":
+        payload["payload_complete"] = True
+    elif change == "extra_identity":
+        payload["identity"] = {"model_tag": "w21model"}
+    _patch_isolation(monkeypatch)
+    plan = _plan(tmp_path, mode=runner.SOLVE_READBACK_MODE)
+    state = _state(tmp_path, schema=runner.SOLVE_READBACK_SCHEMA)
+    fake = _FakeStdioSession(plan, state, probe_payload_override=json.dumps(payload))
+
+    with pytest.raises(runner.RunnerError, match="probe output is incomplete"):
+        asyncio.run(runner.run_metadata_protocol(
+            runner._MCPCalls(fake), plan, state, clock=lambda: 100.0, preflight=lambda: [],
+        ))
+
+    actions = [action for action, _ in fake.calls]
+    assert actions.count("probe.execute") == 1
+    assert "study.solve" not in actions
+    assert "dataset.solution_indices" not in actions
+    assert "result.evaluate" not in actions
+    assert state.value["study_dispatch"] == state.value["solver_dispatch"] == 0
+
+
 def test_trusted_code_ticket_advances_real_execution_service_revision_and_unwraps_worker_result(tmp_path):
     """Exercise the actual trusted-code ledger and G2 result constructors offline."""
     project_root = tmp_path / "project"
