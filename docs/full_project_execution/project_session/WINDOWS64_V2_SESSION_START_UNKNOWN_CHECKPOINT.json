@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "unit": "W21 Windows6.4 V2 short-home current-source attempt",
-  "updated_at_utc": "2026-09-29T10:49:40Z",
+  "updated_at_utc": "2026-09-29T11:21:48Z",
   "overall_status": "PARTIAL",
   "source_package_status": "PASS_MAIN_VERIFIED",
-  "native_status": "LATEST_3160730_RUN_IDENTITY_MISMATCH_STOP_UNKNOWN; PRIOR_CONNECT_QUIESCENCE_VERIFIED; SOLVE_READBACK_NOT_RUN",
-  "next_action": "Use the main-reviewed source for one fresh, source-bound public recovery attempt that preserves the original session.stop UNKNOWN; then verify its durable disposition without replay, restart, repeated stop/disconnect, or cleanup. The original native stop disposition remains NOT_RUN for this recovery. Only after disposition is verified, freeze a new Windows 6.4 solve/readback/cleanup candidate, then run Windows 6.3 against its verified 6.4 receipt.",
+  "native_status": "PRIOR_STOP_UNKNOWN_CURRENT_HOST_QUIESCENCE_VERIFIED; CURRENT_MODEL_CREATE_UNKNOWN_RETAINED; READONLY_CURRENT_HOST_QUIESCENCE_CONFIRMED; NEW_CANDIDATE_AFTER_FIX_ONLY; SOLVE_READBACK_NOT_RUN",
+  "next_action": "The current model_create attempt is confirmed quiet by the read-only census, but its original result remains UNKNOWN and no ModelRef is registered. Do not reuse or clean the old session or promote its outcome. After the backend/runner defect is fixed, proceed with a new separate Windows 6.4 candidate; solve/readback is NOT_RUN. Run Windows 6.3 only against a verified successful 6.4 solve-readback receipt.",
   "candidate": {
     "source_commit": "9c5ced6272dd876cf9c28c6c6f73b943bd76b96c",
     "evidence_root": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-v2-20260928T235840Z-9c5ced6",
@@ -1662,5 +1662,214 @@
       "The original native session.stop UNKNOWN remains retained and is not durably dispositioned by offline tests."
     ],
     "reproduce": "PYTHONDONTWRITEBYTECODE=1 python -B -m pytest -p no:cacheprovider -q tests/test_control_daemon_sessions.py tests/test_operation_store.py tests/test_operation_store_migrations.py --basetemp=<short-task-scratch>/pytest --junitxml=<evidence-root>/affected-suites.junit.xml"
+  },
+  "stop_recovery_attempt_20260929T110853Z": {
+    "schema": "COMSOL_W21_STOP_RECOVERY_ONCE_V1",
+    "status": "VERIFIED_CURRENT_HOST_QUIESCENCE_ONLY",
+    "source_head": "31331365ce083a72052dc5c60fd91140e4bc8b5b",
+    "source_package": {
+      "archive": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-stop-recovery-handoff-3133136/w21-stop-recovery-3133136.tar.gz",
+        "sha256": "0f849d48dcb775472aca1dede453f429fcd71d5994c434f1878d512ebfe4e787"
+      },
+      "source_manifest": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-stop-recovery-handoff-3133136/source-manifest.json",
+        "sha256": "a92b08db948bba1639c5216d99898ade12012dc7449f80027dfc19e78cd909c5",
+        "source_files": 107
+      },
+      "git_blob_manifest": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-stop-recovery-handoff-3133136/source-git-blobs.json",
+        "sha256": "cfe1d94d3770ddaaeb0a825c06145ba67268d00588e9949b22f52b6c4fb11cac",
+        "matched_git_blobs": 107,
+        "total_git_blobs": 107
+      },
+      "package_receipt": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-stop-recovery-handoff-3133136/handoff-package-receipt.json",
+        "sha256": "a17f86558994341b75ef2f3fdfd6df02774324d6f6e7383241656038ca9b4c33"
+      },
+      "snapshot_helper_sha256": "2d26523215002042d5ff0441dee428de7644dab93ce2f2834f92ac4abd83ad02",
+      "archive_members": 110,
+      "all_members_regular": true,
+      "worktree_patch_empty": true
+    },
+    "offline_driver": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-stop-recovery-once/run_w21_stop_recovery_once.py",
+      "sha256": "a44b11b6061530d9feec9ff2fbe194fc293e95a4d918bff9691e05fc30579685",
+      "test_source": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-stop-recovery-once/test_stop_recovery_once.py",
+        "sha256": "50b7f21192a7176bde2ecc10f6b22f30ab0b8409639d6077604028fe7805a333"
+      },
+      "tests": {
+        "unique": 5,
+        "passed": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "junit": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-stop-recovery-once/final-junit.xml",
+        "sha256": "cfca0406535a424500357d2de82ffd18ad733da9c649242d70f8894a30607b85"
+      },
+      "log": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-stop-recovery-once/final-pytest.log",
+        "sha256": "d8723ee001feaaf2086b9ce1b811b05cd7fcaa5a6810308b70293e0529ba97f7"
+      }
+    },
+    "main_review": {
+      "status": "VERIFIED_CURRENT_HOST_QUIESCENCE_ONLY",
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-stop-recovery-once/main-recovery-review.json",
+      "sha256": "debb742122671242d7f05fa65096fe129b4e21c9baa7f312629c40c25d280f0c"
+    },
+    "source_operation": {
+      "operation": "session.stop",
+      "operation_id": "8f91a0ec-ab71-41c4-90f2-a00bee016733",
+      "request_id": "d26119c9-2727-4f16-b57f-091add8c1815",
+      "job_id": "e2d821c1-9a30-4561-ae73-0c9a022e9df5",
+      "prior_status": "UNKNOWN",
+      "current_status": "RECONCILING",
+      "original_result_preserved": true,
+      "original_result_sha256": "20c2b1b30dc047db217f1456e5b4d872439af575473ce350c27716f1704f9fef"
+    },
+    "recovery_call": {
+      "count": 1,
+      "operation": "session.recover",
+      "status": "SUCCEEDED",
+      "request_id": "838d935c-ede1-4cd1-abbd-26ad20542308",
+      "operation_id": "29d1eaee-c63e-4af5-b797-f8bae2773d1a",
+      "job_id": "e6f230cd-a9c7-4d01-80d0-725a4831dd98",
+      "recovery_status": "PARTIAL_HISTORICAL_UNKNOWN_RETAINED",
+      "replayed_requests": 0,
+      "new_worker_created": false,
+      "new_engine_or_worker_birth": false
+    },
+    "resolution": {
+      "scope": "ABANDONED_UNKNOWN_STOP_CURRENT_HOST_QUIESCENCE",
+      "event_id": 21,
+      "evidence_sha256": "27c17a36d9b5b7ed3c5cc53416e05556f7d795c835f585e2f8cb4bce8d37a52d",
+      "event_digest_matches": true,
+      "lifecycle_revision": 9,
+      "lifecycle_state": "STOPPED",
+      "client_state": "DISCONNECTED",
+      "endpoint_present": false,
+      "server_process_identity_present": false,
+      "worker_instance_id_present": false,
+      "process_inventory": "COMPLETE; 0 task/canonical matches; 0 unresolved candidates",
+      "listener_inventory": "COMPLETE; 57 rows; 0 task/canonical matches; 0 unresolved owners"
+    },
+    "historical_stop_outcome": "UNKNOWN_RETAINED",
+    "native_solve_readback": "NOT_RUN",
+    "scope_limit": "This recovery proves current-host quiescence only; it does not establish a known outcome for the historical stop or COMSOL solve/readback acceptance."
+  },
+  "current_windows64_solve_readback_attempt": {
+    "status": "MODEL_CREATE_UNKNOWN_RETAINED; CURRENT_HOST_QUIESCENCE_CONFIRMED_READONLY; NO_MODELREF; OLD_SESSION_NOT_REUSED_OR_CLEANED; SOLVE_READBACK_NOT_RUN",
+    "run_id": "w21-64-20260929T111047Z-519e6ec8",
+    "source_head": "31331365ce083a72052dc5c60fd91140e4bc8b5b",
+    "freeze_sha256": "177f781c18426020f0d4b63ac3479580fac23a4ca18093709f9fd7440d214895",
+    "remote_exit_code": 2,
+    "dispatch_count": 1,
+    "project_create": {
+      "status": "SUCCESS",
+      "request_id": "0f315553-6c21-4748-8d1c-624a90252397",
+      "job_id": "2bd1520c-adb2-431c-acc5-e57456e916b6"
+    },
+    "session_start": {
+      "status": "SUCCESS",
+      "request_id": "164e4796-e80d-4831-8080-9841ac83f250",
+      "job_id": "e0a7f052-a24c-4956-a9dd-d8bbea40b179"
+    },
+    "session_connect": {
+      "status": "SUCCESS",
+      "request_id": "bcf5fe31-752e-4a64-8bef-91d3d01e6242",
+      "job_id": "4e0996ab-cebc-46c8-b51a-81a06261d2da",
+      "project_id": "9981875a-3dd6-419c-bf73-314bedb48277",
+      "session_id": "session-361b451118b047a0b88e175bbedf7b59"
+    },
+    "model_create": {
+      "operation_id": "01ea9490-37ab-4f93-bd53-d578d9ef0b1f",
+      "request_id": "d592442a-9a35-40a8-afe0-560b14c488ca",
+      "job_id": "dd8a9412-83f1-417a-9b03-6d1078e0f74d",
+      "status": "UNKNOWN",
+      "error_code": "EXECUTION_STATE_UNKNOWN",
+      "execution_state_unknown_flag": false,
+      "result_sha256": "96534e006cf635d8ea30fc34bf992af229c1af364bb5190c1aeeefd7c8eac8b6",
+      "worker_model_tag": "mcp1",
+      "worker_modelutil_create": "SUCCEEDED; com.comsol.model.Model handle returned",
+      "worker_rpc_observations": "All events observed in the operation history were SUCCEEDED.",
+      "registered_model_ref": false,
+      "backend_error": {
+        "type": "AttributeError",
+        "location": "comsol_mcp/_managed_backend.py:1111",
+        "expression": "srv._current_model.java.tag()",
+        "cause_observed": "srv._current_model was None"
+      },
+      "durable_disposition": "PENDING"
+    },
+    "failure_disconnect": {
+      "status": "SESSION_BUSY",
+      "request_id": "1bcb39cb-39f7-4440-96aa-9b614f9021ea",
+      "job_id": "75b300c4-872c-4258-9adc-200494ae7130"
+    },
+    "session_stop_dispatched": false,
+    "possible_server_births": 1,
+    "possible_worker_births": 1,
+    "study_dispatches": 0,
+    "solver_dispatches": 0,
+    "solution_tuple_reads": 0,
+    "field_reads": 0,
+    "state_after_execute": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback-handoff-plan-w21r04/state64-after-execute.json",
+      "sha256": "64c3c15c6abcc17e0eb3137051f955486f960781c13473d555c781b797d798d2"
+    },
+    "outer_exec_session_id": 97357,
+    "native_result": "NO_PASS; READONLY_DIAGNOSIS_REQUIRED",
+    "next_action": "No further action on this old session: do not reuse or clean it and do not change the UNKNOWN result. After the backend/runner defect is fixed, proceed only with a separate Windows 6.4 candidate.",
+    "readonly_diagnostics": {
+      "status": "COMPLETE_READONLY_CENSUS; CURRENT_HOST_QUIESCENCE_CONFIRMED; MODEL_CREATE_RESULT_STILL_UNKNOWN",
+      "model_event_history": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback-handoff-plan-w21r04/read_model_unknown.stdout",
+        "sha256": "7420e6bc73a30ade588bbf295ca6da12fc3771523a4ef25fca09d6d32d1b50f5"
+      },
+      "process_listener_diagnostics": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback-handoff-plan-w21r04/read_model_diagnostics.stdout",
+        "sha256": "29af1134f6b2cbdc918e4b891760621a5c23e1aaa3ba428970913a5a74aa4ada",
+        "exit_code": 0,
+        "current_server_pid": 33728,
+        "current_daemon_pid": 16852,
+        "process_matches": 0,
+        "listener_matches": 0,
+        "endpoint_port": 1278,
+        "sanitized_control_errors_log_bytes": 542,
+        "sanitized_control_errors_log_sha256": "fbe62df104884e1b67c5f3492b86c744486d77777b73f820c37b444f708ea595"
+      },
+      "interpretation": "Server/daemon absence and no listener are observations only; the original model_create job remains UNKNOWN and has no registered ModelRef.",
+      "final_quiescence_check": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback-handoff-plan-w21r04/read_current_host_quiescence.stdout",
+        "sha256": "915ab495a5779a8820b87753d02b761dabb8305d2a7b8d34cab31b772db73f19",
+        "scope": "READONLY_CURRENT_HOST_AND_EXISTING_WORKER_TERMINAL_OBSERVATIONS",
+        "source_job_id": "dd8a9412-83f1-417a-9b03-6d1078e0f74d",
+        "source_status": "UNKNOWN",
+        "source_result_sha256": "96534e006cf635d8ea30fc34bf992af229c1af364bb5190c1aeeefd7c8eac8b6",
+        "submitted_worker_requests": 11,
+        "observed_terminal_worker_requests": 11,
+        "all_exact_bound_requests_terminal": true,
+        "daemon_initialized": false,
+        "mcp_mutation_dispatched": false,
+        "process_inventory": {
+          "status": "COMPLETE",
+          "candidate_count": 0,
+          "task_owned_match_count": 0,
+          "canonical_engine_match_count": 0,
+          "unresolved_candidate_count": 0
+        },
+        "listener_inventory": {
+          "status": "COMPLETE",
+          "rows_scanned": 56,
+          "task_owned_match_count": 0,
+          "canonical_engine_match_count": 0,
+          "owner_query_unresolved_count": 0
+        },
+        "interpretation": "Current-host quiescence confirmed for this isolated attempt only. Historical model_create outcome remains UNKNOWN and no ModelRef is registered; this is not a production recovery flag or PASS."
+      }
+    }
   }
 }
