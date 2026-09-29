@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "unit": "W21 Windows6.4 V2 short-home current-source attempt",
-  "updated_at_utc": "2026-09-29T04:35:58.974810+00:00",
+  "updated_at_utc": "2026-09-29T05:14:28.300795+00:00",
   "overall_status": "PARTIAL",
   "source_package_status": "PASS_MAIN_VERIFIED",
   "native_status": "NOT_ACCEPTED_SESSION_START_UNKNOWN",
-  "next_action": "Finish review of the one-shot recovery driver against frozen15e7bea; source is uploaded and all107 archive members verified remotely. Back up original SQLite before controller startup, record controller auto-reconciliation separately, and dispatch existing session.recover once. Preserve UNKNOWN history and no replay. After actual safe reconciliation, execute the bounded new short-root Windows6.4 start/connect/solve/readback comparison, then6.3 and W23-W26.",
+  "next_action": "Do not replay recovery request8ec17d18-88f7-4e5c-a797-6d1500ca20ac. Raw read-only evidence confirms original start RECONCILING, recovery request rows0, controller32880 DAEMON_READY then observed dead with no exit event; no quiescence disposition. Audit MCP1.30 Windows process-tree cleanup and public session.recover pre-persistence rejection paths separately, preserving unavailable error details as UNKNOWN. Repair and verify before another controlled action; new short-root native source is staged, not executed.",
   "candidate": {
     "source_commit": "9c5ced6272dd876cf9c28c6c6f73b943bd76b96c",
     "evidence_root": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-v2-20260928T235840Z-9c5ced6",
@@ -397,5 +397,180 @@
       "verification_exit_code": 0,
       "extraction_output_capture": "Local UTF-8 decoding failed after the extraction call; no replay. Subsequent independent read-only comparison verified every archive member and exact destination file set."
     }
+  },
+  "recovery_driver_attempt": {
+    "status": "UNKNOWN_NO_RETRY",
+    "native_status": "NOT_RUN",
+    "source_head": "15e7bea61e9ef06b29d9a51f55fcddebcb773b7a",
+    "driver_sha256": "ef9f6200898c5225023f1436ed85290812d17a628f95dbb4b2ad4646cf777ec0",
+    "backup": {
+      "bytes": 139264,
+      "sha256": "f8637aedea86a2c2151e67e91f3b02e5561705dd8b7ec76043391282ab6d4275",
+      "status": "CONSISTENT_READONLY_SOURCE_BACKUP"
+    },
+    "controller_start_attempted": true,
+    "recover_dispatch_attempted": true,
+    "dispatch_count": 1,
+    "recovery_request_id": "8ec17d18-88f7-4e5c-a797-6d1500ca20ac",
+    "idempotency_key_sha256": "648ce4ddd64b3e6b1b9e42428cbcdd8003207a7c2c1b034d9f8ee458e4b9a0a6",
+    "response": {
+      "is_error": true,
+      "recovery_status": null,
+      "returned_operation_id": null,
+      "success": false
+    },
+    "controller_process_after_stdio": {
+      "alive": false,
+      "birth_matches": null,
+      "pid": 32880,
+      "process_start_epoch_ms": 1790658270497,
+      "status": "OBSERVED"
+    },
+    "original_current_sqlite_state": "RECONCILING",
+    "lifecycle_state_observed": "STARTING",
+    "exact_quiescence_proof_valid": false,
+    "original_start_replayed": false,
+    "readonly_process_followup": {
+      "old_task_matching_processes": 0,
+      "new_task_matching_processes": 0,
+      "candidate_command_missing": 0,
+      "unrelated_controller_pid": 15240,
+      "unrelated_birth_utc": "2026-09-24T13:33:04.6768190Z",
+      "unrelated_process_touched": false,
+      "controller_marker": true,
+      "recovery_dispatch_marker": true
+    },
+    "driver_interface_verification": "Real MCP1.30 stdio with harmless Python child plus3 exception/privacy controls passed (4 total); does not establish recovery success.",
+    "evidence": [
+      {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-recovery-15e7bea/recovery-invocation-v4-receipt.json",
+        "sha256": "0ae5ca1ac1022f5e070bf8b783b06f743e1ea54384dfda7d06872f969b923fa9"
+      },
+      {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-recovery-15e7bea/readonly_recovery_controller_processes_v2_receipt.json",
+        "sha256": "fb365bbb24aaf29cbca200f943c906b29736d85dae86dc3043decf65c7ca5f5a"
+      },
+      {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-recovery-15e7bea/recovery-driver-stdio-receipt.json",
+        "sha256": "a56a343000028f033d7f90a36a823d005cb0b30c7243654e117895d28c086cb9"
+      }
+    ],
+    "recovery_request_persisted_row_count": 0,
+    "raw_state_verification": {
+      "status": "OBSERVED_READ_ONLY",
+      "source_exact_identity_match": true,
+      "source_operation_status": "RECONCILING",
+      "source_job_status": "RECONCILING",
+      "source_result_present": false,
+      "recovery_request_rows": 0,
+      "total_operations": 2,
+      "nonterminal_operations": 1,
+      "daemon_identity": {
+        "birth": "start_epoch_ms:1790658270497",
+        "errno": null,
+        "error_category": null,
+        "event": "DAEMON_READY",
+        "exact_schema_fields": true,
+        "exception_type": null,
+        "exit_code": null,
+        "observed_at_utc": "2026-09-29T05:04:31.307Z",
+        "pid": 32880,
+        "schema": "COMSOL_CONTROL_DAEMON_IDENTITY_V1",
+        "status": "OBSERVED",
+        "unknown_field_count": 0,
+        "winerror": null
+      },
+      "control_log_bytes": 0,
+      "control_errors_log": "MISSING",
+      "receipt_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-recovery-15e7bea/readonly_v4_recovery_diagnostic_v1_receipt.json",
+      "receipt_sha256": "d932982b24c4b1ab3a33288d99f9e9b62b46dd69f4819e9d27b9b90c74a5ca06"
+    },
+    "unresolved": "Recovery response error details were discarded by driver; empty log and DAEMON_READY without exit event do not establish why controller died. Do not invent a cause or replay."
+  },
+  "recovery_driver_prior_controller_init_attempt": {
+    "status": "CONTROLLER_START_NO_RECOVERY_DISPATCH_OUTCOME_UNVERIFIED",
+    "native_status": "NOT_RUN",
+    "source_head": "15e7bea61e9ef06b29d9a51f55fcddebcb773b7a",
+    "driver_sha256": "9952814eea5cedc72166bb1f56f16fc736d43f177d7d8ef706403849fb480553",
+    "backup": {
+      "bytes": 139264,
+      "sha256": "f8637aedea86a2c2151e67e91f3b02e5561705dd8b7ec76043391282ab6d4275",
+      "status": "CONSISTENT_READONLY_SOURCE_BACKUP"
+    },
+    "controller_start_attempted": true,
+    "recover_dispatch_attempted": false,
+    "dispatch_count": 0,
+    "original_operation_status": "RUNNING",
+    "original_job_status": "RUNNING",
+    "lifecycle_state": "STARTING",
+    "new_operations": 0,
+    "source_result_present": false,
+    "historical_native_outcome": "UNKNOWN",
+    "original_start_replayed": false,
+    "readonly_followup": {
+      "old_task_matching_processes": 0,
+      "new_task_matching_processes": 0,
+      "missing_commandline_candidates": 0,
+      "unrelated_controller_pid": 15240,
+      "unrelated_controller_birth_utc": "2026-09-24T13:33:04.6768190Z",
+      "unrelated_listener_count": 1,
+      "unrelated_process_touched": false,
+      "controller_marker": true,
+      "recovery_dispatch_marker": false
+    },
+    "earlier_preflight_failures": [
+      "Main wrapper used incorrect old-home path; stopped read-only with dispatch_count0.",
+      "Driver incorrectly required metadata.operation absent in production schema; actual read-only identity matches confirmed. One-line repair passed9 synthetic SQLite controls."
+    ],
+    "current_finding": "Investigate real MCP stdio stderr interface (StringIO has no usable fileno) and retain pre-dispatch exception instead of masking it; no recovery replay or native start.",
+    "evidence": [
+      {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-recovery-15e7bea/recovery-invocation-receipt.json",
+        "sha256": "ceb920ce75fd14bb8c66556d377c51a9811d12e9fd1aef69b037a49215e337b8"
+      },
+      {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-recovery-15e7bea/recovery-invocation-v2-receipt.json",
+        "sha256": "28dc702aab59a648651a7567d58cfb165f02b3880c858bcd0ce009ecadd4f02b"
+      },
+      {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-recovery-15e7bea/recovery-invocation-v3-receipt.json",
+        "sha256": "ec2add6aca79817b5a2250597e4ab4f30cdd68dd5b0b725a04c6c51b6617c9be"
+      },
+      {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-recovery-15e7bea/readonly_source_binding_v1_uploaded_receipt.json",
+        "sha256": "8d5fc01127fff511fc5d3c841df5c1992267f09c93855a62eb856b67c6f36115"
+      },
+      {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-recovery-15e7bea/readonly_recovery_controller_processes_v1_receipt.json",
+        "sha256": "b1e74120f8665ceeb91dab82f87ca16bca614382006f6f56dd577829abd4dffa"
+      },
+      {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-recovery-15e7bea/recovery-driver-binding-receipt.json",
+        "sha256": "e46493dd4fb0ee2bd0fb9a7e6c005d45d4dcc6f7f4d4dd9474f94d612e8afec8"
+      }
+    ]
+  },
+  "next_native_source_handoff": {
+    "status": "SOURCE_UPLOADED_AND_EXTRACTED_NATIVE_NOT_RUN",
+    "source_head": "9d5aab1880e37a439c34148fc5a9c75d2e044224",
+    "source_files": 107,
+    "archive_members": 110,
+    "archive_sha256": "6ae9043f20232ab5683f8243da68d947dcee38bfcbdc047b72054c7d0ea1c70a",
+    "manifest_sha256": "77661e749d1f9ce5bc3f660f255070193540a6c09321830d50d42b76a8b03a38",
+    "task_root": "C:\\Temp\\w21s9d5",
+    "local_path_budget_utf16_units": 229,
+    "path_budget_not_root_cause_proof": true,
+    "prepare_executed": false,
+    "native_executed": false,
+    "receipts": [
+      {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback-handoff-9d5aab1/handoff-receipt.json",
+        "sha256": "0d6892638914106f39b8e7e11c076ffdaeade128547f4ab2c826bc25db26e2e4"
+      },
+      {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback-handoff-9d5aab1/windows-upload-extraction-receipt.json",
+        "sha256": "a52c7bdd7cc2bdfb3ebd05ad93320422a0cb5ebb16f12640f13af2ad773152b2"
+      }
+    ]
   }
 }
