@@ -6,7 +6,7 @@
 
 **PASS — scoped canonical Windows 6.4 native chain.** Run `w21-64-20260929T132007Z-820b0f09`, runtime source `2bdcc75`, COMSOL 6.4.0 build 293, exited 0. Public MCP start/connect/model construction → one solve → exact solution-index read → full temperature field readback → owned cleanup all completed. Field shape is `[1,1,5,637]`, unit readback K, selected tuple `(outer=1, inner=5, solnum=5)`; selected values are approximately 300–304.380 K. The complete field response was 375,596 bytes under the unchanged 45s RPC wait and native budgets. Returned-field hashes and request/model/revision bindings were checked by the main Agent.
 
-Cleanup is proven for the exact owned Server PID 2796/birth: child reaped, exit confirmed, listener absent; Worker retired and temporary Eval node verified removed. [Canonical 6.4 checkpoint](docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json#canonical_native_chain_windows64) contains the compact result, exact fingerprints, reproduction entry and local receipt identities. **Windows 6.3 was attempted and startup remains UNKNOWN**; solve/readback is NOT_RUN.
+Cleanup is proven for the exact owned Server PID 2796/birth: child reaped, exit confirmed, listener absent; Worker retired and temporary Eval node verified removed. [Canonical 6.4 checkpoint](docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json#canonical_native_chain_windows64) contains the compact result, exact fingerprints, reproduction entry and local receipt identities. **Windows 6.3 now passes startup/connect; its latest solve is UNKNOWN after a native file-creation error, and readback remains NOT_RUN.**
 
 This is minimal coarse-mesh (`hauto=9`) production-chain acceptance only. The auxiliary structural probe remains RAW_UNINTERPRETED/PARTIAL. Actual spatial coordinates, intrinsic mesh mapping, stage-transfer admission, numerical convergence and physical validation are not established. The preceding fine-mesh run produced a real 45MB field result but its public reply timed out; its runner UNKNOWN remains preserved and current-host quiescence was separately verified. It is not retroactively counted as a complete chain.
 
@@ -16,7 +16,9 @@ Earlier failures remain preserved. Source `3133136` created native `mcp1` but it
 
 ## Current Windows 6.3 state
 
-**PARTIAL / startup UNKNOWN.** Same runtime source, COMSOL 6.3.0 build 290, run `w21-63-20260929T132702Z-8406c97b`, actual runner exit 2. Native PID 4316 reached READY after 33.382s, but the exact start job remains RUNNING with no terminal result and lifecycle STARTING revision 1. No connect, solve, readback or cleanup followed. Read-only complete inventories at 13:38:38Z found no canonical/task process or listener and no unresolved candidates (56 listener rows). A subsequent single public `session.recover` proved current-host quiescence and set lifecycle STOPPED revision 3, retaining the historical job as UNKNOWN, with zero replay and no new Worker. Original daemon PID 26676 and Server PID 4316 were absent; daemon logs supplied no error cause. Original startup outcome is not relabeled PASS. Exact identities, hashes and local reproduction inputs are in the [same checkpoint](docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json#canonical_native_chain_windows63_attempt_20260929T132702Z).
+**PARTIAL — startup/connect/model/mesh passed; solve UNKNOWN, readback NOT_RUN.** New run `w21-63-20260929T140237Z-f4004a44`, source `18154c6`, COMSOL 6.3.0 build 290, exited 2 after an actual transient-solver failure: it could not create a native solution file. The measured path is 271 UTF-16 units before NUL; the existing 260-unit preflight missed COMSOL's nested recovery directory and solution filename. One solve was dispatched; no result read or cleanup followed. Read-only evidence confirms 19/19 Worker requests terminal and complete process/listener inventories quiet at 14:07:38Z. Preserve the original UNKNOWN; this does not establish owned cleanup or scientific acceptance. [Exact failure and resume evidence](docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json#canonical_native_chain_windows63_attempt_20260929T140237Z).
+
+The earlier 6.3 interrupted start was safely reconciled by one public `session.recover`: current lifecycle STOPPED revision 3, historical job UNKNOWN, zero replay and no new Worker. The subsequent run confirms real start/connect success after the missing start RPC wait parameter was supplied; it does not prove every detail of the prior transport failure's cause.
 
 ## Accepted software evidence
 
@@ -24,9 +26,9 @@ The latest start RPC wait-parameter repair passed 118 runner tests (0 failures/e
 
 ## Next action
 
-1. Software verification passed for the minimal repair: explicitly pass the existing 45s RPC wait to `session.start`, which previously fell back to the control client default (30s plus 5s HTTP margin). This mismatch is confirmed in source; it is not yet a proven native root-cause resolution.
-2. Freeze a new 6.3 attempt after software checks; complete canonical solve/readback/cleanup under the unchanged 45s outer RPC and 900s total budgets. Preserve the safely reconciled original UNKNOWN.
-3. Keep metadata, mapping and physical acceptance separate; unrelated capability expansion stays paused this round.
+1. Repair only the necessary Windows runtime-state path layout and existing path-budget coverage, preserving old sessions and full identity hashes.
+2. Run relevant software checks, then a new isolated Windows 6.3 canonical solve/readback/cleanup attempt under unchanged budgets. Path preflight alone is not native acceptance.
+3. Preserve both historical UNKNOWN attempts and separate metadata/mapping/physical gaps; unrelated capability expansion stays paused this round.
 
 ## Remaining project scope
 

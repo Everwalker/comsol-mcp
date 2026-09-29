@@ -2751,5 +2751,117 @@
         "sha256": "35b95cc895be2743d7c89619e707877f83b339a46c55b3f9c06a5bc22cd1b6f7"
       }
     }
+  },
+  "canonical_native_chain_windows63_attempt_20260929T140237Z": {
+    "status": "PARTIAL_SOLVE_UNKNOWN_NATIVE_FILE_CREATE_ERROR",
+    "run_id": "w21-63-20260929T140237Z-f4004a44",
+    "runtime_source_commit": "18154c663c635316f54a6ab0598ea994748266e4",
+    "freeze_sha256": "3fc8dd7f33baf6dcc8568ffad6bd511f2e6ac74800c069925d92d5a6dc23cdf5",
+    "actual_exit_code": 2,
+    "completed_capabilities": [
+      "public session.start",
+      "public session.connect",
+      "model_create and inspect",
+      "fixture register/execute",
+      "one geometry and mesh build",
+      "bounded partial metadata probe"
+    ],
+    "solve_status": "UNKNOWN_RETAINED; one actual Worker solve failed; no replay or cleanup",
+    "result_readback": "NOT_RUN",
+    "job_id": "541b6f03-800c-4d4f-8436-ce4f559a7086",
+    "operation_id": "7b409c6a-3449-4420-99e5-766b022de860",
+    "request_id": "903c5944-4381-47d8-a132-ae708ce8cb39",
+    "original_result_sha256": "3d22a02eb1dac6ba4cddad80e5ab9069d569817de685786d3b75645e77cd89aa",
+    "native_error": {
+      "error_code": "ENGINE_CALL_FAILED",
+      "worker_request_id": "wrk-995b84b7-6ee2-456a-b0db-63f8fc8dd9f6",
+      "elapsed_ms": 5430,
+      "message_redacted": "FlException: 以下特征遇到问题：\r\n  - 特征: 瞬态求解器 1 (sol1/t1)\r\n无法创建原生文件 <path>",
+      "path_facts": [
+        {
+          "path_sha256": "0c8d886c0094c09147432c7315d1c7bdeb2e0a9561495fbc6b32526a0effee29",
+          "utf16_units": 271,
+          "basename": "solution13942611797189722681.mphbin2490844661484551431",
+          "parent_utf16_units": 216,
+          "parent_exists": false,
+          "file_exists": false,
+          "under_current_task": true,
+          "last_directory_parts": [
+            "owned-server",
+            "recovery",
+            "MPHRecovery8633date Sep 29 2026 10-04 PM.mph"
+          ],
+          "path_parts_lengths": [
+            3,
+            4,
+            6,
+            3,
+            1,
+            16,
+            15,
+            21,
+            8,
+            64,
+            12,
+            8,
+            44,
+            54
+          ]
+        }
+      ]
+    },
+    "quiescence": {
+      "all_bound_requests_terminal": true,
+      "daemon_initialized": false,
+      "job_id": "541b6f03-800c-4d4f-8436-ce4f559a7086",
+      "mcp_mutation_dispatched": false,
+      "observation": {
+        "listener_inventory": {
+          "canonical_engine_match_count": 0,
+          "owner_query_unresolved_count": 0,
+          "rows_scanned": 56,
+          "status": "COMPLETE",
+          "task_owned_match_count": 0
+        },
+        "observed_at_utc": "2026-09-29T14:07:38.753Z",
+        "process_inventory": {
+          "candidate_count": 0,
+          "canonical_engine_match_count": 0,
+          "status": "COMPLETE",
+          "task_owned_match_count": 0,
+          "unresolved_candidate_count": 0
+        }
+      },
+      "observed_count": 19,
+      "original_result_sha256": "3d22a02eb1dac6ba4cddad80e5ab9069d569817de685786d3b75645e77cd89aa",
+      "original_status": "UNKNOWN",
+      "runner_transport_outcome": "UNKNOWN_RETAINED",
+      "scope": "READONLY_CURRENT_HOST_AND_EXISTING_WORKER_TERMINAL_OBSERVATIONS",
+      "submitted_count": 19
+    },
+    "cause_scope": "Real COMSOL native-file creation failure at a measured 271 UTF-16-unit path. Existing preflight omitted recovery directory and native solution-file descendants. Shortening paths remains a candidate until real solve/readback succeeds.",
+    "next_action": "Use shared short Windows runtime-state root for new homes, preserve legacy homes, include observed solver recovery-file descendants in existing 260-unit budget; test then run a fresh canonical attempt.",
+    "local_evidence": {
+      "freeze63.json": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-start-rpc45-w21r11/freeze63.json",
+        "sha256": "adf3acf10bd605781f8d011257993b7fc88c5d4a0b8c5bb7278d986bbc79568b"
+      },
+      "state63-after-execute.json": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-start-rpc45-w21r11/state63-after-execute.json",
+        "sha256": "e25367004b753bc8019f279413954ed054a4601897760875c7b0d349cd5d1bad"
+      },
+      "read_solve63_result.stdout": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-start-rpc45-w21r11/read_solve63_result.stdout",
+        "sha256": "da4ccc838cf24524cc6866474161b2770f74264a31692c663e2411ababe7674c"
+      },
+      "read_native_file_error63_tail.stdout": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-start-rpc45-w21r11/read_native_file_error63_tail.stdout",
+        "sha256": "2321ee8c4ac2e30e2d69bbb8928f181eef34d4ea0fddb99ac0444330f2f607dd"
+      },
+      "read_current_host_quiescence63.stdout": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-start-rpc45-w21r11/read_current_host_quiescence63.stdout",
+        "sha256": "2ea103b72868557d8ec3aebcc6324bcc45d6eee6669284ae66e317a633ec405c"
+      }
+    }
   }
 }
