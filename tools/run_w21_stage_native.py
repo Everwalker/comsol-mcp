@@ -247,6 +247,16 @@ def _mode_tools(mode: str) -> tuple[str, ...]:
     return SOLVE_READBACK_TOOLS if mode == SOLVE_READBACK_MODE else REQUIRED_TOOLS
 
 
+def _project_policy_permissions(mode: str) -> list[str]:
+    """Grant only the project capabilities used by the frozen runner mode."""
+    permissions = ["inspect", "project_write", "trusted_code", "host_control"]
+    if mode == METADATA_MODE:
+        return permissions
+    if mode == SOLVE_READBACK_MODE:
+        return [*permissions, "compute"]
+    raise RunnerError("mode must be exactly metadata-only or solve-readback")
+
+
 def _mode_operations(mode: str) -> tuple[str, ...]:
     return (LOGICAL_OPERATIONS + SOLVE_READBACK_LOGICAL_OPERATIONS
             if mode == SOLVE_READBACK_MODE else LOGICAL_OPERATIONS)
@@ -1719,7 +1729,7 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
         create_response = await dispatch("project.create", "operation_call", _operation_params(
             "project.create", {"label": f"W21 {plan['requested_version']} field probe {plan['run_id']}",
                                 "workspace": str(project_workspace.relative_to(workspace_root)),
-                                "policy": {"permissions": ["inspect", "project_write", "trusted_code", "host_control"]},
+                                "policy": {"permissions": _project_policy_permissions(mode)},
                                 "idempotency_key": keys["project_create"],
                                 "request_id": request_ids["project_create"]}, env_project))
         async def wait_for_project_create(job_id: str) -> Mapping[str, Any]:

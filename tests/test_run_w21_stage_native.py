@@ -22,6 +22,7 @@ from types import ModuleType, SimpleNamespace
 import pytest
 
 from comsol_mcp._control_daemon import ControlDaemon
+from comsol_mcp._execution_contract import ExecutionContractError
 
 
 REPOSITORY = Path(__file__).resolve().parents[1]
@@ -668,6 +669,60 @@ def test_srb_ok(tmp_path, monkeypatch):
         "aggregate": "none", "complex_mode": "preserve", "storage": "inline",
     }
     assert state.value["study_dispatch"] == state.value["solver_dispatch"] == 1
+
+
+@pytest.mark.parametrize(
+    ("mode", "compute_allowed"),
+    [(runner.METADATA_MODE, False), (runner.SOLVE_READBACK_MODE, True)],
+    ids=["meta", "solve"],
+)
+def test_compute_policy(mode, compute_allowed, tmp_path, monkeypatch):
+    """Only solve-readback grants the permission enforced by the public run_study route."""
+    monkeypatch.setenv("COMSOL_MCP_HOST_CONTROL", "1")
+    monkeypatch.setenv("COMSOL_MCP_TRUSTED_CODE", "1")
+    _patch_isolation(monkeypatch)
+    runner_root = tmp_path / "runner"
+    runner_root.mkdir()
+    plan = _plan(runner_root, mode=mode)
+    state = _state(runner_root, schema=runner._mode_schema(mode))
+    fake = _FakeStdioSession(plan, state)
+    asyncio.run(runner.run_metadata_protocol(
+        runner._MCPCalls(fake), plan, state, clock=lambda: 100.0, preflight=lambda: [],
+    ))
+
+    create_params = next(params for action, params in fake.calls if action == "project.create")
+    permissions = create_params["arguments"]["policy"]["permissions"]
+    expected = ["inspect", "project_write", "trusted_code", "host_control"]
+    if compute_allowed:
+        expected.append("compute")
+    assert permissions == expected
+
+    # Exercise the production project policy/operation gate that guards the
+    # runner's run_study action, without creating a session or starting a worker.
+    project_root = runner_root / "authorized-projects"
+    project_root.mkdir()
+    daemon = ControlDaemon(runner_root / "control", project_root=project_root)
+    request_id = f"policy-{mode}-create"
+    response = daemon.dispatch({
+        "operation": "operation_call",
+        "arguments": {"operation_id": "project.create", "arguments": {
+            "label": f"W21 {mode} permission test", "workspace": f"workspace-{mode}",
+            "policy": {"permissions": permissions}, "request_id": request_id,
+            "idempotency_key": f"idem-{mode}-create",
+        }},
+        "execution": {"request_id": request_id, "idempotency_key": f"idem-{mode}-create"},
+    })
+    try:
+        assert response["success"] is True
+        project_id = response["data"]["project"]["project_id"]
+        execution = {"project_id": project_id}
+        if compute_allowed:
+            daemon._authorize_project_execution("run_study", {"study_tag": "std1"}, execution)
+        else:
+            with pytest.raises(ExecutionContractError, match="project-scoped action requires compute"):
+                daemon._authorize_project_execution("run_study", {"study_tag": "std1"}, execution)
+    finally:
+        daemon.close()
 
 
 def test_srb_eval_revision_advance_is_bound_into_the_report(tmp_path, monkeypatch):

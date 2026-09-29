@@ -2,7 +2,7 @@
   "schema_version": 1,
   "stage": "W21_PRODUCTION_MCP_METADATA_RUNNER",
   "status": "PASS_SCOPED_OFFLINE",
-  "native_status": "NOT_RUN",
+  "native_status": "PARTIAL_WINDOWS64_CONNECT_UNKNOWN_SOLVE_READBACK_NOT_RUN",
   "candidate_files": {
     "tests/test_run_w21_stage_native.py": "3c025caae10dc4fd0dc98d8c9c69b7d31f2ae8b41d817ad198382afb14a3cf03",
     "tools/run_w21_stage_native.py": "01bf8b598f4b086ed623127c0511e5b860e7987aa9ca972a938d9b11127fbe83"
@@ -38,7 +38,7 @@
     "Windows breakaway failure refuses unsafe fallback (56e275f)."
   ],
   "scope": "Uses production stdio tool schemas and exact project/session/ModelRef routes. Tests stub transport/lifecycle; no target Windows prepare or native execution.",
-  "next_action": "Continue exact Windows V2 UNKNOWN process/listener/log reconciliation and startup diagnostics/state repair; no replay before quiescence. Runner repair has not been deployed or tested natively.",
+  "next_action": "Read-only diagnose the 164eec3 session.connect UNKNOWN (request d97c0e81-abf1-4eb8-972d-b6ac1e3dfd6f, job 0bb81f8f-a6aa-4449-8cb0-09bc90ea725d) from the preserved task evidence. Do not replay, clean up, or launch another native attempt. Solve/readback remains NOT_RUN; main decides after diagnosis. A later main-reviewed compute-policy fix passed 4 targeted tests but is not in the executed 164eec3 freeze; do not change or retry that UNKNOWN. Any subsequent native candidate requires a new reviewed freeze after read-only diagnosis and main decision.",
   "latest_session_start_recovery_repair": {
     "status": "PASS_SCOPED_OFFLINE",
     "native_status": "NOT_RUN",
@@ -97,5 +97,106 @@
       "/Volumes/CTestEff/w21q-focus.xml"
     ],
     "prior_failures": "Overlong pytest scratch paths rejected by unchanged 260-unit path guard; corrected short fixture/basetemp. No Windows native acceptance."
+  },
+  "latest_native_attempt_164eec3": {
+    "status": "SESSION_CONNECT_EXECUTION_STATE_UNKNOWN",
+    "native_status": "PARTIAL_CONNECT_UNKNOWN_SOLVE_READBACK_NOT_RUN",
+    "source_head": "164eec3c131c45cc61a41d62bd02606ea41e7d88",
+    "evidence_root": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-import-fix-handoff-164eec3",
+    "archive_sha256": "1c6819c7735a46e1c3e169b178b955e40fb5196ac33547e670a22a804299aeef",
+    "source_manifest_sha256": "291f79fc91f5d7074e5e3e59ab785b079e802c1ad0b38379112a438fedf7b45b",
+    "source_files_verified": 107,
+    "run_id": "w21-64-20260929T065233Z-4b2dc981",
+    "freeze_sha256": "c6047af8857cf00cba4f0c8f6d6a9744980f19a677b8ecfb6382800f04d901b2",
+    "freeze_file_sha256": "1c35f2b1cfc6c74baf9a8b1817758ae815f6b446b222b5c5e08bf225bbe8b415",
+    "main_freeze_review": "PASS_SOURCE_AND_PLAN_MAIN_REVIEW",
+    "main_freeze_review_sha256": "507e0bab8aca2ae9975b4f19509534a4e3a28542fbcf2f9b3fdac7dd5f6d44e1",
+    "project_id": "d905c1fc-bdda-46ad-ae2a-a9d41a8e95d4",
+    "session_id": "session-749c22b816944f9a8c73938148976d0f",
+    "project_create": "SUCCESS",
+    "session_start": "SUCCESS",
+    "session_connect": {
+      "request_id": "d97c0e81-abf1-4eb8-972d-b6ac1e3dfd6f",
+      "job_id": "0bb81f8f-a6aa-4449-8cb0-09bc90ea725d",
+      "status": "UNKNOWN",
+      "error_code": "EXECUTION_STATE_UNKNOWN"
+    },
+    "possible_server_births": 1,
+    "possible_worker_births": 1,
+    "study_dispatches": 0,
+    "solver_dispatches": 0,
+    "solution_tuple_reads": 0,
+    "field_reads": 0,
+    "solve_readback": "NOT_RUN",
+    "replay_permitted": false,
+    "cleanup_permitted": false,
+    "execute_exit_code": 2,
+    "execute_receipt": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-import-fix-handoff-164eec3/execute64-receipt.json",
+      "sha256": "461bd61db71372733ff4afc7f3fb5b5d6f40f4edc70a914c3e671c2ee2fe628a",
+      "stdout_sha256": "a4e45df5dd1fdee1d2438b852e9928adfb9ae30f8af18555c0c92d1593de3d29",
+      "stderr_bytes": 221,
+      "stderr_sha256": "e3dcd850d18e83164cc9466f959792490cf087fcb3f4a968c0d9cba0c673dcb9"
+    },
+    "state_after_execute": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-import-fix-handoff-164eec3/state64-after-execute.json",
+      "sha256": "7ddd5d10720285d6160d5e68966a7db171d2ab2d583f8c8075cfc43297f34d16"
+    },
+    "prepare_receipt": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-import-fix-handoff-164eec3/prepare64-receipt.json",
+      "sha256": "514996540309f1ccf96e59f1feead23bd816abec48a307f86bd25801c6bcf765"
+    },
+    "archive_members": 110,
+    "metadata_members": 3,
+    "remote_source_files_verified": 107,
+    "source_and_freeze_receipts": {
+      "upload": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-import-fix-handoff-164eec3/upload-receipt.json",
+        "sha256": "ff52ff38d05e4808c5679d31d938e6989b7643ed82841e7872979a07d7bcdc18"
+      },
+      "extract": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-import-fix-handoff-164eec3/extract-receipt.json",
+        "sha256": "fbe84a3020e0f91416ef950205fd4d35d8ada312e51c3b8cf402d6a8d7185968"
+      },
+      "local_package": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-import-fix-handoff-164eec3/local-preparation-receipt.json",
+        "sha256": "075d58190cc74b61eb3b37aeefbe1a0f7328160965f6dc976d63708ce436df74"
+      },
+      "main_source_review": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-import-fix-handoff-164eec3/main-handoff-review.json",
+        "sha256": "0d3d7f1142778d1ebf20a138233d90e8f511fbc17ac9051f48d5031af4f1e43b"
+      },
+      "prepare": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-import-fix-handoff-164eec3/prepare64-receipt.json",
+        "sha256": "514996540309f1ccf96e59f1feead23bd816abec48a307f86bd25801c6bcf765"
+      },
+      "main_freeze_review": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-import-fix-handoff-164eec3/main-freeze64-review.json",
+        "sha256": "507e0bab8aca2ae9975b4f19509534a4e3a28542fbcf2f9b3fdac7dd5f6d44e1"
+      },
+      "execute": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-import-fix-handoff-164eec3/execute64-receipt.json",
+        "sha256": "461bd61db71372733ff4afc7f3fb5b5d6f40f4edc70a914c3e671c2ee2fe628a"
+      }
+    }
+  },
+  "latest_compute_policy_repair": {
+    "status": "PASS_SCOPED_OFFLINE_MAIN_REVIEWED",
+    "change": "Solve-readback project.create adds compute; metadata-only mode keeps its four-permission route.",
+    "runner_sha256": "040b73e3c7250056c71ab086269ec2c7bd234ec40cfb6e15746ae189da91fd91",
+    "tests_sha256": "38d7bce5a9dda4d17484e100fe0717e36c3e14f78412e2d056d355ba5bb36479",
+    "unique_targeted_tests_passed": 4,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "junit_path": "/Volumes/CTestEff/h3-runner-policy-regression.xml",
+    "junit_sha256": "e1226c8734e286925ab9861d9216ac5ce146eeb3b1720cc41fa61b3644f7c837",
+    "prior_path_budget_failure": {
+      "path": "/Volumes/CTestEff/h-project-compute-policy.xml",
+      "classification": "scratch path budget; not native"
+    },
+    "present_in_executed_164eec3_freeze": false,
+    "native_status": "NOT_RUN",
+    "note": "Offline policy verification used the real ControlDaemon authorization path; this is a targeted regression, not a full suite or native run."
   }
 }
