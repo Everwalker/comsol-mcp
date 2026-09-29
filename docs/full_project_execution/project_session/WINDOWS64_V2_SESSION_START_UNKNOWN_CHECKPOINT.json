@@ -4,8 +4,8 @@
   "updated_at_utc": "2026-09-29T11:36:36.583380+00:00",
   "overall_status": "PARTIAL",
   "source_package_status": "PASS_MAIN_VERIFIED",
-  "native_status": "PRIOR_STOP_UNKNOWN_CURRENT_HOST_QUIESCENCE_VERIFIED; CURRENT_MODEL_CREATE_UNKNOWN_RETAINED; READONLY_CURRENT_HOST_QUIESCENCE_CONFIRMED; NEW_CANDIDATE_AFTER_FIX_ONLY; SOLVE_READBACK_NOT_RUN",
-  "next_action": "Freeze a separate Windows 6.4 candidate from the reviewed backend session-state and runner UNKNOWN fixes, run its canonical solve/readback/cleanup chain, then Windows 6.3 against a verified successful 6.4 receipt. Preserve prior UNKNOWN jobs and isolated sessions; no reuse or cleanup. Do not expand other capabilities this round.",
+  "native_status": "PARTIAL_NATIVE_MODEL_CREATED_CLEANUP_COMPLETE_SOLVE_NOT_RUN",
+  "next_action": "Repair canonical public execution project binding against authoritative session context, run targeted cross-layer regression tests, then prepare a separate 6.4 candidate; 6.3 follows successful 6.4 readback.",
   "candidate": {
     "source_commit": "9c5ced6272dd876cf9c28c6c6f73b943bd76b96c",
     "evidence_root": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-v2-20260928T235840Z-9c5ced6",
@@ -1624,7 +1624,8 @@
       "No Windows or remote execution was run after this software change.",
       "No COMSOL/native run was performed.",
       "The original session.stop UNKNOWN remains undurably reconciled; this software test does not close it."
-    ]
+    ],
+    "native_after_repair": "SCOPED_PASS: run w21-64-20260929T114231Z-5715139c exact owned child reaped, exit confirmed, listener absent; original historical stop UNKNOWN unchanged"
   },
   "stop_recovery_software": {
     "status": "SCOPED_SOFTWARE_PASS_MAIN_ACCEPTED",
@@ -1872,5 +1873,148 @@
       }
     }
   },
-  "model_selection_repair": "PRODUCTION_RUNNER_SOFTWARE_CHECKPOINT.json#model_selection_and_unknown_fix"
+  "model_selection_repair": "PRODUCTION_RUNNER_SOFTWARE_CHECKPOINT.json#model_selection_and_unknown_fix",
+  "native_attempt_20260929T114231Z": {
+    "run_id": "w21-64-20260929T114231Z-5715139c",
+    "source_head": "a4dfc98d65a2467fe06e118d98150066aea8ff64",
+    "freeze_sha256": "9a45250f50492b837c379c39ee783237ab8754e78211fb41bab9938c673fc945",
+    "status": "PARTIAL_NATIVE_MODEL_CREATED_CLEANUP_COMPLETE_SOLVE_NOT_RUN",
+    "execute_exit_code": 2,
+    "finding": "Public model_create succeeded and returned a registered ModelRef, but execution omitted project_id; strict runner binding check refused before model.inspect/solve/readback.",
+    "model_create": {
+      "job_id": "58b8fe8c-114d-4895-8930-83d6fc3d1b48",
+      "job_status": "SUCCEEDED",
+      "operation": "model_create",
+      "operation_id": "bc055ff4-2d0d-4e6b-8b6b-12fb721e468a",
+      "request_id": "03e6eed5-91f1-4db8-b6e6-2d419e544c84",
+      "result": {
+        "data": {
+          "file_path": "",
+          "label": "W21_w21-64-20260929T114231Z-5715139c",
+          "model_tag": "mcp1"
+        },
+        "error": null,
+        "execution": {
+          "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+          "dirty": false,
+          "idempotency_key": "54bef1fc-5b5f-47ad-be35-8ef2e8f4e94d",
+          "job_id": "58b8fe8c-114d-4895-8930-83d6fc3d1b48",
+          "model_ownership": "mcp_owned",
+          "model_ref": {
+            "generation": 1,
+            "model_tag": "mcp1",
+            "schema_version": 1,
+            "server_instance_id": "ca8c858fd2ab3508316757c0eb3be754efb2e0230cae3f2fc6040dc7fc85848c",
+            "session_id": "session-96e0d346004347bd97d845fc8a6c1bbc"
+          },
+          "operation_id": "bc055ff4-2d0d-4e6b-8b6b-12fb721e468a",
+          "request_hash": "5c9565e0d3bd4a8588d8ccfb59b0df3f5956de87b6710e75027b106a23d665d4",
+          "request_id": "03e6eed5-91f1-4db8-b6e6-2d419e544c84",
+          "revision": 0,
+          "server_ownership": "mcp_managed",
+          "session_id": "session-96e0d346004347bd97d845fc8a6c1bbc"
+        },
+        "success": true
+      },
+      "result_sha256": "e5e1ac2f42d8c762a12d53520dc968f94c6a1c5c9f2671a1d2e87f04cccd0534",
+      "status": "SUCCEEDED"
+    },
+    "cleanup_stop": {
+      "job_id": "f3aacd3b-1332-4e7d-84ea-b17c08153e30",
+      "job_status": "SUCCEEDED",
+      "operation": "session.stop",
+      "operation_id": "1853507d-4b6e-4dbd-9cea-d35097eb6073",
+      "request_id": "cb72af69-7c3e-431a-a756-82915e83bb2f",
+      "result": {
+        "data": {
+          "project_id": "5feac15e-f67a-4037-bc0c-90fddaa5149f",
+          "server_stopped": true,
+          "session_id": "session-96e0d346004347bd97d845fc8a6c1bbc",
+          "state": "STOPPED",
+          "stop_evidence": {
+            "birth": "start_epoch_ms:1790682238527",
+            "child_reaped": true,
+            "exit_confirmed": true,
+            "listener_absent": true,
+            "pid": 32744,
+            "returncode": 1,
+            "server_stopped": true
+          },
+          "worker_client_state": "RETIRED"
+        },
+        "execution": {
+          "idempotency_key": "aae4340e-543a-4809-93de-7261ec08b033",
+          "job_id": "f3aacd3b-1332-4e7d-84ea-b17c08153e30",
+          "operation_id": "1853507d-4b6e-4dbd-9cea-d35097eb6073",
+          "request_hash": "c6efcbede876905714dfc4eecb6b0e6c802a886ea71bb75c4593adb7933ace60",
+          "request_id": "cb72af69-7c3e-431a-a756-82915e83bb2f"
+        },
+        "success": true
+      },
+      "result_sha256": "e1e960deba3c33f5bd184c94174f86fdc4d99c9c0a4fa59c29c2e7f0a25bbd63",
+      "status": "SUCCEEDED"
+    },
+    "lifecycle": {
+      "client_state": "RETIRED",
+      "created_at": "2026-09-29T11:43:58.487Z",
+      "endpoint": {
+        "host": "127.0.0.1",
+        "port": 29524
+      },
+      "health": {
+        "observed_at": null,
+        "source": null,
+        "status": "UNKNOWN"
+      },
+      "project_id": "5feac15e-f67a-4037-bc0c-90fddaa5149f",
+      "revision": 8,
+      "runtime_id": "comsol-install:C%3A%5CProgram%20Files%5CCOMSOL%5CCOMSOL64%5CMultiphysics",
+      "schema_version": 1,
+      "server_instance_id": null,
+      "server_ownership": "unknown",
+      "server_process_identity": null,
+      "server_state": "STOPPED",
+      "session_id": "session-96e0d346004347bd97d845fc8a6c1bbc",
+      "state": "STOPPED",
+      "updated_at": "2026-09-29T11:44:15.969Z",
+      "worker_epoch": 3,
+      "worker_instance_id": "23bbc57f-c50b-49e8-99f2-76130f2b1b76"
+    },
+    "counters": {
+      "server_births_possible": 1,
+      "worker_births_possible": 1,
+      "study_dispatch": 0,
+      "solver_dispatch": 0,
+      "solution_tuple_reads": 0,
+      "field_reads": 0
+    },
+    "failure_cleanup": {
+      "server_stopped": true,
+      "status": "CLEANUP_COMPLETE",
+      "worker_retired": true
+    },
+    "evidence": {
+      "freeze64.json": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback-handoff-plan-w21r05/freeze64.json",
+        "sha256": "9c461925a0e22ace8c419124a8a88b7789a490dfe3625855f30781f0019416f2"
+      },
+      "state64-after-execute.json": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback-handoff-plan-w21r05/state64-after-execute.json",
+        "sha256": "5ea885fcfd414d1196824a4d98bf5f7e9f716fdb7111380579a441c9430c0ab9"
+      },
+      "read_model_result.stdout": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback-handoff-plan-w21r05/read_model_result.stdout",
+        "sha256": "6badeb8152bea16a5fb8a886940318153fa2cee938ef10b8a08dad5b07e84e95"
+      },
+      "read_stop_result.stdout": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback-handoff-plan-w21r05/read_stop_result.stdout",
+        "sha256": "389b1d91019c7878b740afcc0502f83f31342060f52ed89c98e87757d562e042"
+      },
+      "execute64.stdout": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback-handoff-plan-w21r05/execute64.stdout",
+        "sha256": "2b56f2412e75a0449bea7c0053b84a1758974d1e7bf556b35fcbda0eaff95648"
+      }
+    },
+    "next_action": "Repair canonical public execution project binding against authoritative session context, run targeted cross-layer regression tests, then prepare a separate 6.4 candidate; 6.3 follows successful 6.4 readback."
+  }
 }

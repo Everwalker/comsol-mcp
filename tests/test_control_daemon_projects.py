@@ -411,6 +411,7 @@ def test_managed_model_creation_persists_project_binding_and_rejects_foreign_pro
             },
         })
         assert created["success"] is True, created
+        assert created["execution"]["project_id"] == project["project_id"]
         assert created_names == ["created-model"]
         ref = created["execution"]["model_ref"]
         assert daemon.backend.model_project_binding(ref) == {
@@ -433,11 +434,32 @@ def test_managed_model_creation_persists_project_binding_and_rejects_foreign_pro
             },
         })
         assert loaded["success"] is True, loaded
+        assert loaded["execution"]["project_id"] == project["project_id"]
         loaded_ref = loaded["execution"]["model_ref"]
         assert loaded_paths == [str(Path(project["workspace"]) / "input.mph")]
         assert daemon.backend.model_project_binding(loaded_ref) == {
             "attribution": "PROJECT_BOUND", "project_id": project["project_id"],
         }
+
+        from comsol_mcp import _model_ops
+
+        monkeypatch.setattr(_model_ops, "_model_tree_data", lambda _model: {
+            "components": [], "component_details": [], "parameters": [], "studies": [],
+            "solutions": [], "datasets": [], "results": [],
+        })
+        inspected = daemon.dispatch({
+            "operation": "model.inspect",
+            "arguments": {"detail": "summary"},
+            "execution": {
+                "project_id": project["project_id"],
+                "session_id": "session",
+                "model_ref": loaded_ref,
+                "request_id": "project-model-inspect",
+                "idempotency_key": "project-model-inspect",
+            },
+        })
+        assert inspected["success"] is True, inspected
+        assert inspected["execution"]["project_id"] == project["project_id"]
 
         denied = daemon.dispatch({
             "operation": "model.inspect",
@@ -452,6 +474,28 @@ def test_managed_model_creation_persists_project_binding_and_rejects_foreign_pro
         })
         assert denied["success"] is False
         assert denied["error"]["code"] == "PROJECT_IDENTITY_MISMATCH"
+
+        # The daemon may add a missing project id only if the exact returned
+        # ModelRef is still mapped to the request's project. A foreign mapping
+        # must not be copied into a successful response.
+        real_binding = daemon.backend.model_project_binding
+        with monkeypatch.context() as mapping_context:
+            mapping_context.setattr(daemon.backend, "model_project_binding", lambda _ref: {
+                "attribution": "PROJECT_BOUND", "project_id": foreign["project_id"],
+            })
+            foreign_mapping = daemon.dispatch({
+                "operation": "model_create",
+                "arguments": {"model_name": "foreign-mapping"},
+                "execution": {
+                    "project_id": project["project_id"],
+                    "session_id": "session",
+                    "request_id": "project-model-create-foreign-mapping",
+                    "idempotency_key": "project-model-create-foreign-mapping",
+                },
+            })
+        assert foreign_mapping["success"] is True, foreign_mapping
+        assert "project_id" not in foreign_mapping["execution"]
+        assert daemon.backend.model_project_binding == real_binding
     finally:
         daemon.close()
 

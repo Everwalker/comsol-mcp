@@ -10304,6 +10304,47 @@ class ControlDaemon:
             raise ExecutionContractError("INVALID_REQUEST", f"{label} must be a decimal non-negative offset string")
         return int(cursor)
 
+    def _attach_confirmed_project_id(self, result, request_execution):
+        """Fill a missing reply project id only from the exact stored ModelRef binding.
+
+        Some legacy-backed operations return the managed ExecutionService metadata,
+        which contains a ModelRef but does not know the enclosing project scope.
+        Preserve explicit reply claims and unscoped legacy behavior; this only adds
+        the request project id when the exact returned ref is already bound to it.
+        """
+        if result.get("success") is not True:
+            return
+        requested_project = request_execution.get("project_id")
+        requested_session = request_execution.get("session_id")
+        reply_execution = result.get("execution")
+        if (not isinstance(requested_project, str) or not requested_project
+                or not isinstance(requested_session, str) or not requested_session
+                or not isinstance(reply_execution, Mapping)
+                or "project_id" in reply_execution):
+            return
+        raw_ref = reply_execution.get("model_ref")
+        if not isinstance(raw_ref, Mapping) or reply_execution.get("session_id") != requested_session:
+            return
+        try:
+            from ._execution_contract import model_ref_from_mapping
+
+            reply_ref = model_ref_from_mapping(dict(raw_ref)).as_dict()
+            if reply_ref["session_id"] != requested_session:
+                return
+            requested_ref = request_execution.get("model_ref")
+            if requested_ref is not None:
+                if not isinstance(requested_ref, Mapping):
+                    return
+                if model_ref_from_mapping(dict(requested_ref)).as_dict() != reply_ref:
+                    return
+            binding = self.backend.model_project_binding(reply_ref)
+        except (ExecutionContractError, KeyError, TypeError, ValueError):
+            return
+        if (isinstance(binding, Mapping)
+                and binding.get("attribution") == "PROJECT_BOUND"
+                and binding.get("project_id") == requested_project):
+            result["execution"] = {**reply_execution, "project_id": requested_project}
+
     def _execute(self, record, operation, arguments, execution, timeouts, submitted, *, resume_context=None):
         job_id, operation_id = record["job_id"], record["operation_id"]
         current_job = self.store.job(job_id)
@@ -10364,6 +10405,7 @@ class ControlDaemon:
                     )
             if not isinstance(result, dict) or type(result.get("success")) is not bool:
                 raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "backend returned an invalid execution envelope")
+            self._attach_confirmed_project_id(result, execution)
             detail = result.get("data") if isinstance(result.get("data"), dict) else {}
             error = result.get("error") if isinstance(result.get("error"), dict) else {}
             unknown = bool(

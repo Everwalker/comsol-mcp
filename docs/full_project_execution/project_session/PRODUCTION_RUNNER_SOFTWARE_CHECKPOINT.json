@@ -387,5 +387,33 @@
       "tests/test_run_w21_stage_native.py": "ea4352c13bb97b8a2352626e77bcd9a72f5951b9d915c702918760cb06d18ee9"
     },
     "review": "Main inspected diff, verified source hashes and focused/runner JUnit, and reviewed actual 177-test command/stdout/exit0."
+  },
+  "canonical_project_execution_binding": {
+    "status": "PASS_SCOPED_OFFLINE_MAIN_REVIEWED",
+    "change": "Fill missing execution.project_id at the daemon response boundary only for a successful response with exact request/reply session and ModelRef plus persisted PROJECT_BOUND project attribution; explicit or foreign claims and legacy unscoped calls unchanged.",
+    "tests": {
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "unique_testcases": 21
+    },
+    "commands": [
+      "PYTHONDONTWRITEBYTECODE=1 TMPDIR=/Volumes/CTestEff/c /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -B -m pytest -q -p no:cacheprovider --basetemp=/Volumes/CTestEff/c/w21-project-binding-apfs-20260929 --junitxml=/Volumes/SSD/Comsol-MCP/execution-scratch/w21-project-binding-20260929/focused-apfs.junit.xml tests/test_control_daemon_projects.py::test_managed_model_creation_persists_project_binding_and_rejects_foreign_project",
+      "PYTHONDONTWRITEBYTECODE=1 TMPDIR=/Volumes/CTestEff/c /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -B -m pytest -q -p no:cacheprovider --basetemp=/Volumes/CTestEff/c/w21-project-binding-regression-20260929 --junitxml=/Volumes/SSD/Comsol-MCP/execution-scratch/w21-project-binding-20260929/regression.junit.xml tests/test_control_daemon_projects.py tests/test_managed_backend.py"
+    ],
+    "source_sha256": {
+      "comsol_mcp/_control_daemon.py": "af471f5f6291c995a19014b36de888c8bbc4434a95cef4c4906b01f0e8d734af",
+      "tests/test_control_daemon_projects.py": "557b89cf275ec4fa6e200f4edae36f1ae5b9f31acaa513487df75242e2806d0b"
+    },
+    "receipt": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-project-binding-20260929/receipt.json",
+      "sha256": "3299d4e91ce6ccb24469291a71301de93c86e010def97b782f4afbf9ebfd084a"
+    },
+    "junit": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-project-binding-20260929/regression.junit.xml",
+      "sha256": "0324c43379ada0a1e767654bd3cc13f37d5e24be4687eb6d8044e1128197d11c"
+    },
+    "native_after_fix": "NOT_RUN",
+    "root_review": "Production diff and actual JUnit/source hashes verified; no runner validation relaxed."
   }
 }
