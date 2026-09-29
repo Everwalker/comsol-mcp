@@ -642,5 +642,175 @@
       "unique_testcase_names": 138
     },
     "main_review": "Reviewed frozen expression request, no requested units, actual real/imag representation retained with zero-imag check, exact tuple and full array hashes, unit/numeric negative controls, same-profile prerequisite recomputation, unchanged budgets and owned cleanup. Verified 138 unique JUnit cases and source/log/manifest hashes. No duplicate test run. Existing native admission and physical validation remain UNVERIFIED."
+  },
+  "auto_unit_controls_native_windows_20260930": {
+    "status": "PASS_SCOPED_NATIVE_AUTO_UNIT_CONTROLS_BOTH_WINDOWS",
+    "source_head": "40c9838898d1e1dbdd23209246dfef7d325df19c",
+    "order": [
+      "Windows 6.4 build 293",
+      "Windows 6.3 build 290"
+    ],
+    "runs": {
+      "64": {
+        "status": "PASS_SCOPED_NATIVE_AUTO_UNIT_CONTROLS",
+        "run_id": "w21-64-20260929T165606Z-142016ea",
+        "source_head": "40c9838898d1e1dbdd23209246dfef7d325df19c",
+        "freeze_sha256": "34569153bf7196332a9e565530fdf0b79c41638e203c39f7a53525703c39ed2f",
+        "receipt_sha256": "76f2505bd9a8a18a3965ef75891c8aef4bf4b7bb62d8fa226a12e5e9d00eb7b1",
+        "shape": [
+          3,
+          1,
+          5,
+          637
+        ],
+        "controls": {
+          "expected_units": {
+            "1": "1",
+            "T": "K",
+            "T/1[K]": "1"
+          },
+          "numeric_checks": {
+            "T_over_1K_equals_T": {
+              "absolute_tolerance": 1e-10,
+              "max_absolute_difference": 0.0,
+              "max_allowed_difference": 4.043799759431567e-10,
+              "point_count": 637,
+              "relative_tolerance": 1e-12,
+              "status": "PASS"
+            },
+            "all_imaginary_components_zero": {
+              "max_absolute_imaginary": 0.0,
+              "point_count": 1911,
+              "status": "PASS"
+            },
+            "one_is_one": {
+              "absolute_tolerance": 1e-10,
+              "max_absolute_difference": 0.0,
+              "max_allowed_difference": 1.01e-10,
+              "point_count": 637,
+              "relative_tolerance": 1e-12,
+              "status": "PASS"
+            }
+          },
+          "numeric_status": "PASS",
+          "observed_units": {
+            "1": "1",
+            "T": "K",
+            "T/1[K]": "1"
+          },
+          "profile": "auto-unit-controls",
+          "selected_tuple": {
+            "inner": 5,
+            "outer": 1,
+            "solnum": 5
+          },
+          "status": "PASS",
+          "unit_status": "PASS"
+        },
+        "cleanup": {
+          "owned_server_stopped": true,
+          "server_stop_evidence": {
+            "birth": "start_epoch_ms:1790701046951",
+            "child_reaped": true,
+            "exit_confirmed": true,
+            "listener_absent": true,
+            "pid": 16688,
+            "returncode": 1,
+            "server_stopped": true
+          },
+          "status": "CLEANUP_COMPLETE",
+          "worker_retired": true
+        },
+        "native_admission": "UNVERIFIED",
+        "physical_validation": "UNVERIFIED",
+        "review": "Main independently recomputed complete per-expression/selected hashes, exact tuple, actual controls, state action successes and owned cleanup; no additional native calls."
+      },
+      "63": {
+        "status": "PASS_SCOPED_NATIVE_AUTO_UNIT_CONTROLS",
+        "run_id": "w21-63-20260929T170038Z-0036f835",
+        "source_head": "40c9838898d1e1dbdd23209246dfef7d325df19c",
+        "freeze_sha256": "c1fa3820aa0b13bc53ad22e62cae4592760829b9b22c779539ef9bb57d742695",
+        "receipt_sha256": "7561d1013ed39b88a923a8d256e17b4d9ae8740091b907c560ff8b14891e1f1f",
+        "shape": [
+          3,
+          1,
+          5,
+          637
+        ],
+        "controls": {
+          "expected_units": {
+            "1": "1",
+            "T": "K",
+            "T/1[K]": "1"
+          },
+          "numeric_checks": {
+            "T_over_1K_equals_T": {
+              "absolute_tolerance": 1e-10,
+              "max_absolute_difference": 0.0,
+              "max_allowed_difference": 4.043906746707166e-10,
+              "point_count": 637,
+              "relative_tolerance": 1e-12,
+              "status": "PASS"
+            },
+            "all_imaginary_components_zero": {
+              "max_absolute_imaginary": 0.0,
+              "point_count": 1911,
+              "status": "PASS"
+            },
+            "one_is_one": {
+              "absolute_tolerance": 1e-10,
+              "max_absolute_difference": 0.0,
+              "max_allowed_difference": 1.01e-10,
+              "point_count": 637,
+              "relative_tolerance": 1e-12,
+              "status": "PASS"
+            }
+          },
+          "numeric_status": "PASS",
+          "observed_units": {
+            "1": "1",
+            "T": "K",
+            "T/1[K]": "1"
+          },
+          "profile": "auto-unit-controls",
+          "selected_tuple": {
+            "inner": 5,
+            "outer": 1,
+            "solnum": 5
+          },
+          "status": "PASS",
+          "unit_status": "PASS"
+        },
+        "cleanup": {
+          "owned_server_stopped": true,
+          "server_stop_evidence": {
+            "birth": "start_epoch_ms:1790701310888",
+            "child_reaped": true,
+            "exit_confirmed": true,
+            "listener_absent": true,
+            "pid": 34136,
+            "returncode": 1,
+            "server_stopped": true
+          },
+          "status": "CLEANUP_COMPLETE",
+          "worker_retired": true
+        },
+        "native_admission": "UNVERIFIED",
+        "physical_validation": "UNVERIFIED",
+        "review": "Main independently recomputed complete per-expression/selected hashes, exact tuple, actual controls, state action successes and owned cleanup; no additional native calls."
+      }
+    },
+    "package": {
+      "archive_sha256": "1e675ed1abcadb8303d9b836534054abc98a282673eb0a8907520ebb7f161348",
+      "manifest_sha256": "70c6c4e8d63e666fdf25a211c0843b35c4fc7fc2de57460e2522c4ee596a631d",
+      "source_files": 107
+    },
+    "local_evidence_root": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-auto-unit-native-w21r14",
+    "reproduce": "tools/run_w21_stage_native.py prepare --mode solve-readback --field-readback-profile auto-unit-controls --probe-feature-info-tag info --probe-table-id Shape with explicit installed runtime/JDK/source and fresh short home; review freeze then execute once. Prepare 6.3 only with actual successful same-profile 6.4 receipt. Never replay these historical freezes.",
+    "limitations": [
+      "Automatic native output unit controls only; generic intrinsic field/unit admission not yet implemented.",
+      "Full historical mesh/frame mapping and stage transfer remain UNVERIFIED.",
+      "Not numerical convergence, physical validation or final independent review."
+    ]
   }
 }
