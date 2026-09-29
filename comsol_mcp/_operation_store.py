@@ -1060,8 +1060,51 @@ class OperationStore:
                 or evidence.get("resolution_scope") not in {
                     "SESSION_LIFECYCLE_RPC_TERMINAL_QUIESCENCE",
                     "SESSION_WORKER_RETIRED_EXACT",
+                    "ABANDONED_UNKNOWN_CONNECT_CURRENT_HOST_QUIESCENCE",
                 }):
             raise ValueError("lifecycle recovery evidence is incomplete or has mismatched source binding")
+
+        abandoned_connect = evidence.get("resolution_scope") == "ABANDONED_UNKNOWN_CONNECT_CURRENT_HOST_QUIESCENCE"
+        if abandoned_connect:
+            processes, listeners = evidence.get("process_inventory"), evidence.get("listener_inventory")
+            binding = evidence.get("original_worker_binding")
+            requests, replies = evidence.get("request_observations"), evidence.get("terminal_reply_identities")
+            process_identity = evidence.get("server_process_identity")
+            if (evidence.get("source_operation") != "session.connect"
+                    or evidence.get("source_status") not in {"UNKNOWN", "RECONCILING"}
+                    or evidence.get("source_operation_status") != evidence.get("source_status")
+                    or evidence.get("classification") != "ABANDONED_UNKNOWN_CONNECT_CURRENT_HOST_QUIESCENCE"
+                    or not isinstance(processes, dict) or processes.get("status") != "COMPLETE"
+                    or any(processes.get(key) != 0 for key in (
+                        "candidate_count", "unresolved_candidate_count", "task_owned_match_count",
+                        "canonical_engine_match_count", "startup_pid_live_count", "startup_pid_unresolved_count",
+                    )) or type(processes.get("startup_pid_count")) is not int or processes["startup_pid_count"] < 1
+                    or not isinstance(listeners, dict) or listeners.get("status") != "COMPLETE"
+                    or any(listeners.get(key) != 0 for key in (
+                        "owner_query_unresolved_count", "task_owned_match_count", "canonical_engine_match_count",
+                    ))
+                    or not isinstance(binding, dict) or binding.get("kind") != "registered_session"
+                    or binding.get("project_id") != evidence.get("project_id")
+                    or binding.get("session_id") != evidence.get("session_id")
+                    or not isinstance(binding.get("worker_instance_id"), str)
+                    or type(binding.get("worker_epoch")) is not int or binding["worker_epoch"] < 1
+                    or not isinstance(requests, list) or len(requests) != 1
+                    or not isinstance(replies, list) or len(replies) != 1
+                    or requests[0].get("status") != "FAILED" or requests[0].get("terminal") is not True
+                    or replies[0].get("status") != "FAILED" or replies[0].get("kind") != "connect"
+                    or not isinstance(process_identity, dict)
+                    or process_identity.get("runtime_id") != evidence.get("runtime_id")
+                    or process_identity.get("endpoint") != evidence.get("endpoint")
+                    or evidence.get("server_pid_observation") != {
+                        "state": "EXITED_EXACT", "pid": process_identity.get("pid"),
+                        "birth": process_identity.get("birth"),
+                    }
+                    or type(evidence.get("session_history_job_count")) is not int
+                    or evidence["session_history_job_count"] < 2
+                    or any(not isinstance(evidence.get(key), str) or len(evidence[key]) != 64 for key in (
+                        "prior_start_result_sha256", "startup_observations_sha256", "session_history_sha256",
+                    ))):
+                raise ValueError("abandoned connect evidence is incomplete or inconsistent")
 
         from ._session_lifecycle import validate_lifecycle_record
 
@@ -1071,6 +1114,15 @@ class OperationStore:
                 or proposed["revision"] != expected_lifecycle_revision + 1
                 or proposed["health"] != {"status": "UNKNOWN", "observed_at": None, "source": None}):
             raise ValueError("lifecycle recovery target is not the next exact session revision")
+        if abandoned_connect and (proposed["state"] != "STOPPED"
+                or proposed["project_id"] != evidence.get("project_id")
+                or proposed["session_id"] != evidence.get("session_id")
+                or proposed["runtime_id"] != evidence.get("runtime_id")
+                or proposed["client_state"] != "DISCONNECTED" or proposed["server_state"] != "STOPPED"
+                or proposed["server_ownership"] != "unknown" or proposed["endpoint"] is not None
+                or proposed["worker_instance_id"] is not None or proposed["worker_epoch"] is not None
+                or proposed["server_instance_id"] is not None or proposed["server_process_identity"] is not None):
+            raise ValueError("abandoned connect may only clear to a non-connected STOPPED lifecycle")
 
         with self.lock:
             self.db.execute("BEGIN IMMEDIATE")
@@ -1101,6 +1153,13 @@ class OperationStore:
                 if row["job_status"] not in unresolved or row["operation_status"] not in unresolved:
                     self.db.execute("ROLLBACK")
                     return {"recorded": False, "reason": "SOURCE_NOT_UNRESOLVED", "resolution": None}
+                if abandoned_connect and (
+                    row["job_status"] != row["operation_status"]
+                    or row["job_status"] != evidence.get("source_status")
+                    or row["operation_status"] != evidence.get("source_operation_status")
+                ):
+                    self.db.execute("ROLLBACK")
+                    return {"recorded": False, "reason": "SOURCE_STATUS_BINDING_MISMATCH", "resolution": None}
                 if row["operation"] != evidence["source_operation"]:
                     self.db.execute("ROLLBACK")
                     return {"recorded": False, "reason": "SOURCE_OPERATION_KIND_MISMATCH", "resolution": None}
@@ -1137,6 +1196,13 @@ class OperationStore:
                 if current["project_id"] != project_id or current["session_id"] != session_id:
                     self.db.execute("ROLLBACK")
                     return {"recorded": False, "reason": "SESSION_LIFECYCLE_IDENTITY_MISMATCH", "resolution": None}
+                if abandoned_connect and (current["state"] != "UNKNOWN"
+                        or current["runtime_id"] != evidence.get("runtime_id")
+                        or current["server_ownership"] != "mcp_managed"
+                        or current["endpoint"] != evidence.get("endpoint")
+                        or current["server_process_identity"] != evidence.get("server_process_identity")):
+                    self.db.execute("ROLLBACK")
+                    return {"recorded": False, "reason": "ABANDONED_CONNECT_LIFECYCLE_BINDING_MISMATCH", "resolution": None}
                 if current["revision"] != expected_lifecycle_revision or current["state"] != "UNKNOWN":
                     self.db.execute("ROLLBACK")
                     return {

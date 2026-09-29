@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "unit": "W21 Windows6.4 V2 short-home current-source attempt",
-  "updated_at_utc": "2026-09-29T08:02:20Z",
+  "updated_at_utc": "2026-09-29T08:30:00Z",
   "overall_status": "PARTIAL",
   "source_package_status": "PASS_MAIN_VERIFIED",
-  "native_status": "PARTIAL_CONNECT_UNKNOWN_DIAGNOSED_NOT_DURABLY_RECONCILED_SOLVE_READBACK_NOT_RUN",
-  "next_action": "Finish the exact same-host durable disposition for the 164eec3 session.connect UNKNOWN while preserving its result; do not replay or clean up. The scoped preferences binding is software-only. After safe disposition and main review of a new exact source freeze containing the repair, continue the existing bounded Windows 6.4 then 6.3 solve-readback plan. No native solve/readback is claimed.",
+  "native_status": "CONNECT_UNKNOWN_PRESERVED_RECOVERY_NOT_RUN_SOLVE_READBACK_NOT_RUN",
+  "next_action": "Prepare and review a final source package plus dependency pin manifest for the tested one-shot connect-recovery driver (the current driver candidate is still UNFROZEN). Then dispatch exactly one fresh session.recover to durably close the original session.connect UNKNOWN before any new Windows native start. In a fresh daemon the source job may become RECONCILING while the original UNKNOWN result remains bound and preserved; this recovery proof does not mean session.connect succeeded or that any solve/readback passed. After safe disposition, create a new reviewed Windows6.4 candidate freeze, run the bounded W21 chain, then Windows6.3, then W23-W26.",
   "candidate": {
     "source_commit": "9c5ced6272dd876cf9c28c6c6f73b943bd76b96c",
     "evidence_root": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-v2-20260928T235840Z-9c5ced6",
@@ -1143,5 +1143,77 @@
       "cleanup_permitted": false,
       "solve_readback": "NOT_RUN"
     }
+  },
+  "connect_unknown_recovery_software": {
+    "status": "PASS_SCOPED_SOFTWARE_MAIN_ACCEPTED",
+    "native_recovery_status": "NOT_RUN",
+    "native_connect_status": "UNKNOWN_PRESERVED",
+    "solve_readback_status": "NOT_RUN",
+    "unique_final_integration_tests": 133,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "main_review": "ACCEPTED_SCOPED_SOFTWARE; final source and JUnit hashes independently checked",
+    "source_sha256": {
+      "comsol_mcp/_control_daemon.py": "45c7af0c974cc6ca8bffbe4812b7a2423d034f33a009682e3e070f5bb7ee95d0",
+      "comsol_mcp/_operation_store.py": "64e67ff83f20bc3b688c35780e36fc6b4b38171f3822426e47aa27bfed552f8c",
+      "tests/test_control_daemon_sessions.py": "38039d3c3aeca5a74c3225dc6c374b36879379dcedc851ebb56e5caefcb15fd7"
+    },
+    "final_receipt": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/connect-recovery-durable/final-receipt.json",
+      "sha256": "802555a0a97b676d746af6ed2de616f96de41da211b6121aa9b590b9710c3f68"
+    },
+    "integrated_junit": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/connect-recovery-durable/integration.xml",
+      "sha256": "75b537157b7561ec8282ccb15f343a8b241a1e31fa35fd8f59dbbaf99164d869",
+      "tests": 133,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "focused_retest_subset": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/connect-recovery-durable/final-retest.xml",
+      "sha256": "c2f43db0c0873276d202ca73f657b7fb4f595b04794c9c2780ab686b35c81cef",
+      "tests": 18,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "counting": "Subset of the 133 integrated tests; do not add again."
+    },
+    "coverage": "Production ControlDaemon dispatch, synthetic Worker failure reply, persistent SQLite operation/job/event writes, new-daemon recovery/CAS proof validation, exact target identity and endpoint negatives.",
+    "recovery_state_semantics": "On the next fresh-daemon recovery, the source job transitions to RECONCILING while its original UNKNOWN result remains bound/preserved. A verified durable recovery proof is not evidence that session.connect connected or that a solve/readback passed.",
+    "historical_failed_fixture": "/Volumes/SSD/Comsol-MCP/execution-scratch/connect-recovery-durable/focused.xml; 15 tests, one fixture-status assertion failure; retained by receipt and excluded from final passing totals.",
+    "limits": [
+      "Offline software only.",
+      "No Windows or remote recovery dispatch occurred.",
+      "No COMSOL/native process, solve, or result readback occurred."
+    ]
+  },
+  "connect_recovery_driver_candidate_v1": {
+    "status": "PASS_SCOPED_OFFLINE_UNFROZEN_NOT_EXECUTED",
+    "driver_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-connect-unknown-recovery-driver-v1/run_session_connect_recovery_once_v1.py",
+    "driver_sha256": "d5d847fab77d3d219a755457be4c4d9b664d0d0d60384c9fd17b80a0ffd9f375",
+    "receipt": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-connect-unknown-recovery-driver-v1/connect-recovery-driver-v1-receipt.json",
+      "sha256": "7219361dd216bb52e0c94155561bf121952d043087a7a674b83a7f412f648d73"
+    },
+    "junit": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-connect-unknown-recovery-driver-v1/pytest-results.xml",
+      "sha256": "b0d6366e9ef82adb13b2a674f7e7d49458fb937ed6487da129492fe025776824",
+      "pytest_passed": 25,
+      "subtests": 3,
+      "junit_testcase_entries": 28,
+      "unique_tests": 25,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "candidate_pins": {
+      "source_head": "UNFROZEN",
+      "source_manifest_sha256": "UNFROZEN",
+      "source_archive_sha256": "UNFROZEN"
+    },
+    "native_or_remote_execution": "NOT_RUN",
+    "next": "Build and review the final source-package/dependency-pin candidate, then use the driver for one fresh recovery dispatch only."
   }
 }

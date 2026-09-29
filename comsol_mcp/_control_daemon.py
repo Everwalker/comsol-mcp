@@ -59,6 +59,7 @@ from ._session_lifecycle import (
 )
 
 TERMINAL = {"SUCCEEDED", "FAILED", "EXPIRED", "LOST", "CANCELLED"}
+_ABANDONED_CONNECT_SCOPE = "ABANDONED_UNKNOWN_CONNECT_CURRENT_HOST_QUIESCENCE"
 CONTROL_READS = {
     "session_health", "server_info", "job_status", "job_log", "job_result", "job_reconcile",
     "job_list", "job_wait", "job_cancel",
@@ -4809,6 +4810,12 @@ class ControlDaemon:
         if (isinstance(operation, Mapping)
                 and operation.get("operation") == "session.start"):
             return self._session_start_lifecycle_recovery_resolution_is_valid(job)
+        if (isinstance(operation, Mapping) and operation.get("operation") == "session.connect"
+                and isinstance(metadata, Mapping)
+                and isinstance(metadata.get("session_lifecycle_recovery_resolution"), Mapping)
+                and metadata["session_lifecycle_recovery_resolution"].get("resolution_scope")
+                    == _ABANDONED_CONNECT_SCOPE):
+            return self._session_connect_abandonment_resolution_is_valid(job)
         if (not isinstance(job_id, str) or not isinstance(operation_id, str)
                 or not isinstance(metadata, Mapping) or not isinstance(operation, Mapping)
                 or metadata.get("reconciled_quiescent") is not True
@@ -5298,6 +5305,410 @@ class ControlDaemon:
             and target_record.get("health") == {"status": "UNKNOWN", "observed_at": None, "source": None}
         )
 
+    @staticmethod
+    def _session_job_contains_model_ref(value: Any) -> bool:
+        if isinstance(value, Mapping):
+            for key, child in value.items():
+                if key == "model_ref" and child is not None:
+                    return True
+                if key == "model_refs" and child:
+                    return True
+                if ControlDaemon._session_job_contains_model_ref(child):
+                    return True
+        elif isinstance(value, (list, tuple)):
+            return any(ControlDaemon._session_job_contains_model_ref(child) for child in value)
+        return False
+
+    def _session_connect_history_before_recovery(self, project_id: str, session_id: str,
+                                                recovery_job_id: str
+                                                ) -> tuple[list[dict[str, Any]] | None, str | None, str | None]:
+        """Snapshot only session jobs older than this recovery, so later sessions do not rewrite it."""
+        jobs = self._session_jobs_for_project(project_id)
+        positions = [index for index, item in enumerate(jobs) if item.get("job_id") == recovery_job_id]
+        if len(positions) != 1:
+            return None, None, "RECOVERY_JOB_ORDER_UNAVAILABLE"
+        history = [item for item in jobs[positions[0] + 1:]
+                   if self._job_belongs_to_session(item, project_id, session_id)]
+        allowed = {"session.start", "session.connect", "session.recover", "session.inspect", "session.health"}
+        for item in history:
+            operation = item.get("operation")
+            name = operation.get("operation") if isinstance(operation, Mapping) else None
+            if name not in allowed:
+                return None, None, "SESSION_HAS_DEPENDENT_OPERATION"
+            if self._session_job_contains_model_ref((item.get("metadata"), item.get("result"), operation)):
+                return None, None, "SESSION_HAS_MODEL_REF"
+        snapshot = [{
+            "job_id": item.get("job_id"), "operation_id": item.get("operation_id"),
+            "operation": (item.get("operation") or {}).get("operation")
+                if isinstance(item.get("operation"), Mapping) else None,
+            "status": item.get("status"),
+            "metadata_sha256": session_recovery_evidence_sha256({"metadata": {
+                key: value for key, value in (item.get("metadata") if isinstance(item.get("metadata"), Mapping) else {}).items()
+                if key not in {"reconciled_quiescent", "session_lifecycle_recovery_resolution"}
+            }}),
+            "result_sha256": session_recovery_evidence_sha256({"result": item.get("result")}),
+        } for item in history]
+        return history, session_recovery_evidence_sha256({"session_history": snapshot}), None
+
+    def _session_connect_terminal_failure(self, job: Mapping[str, Any]
+                                          ) -> tuple[dict[str, Any] | None, str | None]:
+        """Read exactly one durable submitted/observed failed connect RPC; never poll or replay it."""
+        operation = job.get("operation")
+        metadata = job.get("metadata")
+        result = job.get("result")
+        if (job.get("status") not in {"UNKNOWN", "RECONCILING"} or not isinstance(operation, Mapping)
+                or operation.get("operation") != "session.connect"
+                or operation.get("status") != job.get("status")
+                or not isinstance(metadata, Mapping) or not isinstance(result, Mapping)
+                or result.get("success") is not False):
+            return None, "CONNECT_SOURCE_NOT_EXACT_UNKNOWN"
+        execution = result.get("execution")
+        if (not isinstance(execution, Mapping)
+                or any(execution.get(key) != operation.get(key)
+                       for key in ("request_id", "operation_id", "request_hash", "idempotency_key"))
+                or execution.get("job_id") != job.get("job_id")):
+            return None, "CONNECT_RESULT_BINDING_MISMATCH"
+        error = result.get("error")
+        data = result.get("data")
+        if (not isinstance(error, Mapping) or error.get("execution_state_unknown") is not True
+                or not isinstance(data, Mapping) or data.get("engine_dispatched") is not True):
+            return None, "CONNECT_RESULT_NOT_DISPATCHED_UNKNOWN"
+        binding = metadata.get("runtime_binding")
+        project_id, session_id = metadata.get("project_id"), metadata.get("session_id")
+        if (not isinstance(binding, Mapping) or binding.get("kind") != "registered_session"
+                or binding.get("project_id") != project_id or binding.get("session_id") != session_id
+                or not isinstance(binding.get("worker_instance_id"), str)
+                or type(binding.get("worker_epoch")) is not int or binding["worker_epoch"] < 1):
+            return None, "CONNECT_WORKER_BINDING_UNAVAILABLE"
+        request_id = operation.get("request_id")
+        if not isinstance(request_id, str) or not request_id:
+            return None, "CONNECT_REQUEST_ID_UNAVAILABLE"
+        events = self._session_job_events(str(job.get("job_id")))
+        worker_events = [item for item in events if item.get("event") == "worker_request"]
+        submitted = [item for item in worker_events
+                     if isinstance(item.get("metadata"), Mapping)
+                     and item["metadata"].get("phase") == "submitted"]
+        observed = [item for item in worker_events
+                    if isinstance(item.get("metadata"), Mapping)
+                    and item["metadata"].get("phase") == "observed"]
+        if len(worker_events) != 2 or len(submitted) != 1 or len(observed) != 1:
+            return None, "CONNECT_WORKER_EVENT_COUNT_NOT_EXACT"
+        submitted_row, observed_row = submitted[0], observed[0]
+        sub, obs = submitted_row["metadata"], observed_row["metadata"]
+        reply = obs.get("reply")
+        source_endpoint = metadata.get("endpoint")
+        submitted_body, observed_body = sub.get("metadata"), obs.get("metadata")
+        exact_request_body = lambda body: (
+            isinstance(body, Mapping)
+            and isinstance(source_endpoint, Mapping)
+            and body.get("type") == "connect"
+            and body.get("request_id") == request_id
+            and body.get("host") == source_endpoint.get("host")
+            and type(body.get("port")) is int
+            and body.get("port") == source_endpoint.get("port")
+        )
+        if (sub.get("operation_id") != job.get("operation_id")
+                or obs.get("operation_id") != job.get("operation_id")
+                or sub.get("request_id") != request_id or obs.get("request_id") != request_id
+                or sub.get("kind") != "connect" or obs.get("kind") != "connect"
+                or type(submitted_row.get("id")) is not int or type(observed_row.get("id")) is not int
+                or submitted_row["id"] >= observed_row["id"]
+                or not exact_request_body(submitted_body) or not exact_request_body(observed_body)
+                or any(submitted_body.get(key) != observed_body.get(key)
+                       for key in ("type", "request_id", "host", "port"))
+                or not isinstance(sub.get("request_hash"), str)
+                or len(sub["request_hash"]) != 64 or obs.get("request_hash") != sub.get("request_hash")
+                or not isinstance(reply, Mapping) or reply.get("request_id") != request_id
+                or reply.get("type") != "connect" or reply.get("status") != "FAILED"
+                or obs.get("status") != "FAILED" or not isinstance(reply.get("failure"), Mapping)
+                or not isinstance(reply["failure"].get("code"), str)
+                or not (reply.get("execution_state_unknown") is True
+                        or reply["failure"].get("execution_state_unknown") is True)):
+            return None, "CONNECT_TERMINAL_FAILURE_BINDING_MISMATCH"
+        safe_reply = self._redact_session_worker_event(dict(reply))
+        return {
+            "request_id": request_id,
+            "request_hash": sub["request_hash"],
+            "submitted_event_id": submitted_row.get("id"),
+            "observed_event_id": observed_row.get("id"),
+            "reply_sha256": session_recovery_evidence_sha256({"worker_reply": safe_reply}),
+            "failure_code": reply["failure"]["code"],
+            "worker_binding": {key: binding[key] for key in (
+                "kind", "project_id", "session_id", "worker_instance_id", "worker_epoch",
+            )},
+        }, None
+
+    def _session_connect_start_binding(self, history: list[dict[str, Any]], *, project_id: str,
+                                       session_id: str, runtime_id: str,
+                                       endpoint: Mapping[str, Any],
+                                       process_record: Mapping[str, Any]
+                                       ) -> tuple[dict[str, Any] | None, str | None]:
+        starts = [item for item in history
+                  if isinstance(item.get("operation"), Mapping)
+                  and item["operation"].get("operation") == "session.start"]
+        if len(starts) != 1:
+            return None, "EXACT_PRIOR_SUCCESSFUL_START_NOT_UNIQUE"
+        start = starts[0]
+        op = start.get("operation")
+        meta = start.get("metadata")
+        result = start.get("result")
+        data = result.get("data") if isinstance(result, Mapping) else None
+        if (start.get("status") != "SUCCEEDED" or not isinstance(op, Mapping)
+                or op.get("status") != "SUCCEEDED" or not isinstance(meta, Mapping)
+                or meta.get("project_id") != project_id or meta.get("session_id") != session_id
+                or meta.get("runtime_id") != runtime_id or not isinstance(result, Mapping)
+                or result.get("success") is not True or not isinstance(data, Mapping)
+                or data.get("project_id") != project_id or data.get("session_id") != session_id
+                or data.get("runtime_id") != runtime_id or data.get("server_ownership") != "mcp_managed"
+                or data.get("endpoint") != endpoint or data.get("server_process_identity") != process_record):
+            return None, "PRIOR_START_RESULT_BINDING_MISMATCH"
+        start_exec = result.get("execution")
+        if (not isinstance(start_exec, Mapping)
+                or any(start_exec.get(key) != op.get(key)
+                       for key in ("request_id", "operation_id", "request_hash", "idempotency_key"))
+                or start_exec.get("job_id") != start.get("job_id")):
+            return None, "PRIOR_START_REQUEST_BINDING_MISMATCH"
+        events = [item for item in self._session_job_events(str(start.get("job_id")))
+                  if item.get("event") == "SessionServerStartupObservation"]
+        exact = [item for item in events if isinstance(item.get("metadata"), Mapping)
+                 and item["metadata"].get("event") in {"BIRTH_OBSERVED", "READY"}
+                 and item["metadata"].get("pid") == process_record.get("pid")
+                 and item["metadata"].get("birth") == process_record.get("birth")
+                 and item["metadata"].get("project_id") == project_id
+                 and item["metadata"].get("session_id") == session_id
+                 and item["metadata"].get("runtime_id") == runtime_id
+                 and item["metadata"].get("request_id") == op.get("request_id")
+                 and item["metadata"].get("operation_id") == op.get("operation_id")
+                 and item["metadata"].get("job_id") == start.get("job_id")]
+        if not exact:
+            return None, "PRIOR_START_PROCESS_BIRTH_EVENT_MISSING"
+        digest = session_recovery_evidence_sha256({
+            "startup_observations": [{"id": int(item["id"]), "metadata": item["metadata"]}
+                                     for item in events],
+        })
+        return {
+            "job_id": start["job_id"], "operation_id": start["operation_id"],
+            "result_sha256": session_recovery_evidence_sha256({"source_result": dict(result)}),
+            "startup_observations_sha256": digest,
+        }, None
+
+    def _session_connect_abandonment_resolution_is_valid(self, job: Mapping[str, Any]) -> bool:
+        """Validate an append-only, no-ModelRef connect abandonment proof after daemon restart."""
+        job_id, operation_id = job.get("job_id"), job.get("operation_id")
+        metadata, operation, result = job.get("metadata"), job.get("operation"), job.get("result")
+        if (not isinstance(job_id, str) or not isinstance(operation_id, str)
+                or not isinstance(metadata, Mapping) or not isinstance(operation, Mapping)
+                or not isinstance(result, Mapping) or job.get("status") not in {"UNKNOWN", "RECONCILING"}
+                or operation.get("operation") != "session.connect"
+                or operation.get("status") not in {"UNKNOWN", "RECONCILING"}
+                or operation.get("status") != job.get("status")
+                or metadata.get("reconciled_quiescent") is not True):
+            return False
+        try:
+            event = self.store.session_lifecycle_recovery_resolution(job_id)
+            result_digest = session_recovery_evidence_sha256({"source_result": dict(result)})
+        except Exception:
+            return False
+        if not isinstance(event, Mapping) or not isinstance(event.get("metadata"), Mapping):
+            return False
+        proof = dict(event["metadata"])
+        supplied_digest = proof.pop("evidence_sha256", None)
+        if (not isinstance(supplied_digest, str) or len(supplied_digest) != 64
+                or session_recovery_evidence_sha256(proof) != supplied_digest):
+            return False
+        required = {
+            "schema_version", "source_job_id", "source_operation_id", "source_request_id",
+            "source_idempotency_key", "source_request_hash", "session_recovery_operation_id",
+            "session_recovery_job_id", "session_recovery_request_id", "session_recovery_idempotency_key",
+            "project_id", "session_id", "runtime_id", "source_operation", "source_status",
+            "source_operation_status", "source_result_sha256", "original_unknown_reason",
+            "prior_start_job_id", "prior_start_operation_id", "prior_start_result_sha256",
+            "startup_observations_sha256", "session_history_job_count", "session_history_sha256",
+            "endpoint", "server_process_identity", "server_pid_observation", "connect_request",
+            "observed_at_utc", "control_daemon_identity", "process_inventory", "listener_inventory",
+            "worker_observation", "original_worker_binding", "request_observations",
+            "terminal_reply_identities", "reconnect_baseline", "connection_observation",
+            "worker_close_event_sha256", "worker_close_reaped_event_sha256", "resolution_scope",
+            "classification", "replay_performed", "new_worker_created", "lifecycle_transition",
+        }
+        if set(proof) != required:
+            return False
+        source_execution = result.get("execution")
+        project_id, session_id = metadata.get("project_id"), metadata.get("session_id")
+        runtime_id = metadata.get("runtime_id")
+        pointer = metadata.get("session_lifecycle_recovery_resolution")
+        transition = proof.get("lifecycle_transition")
+        target = transition.get("target_lifecycle") if isinstance(transition, Mapping) else None
+        try:
+            target_record = validate_lifecycle_record(target) if isinstance(target, Mapping) else None
+        except Exception:
+            target_record = None
+        identity = proof.get("server_process_identity")
+        connect_request, worker_observation = proof.get("connect_request"), proof.get("worker_observation")
+        processes, listeners = proof.get("process_inventory"), proof.get("listener_inventory")
+        original_binding = proof.get("original_worker_binding")
+        if (not isinstance(source_execution, Mapping) or not isinstance(pointer, Mapping)
+                or not isinstance(identity, Mapping) or not isinstance(connect_request, Mapping)
+                or not isinstance(worker_observation, Mapping) or not isinstance(processes, Mapping)
+                or not isinstance(listeners, Mapping) or not isinstance(original_binding, Mapping)
+                or target_record is None):
+            return False
+        if (any(source_execution.get(key) != operation.get(key)
+                for key in ("request_id", "operation_id", "request_hash", "idempotency_key"))
+                or source_execution.get("job_id") != job_id
+                or proof.get("schema_version") != 1
+                or proof.get("source_job_id") != job_id or proof.get("source_operation_id") != operation_id
+                or proof.get("source_request_id") != operation.get("request_id")
+                or proof.get("source_idempotency_key") != operation.get("idempotency_key")
+                or proof.get("source_request_hash") != operation.get("request_hash")
+                or proof.get("project_id") != project_id or proof.get("session_id") != session_id
+                or proof.get("runtime_id") != runtime_id or proof.get("source_operation") != "session.connect"
+                or proof.get("source_status") != job.get("status")
+                or proof.get("source_operation_status") != operation.get("status")
+                or proof.get("source_status") not in {"UNKNOWN", "RECONCILING"}
+                or proof.get("source_operation_status") not in {"UNKNOWN", "RECONCILING"}
+                or proof.get("source_status") != proof.get("source_operation_status")
+                or proof.get("source_result_sha256") != result_digest
+                or proof.get("resolution_scope") != _ABANDONED_CONNECT_SCOPE
+                or proof.get("classification") != _ABANDONED_CONNECT_SCOPE
+                or proof.get("replay_performed") is not False or proof.get("new_worker_created") is not False
+                or not isinstance(proof.get("observed_at_utc"), str)
+                or not isinstance(proof.get("original_unknown_reason"), str)
+                or not proof["original_unknown_reason"]):
+            return False
+        error, data = result.get("error"), result.get("data")
+        if (not isinstance(error, Mapping) or error.get("execution_state_unknown") is not True
+                or not isinstance(data, Mapping) or data.get("engine_dispatched") is not True
+                or error.get("code") != proof.get("original_unknown_reason")):
+            return False
+        binding = metadata.get("runtime_binding")
+        if (not isinstance(binding, Mapping) or binding != original_binding
+                or binding.get("kind") != "registered_session"
+                or binding.get("project_id") != project_id or binding.get("session_id") != session_id
+                or identity.get("runtime_id") != runtime_id or identity.get("endpoint") != proof.get("endpoint")
+                or metadata.get("endpoint") != proof.get("endpoint")):
+            return False
+        source_request, source_reason = self._session_connect_terminal_failure(job)
+        if (source_reason is not None or not isinstance(source_request, Mapping)
+                or any(connect_request.get(key) != source_request.get(key) for key in source_request)):
+            return False
+        recovery_operation_id = proof.get("session_recovery_operation_id")
+        try:
+            recovery_operation = self.store.get_operation(recovery_operation_id)
+            recovery_job = self.store.operation_job(recovery_operation_id)
+        except Exception:
+            return False
+        if (not isinstance(recovery_operation, Mapping) or not isinstance(recovery_job, Mapping)
+                or recovery_operation.get("operation") != "session.recover"
+                or recovery_operation.get("request_id") != proof.get("session_recovery_request_id")
+                or recovery_operation.get("idempotency_key") != proof.get("session_recovery_idempotency_key")
+                or recovery_job.get("job_id") != proof.get("session_recovery_job_id")
+                or recovery_job.get("status") not in {"RUNNING", "RECONCILING", "SUCCEEDED"}
+                or recovery_operation.get("status") not in {"RUNNING", "RECONCILING", "SUCCEEDED"}
+                or not isinstance(recovery_job.get("metadata"), Mapping)
+                or recovery_job["metadata"].get("project_id") != project_id
+                or recovery_job["metadata"].get("session_id") != session_id):
+            return False
+        history, history_digest, history_error = self._session_connect_history_before_recovery(
+            project_id, session_id, proof["session_recovery_job_id"],
+        )
+        if (history_error is not None or not isinstance(history, list)
+                or proof.get("session_history_job_count") != len(history)
+                or proof.get("session_history_sha256") != history_digest):
+            return False
+        connects = [item for item in history
+                    if isinstance(item.get("operation"), Mapping)
+                    and item["operation"].get("operation") == "session.connect"]
+        if len(connects) != 1 or connects[0].get("job_id") != job_id:
+            return False
+        start_binding, start_error = self._session_connect_start_binding(
+            history, project_id=project_id, session_id=session_id, runtime_id=runtime_id,
+            endpoint=proof.get("endpoint"), process_record=identity,
+        )
+        if (start_error is not None or not isinstance(start_binding, Mapping)
+                or start_binding.get("job_id") != proof.get("prior_start_job_id")
+                or start_binding.get("operation_id") != proof.get("prior_start_operation_id")
+                or start_binding.get("result_sha256") != proof.get("prior_start_result_sha256")
+                or start_binding.get("startup_observations_sha256") != proof.get("startup_observations_sha256")):
+            return False
+        process_keys = {
+            "status", "candidate_count", "unresolved_candidate_count", "task_owned_match_count",
+            "canonical_engine_match_count", "startup_pid_count", "startup_pid_live_count",
+            "startup_pid_unresolved_count",
+        }
+        listener_keys = {"status", "rows_scanned", "owner_query_unresolved_count",
+                         "task_owned_match_count", "canonical_engine_match_count"}
+        if (set(processes) != process_keys or set(listeners) != listener_keys
+                or processes.get("status") != "COMPLETE" or listeners.get("status") != "COMPLETE"
+                or any(type(processes.get(key)) is not int or processes[key] < 0 for key in process_keys - {"status"})
+                or any(type(listeners.get(key)) is not int or listeners[key] < 0 for key in listener_keys - {"status"})
+                or any(processes.get(key) != 0 for key in (
+                    "candidate_count", "unresolved_candidate_count", "task_owned_match_count",
+                    "canonical_engine_match_count", "startup_pid_live_count", "startup_pid_unresolved_count",
+                ))
+                or any(listeners.get(key) != 0 for key in (
+                    "owner_query_unresolved_count", "task_owned_match_count", "canonical_engine_match_count",
+                )) or processes.get("startup_pid_count", 0) < 1):
+            return False
+        server_pid = identity.get("pid")
+        birth_match = re.fullmatch(r"start_epoch_ms:(\d+)", str(identity.get("birth")))
+        pid_observation = proof.get("server_pid_observation")
+        if (not isinstance(server_pid, int) or server_pid <= 1 or birth_match is None
+                or not isinstance(pid_observation, Mapping)
+                or pid_observation != {"state": "EXITED_EXACT", "pid": server_pid,
+                                       "birth": identity.get("birth")}):
+            return False
+        control = proof.get("control_daemon_identity")
+        if (not isinstance(control, Mapping)
+                or set(control) != {"pid", "process_start_epoch_ms", "singleton_lock_held"}
+                or type(control.get("pid")) is not int or control["pid"] <= 1
+                or type(control.get("process_start_epoch_ms")) is not int or control["process_start_epoch_ms"] <= 0
+                or control.get("singleton_lock_held") is not True
+                or worker_observation != {"state": "NO_HOST_PROCESS_CANDIDATE", "remote_engine_health_claim": False}
+                or proof.get("request_observations") != [{
+                    "request_id": connect_request.get("request_id"), "kind": "connect",
+                    "source_operation_id": operation_id, "status": "FAILED", "terminal": True,
+                    "request_id_match": True, "request_type_match": True,
+                    "reply_sha256": connect_request.get("reply_sha256"),
+                }]
+                or proof.get("terminal_reply_identities") != [{
+                    "request_id": connect_request.get("request_id"), "kind": "connect", "status": "FAILED",
+                    "worker_instance_id": binding.get("worker_instance_id"),
+                    "worker_epoch": binding.get("worker_epoch"),
+                    "failure_code": connect_request.get("failure_code"),
+                    "reply_sha256": connect_request.get("reply_sha256"),
+                }]
+                or proof.get("reconnect_baseline") is not None
+                or proof.get("connection_observation") is not None
+                or proof.get("worker_close_event_sha256") is not None
+                or proof.get("worker_close_reaped_event_sha256") is not None):
+            return False
+        transition = proof["lifecycle_transition"]
+        if (not isinstance(transition, Mapping) or target_record.get("state") != "STOPPED"
+                or target_record.get("project_id") != project_id
+                or target_record.get("session_id") != session_id
+                or target_record.get("runtime_id") != runtime_id
+                or target_record.get("client_state") != "DISCONNECTED"
+                or target_record.get("server_state") != "STOPPED"
+                or target_record.get("server_ownership") != "unknown"
+                or target_record.get("endpoint") is not None or target_record.get("worker_instance_id") is not None
+                or target_record.get("worker_epoch") is not None or target_record.get("server_instance_id") is not None
+                or target_record.get("server_process_identity") is not None
+                or target_record.get("health") != {"status": "UNKNOWN", "observed_at": None, "source": None}
+                or transition.get("from_state") != "UNKNOWN"
+                or type(transition.get("from_revision")) is not int
+                or transition.get("to_revision") != transition.get("from_revision") + 1
+                or target_record.get("revision") != transition.get("to_revision")):
+            return False
+        return bool(
+            pointer.get("event_id") == event.get("id")
+            and pointer.get("evidence_sha256") == supplied_digest
+            and pointer.get("project_id") == project_id and pointer.get("session_id") == session_id
+            and pointer.get("lifecycle_revision") == target_record.get("revision")
+            and pointer.get("resolution_scope") == _ABANDONED_CONNECT_SCOPE
+            and transition.get("from_revision") >= 1
+        )
+
     def _session_start_probe_roots(self, runtime_id: str, project_id: str,
                                    session_id: str) -> tuple[Path, Path, Path]:
         """Resolve only the existing task-owned and canonical install roots, read-only."""
@@ -5620,6 +6031,184 @@ class ControlDaemon:
                     "evidence_sha256": prior_metadata.get("evidence_sha256"),
                 }
         return None, str(recorded.get("reason") or "START_LIFECYCLE_RESOLUTION_NOT_RECORDED"), {}
+
+    def _reconcile_interrupted_session_connect(self, job: Mapping[str, Any], recovery_record: Mapping[str, Any],
+                                               lifecycle: Mapping[str, Any], *,
+                                               project_id: str, session_id: str
+                                               ) -> tuple[dict[str, Any] | None, str, dict[str, Any]]:
+        """Abandon only an exact failed connect after its started Server is quiescent."""
+        operation, metadata = job.get("operation"), job.get("metadata")
+        runtime_id = lifecycle.get("runtime_id")
+        if (not isinstance(operation, Mapping) or operation.get("operation") != "session.connect"
+                or job.get("status") not in {"UNKNOWN", "RECONCILING"}
+                or operation.get("status") != job.get("status")
+                or not isinstance(metadata, Mapping) or metadata.get("project_id") != project_id
+                or metadata.get("session_id") != session_id or metadata.get("runtime_id") != runtime_id
+                or self._session_job_contains_model_ref((metadata, operation, job.get("result")))):
+            return None, "CONNECT_SOURCE_BINDING_OR_SCOPE_MISMATCH", {}
+        if self._session_lifecycle_recovery_resolution_is_valid(job):
+            prior = self.store.session_lifecycle_recovery_resolution(job["job_id"])
+            prior_meta = prior.get("metadata", {}) if isinstance(prior, Mapping) else {}
+            return dict(lifecycle), "ALREADY_PROVEN", {
+                "resolution_scope": prior_meta.get("resolution_scope"),
+                "evidence_sha256": prior_meta.get("evidence_sha256"),
+            }
+        if self.store.session_lifecycle_recovery_resolution(job["job_id"]) is not None:
+            return None, "EXISTING_LIFECYCLE_PROOF_INVALID", {}
+        if self._control_singleton_lock_held is not True:
+            return None, "CONTROL_SINGLETON_LOCK_NOT_HELD", {}
+
+        connect_request, reason = self._session_connect_terminal_failure(job)
+        if not isinstance(connect_request, Mapping):
+            return None, reason or "CONNECT_TERMINAL_FAILURE_UNPROVEN", {}
+        history, history_digest, history_error = self._session_connect_history_before_recovery(
+            project_id, session_id, str(recovery_record.get("job_id")),
+        )
+        if history_error is not None or not isinstance(history, list):
+            return None, history_error or "SESSION_HISTORY_UNAVAILABLE", {}
+        connects = [item for item in history
+                    if isinstance(item.get("operation"), Mapping)
+                    and item["operation"].get("operation") == "session.connect"]
+        if len(connects) != 1 or connects[0].get("job_id") != job.get("job_id"):
+            return None, "CONNECT_SESSION_HISTORY_NOT_EXACT", {}
+        endpoint, process_record = lifecycle.get("endpoint"), lifecycle.get("server_process_identity")
+        if (lifecycle.get("server_ownership") != "mcp_managed"
+                or lifecycle.get("server_state") != "MCP_MANAGED"
+                or not isinstance(endpoint, Mapping) or not isinstance(process_record, Mapping)
+                or process_record.get("runtime_id") != runtime_id or process_record.get("endpoint") != endpoint):
+            return None, "OWNED_SERVER_IDENTITY_UNAVAILABLE", {}
+        start_binding, reason = self._session_connect_start_binding(
+            history, project_id=project_id, session_id=session_id, runtime_id=runtime_id,
+            endpoint=endpoint, process_record=process_record,
+        )
+        if not isinstance(start_binding, Mapping):
+            return None, reason or "PRIOR_START_NOT_PROVEN", {}
+
+        pid, birth = process_record.get("pid"), process_record.get("birth")
+        match = re.fullmatch(r"start_epoch_ms:(\d+)", str(birth))
+        if type(pid) is not int or pid <= 1 or match is None:
+            return None, "OWNED_SERVER_PROCESS_IDENTITY_INVALID", {}
+        try:
+            observed_pid = process_identity(pid)
+        except Exception:
+            return None, "OWNED_SERVER_PID_OBSERVATION_UNAVAILABLE", {}
+        if not isinstance(observed_pid, Mapping) or type(observed_pid.get("alive")) is not bool:
+            return None, "OWNED_SERVER_PID_OBSERVATION_UNRESOLVED", {}
+        if observed_pid["alive"] is True:
+            expected_birth = int(match.group(1))
+            return None, ("OWNED_SERVER_STILL_LIVE" if observed_pid.get("start_epoch_ms") == expected_birth
+                          else "OWNED_SERVER_PID_REUSED_OR_UNRESOLVED"), {}
+        pid_observation = {"state": "EXITED_EXACT", "pid": pid, "birth": birth}
+
+        try:
+            observation = self._observe_session_start_quiescence(runtime_id, project_id, session_id)
+            start_events = [item for item in self._session_job_events(start_binding["job_id"])
+                            if item.get("event") == "SessionServerStartupObservation"]
+            startup_pids = self._read_startup_pid_observations(start_events)
+        except Exception as exc:
+            return None, f"QUIESCENCE_QUERY_{type(exc).__name__}", {}
+        processes = observation.get("process_inventory") if isinstance(observation, Mapping) else None
+        listeners = observation.get("listener_inventory") if isinstance(observation, Mapping) else None
+        if isinstance(processes, Mapping):
+            processes = {**dict(processes), **startup_pids}
+        if (not isinstance(processes, Mapping) or not isinstance(listeners, Mapping)
+                or processes.get("status") != "COMPLETE" or listeners.get("status") != "COMPLETE"
+                or any(processes.get(key) != 0 for key in (
+                    "candidate_count", "unresolved_candidate_count", "task_owned_match_count",
+                    "canonical_engine_match_count", "startup_pid_live_count", "startup_pid_unresolved_count",
+                )) or processes.get("startup_pid_count", 0) < 1
+                or any(listeners.get(key) != 0 for key in (
+                    "owner_query_unresolved_count", "task_owned_match_count", "canonical_engine_match_count",
+                ))):
+            return None, "CURRENT_HOST_QUIESCENCE_NOT_PROVEN", {
+                "process_inventory": dict(processes) if isinstance(processes, Mapping) else {"status": "UNAVAILABLE"},
+                "listener_inventory": dict(listeners) if isinstance(listeners, Mapping) else {"status": "UNAVAILABLE"},
+            }
+        try:
+            control_identity = process_identity(os.getpid())
+        except Exception:
+            control_identity = None
+        if (not isinstance(control_identity, Mapping) or control_identity.get("alive") is not True
+                or type(control_identity.get("start_epoch_ms")) is not int
+                or control_identity["start_epoch_ms"] <= 0):
+            return None, "CURRENT_CONTROL_IDENTITY_UNVERIFIED", {}
+        source_result = job.get("result")
+        error = source_result.get("error") if isinstance(source_result, Mapping) else None
+        if not isinstance(error, Mapping):
+            return None, "SOURCE_UNKNOWN_RESULT_UNAVAILABLE", {}
+
+        recovery_op, recovery_job = recovery_record.get("operation"), recovery_record.get("job_id")
+        request_observation = {
+            "request_id": connect_request["request_id"], "kind": "connect",
+            "source_operation_id": job["operation_id"], "status": "FAILED", "terminal": True,
+            "request_id_match": True, "request_type_match": True,
+            "reply_sha256": connect_request["reply_sha256"],
+        }
+        terminal_reply = {
+            "request_id": connect_request["request_id"], "kind": "connect", "status": "FAILED",
+            "worker_instance_id": connect_request["worker_binding"]["worker_instance_id"],
+            "worker_epoch": connect_request["worker_binding"]["worker_epoch"],
+            "failure_code": connect_request["failure_code"], "reply_sha256": connect_request["reply_sha256"],
+        }
+        evidence = {
+            "schema_version": 1, "source_job_id": job["job_id"],
+            "source_operation_id": job["operation_id"], "source_request_id": operation["request_id"],
+            "source_idempotency_key": operation["idempotency_key"], "source_request_hash": operation["request_hash"],
+            "session_recovery_operation_id": recovery_op.get("operation_id") if isinstance(recovery_op, Mapping) else recovery_record.get("operation_id"),
+            "session_recovery_job_id": recovery_job,
+            "session_recovery_request_id": recovery_op.get("request_id") if isinstance(recovery_op, Mapping) else recovery_record.get("request_id"),
+            "session_recovery_idempotency_key": recovery_op.get("idempotency_key") if isinstance(recovery_op, Mapping) else recovery_record.get("idempotency_key"),
+            "project_id": project_id, "session_id": session_id, "runtime_id": runtime_id,
+            "source_operation": "session.connect", "source_status": job.get("status"),
+            "source_operation_status": operation.get("status"),
+            "source_result_sha256": session_recovery_evidence_sha256({"source_result": dict(source_result)}),
+            "original_unknown_reason": error.get("code"),
+            "prior_start_job_id": start_binding["job_id"],
+            "prior_start_operation_id": start_binding["operation_id"],
+            "prior_start_result_sha256": start_binding["result_sha256"],
+            "startup_observations_sha256": start_binding["startup_observations_sha256"],
+            "session_history_job_count": len(history), "session_history_sha256": history_digest,
+            "endpoint": dict(endpoint), "server_process_identity": dict(process_record),
+            "server_pid_observation": pid_observation, "connect_request": dict(connect_request),
+            "observed_at_utc": observation["observed_at_utc"],
+            "control_daemon_identity": {
+                "pid": os.getpid(), "process_start_epoch_ms": control_identity["start_epoch_ms"],
+                "singleton_lock_held": True,
+            },
+            "process_inventory": dict(processes), "listener_inventory": dict(listeners),
+            "worker_observation": {"state": "NO_HOST_PROCESS_CANDIDATE", "remote_engine_health_claim": False},
+            "original_worker_binding": dict(connect_request["worker_binding"]),
+            "request_observations": [request_observation], "terminal_reply_identities": [terminal_reply],
+            "reconnect_baseline": None, "connection_observation": None,
+            "worker_close_event_sha256": None, "worker_close_reaped_event_sha256": None,
+            "resolution_scope": _ABANDONED_CONNECT_SCOPE, "classification": _ABANDONED_CONNECT_SCOPE,
+            "replay_performed": False, "new_worker_created": False,
+        }
+        target = new_lifecycle_record(
+            project_id=project_id, session_id=session_id, state="STOPPED", runtime_id=str(runtime_id),
+            endpoint=None, client_state="DISCONNECTED", server_state="STOPPED", server_ownership="unknown",
+        )
+        target["revision"] = lifecycle["revision"] + 1
+        recorded = self.store.record_session_lifecycle_recovery_resolution(
+            str(job["job_id"]), str(job["operation_id"]), lifecycle["revision"], target, evidence,
+        )
+        if recorded.get("recorded") is True:
+            source_now = self.store.job(str(job["job_id"]))
+            if not source_now or not self._session_lifecycle_recovery_resolution_is_valid(source_now):
+                return None, "RECORDED_CONNECT_PROOF_FAILED_VALIDATION", {}
+            return recorded.get("lifecycle"), "PROVEN_AND_AUDITED", {
+                "resolution_scope": _ABANDONED_CONNECT_SCOPE,
+                "evidence_sha256": recorded.get("resolution", {}).get("metadata", {}).get("evidence_sha256"),
+            }
+        if recorded.get("reason") == "ALREADY_RESOLVED":
+            source_now = self.store.job(str(job["job_id"]))
+            if source_now and self._session_lifecycle_recovery_resolution_is_valid(source_now):
+                prior = recorded.get("resolution") or {}
+                return self.session_lifecycle.get(project_id, session_id), "ALREADY_PROVEN", {
+                    "resolution_scope": prior.get("metadata", {}).get("resolution_scope"),
+                    "evidence_sha256": prior.get("metadata", {}).get("evidence_sha256"),
+                }
+        return None, str(recorded.get("reason") or "CONNECT_LIFECYCLE_RESOLUTION_NOT_RECORDED"), {}
 
     def _job_quiescence_proven(self, job: Mapping[str, Any]) -> bool:
         metadata = job.get("metadata") if isinstance(job, Mapping) else None
@@ -7730,6 +8319,54 @@ class ControlDaemon:
                     source_operation = job.get("operation")
                     source_name = (source_operation.get("operation")
                                    if isinstance(source_operation, Mapping) else None)
+                    if source_name == "session.connect" and worker is None and context is None:
+                        if self._session_lifecycle_recovery_resolution_is_valid(job):
+                            prior = self.store.session_lifecycle_recovery_resolution(job["job_id"])
+                            prior_metadata = prior.get("metadata", {}) if isinstance(prior, Mapping) else {}
+                            resolved_jobs.append({
+                                "job_id": job["job_id"], "historical_status": job.get("status"),
+                                "outcome_resolution": "UNVERIFIED_HISTORICAL_UNKNOWN",
+                                "quiescence_resolution": "ALREADY_PROVEN",
+                                "resolution_scope": prior_metadata.get("resolution_scope"),
+                                "classification": prior_metadata.get("classification"),
+                                "evidence_sha256": prior_metadata.get("evidence_sha256"),
+                                "replayed": False,
+                            })
+                            continue
+                        target_lifecycle, disposition, details = self._reconcile_interrupted_session_connect(
+                            job, record, lifecycle, project_id=project_id, session_id=session_id,
+                        )
+                        observations.append({
+                            "job_id": job.get("job_id"), "operation_id": job.get("operation_id"),
+                            "historical_status": job.get("status"), "classification": disposition,
+                            "process_inventory": details.get("process_inventory"),
+                            "listener_inventory": details.get("listener_inventory"),
+                            "resolution_scope": details.get("resolution_scope"),
+                        })
+                        if target_lifecycle is not None:
+                            lifecycle = target_lifecycle
+                            source_now = self.store.job(job["job_id"])
+                            prior = self.store.session_lifecycle_recovery_resolution(job["job_id"])
+                            prior_metadata = prior.get("metadata", {}) if isinstance(prior, Mapping) else {}
+                            resolved_jobs.append({
+                                "job_id": job["job_id"], "historical_status": job.get("status"),
+                                "outcome_resolution": "UNVERIFIED_HISTORICAL_UNKNOWN",
+                                "quiescence_resolution": ("ALREADY_PROVEN" if disposition == "ALREADY_PROVEN"
+                                                           else "PROVEN_AND_AUDITED"),
+                                "resolution_scope": prior_metadata.get("resolution_scope"),
+                                "classification": prior_metadata.get("classification"),
+                                "evidence_sha256": prior_metadata.get("evidence_sha256"),
+                                "lifecycle_state_after": lifecycle.get("state"),
+                                "historical_unknown_preserved": True,
+                                "source_result_preserved": bool(source_now and source_now.get("result")),
+                                "replayed": False,
+                            })
+                        else:
+                            unresolved_items.append({
+                                "kind": "UNKNOWN_JOB", "job_id": job.get("job_id"),
+                                "historical_status": job.get("status"), "reason": disposition,
+                            })
+                        continue
                     if source_name != "session.start":
                         remaining_unresolved.append(job)
                         continue
