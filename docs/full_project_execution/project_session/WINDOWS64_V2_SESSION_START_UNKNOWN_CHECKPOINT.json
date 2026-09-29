@@ -182,6 +182,47 @@
       "receipt_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-v2-20260928T235840Z-9c5ced6/readonly_startup_log_reference_v3_receipt.json",
       "receipt_sha256": "1e6c0864834927f088b7e80f73a3b30f6aad525fdac125a73665baa5c33f1910",
       "interpretation": "Native JNI library initialization reports file not found. The missing dependency and sole root cause remain unproven; original durable state is unchanged."
+    },
+    "production_probe_readonly": {
+      "status": "READ_ONLY_QUERY_COMPLETE",
+      "result": {
+        "probe_status": "COMPLETE",
+        "process_inventory": {
+          "status": "COMPLETE",
+          "candidate_count": 0,
+          "unresolved_candidate_count": 0,
+          "task_owned_match_count": 0,
+          "canonical_engine_match_count": 0
+        },
+        "listener_inventory": {
+          "status": "COMPLETE",
+          "rows_scanned": 56,
+          "owner_query_unresolved_count": 0,
+          "task_owned_match_count": 0,
+          "canonical_engine_match_count": 0
+        }
+      },
+      "receipt_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-v2-20260928T235840Z-9c5ced6/readonly_production_quiescence_probe_v1_receipt.json",
+      "receipt_sha256": "e2561f05a5c8ce654c3e1bd81b9fb6dd65553c254e2e79e3ee20894d9f6cb0e8",
+      "script_sha256": "54fa584e4ed5c4259c6cb6e54dbccf734d747b958e3def8a593f0b52eabf56b4",
+      "scope": "Actual read-only Windows observation; no daemon/COMSOL startup, replay, stop, cleanup or durable operation mutation."
+    },
+    "control_restart_scope_readonly": {
+      "status": "READ_ONLY_QUERY_COMPLETE",
+      "result": {
+        "status": "OBSERVED",
+        "observed_at_utc": "2026-09-29T03:22:54.877666+00:00",
+        "restart_mutation_candidate_count": 1,
+        "exact_original_candidate_count": 1,
+        "other_candidate_count": 0,
+        "only_original_would_change": true,
+        "original_job_running": true,
+        "original_operation_running": true
+      },
+      "receipt_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-v2-20260928T235840Z-9c5ced6/readonly_restart_scope_v1_receipt.json",
+      "receipt_sha256": "181cffb2bec957f210173b3d3caf128062ec444a6c1573b130bee6714d4ca4e2",
+      "script_sha256": "05a701fb595b008a7a9add4d0ab8a4ffd92d905137d13aa0ffb153e087c50744",
+      "scope": "Actual read-only Windows observation; no daemon/COMSOL startup, replay, stop, cleanup or durable operation mutation."
     }
   },
   "startup_diagnostic_software": {
@@ -217,5 +258,37 @@
       "No COMSOL process, SSH, remote host, Windows process, automatic restart, or native/scientific acceptance was exercised."
     ],
     "next_action": "Wire daemon identity sidecar and original-job startup events; finish existing session.recover same-host quiescence reconciliation before a fresh native comparison."
+  },
+  "next_native_minimal_chain": {
+    "status": "SOFTWARE_IMPLEMENTATION_IN_PROGRESS_NATIVE_NOT_RUN",
+    "entrypoint": "tools/run_w21_stage_native.py",
+    "mode": "solve-readback (separately frozen; existing metadata-only mode remains zero-solve)",
+    "sequence": [
+      "same-host reconcile original interrupted session.start without replay",
+      "fresh short-root session.start with early identity/error/exit diagnostics",
+      "session.connect with actual runtime/build/Server/Worker identity",
+      "existing W21Fixture build",
+      "public run_study std1 once",
+      "dataset.solution_indices actual tuple",
+      "result.evaluate T field once with actual payload and available unit/mesh evidence",
+      "task-owned safe cleanup receipt",
+      "repeat independently for Windows 6.3 after actual Windows 6.4 success and cleanup"
+    ],
+    "proposed_per_version_limits": {
+      "servers": 1,
+      "workers": 1,
+      "study_dispatches": 1,
+      "solver_dispatches": 1,
+      "solution_tuple_reads": 1,
+      "field_reads": 1,
+      "total_seconds": 900,
+      "cleanup_reserve_seconds": 60,
+      "rpc_wait_seconds": 45,
+      "queue_timeout_seconds": 30,
+      "execution_timeout_seconds": 240
+    },
+    "limits": "Original Windows V2 budget is used, not reset. No new native invocation has occurred. Actual field/unit/mesh evidence must be distinguished from configured expectations. A smoke receipt is not stage-run admission, stage transfer, physical acceptance or overall W21 completion.",
+    "unknown_behavior": "Preserve exact original job identity and stop dependent actions; never replay an uncertain solve or launch.",
+    "executor": "/root/luna_stage_output"
   }
 }

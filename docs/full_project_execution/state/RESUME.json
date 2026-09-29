@@ -2814,6 +2814,12 @@
       "unique_tests_passed": 17,
       "receipt_sha256": "748ba255f348e3c936f9349b17f3ca1e927608cdb18f5fcaf820900241b02b22",
       "checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json"
+    },
+    "next_native_minimal_chain": {
+      "status": "SOFTWARE_IMPLEMENTATION_IN_PROGRESS_NATIVE_NOT_RUN",
+      "checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json",
+      "executor": "/root/luna_stage_output",
+      "next_action": "Complete separately frozen solve-readback mode using the existing managed public run_study and strict result path; first reconcile original UNKNOWN, then Windows 6.4 before 6.3. No original replay."
     }
   },
   "windows64_current_daemon_readonly": {
@@ -2823,7 +2829,9 @@
     "native_status": "UNKNOWN_UNCHANGED",
     "native_quiescence": "OBSERVED_AT_RECORDED_SNAPSHOTS_NOT_DURABLY_RECONCILED",
     "checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json",
-    "original_job_status": "RUNNING_NO_RESULT"
+    "original_job_status": "RUNNING_NO_RESULT",
+    "latest_probe": "Actual captured production probe: 0 candidates, 56 TCP listeners, 0 unresolved owners, 0 associated listeners; read-only snapshot.",
+    "restart_scope": "Read-only SQLite inspection: exactly the original RUNNING session.start job would change under existing reconcile_after_restart; 0 other jobs."
   },
   "w21_session_start_runner_recovery": {
     "status": "PASS_SCOPED_OFFLINE",
