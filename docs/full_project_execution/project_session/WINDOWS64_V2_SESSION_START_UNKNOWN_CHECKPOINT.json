@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "unit": "W21 Windows6.4 V2 short-home current-source attempt",
-  "updated_at_utc": "2026-09-29T06:12:08Z",
+  "updated_at_utc": "2026-09-29T06:33:55Z",
   "overall_status": "PARTIAL",
   "source_package_status": "PASS_MAIN_VERIFIED",
   "native_status": "NOT_ACCEPTED_SESSION_START_UNKNOWN",
-  "next_action": "Preserve the original Windows6.4 session.start and both distinct session.recover attempts as UNKNOWN_NO_RETRY; neither recovery created a durable operation. The latest request aa289248-28c8-4f92-ab9e-c16bcaaec5dc was rejected with PROJECT_WORKSPACE_IDENTITY_MISMATCH because the recovery environment omitted COMSOL_PROJECT_ROOT and production ProjectAuthority resolved the source fallback instead of the matching frozen workspace. Review the corrected driver hash and explicit frozen workspace-root binding before any new, distinct single recovery request. Never replay either prior request. Do not start the short-path native chain until the original operation is durably reconciled and same-host safe closure is established. This recover finding does not explain the earlier JNI file-not-found startup error or the prior daemon exit.",
+  "next_action": "Repair the solve-readback entrypoint to bind plan imports to the hash-verified 9d5aab1 candidate. The 9d5aab1 prepare and source/plan review passed, but the single execute attempt failed before stdio dispatch because import resolution used an older installed package lacking comsol_mcp._session_server; the candidate source itself passed all 104 source checks. Preserve that run and freeze. Main reviews a new freeze after the candidate-binding fix, then one fresh Windows 6.4 solve-readback may run under the frozen budget. Do not rerun the old freeze or replay the original session.start or prior session.recover requests. Windows 6.3 follows only after 6.4 is successfully closed, then continue W23-W26. Native status remains NOT_RUN.",
   "candidate": {
     "source_commit": "9c5ced6272dd876cf9c28c6c6f73b943bd76b96c",
     "evidence_root": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-v2-20260928T235840Z-9c5ced6",
@@ -80,11 +80,12 @@
     "diagnosis_status": "INITIAL_READ_ONLY_DIAGNOSTICS_COMPLETE_ROOT_CAUSE_UNRESOLVED"
   },
   "recovery_guard": {
-    "replay_permitted": false,
-    "cleanup_permitted": false,
+    "original_start_replay_permitted": false,
+    "prior_recovery_request_replay_permitted": false,
     "stop_or_cleanup_performed": false,
-    "new_session_start_permitted_by_this_checkpoint": false,
-    "reason": "The original durable session.start remains UNKNOWN and the source job remains RECONCILING without a result. The latest fresh recover was rejected before any durable recovery row was created by PROJECT_WORKSPACE_IDENTITY_MISMATCH; a distinct later request may be considered only after main reviews the corrected driver and exact frozen workspace-root binding. Do not replay either prior recover request, start a new session, or run the native chain before durable reconciliation and safe same-host closure."
+    "disposition_status": "VERIFIED_CURRENT_HOST_QUIESCENCE_HISTORICAL_UNKNOWN_RETAINED",
+    "proof_scope": "ABANDONED_UNKNOWN_START_CURRENT_HOST_QUIESCENCE",
+    "interpretation": "The original session.start outcome remains UNKNOWN and its result is preserved. V3 session.recover recorded a verified same-host quiescence disposition with lifecycle STOPPED and no endpoint/Server identity. This is not proof of native startup or a native acceptance result; the separately authorized solve-readback chain remains distinct."
   },
   "prior_path_repair": {
     "checkpoint": "docs/full_project_execution/project_session/WINDOWS_SHORT_HOME_PATH_CHECKPOINT.json",
@@ -134,7 +135,7 @@
     "auto_review_rejection_record_sha256": "960bb5a20a23d36e25f35eae94519b5f429660d0b1625fd5c5d0010cc58d6501"
   },
   "latest_readonly_reconciliation": {
-    "status": "READONLY_OBSERVATIONS_COMPLETE_DURABLE_RECOVERY_PENDING",
+    "status": "HISTORICAL_PRE_V3_READONLY_OBSERVATION_RECOVERY_PENDING_AT_THAT_TIME",
     "daemon_pid": 20888,
     "daemon_observation": "PROCESS_NOT_FOUND",
     "canonical_comsol_java_candidate_count": 0,
@@ -223,7 +224,8 @@
       "receipt_sha256": "181cffb2bec957f210173b3d3caf128062ec444a6c1573b130bee6714d4ca4e2",
       "script_sha256": "05a701fb595b008a7a9add4d0ab8a4ffd92d905137d13aa0ffb153e087c50744",
       "scope": "Actual read-only Windows observation; no daemon/COMSOL startup, replay, stop, cleanup or durable operation mutation."
-    }
+    },
+    "superseded_by_recovery_request_id": "85a7c7ee-7ec0-4dac-be50-64dd0ca6eb1b"
   },
   "startup_diagnostic_software": {
     "status": "PASS_SCOPED_OFFLINE",
@@ -264,8 +266,8 @@
     "entrypoint": "tools/run_w21_stage_native.py",
     "mode": "solve-readback (separately frozen; existing metadata-only mode remains zero-solve)",
     "sequence": [
-      "same-host reconcile original interrupted session.start without replay",
-      "fresh short-root session.start with early identity/error/exit diagnostics",
+      "COMPLETED: same-host reconcile original interrupted session.start without replay; preserve its UNKNOWN result",
+      "Fix candidate-bound plan imports; create and main-review a new freeze; then one fresh short-root session.start with early identity/error/exit diagnostics",
       "session.connect with actual runtime/build/Server/Worker identity",
       "existing W21Fixture build",
       "public run_study std1 once",
@@ -287,7 +289,7 @@
       "queue_timeout_seconds": 30,
       "execution_timeout_seconds": 240
     },
-    "limits": "The solve-readback runner passed scoped offline software review (90 unique tests); no new native invocation occurred. Original Windows V2 UNKNOWN remains unrecovered and source upload and remote integrity verification are complete. Actual field/unit/mesh evidence must be distinguished from configured expectations. A smoke receipt is not stage-run admission, stage transfer, physical acceptance or overall W21 completion.",
+    "limits": "The solve-readback runner passed scoped offline software review (90 unique tests). The original Windows V2 UNKNOWN now has a verified same-host quiescence disposition but remains the historical UNKNOWN. The 9d5aab1 prepare and source/plan review passed; one execute attempt failed before stdio because the entrypoint imported an older installed package. No COMSOL/Worker/native birth occurred. Fix candidate binding and create a new reviewed freeze; do not replay the old freeze. Native acceptance remains NOT_RUN.",
     "unknown_behavior": "Preserve exact original job identity and stop dependent actions; never replay an uncertain solve or launch.",
     "executor": "/root/luna_stage_output",
     "main_review": {
@@ -312,7 +314,8 @@
           "tools/run_w21_stage_native.py": "b9d0866c8af46fd6876865adf8adbce7b50bbf998f467db2ea490f02c76d1d14"
         }
       }
-    }
+    },
+    "next_action": "Candidate-source import binding repair -> new source freeze -> main review -> one fresh Windows 6.4 solve-readback; then Windows 6.3 after 6.4 closure, then W23-W26."
   },
   "startup_recovery_software": {
     "status": "PASS_SCOPED_OFFLINE",
@@ -671,7 +674,7 @@
     ]
   },
   "next_native_source_handoff": {
-    "status": "SOURCE_UPLOADED_AND_EXTRACTED_NATIVE_NOT_RUN",
+    "status": "PREPARE_AND_FREEZE_REVIEW_PASS_EXECUTE_FAILED_BEFORE_STDIO_NATIVE_NOT_RUN",
     "source_head": "9d5aab1880e37a439c34148fc5a9c75d2e044224",
     "source_files": 107,
     "archive_members": 110,
@@ -680,7 +683,7 @@
     "task_root": "C:\\Temp\\w21s9d5",
     "local_path_budget_utf16_units": 229,
     "path_budget_not_root_cause_proof": true,
-    "prepare_executed": false,
+    "prepare_executed": true,
     "native_executed": false,
     "receipts": [
       {
@@ -691,7 +694,56 @@
         "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback-handoff-9d5aab1/windows-upload-extraction-receipt.json",
         "sha256": "a52c7bdd7cc2bdfb3ebd05ad93320422a0cb5ebb16f12640f13af2ad773152b2"
       }
-    ]
+    ],
+    "freeze_run_id": "w21-64-20260929T062541Z-3a5cc948",
+    "freeze_sha256": "9cd78ad359625b2522a59fa3444011e9e237e0c49a07c5a6eef63b6b5994cdf6",
+    "freeze_file_sha256": "882610fc4eec9eb3b57bbcbae258051483767b117c64925164c699fd9328f8ff",
+    "main_review": {
+      "status": "PASS_SOURCE_AND_PLAN_REVIEW_ONLY",
+      "matched_source_files": 104,
+      "sha256": "edb53da4c482d91a462848fdcb09d5018462dc3113978bb52ac21dba38e56a7c"
+    },
+    "execute_attempt": {
+      "status": "FAILED_BEFORE_STDIO_NATIVE_NOT_RUN",
+      "exit_code": 2,
+      "error_type": "ModuleNotFoundError",
+      "missing_module_in_resolved_installed_environment": "comsol_mcp._session_server",
+      "candidate_source_missing_module": false,
+      "cause": "Plan-loading entrypoint was not bound to the verified candidate import root and resolved an older installed package.",
+      "source_locations": [
+        "_load_plan:2183",
+        "verify_plan:650",
+        "_validate_frozen_server_home:499",
+        "_server_home_budget:444"
+      ],
+      "execute_entered": false,
+      "state": "PREPARED",
+      "action_history_count": 0,
+      "server_births_possible": 0,
+      "worker_births_possible": 0,
+      "study_dispatch_possible": 0,
+      "solver_dispatch_possible": 0,
+      "freeze_must_not_be_replayed": true,
+      "evidence": [
+        {
+          "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback-handoff-9d5aab1/execute64-receipt.json",
+          "sha256": "7cdfde307780ac76c11f694d6e50bfc8cc5a051cc47b404c6965cc246c94e11c"
+        },
+        {
+          "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback-handoff-9d5aab1/execute64.stdout",
+          "sha256": "9f925a42b2db1661a26f2f3e883c29bf87314743009cbb4a420d125b4b304e1e"
+        },
+        {
+          "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback-handoff-9d5aab1/state64-after-execute.json",
+          "sha256": "28ab4d86d8c84a57cb782012672904d0fa7f52e8b0ee9c5fe875c1440b23dfc8"
+        },
+        {
+          "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback-handoff-9d5aab1/readonly-load-plan-diagnostic-receipt.json",
+          "sha256": "f0d09b20a28e27d60897903f71076d20080248161c9013fa86e8be2adaf78a70"
+        }
+      ]
+    },
+    "next_action": "Repair the entrypoint so plan loading imports from the hash-verified candidate; add the targeted regression, then make a new source freeze and obtain main review. Run one fresh Windows 6.4 solve-readback only against that new freeze. Do not replay this PREPARED run/freeze. Native status remains NOT_RUN."
   },
   "fresh_recovery_attempt_20260929T061208Z": {
     "status": "UNKNOWN_NO_RETRY_RECOVERY_REJECTED",
@@ -778,5 +830,54 @@
     "receipt_sha256": "2176f01d3101ee45b1cb5aa3640db27609782de414d68881dc83689d35474fe4",
     "tests": "6 V3 workspace-binding tests plus 12 existing V2 observer tests, 3 subtests; no failures/errors. V3 Windows not run.",
     "change": "Require explicit frozen COMSOL_PROJECT_ROOT and exact persisted project workspace before controller start; compare backup/live project identity; daemon baseline 27724/birth1790662326841. No production authorization relaxation."
+  },
+  "successful_recovery_disposition_v3": {
+    "status": "RECOVERY_PROOF_VERIFIED_HISTORICAL_UNKNOWN_RETAINED",
+    "native_status": "NOT_RUN",
+    "driver_source_head": "15e7bea61e9ef06b29d9a51f55fcddebcb773b7a",
+    "driver_sha256": "447c6578ddace78bbbf8d5fab296d90cc9ea9c3c1bb1d420e472608cc4586346",
+    "request_id": "85a7c7ee-7ec0-4dac-be50-64dd0ca6eb1b",
+    "operation_id": "fe7a8326-02de-4914-936f-aadf2642cdf9",
+    "job_id": "897ff719-de79-4b09-9401-2e4ee183eabd",
+    "dispatch_count": 1,
+    "source_operation_id": "9e9c6f63-8905-42e9-b320-5313df0e7dce",
+    "source_job_id": "75407ced-fbdc-496d-a2fc-ab8b544a0efb",
+    "source_operation_status": "UNKNOWN",
+    "source_job_status": "UNKNOWN",
+    "source_result_present": true,
+    "source_result_sha256": "7ebde0528f74f5ea3a05827377cfc9e4653f08d4643080ad4656b6a6dd6e7e89",
+    "historical_native_outcome": "UNKNOWN_RETAINED_NOT_ACCEPTED",
+    "lifecycle_status": "STOPPED_NO_ENDPOINT_NO_SERVER_IDENTITY",
+    "proof_scope": "ABANDONED_UNKNOWN_START_CURRENT_HOST_QUIESCENCE",
+    "exact_proof_verified": true,
+    "process_inventory": {
+      "status": "COMPLETE",
+      "candidate_count": 0,
+      "unresolved_candidate_count": 0,
+      "task_owned_matches": 0,
+      "canonical_engine_matches": 0
+    },
+    "listener_inventory": {
+      "status": "COMPLETE",
+      "rows_scanned": 57,
+      "owner_query_unresolved": 0,
+      "task_owned_matches": 0,
+      "canonical_engine_matches": 0
+    },
+    "native_birth_by_recovery": false,
+    "recovery_backup": {
+      "bytes": 139264,
+      "sha256": "14b81ffbbf0dd8658832c16e561f9883cbc6113cac9207890555375fcab39196"
+    },
+    "evidence": [
+      {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-fresh-recover-plan-20260929T054245Z/main-v3-execute.stdout",
+        "sha256": "a7a2eb07a761fcbd6c5a2e5a417eccd028ade9d953d71e9e05c73d5190360572"
+      },
+      {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-fresh-recover-plan-20260929T054245Z/main-v3-execute-receipt.json",
+        "sha256": "c4b8bd17222fbb5ac7a8f6e6189930c11a1cde89639cf6d7a81ea74ed8643c1b"
+      }
+    ]
   }
 }

@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "phase": "W21_WINDOWS64_V2_SESSION_START_UNKNOWN_RECOVERY",
+  "phase": "W21_WINDOWS64_SHORT_PATH_CANDIDATE_IMPORT_BINDING_REPAIR",
   "task": "W01_W26_CONTINUOUS_IMPLEMENTATION",
-  "status": "PARTIAL_EXECUTION_CONTINUING_NATIVE_UNKNOWN",
-  "candidate_source": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-v2-20260928T235840Z-9c5ced6/w21-windows64-metadata-v2-9c5ced6-20260928T235840Z.tar.gz (sha256 7f96b2c25cb2d5c4194db44b21952e3add20cc8ac96f0a82d3e02e1dc567088c)",
+  "status": "PARTIAL_EXECUTION_CONTINUING_NATIVE_NOT_RUN",
+  "candidate_source": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback-handoff-9d5aab1/w21-solve-readback-9d5aab1.tar.gz (sha256 6ae9043f20232ab5683f8243da68d947dcee38bfcbdc047b72054c7d0ea1c70a; next freeze required after candidate import-binding fix)",
   "completed_work": [
     "PIN source restoration completed and verified: 10832 files, zero missing LFS backing objects; repository HEAD matches pinned commit/tree.",
     "tools/init_completion.py --repo repository completed; frozen inventory: 26 work packages, 272 actions, 60 tests x 6 targets = 360 test cells.",
@@ -141,9 +141,14 @@
       "recover_dispatch_count": 0,
       "original_operation_replayed": false,
       "checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json"
+    },
+    {
+      "scope": "Windows6.4 historical UNKNOWN disposition and current short-path preflight",
+      "status": "QUIESCENCE_DISPOSITION_VERIFIED; EXECUTE_FAILED_BEFORE_STDIO; NATIVE_NOT_RUN",
+      "checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json"
     }
   ],
-  "next_action": "Preserve the original Windows6.4 session.start and both distinct session.recover attempts as UNKNOWN_NO_RETRY; neither recovery created a durable operation. The latest request aa289248-28c8-4f92-ab9e-c16bcaaec5dc was rejected with PROJECT_WORKSPACE_IDENTITY_MISMATCH because the recovery environment omitted COMSOL_PROJECT_ROOT and production ProjectAuthority resolved the source fallback instead of the matching frozen workspace. Review the corrected driver hash and explicit frozen workspace-root binding before any new, distinct single recovery request. Never replay either prior request. Do not start the short-path native chain until the original operation is durably reconciled and same-host safe closure is established. This recover finding does not explain the earlier JNI file-not-found startup error or the prior daemon exit.",
+  "next_action": "V3 session.recover durably verified exact same-host quiescence while retaining the original session.start UNKNOWN result. The 9d5aab1 short-path prepare and source/plan review passed, but its one execute attempt failed before stdio: plan loading resolved an older installed package without comsol_mcp._session_server; the verified candidate itself passed all 104 file checks and contains that module. Durable run state remains PREPARED with empty action history and zero possible dispatches/births. Repair candidate import binding and targeted tests, create and review a new freeze, then perform one fresh Windows 6.4 solve-readback. Never replay the original session.start, either prior recover request, or the failed freeze/run. Windows 6.3 follows only after 6.4 closure, then W23-W26.",
   "active_jobs": [],
   "blockers": [
     "W23 failed setup owned Server 75272 and daemon 75260 remain preserved: cleanup SIGTERM was rejected by automatic approval and explicit authorization is pending; no cleanup or relaunch authorized by elapsed time.",
@@ -172,7 +177,7 @@
     "native_solve_budget_remaining": 0,
     "evidence": "docs/full_project_execution/evidence/luna_process_reconciliation/mac_readonly_snapshot_20260926T2152Z.json"
   },
-  "updated_at": "2026-09-29T06:12:08Z",
+  "updated_at": "2026-09-29T06:35:05Z",
   "note": "Original scope remains through W26. User explicitly resumed after the test-efficiency analysis; implement efficiency improvements first. OpenViking task-detail retrieval was denied by auto-review because it would disclose internal roadmap identifiers externally; no workaround. Use current frozen workpack and read-only local memory only. Do not rerun bootstrap/init on resume. Source files now contain executor edits; do not rerun bootstrap/init. Git metadata is an APFS pointer managed by main agent; migration requires bundle/source transfer, not copying only the repository pointer. Git metadata migration is documented by evidence/git_metadata_relocation.json and owned by the main agent; do not copy the APFS git pointer to another machine without source bundle/archive. GUI permission boundary and checkpoint solution-scope caveat recorded. This executor has one W24 native setup-only failure with exact cleanup verified; the durable operation/job UNKNOWN records remain unchanged. No W24 solver submission occurred. Saved-MPH readback supplement uses separate time/evidence and zero study/solver calls; run08 remains FAIL_OR_INCOMPLETE. Root raw SQLite recomputation is linked under native_resume_saved_artifact_supplement.raw_recomputation_evidence; original run08 remains FAIL_OR_INCOMPLETE and no solve budget is restored. Latest checkpoint 2026-09-27T03:50:43Z: W24 0334Z setup run failed pre-model due Python 3.14 missing mcp, with exact cleanup; 0346Z candidate pins the validated 3.12.13 environment and passes a production no-engine registry/daemon preflight. Native setup remains pending root review; science implementation continues offline. Latest checkpoint 2026-09-27T09:09:28Z: W24 0841Z candidate was invoked once at 0857Z and failed before any engine/Worker birth because project.inspect received an injected idempotency_key; project.create persisted successfully. Exact read-only SQLite hash and operation result are in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_contract_diagnostic.json. The runner now omits the unnecessary inspect key; actual ControlDaemon focused regression is 2/2 PASS in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_runner_regression_receipt.json. No native retry or acceptance is claimed; release F04 runtime integration is active, so refresh closure and root review are required before another launch. Windows COMSOL 6.3 remains required/unassessed; only macOS 6.3 is USER_REQUESTED_SKIP.",
   "native_resume_smoke": {
     "status": "FAIL_OR_INCOMPLETE_POINT_SCHEMA_FAILURE; SOLVED_CHILD_ARTIFACT_DURABLE; SOLVE_BUDGET_EXHAUSTED; SEPARATE_SAVED_MPH_READBACK_PASS",
@@ -1032,7 +1037,7 @@
   "acceptance_cells_changed": false,
   "current_execution_checkpoint": {
     "path": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json",
-    "status": "PARTIAL_NATIVE_SESSION_START_UNKNOWN_NOT_ACCEPTED"
+    "status": "PARTIAL_HISTORICAL_START_UNKNOWN_RECONCILED_SHORT_PATH_RUNNER_FIX_NATIVE_NOT_RUN"
   },
   "w24_setup_candidate_0841z_native_attempt": {
     "candidate_id": "W24-CURE-HIST-AXISYM-01",
@@ -2628,9 +2633,8 @@
     "checkpoint": "docs/full_project_execution/project_session/WINDOWS_STAGE_SOURCE_DEPENDENCIES_CHECKPOINT.json"
   },
   "priority_order": [
-    "W21 stage field/unit/mesh mapping and actual output readback",
-    "Windows6.4 minimal production MCP chain",
-    "Windows6.3 same-source production chain",
+    "Windows 6.4 solve-readback",
+    "Windows 6.3 solve-readback",
     "W23",
     "W24",
     "W25",
@@ -2722,7 +2726,7 @@
       "tests/test_session_server.py": "211855691e0a3a66d140e484395aafac9f2f163b6bc716392375bb732c2d8ab3",
       "tests/test_run_w21_stage_native.py": "487f53ea01e13fe6a4a9dab276b139d5f6f273249af0b9cb26632ec037b6943a"
     },
-    "next_action": "The short-home path guard passed scoped offline checks only. The fresh recover attempt was rejected because COMSOL_PROJECT_ROOT was absent and production workspace binding used the source fallback, producing PROJECT_WORKSPACE_IDENTITY_MISMATCH. Review the corrected driver and frozen workspace-root binding before a distinct new recovery request. Preserve both prior requests as UNKNOWN_NO_RETRY; the already-authorized short-path native chain remains gated on durable reconciliation and safe same-host closure.",
+    "next_action": "The 9d5aab1 short-path prepare and main source/plan freeze review passed. Its single execute attempt failed before stdio because plan loading resolved an older installed package without comsol_mcp._session_server; the candidate itself is complete and hash-verified. Fix candidate import binding, add focused tests, then create and review a new freeze before fresh Windows 6.4 solve-readback. Do not replay the old freeze; native remains NOT_RUN.",
     "critical_dll_guard_followup": {
       "status": "PASS_SCOPED_OFFLINE_SOFTWARE",
       "native_status": "NOT_RUN",
@@ -2785,10 +2789,13 @@
         }
       ],
       "interpretation": "This software guard addresses a measured path constraint only. It does not establish the cause or repair of the prior Windows6.4 session.start UNKNOWN."
-    }
+    },
+    "latest_execution_status": "FAILED_BEFORE_STDIO_NATIVE_NOT_RUN",
+    "latest_run_id": "w21-64-20260929T062541Z-3a5cc948",
+    "latest_freeze_sha256": "9cd78ad359625b2522a59fa3444011e9e237e0c49a07c5a6eef63b6b5994cdf6"
   },
   "windows_v2_session_start_unknown": {
-    "status": "UNKNOWN_NOT_ACCEPTED",
+    "status": "UNKNOWN_NOT_ACCEPTED_HISTORICAL_RESULT_RETAINED_QUIESCENCE_RECONCILED",
     "native_status": "NOT_ACCEPTED",
     "checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json",
     "evidence_root": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-v2-20260928T235840Z-9c5ced6",
@@ -2803,15 +2810,15 @@
     "job_id": "75407ced-fbdc-496d-a2fc-ab8b544a0efb",
     "project_id": "915442e2-22c9-4a92-9d62-d65582e0e85a",
     "session_id": "session-107418ef98a240888adf5e0687d7b26b",
-    "database_job_state": "RUNNING_NO_FINISHED_AT_NO_RESULT",
-    "lifecycle": "STARTING_SERVER_UNKNOWN_NO_NATIVE_IDENTITY_OR_ENDPOINT",
+    "database_job_state": "UNKNOWN_RESULT_PERSISTED_HISTORICAL_START_OUTCOME_RETAINED",
+    "lifecycle": "STOPPED_NO_ENDPOINT_NO_SERVER_IDENTITY; exact same-host quiescence disposition verified",
     "possible_server_births": 1,
     "worker_births": 0,
     "study_dispatches": 0,
     "solver_dispatches": 0,
     "replay_permitted": false,
     "cleanup_permitted": false,
-    "next_action": "Preserve the original Windows6.4 session.start and both distinct session.recover attempts as UNKNOWN_NO_RETRY; neither recovery created a durable operation. The latest request aa289248-28c8-4f92-ab9e-c16bcaaec5dc was rejected with PROJECT_WORKSPACE_IDENTITY_MISMATCH because the recovery environment omitted COMSOL_PROJECT_ROOT and production ProjectAuthority resolved the source fallback instead of the matching frozen workspace. Review the corrected driver hash and explicit frozen workspace-root binding before any new, distinct single recovery request. Never replay either prior request. Do not start the short-path native chain until the original operation is durably reconciled and same-host safe closure is established. This recover finding does not explain the earlier JNI file-not-found startup error or the prior daemon exit.",
+    "next_action": "Repair candidate-source import binding in the solve-readback entrypoint and add targeted tests. Then create and main-review a new freeze before one fresh Windows 6.4 solve-readback. Do not replay the failed freeze or any prior operation. 6.3 follows only after 6.4 closure, then W23-W26.",
     "image_library_basename": "CORE_RL_magick_.dll",
     "image_library_relative_alias": "ext\\graphicsmagick\\win64\\CORE_RL_magick_.dll",
     "image_library_exists": true,
@@ -2849,10 +2856,10 @@
       "checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json"
     },
     "next_native_minimal_chain": {
-      "status": "SOFTWARE_IMPLEMENTATION_IN_PROGRESS_NATIVE_NOT_RUN",
+      "status": "PREPARE_AND_FREEZE_REVIEW_PASS_EXECUTE_FAILED_BEFORE_STDIO_NATIVE_NOT_RUN",
       "checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json",
       "executor": "/root/luna_stage_output",
-      "next_action": "The 9d5aab1 solve-readback candidate is software-only and native NOT_RUN. Finish diagnostics and have main review a fresh recovery request; never replay the prior request. After durable reconciliation of the original operation, use the already-authorized bounded short-path chain: Windows 6.4 solve-readback, then 6.3. This record does not claim stage_run or native admission."
+      "next_action": "Completed: exact same-host disposition of the original interrupted session.start, retaining UNKNOWN. Current: fix candidate-bound imports, add focused tests, create a new freeze and main review, then one fresh Windows 6.4 solve-readback; 6.3 only after closure, then W23-W26."
     },
     "startup_recovery_software": {
       "status": "PASS_SCOPED_OFFLINE",
@@ -2865,7 +2872,7 @@
       "status": "PASS_SOURCE_UPLOADED_AND_REMOTE_HASH_VERIFIED",
       "source_head": "15e7bea61e9ef06b29d9a51f55fcddebcb773b7a",
       "checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json",
-      "next_action": "Source 15e7bea upload and remote hash verification remain complete. The first recover request remains UNKNOWN_NO_RETRY. A distinct fresh request was attempted once and rejected with PROJECT_WORKSPACE_IDENTITY_MISMATCH because COMSOL_PROJECT_ROOT was absent and production workspace binding used a mismatching source fallback. Main must review the corrected driver and exact frozen workspace-root binding before any new distinct recovery request; do not replay prior requests or start the native chain before durable reconciliation and safe same-host closure.",
+      "next_action": "The 15e7bea recovery source and 9d5aab1 solve-readback source remain uploaded and integrity-verified. V3 session.recover succeeded with the exact quiescence proof while retaining original UNKNOWN history. The reviewed 9d5aab1 prepare freeze executed only to plan loading and failed because the entrypoint imported an older installed package; no stdio/native action or birth occurred. Repair candidate import binding, freeze/review a new source, then fresh 6.4. Never replay prior requests or the failed freeze.",
       "source_files": 104,
       "archive_members": 107,
       "archive_bytes": 942059,
@@ -2933,7 +2940,12 @@
         "lifecycle_state": "STARTING"
       },
       "checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json#fresh_recovery_attempt_20260929T061208Z"
-    }
+    },
+    "latest_recovery_disposition_status": "RECOVERY_PROOF_VERIFIED_HISTORICAL_UNKNOWN_RETAINED",
+    "latest_recovery_checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json",
+    "latest_short_path_execution_status": "FAILED_BEFORE_STDIO_NATIVE_NOT_RUN",
+    "latest_short_path_run_id": "w21-64-20260929T062541Z-3a5cc948",
+    "latest_short_path_freeze_sha256": "9cd78ad359625b2522a59fa3444011e9e237e0c49a07c5a6eef63b6b5994cdf6"
   },
   "windows64_current_daemon_readonly": {
     "status": "READONLY_OBSERVATIONS_COMPLETE_DURABLE_RECOVERY_PENDING",
