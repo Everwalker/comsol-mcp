@@ -170,6 +170,52 @@
         "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-v2-20260928T235840Z-9c5ced6/readonly_original_job_current_v2_receipt.json",
         "sha256": "9cc98da7a8d975555b3cdc4d35dd373f84035c785e497816d28987fca9ffc40b"
       }
-    ]
+    ],
+    "detailed_startup_log": {
+      "status": "READ_TASK_LOG_REFERENCE",
+      "scope": "Referenced log verified inside original task root; UTF-8 read only; no token or full path output.",
+      "error_lines": [
+        "2026-09-29T08:24:53.094+0800 Internal error, Exception while initializing bridge.",
+        "java.lang.RuntimeException: Exception when initializing COMSOL libraries: Exception:",
+        "\tcom.comsol.nativejni.FlNativeException: 找不到文件。"
+      ],
+      "receipt_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-v2-20260928T235840Z-9c5ced6/readonly_startup_log_reference_v3_receipt.json",
+      "receipt_sha256": "1e6c0864834927f088b7e80f73a3b30f6aad525fdac125a73665baa5c33f1910",
+      "interpretation": "Native JNI library initialization reports file not found. The missing dependency and sole root cause remain unproven; original durable state is unchanged."
+    }
+  },
+  "startup_diagnostic_software": {
+    "status": "PASS_SCOPED_OFFLINE",
+    "native_status": "NOT_RUN",
+    "unique_tests_passed": 17,
+    "main_verified": true,
+    "capability": "Launcher records early process birth, actual observed exit and safe system error metadata in a token-free fixed-schema atomic sidecar; observation failures retain the exact child handle without restart/replay/stop. Known birth persists through exit; prebirth errors survive diagnostic storage failure.",
+    "receipt_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/startup_diagnostics_receipt.json",
+    "receipt_sha256": "748ba255f348e3c936f9349b17f3ca1e927608cdb18f5fcaf820900241b02b22",
+    "source_sha256": {
+      "comsol_mcp/_process_diagnostics.py": "e9f0626eb8b6c122fa30cce4b2728d87da112e5002d3517dac24e6ed8d1ad4e9",
+      "comsol_mcp/_session_server.py": "de376961abe138accb000ed1a71604e2e9cc36ade2983f418663b150e7cd507b",
+      "tests/test_session_server.py": "f4812e77c1ddc0894d074fdc69f4f5fa62ac960bfb0ed6a9de5da3bc06400378"
+    },
+    "test_artifacts": [
+      {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/startdiag106.xml",
+        "sha256": "e0d55c1985e9a4f7dd7304a1aa8f7753b75dd1fb45023e3da566836f5f14fc04",
+        "tests": 16,
+        "reproduce": "PYTHONDONTWRITEBYTECODE=1 /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -B -m pytest -p no:cacheprovider tests/test_session_server.py -q -k 'not exact_birth_and_listener_gate_before_stopping_task_owned_child' --basetemp=/Volumes/SSD/Comsol-MCP/execution-scratch/startdiag106 --junitxml=/Volumes/SSD/Comsol-MCP/execution-scratch/startdiag106.xml"
+      },
+      {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/startdiag107.xml",
+        "sha256": "c5c14455703f150820acde57147c3fb3a7d0baa8c3eeea0d5aa60ee6e9ff6c16",
+        "tests": 1,
+        "reproduce": "PYTHONDONTWRITEBYTECODE=1 /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -B -m pytest -p no:cacheprovider tests/test_session_server.py::test_exact_birth_and_listener_gate_before_stopping_task_owned_child -q --basetemp=/Volumes/SSD/Comsol-MCP/execution-scratch/startdiag107 --junitxml=/Volumes/SSD/Comsol-MCP/execution-scratch/startdiag107.xml"
+      }
+    ],
+    "limits": [
+      "New startup-observation cases use synthetic Popen/process-identity/listener fixtures.",
+      "One existing localhost-only Python child/listener regression was separately run with explicit escalation and terminates only that test-owned child.",
+      "No COMSOL process, SSH, remote host, Windows process, automatic restart, or native/scientific acceptance was exercised."
+    ],
+    "next_action": "Wire daemon identity sidecar and original-job startup events; finish existing session.recover same-host quiescence reconciliation before a fresh native comparison."
   }
 }

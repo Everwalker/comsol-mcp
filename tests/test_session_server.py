@@ -26,6 +26,12 @@ from comsol_mcp._session_server import (
     prepare_private_loopback_installation,
     windows_owned_server_path_budget,
 )
+from comsol_mcp._process_diagnostics import (
+    ProcessDiagnosticError,
+    sanitize_startup_observation,
+    write_atomic_json_snapshot,
+    write_startup_diagnostic,
+)
 
 
 def _sha256(path: Path) -> str:
@@ -235,6 +241,295 @@ def test_windows_owned_launcher_passes_exact_validated_executable_to_popen(tmp_p
     assert Path(command[0]).is_file()
     assert options["creationflags"] == getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
     assert "start_new_session" not in options
+
+
+def _startup_runtime(tmp_path: Path) -> SessionRuntimeConfig:
+    source = _installation(tmp_path / "installed")
+    return SessionRuntimeConfig(
+        runtime_id="fixture-runtime", comsol_version="6.4.0.293",
+        installation_root=source, java_executable=tmp_path / "jdk/bin/java",
+        classpath=(source / "client.jar",), preferences_dir=tmp_path / "prefs",
+        session_state_root=tmp_path / "state",
+    )
+
+
+class _StartupProcess:
+    def __init__(self, pid=9182, poll_values=(None,)):
+        self.pid = pid
+        self._poll_values = list(poll_values)
+        self.returncode = None
+        self.mutation_calls = []
+
+    def poll(self):
+        if self._poll_values:
+            value = self._poll_values.pop(0)
+            if value is not None:
+                self.returncode = value
+            return value
+        return self.returncode
+
+    def terminate(self):
+        self.mutation_calls.append("terminate")
+
+    def kill(self):
+        self.mutation_calls.append("kill")
+
+    def wait(self, *args, **kwargs):
+        self.mutation_calls.append("wait")
+        return self.returncode
+
+
+def _startup_diagnostic_path(runtime: SessionRuntimeConfig, project="project", session="session") -> Path:
+    return session_state_directory(runtime.session_state_root, project, session) / "owned-server" / "startup-diagnostic.json"
+
+
+def _launcher_for_startup(process_factory, *, process_identity_reader=None, listener_reader=None,
+                          ready_timeout_s=0.05):
+    return OwnedServerLauncher(
+        process_factory=process_factory,
+        process_identity_reader=process_identity_reader or (lambda _pid: {"alive": True, "start_epoch_ms": 123456}),
+        listener_reader=listener_reader or (lambda port: [(9182, CanonicalSocket("127.0.0.1", port))]),
+        platform_name="darwin", ready_timeout_s=ready_timeout_s, poll_interval_s=0.001,
+    )
+
+
+def test_owned_server_start_records_created_birth_and_ready_snapshot(tmp_path):
+    runtime = _startup_runtime(tmp_path)
+    process = _StartupProcess()
+    sink_rows = []
+
+    def observe(row):
+        # The sidecar is already the current snapshot when the higher-level
+        # job-event sink receives the same sanitized observation.
+        assert json.loads(_startup_diagnostic_path(runtime).read_text(encoding="utf-8")) == row
+        sink_rows.append(dict(row))
+
+    def create(command, **_options):
+        port_file = Path(command[command.index("-portfile") + 1])
+        port_file.write_text("2036", encoding="ascii")
+        return process
+
+    handle = _launcher_for_startup(create).start(
+        runtime, "project", "session", observation_sink=observe,
+    )
+
+    assert handle.process is process
+    assert [row["event"] for row in sink_rows] == ["PROCESS_CREATED", "BIRTH_OBSERVED", "READY"]
+    assert all(set(row) == {
+        "schema", "event", "observed_at_utc", "project_id", "session_id", "runtime_id",
+        "pid", "birth", "exit_code", "exception_type", "errno", "winerror", "error_category",
+    } for row in sink_rows)
+    assert sink_rows[0]["pid"] == 9182 and sink_rows[0]["birth"] is None
+    assert sink_rows[1]["birth"] == "start_epoch_ms:123456"
+    assert json.loads(_startup_diagnostic_path(runtime).read_text(encoding="utf-8")) == sink_rows[-1]
+
+
+def test_owned_server_start_fast_exit_records_actual_exit_and_never_mutates_child(tmp_path):
+    runtime = _startup_runtime(tmp_path)
+    process = _StartupProcess(poll_values=(17,))
+    sink_rows = []
+
+    with pytest.raises(OwnedServerError, match="exited before listener proof") as caught:
+        _launcher_for_startup(lambda *_args, **_kwargs: process).start(
+            runtime, "project", "session", observation_sink=sink_rows.append,
+        )
+
+    assert caught.value.handle.process is process
+    assert [row["event"] for row in sink_rows] == ["PROCESS_CREATED", "BIRTH_OBSERVED", "EXIT_OBSERVED"]
+    assert sink_rows[-1]["birth"] == "start_epoch_ms:123456"
+    assert sink_rows[-1]["exit_code"] == 17
+    assert json.loads(_startup_diagnostic_path(runtime).read_text(encoding="utf-8")) == sink_rows[-1]
+    assert process.mutation_calls == []
+
+
+def test_owned_server_start_missing_birth_records_unknown_and_retains_handle(tmp_path):
+    runtime = _startup_runtime(tmp_path)
+    process = _StartupProcess()
+    sink_rows = []
+
+    with pytest.raises(OwnedServerError) as caught:
+        _launcher_for_startup(
+            lambda *_args, **_kwargs: process,
+            process_identity_reader=lambda _pid: {"alive": False},
+        ).start(runtime, "project", "session", observation_sink=sink_rows.append)
+
+    assert caught.value.handle.process is process and caught.value.uncertain is True
+    assert [row["event"] for row in sink_rows] == ["PROCESS_CREATED", "STARTUP_UNKNOWN"]
+    assert sink_rows[-1]["error_category"] == "BIRTH_OBSERVATION_FAILED"
+    assert sink_rows[-1]["birth"] is None
+
+
+def test_owned_server_start_timeout_records_unknown_without_terminating_child(tmp_path):
+    runtime = _startup_runtime(tmp_path)
+    process = _StartupProcess()
+    sink_rows = []
+    launcher = _launcher_for_startup(lambda *_args, **_kwargs: process, ready_timeout_s=0.0)
+
+    with pytest.raises(OwnedServerError, match="did not publish a valid port") as caught:
+        launcher.start(runtime, "project", "session", observation_sink=sink_rows.append)
+
+    assert caught.value.handle.process is process
+    assert [row["event"] for row in sink_rows] == ["PROCESS_CREATED", "BIRTH_OBSERVED", "STARTUP_UNKNOWN"]
+    assert sink_rows[-1]["error_category"] == "STARTUP_TIMEOUT"
+    assert process.mutation_calls == []
+
+
+def test_owned_server_start_popen_failure_records_safe_type_and_no_pid(tmp_path, monkeypatch):
+    runtime = _startup_runtime(tmp_path)
+    sink_rows = []
+
+    def fail(*_args, **_kwargs):
+        raise PermissionError(13, "do not persist this secret path")
+
+    with pytest.raises(OwnedServerError, match="process creation failed") as caught_primary:
+        _launcher_for_startup(fail).start(runtime, "project", "session", observation_sink=sink_rows.append)
+
+    assert caught_primary.value.startup_exception_type == "PermissionError"
+    assert caught_primary.value.startup_errno == 13 and caught_primary.value.startup_winerror is None
+    assert caught_primary.value.diagnostic_persistence_failed is False
+    assert "secret path" not in str(caught_primary.value)
+    assert len(sink_rows) == 1
+    row = sink_rows[0]
+    assert row["event"] == "PROCESS_CREATE_FAILED"
+    assert row["pid"] is None and row["birth"] is None
+    assert row["exception_type"] == "PermissionError" and row["errno"] == 13
+    assert "secret path" not in json.dumps(row)
+    assert json.loads(_startup_diagnostic_path(runtime).read_text(encoding="utf-8")) == row
+
+    # A diagnostic sink failure cannot change the no-child launch-failure
+    # contract or invent a retained process handle.
+    no_sink_runtime = _startup_runtime(tmp_path / "sink-failure")
+    failed_sink_rows = []
+
+    def fail_sink(_row):
+        failed_sink_rows.append(dict(_row))
+        raise OSError("secret sink failure")
+
+    with pytest.raises(OwnedServerError, match="process creation failed") as caught:
+        _launcher_for_startup(fail).start(
+            no_sink_runtime, "project", "session", observation_sink=fail_sink,
+        )
+    assert caught.value.handle is None and caught.value.uncertain is False
+    assert caught.value.startup_exception_type == "PermissionError" and caught.value.startup_errno == 13
+    assert caught.value.startup_winerror is None and caught.value.diagnostic_persistence_failed is True
+    assert json.loads(_startup_diagnostic_path(no_sink_runtime).read_text(encoding="utf-8"))["event"] == "PROCESS_CREATE_FAILED"
+    assert len(failed_sink_rows) == 1 and failed_sink_rows[0]["event"] == "PROCESS_CREATE_FAILED"
+    assert "secret sink failure" not in json.dumps(failed_sink_rows)
+
+    windows_error = OSError("synthetic Windows create failure")
+    windows_error.winerror = 1234
+    win_runtime = _startup_runtime(tmp_path / "win-error")
+
+    def fail_windows(*_args, **_kwargs):
+        raise windows_error
+
+    with pytest.raises(OwnedServerError, match="process creation failed"):
+        _launcher_for_startup(fail_windows).start(win_runtime, "project", "session")
+    win_row = json.loads(_startup_diagnostic_path(win_runtime).read_text(encoding="utf-8"))
+    assert win_row["exception_type"] == "OSError" and win_row["winerror"] == 1234
+    win_caught = None
+    try:
+        _launcher_for_startup(fail_windows).start(_startup_runtime(tmp_path / "win-error-metadata"), "project", "session")
+    except OwnedServerError as exc:
+        win_caught = exc
+    assert win_caught is not None
+    assert win_caught.startup_exception_type == "OSError" and win_caught.startup_winerror == 1234
+    assert win_caught.diagnostic_persistence_failed is False
+
+    import comsol_mcp._session_server as session_server
+    sidecar_failure_runtime = _startup_runtime(tmp_path / "sidecar-failure")
+    monkeypatch.setattr(
+        session_server, "write_startup_diagnostic",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("diagnostic disk failure")),
+    )
+    sink_after_writer_failure = []
+    with pytest.raises(OwnedServerError, match="process creation failed") as caught_write:
+        _launcher_for_startup(fail).start(
+            sidecar_failure_runtime, "project", "session",
+            observation_sink=sink_after_writer_failure.append,
+        )
+    assert caught_write.value.handle is None and caught_write.value.uncertain is False
+    assert caught_write.value.startup_exception_type == "PermissionError"
+    assert caught_write.value.startup_errno == 13 and caught_write.value.diagnostic_persistence_failed is True
+    assert sink_after_writer_failure == []
+    assert not _startup_diagnostic_path(sidecar_failure_runtime).exists()
+
+def test_owned_server_start_observation_failure_does_not_retry_sink_or_drop_child(tmp_path, monkeypatch):
+    import comsol_mcp._session_server as session_server
+
+    runtime = _startup_runtime(tmp_path)
+    process = _StartupProcess()
+    sink_calls = []
+
+    def fail_sink(row):
+        sink_calls.append(dict(row))
+        raise OSError("secret sink detail")
+
+    with pytest.raises(OwnedServerError, match="observation could not be persisted") as caught:
+        _launcher_for_startup(lambda *_args, **_kwargs: process).start(
+            runtime, "project", "session", observation_sink=fail_sink,
+        )
+    assert caught.value.handle.process is process and caught.value.uncertain is True
+    assert len(sink_calls) == 1
+    assert sink_calls[0]["event"] == "PROCESS_CREATED"
+    sidecar = _startup_diagnostic_path(runtime).read_text(encoding="utf-8")
+    assert "secret sink detail" not in sidecar
+
+    # A sidecar write failure happens before callback dispatch and must not
+    # recurse through the same broken writer while handling the failure.
+    sink_calls.clear()
+    monkeypatch.setattr(session_server, "write_startup_diagnostic", lambda *_a, **_k: (_ for _ in ()).throw(OSError("secret disk detail")))
+    disk_failure_runtime = _startup_runtime(tmp_path / "disk-failure")
+    disk_failure_process = _StartupProcess(pid=9183)
+    with pytest.raises(OwnedServerError, match="observation could not be persisted") as caught_write:
+        _launcher_for_startup(lambda *_args, **_kwargs: disk_failure_process).start(
+            disk_failure_runtime, "project", "session", observation_sink=fail_sink,
+        )
+    assert caught_write.value.handle.process is disk_failure_process
+    assert sink_calls == []
+
+
+def test_startup_diagnostic_rejects_unlisted_secret_fields_and_replace_failure_preserves_old_snapshot(
+        tmp_path, monkeypatch):
+    import comsol_mcp._process_diagnostics as diagnostics
+
+    valid = {
+        "schema": "COMSOL_OWNED_SERVER_STARTUP_DIAGNOSTIC_V1", "event": "PROCESS_CREATED",
+        "observed_at_utc": "2026-09-29T12:00:00.000Z", "project_id": "project",
+        "session_id": "session", "runtime_id": "runtime", "pid": 9182, "birth": None,
+        "exit_code": None, "exception_type": None, "errno": None, "winerror": None,
+        "error_category": None,
+    }
+    for secret_field in ("token", "path", "command_line", "endpoint", "request_id", "operation_id", "job_id"):
+        with pytest.raises(ProcessDiagnosticError, match="fixed schema"):
+            sanitize_startup_observation({**valid, secret_field: "secret"})
+
+    target = tmp_path / "startup-diagnostic.json"
+    previous_row = sanitize_startup_observation(valid)
+    target.write_text(json.dumps(previous_row, sort_keys=True, separators=(",", ":")) + "\n", encoding="utf-8")
+    previous = target.read_bytes()
+    monkeypatch.setattr(diagnostics.os, "replace", lambda *_a, **_k: (_ for _ in ()).throw(OSError("replace failed")))
+    with pytest.raises(ProcessDiagnosticError, match="could not be persisted"):
+        write_startup_diagnostic(tmp_path, valid)
+    assert target.read_bytes() == previous
+    assert json.loads(target.read_text(encoding="utf-8")) == previous_row
+    assert list(tmp_path.glob(".atomic-json-snapshot-*.tmp")) == []
+
+
+def test_atomic_json_snapshot_supports_a_separate_validated_schema(tmp_path):
+    # The caller owns this schema validation; the shared primitive only
+    # performs the private atomic write and does not invent identity fields.
+    identity = {
+        "schema": "COMSOL_CONTROL_DAEMON_IDENTITY_V1",
+        "pid": 12001,
+        "process_start_epoch_ms": 123456,
+    }
+    path = tmp_path / "control-daemon-identity.json"
+    assert write_atomic_json_snapshot(path, identity) == identity
+    assert json.loads(path.read_text(encoding="utf-8")) == identity
+    assert path.stat().st_mode & 0o077 == 0
+    with pytest.raises(ProcessDiagnosticError, match="safe basename"):
+        write_atomic_json_snapshot(tmp_path / "identity.txt", identity)
 
 
 def test_lsof_field_parser_preserves_pid_and_canonical_socket_rows():

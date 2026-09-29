@@ -2689,7 +2689,7 @@
       "tests/test_session_server.py": "211855691e0a3a66d140e484395aafac9f2f163b6bc716392375bb732c2d8ab3",
       "tests/test_run_w21_stage_native.py": "487f53ea01e13fe6a4a9dab276b139d5f6f273249af0b9cb26632ec037b6943a"
     },
-    "next_action": "Await the pending narrowly scoped daemon-liveness authorization and reconcile the same Windows6.4 V2 session.start UNKNOWN. Do not start, replay, stop or clean up another session; the local DLL path guard is not proof of a Windows startup fix.",
+    "next_action": "Finish startup identity/error/exit persistence and non-sensitive diagnostic separation; extend the existing session.recover path for the exact abandoned session.start with a same-host quiescence disposition. Preserve original UNKNOWN/failure history and missing exit code; do not trust imported PASS receipts or mark native success. After controlled reconciliation and a freshly approved short-root plan, execute one minimal Windows6.4 native startup comparison, then connect/small-model solve/result readback and Windows6.3. Continue W23 analytic geometry in parallel; no new acceptance gates.",
     "critical_dll_guard_followup": {
       "status": "PASS_SCOPED_OFFLINE_SOFTWARE",
       "native_status": "NOT_RUN",
@@ -2778,7 +2778,7 @@
     "solver_dispatches": 0,
     "replay_permitted": false,
     "cleanup_permitted": false,
-    "next_action": "Await the pending narrow read-only daemon-liveness authorization; then reconcile the same original operation/job/daemon and investigate the image-library/startup-class error. Preserve UNKNOWN; do not start, replay, stop or clean up another session.",
+    "next_action": "Finish startup identity/error/exit persistence and non-sensitive diagnostic separation; extend the existing session.recover path for the exact abandoned session.start with a same-host quiescence disposition. Preserve original UNKNOWN/failure history and missing exit code; do not trust imported PASS receipts or mark native success. After controlled reconciliation and a freshly approved short-root plan, execute one minimal Windows6.4 native startup comparison, then connect/small-model solve/result readback and Windows6.3. Continue W23 analytic geometry in parallel; no new acceptance gates.",
     "image_library_basename": "CORE_RL_magick_.dll",
     "image_library_relative_alias": "ext\\graphicsmagick\\win64\\CORE_RL_magick_.dll",
     "image_library_exists": true,
@@ -2792,8 +2792,8 @@
     "operations_sqlite_wal_bytes": 292552,
     "server_port_file_exists": false,
     "exact_private_executable_path_match_count": 0,
-    "daemon_liveness": "UNVERIFIED",
-    "daemon_pid_query_status": "AUTO_REVIEW_REJECTED_TOKEN_BEARING_CONTROL_JSON_PARSE; LIMITED_USER_AUTHORIZATION_PENDING",
+    "daemon_liveness": "PROCESS_NOT_FOUND_AT_RECORDED_SNAPSHOT",
+    "daemon_pid_query_status": "LIMITED_USER_AUTHORIZATION_GRANTED_AND_EXECUTED",
     "native_execute_authorization": "AUTHORIZED_AND_USED_ONCE",
     "proposed_short_taskroot": "C:\\Temp\\w21v3_9c5ced6",
     "proposed_short_taskroot_status": "NOT_CREATED_MEASURED_EXAMPLE_ONLY",
@@ -2806,6 +2806,14 @@
       "native_status": "NOT_RUN",
       "original_unknown_unchanged": true,
       "no_replay_stop_or_cleanup": true
+    },
+    "detailed_startup_log": "FlNativeException: 找不到文件。; JNI initialization failure; root cause unproven",
+    "startup_diagnostic_software": {
+      "status": "PASS_SCOPED_OFFLINE",
+      "native_status": "NOT_RUN",
+      "unique_tests_passed": 17,
+      "receipt_sha256": "748ba255f348e3c936f9349b17f3ca1e927608cdb18f5fcaf820900241b02b22",
+      "checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json"
     }
   },
   "windows64_current_daemon_readonly": {

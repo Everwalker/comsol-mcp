@@ -7,6 +7,7 @@ stop, or adopt a Server after the original Popen handle has been lost.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
@@ -18,6 +19,7 @@ import xml.etree.ElementTree as ET
 from typing import Any, Callable, Iterable, Mapping
 
 from ._platform_process import process_identity
+from ._process_diagnostics import write_startup_diagnostic
 from ._session_context import (
     CanonicalSocket,
     OwnedServerProcessIdentity,
@@ -30,10 +32,39 @@ class OwnedServerError(RuntimeError):
     """A Server lifecycle action could not be proven safe or complete."""
 
     def __init__(self, message: str, *, handle: "ManagedServerHandle | None" = None,
-                 uncertain: bool = False):
+                 uncertain: bool = False, diagnostic_persistence_failed: bool = False,
+                 startup_exception_type: str | None = None, startup_errno: int | None = None,
+                 startup_winerror: int | None = None):
         super().__init__(message)
         self.handle = handle
         self.uncertain = uncertain
+        self.diagnostic_persistence_failed = diagnostic_persistence_failed
+        self.startup_exception_type = startup_exception_type
+        self.startup_errno = startup_errno
+        self.startup_winerror = startup_winerror
+
+
+def _safe_exception_type(exception: BaseException) -> str:
+    name = type(exception).__name__
+    if (not name or not (name[0].isascii() and (name[0].isalpha() or name[0] == "_"))
+            or not all(char.isascii() and (char.isalnum() or char == "_") for char in name[1:])
+            or len(name) > 128):
+        return "UnclassifiedError"
+    return name
+
+
+def _safe_error_code(exception: BaseException, attribute: str) -> int | None:
+    try:
+        value = getattr(exception, attribute, None)
+    except Exception:
+        return None
+    if type(value) is int and -(2**31) <= value < 2**32:
+        return value
+    return None
+
+
+class _StartupObservationError(OwnedServerError):
+    """Startup observation persistence failed after a child was created."""
 
 
 @dataclass(frozen=True)
@@ -421,12 +452,17 @@ class OwnedServerLauncher:
         self.ready_timeout_s = ready_timeout_s
         self.poll_interval_s = poll_interval_s
 
-    def start(self, runtime: SessionRuntimeConfig, project_id: str, session_id: str) -> ManagedServerHandle:
+    def start(self, runtime: SessionRuntimeConfig, project_id: str, session_id: str, *,
+              observation_sink: Callable[[Mapping[str, Any]], None] | None = None) -> ManagedServerHandle:
         if self.platform_name in {"win32", "nt", "windows"}:
             windows_owned_server_path_budget(runtime.session_state_root, project_id, session_id)
         directories = create_server_directories(runtime, project_id, session_id)
         prepare_private_loopback_installation(runtime.installation_root, directories.private_installation)
         command = build_server_command(directories, platform_name=self.platform_name)
+        # Resolve the executable before CreateProcess so no fallible path
+        # lookup can occur in the interval between a child birth and retaining
+        # its exact Popen handle.
+        executable = str(Path(command[0]).resolve())
         log_handle = directories.log_file.open("ab", buffering=0)
         options: dict[str, Any] = {
             "cwd": str(directories.root), "stdin": subprocess.DEVNULL,
@@ -440,24 +476,101 @@ class OwnedServerLauncher:
             options["executable"] = command[0]
         else:
             options["start_new_session"] = True
+
+        def emit_observation(event: str, *, pid: int | None = None, birth: str | None = None,
+                             exit_code: int | None = None, exception: BaseException | None = None,
+                             error_category: str | None = None,
+                             child_handle: ManagedServerHandle | None = None) -> None:
+            exception_type = _safe_exception_type(exception) if exception is not None else None
+            payload = {
+                "schema": "COMSOL_OWNED_SERVER_STARTUP_DIAGNOSTIC_V1",
+                "event": event,
+                "observed_at_utc": datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z"),
+                "project_id": project_id,
+                "session_id": session_id,
+                "runtime_id": runtime.runtime_id,
+                "pid": pid,
+                "birth": birth,
+                "exit_code": exit_code,
+                "exception_type": exception_type,
+                "errno": _safe_error_code(exception, "errno") if exception is not None else None,
+                "winerror": _safe_error_code(exception, "winerror") if exception is not None else None,
+                "error_category": error_category,
+            }
+            try:
+                safe_payload = write_startup_diagnostic(directories.root, payload)
+                if observation_sink is not None:
+                    observation_sink(safe_payload)
+            except Exception:
+                if child_handle is not None:
+                    raise _StartupObservationError(
+                        "owned COMSOL Server startup observation could not be persisted",
+                        handle=child_handle, uncertain=True,
+                    ) from None
+                raise
+
         try:
             process = self.process_factory(command, **options)
         except Exception as exc:
-            log_handle.close()
-            raise OwnedServerError("COMSOL Server process creation failed before process identity was retained") from exc
-        executable = str(Path(command[0]).resolve())
+            try:
+                log_handle.close()
+            except Exception:
+                pass
+            diagnostic_persistence_failed = False
+            try:
+                emit_observation(
+                    "PROCESS_CREATE_FAILED", exception=exc,
+                    error_category="PROCESS_CREATE_FAILED",
+                )
+            except Exception:
+                # The original CreateProcess failure remains the lifecycle
+                # result when no child handle exists to preserve, while its
+                # safe type/codes remain available to the daemon.
+                diagnostic_persistence_failed = True
+            raise OwnedServerError(
+                "COMSOL Server process creation failed before process identity was retained",
+                diagnostic_persistence_failed=diagnostic_persistence_failed,
+                startup_exception_type=_safe_exception_type(exc),
+                startup_errno=_safe_error_code(exc, "errno"),
+                startup_winerror=_safe_error_code(exc, "winerror"),
+            ) from None
+        process_pid = getattr(process, "pid", None)
         handle = ManagedServerHandle(
             process=process, runtime_id=runtime.runtime_id, executable=executable,
             directories=directories, log_handle=log_handle,
         )
+        phase_category = "BIRTH_OBSERVATION_FAILED"
+        terminal_observation_recorded = False
         try:
-            birth, start_epoch_ms = _birth_identity(process.pid, self.process_identity_reader)
+            emit_observation("PROCESS_CREATED", pid=process_pid, child_handle=handle)
+            birth, start_epoch_ms = _birth_identity(process_pid, self.process_identity_reader)
             handle.start_epoch_ms = start_epoch_ms
+            emit_observation("BIRTH_OBSERVED", pid=process_pid, birth=birth, child_handle=handle)
             deadline = time.monotonic() + self.ready_timeout_s
             port: int | None = None
+            phase_category = "STARTUP_TIMEOUT"
             while time.monotonic() < deadline:
-                if process.poll() is not None:
-                    raise OwnedServerError("task-owned COMSOL Server exited before listener proof", handle=handle, uncertain=True)
+                observed_exit = process.poll()
+                if observed_exit is not None:
+                    if type(observed_exit) is int:
+                        emit_observation(
+                            "EXIT_OBSERVED", pid=process_pid,
+                            birth=(f"start_epoch_ms:{handle.start_epoch_ms}" if handle.start_epoch_ms else None),
+                            exit_code=observed_exit,
+                            exception=OwnedServerError("child exited before listener proof"),
+                            error_category="PROCESS_EXITED_BEFORE_READY", child_handle=handle,
+                        )
+                    else:
+                        emit_observation(
+                            "STARTUP_UNKNOWN", pid=process_pid,
+                            exception=OwnedServerError("child exit status was malformed"),
+                            error_category="STARTUP_UNKNOWN", child_handle=handle,
+                        )
+                    terminal_observation_recorded = True
+                    raise OwnedServerError(
+                        "task-owned COMSOL Server exited before listener proof",
+                        handle=handle, uncertain=True,
+                    )
                 try:
                     value = int(directories.port_file.read_text(encoding="utf-8").strip())
                     if 1 <= value <= 65535:
@@ -468,24 +581,69 @@ class OwnedServerLauncher:
                 time.sleep(self.poll_interval_s)
             if port is None:
                 raise OwnedServerError("task-owned COMSOL Server did not publish a valid port", handle=handle, uncertain=True)
-            listeners = _verified_loopback_listener(process.pid, port, self.listener_reader)
-            current_birth, current_start = _birth_identity(process.pid, self.process_identity_reader)
+            phase_category = "LISTENER_PROOF_FAILED"
+            listeners = _verified_loopback_listener(process_pid, port, self.listener_reader)
+            phase_category = "PROCESS_IDENTITY_CHANGED"
+            current_birth, current_start = _birth_identity(process_pid, self.process_identity_reader)
             if current_birth != birth or current_start != start_epoch_ms:
                 raise OwnedServerError("COMSOL Server process identity changed during startup", handle=handle, uncertain=True)
             endpoint = CanonicalSocket("127.0.0.1", port)
             identity = OwnedServerProcessIdentity(
-                pid=process.pid, birth=birth, executable=executable,
+                pid=process_pid, birth=birth, executable=executable,
                 listener_sockets=listeners, start_epoch_ms=start_epoch_ms,
             )
             handle.endpoint = endpoint
             handle.process_identity = identity
+            emit_observation("READY", pid=process_pid, birth=birth, child_handle=handle)
             return handle
+        except _StartupObservationError:
+            raise
         except OwnedServerError as exc:
+            if not terminal_observation_recorded:
+                exit_code: Any = None
+                try:
+                    exit_code = process.poll()
+                except Exception:
+                    pass
+                if type(exit_code) is int:
+                    emit_observation(
+                        "EXIT_OBSERVED", pid=process_pid,
+                        birth=(f"start_epoch_ms:{handle.start_epoch_ms}" if handle.start_epoch_ms else None),
+                        exit_code=exit_code,
+                        exception=exc, error_category="PROCESS_EXITED_BEFORE_READY",
+                        child_handle=handle,
+                    )
+                else:
+                    emit_observation(
+                        "STARTUP_UNKNOWN", pid=process_pid,
+                        birth=(f"start_epoch_ms:{handle.start_epoch_ms}" if handle.start_epoch_ms else None),
+                        exception=exc, error_category=phase_category, child_handle=handle,
+                    )
             if exc.handle is None:
                 exc.handle = handle
                 exc.uncertain = True
             raise
         except Exception as exc:
+            if not terminal_observation_recorded:
+                exit_code = None
+                try:
+                    exit_code = process.poll()
+                except Exception:
+                    pass
+                if type(exit_code) is int:
+                    emit_observation(
+                        "EXIT_OBSERVED", pid=process_pid,
+                        birth=(f"start_epoch_ms:{handle.start_epoch_ms}" if handle.start_epoch_ms else None),
+                        exit_code=exit_code,
+                        exception=exc, error_category="PROCESS_EXITED_BEFORE_READY",
+                        child_handle=handle,
+                    )
+                else:
+                    emit_observation(
+                        "STARTUP_UNKNOWN", pid=process_pid,
+                        birth=(f"start_epoch_ms:{handle.start_epoch_ms}" if handle.start_epoch_ms else None),
+                        exception=exc, error_category=phase_category, child_handle=handle,
+                    )
             raise OwnedServerError("owned COMSOL Server start lacks complete process/listener proof",
                                    handle=handle, uncertain=True) from exc
 
