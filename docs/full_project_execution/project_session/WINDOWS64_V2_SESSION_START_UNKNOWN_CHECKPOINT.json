@@ -289,7 +289,17 @@
     },
     "limits": "Original Windows V2 budget is used, not reset. No new native invocation has occurred. Actual field/unit/mesh evidence must be distinguished from configured expectations. A smoke receipt is not stage-run admission, stage transfer, physical acceptance or overall W21 completion.",
     "unknown_behavior": "Preserve exact original job identity and stop dependent actions; never replay an uncertain solve or launch.",
-    "executor": "/root/luna_stage_output"
+    "executor": "/root/luna_stage_output",
+    "main_review": {
+      "status": "REPAIRS_IN_PROGRESS_NOT_ACCEPTED",
+      "findings": [
+        "Keep the old metadata-only Windows 6.3 prerequisite contract; require the new solve/readback receipt only for solve-readback mode.",
+        "Persist possible study/solver and read dispatch consumption before sending; UNKNOWN must not imply zero consumed budget.",
+        "Bound the server-side queue/execution envelope by the remaining work window, not only the client RPC wait."
+      ],
+      "actual_read_strategy": "Public result.evaluate returns a complete dataset FieldArray. Match the selected actual SolutionInfo tuple against returned axes/coordinates/solution_pairs and reject incomplete, malformed, nonfinite or over-budget payloads. No internal stage selector/admission bypass.",
+      "native_status": "NOT_RUN"
+    }
   },
   "startup_recovery_software": {
     "status": "PASS_SCOPED_OFFLINE",
@@ -340,5 +350,29 @@
     ],
     "limits": "Offline software tests use synthetic host observations and localhost Python children. The separately captured Windows query passed read-only, but the original database has not been recovered and no fresh COMSOL startup has run.",
     "next_action": "Freeze and verify a current-source recovery driver; consistent SQLite backup before starting a fresh controller on the old task home; run existing authenticated session.recover once. After actual reconciliation, one short-root Windows 6.4 solve-readback attempt, then 6.3."
+  },
+  "recovery_source_handoff": {
+    "status": "PREPARED_VERIFIED_LOCALLY_UPLOAD_AUTHORIZATION_PENDING",
+    "source_head": "15e7bea61e9ef06b29d9a51f55fcddebcb773b7a",
+    "source_files": 104,
+    "archive_members": 107,
+    "archive_bytes": 942059,
+    "archive_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-recovery-15e7bea/recovery-source-15e7bea.tar.gz",
+    "archive_sha256": "13fd36f674331e0f50a85f2d6501598808b147af403e5d343a6eeb642b0814ac",
+    "source_manifest_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-recovery-15e7bea/source-manifest.json",
+    "source_manifest_sha256": "2837f8cac79ceba8918d99f26c548a08f851af0d5d48563e913692d640774d87",
+    "git_blob_match": "104/104",
+    "worktree_patch_bytes": 0,
+    "new_files": [],
+    "selection": "All tracked comsol_mcp files, pyproject.toml, tools/windows_handoff_snapshot.py at exact commit; excludes dirty runner/W23, logs, environments, token and runtime data.",
+    "local_verified_extraction": true,
+    "windows_task_directory": "C:\\Temp\\w21r15e7",
+    "windows_task_directory_created": true,
+    "archive_upload_executed": false,
+    "helper_upload_executed": false,
+    "remote_extract_executed": false,
+    "daemon_or_native_started": false,
+    "approval": "Automatic permission review rejected SCP because exact private-source payload and destination were not explicitly authorized in available text. Exact upload/verification/extraction authorization requested; no bypass or alternate channel used.",
+    "reproduce": "Generate explicit source manifest from listed Git blobs; require matching working-tree hashes; use existing windows_handoff_snapshot.create_snapshot/extract_verified with no overwrite."
   }
 }
