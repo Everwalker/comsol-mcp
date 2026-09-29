@@ -2458,6 +2458,341 @@ def test_session_disconnect_refuses_binding_with_accepted_worker_task(tmp_path):
         daemon.close()
 
 
+def _interrupted_session_start(daemon: ControlDaemon, project_id: str, session_id: str,
+                               *, lifecycle: dict | None = None) -> dict:
+    from comsol_mcp._execution_contract import canonical_request_hash
+
+    runtime_id = "fixture-runtime"
+    if lifecycle is None:
+        lifecycle = new_lifecycle_record(
+            project_id=project_id, session_id=session_id, state="STARTING",
+            runtime_id=runtime_id, endpoint=None,
+            client_state="DISCONNECTED", server_state="UNKNOWN", server_ownership="unknown",
+        )
+    daemon.session_lifecycle.save(lifecycle)
+    semantic_arguments = {"runtime_id": runtime_id, "options": {}, "resources": {}}
+    request_id = f"legacy-start-request-{session_id}"
+    idempotency_key = f"legacy-start-key-{session_id}"
+    record, reused = daemon.store.begin(
+        request_id=request_id,
+        idempotency_key=idempotency_key,
+        request_hash=canonical_request_hash(
+            "session.start", semantic_arguments, None, None, project_id=project_id,
+        ),
+        operation="session.start",
+        metadata={
+            "operation": "session.start", "project_id": project_id,
+            "session_id": session_id, "runtime_id": runtime_id,
+            "arguments": semantic_arguments,
+            "execution": {"project_id": project_id, "session_id": session_id},
+        },
+    )
+    assert reused is False
+    daemon._start_session_mutation_record(record, operation="session.start", session_id=session_id)
+    assert daemon.store.reconcile_after_restart() == [record["job_id"]]
+    daemon._control_singleton_lock_held = True
+    return record
+
+
+def _empty_host_start_quiescence() -> dict:
+    return {
+        "observed_at_utc": "2026-09-29T03:30:00.000Z",
+        "process_inventory": {
+            "status": "COMPLETE", "candidate_count": 0,
+            "unresolved_candidate_count": 0, "task_owned_match_count": 0,
+            "canonical_engine_match_count": 0,
+        },
+        "listener_inventory": {
+            "status": "COMPLETE", "rows_scanned": 56,
+            "owner_query_unresolved_count": 0, "task_owned_match_count": 0,
+            "canonical_engine_match_count": 0,
+        },
+    }
+
+
+def test_session_recover_abandons_only_exact_interrupted_start_after_complete_host_observation(
+        tmp_path, monkeypatch):
+    daemon = _daemon(tmp_path)
+    try:
+        project = _create_project(daemon, "start-recovery-positive")
+        project_id = project["project_id"]
+        session_id = "session-legacy-start"
+        source = _interrupted_session_start(daemon, project_id, session_id)
+        monkeypatch.setattr(
+            daemon, "_observe_session_start_quiescence",
+            lambda *_args: _empty_host_start_quiescence(),
+        )
+
+        recovered = daemon.dispatch(_session_mutation_request(
+            "session.recover", project_id, session_id, "recover-legacy-start-once",
+        ))
+
+        assert recovered["success"] is True, json.dumps(recovered, sort_keys=True)
+        data = recovered["data"]
+        assert data["recovery_status"] == "PARTIAL_HISTORICAL_UNKNOWN_RETAINED"
+        assert data["replayed_requests"] == 0
+        assert data["new_worker_created"] is False
+        assert len(data["resolved_jobs"]) == 1
+        assert data["resolved_jobs"][0]["job_id"] == source["job_id"]
+        assert data["resolved_jobs"][0]["outcome_resolution"] == "UNVERIFIED_HISTORICAL_UNKNOWN"
+        assert data["resolved_jobs"][0]["quiescence_resolution"] == "PROVEN_AND_AUDITED"
+        assert data["resolved_jobs"][0]["lifecycle_state_after"] == "STOPPED"
+
+        source_after = daemon.store.job(source["job_id"])
+        assert source_after["status"] == source_after["operation"]["status"] == "UNKNOWN"
+        assert source_after["result"]["success"] is False
+        assert source_after["result"]["data"]["server_birth_observed"] == "UNKNOWN"
+        assert source_after["result"]["data"]["server_exit_code"] == "UNKNOWN"
+        assert source_after["metadata"]["reconciled_quiescent"] is True
+        assert daemon._job_quiescence_proven(source_after) is True
+
+        proof = daemon.store.session_lifecycle_recovery_resolution(source["job_id"])
+        assert proof["event"] == "SessionLifecycleRecoveryResolution"
+        assert proof["metadata"]["resolution_scope"] == (
+            "ABANDONED_UNKNOWN_START_CURRENT_HOST_QUIESCENCE"
+        )
+        assert proof["metadata"]["source_job_id"] == source["job_id"]
+        assert proof["metadata"]["session_recovery_operation_id"] == recovered["execution"]["operation_id"]
+        assert proof["metadata"]["replay_performed"] is False
+        assert proof["metadata"]["new_worker_created"] is False
+
+        lifecycle = daemon.session_lifecycle.get(project_id, session_id)
+        assert lifecycle["state"] == "STOPPED"
+        assert lifecycle["endpoint"] is None
+        assert lifecycle["server_process_identity"] is None
+    finally:
+        daemon.close()
+
+
+def test_verified_interrupted_start_resolution_survives_restart_and_reopens_admission(
+        tmp_path, monkeypatch):
+    monkeypatch.setenv("COMSOL_MCP_HOST_CONTROL", "1")
+    daemon = _daemon(tmp_path)
+    try:
+        project_result = daemon.dispatch({
+            "operation": "project.create",
+            "arguments": {
+                "label": "start-recovery-restart",
+                "workspace": "start-recovery-restart",
+                "policy": {"permissions": ["inspect", "project_write", "compute", "host_control"]},
+            },
+            "execution": {"request_id": "create-start-recovery-restart",
+                          "idempotency_key": "create-start-recovery-restart"},
+        })
+        assert project_result["success"] is True, project_result
+        project_id = project_result["data"]["project"]["project_id"]
+        session_id = "session-start-recovery-restart"
+        source = _interrupted_session_start(daemon, project_id, session_id)
+
+        # A second UNKNOWN start with a caller-set marker but no proof must
+        # still be reconciled. Only the daemon's full proof verifier may keep
+        # a historic UNKNOWN row out of restart reconciliation.
+        other_project = _create_project(daemon, "start-recovery-restart-unverified")
+        unverified = _interrupted_session_start(
+            daemon, other_project["project_id"], "session-start-recovery-unverified",
+        )
+        daemon.store.update_job(unverified["job_id"], "UNKNOWN", {"reconciled_quiescent": True})
+
+        monkeypatch.setattr(
+            daemon, "_observe_session_start_quiescence",
+            lambda *_args: _empty_host_start_quiescence(),
+        )
+        first_recovery = daemon.dispatch(_session_mutation_request(
+            "session.recover", project_id, session_id, "recover-start-before-restart",
+        ))
+        assert first_recovery["success"] is True, first_recovery
+        source_before_restart = daemon.store.job(source["job_id"])
+        assert source_before_restart["status"] == source_before_restart["operation"]["status"] == "UNKNOWN"
+        assert daemon._session_start_lifecycle_recovery_resolution_is_valid(source_before_restart) is True
+    finally:
+        daemon.close()
+
+    restarted = ControlDaemon(
+        tmp_path / "control", project_root=tmp_path / "workspaces", registry={},
+    )
+    try:
+        source_after_restart = restarted.store.job(source["job_id"])
+        assert source_after_restart["status"] == source_after_restart["operation"]["status"] == "UNKNOWN"
+        assert restarted._session_start_lifecycle_recovery_resolution_is_valid(source_after_restart) is True
+        assert restarted.session_lifecycle.get(project_id, session_id)["state"] == "STOPPED"
+
+        unverified_after_restart = restarted.store.job(unverified["job_id"])
+        assert (unverified_after_restart["status"]
+                == unverified_after_restart["operation"]["status"] == "RECONCILING")
+
+        monkeypatch.setattr(
+            restarted, "_observe_session_start_quiescence",
+            lambda *_args: pytest.fail("an already verified historical start must not be reprobed"),
+        )
+        repeated_recovery = restarted.dispatch(_session_mutation_request(
+            "session.recover", project_id, session_id, "recover-start-after-restart",
+        ))
+        assert repeated_recovery["success"] is True, repeated_recovery
+        assert repeated_recovery["data"]["resolved_jobs"][0]["quiescence_resolution"] == "ALREADY_PROVEN"
+
+        inspected = restarted.dispatch({
+            "operation": "session.inspect",
+            "arguments": {"project_id": project_id, "session_id": session_id},
+            "execution": {},
+        })
+        assert inspected["success"] is True, inspected
+        assert inspected["data"]["lifecycle"]["state"] == "STOPPED"
+
+        def stop_before_runtime(*_args):
+            raise RuntimeError("synthetic prebirth runtime stop")
+
+        monkeypatch.setattr(restarted, "_resolve_session_runtime", stop_before_runtime)
+        next_start = restarted.dispatch({
+            "operation": "session.start",
+            "arguments": {
+                "project_id": project_id, "runtime_id": "fixture-runtime",
+                "idempotency_key": "new-start-after-recovery-restart",
+            },
+            "execution": {},
+        })
+        assert next_start["success"] is False
+        assert next_start["error"]["code"] == "RUNTIME_CONFIGURATION_REQUIRED"
+        assert next_start["data"]["server_birth_performed"] is False
+        source_final = restarted.store.job(source["job_id"])
+        assert source_final["status"] == source_final["operation"]["status"] == "UNKNOWN"
+        assert restarted._session_start_lifecycle_recovery_resolution_is_valid(source_final) is True
+    finally:
+        restarted.close()
+
+
+@pytest.mark.parametrize(
+    "inventory_change",
+    [
+        {"process_inventory": {"task_owned_match_count": 1}},
+        {"process_inventory": {"unresolved_candidate_count": 1}},
+        {"listener_inventory": {"owner_query_unresolved_count": 1}},
+    ],
+    ids=["task-process-match", "incomplete-process-inventory", "unresolved-listener-owner"],
+)
+def test_session_recover_keeps_interrupted_start_unknown_without_complete_quiescence(
+        tmp_path, monkeypatch, inventory_change):
+    daemon = _daemon(tmp_path)
+    try:
+        project = _create_project(daemon, "start-recovery-negative")
+        project_id = project["project_id"]
+        session_id = "session-start-not-quiescent"
+        source = _interrupted_session_start(daemon, project_id, session_id)
+        observation = _empty_host_start_quiescence()
+        for section, fields in inventory_change.items():
+            observation[section].update(fields)
+        monkeypatch.setattr(daemon, "_observe_session_start_quiescence", lambda *_args: observation)
+
+        recovered = daemon.dispatch(_session_mutation_request(
+            "session.recover", project_id, session_id, "recover-start-negative",
+        ))
+
+        assert recovered["success"] is True, recovered
+        assert recovered["data"]["resolved_jobs"] == []
+        assert any(item.get("reason") == "CURRENT_HOST_QUIESCENCE_NOT_PROVEN"
+                   for item in recovered["data"]["unresolved_items"])
+        source_after = daemon.store.job(source["job_id"])
+        assert source_after["status"] == source_after["operation"]["status"] == "UNKNOWN"
+        assert source_after["result"]["success"] is False
+        assert source_after["metadata"].get("reconciled_quiescent") is not True
+        assert daemon.store.session_lifecycle_recovery_resolution(source["job_id"]) is None
+        assert daemon.session_lifecycle.get(project_id, session_id)["state"] == "UNKNOWN"
+    finally:
+        daemon.close()
+
+
+def test_session_recover_rechecks_recorded_startup_pid_birth_before_quiescence_proof(
+        tmp_path, monkeypatch):
+    from comsol_mcp import _control_daemon as control_daemon_module
+
+    daemon = _daemon(tmp_path)
+    try:
+        project = _create_project(daemon, "start-recovery-pid")
+        project_id = project["project_id"]
+        session_id = "session-start-pid-observed"
+        source = _interrupted_session_start(daemon, project_id, session_id)
+        startup_pid = 39001
+        startup_birth = 1790641470225
+        daemon.store.add_event(source["job_id"], "SessionServerStartupObservation", {
+            "schema": "COMSOL_OWNED_SERVER_STARTUP_DIAGNOSTIC_V1",
+            "event": "BIRTH_OBSERVED",
+            "observed_at_utc": "2026-09-29T03:30:00.000Z",
+            "project_id": project_id, "session_id": session_id,
+            "runtime_id": "fixture-runtime", "pid": startup_pid,
+            "birth": f"start_epoch_ms:{startup_birth}", "exit_code": None,
+            "exception_type": None, "errno": None, "winerror": None,
+            "error_category": None,
+            "request_id": source["request_id"],
+            "idempotency_key": source["idempotency_key"],
+            "request_hash": source["request_hash"],
+            "operation_id": source["operation_id"], "job_id": source["job_id"],
+        })
+        original_identity = control_daemon_module.process_identity
+
+        def process_identity(pid):
+            if pid == startup_pid:
+                return {"alive": True, "start_epoch_ms": startup_birth}
+            return original_identity(pid)
+
+        monkeypatch.setattr(control_daemon_module, "process_identity", process_identity)
+        monkeypatch.setattr(
+            daemon, "_observe_session_start_quiescence",
+            lambda *_args: _empty_host_start_quiescence(),
+        )
+
+        recovered = daemon.dispatch(_session_mutation_request(
+            "session.recover", project_id, session_id, "recover-start-live-pid",
+        ))
+
+        assert recovered["success"] is True, recovered
+        assert recovered["data"]["resolved_jobs"] == []
+        observation = recovered["data"]["request_observations"][0]
+        assert observation["process_inventory"]["startup_pid_live_count"] == 1
+        assert observation["process_inventory"]["startup_pid_unresolved_count"] == 0
+        assert daemon.store.session_lifecycle_recovery_resolution(source["job_id"]) is None
+        assert daemon.session_lifecycle.get(project_id, session_id)["state"] == "UNKNOWN"
+    finally:
+        daemon.close()
+
+
+def test_interrupted_start_refuses_to_clear_existing_server_or_worker_identity(tmp_path, monkeypatch):
+    daemon = _daemon(tmp_path)
+    try:
+        project = _create_project(daemon, "start-recovery-preserve-identity")
+        project_id = project["project_id"]
+        session_id = "session-start-has-identities"
+        endpoint = {"host": "127.0.0.1", "port": 2046}
+        lifecycle = new_lifecycle_record(
+            project_id=project_id, session_id=session_id, state="UNKNOWN",
+            runtime_id="fixture-runtime", endpoint=endpoint,
+            client_state="UNKNOWN", server_state="UNKNOWN", server_ownership="unknown",
+            worker_instance_id="preserve-worker-id", worker_epoch=7,
+            server_instance_id="preserve-server-epoch",
+            server_process_identity={
+                "pid": 39002, "birth": "start_epoch_ms:1790641470226",
+                "executable": r"C:\COMSOL\bin\win64\comsolmphserver.exe",
+                "runtime_id": "fixture-runtime", "endpoint": endpoint,
+            },
+        )
+        source = _interrupted_session_start(daemon, project_id, session_id, lifecycle=lifecycle)
+        daemon._observe_session_start_quiescence = lambda *_args: pytest.fail(
+            "existing lifecycle identities must not be cleared or treated as legacy"
+        )
+
+        recovered = daemon.dispatch(_session_mutation_request(
+            "session.recover", project_id, session_id, "recover-start-existing-identity",
+        ))
+
+        assert recovered["success"] is True, recovered
+        assert recovered["data"]["resolved_jobs"] == []
+        assert any(item.get("reason") == "SESSION_LIFECYCLE_NOT_INTERRUPTED_START"
+                   for item in recovered["data"]["unresolved_items"])
+        current = daemon.session_lifecycle.get(project_id, session_id)
+        assert current == lifecycle
+        assert daemon.store.session_lifecycle_recovery_resolution(source["job_id"]) is None
+    finally:
+        daemon.close()
+
+
 def test_session_disconnect_preflight_identity_mismatch_fences_context_and_records_unknown(tmp_path):
     worker = _InjectedConnectWorker()
     daemon, project_id = _connect_daemon(tmp_path, worker)

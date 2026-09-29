@@ -7,6 +7,7 @@ from pathlib import Path
 import subprocess
 import sys
 import textwrap
+from types import SimpleNamespace
 
 import pytest
 
@@ -317,6 +318,282 @@ def test_owned_server_start_idempotency_reuses_original_process(tmp_path, monkey
                 if process.poll() is None:
                     process.terminate()
                     process.wait(timeout=3)
+
+
+def _startup_observation(event, project_id, session_id, runtime_id, **changes):
+    return {
+        "schema": "COMSOL_OWNED_SERVER_STARTUP_DIAGNOSTIC_V1",
+        "event": event,
+        "observed_at_utc": "2026-09-29T00:00:00.000Z",
+        "project_id": project_id,
+        "session_id": session_id,
+        "runtime_id": runtime_id,
+        "pid": None,
+        "birth": None,
+        "exit_code": None,
+        "exception_type": None,
+        "errno": None,
+        "winerror": None,
+        "error_category": None,
+        **changes,
+    }
+
+
+class _StartupObservationFailureLauncher:
+    def __init__(self, *, born):
+        self.born = born
+
+    def start(self, runtime, project_id, session_id, *, observation_sink=None):
+        if self.born:
+            handle = SimpleNamespace(
+                process=SimpleNamespace(pid=77123), runtime_id=runtime.runtime_id,
+                endpoint=None, process_identity=None,
+            )
+            payload = _startup_observation(
+                "PROCESS_CREATED", project_id, session_id, runtime.runtime_id, pid=77123,
+            )
+        else:
+            handle = None
+            payload = _startup_observation(
+                "PROCESS_CREATE_FAILED", project_id, session_id, runtime.runtime_id,
+                exception_type="OSError", errno=2, error_category="PROCESS_CREATE_FAILED",
+            )
+        try:
+            observation_sink(payload)
+        except Exception:
+            if self.born:
+                raise OwnedServerError(
+                    "startup observation failed after process creation", handle=handle, uncertain=True,
+                ) from None
+            raise
+        if self.born:
+            raise OwnedServerError("injected incomplete startup proof", handle=handle, uncertain=True)
+        raise OwnedServerError("injected process creation failure")
+
+
+def _startup_observation_events(daemon, job_id):
+    return [event for event in daemon.store.events(job_id)
+            if event["event"] == "SessionServerStartupObservation"]
+
+
+@pytest.mark.skipif(sys.platform not in {"darwin", "win32"}, reason="session launcher adapters are supported on Darwin and Windows")
+def test_session_start_persists_safe_startup_observation_with_original_operation_identity(
+        tmp_path, monkeypatch):
+    daemon = None
+    try:
+        daemon, project_id, _command, _xml, _hash = _make_daemon(
+            tmp_path, monkeypatch, server_launcher=_StartupObservationFailureLauncher(born=True),
+        )
+        result = _start(daemon, project_id, key="startup-observation-unknown")
+
+        assert result["success"] is False
+        assert result["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
+        execution = result["execution"]
+        job = daemon.store.job(execution["job_id"])
+        assert job["status"] == "UNKNOWN"
+        assert job["operation"]["status"] == "UNKNOWN"
+        assert job["operation"]["request_id"] == execution["request_id"]
+        assert job["operation"]["idempotency_key"] == "startup-observation-unknown"
+        assert job["operation_id"] == execution["operation_id"]
+
+        events = _startup_observation_events(daemon, execution["job_id"])
+        assert len(events) == 1
+        metadata = events[0]["metadata"]
+        assert metadata["event"] == "PROCESS_CREATED"
+        assert metadata["pid"] == 77123 and metadata["birth"] is None
+        assert metadata["project_id"] == project_id
+        assert metadata["session_id"] == result["data"]["session_id"]
+        assert metadata["runtime_id"] == "fixture-runtime"
+        assert metadata["request_id"] == execution["request_id"]
+        assert metadata["idempotency_key"] == "startup-observation-unknown"
+        assert metadata["request_hash"] == execution["request_hash"]
+        assert metadata["operation_id"] == execution["operation_id"]
+        assert metadata["job_id"] == execution["job_id"]
+        serialized = json.dumps(metadata, sort_keys=True).casefold()
+        assert "token" not in serialized and "commandline" not in serialized
+        assert "executable" not in serialized and "endpoint" not in serialized
+        assert daemon.session_lifecycle.get(project_id, result["data"]["session_id"])["state"] == "UNKNOWN"
+    finally:
+        if daemon is not None:
+            daemon.close()
+
+
+@pytest.mark.skipif(sys.platform not in {"darwin", "win32"}, reason="session launcher adapters are supported on Darwin and Windows")
+def test_session_start_process_create_failure_records_failed_without_raw_exception(
+        tmp_path, monkeypatch):
+    daemon = None
+    try:
+        daemon, project_id, _command, _xml, _hash = _make_daemon(
+            tmp_path, monkeypatch, server_launcher=_StartupObservationFailureLauncher(born=False),
+        )
+        result = _start(daemon, project_id, key="startup-prebirth-failure")
+
+        assert result["success"] is False
+        assert result["error"]["code"] == "SERVER_START_FAILED"
+        assert result["data"]["server_birth_performed"] is False
+        execution = result["execution"]
+        job = daemon.store.job(execution["job_id"])
+        assert job["status"] == job["operation"]["status"] == "FAILED"
+        events = _startup_observation_events(daemon, execution["job_id"])
+        assert len(events) == 1
+        metadata = events[0]["metadata"]
+        assert metadata["event"] == "PROCESS_CREATE_FAILED"
+        assert metadata["pid"] is None and metadata["exit_code"] is None
+        assert metadata["exception_type"] == "OSError" and metadata["errno"] == 2
+        assert "message" not in metadata and "traceback" not in metadata
+        assert daemon.session_lifecycle.get(project_id, result["data"]["session_id"])["state"] == "STOPPED"
+    finally:
+        if daemon is not None:
+            daemon.close()
+
+
+@pytest.mark.skipif(sys.platform not in {"darwin", "win32"}, reason="session launcher adapters are supported on Darwin and Windows")
+def test_session_start_observation_store_failure_remains_unknown_and_finish_readback_is_authoritative(
+        tmp_path, monkeypatch):
+    daemon = None
+    try:
+        daemon, project_id, _command, _xml, _hash = _make_daemon(
+            tmp_path, monkeypatch, server_launcher=_StartupObservationFailureLauncher(born=True),
+        )
+        add_event = daemon.store.add_event
+
+        def fail_startup_event(job_id, event, metadata=None):
+            if event == "SessionServerStartupObservation":
+                raise OSError("synthetic private store detail")
+            return add_event(job_id, event, metadata)
+
+        monkeypatch.setattr(daemon.store, "add_event", fail_startup_event)
+        update_job = daemon.store.update_job
+
+        def fail_after_unknown_finish(job_id, status, metadata=None, *, result=None):
+            if status == "UNKNOWN":
+                raise OSError("synthetic post-finish update failure")
+            return update_job(job_id, status, metadata, result=result)
+
+        monkeypatch.setattr(daemon.store, "update_job", fail_after_unknown_finish)
+        result = _start(daemon, project_id, key="startup-observation-store-failure")
+
+        assert result["success"] is False
+        assert result["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
+        assert result["data"]["startup_observation_persist_error_type"] == "OSError"
+        execution = result["execution"]
+        job = daemon.store.job(execution["job_id"])
+        assert job["status"] == job["operation"]["status"] == "UNKNOWN"
+        assert job["result"] == result
+        assert _startup_observation_events(daemon, execution["job_id"]) == []
+    finally:
+        if daemon is not None:
+            daemon.close()
+
+
+def test_control_daemon_sidecar_distinguishes_serve_loop_from_process_exit(tmp_path):
+    from comsol_mcp._control_daemon import _write_control_daemon_identity
+
+    base = {
+        "schema": "COMSOL_CONTROL_DAEMON_IDENTITY_V1",
+        "observed_at_utc": "2026-09-29T03:30:00.000Z",
+        "pid": 39003,
+        "birth": "start_epoch_ms:1790641470227",
+        "exit_code": None,
+        "exception_type": None,
+        "errno": None,
+        "winerror": None,
+        "error_category": None,
+    }
+    ready = {**base, "event": "DAEMON_READY"}
+    assert _write_control_daemon_identity(tmp_path, ready) == ready
+
+    returned = {
+        **base, "event": "DAEMON_SERVE_RETURNED",
+        "error_category": "DAEMON_SERVE_LOOP_RETURNED",
+    }
+    assert _write_control_daemon_identity(tmp_path, returned) == returned
+    persisted = json.loads((tmp_path / "control-daemon-identity.json").read_text(encoding="utf-8"))
+    assert persisted == returned
+    assert persisted["exit_code"] is None
+
+    failed = {
+        **base, "event": "DAEMON_SERVE_FAILED",
+        "exception_type": "RuntimeError",
+        "error_category": "DAEMON_SERVE_LOOP_RAISED",
+    }
+    assert _write_control_daemon_identity(tmp_path, failed) == failed
+
+    for invalid in (
+        {**base, "event": "DAEMON_EXIT_OBSERVED", "exit_code": 0,
+         "error_category": "DAEMON_EXITED_NORMALLY"},
+        {**returned, "exit_code": 0},
+        {**returned, "token": "synthetic-secret"},
+    ):
+        with pytest.raises(ValueError):
+            _write_control_daemon_identity(tmp_path, invalid)
+
+
+def test_control_daemon_serve_terminal_observations_never_claim_process_exit(tmp_path, monkeypatch):
+    from comsol_mcp import _control_daemon as daemon_module
+
+    class FakeLock:
+        def __init__(self, _path):
+            pass
+
+        def close(self):
+            pass
+
+    class FakeDaemon:
+        def __init__(self, _home):
+            self._control_singleton_lock_held = False
+
+    class FakeServer:
+        server_port = 24888
+
+        def __init__(self, *, raised=None):
+            self.raised = raised
+            self.daemon_threads = False
+
+        def serve_forever(self):
+            if self.raised is not None:
+                raise self.raised
+
+    returned_server = FakeServer()
+    failed_server = FakeServer(raised=RuntimeError("synthetic serve loop failure"))
+    servers = iter((returned_server, failed_server))
+    monkeypatch.setattr(daemon_module, "ProcessLock", FakeLock)
+    monkeypatch.setattr(daemon_module, "ControlDaemon", FakeDaemon)
+    monkeypatch.setattr(daemon_module, "ThreadingHTTPServer", lambda *_args: next(servers))
+    monkeypatch.setattr(
+        daemon_module, "process_identity",
+        lambda _pid: {"alive": True, "start_epoch_ms": 1790641470228},
+    )
+
+    path_replace = Path.replace
+
+    def discard_temporary_control_endpoint(path, target):
+        target_path = Path(target)
+        if path.name == "control.json.tmp" and target_path.name == "control.json":
+            path.unlink()
+            return target_path
+        return path_replace(path, target)
+
+    monkeypatch.setattr(Path, "replace", discard_temporary_control_endpoint)
+
+    returned_home = tmp_path / "returned"
+    daemon_module.serve(returned_home)
+    returned = json.loads((returned_home / "control-daemon-identity.json").read_text(encoding="utf-8"))
+    assert returned["event"] == "DAEMON_SERVE_RETURNED"
+    assert returned["error_category"] == "DAEMON_SERVE_LOOP_RETURNED"
+    assert returned["exit_code"] is None
+    assert not (returned_home / "control.json").exists()
+
+    failed_home = tmp_path / "failed"
+    with pytest.raises(RuntimeError, match="synthetic serve loop failure"):
+        daemon_module.serve(failed_home)
+    failed = json.loads((failed_home / "control-daemon-identity.json").read_text(encoding="utf-8"))
+    assert failed["event"] == "DAEMON_SERVE_FAILED"
+    assert failed["error_category"] == "DAEMON_SERVE_LOOP_RAISED"
+    assert failed["exception_type"] == "RuntimeError"
+    assert failed["exit_code"] is None
+    assert "synthetic serve loop failure" not in json.dumps(failed)
+    assert not (failed_home / "control.json").exists()
 
 
 @pytest.mark.skipif(sys.platform not in {"darwin", "win32"}, reason="exact process/listener proof adapter is supported on Darwin and Windows")

@@ -7,7 +7,7 @@ import sqlite3
 import threading
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 from uuid import uuid4
 
 
@@ -821,6 +821,195 @@ class OperationStore:
                 return None
             return {**dict(row), "metadata": json.loads(row["metadata"] or "{}")}
 
+    def mark_interrupted_session_start_unknown(
+        self, *, job_id: str, operation_id: str, request_id: str,
+        idempotency_key: str, request_hash: str, project_id: str,
+        session_id: str, unknown_result: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Conservatively reconcile one exact interrupted start into UNKNOWN.
+
+        This is deliberately limited to a source-bound ``session.start`` row.
+        The lifecycle transition, result/status update, and append-only event
+        commit together. Existing UNKNOWN results are preserved verbatim.
+        """
+        identities = (job_id, operation_id, request_id, idempotency_key,
+                      request_hash, project_id, session_id)
+        if (not all(isinstance(value, str) and value for value in identities)
+                or not isinstance(unknown_result, dict)):
+            raise ValueError("interrupted session.start reconciliation requires exact identities")
+
+        from ._session_lifecycle import validate_lifecycle_record
+
+        with self.lock:
+            self.db.execute("BEGIN IMMEDIATE")
+            try:
+                row = self.db.execute(
+                    "SELECT j.job_id,j.operation_id,j.status AS job_status,j.metadata AS job_metadata,"
+                    "o.request_id,o.idempotency_key,o.request_hash,o.operation,"
+                    "o.status AS operation_status,o.metadata AS operation_metadata,o.result AS operation_result "
+                    "FROM jobs j JOIN operations o ON o.operation_id=j.operation_id WHERE j.job_id=?",
+                    (job_id,),
+                ).fetchone()
+                if row is None:
+                    self.db.execute("ROLLBACK")
+                    return {"updated": False, "reason": "SOURCE_JOB_NOT_FOUND", "job": None}
+                if (row["operation_id"] != operation_id or row["request_id"] != request_id
+                        or row["idempotency_key"] != idempotency_key
+                        or row["request_hash"] != request_hash
+                        or row["operation"] != "session.start"):
+                    self.db.execute("ROLLBACK")
+                    return {"updated": False, "reason": "SOURCE_REQUEST_IDENTITY_MISMATCH", "job": None}
+                job_metadata = json.loads(row["job_metadata"] or "{}")
+                operation_metadata = json.loads(row["operation_metadata"] or "{}")
+                if (not isinstance(job_metadata, dict) or not isinstance(operation_metadata, dict)
+                        or job_metadata.get("project_id") != project_id
+                        or job_metadata.get("session_id") != session_id
+                        or job_metadata.get("operation") not in {None, "session.start"}
+                        or operation_metadata.get("project_id") != project_id
+                        or operation_metadata.get("session_id") != session_id
+                        or operation_metadata.get("runtime_id") != job_metadata.get("runtime_id")):
+                    self.db.execute("ROLLBACK")
+                    return {"updated": False, "reason": "SOURCE_SESSION_BINDING_MISMATCH", "job": None}
+                allowed = {"RUNNING", "STARTING", "RECONCILING", "UNKNOWN"}
+                if row["job_status"] not in allowed or row["operation_status"] not in allowed:
+                    self.db.execute("ROLLBACK")
+                    return {"updated": False, "reason": "SOURCE_NOT_INTERRUPTED", "job": None}
+
+                session_row = self.db.execute(
+                    "SELECT metadata FROM sessions WHERE session_id=?", (session_id,),
+                ).fetchone()
+                if session_row is None:
+                    self.db.execute("ROLLBACK")
+                    return {"updated": False, "reason": "SESSION_LIFECYCLE_NOT_FOUND", "job": None}
+                session_metadata = json.loads(session_row["metadata"] or "{}")
+                raw_lifecycle = session_metadata.get("lifecycle") if isinstance(session_metadata, dict) else None
+                try:
+                    current = validate_lifecycle_record(raw_lifecycle)
+                except Exception:
+                    self.db.execute("ROLLBACK")
+                    return {"updated": False, "reason": "SESSION_LIFECYCLE_MALFORMED", "job": None}
+                if (current["project_id"] != project_id or current["session_id"] != session_id
+                        or current["runtime_id"] != operation_metadata.get("runtime_id")
+                        or current["state"] not in {"STARTING", "UNKNOWN"}
+                        or current["endpoint"] is not None
+                        or current["server_process_identity"] is not None
+                        or current["worker_instance_id"] is not None
+                        or current["worker_epoch"] is not None
+                        or current["server_instance_id"] is not None):
+                    self.db.execute("ROLLBACK")
+                    return {"updated": False, "reason": "SESSION_LIFECYCLE_NOT_INTERRUPTED_START", "job": None}
+
+                try:
+                    existing_result = json.loads(row["operation_result"] or "null")
+                except (TypeError, json.JSONDecodeError):
+                    existing_result = None
+                result = existing_result if isinstance(existing_result, dict) else unknown_result
+                result_execution = result.get("execution") if isinstance(result, dict) else None
+                if (not isinstance(result_execution, dict)
+                        or result_execution.get("request_id") != request_id
+                        or result_execution.get("operation_id") != operation_id
+                        or result_execution.get("request_hash") != request_hash
+                        or result_execution.get("idempotency_key") != idempotency_key
+                        or result_execution.get("job_id") != job_id):
+                    self.db.execute("ROLLBACK")
+                    return {"updated": False, "reason": "SOURCE_RESULT_IDENTITY_MISMATCH", "job": None}
+                if result.get("success") is not False:
+                    self.db.execute("ROLLBACK")
+                    return {"updated": False, "reason": "SOURCE_RESULT_NOT_UNKNOWN", "job": None}
+
+                changed = False
+                old_state = current["state"]
+                if old_state == "STARTING":
+                    now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+                    updated_lifecycle = dict(current)
+                    updated_lifecycle.update({
+                        "revision": current["revision"] + 1,
+                        "state": "UNKNOWN",
+                        "endpoint": None,
+                        "client_state": "UNKNOWN",
+                        "server_state": "UNKNOWN",
+                        "server_ownership": "unknown",
+                        "health": {"status": "UNKNOWN", "observed_at": None, "source": None},
+                        "updated_at": now,
+                    })
+                    updated_lifecycle = validate_lifecycle_record(updated_lifecycle)
+                    session_metadata["lifecycle"] = updated_lifecycle
+                    self.db.execute(
+                        "UPDATE sessions SET metadata=? WHERE session_id=?",
+                        (_dumps_canonical(session_metadata), session_id),
+                    )
+                    changed = True
+
+                if row["job_status"] != "UNKNOWN" or row["operation_status"] != "UNKNOWN":
+                    self.db.execute(
+                        "UPDATE jobs SET status='UNKNOWN' WHERE job_id=?", (job_id,),
+                    )
+                    self.db.execute(
+                        "UPDATE operations SET status='UNKNOWN',result=? WHERE operation_id=?",
+                        (_dumps_canonical(result), operation_id),
+                    )
+                    changed = True
+                elif not isinstance(existing_result, dict):
+                    self.db.execute(
+                        "UPDATE operations SET result=? WHERE operation_id=?",
+                        (_dumps_canonical(result), operation_id),
+                    )
+                    changed = True
+
+                if changed:
+                    startup_rows = self.db.execute(
+                        "SELECT id,metadata FROM job_events WHERE job_id=? "
+                        "AND event='SessionServerStartupObservation' ORDER BY id",
+                        (job_id,),
+                    ).fetchall()
+                    startup_observations = []
+                    for startup_row in startup_rows:
+                        startup_metadata = json.loads(startup_row["metadata"] or "{}")
+                        if (not isinstance(startup_metadata, dict)
+                                or startup_metadata.get("job_id") != job_id
+                                or startup_metadata.get("operation_id") != operation_id
+                                or startup_metadata.get("request_id") != request_id
+                                or startup_metadata.get("idempotency_key") != idempotency_key
+                                or startup_metadata.get("request_hash") != request_hash
+                                or startup_metadata.get("project_id") != project_id
+                                or startup_metadata.get("session_id") != session_id
+                                or startup_metadata.get("runtime_id") != operation_metadata.get("runtime_id")):
+                            self.db.execute("ROLLBACK")
+                            return {"updated": False, "reason": "STARTUP_OBSERVATION_BINDING_MISMATCH", "job": None}
+                        startup_observations.append({"id": int(startup_row["id"]), "metadata": startup_metadata})
+                    self.db.execute(
+                        "INSERT INTO job_events(job_id,event,metadata) VALUES(?,?,?)",
+                        (job_id, "SessionStartInterruptedUnknown", _dumps_canonical({
+                            "schema_version": 1,
+                            "job_id": job_id,
+                            "operation_id": operation_id,
+                            "request_id": request_id,
+                            "idempotency_key": idempotency_key,
+                            "request_hash": request_hash,
+                            "project_id": project_id,
+                            "session_id": session_id,
+                            "runtime_id": operation_metadata.get("runtime_id"),
+                            "job_status_before": row["job_status"],
+                            "operation_status_before": row["operation_status"],
+                            "lifecycle_state_before": old_state,
+                            "lifecycle_state_after": "UNKNOWN",
+                            "startup_observation_count": len(startup_observations),
+                            "startup_observations_sha256": session_recovery_evidence_sha256({
+                                "startup_observations": startup_observations,
+                            }),
+                            "server_birth_observed": "UNKNOWN",
+                            "server_exit_code_observed": "UNKNOWN",
+                            "replayed": False,
+                        })),
+                    )
+                self.db.execute("COMMIT")
+                return {"updated": changed, "reason": None,
+                        "job": self.job(job_id), "lifecycle": self.get_metadata("sessions", session_id).get("lifecycle")}
+            except Exception:
+                if self.db.in_transaction:
+                    self.db.execute("ROLLBACK")
+                raise
+
     def record_session_lifecycle_recovery_resolution(
         self, job_id: str, source_operation_id: str, expected_lifecycle_revision: int,
         lifecycle_after: dict[str, Any], evidence: dict[str, Any],
@@ -836,6 +1025,11 @@ class OperationStore:
                 or type(expected_lifecycle_revision) is not int or expected_lifecycle_revision < 1
                 or not isinstance(lifecycle_after, dict) or not isinstance(evidence, dict)):
             raise ValueError("lifecycle recovery requires exact source and lifecycle identities")
+        if evidence.get("source_operation") == "session.start":
+            return self._record_interrupted_session_start_resolution(
+                job_id, source_operation_id, expected_lifecycle_revision,
+                lifecycle_after, evidence,
+            )
         required = {
             "schema_version", "source_job_id", "source_operation_id",
             "session_recovery_operation_id", "project_id", "session_id",
@@ -992,6 +1186,296 @@ class OperationStore:
                     "UPDATE jobs SET metadata=? WHERE job_id=?",
                     (_dumps_canonical(job_metadata), job_id),
                 )
+                self.db.execute("COMMIT")
+                return {
+                    "recorded": True, "reason": None,
+                    "resolution": {"id": int(cursor.lastrowid),
+                                   "event": "SessionLifecycleRecoveryResolution",
+                                   "metadata": event_metadata},
+                    "lifecycle": updated,
+                }
+            except Exception:
+                if self.db.in_transaction:
+                    self.db.execute("ROLLBACK")
+                raise
+
+    def _record_interrupted_session_start_resolution(
+        self, job_id: str, source_operation_id: str, expected_lifecycle_revision: int,
+        lifecycle_after: dict[str, Any], evidence: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Append one exact same-host quiescence resolution for a start job."""
+        required = {
+            "schema_version", "source_job_id", "source_operation_id",
+            "source_request_id", "source_idempotency_key", "source_request_hash",
+            "session_recovery_operation_id", "session_recovery_job_id",
+            "session_recovery_request_id", "session_recovery_idempotency_key",
+            "project_id", "session_id", "runtime_id", "source_operation",
+            "source_status", "source_operation_status", "source_result_sha256",
+            "original_unknown_reason", "startup_observations_sha256",
+            "observed_at_utc", "control_daemon_identity", "process_inventory",
+            "listener_inventory", "resolution_scope", "classification",
+            "replay_performed", "new_worker_created",
+        }
+        identity_values = (
+            evidence.get("source_job_id"), evidence.get("source_operation_id"),
+            evidence.get("source_request_id"), evidence.get("source_idempotency_key"),
+            evidence.get("source_request_hash"), evidence.get("session_recovery_operation_id"),
+            evidence.get("session_recovery_job_id"), evidence.get("session_recovery_request_id"),
+            evidence.get("session_recovery_idempotency_key"), evidence.get("project_id"),
+            evidence.get("session_id"), evidence.get("runtime_id"),
+        )
+        control = evidence.get("control_daemon_identity")
+        processes = evidence.get("process_inventory")
+        listeners = evidence.get("listener_inventory")
+        if (not required.issubset(evidence)
+                or evidence.get("schema_version") != 1
+                or evidence.get("source_job_id") != job_id
+                or evidence.get("source_operation_id") != source_operation_id
+                or evidence.get("source_operation") != "session.start"
+                or evidence.get("source_status") != "UNKNOWN"
+                or evidence.get("source_operation_status") != "UNKNOWN"
+                or evidence.get("resolution_scope") != "ABANDONED_UNKNOWN_START_CURRENT_HOST_QUIESCENCE"
+                or evidence.get("classification") != "ABANDONED_UNKNOWN_START_CURRENT_HOST_QUIESCENCE"
+                or evidence.get("replay_performed") is not False
+                or evidence.get("new_worker_created") is not False
+                or not all(isinstance(value, str) and value for value in identity_values)
+                or not isinstance(evidence.get("observed_at_utc"), str)
+                or not isinstance(evidence.get("original_unknown_reason"), str)
+                or not evidence["original_unknown_reason"]
+                or not all(isinstance(evidence.get(key), str) and len(evidence[key]) == 64
+                           for key in ("source_result_sha256", "startup_observations_sha256"))
+                or not isinstance(control, dict)
+                or set(control) != {"pid", "process_start_epoch_ms", "singleton_lock_held"}
+                or type(control.get("pid")) is not int or control["pid"] <= 1
+                or type(control.get("process_start_epoch_ms")) is not int or control["process_start_epoch_ms"] <= 0
+                or control.get("singleton_lock_held") is not True
+                or not isinstance(processes, dict)
+                or set(processes) != {
+                    "status", "candidate_count", "unresolved_candidate_count",
+                    "task_owned_match_count", "canonical_engine_match_count",
+                    "startup_pid_count", "startup_pid_live_count", "startup_pid_unresolved_count",
+                }
+                or processes.get("status") != "COMPLETE"
+                or any(type(processes.get(key)) is not int or processes[key] < 0 for key in (
+                    "candidate_count", "unresolved_candidate_count", "task_owned_match_count",
+                    "canonical_engine_match_count", "startup_pid_count", "startup_pid_live_count",
+                    "startup_pid_unresolved_count",
+                ))
+                or any(processes.get(key) != 0 for key in (
+                    "unresolved_candidate_count", "task_owned_match_count", "canonical_engine_match_count",
+                    "startup_pid_live_count", "startup_pid_unresolved_count",
+                ))
+                or not isinstance(listeners, dict)
+                or set(listeners) != {
+                    "status", "rows_scanned", "owner_query_unresolved_count",
+                    "task_owned_match_count", "canonical_engine_match_count",
+                }
+                or listeners.get("status") != "COMPLETE"
+                or any(type(listeners.get(key)) is not int or listeners[key] < 0 for key in (
+                    "rows_scanned", "owner_query_unresolved_count", "task_owned_match_count",
+                    "canonical_engine_match_count",
+                ))
+                or any(listeners.get(key) != 0 for key in (
+                    "owner_query_unresolved_count", "task_owned_match_count", "canonical_engine_match_count",
+                ))):
+            raise ValueError("session.start quiescence evidence is incomplete or has mismatched source binding")
+
+        from ._session_lifecycle import validate_lifecycle_record
+
+        proposed = validate_lifecycle_record(lifecycle_after)
+        project_id, session_id = evidence["project_id"], evidence["session_id"]
+        if (proposed["project_id"] != project_id or proposed["session_id"] != session_id
+                or proposed["revision"] != expected_lifecycle_revision + 1
+                or proposed["state"] != "STOPPED" or proposed["endpoint"] is not None
+                or proposed["client_state"] != "DISCONNECTED"
+                or proposed["server_state"] != "STOPPED"
+                or proposed["server_ownership"] != "unknown"
+                or proposed["server_process_identity"] is not None
+                or proposed["health"] != {"status": "UNKNOWN", "observed_at": None, "source": None}):
+            raise ValueError("session.start quiescence target is not a stopped unknown-ownership lifecycle")
+
+        with self.lock:
+            self.db.execute("BEGIN IMMEDIATE")
+            try:
+                row = self.db.execute(
+                    "SELECT j.job_id,j.operation_id,j.status AS job_status,j.metadata AS job_metadata,"
+                    "o.request_id,o.idempotency_key,o.request_hash,o.status AS operation_status,"
+                    "o.operation,o.metadata AS operation_metadata,o.result AS operation_result "
+                    "FROM jobs j JOIN operations o ON o.operation_id=j.operation_id WHERE j.job_id=?",
+                    (job_id,),
+                ).fetchone()
+                if row is None:
+                    self.db.execute("ROLLBACK")
+                    return {"recorded": False, "reason": "SOURCE_JOB_NOT_FOUND", "resolution": None}
+                if (row["operation_id"] != source_operation_id
+                        or row["request_id"] != evidence["source_request_id"]
+                        or row["idempotency_key"] != evidence["source_idempotency_key"]
+                        or row["request_hash"] != evidence["source_request_hash"]):
+                    self.db.execute("ROLLBACK")
+                    return {"recorded": False, "reason": "SOURCE_REQUEST_IDENTITY_MISMATCH", "resolution": None}
+                existing = self.db.execute(
+                    "SELECT id,event,metadata,created_at FROM job_events "
+                    "WHERE job_id=? AND event='SessionLifecycleRecoveryResolution' ORDER BY id LIMIT 1",
+                    (job_id,),
+                ).fetchone()
+                if existing is not None:
+                    resolution = {**dict(existing), "metadata": json.loads(existing["metadata"] or "{}")}
+                    self.db.execute("COMMIT")
+                    return {"recorded": False, "reason": "ALREADY_RESOLVED", "resolution": resolution}
+                if row["job_status"] != "UNKNOWN" or row["operation_status"] != "UNKNOWN":
+                    self.db.execute("ROLLBACK")
+                    return {"recorded": False, "reason": "SOURCE_NOT_UNRESOLVED", "resolution": None}
+                if row["operation"] != "session.start":
+                    self.db.execute("ROLLBACK")
+                    return {"recorded": False, "reason": "SOURCE_OPERATION_KIND_MISMATCH", "resolution": None}
+                job_metadata = json.loads(row["job_metadata"] or "{}")
+                operation_metadata = json.loads(row["operation_metadata"] or "{}")
+                if (not isinstance(job_metadata, dict) or not isinstance(operation_metadata, dict)
+                        or job_metadata.get("project_id") != project_id
+                        or job_metadata.get("session_id") != session_id
+                        or job_metadata.get("runtime_id") != evidence["runtime_id"]
+                        or operation_metadata.get("project_id") != project_id
+                        or operation_metadata.get("session_id") != session_id
+                        or operation_metadata.get("runtime_id") != evidence["runtime_id"]):
+                    self.db.execute("ROLLBACK")
+                    return {"recorded": False, "reason": "SOURCE_SESSION_BINDING_MISMATCH", "resolution": None}
+                try:
+                    source_result = json.loads(row["operation_result"] or "null")
+                except (TypeError, json.JSONDecodeError):
+                    source_result = None
+                if not isinstance(source_result, dict):
+                    self.db.execute("ROLLBACK")
+                    return {"recorded": False, "reason": "SOURCE_RESULT_UNAVAILABLE", "resolution": None}
+                if (session_recovery_evidence_sha256({"source_result": source_result})
+                        != evidence["source_result_sha256"]):
+                    self.db.execute("ROLLBACK")
+                    return {"recorded": False, "reason": "SOURCE_RESULT_CHANGED", "resolution": None}
+                source_execution = source_result.get("execution")
+                if (not isinstance(source_execution, dict)
+                        or source_execution.get("request_id") != evidence["source_request_id"]
+                        or source_execution.get("operation_id") != source_operation_id
+                        or source_execution.get("request_hash") != evidence["source_request_hash"]
+                        or source_execution.get("idempotency_key") != evidence["source_idempotency_key"]
+                        or source_execution.get("job_id") != job_id
+                        or source_result.get("success") is not False):
+                    self.db.execute("ROLLBACK")
+                    return {"recorded": False, "reason": "SOURCE_RESULT_IDENTITY_MISMATCH", "resolution": None}
+
+                recovery = self.db.execute(
+                    "SELECT j.job_id,j.status AS job_status,j.metadata AS job_metadata,"
+                    "o.request_id,o.idempotency_key,o.operation_id,o.operation,o.status AS operation_status,"
+                    "o.metadata AS operation_metadata FROM jobs j JOIN operations o ON o.operation_id=j.operation_id "
+                    "WHERE o.operation_id=?",
+                    (evidence["session_recovery_operation_id"],),
+                ).fetchone()
+                if (recovery is None or recovery["job_id"] != evidence["session_recovery_job_id"]
+                        or recovery["request_id"] != evidence["session_recovery_request_id"]
+                        or recovery["idempotency_key"] != evidence["session_recovery_idempotency_key"]
+                        or recovery["operation"] != "session.recover"
+                        or recovery["operation_status"] not in {"RUNNING", "RECONCILING"}
+                        or recovery["job_status"] not in {"RUNNING", "RECONCILING"}):
+                    self.db.execute("ROLLBACK")
+                    return {"recorded": False, "reason": "RECOVERY_REQUEST_IDENTITY_MISMATCH", "resolution": None}
+                recovery_job_metadata = json.loads(recovery["job_metadata"] or "{}")
+                recovery_operation_metadata = json.loads(recovery["operation_metadata"] or "{}")
+                if any(not isinstance(value, dict) or value.get("project_id") != project_id
+                       or value.get("session_id") != session_id
+                       for value in (recovery_job_metadata, recovery_operation_metadata)):
+                    self.db.execute("ROLLBACK")
+                    return {"recorded": False, "reason": "RECOVERY_SESSION_BINDING_MISMATCH", "resolution": None}
+
+                startup_rows = self.db.execute(
+                    "SELECT id,metadata FROM job_events WHERE job_id=? "
+                    "AND event='SessionServerStartupObservation' ORDER BY id",
+                    (job_id,),
+                ).fetchall()
+                startup_observations = []
+                for startup_row in startup_rows:
+                    startup_metadata = json.loads(startup_row["metadata"] or "{}")
+                    if (not isinstance(startup_metadata, dict)
+                            or startup_metadata.get("job_id") != job_id
+                            or startup_metadata.get("operation_id") != source_operation_id
+                            or startup_metadata.get("request_id") != evidence["source_request_id"]
+                            or startup_metadata.get("idempotency_key") != evidence["source_idempotency_key"]
+                            or startup_metadata.get("request_hash") != evidence["source_request_hash"]
+                            or startup_metadata.get("project_id") != project_id
+                            or startup_metadata.get("session_id") != session_id
+                            or startup_metadata.get("runtime_id") != evidence["runtime_id"]):
+                        self.db.execute("ROLLBACK")
+                        return {"recorded": False, "reason": "STARTUP_OBSERVATION_BINDING_MISMATCH", "resolution": None}
+                    startup_observations.append({"id": int(startup_row["id"]), "metadata": startup_metadata})
+                if (session_recovery_evidence_sha256({"startup_observations": startup_observations})
+                        != evidence["startup_observations_sha256"]):
+                    self.db.execute("ROLLBACK")
+                    return {"recorded": False, "reason": "STARTUP_OBSERVATIONS_CHANGED", "resolution": None}
+
+                session_row = self.db.execute(
+                    "SELECT metadata FROM sessions WHERE session_id=?", (session_id,),
+                ).fetchone()
+                if session_row is None:
+                    self.db.execute("ROLLBACK")
+                    return {"recorded": False, "reason": "SESSION_LIFECYCLE_NOT_FOUND", "resolution": None}
+                session_metadata = json.loads(session_row["metadata"] or "{}")
+                raw_lifecycle = session_metadata.get("lifecycle") if isinstance(session_metadata, dict) else None
+                if not isinstance(raw_lifecycle, dict):
+                    self.db.execute("ROLLBACK")
+                    return {"recorded": False, "reason": "SESSION_LIFECYCLE_MALFORMED", "resolution": None}
+                current = validate_lifecycle_record(raw_lifecycle)
+                if (current["project_id"] != project_id or current["session_id"] != session_id
+                        or current["runtime_id"] != evidence["runtime_id"]):
+                    self.db.execute("ROLLBACK")
+                    return {"recorded": False, "reason": "SESSION_LIFECYCLE_IDENTITY_MISMATCH", "resolution": None}
+                if (current["endpoint"] is not None
+                        or current["server_process_identity"] is not None
+                        or current["worker_instance_id"] is not None
+                        or current["worker_epoch"] is not None
+                        or current["server_instance_id"] is not None):
+                    self.db.execute("ROLLBACK")
+                    return {"recorded": False, "reason": "SESSION_LIFECYCLE_IDENTITY_PRESENT", "resolution": None}
+                if current["revision"] != expected_lifecycle_revision or current["state"] != "UNKNOWN":
+                    self.db.execute("ROLLBACK")
+                    return {"recorded": False, "reason": "SESSION_LIFECYCLE_REVISION_CONFLICT",
+                            "current_revision": current["revision"], "current_state": current["state"],
+                            "resolution": None}
+
+                now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+                updated = dict(proposed)
+                updated["revision"] = current["revision"] + 1
+                updated["created_at"] = current["created_at"]
+                updated["updated_at"] = now
+                updated = validate_lifecycle_record(updated)
+                event_evidence = {
+                    **evidence,
+                    "lifecycle_transition": {
+                        "from_revision": current["revision"],
+                        "to_revision": updated["revision"],
+                        "from_state": current["state"],
+                        "from_client_state": current["client_state"],
+                        "target_lifecycle": updated,
+                    },
+                }
+                digest = session_recovery_evidence_sha256(event_evidence)
+                event_metadata = {**event_evidence, "evidence_sha256": digest}
+                cursor = self.db.execute(
+                    "INSERT INTO job_events(job_id,event,metadata) VALUES(?,?,?)",
+                    (job_id, "SessionLifecycleRecoveryResolution", _dumps_canonical(event_metadata)),
+                )
+                session_metadata["lifecycle"] = updated
+                self.db.execute(
+                    "UPDATE sessions SET metadata=? WHERE session_id=?",
+                    (_dumps_canonical(session_metadata), session_id),
+                )
+                job_metadata["reconciled_quiescent"] = True
+                job_metadata["session_lifecycle_recovery_resolution"] = {
+                    "event_id": int(cursor.lastrowid),
+                    "evidence_sha256": digest,
+                    "session_id": session_id,
+                    "project_id": project_id,
+                    "lifecycle_revision": updated["revision"],
+                    "resolution_scope": evidence["resolution_scope"],
+                }
+                self.db.execute("UPDATE jobs SET metadata=? WHERE job_id=?",
+                                (_dumps_canonical(job_metadata), job_id))
                 self.db.execute("COMMIT")
                 return {
                     "recorded": True, "reason": None,
@@ -1228,13 +1712,32 @@ class OperationStore:
                 )
             ]
 
-    def reconcile_after_restart(self) -> list[str]:
+    def reconcile_after_restart(
+        self, *,
+        preserve_verified_session_start: Callable[[dict[str, Any]], bool] | None = None,
+    ) -> list[str]:
+        """Move interrupted jobs to RECONCILING without reopening verified starts.
+
+        A caller may preserve an UNKNOWN ``session.start`` only by validating
+        its complete durable lifecycle-recovery proof. No other operation or
+        status is eligible for this exception.
+        """
         with self.lock:
             rows = self.db.execute(
-                "SELECT job_id FROM jobs WHERE status NOT IN "
+                "SELECT * FROM jobs WHERE status NOT IN "
                 "('SUCCEEDED','FAILED','CANCELLED','EXPIRED','LOST','RECONCILING')"
             ).fetchall()
-            job_ids = [row[0] for row in rows]
+            job_ids = []
+            for row in rows:
+                if (row["status"] == "UNKNOWN"
+                        and preserve_verified_session_start is not None):
+                    job = self._job(row)
+                    operation = job.get("operation")
+                    if (isinstance(operation, dict)
+                            and operation.get("operation") == "session.start"
+                            and preserve_verified_session_start(job) is True):
+                        continue
+                job_ids.append(row["job_id"])
             for job_id in job_ids:
                 self.update_job(job_id, "RECONCILING")
             return job_ids

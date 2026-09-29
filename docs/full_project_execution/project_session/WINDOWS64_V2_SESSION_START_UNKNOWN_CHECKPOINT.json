@@ -5,7 +5,7 @@
   "overall_status": "PARTIAL",
   "source_package_status": "PASS_MAIN_VERIFIED",
   "native_status": "NOT_ACCEPTED_SESSION_START_UNKNOWN",
-  "next_action": "Finish startup identity/error/exit persistence and non-sensitive diagnostic separation; extend the existing session.recover path for the exact abandoned session.start with a same-host quiescence disposition. Preserve original UNKNOWN/failure history and missing exit code; do not trust imported PASS receipts or mark native success. After controlled reconciliation and a freshly approved short-root plan, execute one minimal Windows6.4 native startup comparison, then connect/small-model solve/result readback and Windows6.3. Continue W23 analytic geometry in parallel; no new acceptance gates.",
+  "next_action": "Freeze and verify a current-source recovery driver; consistent SQLite backup before starting a fresh controller on the old task home; run existing authenticated session.recover once. After actual reconciliation, one short-root Windows 6.4 solve-readback attempt, then 6.3.",
   "candidate": {
     "source_commit": "9c5ced6272dd876cf9c28c6c6f73b943bd76b96c",
     "evidence_root": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-v2-20260928T235840Z-9c5ced6",
@@ -290,5 +290,55 @@
     "limits": "Original Windows V2 budget is used, not reset. No new native invocation has occurred. Actual field/unit/mesh evidence must be distinguished from configured expectations. A smoke receipt is not stage-run admission, stage transfer, physical acceptance or overall W21 completion.",
     "unknown_behavior": "Preserve exact original job identity and stop dependent actions; never replay an uncertain solve or launch.",
     "executor": "/root/luna_stage_output"
+  },
+  "startup_recovery_software": {
+    "status": "PASS_SCOPED_OFFLINE",
+    "native_status": "NOT_RUN",
+    "unique_tests_passed": 130,
+    "main_verified": true,
+    "capabilities": [
+      "Credential-free daemon identity sidecar separate from token endpoint; service return/failure does not claim process exit.",
+      "Early Server observations bind to the exact original job/request; storage failure retains uncertainty and safe error metadata.",
+      "Existing session.recover can conservatively reconcile an exact interrupted legacy start with a fresh same-host process/listener observation and atomic durable disposition, retaining original UNKNOWN history.",
+      "Verified historical start quiescence survives controller restart; a caller-set marker without full proof does not bypass reconciliation."
+    ],
+    "receipt_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/session-start-recovery-offline-20260929/final-receipt-post-restart-fix.json",
+    "receipt_sha256": "cf45cf27e564c65925bcee2bdd6fbbf62e61f92705e6734f166108cde541255b",
+    "source_sha256": {
+      "comsol_mcp/_control_daemon.py": "b145e508c60378ea295bacbce3f9f00cb1a1e280c50f7a4d1415340b6a80f661",
+      "comsol_mcp/_operation_store.py": "60316b011716a486f44eac2b73f36800365598b9253f3f8017ace21441411a47",
+      "tests/test_control_daemon_sessions.py": "47151e2db8937aa722a47fad82f742d64612f377581cccea675a9f85bace08bd",
+      "tests/test_session_server_control.py": "2d430b32c8f12ab5fca07a69f002e655993a82e8ed97d74a0ddff92b7c0ec0d5"
+    },
+    "final_test_run": {
+      "command": "PYTHONDONTWRITEBYTECODE=1 /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -B -m pytest -q -p no:cacheprovider --basetemp=/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/session-start-recovery-offline-20260929/final-four-module-post-restart-fix/pytest --junitxml=/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/session-start-recovery-offline-20260929/final-four-module-post-restart-fix/junit.xml tests/test_control_daemon_sessions.py tests/test_session_server_control.py tests/test_operation_store.py tests/test_operation_store_migrations.py",
+      "exit_code": 0,
+      "junit": {
+        "errors": 0,
+        "failures": 0,
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/session-start-recovery-offline-20260929/final-four-module-post-restart-fix/junit.xml",
+        "sha256": "1271f8d30dcdea5d6cb50eb33258f583659bfcb06a4ce7f70d58bbefc2cf7966",
+        "skipped": 0,
+        "tests": 130
+      },
+      "summary": "130 passed in 5.67s",
+      "unique_tests": 130
+    },
+    "preserved_failure_evidence": {
+      "errors": 0,
+      "failures": 6,
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/session-start-recovery-offline-20260929/junit-full-regression.xml",
+      "sha256": "6ef232800e96a31167010f6838aecb7ea9e8cc513617e3899ff9dc389a5c68be",
+      "skipped": 0,
+      "tests": 128
+    },
+    "review_repairs": [
+      "Preserve existing process/Worker identity instead of clearing it during legacy recovery.",
+      "Use a non-reserved PowerShell variable instead of read-only PID.",
+      "Distinguish daemon service-loop termination from observed process exit.",
+      "Preserve verified historical UNKNOWN quiescence across control restart."
+    ],
+    "limits": "Offline software tests use synthetic host observations and localhost Python children. The separately captured Windows query passed read-only, but the original database has not been recovered and no fresh COMSOL startup has run.",
+    "next_action": "Freeze and verify a current-source recovery driver; consistent SQLite backup before starting a fresh controller on the old task home; run existing authenticated session.recover once. After actual reconciliation, one short-root Windows 6.4 solve-readback attempt, then 6.3."
   }
 }

@@ -2,8 +2,10 @@
 from __future__ import annotations
 
 import argparse
+import base64
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
 from contextlib import ExitStack, contextmanager, nullcontext
+from datetime import datetime, timezone
 import hashlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import ipaddress
@@ -15,6 +17,7 @@ from pathlib import Path
 import platform
 import re
 import secrets
+import subprocess
 import threading
 import time
 import traceback
@@ -80,9 +83,153 @@ SESSION_OPERATIONS = frozenset({
 EXPERIMENT_DURABLE_READS = frozenset({"experiment.inspect", "experiment.case_result"})
 
 _PRESERVE_SERVER_PROCESS_IDENTITY = object()
+_CONTROL_DAEMON_IDENTITY_SCHEMA = "COMSOL_CONTROL_DAEMON_IDENTITY_V1"
+_CONTROL_DAEMON_IDENTITY_FIELDS = frozenset({
+    "schema", "event", "observed_at_utc", "pid", "birth", "exit_code",
+    "exception_type", "errno", "winerror", "error_category",
+})
+_CONTROL_DAEMON_BIRTH_RE = re.compile(r"^start_epoch_ms:[1-9][0-9]{0,18}$")
+_CONTROL_DAEMON_SAFE_TYPE_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,127}$")
 SESSION_ALIASES = {f"session_{name}": f"session.{name}" for name in (
     "list", "connect", "start", "inspect", "reconnect", "disconnect", "stop", "recover",
 )}
+
+
+def _utc_millis() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+
+
+def _write_control_daemon_identity(home: Path, payload: Mapping[str, Any]) -> dict[str, Any]:
+    """Persist a strictly separate, credential-free control-daemon identity snapshot."""
+    if not isinstance(payload, Mapping) or set(payload) != _CONTROL_DAEMON_IDENTITY_FIELDS:
+        raise ValueError("control daemon identity fields do not match the fixed schema")
+    row = dict(payload)
+    if row.get("schema") != _CONTROL_DAEMON_IDENTITY_SCHEMA:
+        raise ValueError("control daemon identity schema is unsupported")
+    if row.get("event") not in {
+            "DAEMON_READY", "DAEMON_SERVE_RETURNED", "DAEMON_SERVE_FAILED"}:
+        raise ValueError("control daemon identity event is unsupported")
+    timestamp = row.get("observed_at_utc")
+    if (not isinstance(timestamp, str) or len(timestamp) != 24
+            or not timestamp.endswith("Z")):
+        raise ValueError("control daemon identity timestamp is malformed")
+    if type(row.get("pid")) is not int or row["pid"] <= 1:
+        raise ValueError("control daemon identity PID is malformed")
+    birth = row.get("birth")
+    if birth is not None and (not isinstance(birth, str) or not _CONTROL_DAEMON_BIRTH_RE.fullmatch(birth)):
+        raise ValueError("control daemon identity birth is malformed")
+    if row["event"] == "DAEMON_READY":
+        if any(row.get(key) is not None for key in (
+                "exit_code", "exception_type", "errno", "winerror", "error_category")):
+            raise ValueError("ready identity cannot contain exit details")
+    elif row["event"] == "DAEMON_SERVE_RETURNED":
+        if (row.get("exit_code") is not None
+                or any(row.get(key) is not None for key in ("exception_type", "errno", "winerror"))
+                or row.get("error_category") != "DAEMON_SERVE_LOOP_RETURNED"):
+            raise ValueError("serve-returned identity cannot claim process exit")
+    else:
+        if row.get("exit_code") is not None:
+            raise ValueError("serve-failed identity cannot claim process exit")
+        exception_type = row.get("exception_type")
+        if (not isinstance(exception_type, str)
+                or not _CONTROL_DAEMON_SAFE_TYPE_RE.fullmatch(exception_type)):
+            raise ValueError("control daemon exception type is malformed")
+        for key in ("errno", "winerror"):
+            if row.get(key) is not None and type(row[key]) is not int:
+                raise ValueError(f"control daemon {key} is malformed")
+        if row.get("error_category") != "DAEMON_SERVE_LOOP_RAISED":
+            raise ValueError("control daemon serve-failure category is unsupported")
+    from ._process_diagnostics import write_atomic_json_snapshot
+
+    return write_atomic_json_snapshot(Path(home) / "control-daemon-identity.json", row)
+
+
+_WINDOWS_SESSION_START_PROBE_PS = r"""
+$ErrorActionPreference = 'Stop'
+try {
+  $cfg = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('__CONFIG_B64__')) | ConvertFrom-Json
+  function Normalize-Path([string]$value) {
+    if ([string]::IsNullOrWhiteSpace($value)) { return '' }
+    try { return [IO.Path]::GetFullPath($value).TrimEnd([char[]]@('\','/')).ToLowerInvariant() }
+    catch { return '' }
+  }
+  function Is-Under([string]$value, [string]$root) {
+    if ([string]::IsNullOrWhiteSpace($value) -or [string]::IsNullOrWhiteSpace($root)) { return $false }
+    return $value -eq $root -or $value.StartsWith(($root + '\'), [StringComparison]::OrdinalIgnoreCase)
+  }
+  function Mentions-Root([string]$value, [string]$root) {
+    if ([string]::IsNullOrWhiteSpace($value) -or [string]::IsNullOrWhiteSpace($root)) { return $false }
+    return $value.IndexOf($root, [StringComparison]::OrdinalIgnoreCase) -ge 0
+  }
+  $taskRoot = Normalize-Path ([string]$cfg.task_owned_root)
+  $installRoot = Normalize-Path ([string]$cfg.installation_root)
+  $jdkRoot = Normalize-Path ([string]$cfg.jdk_root)
+  if (!$taskRoot -or !$installRoot -or !$jdkRoot) { throw 'invalid-root' }
+  $engineNames = @('comsolmphserver.exe','comsol.exe','comsolbatch.exe','java.exe','javaw.exe')
+  $all = @(Get-CimInstance -ClassName Win32_Process -ErrorAction Stop)
+  $allPids = @{}
+  $taskPids = @{}
+  $canonicalPids = @{}
+  $candidateCount = 0
+  $unresolvedCandidates = 0
+  $taskMatches = 0
+  $canonicalMatches = 0
+  foreach ($process in $all) {
+    $observedProcessId = [int]$process.ProcessId
+    if ($observedProcessId -gt 0) { $allPids[[string]$observedProcessId] = $true }
+    $name = ([string]$process.Name).ToLowerInvariant()
+    $exe = Normalize-Path ([string]$process.ExecutablePath)
+    $commandLine = [string]$process.CommandLine
+    $taskMatch = (Is-Under $exe $taskRoot) -or (Mentions-Root $commandLine $taskRoot)
+    $canonicalMatch = (Is-Under $exe $installRoot) -or (Is-Under $exe $jdkRoot) -or
+      (Mentions-Root $commandLine $installRoot) -or (Mentions-Root $commandLine $jdkRoot)
+    $namedCandidate = $engineNames -contains $name
+    if (!$taskMatch -and !$canonicalMatch -and !$namedCandidate) { continue }
+    $candidateCount++
+    if ($namedCandidate -and ([string]::IsNullOrWhiteSpace([string]$process.ExecutablePath) -or
+        [string]::IsNullOrWhiteSpace($commandLine))) {
+      $unresolvedCandidates++
+      continue
+    }
+    if ($taskMatch) { $taskPids[[string]$observedProcessId] = $true; $taskMatches++ }
+    if ($canonicalMatch) { $canonicalPids[[string]$observedProcessId] = $true; $canonicalMatches++ }
+  }
+  $connections = @(Get-NetTCPConnection -State Listen -ErrorAction Stop)
+  $unresolvedOwners = 0
+  $taskListeners = 0
+  $canonicalListeners = 0
+  foreach ($connection in $connections) {
+    $ownerPid = 0
+    if ($null -eq $connection.OwningProcess -or
+        ![int]::TryParse([string]$connection.OwningProcess, [ref]$ownerPid) -or $ownerPid -le 0) {
+      $unresolvedOwners++
+      continue
+    }
+    if (!$allPids.ContainsKey([string]$ownerPid)) { $unresolvedOwners++; continue }
+    if ($taskPids.ContainsKey([string]$ownerPid)) { $taskListeners++ }
+    if ($canonicalPids.ContainsKey([string]$ownerPid)) { $canonicalListeners++ }
+  }
+  $output = [ordered]@{
+    probe_status = 'COMPLETE'
+    process_inventory = [ordered]@{
+      status = 'COMPLETE'; candidate_count = $candidateCount
+      unresolved_candidate_count = $unresolvedCandidates
+      task_owned_match_count = $taskMatches
+      canonical_engine_match_count = $canonicalMatches
+    }
+    listener_inventory = [ordered]@{
+      status = 'COMPLETE'; rows_scanned = $connections.Count
+      owner_query_unresolved_count = $unresolvedOwners
+      task_owned_match_count = $taskListeners
+      canonical_engine_match_count = $canonicalListeners
+    }
+  }
+  [Console]::Out.WriteLine(($output | ConvertTo-Json -Compress -Depth 4))
+} catch {
+  [Console]::Out.WriteLine('{"probe_status":"FAILED"}')
+  exit 2
+}
+"""
 
 
 class WorkerRetirementRefused(RuntimeError):
@@ -181,6 +328,10 @@ class ControlDaemon:
         self._session_worker_handles: dict[tuple[str, str], Any] = {}
         self._session_backends: dict[tuple[str, str], ManagedBackend] = {}
         self._session_runtime_configs: dict[tuple[str, str], SessionRuntimeConfig] = {}
+        # Set only by ``serve`` after it has acquired the process-wide control
+        # singleton lock.  Session-start recovery may use this to distinguish a
+        # fresh controller from the original still-running controller.
+        self._control_singleton_lock_held = False
         # Only the opaque local credential reference is retained in memory.
         # Resolved user/password values are request-local and never persisted.
         self._session_credentials_refs: dict[tuple[str, str], str | None] = {}
@@ -217,7 +368,9 @@ class ControlDaemon:
         self._activity_generation = 0
         self.running = {}
         self.worker_health = {"status": "NOT_STARTED", "observed_at": None}
-        self.store.reconcile_after_restart()
+        self.store.reconcile_after_restart(
+            preserve_verified_session_start=self._session_start_lifecycle_recovery_resolution_is_valid,
+        )
         self.closed = threading.Event()
         self.monitor = threading.Thread(target=self._monitor, name="comsol-cached-control", daemon=True)
         self.monitor.start()
@@ -3779,9 +3932,45 @@ class ControlDaemon:
         key = (project_id, session_id)
         lifecycle = None
         handle = None
+        startup_observations_recorded = 0
+        startup_observation_persist_error_type = None
+
+        def record_startup_observation(payload: Mapping[str, Any]) -> None:
+            nonlocal startup_observations_recorded, startup_observation_persist_error_type
+            from ._process_diagnostics import sanitize_startup_observation
+
+            try:
+                observation = sanitize_startup_observation(payload)
+                if (observation["project_id"] != project_id
+                        or observation["session_id"] != session_id
+                        or observation["runtime_id"] != runtime_id):
+                    raise ValueError("startup observation binding differs from the active request")
+                metadata = {
+                    "schema": observation["schema"],
+                    "event": observation["event"],
+                    "observed_at_utc": observation["observed_at_utc"],
+                    "project_id": project_id,
+                    "session_id": session_id,
+                    "runtime_id": runtime_id,
+                    "request_id": record["request_id"],
+                    "idempotency_key": record["idempotency_key"],
+                    "request_hash": record["request_hash"],
+                    "operation_id": record["operation_id"],
+                    "job_id": record["job_id"],
+                    **{field: observation[field] for field in (
+                        "pid", "birth", "exit_code", "exception_type", "errno", "winerror",
+                        "error_category",
+                    )},
+                }
+                self.store.add_event(record["job_id"], "SessionServerStartupObservation", metadata)
+                startup_observations_recorded += 1
+            except Exception as exc:
+                startup_observation_persist_error_type = type(exc).__name__
+                raise
+
         with self._session_connect_lock:
             if self._closing:
-                return self._finish(record, self._error(
+                return self._finish_session_start(record, self._error(
                     "CONTROL_DAEMON_CLOSING", "control daemon is closing before Server birth",
                     data={"session_id": session_id, "server_birth_performed": False}, safe_retry=False,
                 ), "FAILED")
@@ -3791,7 +3980,7 @@ class ControlDaemon:
                               and row.get("endpoint") is None
                               and row.get("state") in {"STARTING", "STOPPING", "UNKNOWN"}]
                 if unresolved:
-                    return self._finish(record, self._error(
+                    return self._finish_session_start(record, self._error(
                         "SERVER_OWNERSHIP_UNKNOWN",
                         "an earlier owned Server birth has no resolved endpoint; no replacement will be started",
                         data={"session_id": session_id, "unresolved_session_id": unresolved[0]["session_id"],
@@ -3807,17 +3996,18 @@ class ControlDaemon:
                     client_state="DISCONNECTED", server_state="UNKNOWN", server_ownership="unknown",
                 ))
             except ExecutionContractError as exc:
-                return self._finish(record, self._exception(exc), "FAILED")
+                return self._finish_session_start(record, self._exception(exc), "FAILED")
             except Exception as exc:
-                self._log_exception()
-                return self._finish(record, self._error(
+                return self._finish_session_start(record, self._error(
                     "RUNTIME_CONFIGURATION_REQUIRED", "local COMSOL Server runtime could not be resolved",
                     data={"session_id": session_id, "server_birth_performed": False},
                     cause_type=type(exc).__name__, safe_retry=True,
                 ), "FAILED")
 
             try:
-                handle = self.session_server_launcher.start(runtime, project_id, session_id)
+                handle = self.session_server_launcher.start(
+                    runtime, project_id, session_id, observation_sink=record_startup_observation,
+                )
                 if not isinstance(handle, ManagedServerHandle):
                     raise OwnedServerError("Server launcher returned an untrusted handle")
                 self._session_server_handles[key] = handle
@@ -3835,7 +4025,7 @@ class ControlDaemon:
                     health={"status": "HEALTHY", "observed_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                             "source": "exact-process-birth+loopback-listener"},
                 ), expected_revision=lifecycle["revision"])
-                return self._finish(record, {"success": True, "data": {
+                return self._finish_session_start(record, {"success": True, "data": {
                     "project_id": project_id, "session_id": session_id,
                     "runtime_id": runtime.runtime_id, "comsol_version": runtime.comsol_version,
                     "endpoint": endpoint, "server_ownership": "mcp_managed",
@@ -3849,6 +4039,20 @@ class ControlDaemon:
             except Exception as exc:
                 if isinstance(exc, OwnedServerError):
                     handle = exc.handle or handle
+                startup_error_summary: dict[str, Any] = {}
+                if isinstance(exc, OwnedServerError):
+                    exception_type = getattr(exc, "startup_exception_type", None)
+                    if (isinstance(exception_type, str)
+                            and _CONTROL_DAEMON_SAFE_TYPE_RE.fullmatch(exception_type)):
+                        startup_error_summary["startup_exception_type"] = exception_type
+                    for source, target in (("startup_errno", "startup_errno"),
+                                           ("startup_winerror", "startup_winerror")):
+                        value = getattr(exc, source, None)
+                        if type(value) is int and -(2**31) <= value < 2**32:
+                            startup_error_summary[target] = value
+                    startup_error_summary["diagnostic_persistence_failed"] = (
+                        getattr(exc, "diagnostic_persistence_failed", False) is True
+                    )
                 if handle is not None:
                     self._session_server_handles[key] = handle
                     endpoint = ({"host": handle.endpoint.address, "port": handle.endpoint.port}
@@ -3862,6 +4066,7 @@ class ControlDaemon:
                             owner, server_state = "mcp_managed", "MCP_MANAGED"
                         except Exception:
                             durable_process = None
+                    lifecycle_persist_error_type = None
                     try:
                         unknown = new_lifecycle_record(
                             project_id=project_id, session_id=session_id, state="UNKNOWN",
@@ -3870,15 +4075,20 @@ class ControlDaemon:
                             server_process_identity=durable_process,
                         )
                         lifecycle = self.session_lifecycle.save(unknown, expected_revision=lifecycle["revision"])
-                    except Exception:
-                        pass
-                    return self._finish(record, self._error(
+                    except Exception as lifecycle_exc:
+                        lifecycle_persist_error_type = type(lifecycle_exc).__name__
+                    return self._finish_session_start(record, self._error(
                         "EXECUTION_STATE_UNKNOWN", "Server process was created but exact startup/registration proof is incomplete",
                         data={"session_id": session_id, "state": "UNKNOWN", "server_handle_preserved": True,
                               "server_pid": getattr(handle.process, "pid", None),
-                              "server_birth_performed": True},
+                              "server_birth_performed": True,
+                              "startup_observations_recorded": startup_observations_recorded,
+                              "startup_observation_persist_error_type": startup_observation_persist_error_type,
+                              **startup_error_summary,
+                              "lifecycle_persist_error_type": lifecycle_persist_error_type},
                         execution_state_unknown=True, safe_retry=False,
                     ), "UNKNOWN")
+                lifecycle_persist_error_type = None
                 try:
                     failed = new_lifecycle_record(
                         project_id=project_id, session_id=session_id, state="STOPPED",
@@ -3886,14 +4096,41 @@ class ControlDaemon:
                         client_state="DISCONNECTED", server_state="STOPPED", server_ownership="unknown",
                     )
                     self.session_lifecycle.save(failed, expected_revision=lifecycle["revision"])
-                except Exception:
-                    pass
-                self._log_exception()
-                return self._finish(record, self._error(
+                except Exception as lifecycle_exc:
+                    lifecycle_persist_error_type = type(lifecycle_exc).__name__
+                return self._finish_session_start(record, self._error(
                     "SERVER_START_FAILED", "owned COMSOL Server did not start before any child handle was created",
-                    data={"session_id": session_id, "server_birth_performed": False},
+                    data={"session_id": session_id, "server_birth_performed": False,
+                          "startup_observations_recorded": startup_observations_recorded,
+                          "startup_observation_persist_error_type": startup_observation_persist_error_type,
+                          **startup_error_summary,
+                          "lifecycle_persist_error_type": lifecycle_persist_error_type},
                     cause_type=type(exc).__name__, safe_retry=True,
                 ), "FAILED")
+
+    def _finish_session_start(self, record, result, status):
+        """Finish a start result only as confirmed by the persistent operation row."""
+        try:
+            return self._finish(record, result, status)
+        except Exception as finish_error:
+            try:
+                job = self.store.job(record["job_id"])
+            except Exception as readback_error:
+                raise finish_error from readback_error
+            operation = job.get("operation") if isinstance(job, Mapping) else None
+            persisted = job.get("result") if isinstance(job, Mapping) else None
+            if (isinstance(job, Mapping) and job.get("job_id") == record["job_id"]
+                    and job.get("operation_id") == record["operation_id"]
+                    and job.get("status") == status
+                    and isinstance(operation, Mapping) and operation.get("status") == status
+                    and isinstance(persisted, Mapping)
+                    and isinstance(persisted.get("execution"), Mapping)
+                    and persisted["execution"].get("request_id") == record["request_id"]
+                    and persisted["execution"].get("operation_id") == record["operation_id"]
+                    and persisted["execution"].get("idempotency_key") == record["idempotency_key"]
+                    and persisted["execution"].get("job_id") == record["job_id"]):
+                return dict(persisted)
+            raise finish_error
 
     def _dispatch_session_stop(self, routed: dict[str, Any], execution: dict[str, Any]) -> dict[str, Any]:
         project_id, session_id = routed["project_id"], routed["session_id"]
@@ -4569,6 +4806,9 @@ class ControlDaemon:
         """Validate one atomic, request-quiescence-only lifecycle resolution."""
         job_id, operation_id = job.get("job_id"), job.get("operation_id")
         metadata, operation = job.get("metadata"), job.get("operation")
+        if (isinstance(operation, Mapping)
+                and operation.get("operation") == "session.start"):
+            return self._session_start_lifecycle_recovery_resolution_is_valid(job)
         if (not isinstance(job_id, str) or not isinstance(operation_id, str)
                 or not isinstance(metadata, Mapping) or not isinstance(operation, Mapping)
                 or metadata.get("reconciled_quiescent") is not True
@@ -4875,6 +5115,511 @@ class ControlDaemon:
             and proof.get("project_id") == source_project
             and proof.get("session_id") == source_session
         )
+
+    def _session_start_lifecycle_recovery_resolution_is_valid(self, job: Mapping[str, Any]) -> bool:
+        """Validate a current-host quiescence disposition for one old start."""
+        job_id, operation_id = job.get("job_id"), job.get("operation_id")
+        metadata, operation = job.get("metadata"), job.get("operation")
+        if (not isinstance(job_id, str) or not isinstance(operation_id, str)
+                or not isinstance(metadata, Mapping) or not isinstance(operation, Mapping)
+                or operation.get("operation") != "session.start"
+                or job.get("status") != "UNKNOWN" or operation.get("status") != "UNKNOWN"
+                or metadata.get("reconciled_quiescent") is not True):
+            return False
+        result = job.get("result")
+        if not isinstance(result, Mapping) or result.get("success") is not False:
+            return False
+        try:
+            result_digest = session_recovery_evidence_sha256({"source_result": dict(result)})
+            event = self.store.session_lifecycle_recovery_resolution(job_id)
+        except Exception:
+            return False
+        if not isinstance(event, Mapping) or not isinstance(event.get("metadata"), Mapping):
+            return False
+        proof = dict(event["metadata"])
+        supplied_digest = proof.pop("evidence_sha256", None)
+        if (not isinstance(supplied_digest, str) or len(supplied_digest) != 64
+                or session_recovery_evidence_sha256(proof) != supplied_digest):
+            return False
+        required = {
+            "schema_version", "source_job_id", "source_operation_id",
+            "source_request_id", "source_idempotency_key", "source_request_hash",
+            "session_recovery_operation_id", "session_recovery_job_id",
+            "session_recovery_request_id", "session_recovery_idempotency_key",
+            "project_id", "session_id", "runtime_id", "source_operation",
+            "source_status", "source_operation_status", "source_result_sha256",
+            "original_unknown_reason", "startup_observations_sha256",
+            "observed_at_utc", "control_daemon_identity", "process_inventory",
+            "listener_inventory", "resolution_scope", "classification",
+            "replay_performed", "new_worker_created", "lifecycle_transition",
+        }
+        if set(proof) != required:
+            return False
+        source_result = dict(result)
+        source_execution = source_result.get("execution")
+        source_request_id = operation.get("request_id")
+        source_key = operation.get("idempotency_key")
+        source_hash = operation.get("request_hash")
+        source_project = metadata.get("project_id")
+        source_session = metadata.get("session_id")
+        runtime_id = metadata.get("runtime_id")
+        if (not isinstance(source_execution, Mapping)
+                or source_execution.get("request_id") != source_request_id
+                or source_execution.get("operation_id") != operation_id
+                or source_execution.get("request_hash") != source_hash
+                or source_execution.get("idempotency_key") != source_key
+                or source_execution.get("job_id") != job_id):
+            return False
+        control = proof.get("control_daemon_identity")
+        processes = proof.get("process_inventory")
+        listeners = proof.get("listener_inventory")
+        transition = proof.get("lifecycle_transition")
+        pointer = metadata.get("session_lifecycle_recovery_resolution")
+        target = transition.get("target_lifecycle") if isinstance(transition, Mapping) else None
+        try:
+            target_record = validate_lifecycle_record(target) if isinstance(target, Mapping) else None
+        except Exception:
+            target_record = None
+        if (not isinstance(control, Mapping)
+                or set(control) != {"pid", "process_start_epoch_ms", "singleton_lock_held"}
+                or type(control.get("pid")) is not int or control.get("pid", 0) <= 1
+                or type(control.get("process_start_epoch_ms")) is not int
+                or control.get("process_start_epoch_ms", 0) <= 0
+                or control.get("singleton_lock_held") is not True
+                or not isinstance(processes, Mapping)
+                or set(processes) != {
+                    "status", "candidate_count", "unresolved_candidate_count",
+                    "task_owned_match_count", "canonical_engine_match_count",
+                    "startup_pid_count", "startup_pid_live_count", "startup_pid_unresolved_count",
+                }
+                or processes.get("status") != "COMPLETE"
+                or any(type(processes.get(key)) is not int or processes[key] < 0 for key in (
+                    "candidate_count", "unresolved_candidate_count", "task_owned_match_count",
+                    "canonical_engine_match_count", "startup_pid_count", "startup_pid_live_count",
+                    "startup_pid_unresolved_count",
+                ))
+                or any(processes.get(key) != 0 for key in (
+                    "unresolved_candidate_count", "task_owned_match_count",
+                    "canonical_engine_match_count", "startup_pid_live_count",
+                    "startup_pid_unresolved_count",
+                ))
+                or not isinstance(listeners, Mapping)
+                or set(listeners) != {
+                    "status", "rows_scanned", "owner_query_unresolved_count",
+                    "task_owned_match_count", "canonical_engine_match_count",
+                }
+                or listeners.get("status") != "COMPLETE"
+                or any(type(listeners.get(key)) is not int or listeners[key] < 0 for key in (
+                    "rows_scanned", "owner_query_unresolved_count", "task_owned_match_count",
+                    "canonical_engine_match_count",
+                ))
+                or any(listeners.get(key) != 0 for key in (
+                    "owner_query_unresolved_count", "task_owned_match_count",
+                    "canonical_engine_match_count",
+                ))
+                or not isinstance(transition, Mapping)
+                or not isinstance(pointer, Mapping)
+                or target_record is None):
+            return False
+        if (proof.get("schema_version") != 1
+                or proof.get("source_job_id") != job_id
+                or proof.get("source_operation_id") != operation_id
+                or proof.get("source_request_id") != source_request_id
+                or proof.get("source_idempotency_key") != source_key
+                or proof.get("source_request_hash") != source_hash
+                or proof.get("source_operation") != "session.start"
+                or proof.get("source_status") != "UNKNOWN"
+                or proof.get("source_operation_status") != "UNKNOWN"
+                or proof.get("source_result_sha256") != result_digest
+                or proof.get("project_id") != source_project
+                or proof.get("session_id") != source_session
+                or proof.get("runtime_id") != runtime_id
+                or proof.get("resolution_scope") != "ABANDONED_UNKNOWN_START_CURRENT_HOST_QUIESCENCE"
+                or proof.get("classification") != "ABANDONED_UNKNOWN_START_CURRENT_HOST_QUIESCENCE"
+                or proof.get("replay_performed") is not False
+                or proof.get("new_worker_created") is not False
+                or not isinstance(proof.get("observed_at_utc"), str)
+                or not isinstance(proof.get("original_unknown_reason"), str)
+                or not proof["original_unknown_reason"]):
+            return False
+        try:
+            recovery_operation = self.store.get_operation(proof["session_recovery_operation_id"])
+            recovery_job = self.store.operation_job(proof["session_recovery_operation_id"])
+        except Exception:
+            return False
+        if (not isinstance(recovery_operation, Mapping) or not isinstance(recovery_job, Mapping)
+                or recovery_operation.get("operation") != "session.recover"
+                or recovery_operation.get("request_id") != proof["session_recovery_request_id"]
+                or recovery_operation.get("idempotency_key") != proof["session_recovery_idempotency_key"]
+                or recovery_job.get("job_id") != proof["session_recovery_job_id"]
+                or recovery_job.get("status") not in {"RUNNING", "RECONCILING", "SUCCEEDED"}
+                or recovery_operation.get("status") not in {"RUNNING", "RECONCILING", "SUCCEEDED"}):
+            return False
+        recovery_metadata = recovery_job.get("metadata")
+        if (not isinstance(recovery_metadata, Mapping)
+                or recovery_metadata.get("project_id") != source_project
+                or recovery_metadata.get("session_id") != source_session):
+            return False
+        try:
+            startup_events = [item for item in self._session_job_events(job_id)
+                              if item.get("event") == "SessionServerStartupObservation"]
+            startup_digest = session_recovery_evidence_sha256({
+                "startup_observations": [
+                    {"id": int(item["id"]), "metadata": item["metadata"]}
+                    for item in startup_events
+                ],
+            })
+        except Exception:
+            return False
+        if proof.get("startup_observations_sha256") != startup_digest:
+            return False
+        lifecycle_transition = transition
+        return bool(
+            pointer.get("event_id") == event.get("id")
+            and pointer.get("evidence_sha256") == supplied_digest
+            and pointer.get("project_id") == source_project
+            and pointer.get("session_id") == source_session
+            and pointer.get("lifecycle_revision") == target_record.get("revision")
+            and pointer.get("resolution_scope") == proof.get("resolution_scope")
+            and lifecycle_transition.get("from_state") == "UNKNOWN"
+            and type(lifecycle_transition.get("from_revision")) is int
+            and type(lifecycle_transition.get("to_revision")) is int
+            and lifecycle_transition.get("from_revision") + 1 == lifecycle_transition.get("to_revision")
+            and target_record.get("revision") == lifecycle_transition.get("to_revision")
+            and target_record.get("project_id") == source_project
+            and target_record.get("session_id") == source_session
+            and target_record.get("runtime_id") == runtime_id
+            and target_record.get("state") == "STOPPED"
+            and target_record.get("endpoint") is None
+            and target_record.get("client_state") == "DISCONNECTED"
+            and target_record.get("server_state") == "STOPPED"
+            and target_record.get("server_ownership") == "unknown"
+            and target_record.get("server_process_identity") is None
+            and target_record.get("health") == {"status": "UNKNOWN", "observed_at": None, "source": None}
+        )
+
+    def _session_start_probe_roots(self, runtime_id: str, project_id: str,
+                                   session_id: str) -> tuple[Path, Path, Path]:
+        """Resolve only the existing task-owned and canonical install roots, read-only."""
+        if os.name != "nt":
+            raise RuntimeError("current-host COMSOL process inventory is supported only on Windows")
+        from ._runtime_installation import inspect_installation
+
+        row = inspect_installation(runtime_id).get("installation")
+        if (not isinstance(row, Mapping) or row.get("runtime_id") != runtime_id
+                or row.get("metadata_only") is not True):
+            raise RuntimeError("runtime installation identity is not exact")
+        installation_root = Path(row["root"]).resolve(strict=True)
+        configured_java = os.environ.get("COMSOL_JAVA_HOME") or os.environ.get("JAVA_HOME")
+        java_candidates: list[Path] = []
+        if configured_java:
+            java_candidates.append(Path(configured_java).expanduser())
+        else:
+            target_arch = platform.machine().lower()
+            target_arch = {"amd64": "x86_64", "aarch64": "arm64"}.get(target_arch, target_arch)
+            for bundle in row.get("bundled_java", []):
+                if not isinstance(bundle, Mapping):
+                    continue
+                arch = bundle.get("architecture", {}).get("values", []) if isinstance(bundle.get("architecture"), Mapping) else []
+                if target_arch in arch and isinstance(bundle.get("home"), str):
+                    java_candidates.append(Path(bundle["home"]))
+        java_homes = []
+        for candidate in java_candidates:
+            try:
+                home = candidate.resolve(strict=True)
+                if home.is_dir() and (home / "bin" / "java.exe").is_file():
+                    java_homes.append(home)
+            except OSError:
+                continue
+        if len(java_homes) != 1:
+            raise RuntimeError("one exact local Java home could not be resolved")
+
+        state_root = self.home / "session-runtime-state"
+        if state_root.is_symlink() or not state_root.is_dir():
+            raise RuntimeError("task session-state root is missing or redirected")
+        state_root = state_root.resolve(strict=True)
+        session_root = session_state_directory(state_root, project_id, session_id)
+        if session_root.is_symlink() or not session_root.is_dir():
+            raise RuntimeError("task session directory is missing or redirected")
+        session_root = session_root.resolve(strict=True)
+        if not session_root.is_relative_to(state_root):
+            raise RuntimeError("task session directory escapes its state root")
+        owned_root = session_root / "owned-server"
+        if owned_root.is_symlink() or not owned_root.is_dir():
+            raise RuntimeError("task-owned Server directory is missing or redirected")
+        owned_root = owned_root.resolve(strict=True)
+        if not owned_root.is_relative_to(session_root):
+            raise RuntimeError("task-owned Server directory escapes its session root")
+        return owned_root, installation_root, java_homes[0]
+
+    def _observe_session_start_quiescence(self, runtime_id: str, project_id: str,
+                                          session_id: str) -> dict[str, Any]:
+        """Read all Windows processes and TCP listener owners without persisting paths."""
+        task_root, installation_root, jdk_root = self._session_start_probe_roots(
+            runtime_id, project_id, session_id,
+        )
+        configuration = base64.b64encode(json.dumps({
+            "task_owned_root": str(task_root),
+            "installation_root": str(installation_root),
+            "jdk_root": str(jdk_root),
+        }, sort_keys=True).encode("utf-8")).decode("ascii")
+        script = _WINDOWS_SESSION_START_PROBE_PS.replace("__CONFIG_B64__", configuration)
+        encoded = base64.b64encode(script.encode("utf-16le")).decode("ascii")
+        try:
+            completed = subprocess.run(
+                ["powershell.exe", "-NoProfile", "-NonInteractive", "-EncodedCommand", encoded],
+                capture_output=True, text=True, timeout=20, check=False,
+            )
+        except Exception as exc:
+            raise RuntimeError(type(exc).__name__) from None
+        if completed.returncode != 0 or not isinstance(completed.stdout, str):
+            raise RuntimeError("PROCESS_OR_LISTENER_QUERY_FAILED")
+        try:
+            output = json.loads(completed.stdout)
+        except (TypeError, json.JSONDecodeError):
+            raise RuntimeError("PROCESS_OR_LISTENER_QUERY_MALFORMED") from None
+        if not isinstance(output, Mapping) or output.get("probe_status") != "COMPLETE":
+            raise RuntimeError("PROCESS_OR_LISTENER_QUERY_INCOMPLETE")
+        process_fields = {
+            "status", "candidate_count", "unresolved_candidate_count",
+            "task_owned_match_count", "canonical_engine_match_count",
+        }
+        listener_fields = {
+            "status", "rows_scanned", "owner_query_unresolved_count",
+            "task_owned_match_count", "canonical_engine_match_count",
+        }
+        processes = output.get("process_inventory")
+        listeners = output.get("listener_inventory")
+        if (not isinstance(processes, Mapping) or set(processes) != process_fields
+                or not isinstance(listeners, Mapping) or set(listeners) != listener_fields):
+            raise RuntimeError("PROCESS_OR_LISTENER_QUERY_SCHEMA_MISMATCH")
+        for mapping, field in ((processes, "candidate_count"), (processes, "unresolved_candidate_count"),
+                               (processes, "task_owned_match_count"), (processes, "canonical_engine_match_count"),
+                               (listeners, "rows_scanned"), (listeners, "owner_query_unresolved_count"),
+                               (listeners, "task_owned_match_count"), (listeners, "canonical_engine_match_count")):
+            if type(mapping.get(field)) is not int or mapping[field] < 0:
+                raise RuntimeError("PROCESS_OR_LISTENER_QUERY_COUNT_INVALID")
+        if processes.get("status") != "COMPLETE" or listeners.get("status") != "COMPLETE":
+            raise RuntimeError("PROCESS_OR_LISTENER_QUERY_INCOMPLETE")
+        return {"observed_at_utc": _utc_millis(),
+                "process_inventory": dict(processes),
+                "listener_inventory": dict(listeners)}
+
+    @staticmethod
+    def _read_startup_pid_observations(startup_events: list[Mapping[str, Any]]) -> dict[str, int]:
+        """Recheck every recorded launcher PID/birth without treating PID reuse as ownership."""
+        identities: dict[int, set[int]] = {}
+        unresolved = 0
+        for event in startup_events:
+            metadata = event.get("metadata")
+            if not isinstance(metadata, Mapping):
+                unresolved += 1
+                continue
+            pid = metadata.get("pid")
+            if pid is None:
+                continue
+            if type(pid) is not int or pid <= 1:
+                unresolved += 1
+                continue
+            birth_text = metadata.get("birth")
+            if isinstance(birth_text, str) and _CONTROL_DAEMON_BIRTH_RE.fullmatch(birth_text):
+                identities.setdefault(pid, set()).add(int(birth_text.split(":", 1)[1]))
+            else:
+                identities.setdefault(pid, set())
+
+        live = 0
+        for pid, expected_births in identities.items():
+            try:
+                observed = process_identity(pid)
+            except Exception:
+                unresolved += 1
+                continue
+            if not isinstance(observed, Mapping) or type(observed.get("alive")) is not bool:
+                unresolved += 1
+                continue
+            if observed["alive"] is False:
+                continue
+            observed_birth = observed.get("start_epoch_ms")
+            if type(observed_birth) is not int or observed_birth <= 0 or not expected_births:
+                unresolved += 1
+            elif observed_birth in expected_births:
+                live += 1
+            # A different observed creation time means the numeric PID was
+            # reused; the all-process path inventory still checks that new
+            # process against task, COMSOL, and JDK roots.
+        return {
+            "startup_pid_count": len(identities),
+            "startup_pid_live_count": live,
+            "startup_pid_unresolved_count": unresolved,
+        }
+
+    def _reconcile_interrupted_session_start(self, job: Mapping[str, Any], recovery_record: Mapping[str, Any],
+                                             lifecycle: Mapping[str, Any], *,
+                                             project_id: str, session_id: str
+                                             ) -> tuple[dict[str, Any] | None, str, dict[str, Any]]:
+        """Turn one interrupted start into UNKNOWN, then CAS a proved quiescent disposition."""
+        operation = job.get("operation")
+        metadata = job.get("metadata")
+        if (not isinstance(operation, Mapping) or operation.get("operation") != "session.start"
+                or not isinstance(metadata, Mapping)
+                or metadata.get("project_id") != project_id
+                or metadata.get("session_id") != session_id
+                or metadata.get("runtime_id") != lifecycle.get("runtime_id")):
+            return None, "SOURCE_SESSION_BINDING_MISMATCH", {}
+        if self._session_lifecycle_recovery_resolution_is_valid(job):
+            prior = self.store.session_lifecycle_recovery_resolution(job["job_id"])
+            return dict(lifecycle), "ALREADY_PROVEN", {
+                "evidence_sha256": (prior or {}).get("metadata", {}).get("evidence_sha256"),
+                "resolution_scope": (prior or {}).get("metadata", {}).get("resolution_scope"),
+            }
+        if self.store.session_lifecycle_recovery_resolution(job["job_id"]) is not None:
+            return None, "EXISTING_LIFECYCLE_PROOF_INVALID", {}
+        if self._control_singleton_lock_held is not True:
+            return None, "CONTROL_SINGLETON_LOCK_NOT_HELD", {}
+
+        execution = {
+            "request_id": operation.get("request_id"),
+            "operation_id": operation.get("operation_id"),
+            "request_hash": operation.get("request_hash"),
+            "idempotency_key": operation.get("idempotency_key"),
+            "job_id": job.get("job_id"),
+        }
+        unknown_result = self._error(
+            "EXECUTION_STATE_UNKNOWN",
+            "session.start has no durable terminal result; same-host quiescence review is required",
+            data={"session_id": session_id, "state": "UNKNOWN",
+                  "server_birth_observed": "UNKNOWN", "server_exit_code": "UNKNOWN",
+                  "replayed": False},
+            safe_retry=False, execution_state_unknown=True,
+        )
+        unknown_result["execution"] = execution
+        marked = self.store.mark_interrupted_session_start_unknown(
+            job_id=str(job.get("job_id")), operation_id=str(job.get("operation_id")),
+            request_id=str(operation.get("request_id")),
+            idempotency_key=str(operation.get("idempotency_key")),
+            request_hash=str(operation.get("request_hash")),
+            project_id=project_id, session_id=session_id,
+            unknown_result=unknown_result,
+        )
+        source = marked.get("job") if isinstance(marked, Mapping) else None
+        if not isinstance(source, Mapping):
+            return None, str(marked.get("reason") or "SOURCE_START_RECONCILIATION_FAILED"), {}
+        lifecycle_now = self.session_lifecycle.get(project_id, session_id)
+        if not isinstance(lifecycle_now, Mapping) or lifecycle_now.get("state") != "UNKNOWN":
+            return None, "SESSION_LIFECYCLE_NOT_UNKNOWN", {}
+        try:
+            identity = process_identity(os.getpid())
+        except Exception:
+            identity = {"alive": False, "start_epoch_ms": None}
+        birth = identity.get("start_epoch_ms") if isinstance(identity, Mapping) else None
+        if (self._control_singleton_lock_held is not True or identity.get("alive") is not True
+                or type(birth) is not int or birth <= 0):
+            return None, "CURRENT_CONTROL_IDENTITY_UNVERIFIED", {}
+        try:
+            observation = self._observe_session_start_quiescence(
+                str(metadata["runtime_id"]), project_id, session_id,
+            )
+        except Exception as exc:
+            return None, f"QUIESCENCE_QUERY_{type(exc).__name__}", {}
+        processes = observation.get("process_inventory") if isinstance(observation, Mapping) else None
+        listeners = observation.get("listener_inventory") if isinstance(observation, Mapping) else None
+        try:
+            startup_events = [item for item in self._session_job_events(str(source["job_id"]))
+                              if item.get("event") == "SessionServerStartupObservation"]
+            startup_pid_counts = self._read_startup_pid_observations(startup_events)
+        except Exception:
+            return None, "STARTUP_PID_RECHECK_UNAVAILABLE", {}
+        if isinstance(processes, Mapping):
+            processes = {**dict(processes), **startup_pid_counts}
+        if (not isinstance(processes, Mapping) or not isinstance(listeners, Mapping)
+                or processes.get("status") != "COMPLETE"
+                or listeners.get("status") != "COMPLETE"
+                or any(processes.get(key) != 0 for key in (
+                    "unresolved_candidate_count", "task_owned_match_count", "canonical_engine_match_count",
+                    "startup_pid_live_count", "startup_pid_unresolved_count",
+                ))
+                or any(listeners.get(key) != 0 for key in (
+                    "owner_query_unresolved_count", "task_owned_match_count", "canonical_engine_match_count",
+                ))):
+            return None, "CURRENT_HOST_QUIESCENCE_NOT_PROVEN", {
+                "process_inventory": dict(processes) if isinstance(processes, Mapping) else {"status": "UNAVAILABLE"},
+                "listener_inventory": dict(listeners) if isinstance(listeners, Mapping) else {"status": "UNAVAILABLE"},
+            }
+
+        source_result = source.get("result")
+        if not isinstance(source_result, Mapping):
+            return None, "SOURCE_UNKNOWN_RESULT_UNAVAILABLE", {}
+        startup_digest = session_recovery_evidence_sha256({
+            "startup_observations": [
+                {"id": int(item["id"]), "metadata": item["metadata"]}
+                for item in startup_events
+            ],
+        })
+        error_row = source_result.get("error")
+        original_reason = (error_row.get("code") if isinstance(error_row, Mapping)
+                           and isinstance(error_row.get("code"), str)
+                           else "SESSION_START_RESULT_UNKNOWN")
+        evidence = {
+            "schema_version": 1,
+            "source_job_id": source["job_id"],
+            "source_operation_id": source["operation_id"],
+            "source_request_id": operation["request_id"],
+            "source_idempotency_key": operation["idempotency_key"],
+            "source_request_hash": operation["request_hash"],
+            "session_recovery_operation_id": recovery_record["operation_id"],
+            "session_recovery_job_id": recovery_record["job_id"],
+            "session_recovery_request_id": recovery_record["request_id"],
+            "session_recovery_idempotency_key": recovery_record["idempotency_key"],
+            "project_id": project_id,
+            "session_id": session_id,
+            "runtime_id": metadata["runtime_id"],
+            "source_operation": "session.start",
+            "source_status": "UNKNOWN",
+            "source_operation_status": "UNKNOWN",
+            "source_result_sha256": session_recovery_evidence_sha256({"source_result": dict(source_result)}),
+            "original_unknown_reason": original_reason,
+            "startup_observations_sha256": startup_digest,
+            "observed_at_utc": observation["observed_at_utc"],
+            "control_daemon_identity": {
+                "pid": os.getpid(), "process_start_epoch_ms": birth,
+                "singleton_lock_held": True,
+            },
+            "process_inventory": dict(processes),
+            "listener_inventory": dict(listeners),
+            "resolution_scope": "ABANDONED_UNKNOWN_START_CURRENT_HOST_QUIESCENCE",
+            "classification": "ABANDONED_UNKNOWN_START_CURRENT_HOST_QUIESCENCE",
+            "replay_performed": False,
+            "new_worker_created": False,
+        }
+        target = new_lifecycle_record(
+            project_id=project_id, session_id=session_id, state="STOPPED",
+            runtime_id=str(metadata["runtime_id"]), endpoint=None,
+            client_state="DISCONNECTED", server_state="STOPPED", server_ownership="unknown",
+        )
+        target["revision"] = lifecycle_now["revision"] + 1
+        recorded = self.store.record_session_lifecycle_recovery_resolution(
+            str(source["job_id"]), str(source["operation_id"]),
+            lifecycle_now["revision"], target, evidence,
+        )
+        if recorded.get("recorded") is True:
+            source_now = self.store.job(str(source["job_id"]))
+            if (not source_now
+                    or not self._session_lifecycle_recovery_resolution_is_valid(source_now)):
+                return None, "RECORDED_START_PROOF_FAILED_VALIDATION", {}
+            return recorded.get("lifecycle"), "PROVEN_AND_AUDITED", {
+                "resolution_scope": evidence["resolution_scope"],
+                "evidence_sha256": (recorded.get("resolution", {}).get("metadata", {}).get("evidence_sha256")),
+            }
+        if recorded.get("reason") == "ALREADY_RESOLVED":
+            source_now = self.store.job(str(source["job_id"]))
+            if source_now and self._session_lifecycle_recovery_resolution_is_valid(source_now):
+                prior = recorded.get("resolution") or {}
+                prior_metadata = prior.get("metadata", {}) if isinstance(prior, Mapping) else {}
+                return self.session_lifecycle.get(project_id, session_id), "ALREADY_PROVEN", {
+                    "resolution_scope": prior_metadata.get("resolution_scope"),
+                    "evidence_sha256": prior_metadata.get("evidence_sha256"),
+                }
+        return None, str(recorded.get("reason") or "START_LIFECYCLE_RESOLUTION_NOT_RECORDED"), {}
 
     def _job_quiescence_proven(self, job: Mapping[str, Any]) -> bool:
         metadata = job.get("metadata") if isinstance(job, Mapping) else None
@@ -6980,6 +7725,66 @@ class ControlDaemon:
                 unresolved_items: list[dict[str, Any]] = []
                 resolved_jobs: list[dict[str, Any]] = []
                 observations: list[dict[str, Any]] = []
+                remaining_unresolved: list[dict[str, Any]] = []
+                for job in unresolved:
+                    source_operation = job.get("operation")
+                    source_name = (source_operation.get("operation")
+                                   if isinstance(source_operation, Mapping) else None)
+                    if source_name != "session.start":
+                        remaining_unresolved.append(job)
+                        continue
+                    if self._session_lifecycle_recovery_resolution_is_valid(job):
+                        prior = self.store.session_lifecycle_recovery_resolution(job["job_id"])
+                        prior_metadata = prior.get("metadata", {}) if isinstance(prior, Mapping) else {}
+                        resolved_jobs.append({
+                            "job_id": job["job_id"],
+                            "historical_status": job.get("status"),
+                            "outcome_resolution": "UNVERIFIED_HISTORICAL_UNKNOWN",
+                            "quiescence_resolution": "ALREADY_PROVEN",
+                            "resolution_scope": prior_metadata.get("resolution_scope"),
+                            "classification": prior_metadata.get("classification"),
+                            "evidence_sha256": prior_metadata.get("evidence_sha256"),
+                            "replayed": False,
+                        })
+                        continue
+                    target_lifecycle, disposition, details = self._reconcile_interrupted_session_start(
+                        job, record, lifecycle, project_id=project_id, session_id=session_id,
+                    )
+                    observations.append({
+                        "job_id": job.get("job_id"),
+                        "operation_id": job.get("operation_id"),
+                        "historical_status": job.get("status"),
+                        "classification": disposition,
+                        "process_inventory": details.get("process_inventory"),
+                        "listener_inventory": details.get("listener_inventory"),
+                        "resolution_scope": details.get("resolution_scope"),
+                    })
+                    if target_lifecycle is not None:
+                        lifecycle = target_lifecycle
+                        source_now = self.store.job(job["job_id"])
+                        prior = self.store.session_lifecycle_recovery_resolution(job["job_id"])
+                        prior_metadata = prior.get("metadata", {}) if isinstance(prior, Mapping) else {}
+                        resolved_jobs.append({
+                            "job_id": job["job_id"],
+                            "historical_status": job.get("status"),
+                            "outcome_resolution": "UNVERIFIED_HISTORICAL_UNKNOWN",
+                            "quiescence_resolution": ("ALREADY_PROVEN" if disposition == "ALREADY_PROVEN"
+                                                       else "PROVEN_AND_AUDITED"),
+                            "resolution_scope": prior_metadata.get("resolution_scope"),
+                            "classification": prior_metadata.get("classification"),
+                            "evidence_sha256": prior_metadata.get("evidence_sha256"),
+                            "lifecycle_state_after": lifecycle.get("state"),
+                            "historical_unknown_preserved": True,
+                            "source_result_preserved": bool(source_now and source_now.get("result")),
+                            "replayed": False,
+                        })
+                    else:
+                        unresolved_items.append({
+                            "kind": "UNKNOWN_JOB", "job_id": job.get("job_id"),
+                            "historical_status": job.get("status"),
+                            "reason": disposition,
+                        })
+                unresolved = remaining_unresolved
                 runtime_metadata = None
                 runtime_error = None
                 process_observation: dict[str, Any] = {"state": "MISSING_OR_UNVERIFIABLE"}
@@ -8944,6 +9749,7 @@ def serve(home):
         raise
     token = secrets.token_urlsafe(32)
     daemon = ControlDaemon(home)
+    daemon._control_singleton_lock_held = True
     class Handler(BaseHTTPRequestHandler):
         def do_POST(self):
             if self.path != "/rpc" or not secrets.compare_digest(self.headers.get("Authorization", ""), "Bearer " + token):
@@ -8970,10 +9776,55 @@ def serve(home):
     start_epoch_ms = process_identity(os.getpid())["start_epoch_ms"]
     if isinstance(start_epoch_ms, int):
         endpoint["process_start_epoch_ms"] = start_epoch_ms
+    daemon_identity = {
+        "schema": _CONTROL_DAEMON_IDENTITY_SCHEMA,
+        "event": "DAEMON_READY",
+        "observed_at_utc": _utc_millis(),
+        "pid": os.getpid(),
+        "birth": f"start_epoch_ms:{start_epoch_ms}" if isinstance(start_epoch_ms, int) and start_epoch_ms > 0 else None,
+        "exit_code": None,
+        "exception_type": None,
+        "errno": None,
+        "winerror": None,
+        "error_category": None,
+    }
+    # This fixed-schema file is credential-free and diagnostic only. The
+    # authenticated endpoint/token remains exclusively in control.json.
+    _write_control_daemon_identity(home, daemon_identity)
     temporary.write_text(json.dumps(endpoint))
     os.chmod(temporary, 0o600)
     temporary.replace(home / "control.json")
-    server.serve_forever()
+    try:
+        server.serve_forever()
+    except BaseException as exc:
+        exception_type = type(exc).__name__
+        if not _CONTROL_DAEMON_SAFE_TYPE_RE.fullmatch(exception_type):
+            exception_type = "UnclassifiedError"
+        errno_value = getattr(exc, "errno", None)
+        winerror_value = getattr(exc, "winerror", None)
+        serve_observation = {
+            **daemon_identity,
+            "event": "DAEMON_SERVE_FAILED",
+            "observed_at_utc": _utc_millis(),
+            "exit_code": None,
+            "exception_type": exception_type,
+            "errno": errno_value if type(errno_value) is int else None,
+            "winerror": winerror_value if type(winerror_value) is int else None,
+            "error_category": "DAEMON_SERVE_LOOP_RAISED",
+        }
+        try:
+            _write_control_daemon_identity(home, serve_observation)
+        except Exception:
+            pass
+        raise
+    else:
+        _write_control_daemon_identity(home, {
+            **daemon_identity,
+            "event": "DAEMON_SERVE_RETURNED",
+            "observed_at_utc": _utc_millis(),
+            "exit_code": None,
+            "error_category": "DAEMON_SERVE_LOOP_RETURNED",
+        })
 
 
 if __name__ == "__main__":
