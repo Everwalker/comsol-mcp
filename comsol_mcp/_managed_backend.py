@@ -238,6 +238,10 @@ class ManagedBackend:
         # W21 output reader. They are kept in a context variable instead of a
         # request flag, so public result.evaluate callers cannot enable them.
         self._stage_output_mode_context = ContextVar(f"comsol_w21_output_mode_{id(self)}", default=None)
+        # Full current-mesh snapshots are similarly restricted to the
+        # backend-owned stage evidence reader. The public mesh.inspect schema
+        # remains unchanged and cannot select this branch.
+        self._stage_mesh_snapshot_context = ContextVar(f"comsol_w21_mesh_snapshot_{id(self)}", default=None)
         self._model_project_bindings: dict[str, str | None] = {}
 
         help_roots = default_comsol_help_roots(self.project_root)
@@ -314,6 +318,18 @@ class ManagedBackend:
             stage_run_operation_id=stage_run_operation_id,
             model_revision=model_revision, solve_result=solve_result,
             event_callback=event_callback, authorize_callback=authorize_callback,
+        )
+
+    def stage_mesh_snapshot_readback(self, *, project_id, model_ref, attempt_id, phase,
+                                     model_revision, component, mesh, geometry,
+                                     event_callback=None):
+        """Read and persist a bounded current mesh snapshot for one exact attempt."""
+        from ._w21_mesh_readback import produce_stage_mesh_snapshot_readback
+
+        return produce_stage_mesh_snapshot_readback(
+            self, project_id=project_id, model_ref=model_ref, attempt_id=attempt_id,
+            phase=phase, model_revision=model_revision, component=component,
+            mesh=mesh, geometry=geometry, event_callback=event_callback,
         )
 
     @contextmanager
@@ -1805,7 +1821,41 @@ class ManagedBackend:
             # G3 (W13-W16) domain operations use the same bound-model,
             # revision and write-ticket path as the G2 model surface; the
             # catalogue effect decides permission and isolation inside.
-            return self._invoke_g3_model(operation, ref, body, execution, operation_id, session)
+            result = self._invoke_g3_model(operation, ref, body, execution, operation_id, session)
+            mesh_snapshot_mode = self._stage_mesh_snapshot_context.get(None)
+            if (operation == "mesh.inspect" and isinstance(mesh_snapshot_mode, dict)
+                    and isinstance(result, Mapping) and result.get("success") is True):
+                # The legacy inspect path intentionally has no write ticket or
+                # ticket request hash.  Bind the private producer's exact
+                # request/operation correlation to the actual outer request
+                # after that same request ID has been passed through
+                # ExecutionService.execute_legacy.  Never synthesize a hash.
+                execution_result = result.get("execution") if isinstance(result, Mapping) else None
+                request_id = execution.get("request_id")
+                if (not isinstance(execution_result, Mapping)
+                        or not isinstance(request_id, str) or not request_id
+                        or execution_result.get("model_ref") != ref.as_dict()
+                        or execution_result.get("session_id") != session
+                        or execution_result.get("revision") != execution.get("expected_revision")
+                        or execution_result.get("dirty") is not False
+                        or execution_result.get("project_id") not in (None, execution.get("project_id"))
+                        or execution_result.get("request_id") not in (None, request_id)
+                        or execution_result.get("operation_id") not in (None, operation_id)
+                        or "request_hash" in execution_result):
+                    raise ExecutionContractError(
+                        "MODEL_IDENTITY_MISMATCH",
+                        "private mesh READ response does not preserve its exact managed identity",
+                        stage="post_dispatch",
+                    )
+                enriched = dict(execution_result)
+                enriched.update({
+                    "project_id": execution.get("project_id"),
+                    "request_id": request_id,
+                    "operation_id": operation_id,
+                    "request_hash_status": "NOT_APPLICABLE_READ_NO_WRITE_TICKET",
+                })
+                result = {**dict(result), "execution": enriched}
+            return result
         if operation in {"node.property_set", "node.property_index_set", "node.property_entry_set",
                          "code.execute_java", "checkpoint.create", "checkpoint.restore",
                          "transaction.trial", "transaction.apply", "transaction.recover"}:
@@ -2337,10 +2387,14 @@ class ManagedBackend:
                 if registered_import is not None:
                     domain_body = dict(import_body)
                 output_mode = self._stage_output_mode_context.get(None)
+                mesh_snapshot_mode = self._stage_mesh_snapshot_context.get(None)
                 if operation == "result.evaluate" and output_mode == "strict_field_readback":
                     data = function(self.worker, model_tag, domain_body, strict_field_readback=True)
                 elif operation == "result.evaluate" and output_mode == "strict_metric_evidence":
                     data = function(self.worker, model_tag, domain_body, strict_metric_evidence=True)
+                elif operation == "mesh.inspect" and isinstance(mesh_snapshot_mode, dict):
+                    data = function(self.worker, model_tag, domain_body,
+                                    _strict_snapshot_mode=mesh_snapshot_mode)
                 else:
                     data = function(self.worker, model_tag, domain_body)
                 if registered_import is not None and isinstance(data, dict):

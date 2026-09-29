@@ -3,6 +3,7 @@ package comsol_mcp.worker_java;
 import com.sun.security.auth.module.NTSystem;
 import com.comsol.model.Model;
 import com.comsol.model.GeomObjectSelection;
+import com.comsol.model.MeshSequence;
 import com.comsol.model.ModelParam;
 import com.comsol.model.NumericalFeature;
 import com.comsol.model.ResultParam;
@@ -86,6 +87,11 @@ public final class PersistentComsolWorker {
       "isGenIntermediatePlots", "isGenPlots", "isPlotUndefVals", "isStoreCompleteHistory",
       "isStoreSolution", "problem", "problems", "setQualityMeasure", "setSolveFor", "solveFor",
       "type", "hasProperty", "materialType", "addInput", "removeInput", "input",
+      // W21 current-mesh evidence uses only bounded block overloads.  The
+      // dispatcher below type-checks MeshSequence and requires an explicit
+      // position/count (1..1024), so the generic reflective overload path
+      // cannot expose whole-mesh arrays.
+      "getVertex", "getElem", "getElemEntity",
       // G3 C06 allow-list merge (2026-09-21).  The entries below were dispatched
       // by the G3 modules but were absent here, so the live worker refused them
       // with METHOD_REJECTED (the W16_T018 evidence shows mesh.statistics
@@ -630,6 +636,10 @@ public final class PersistentComsolWorker {
       if (!args.isEmpty()) throw new IllegalArgumentException("getFileResourceTags takes no arguments");
       return getFileResourceTags(target);
     }
+    if (isMeshBlockGetter(method)) {
+      if (!(target instanceof MeshSequence)) throw new SecurityException("METHOD_REJECTED");
+      validateMeshBlockArguments(method, args);
+    }
     if ("init".equals(method)) {
       // This narrowly enables the exact W14 API call. Do not expose another
       // object's unrelated init overload through the name-based dispatcher.
@@ -650,6 +660,42 @@ public final class PersistentComsolWorker {
           string(request.get("request_id")));
     }
     return invoke(target, target.getClass(), method, args);
+  }
+
+  private static boolean isMeshBlockGetter(String method) {
+    return "getVertex".equals(method) || "getElem".equals(method) || "getElemEntity".equals(method);
+  }
+
+  // Package-visible only for the no-engine Java contract harness. The native
+  // dispatch invokes this same validator before reflection.
+  static void validateMeshBlockArguments(String method, List<?> args) {
+    if (!isMeshBlockGetter(method)) throw new IllegalArgumentException("unsupported mesh block getter");
+    int expected = "getVertex".equals(method) ? 2 : 3;
+    if (args == null || args.size() != expected) {
+      throw new IllegalArgumentException("mesh block getter requires explicit position/count arguments");
+    }
+    int offsetIndex = expected == 2 ? 0 : 1;
+    int countIndex = offsetIndex + 1;
+    if (expected == 3 && (!(args.get(0) instanceof String) || ((String) args.get(0)).isEmpty())) {
+      throw new IllegalArgumentException("mesh element type must be explicit");
+    }
+    long offset = requireMeshBlockInteger(args.get(offsetIndex), "position");
+    long count = requireMeshBlockInteger(args.get(countIndex), "count");
+    if (offset < 0 || offset > Integer.MAX_VALUE || count < 1 || count > 1024
+        || offset + count > Integer.MAX_VALUE) {
+      throw new IllegalArgumentException("mesh block position/count is outside the bounded range");
+    }
+  }
+
+  private static long requireMeshBlockInteger(Object value, String label) {
+    if (!(value instanceof Number)) throw new IllegalArgumentException("mesh block " + label + " must be an integer");
+    Number number = (Number) value;
+    double asDouble = number.doubleValue();
+    long asLong = number.longValue();
+    if (!Double.isFinite(asDouble) || asDouble != (double) asLong) {
+      throw new IllegalArgumentException("mesh block " + label + " must be an integer");
+    }
+    return asLong;
   }
 
   private Object evaluateModelParameterComplex(ModelParam target, String expression,

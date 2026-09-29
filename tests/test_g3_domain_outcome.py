@@ -751,6 +751,18 @@ def test_modelnode_navigation_is_read_but_creation_remains_mutating():
     assert is_mutation_call("unverifiedMethod", ())
 
 
+@pytest.mark.parametrize(("method", "args"), [
+    ("getNumVertex", ()),
+    ("getNumElem", ("tri",)),
+    ("getTypes", ()),
+    ("getVertex", (0, 1)),
+    ("getElem", ("tri", 0, 1)),
+    ("getElemEntity", ("tri", 0, 1)),
+])
+def test_bounded_mesh_sequence_block_getters_are_classified_as_reads(method, args):
+    assert is_mutation_call(method, args) is False
+
+
 def test_function_feature_metadata_reads_require_the_verified_signature():
     from comsol_mcp._domain_outcome import is_mutation_call
     assert not is_mutation_call("functionNames", ())

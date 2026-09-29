@@ -1091,10 +1091,86 @@ def _mesh_tree(seq: Any, depth: int, *, prefix: Mapping[str, Any]) -> list[dict[
     return rows
 
 
-def mesh_inspect(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
-    args = operation_arguments(arguments, ("path", "depth"), ("path",))
+def mesh_inspect(worker: Any, model_tag: str, arguments: Mapping[str, Any], *,
+                 _strict_snapshot_mode: dict[str, Any] | None = None) -> dict[str, Any]:
+    try:
+        args = operation_arguments(arguments, ("path", "depth"), ("path",))
+    except ExecutionContractError as exc:
+        # The schema gate runs before model resolution or any Worker request.
+        # Declare that boundary so rejected caller arguments, including an
+        # attempted private-mode spoof, remain a clean validation refusal.
+        if exc.stage is None:
+            exc.stage = "validation"
+        raise
     depth = args.get("depth")
     depth = 1 if depth is None else require_int(depth, "depth", minimum=1, maximum=4)
+    requested_path = NodePath.from_wire(args["path"])
+    requested_root = requested_path.segments[-1].collection if requested_path.segments else None
+    if _strict_snapshot_mode is not None:
+        # This branch is reachable only through ManagedBackend's private
+        # ContextVar injection.  It bypasses the exploratory feature-tree and
+        # optional-property probes below and reads only the resolved sequence,
+        # its actual geom() association, and the documented complete block API.
+        if (not isinstance(_strict_snapshot_mode, dict)
+                or len(requested_path.segments) != 2
+                or requested_path.segments[0].collection != "component"
+                or requested_path.segments[1].collection != "mesh"
+                or requested_root != "mesh"):
+            raise ExecutionContractError("INVALID_NODE_PATH", "strict current-mesh capture requires one mesh-sequence NodePath",
+                                         stage="validation")
+        binding = _strict_snapshot_mode.get("binding")
+        bound_ref = binding.get("model_ref") if isinstance(binding, Mapping) else None
+        if (not isinstance(binding, Mapping)
+                or set(binding) != {"project_id", "model_ref", "revision", "attempt_id", "phase",
+                                    "component", "mesh", "geometry"}
+                or not isinstance(bound_ref, Mapping)
+                or bound_ref.get("model_tag") != model_tag
+                or binding.get("phase") not in {"pre-stage", "post-stage"}):
+            raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "strict current-mesh binding is malformed",
+                                         stage="validation")
+        # Resolve the exact two-accessor chain directly here.  The generic
+        # NodePath resolver makes a best-effort second tag read after some
+        # accessor failures; strict mesh capture must stop immediately on an
+        # ambiguous Worker outcome instead of issuing another RPC.
+        component = validate_tag(requested_path.segments[0].tag, "component")
+        mesh_tag = validate_tag(requested_path.segments[1].tag, "mesh")
+        if component != binding.get("component") or mesh_tag != binding.get("mesh"):
+            raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "requested component/mesh differs from the stage binding",
+                                         stage="validation")
+        comp = _require_component(worker, model_tag, component)
+        mesh_container = _call(comp, "mesh")
+        if mesh_tag not in tag_list(mesh_container):
+            raise node_not_found(f"mesh sequence {mesh_tag!r} does not exist in component {component!r}")
+        node = _call(comp, "mesh", mesh_tag)
+        canonical = requested_path.as_dict()
+        geometry = _call(node, "geom")
+        if not isinstance(geometry, str) or not geometry or geometry != binding.get("geometry"):
+            raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "actual MeshSequence.geom() differs from the stage binding",
+                                         stage="validation")
+        from ._w21_mesh_evidence import MeshEvidenceError, capture_current_mesh
+        try:
+            snapshot = capture_current_mesh(node, binding=binding)
+        except MeshEvidenceError as exc:
+            raise ExecutionContractError(exc.code, str(exc), stage="validation") from exc
+        receiver_handle = getattr(node, "_handle", None)
+        if not isinstance(receiver_handle, str) or not receiver_handle:
+            raise ExecutionContractError("WORKER_IDENTITY_UNAVAILABLE", "resolved MeshSequence has no Worker receiver handle",
+                                         stage="validation")
+        _strict_snapshot_mode["resolved"] = {
+            "path": canonical, "component": component, "mesh": mesh_tag,
+            "geometry": geometry, "receiver_handle": receiver_handle,
+        }
+        return {
+            "kind": "mesh_sequence_current_snapshot",
+            "path": canonical, "component": component, "mesh": mesh_tag,
+            # The outer operation status participates in the shared outcome
+            # classifier. Keep the narrower evidence claim in its own field;
+            # CURRENT_MESH_CAPTURE_ONLY is a scope label, not an outcome token.
+            "geometry": geometry, "status": "SUCCEEDED",
+            "capture_status": snapshot["status"],
+            "mesh_snapshot": snapshot,
+        }
+
     canonical, node = resolve_path(worker, model_tag, args["path"], label="path")
     parsed = NodePath.from_wire(canonical)
     root_collection = parsed.segments[-1].collection if parsed.segments else None

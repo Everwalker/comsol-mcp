@@ -206,6 +206,10 @@ KNOWN_READ_METHODS = frozenset({
     "getFilledImag", "getImagData", "getPVals",
     "getLastComputationTime", "getLastComputationDate", "getLastComputationVersion",
     "isComplex", "isAxisymmetric", "isPlotGroup", "getSDim", "getSolutioninfo",
+    # Bounded current-mesh evidence reads the documented MeshSequence block
+    # overloads; these are getters, so a validation failure after them does
+    # not imply that the model was mutated.
+    "getNumVertex", "getNumElem", "getTypes", "getVertex", "getElem", "getElemEntity",
     "getOuterSolnum", "getMaxInner", "getLevelNames", "getSolnum", "getSolnums",
     "properties", "getPNames", "getPvals", "getUnits", "getUnit", "getPNamesOuter", "getPUnitsOuter",
     "getSolverSequence",

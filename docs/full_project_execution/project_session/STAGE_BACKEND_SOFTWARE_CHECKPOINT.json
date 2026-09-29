@@ -166,5 +166,149 @@
       "historical mesh/source-target mapping/frame/DOF/history UNVERIFIED"
     ],
     "next_action": "Integrate current mesh snapshots under managed stage ownership before/after initial-stage solve; persist exact attempt-bound evidence for subsequent stages. Distinguish initial-state dispatch prerequisites from predecessor mapping and post-solve acceptance; do not mark historical mesh/admission verified by this helper alone."
+  },
+  "managed_current_mesh_bridge_20260930": {
+    "status": "PASS_SCOPED_SOFTWARE",
+    "native_status": "NOT_RUN",
+    "base_head": "c0d7a1e624a373d48f78c27adc960207d5f07c87",
+    "receipt": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-mesh-bridge-finish-20260930/receipt.json",
+      "sha256": "032131a06b9a7fae632ad19369be72550227cab4cc762c4e2edcfb2312270e1e"
+    },
+    "source_manifest": [
+      {
+        "path": "comsol_mcp/_managed_backend.py",
+        "sha256": "5884257a674b6b883f531cea0b8514ed75f7ff640f1c69b87a3fd0ee4ed0b120"
+      },
+      {
+        "path": "comsol_mcp/_g3_w16.py",
+        "sha256": "8a6fb18c653ed90bde9be801a16dabddb1d2302e4b88608a01eac960d5252a3a"
+      },
+      {
+        "path": "comsol_mcp/_domain_outcome.py",
+        "sha256": "db6f29545466d86181a98d0f79ea3c4cbfbfa0865790b27556f64606cea72b70"
+      },
+      {
+        "path": "comsol_mcp/_w21_mesh_readback.py",
+        "sha256": "c6fe5120c7ca3dbb89c4dbe0e3be9bfcba821ae938964147d11cd7ba867e9851"
+      },
+      {
+        "path": "comsol_mcp/_w21_mesh_evidence.py",
+        "sha256": "8d13794d74547742a4dd38e1516eca3c7102980cc856c96e974216261e193181"
+      }
+    ],
+    "affected_test_manifest": [
+      {
+        "path": "tests/test_w21_mesh_readback.py",
+        "sha256": "b6e72b9a0352397208257b6cfdc00e2497c07597a79b788fe9dd42e3691db8e9"
+      },
+      {
+        "path": "tests/test_w21_mesh_evidence.py",
+        "sha256": "9a79d9ee9b4289f3166f7687d2f66f85c902dcbd2f11a38f748e9c7f23382dfa"
+      },
+      {
+        "path": "tests/test_g3_w16.py",
+        "sha256": "6beeea1fc65d0f1a42b752acb6a53b29ccb81199a64c10384c89dc08b00ba698"
+      },
+      {
+        "path": "tests/test_g3_domain_outcome.py",
+        "sha256": "5ac7d47e85ceb6f67c59dde00c5f2fe6ae87eb8bfa79555cf16313474d121aa7"
+      },
+      {
+        "path": "tests/test_execution_service.py",
+        "sha256": "96f8dab2a324bcfc4235b77955597391d2b15a4add36e8701ba737a3cd8cdb11"
+      },
+      {
+        "path": "tests/test_managed_backend.py",
+        "sha256": "507bae5ff08ae0e9d11f87b1f6b3c3ce07ebcedf93502bab846fbd3a24d8a18a"
+      },
+      {
+        "path": "tests/test_managed_backend_docs_security.py",
+        "sha256": "43a6380e70e3cb800e5de0fae45dc0b90a739d054e8a1949fb0d0bd9e4781db5"
+      }
+    ],
+    "tests": {
+      "command": "pytest -p no:cacheprovider -q tests/test_w21_mesh_readback.py tests/test_w21_mesh_evidence.py tests/test_g3_w16.py tests/test_g3_domain_outcome.py tests/test_execution_service.py tests/test_managed_backend.py tests/test_managed_backend_docs_security.py",
+      "counts": {
+        "tests": 194,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "per_test_module": {
+        "tests.test_execution_service": 7,
+        "tests.test_g3_domain_outcome": 48,
+        "tests.test_g3_w16": 80,
+        "tests.test_managed_backend": 9,
+        "tests.test_managed_backend_docs_security": 3,
+        "tests.test_w21_mesh_evidence": 31,
+        "tests.test_w21_mesh_readback": 16
+      },
+      "junit": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-mesh-bridge-finish-20260930/bridge-focused-08-junit.xml",
+      "junit_sha256": "5b23f70e8445d22773fe45afdc5c4ecb25d18c5a1574be8c781e7f317145794f",
+      "log": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-mesh-bridge-finish-20260930/bridge-focused-08.log",
+      "log_sha256": "5b500e9b696682fc4d9fdeb95a1499b4dbe9d0a509327fea6b0b6cd4a4a2367e",
+      "basetemp": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-mesh-bridge-finish-20260930/pytest-focused-08",
+      "tmpdir": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-mesh-bridge-finish-20260930/tmp-focused-08"
+    },
+    "java": {
+      "status": "PASS_OFFLINE_JAVAC_AND_HARNESS",
+      "accepted_assertions": 4,
+      "rejected_assertions": 20,
+      "receipt": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-mesh-bridge-java-20260930/expanded-controls/receipt.json",
+      "receipt_sha256": "edd32e6b6feace7e68351031d7fc33ffa0d8a10afd6d0a95188fc566749e8be1",
+      "worker_source": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/comsol_mcp/worker_java/PersistentComsolWorker.java",
+      "worker_source_sha256": "9ef79b02bbf43bc7f05bec1e0c13b66975c05d98def6bf394a590b891ae599ae",
+      "harness_source": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/tests/java/W21MeshBlockArgumentsHarness.java",
+      "harness_source_sha256": "8859b158a9fbc97a1fd3a2eef222c3cbcc77d5784da44c9a7db939ef1984f1e1",
+      "native_comsol": "NOT_RUN"
+    },
+    "main_review": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-mesh-bridge-finish-20260930/main-review.json",
+      "sha256": "4428fa7716bd21177be89d0c5c850dee0732c7de36d577c695acff870b1d090b",
+      "result": "Reviewed final diff and verified all 194 unique JUnit cases, source/test/log hashes and Java compile/harness. No new native acceptance."
+    },
+    "failure_history": {
+      "root": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-mesh-bridge-finish-20260930",
+      "retained": [
+        {
+          "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-mesh-bridge-finish-20260930/bridge-first-junit.xml",
+          "sha256": "b1b967e8f36f9c00372f468a6ec4671ad95abdf97981be72130db99c1dba90b5"
+        },
+        {
+          "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-mesh-bridge-finish-20260930/bridge-focused-01.log",
+          "sha256": "65973a364a0fcae0ec100749be346fdb6e8337f85222ef01c1c852a13a33818b"
+        },
+        {
+          "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-mesh-bridge-finish-20260930/bridge-focused-01-junit.xml",
+          "sha256": "9298cc70d9c73fb761bece51f88b215a7d2e5282c62a0eeaf4207584c4a58ea1"
+        },
+        {
+          "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-mesh-bridge-finish-20260930/bridge-focused-02.log",
+          "sha256": "1af50fa1d1eacf74edc68b52ea2b868cc0f67eb03b8b2a8342335fe1d4cb686e"
+        },
+        {
+          "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-mesh-bridge-finish-20260930/bridge-focused-02-junit.xml",
+          "sha256": "db7dd2bf7be9393b788d10b6b1aa7bf0cf111e7c1c3777050f96a3b8221152bc"
+        },
+        {
+          "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-mesh-bridge-finish-20260930/bridge-focused-05-junit.xml",
+          "sha256": "a498f596ce80909b7244abf354f716231ad4951f8d1308e6a4e801ac9b146985"
+        }
+      ],
+      "repairs": [
+        "Separate operation outcome from current-mesh claim token",
+        "Classify six documented MeshSequence getters as read-only",
+        "Preserve UNKNOWN and dirty ledger after exception or malformed reply",
+        "Keep caller argument refusals at the validation boundary"
+      ]
+    },
+    "limitations": [
+      "Python bridge validation used the real ManagedBackend and ExecutionService with an in-process fake Worker and fake snapshot adapter.",
+      "No COMSOL native engine acceptance was performed; native status is NOT_RUN.",
+      "The persisted artifact proves only CURRENT_MESH_CAPTURE_ONLY. Historical mesh identity, source-target mapping, frame identity, DOF identity and scientific admission remain UNVERIFIED.",
+      "Strict NodePath negative controls assert zero domain Worker calls; ExecutionService pre-snapshot through its adapter may already have occurred."
+    ],
+    "next_action": "Integrate the existing stage route: distinguish initial-state dispatch prerequisites from predecessor transfer, capture actual declared target fields/automatic units/tuple/owned meshes/saved artifact, preserve successor continuity/conservation requirements, then Windows 6.4 followed by 6.3 native stage execution."
   }
 }
