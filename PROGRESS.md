@@ -4,9 +4,9 @@
 
 ## Current Windows 6.4 state
 
-**PASS — scoped canonical Windows 6.4 native chain.** Run `w21-64-20260929T132007Z-820b0f09`, runtime source `2bdcc75`, COMSOL 6.4.0 build 293, exited 0. Public MCP start/connect/model construction → one solve → exact solution-index read → full temperature field readback → owned cleanup all completed. Field shape is `[1,1,5,637]`, unit readback K, selected tuple `(outer=1, inner=5, solnum=5)`; selected values are approximately 300–304.380 K. The complete field response was 375,596 bytes under the unchanged 45s RPC wait and native budgets. Returned-field hashes and request/model/revision bindings were checked by the main Agent.
+**PASS — scoped canonical Windows 6.4 native chain, including the shared path repair.** Latest run `w21-64-20260929T144015Z-95b9b5b5`, source `45399a5`, COMSOL 6.4.0 build 293, exited 0. Public MCP start/connect/model construction → one solve → exact solution-index read → full temperature field readback → owned cleanup all completed. Field shape `[1,1,5,637]`, unit K, selected tuple `(outer=1, inner=5, solnum=5)`, approximately 300–304.380 K. Main Agent checked receipt/state/freeze/request identities, finite values and hashes, unchanged budget, and exact owned Server exit/listener absence plus Worker retirement and temporary Eval removal. [Latest compact checkpoint](docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json#canonical_native_chain_windows64_shared_path_candidate).
 
-Cleanup is proven for the exact owned Server PID 2796/birth: child reaped, exit confirmed, listener absent; Worker retired and temporary Eval node verified removed. [Canonical 6.4 checkpoint](docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json#canonical_native_chain_windows64) contains the compact result, exact fingerprints, reproduction entry and local receipt identities. **Windows 6.3 now passes startup/connect; its latest solve is UNKNOWN after a native file-creation error, and readback remains NOT_RUN.**
+The revised Windows path preflight includes native recovery files (worst path 259 UTF-16 units including NUL); the real solve and readback passed. Earlier 6.4 success on source `2bdcc75` remains retained separately. Windows 6.3 verification of this candidate is next; its prior native failure remains below.
 
 This is minimal coarse-mesh (`hauto=9`) production-chain acceptance only. The auxiliary structural probe remains RAW_UNINTERPRETED/PARTIAL. Actual spatial coordinates, intrinsic mesh mapping, stage-transfer admission, numerical convergence and physical validation are not established. The preceding fine-mesh run produced a real 45MB field result but its public reply timed out; its runner UNKNOWN remains preserved and current-host quiescence was separately verified. It is not retroactively counted as a complete chain.
 
@@ -26,8 +26,8 @@ The latest shared Windows path repair passed 298 tests across session context, S
 
 ## Next action
 
-1. Software repair passed 298 tests; freeze the reviewed shared path candidate.
-2. Verify the same candidate natively in Windows 6.4, then 6.3, including solve/readback/cleanup under unchanged budgets. Path preflight alone is not native acceptance.
+1. Shared path candidate `45399a5` passed 298 software tests and the full Windows 6.4 native chain.
+2. Bind the new actual 6.4 receipt and complete Windows 6.3 solve/readback/cleanup with the same source and unchanged budgets.
 3. Preserve both historical UNKNOWN attempts and separate metadata/mapping/physical gaps; unrelated capability expansion stays paused this round.
 
 ## Remaining project scope

@@ -2863,5 +2863,64 @@
         "sha256": "2ea103b72868557d8ec3aebcc6324bcc45d6eee6669284ae66e317a633ec405c"
       }
     }
+  },
+  "canonical_native_chain_windows64_shared_path_candidate": {
+    "status": "PASS_SCOPED_CANONICAL_NATIVE_CHAIN",
+    "run_id": "w21-64-20260929T144015Z-95b9b5b5",
+    "freeze_sha256": "7c5ab28177545887e42d20a7ef6f75006826ff832168080762825abcd7ec41c2",
+    "receipt_sha256": "8b37b57fd5f5403a248caa623bd46e4d461dd4d038f4e3af4bd2fa11568ae988",
+    "runtime": {
+      "build": "293",
+      "root": "C:\\Program Files\\COMSOL\\COMSOL64\\Multiphysics",
+      "runtime_id": "comsol-install:C%3A%5CProgram%20Files%5CCOMSOL%5CCOMSOL64%5CMultiphysics",
+      "server_executable_sha256": "901760d88bfb5b5f1f8dcc8a32eb4a7696d420c80d296b7341a0e48134e56a74",
+      "version": "6.4.0"
+    },
+    "shape": [
+      1,
+      1,
+      5,
+      637
+    ],
+    "unit_readback": "K",
+    "selected_tuple": {
+      "inner": 5,
+      "outer": 1,
+      "solnum": 5
+    },
+    "selected_tuple_field_sha256": "547f45a27d4c4872995b22d4a8d32c86696cc5487a85ca7b51982c2eba022249",
+    "full_dataset_field_sha256": "3bee612b06f81b58b25a52a6b5e41b0f6c83ae771cf84636c6119da1578f1966",
+    "selected_real_min": 299.99999999999994,
+    "selected_real_max": 304.3799759431567,
+    "response_json_bytes": 375600,
+    "counts": {
+      "study_dispatch": 1,
+      "solver_dispatch": 1,
+      "solution_tuple_reads": 1,
+      "field_reads": 1
+    },
+    "cleanup": {
+      "owned_server_stopped": true,
+      "server_stop_evidence": {
+        "birth": "start_epoch_ms:1790692885778",
+        "child_reaped": true,
+        "exit_confirmed": true,
+        "listener_absent": true,
+        "pid": 34008,
+        "returncode": 1,
+        "server_stopped": true
+      },
+      "status": "CLEANUP_COMPLETE",
+      "worker_retired": true
+    },
+    "native_admission": "UNVERIFIED",
+    "physical_validation": "UNVERIFIED",
+    "probe": "PARTIAL",
+    "review": "Actual receipt/state/freeze/request IDs, finite selected values/hash, tuple, budget, runtime and exact owned cleanup checked. Not convergence, mapping, stage transfer or physical acceptance.",
+    "source_head": "45399a5f7a5ff5a6ec6690d5f008a23faf54ae0c",
+    "actual_exit_code": 0,
+    "local_receipt": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solver-path-w21r12/solve_readback64_receipt.json",
+    "reproduce_freeze": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solver-path-w21r12/freeze64.json",
+    "max_windows_path_utf16_including_nul": 259
   }
 }
