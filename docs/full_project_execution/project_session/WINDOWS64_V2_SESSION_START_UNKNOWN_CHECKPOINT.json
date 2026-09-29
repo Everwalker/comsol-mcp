@@ -4,8 +4,8 @@
   "updated_at_utc": "2026-09-29T11:36:36.583380+00:00",
   "overall_status": "PARTIAL",
   "source_package_status": "PASS_MAIN_VERIFIED",
-  "native_status": "PARTIAL_NATIVE_FIXTURE_BUILT_PROBE_OUTPUT_LIMIT_SOLVE_NOT_RUN",
-  "next_action": "Keep bounded probe refusal PARTIAL; assess RAW_UNINTERPRETED solve-readback observation handling without raising limits or changing metadata-only acceptance; continue canonical solve/readback with separate candidate.",
+  "native_status": "PARTIAL_NATIVE_SOLVE_FIELD_DURABLE_SUCCEEDED_PUBLIC_TRANSPORT_UNKNOWN",
+  "next_action": "Fresh canonical smoke candidate uses mesh hauto=9 instead of 2, with the same physics/materials/time grid and full result read. No budget increase or field truncation; no convergence/physical acceptance claimed.",
   "candidate": {
     "source_commit": "9c5ced6272dd876cf9c28c6c6f73b943bd76b96c",
     "evidence_root": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-v2-20260928T235840Z-9c5ced6",
@@ -2279,5 +2279,181 @@
       }
     },
     "next_action": "Keep bounded probe refusal PARTIAL; assess RAW_UNINTERPRETED solve-readback observation handling without raising limits or changing metadata-only acceptance; continue canonical solve/readback with separate candidate."
+  },
+  "native_attempt_20260929T130508Z": {
+    "run_id": "w21-64-20260929T130508Z-abd555f3",
+    "source_head": "30a3f101fd7f754597422d3b1e85e278d5c05f0f",
+    "freeze_sha256": "1251c40a93ffa00d83ff7853489fa9562ea32fbfc8277e29acad825b145df79d",
+    "status": "PARTIAL_NATIVE_SOLVE_FIELD_DURABLE_SUCCEEDED_PUBLIC_TRANSPORT_UNKNOWN",
+    "execute_exit_code": 2,
+    "runner": {
+      "status": "UNKNOWN",
+      "unknown_action": "result.evaluate",
+      "field_action": {
+        "exception_type": "TimeoutError",
+        "idempotency_key": "b0179252-e41b-4012-ab06-5628d681164b",
+        "params_sha256": "3ff79e860ec2d41aa3ba4c75eed070ec8d37c8eb59cf2f989cdaf6c63a08c682",
+        "request_id": "cbd945f5-9a33-434a-850b-5cf1617ff2d3",
+        "status": "UNKNOWN",
+        "tool": "operation_call"
+      },
+      "counts": {
+        "study_dispatch": 1,
+        "solver_dispatch": 1,
+        "solution_tuple_reads": 1,
+        "field_reads": 0,
+        "field_reads_possible": 1
+      },
+      "lifecycle_cleanup": "NOT_DISPATCHED"
+    },
+    "durable_field": {
+      "job_id": "6ea01b83-b85f-401a-90c1-07dc9ca591fd",
+      "operation_id": "b1caea60-e22f-4e0a-b3d4-5bfa002f5a58",
+      "request_id": "cbd945f5-9a33-434a-850b-5cf1617ff2d3",
+      "status": "SUCCEEDED",
+      "job_status": "SUCCEEDED",
+      "result_sha256": "7edd2f5cad00432ee33b27dba8906891f86212da78ef0d8eddec45dfb23a3806",
+      "result_bytes": 45447416,
+      "event_counts": {
+        "RUNNING": 1,
+        "SUCCEEDED": 1,
+        "worker_request": 138
+      },
+      "running_to_succeeded_seconds": 20.225937366485596,
+      "public_rpc_wait_seconds": 45
+    },
+    "field_summary": {
+      "shape": [
+        1,
+        1,
+        5,
+        70874
+      ],
+      "units": {
+        "expression": {
+          "T": "K"
+        },
+        "inner": "index",
+        "outer": "index",
+        "parameters": {},
+        "point": "m"
+      },
+      "solution_axes": {
+        "inner": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "outer": [
+          1
+        ],
+        "pair_mapping_complete": true
+      },
+      "observation_ref": {
+        "observation_id": "obs_ef4f17cc7b69465f9e09e734c07865b1",
+        "sha256": "5e310147f45067974cac743be88fb7054ef4fa5769e740c2b29fab8cf20a1439"
+      },
+      "execution": {
+        "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+        "dirty": false,
+        "idempotency_key": "b0179252-e41b-4012-ab06-5628d681164b",
+        "job_id": "6ea01b83-b85f-401a-90c1-07dc9ca591fd",
+        "model_ownership": "mcp_owned",
+        "model_ref": {
+          "generation": 1,
+          "model_tag": "mcp1",
+          "schema_version": 1,
+          "server_instance_id": "85d2346803534a2fd8c1c0f61cc49b7a2e145def00c79efd286bc1d220e19822",
+          "session_id": "session-4da345337a9d4d6eb785f5718494440c"
+        },
+        "operation_id": "b1caea60-e22f-4e0a-b3d4-5bfa002f5a58",
+        "project_id": "cf744f47-a15f-4d7c-997a-e94c6b2ea09c",
+        "request_hash": "8938851483869f3e4729384c3a9381145a961f90003bd0a2c92246d1e252050d",
+        "request_id": "cbd945f5-9a33-434a-850b-5cf1617ff2d3",
+        "revision": 4,
+        "server_ownership": "mcp_managed",
+        "session_id": "session-4da345337a9d4d6eb785f5718494440c"
+      },
+      "temporary_eval_cleanup": {
+        "children": [],
+        "cleanup_failed": false,
+        "created": true,
+        "error": null,
+        "removed": true,
+        "tag": "cmssp1",
+        "type_id": "Eval",
+        "verified_removed": true
+      },
+      "result_budget_status": "PASS"
+    },
+    "readonly_quiescence": {
+      "all_bound_requests_terminal": true,
+      "daemon_initialized": false,
+      "job_id": "6ea01b83-b85f-401a-90c1-07dc9ca591fd",
+      "mcp_mutation_dispatched": false,
+      "observation": {
+        "listener_inventory": {
+          "canonical_engine_match_count": 0,
+          "owner_query_unresolved_count": 0,
+          "rows_scanned": 56,
+          "status": "COMPLETE",
+          "task_owned_match_count": 0
+        },
+        "observed_at_utc": "2026-09-29T13:12:41.401Z",
+        "process_inventory": {
+          "candidate_count": 0,
+          "canonical_engine_match_count": 0,
+          "status": "COMPLETE",
+          "task_owned_match_count": 0,
+          "unresolved_candidate_count": 0
+        }
+      },
+      "observed_count": 69,
+      "original_result_sha256": "7edd2f5cad00432ee33b27dba8906891f86212da78ef0d8eddec45dfb23a3806",
+      "original_status": "SUCCEEDED",
+      "runner_transport_outcome": "UNKNOWN_RETAINED",
+      "scope": "READONLY_CURRENT_HOST_AND_EXISTING_WORKER_TERMINAL_OBSERVATIONS",
+      "submitted_count": 69
+    },
+    "evidence": {
+      "freeze64.json": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-bounded-probe-w21r09/freeze64.json",
+        "sha256": "2199a71c97afd2ed188926aba8fec6a5ad570b45c26b997e9c208aab39d8ebba"
+      },
+      "state64-after-execute.json": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-bounded-probe-w21r09/state64-after-execute.json",
+        "sha256": "64f7ff0b927113a8dbfb476929f0f604c089ba48e8700bcbd9080983a01ab2e1"
+      },
+      "read_field_status.stdout": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-bounded-probe-w21r09/read_field_status.stdout",
+        "sha256": "8024092c7e9eff48329649ddcde61609d324b2e72d912db884df4f091667a10d"
+      },
+      "read_current_host_quiescence.stdout": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-bounded-probe-w21r09/read_current_host_quiescence.stdout",
+        "sha256": "630c8a1b3d4bde09f7889eec16b0366e4e11199984a2b7eb57663e753e094711"
+      },
+      "read_field_timing.stdout": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-bounded-probe-w21r09/read_field_timing.stdout",
+        "sha256": "87a29dc62a054e96be7cb2e0fdbcdbc6a90d26176dfb2afc0cbbcf30b628a793"
+      }
+    },
+    "limitations": [
+      "Native result exists and temporary Eval cleanup succeeded; public result delivery and owned lifecycle cleanup did not complete.",
+      "Current-host absence is not an observed owned-process exit code.",
+      "Original runner UNKNOWN remains preserved; no replay or old-session reuse.",
+      "Bounded structural probe remains PARTIAL."
+    ],
+    "next_action": "Fresh canonical smoke candidate uses mesh hauto=9 instead of 2, with the same physics/materials/time grid and full result read. No budget increase or field truncation; no convergence/physical acceptance claimed.",
+    "diagnosis": "Public result.evaluate does not support outer/inner filtering. It returns all five stored solutions and duplicate values projections; the 45MB durable reply finished in ~20.2s but public delivery timed out at 45s. Exact serialization versus transport contribution is not established."
+  },
+  "coarse_smoke_candidate": {
+    "status": "NOT_RUN_NATIVE",
+    "file": "tools/java/W21Fixture.java",
+    "sha256": "d227053f2a7c5c00e6a9b35cc7fc63fd59af2ce4ec30780e92c6a3ad3e9e491d",
+    "change": "hauto 2 -> 9 for minimal canonical smoke workload only; retain geometry, physics, materials, time grids and complete field read",
+    "validation": "Main diff inspection only; no redundant software suite rerun for mesh-size parameter. Next actual native run is required.",
+    "limitations": "No numerical convergence or physical validation claim."
   }
 }

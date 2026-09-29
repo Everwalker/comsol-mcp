@@ -29,7 +29,8 @@ public final class W21Fixture {
         model.material("mat1").propertyGroup("def").set("heatcapacity", "rhoCp/(1[kg/m^3])");
 
         model.mesh().create("mesh1", "geom1");
-        model.mesh("mesh1").feature("size").set("hauto", 2);
+        // Coarse smoke fixture: keep the complete field reply inside the canonical RPC budget.
+        model.mesh("mesh1").feature("size").set("hauto", 9);
         model.mesh("mesh1").run();
 
         model.study().create("std1");

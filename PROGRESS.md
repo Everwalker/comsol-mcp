@@ -4,9 +4,11 @@
 
 ## Current Windows 6.4 state
 
-**PARTIAL:** latest native run `w21-64-20260929T124807Z-0c308f9c`, source `cda6c11`, freeze `1871a836…614579`, exited 2. Project/session setup, model creation/inspection, fixture registration and native Java construction all succeeded: geometry and mesh each ran once, and the heat-transfer fixture returned BUILT_NOT_SOLVED. Probe registration and execution succeeded, but its business payload reports `OUTPUT_LIMIT_EXCEEDED / TABLE_ROW_LIMIT_EXCEEDED`, `payload_complete=false`, `native_admission=UNVERIFIED`. The runner stopped on this incomplete metadata observation before study/solver/tuple/field dispatch; Windows 6.3 remains **NOT_RUN**.
+**PARTIAL:** latest native run `w21-64-20260929T130508Z-abd555f3`, source `30a3f10`, freeze `1251c40a…5df79d`, exited 2. Native fixture construction, one study/solver execution and solution-index read succeeded. A read-only durable lookup confirms the original temperature-field job also **SUCCEEDED**: T in K, shape `[1,1,5,70874]`, exact session/ModelRef at revision 4, temporary Eval node verified removed. The persisted result is 45,447,416 bytes.
 
-Owned cleanup completed: exact Server child reaped, exit confirmed, listener absent, Worker retired. No UNKNOWN occurred in this attempt. Complete-probe/native admission is not established. Exact request/result identities, bounded payload and evidence: [latest native checkpoint](docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json#native_attempt_20260929T124807Z).
+Public field delivery timed out, so runner state remains **UNKNOWN** and owned lifecycle cleanup was not dispatched. No result reread or replay was issued. A subsequent read-only check verified all 69 Worker requests terminal with matching IDs/hashes; complete process and 56-row listener inventories had zero task/canonical/unresolved matches. This establishes current-host quiet, not historical owned-exit or full-chain PASS. The original runner UNKNOWN is preserved. Exact evidence: [latest native checkpoint](docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json#native_attempt_20260929T130508Z). Windows 6.3 remains **NOT_RUN**.
+
+The auxiliary structural probe is explicitly RAW_UNINTERPRETED/PARTIAL (`TABLE_ROW_LIMIT_EXCEEDED`); its limits and complete metadata-only acceptance remain unchanged. Native field production is now demonstrated, while public delivery and canonical cleanup remain incomplete.
 
 The preceding `a3c2af8` artifact job remains UNKNOWN: its public ENGINE_UNRESPONSIVE reply omitted the ambiguity flag, leading the runner to complete cleanup. Later read-only complete process/listener inventories confirmed current-host quiet; the original UNKNOWN remains unchanged. The missing-session and deterministic no-service refusal repairs passed 125 software tests and are included in the latest candidate.
 
@@ -18,9 +20,9 @@ The session model-selection repair and UNKNOWN-code handling passed 177 backend/
 
 ## Next action
 
-1. Bounded-observation handling is main-reviewed scoped software PASS: 118 runner tests passed (including 6 focused cases). Solve-readback preserves only the exact known table-row-limit envelope as RAW_UNINTERPRETED/PARTIAL; metadata-only and unknown errors still reject it. Java limits and 6.3 receipt criteria are unchanged. Native after this repair is NOT_RUN.
-2. Canonical runner path/Worker-envelope/revision repairs passed 127 affected software tests and now passed native fixture/probe execution. Run a separate 6.4 solve/readback/cleanup candidate.
-3. After a verified successful 6.4 receipt, execute Windows 6.3. Unrelated capability expansion stays paused this round.
+1. Public wait is 45s; the field job persisted success in ~20.2s. Public result.evaluate cannot filter outer/inner tuples. The new smoke candidate changes only mesh hauto 2 → 9, retaining geometry, physics, materials, time grid and complete field read; no timeout/limit increase or convergence claim. Native after this fixture change is NOT_RUN.
+2. The bounded-observation repair passed 118 runner tests and now reached native solve/field production. The fixture parameter received main diff inspection; its next native run must validate public readback and owned cleanup.
+3. After a complete verified 6.4 canonical receipt, execute Windows 6.3. Unrelated capability expansion remains paused; overall project acceptance stays PARTIAL.
 
 ## Remaining project scope
 
