@@ -2596,5 +2596,57 @@
     },
     "reproduce_entry": "tools/run_w21_stage_native.py prepare --version 6.4 --mode solve-readback with explicit COMSOL/JDK/source/evidence roots; then execute the fresh freeze once. Runtime source is pinned to 2bdcc75 and fixture SHA d227053f2a7c5c00e6a9b35cc7fc63fd59af2ce4ec30780e92c6a3ad3e9e491d. Existing local/remote freeze is historical and must not be replayed.",
     "next_action": "Prepare Windows6.3 from the same 2bdcc75 runtime source, binding the actual successful cleaned-up 6.4 receipt; verify runtime/version/source/budget and execute once."
+  },
+  "canonical_native_chain_windows63_attempt_20260929T132702Z": {
+    "status": "UNKNOWN_RETAINED_CURRENT_HOST_QUIET",
+    "run_id": "w21-63-20260929T132702Z-8406c97b",
+    "runtime_source_commit": "2bdcc75bd86e66f6d2004cdbf84901d5f26f1d49",
+    "runtime_version": "6.3.0 build 290",
+    "freeze_sha256": "ffcdc7ecf35c20908eab1bd9c10091bd69203aaf92f9680197f549a4fa3acbfa",
+    "job_id": "e14540ce-97c8-40b9-b26f-9f249ace9635",
+    "operation_id": "fbb66c1a-40c2-42da-8e5e-b0ab92500784",
+    "request_id": "cc53906c-fd28-4d63-8472-89ff957f4c8d",
+    "session_id": "session-43b426b97bd44fcca818cb2e7e408f60",
+    "actual_exit_code": 2,
+    "startup_observation": "PROCESS_CREATED and BIRTH_OBSERVED PID 4316; READY after 33.382s; no terminal operation result",
+    "durable_state": "RUNNING; result null; lifecycle STARTING revision 1",
+    "native_solve_readback": "NOT_RUN",
+    "current_host_quiescence": {
+      "listener_inventory": {
+        "canonical_engine_match_count": 0,
+        "owner_query_unresolved_count": 0,
+        "rows_scanned": 56,
+        "status": "COMPLETE",
+        "task_owned_match_count": 0
+      },
+      "observed_at_utc": "2026-09-29T13:38:38.790Z",
+      "process_inventory": {
+        "candidate_count": 0,
+        "canonical_engine_match_count": 0,
+        "status": "COMPLETE",
+        "task_owned_match_count": 0,
+        "unresolved_candidate_count": 0
+      }
+    },
+    "scope": "Current-host quiet only; no historical startup success/exit code or lifecycle recovery claimed. No restart/replay/cleanup dispatched.",
+    "next_action": "Inspect task daemon diagnostics and READY-to-finish path; repair only evidenced canonical startup coordination issue, preserving original UNKNOWN.",
+    "local_evidence": {
+      "freeze63.json": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-smoke-mesh-w21r10/freeze63.json",
+        "sha256": "8f9351b79155035a220f86d87c1180ac85d81d694ee44851df05350bb78da988"
+      },
+      "state63-after-execute.json": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-smoke-mesh-w21r10/state63-after-execute.json",
+        "sha256": "81eb87a437a1465045218d56e9f87324d567b0ae6f9abc7b6fa07c31c59d5872"
+      },
+      "read_start63_result.stdout": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-smoke-mesh-w21r10/read_start63_result.stdout",
+        "sha256": "e9e4259c6b467d13195947723ae30a96345cdeaed9473306bfa423fd6bb4a4de"
+      },
+      "read_current_host_quiescence63.stdout": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-smoke-mesh-w21r10/read_current_host_quiescence63.stdout",
+        "sha256": "6140361dc644348ad97983279ba5445b828584daebaa289d33d4c0aeb63255f2"
+      }
+    }
   }
 }
