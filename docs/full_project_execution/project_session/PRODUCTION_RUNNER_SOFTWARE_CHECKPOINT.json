@@ -2,7 +2,7 @@
   "schema_version": 1,
   "stage": "W21_PRODUCTION_MCP_METADATA_RUNNER",
   "status": "PASS_SCOPED_OFFLINE",
-  "native_status": "PARTIAL_WINDOWS64_CONNECT_UNKNOWN_SOLVE_READBACK_NOT_RUN",
+  "native_status": "PARTIAL_WINDOWS64_CONNECT_UNKNOWN_DIAGNOSED_NOT_RECONCILED_SOLVE_READBACK_NOT_RUN",
   "candidate_files": {
     "tests/test_run_w21_stage_native.py": "3c025caae10dc4fd0dc98d8c9c69b7d31f2ae8b41d817ad198382afb14a3cf03",
     "tools/run_w21_stage_native.py": "01bf8b598f4b086ed623127c0511e5b860e7987aa9ca972a938d9b11127fbe83"
@@ -38,7 +38,7 @@
     "Windows breakaway failure refuses unsafe fallback (56e275f)."
   ],
   "scope": "Uses production stdio tool schemas and exact project/session/ModelRef routes. Tests stub transport/lifecycle; no target Windows prepare or native execution.",
-  "next_action": "Read-only diagnose the 164eec3 session.connect UNKNOWN (request d97c0e81-abf1-4eb8-972d-b6ac1e3dfd6f, job 0bb81f8f-a6aa-4449-8cb0-09bc90ea725d) from the preserved task evidence. Do not replay, clean up, or launch another native attempt. Solve/readback remains NOT_RUN; main decides after diagnosis. A later main-reviewed compute-policy fix passed 4 targeted tests but is not in the executed 164eec3 freeze; do not change or retry that UNKNOWN. Any subsequent native candidate requires a new reviewed freeze after read-only diagnosis and main decision.",
+  "next_action": "Continue read-only source/config analysis of the 164eec3 session.connect UNKNOWN. The worker returned ENGINE_CALL_FAILED with a credential-acquisition message; state remains UNKNOWN, and the current-host process/socket observation is not durable reconciliation. No replay, reconnect, stop, cleanup, or new launch. Solve/readback remains NOT_RUN; details are in WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json#connect_readonly_diagnostic_v1.",
   "latest_session_start_recovery_repair": {
     "status": "PASS_SCOPED_OFFLINE",
     "native_status": "NOT_RUN",
@@ -178,7 +178,9 @@
         "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-import-fix-handoff-164eec3/execute64-receipt.json",
         "sha256": "461bd61db71372733ff4afc7f3fb5b5d6f40f4edc70a914c3e671c2ee2fe628a"
       }
-    }
+    },
+    "diagnostic_checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json#connect_readonly_diagnostic_v1",
+    "diagnostic_status": "READ_ONLY_DIAGNOSTICS_COMPLETE_NOT_DURABLY_RECONCILED"
   },
   "latest_compute_policy_repair": {
     "status": "PASS_SCOPED_OFFLINE_MAIN_REVIEWED",
@@ -198,5 +200,13 @@
     "present_in_executed_164eec3_freeze": false,
     "native_status": "NOT_RUN",
     "note": "Offline policy verification used the real ControlDaemon authorization path; this is a targeted regression, not a full suite or native run."
+  },
+  "latest_connect_diagnostic_v1": {
+    "status": "READ_ONLY_DIAGNOSTICS_COMPLETE_NOT_DURABLY_RECONCILED",
+    "checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json#connect_readonly_diagnostic_v1",
+    "operation_id": "73cae563-14ba-4d37-ab7b-1eb9b62effd3",
+    "worker_error_code": "ENGINE_CALL_FAILED",
+    "database_and_lifecycle_state": "UNKNOWN",
+    "native_retry_or_cleanup_performed": false
   }
 }

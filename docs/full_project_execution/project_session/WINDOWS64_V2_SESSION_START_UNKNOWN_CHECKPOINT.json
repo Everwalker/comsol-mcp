@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "unit": "W21 Windows6.4 V2 short-home current-source attempt",
-  "updated_at_utc": "2026-09-29T07:05:23Z",
+  "updated_at_utc": "2026-09-29T07:26:16Z",
   "overall_status": "PARTIAL",
   "source_package_status": "PASS_MAIN_VERIFIED",
-  "native_status": "PARTIAL_164EEC3_SESSION_CONNECT_UNKNOWN_SOLVE_READBACK_NOT_RUN",
-  "next_action": "Read-only diagnose the separate 164eec3 session.connect UNKNOWN (request d97c0e81-abf1-4eb8-972d-b6ac1e3dfd6f, job 0bb81f8f-a6aa-4449-8cb0-09bc90ea725d) from its existing evidence. Do not replay it, clean up, or launch another native attempt. The original V3 recovery remains a separate verified quiescence disposition retaining the old session.start UNKNOWN. Solve/readback is NOT_RUN; main decides after diagnosis.",
+  "native_status": "PARTIAL_CONNECT_UNKNOWN_DIAGNOSED_NOT_DURABLY_RECONCILED_SOLVE_READBACK_NOT_RUN",
+  "next_action": "Continue the local design for a guarded durable quiescence disposition when recovery sees the dead Worker connect. Keep the exact operation/job and lifecycle UNKNOWN until that source change is implemented, reviewed, and verified; do not replay, reconnect, stop, or clean up. The Equinox log marker is not the owned Server process exit code, and installation setup history is not current runtime evidence. Preserve the separate verified V3 disposition for the older session.start.",
   "candidate": {
     "source_commit": "9c5ced6272dd876cf9c28c6c6f73b943bd76b96c",
     "evidence_root": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-v2-20260928T235840Z-9c5ced6",
@@ -262,7 +262,7 @@
     "next_action": "Wire daemon identity sidecar and original-job startup events; finish existing session.recover same-host quiescence reconciliation before a fresh native comparison."
   },
   "next_native_minimal_chain": {
-    "status": "SOURCE_AND_FREEZE_REVIEW_PASS_CONNECT_UNKNOWN_SOLVE_READBACK_NOT_RUN",
+    "status": "CONNECT_UNKNOWN_READ_ONLY_DIAGNOSED_DURABLE_RECONCILIATION_PENDING_SOLVE_READBACK_NOT_RUN",
     "entrypoint": "tools/run_w21_stage_native.py",
     "mode": "solve-readback (separately frozen; existing metadata-only mode remains zero-solve)",
     "sequence": [
@@ -315,7 +315,7 @@
         }
       }
     },
-    "next_action": "Current action: read-only diagnosis of the 164eec3 session.connect UNKNOWN only. No replay, cleanup, or new native launch pending main decision. Solve/readback remains NOT_RUN. The original V3 session.start recovery disposition and all earlier failures remain separately preserved."
+    "next_action": "Continue read-only source/config root-cause analysis of the credential-acquisition failure. Current process/listener observation is not a durable reconciliation; no replay, reconnect, stop, cleanup or new launch. Main decides any subsequent controlled action."
   },
   "startup_recovery_software": {
     "status": "PASS_SCOPED_OFFLINE",
@@ -960,6 +960,114 @@
         "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-import-fix-handoff-164eec3/execute64-receipt.json",
         "sha256": "461bd61db71372733ff4afc7f3fb5b5d6f40f4edc70a914c3e671c2ee2fe628a"
       }
+    },
+    "diagnostic_checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json#connect_readonly_diagnostic_v1",
+    "diagnostic_status": "READ_ONLY_DIAGNOSTICS_COMPLETE_NOT_DURABLY_RECONCILED"
+  },
+  "connect_readonly_diagnostic_v1": {
+    "status": "READ_ONLY_DIAGNOSTICS_COMPLETE_NOT_DURABLY_RECONCILED",
+    "evidence_root": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-import-fix-handoff-164eec3/connect-diagnostic-v1",
+    "connect_operation_id": "73cae563-14ba-4d37-ab7b-1eb9b62effd3",
+    "connect_request_id": "d97c0e81-abf1-4eb8-972d-b6ac1e3dfd6f",
+    "connect_job_id": "0bb81f8f-a6aa-4449-8cb0-09bc90ea725d",
+    "persisted_operation_status": "UNKNOWN",
+    "persisted_job_status": "UNKNOWN",
+    "lifecycle": {
+      "status": "UNKNOWN",
+      "revision": 4,
+      "worker_epoch": 1,
+      "worker_instance_id": "7b6c0c47-05ca-4394-8737-ab4d62b2a939"
+    },
+    "worker_failure": {
+      "observed_time_local": "06:54:21",
+      "status": "FAILED",
+      "error_code": "ENGINE_CALL_FAILED",
+      "execution_state_unknown": true,
+      "returned_message": "FlException: No user name and password could be obtained"
+    },
+    "process_observations": {
+      "server": {
+        "pid": 24844,
+        "birth_epoch_ms": 1790664835852,
+        "observed_status": "READY",
+        "current_pid_query": "PROCESS_NOT_FOUND",
+        "actual_exit_code": null
+      },
+      "control_daemon": {
+        "pid": 8632,
+        "birth_epoch_ms": 1790664834357,
+        "observed_status": "READY",
+        "current_pid_query": "PROCESS_NOT_FOUND",
+        "actual_exit_code": null
+      }
+    },
+    "current_host_read_only_snapshot": {
+      "observed_at_utc": "2026-09-29T07:20:20Z",
+      "process_scan_status": "COMPLETE",
+      "total_processes": 357,
+      "python_candidates": 14,
+      "python_path_missing_count": 0,
+      "python_commandline_missing_count": 0,
+      "python_task_matches": 0,
+      "java_or_comsol_candidates": 0,
+      "tcp_rows_scanned": 223,
+      "task_associated_sockets": 0,
+      "endpoint_21317_sockets": 0
+    },
+    "interpretation": "Read-only current-host observation found no task-matched process candidate or associated socket. This is not a durable reconciliation, does not establish a known process exit code, and does not authorize retry, reconnect, stop, or cleanup.",
+    "root_cause_status": "CREDENTIAL_ACQUISITION_FAILURE_CONFIRMED_AS_WORKER_ERROR; configuration cause under analysis; short-path causation unproven",
+    "native_retry_or_cleanup_performed": false,
+    "receipts": {
+      "main_read": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-import-fix-handoff-164eec3/connect-diagnostic-v1/main-read-receipt.json",
+        "sha256": "ca6d721adc15f14887329363cacb3353cdac77f15834aad047b808dbfe36d4ca",
+        "read_exit_code": 0,
+        "stdout_sha256": "2c3e690912f0ab8224b1b36ab25fcdf7a2e5f1c525d91af113ba6e7c1866d7d0"
+      },
+      "detail_read": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-import-fix-handoff-164eec3/connect-diagnostic-v1/detail-receipt.json",
+        "sha256": "1d38cdbd83c174f3ba3d2d82ba9c81ea75a121535dbc43578e4cc6dea159b0e6",
+        "read_exit_code": 0,
+        "stdout_sha256": "4a278ddf9ae9a66c884f20f5a616e5156257afe2940937759a1784c9091548e0"
+      },
+      "process_read": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-import-fix-handoff-164eec3/connect-diagnostic-v1/process-receipt.json",
+        "sha256": "9b0a2c47773f7e48bb7070d7cf02be04b543a9e4661337e29766b33d0930d838",
+        "read_exit_code": 0,
+        "stdout_sha256": "489bdca93e6c13e4369a89ad3b95413ad42ebd8542fca849887148c119fb964e"
+      }
+    },
+    "logs_readonly_v1": {
+      "status": "READ_ONLY_LOG_OBSERVATION_COMPLETE",
+      "receipt": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-import-fix-handoff-164eec3/connect-diagnostic-v1/logs-receipt.json",
+        "sha256": "98bdee566afdc52e9f053662e61c31b2f08882c197e4549ba56996d83e00cdaa",
+        "read_exit_code": 0,
+        "stdout_sha256": "35a53cdef5854040b0d4cb1066b3fcc3de156f9be7918757c9ceeb5199ca26fa"
+      },
+      "empty_logs": [
+        "control.log",
+        "worker.stderr.log",
+        "mphserver.log"
+      ],
+      "server_log": {
+        "name": "server.log",
+        "bytes": 381,
+        "sha256": "34cad8db44b4ae1bb7a13b25e5dd7b9bc111982c753a116bd76fdace92a3b9e0"
+      },
+      "mphserver_log": {
+        "relative_alias": "preferences/logs/mphserver1.log",
+        "bytes": 7841,
+        "sha256": "f3ffec8b6cabbf00abb0c95c2a128755c0676f41ccf21495bc03aa68a60cf49c",
+        "observed_marker": "Equinox exit code 0 at 14:54:16.549, before Server READY at 14:54:17.988",
+        "interpretation": "This log marker is not the owned Server process exit code."
+      },
+      "shadow_installation_log": {
+        "relative_alias": "installation/comsolsetup.log",
+        "interpretation": "Installation history only; not evidence of current runtime state."
+      },
+      "actual_server_pid_exit_code": "UNVERIFIED",
+      "follow_up": "The current recovery source 6476 refuses dead Worker connect. A local change is being designed to persist same-host quiescence while retaining the original UNKNOWN; it is not yet implemented, tested, or deployed."
     }
   }
 }

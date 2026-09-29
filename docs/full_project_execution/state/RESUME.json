@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "phase": "W21_WINDOWS64_CONNECT_UNKNOWN_READONLY_DIAGNOSTICS",
+  "phase": "W21_WINDOWS64_CONNECT_UNKNOWN_ROOT_CAUSE_ANALYSIS",
   "task": "W01_W26_CONTINUOUS_IMPLEMENTATION",
-  "status": "PARTIAL_NATIVE_CONNECT_UNKNOWN_SOLVE_READBACK_NOT_RUN",
+  "status": "PARTIAL_CONNECT_UNKNOWN_DIAGNOSED_NOT_RECONCILED_SOLVE_READBACK_NOT_RUN",
   "candidate_source": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-import-fix-handoff-164eec3/w21-import-fix-handoff-164eec3.tar.gz (sha256 1c6819c7735a46e1c3e169b178b955e40fb5196ac33547e670a22a804299aeef; source 164eec3c131c45cc61a41d62bd02606ea41e7d88; freeze c6047af8857cf00cba4f0c8f6d6a9744980f19a677b8ecfb6382800f04d901b2)",
   "completed_work": [
     "PIN source restoration completed and verified: 10832 files, zero missing LFS backing objects; repository HEAD matches pinned commit/tree.",
@@ -148,7 +148,7 @@
       "checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json"
     }
   ],
-  "next_action": "Read-only diagnose the 164eec3 session.connect UNKNOWN (request d97c0e81-abf1-4eb8-972d-b6ac1e3dfd6f, job 0bb81f8f-a6aa-4449-8cb0-09bc90ea725d) using its existing task evidence. Do not replay, clean up, or launch again. Solve/readback remains NOT_RUN; main decides after diagnosis. The original session.start V3 quiescence disposition remains separately verified and its historical UNKNOWN result is retained. A separately reviewed local compute-policy fix has 4 targeted offline passes but is not in the executed 164eec3 freeze; any later native candidate needs a new source freeze and main decision.",
+  "next_action": "Continue read-only source/config analysis of the 164eec3 session.connect UNKNOWN. Worker returned ENGINE_CALL_FAILED with a credential-acquisition message; source/job and lifecycle remain UNKNOWN. The current-host scan found no task-matched candidate process or associated socket, but no durable reconciliation occurred. Do not replay, reconnect, stop, clean up, or launch; main decides any later controlled action. Solve/readback remains NOT_RUN. Details: WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json#connect_readonly_diagnostic_v1.",
   "active_jobs": [],
   "blockers": [
     "W23 failed setup owned Server 75272 and daemon 75260 remain preserved: cleanup SIGTERM was rejected by automatic approval and explicit authorization is pending; no cleanup or relaunch authorized by elapsed time.",
@@ -177,7 +177,7 @@
     "native_solve_budget_remaining": 0,
     "evidence": "docs/full_project_execution/evidence/luna_process_reconciliation/mac_readonly_snapshot_20260926T2152Z.json"
   },
-  "updated_at": "2026-09-29T07:05:23Z",
+  "updated_at": "2026-09-29T07:20:20Z",
   "note": "Original scope remains through W26. User explicitly resumed after the test-efficiency analysis; implement efficiency improvements first. OpenViking task-detail retrieval was denied by auto-review because it would disclose internal roadmap identifiers externally; no workaround. Use current frozen workpack and read-only local memory only. Do not rerun bootstrap/init on resume. Source files now contain executor edits; do not rerun bootstrap/init. Git metadata is an APFS pointer managed by main agent; migration requires bundle/source transfer, not copying only the repository pointer. Git metadata migration is documented by evidence/git_metadata_relocation.json and owned by the main agent; do not copy the APFS git pointer to another machine without source bundle/archive. GUI permission boundary and checkpoint solution-scope caveat recorded. This executor has one W24 native setup-only failure with exact cleanup verified; the durable operation/job UNKNOWN records remain unchanged. No W24 solver submission occurred. Saved-MPH readback supplement uses separate time/evidence and zero study/solver calls; run08 remains FAIL_OR_INCOMPLETE. Root raw SQLite recomputation is linked under native_resume_saved_artifact_supplement.raw_recomputation_evidence; original run08 remains FAIL_OR_INCOMPLETE and no solve budget is restored. Latest checkpoint 2026-09-27T03:50:43Z: W24 0334Z setup run failed pre-model due Python 3.14 missing mcp, with exact cleanup; 0346Z candidate pins the validated 3.12.13 environment and passes a production no-engine registry/daemon preflight. Native setup remains pending root review; science implementation continues offline. Latest checkpoint 2026-09-27T09:09:28Z: W24 0841Z candidate was invoked once at 0857Z and failed before any engine/Worker birth because project.inspect received an injected idempotency_key; project.create persisted successfully. Exact read-only SQLite hash and operation result are in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_contract_diagnostic.json. The runner now omits the unnecessary inspect key; actual ControlDaemon focused regression is 2/2 PASS in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_runner_regression_receipt.json. No native retry or acceptance is claimed; release F04 runtime integration is active, so refresh closure and root review are required before another launch. Windows COMSOL 6.3 remains required/unassessed; only macOS 6.3 is USER_REQUESTED_SKIP.",
   "native_resume_smoke": {
     "status": "FAIL_OR_INCOMPLETE_POINT_SCHEMA_FAILURE; SOLVED_CHILD_ARTIFACT_DURABLE; SOLVE_BUDGET_EXHAUSTED; SEPARATE_SAVED_MPH_READBACK_PASS",
@@ -1037,7 +1037,7 @@
   "acceptance_cells_changed": false,
   "current_execution_checkpoint": {
     "path": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json",
-    "status": "PARTIAL_164EEC3_SESSION_CONNECT_UNKNOWN_READONLY_DIAGNOSTICS_SOLVE_READBACK_NOT_RUN"
+    "status": "PARTIAL_CONNECT_UNKNOWN_DIAGNOSED_NOT_DURABLY_RECONCILED_SOLVE_READBACK_NOT_RUN"
   },
   "w24_setup_candidate_0841z_native_attempt": {
     "candidate_id": "W24-CURE-HIST-AXISYM-01",
@@ -2818,7 +2818,7 @@
     "solver_dispatches": 0,
     "replay_permitted": false,
     "cleanup_permitted": false,
-    "next_action": "The original session.start remains historical UNKNOWN/NOT_ACCEPTED and is safely reconciled to STOPPED with exact V3 quiescence proof; do not replay it. The separate 164eec3 session.connect UNKNOWN and current read-only diagnostic action are recorded in windows64_latest_connect_attempt.",
+    "next_action": "The original session.start remains UNKNOWN/NOT_ACCEPTED and is separately reconciled by the verified V3 quiescence proof; do not replay it. The newer 164eec3 session.connect also remains UNKNOWN and has only read-only current-host diagnostics, not durable reconciliation. See windows64_latest_connect_attempt and the checkpoint diagnostic; no retry or cleanup.",
     "image_library_basename": "CORE_RL_magick_.dll",
     "image_library_relative_alias": "ext\\graphicsmagick\\win64\\CORE_RL_magick_.dll",
     "image_library_exists": true,
@@ -2991,7 +2991,7 @@
     "checkpoint": "docs/full_project_execution/project_session/PRODUCTION_RUNNER_SOFTWARE_CHECKPOINT.json#candidate_import_binding_repair"
   },
   "windows64_latest_connect_attempt": {
-    "status": "SESSION_CONNECT_EXECUTION_STATE_UNKNOWN",
+    "status": "SESSION_CONNECT_UNKNOWN_DIAGNOSED_NOT_RECONCILED",
     "native_status": "PARTIAL_CONNECT_UNKNOWN_SOLVE_READBACK_NOT_RUN",
     "checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json#latest_native_attempt_164eec3",
     "evidence_root": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-import-fix-handoff-164eec3",
@@ -3017,7 +3017,13 @@
     "cleanup_permitted": false,
     "execute_receipt_sha256": "461bd61db71372733ff4afc7f3fb5b5d6f40f4edc70a914c3e671c2ee2fe628a",
     "state_after_execute_sha256": "7ddd5d10720285d6160d5e68966a7db171d2ab2d583f8c8075cfc43297f34d16",
-    "next_action": "Read-only diagnosis only; no new native execution pending main decision."
+    "next_action": "Continue read-only root-cause analysis only; no replay, reconnect, stop, cleanup, or launch.",
+    "diagnostic_checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json#connect_readonly_diagnostic_v1",
+    "worker_failure_code": "ENGINE_CALL_FAILED",
+    "persisted_operation_and_job_status": "UNKNOWN",
+    "lifecycle_status": "UNKNOWN_REVISION_4_WORKER_EPOCH_1",
+    "current_host_observation": "NO_TASK_MATCHED_PROCESS_CANDIDATE_OR_ASSOCIATED_SOCKET_OBSERVED; NOT_DURABLY_RECONCILED",
+    "native_retry_or_cleanup_performed": false
   },
   "latest_runner_compute_policy_repair": {
     "status": "PASS_SCOPED_OFFLINE_MAIN_REVIEWED",
