@@ -2,7 +2,7 @@
   "schema_version": 1,
   "stage": "W21_PRODUCTION_MCP_METADATA_RUNNER",
   "status": "PASS_SCOPED_OFFLINE_PROTOCOL_TESTS_ONLY",
-  "native_status": "CONNECT_UNKNOWN_PRESERVED; RECOVERY_QUIESCENCE_READ_ONLY_VERIFIED; SOLVE_READBACK_NOT_RUN; NATIVE_NOT_RUN",
+  "native_status": "CURRENT_SESSION_STOP_UNKNOWN_PRESERVED; PRIOR_CONNECT_UNKNOWN_PRESERVED; SOLVE_READBACK_NOT_RUN; NATIVE_NOT_RUN",
   "candidate_files": {
     "tests/test_run_w21_stage_native.py": "4e875ee698762bb2047d44df882a7b3ab18576da0f324dd045181609c0b94611",
     "tools/java/W21FieldIdentityProbe.java": "632f6657c98752b1522d30ce75840dcc9dc16e52c54fabcd8232ab250bbbcbbf",
@@ -39,7 +39,7 @@
     "Windows breakaway failure refuses unsafe fallback (56e275f)."
   ],
   "scope": "Uses production stdio tool schemas and exact project/session/ModelRef routes. Tests stub transport/lifecycle; no target Windows prepare or native execution.",
-  "next_action": "After synchronizing the reviewed runner/test and canonical state updates, prepare and review a fresh Windows 6.4 freeze that includes the solve-readback probe integration; the fixed 3160730 recovery package predates these runner changes. Then run the single bounded minimal chain. Preparation is underway and no native action has run. Keep the original session.connect UNKNOWN and solve/readback NOT_RUN until actual execution/readback.",
+  "next_action": "Preserve the latest Windows session.stop UNKNOWN. First finish Windows empty-listener enumeration and source-bound durable abandoned-stop/quiescence recovery using the existing atomic proof system. Do not restart, replay, disconnect, or clean up until its exact durable disposition is verified. Then prepare and review a fresh Windows 6.4 freeze containing the accepted version/build parser and probe integration; execute only after review/authorization, then continue 6.3 and W23-W26.",
   "latest_session_start_recovery_repair": {
     "status": "PASS_SCOPED_OFFLINE",
     "native_status": "NOT_RUN",
@@ -271,7 +271,7 @@
     "database_and_lifecycle_state": "UNKNOWN",
     "native_retry_or_cleanup_performed": false
   },
-  "updated_at_utc": "2026-09-29T09:48:43Z",
+  "updated_at_utc": "2026-09-29T10:15:00Z",
   "previous_solve_readback_90_unique": {
     "status": "PASS_SCOPED_OFFLINE",
     "native_status": "NOT_RUN",
@@ -302,5 +302,56 @@
     "native_status": "NOT_RUN",
     "admission": "UNVERIFIED",
     "unique_tests": "98 PASS total; 96 prior cases plus 2 new tests"
+  },
+  "latest_remote_version_identity_repair": {
+    "status": "PASS_SCOPED_OFFLINE_PROTOCOL_TESTS_MAIN_ACCEPTED",
+    "native_status": "CURRENT_SESSION_STOP_UNKNOWN_PRESERVED; NATIVE_NOT_RUN",
+    "trigger": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback-prepare-review-20260929/read_identity_stop.stdout",
+      "sha256": "87a77a9631611f0422b77621118d706bfc66e6a3bfc1861ccd9f7c871809e231",
+      "observed_remote_engine_version": "COMSOL Multiphysics 6.4 (开发版本: 293)",
+      "observed_remote_engine_build": null,
+      "observed_remote_engine_build_source": "NOT_REPORTED"
+    },
+    "change": "Strictly parse anchored English/Chinese COMSOL version-text build grammar or a numeric remote version paired with an independently reported remote build. Normalize omitted patch to zero, compare version and build exactly, retain raw version/build/build-source fields, and never infer build from the frozen local installation.",
+    "supported_software_grammar": [
+      "COMSOL Multiphysics X.Y[.Z] (Build: N)",
+      "COMSOL Multiphysics X.Y[.Z] (开发版本: N)",
+      "Dotted numeric version only when remote_engine_build is independently present and consistent"
+    ],
+    "negative_behavior": "Reject unknown/ambiguous text, false version prefixes, missing independent build evidence, mismatched version/build, and conflicting inline/explicit build values before model/probe/solve dispatch.",
+    "source_sha256": {
+      "tools/run_w21_stage_native.py": "4c2f84081b9098db9b6859dfb31063c8eea1252a5fa45ac40b343c0f21aa1b35",
+      "tests/test_run_w21_stage_native.py": "bf8b8d03785c2d4aa2a56cc0458a31c0cda1deacc4f78673d7e3b59c0e60173e"
+    },
+    "tests": {
+      "unique": 109,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "junit": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-remote-identity-final/runner.junit.xml",
+        "sha256": "19da502eb0d6855514284e92129a32f01d4a65affb94ff06a63a0721a78c901b"
+      },
+      "log": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-remote-identity-final/runner.log",
+        "sha256": "d4fc7c3edb37088ff82b246caddd4b0007e42bab81ab72bc85f50427a11a2638"
+      },
+      "receipt": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-remote-identity-final/receipt.json",
+        "sha256": "ae1238012ed7f3ed19992b912468cbdb03c332e36fe23a05fcde6e45bdf6addc"
+      },
+      "focused_protocol": "11 passed across Chinese 6.4, English 6.3/6.4, existing numeric compatibility, and malformed/conflicting cases.",
+      "preserved_collection_failure": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-remote-identity-focus/focus.log",
+        "log_sha256": "30808bcd4368696620835e7a97b8932f3b2a4d481f8b2f04bee366050e59743e",
+        "junit_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-remote-identity-focus/focus.junit.xml",
+        "junit_sha256": "8691a6a4005e1e36be32f957afd78a2b5c596351963b22e218b06511d9ee8c57",
+        "reason": "Initial test fixture collection SyntaxError; fixed before focused and full-module passing runs."
+      }
+    },
+    "scope": "Offline fake stdio protocol only; identity checks still require exact project/session/endpoint/server/Worker bindings. No Worker/daemon changes or native execution.",
+    "in_prior_3160730_freeze": false,
+    "next_action": "Preserve the latest Windows session.stop UNKNOWN. First finish Windows empty-listener enumeration and source-bound durable abandoned-stop/quiescence recovery using the existing atomic proof system. Do not restart, replay, disconnect, or clean up until its exact durable disposition is verified. Then prepare and review a fresh Windows 6.4 freeze containing the accepted version/build parser and probe integration; execute only after review/authorization, then continue 6.3 and W23-W26."
   }
 }

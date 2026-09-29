@@ -18,6 +18,7 @@ from comsol_mcp._session_context import (
     CanonicalSocket, OwnedServerProcessIdentity, SessionEndpointIdentity, SessionRuntimeConfig,
     SessionRuntimeContext, session_state_directory,
 )
+from comsol_mcp import _session_server
 from comsol_mcp._session_server import (
     OwnedServerError, OwnedServerLauncher, create_server_directories,
     listener_rows, owned_server_preferences_directory,
@@ -333,6 +334,48 @@ def _stop(daemon, project_id, session_id, key="server-stop"):
                        "idempotency_key": key, "authorization_ref": "local-test-operator"},
         "execution": {},
     })
+
+
+def test_windows_listener_inventory_accepts_empty_array_and_filters_client_side(monkeypatch):
+    captured = {}
+
+    def fake_run(command, **kwargs):
+        captured["command"] = list(command)
+        captured["kwargs"] = dict(kwargs)
+        return subprocess.CompletedProcess(command, 0, stdout="[]", stderr="")
+
+    monkeypatch.setattr(_session_server, "subprocess", SimpleNamespace(run=fake_run))
+
+    assert listener_rows(11961, platform_name="win32") == []
+
+    script = captured["command"][-1]
+    assert "Get-NetTCPConnection -ErrorAction Stop" in script
+    assert "Get-NetTCPConnection -State" not in script
+    assert "Get-NetTCPConnection -LocalPort" not in script
+    assert "Where-Object" in script
+    assert "$_.State -eq 'Listen'" in script
+    assert "$_.LocalPort -eq 11961" in script
+    assert "SilentlyContinue" not in script
+    assert "ErrorAction Ignore" not in script
+    assert captured["kwargs"]["check"] is False
+
+
+@pytest.mark.parametrize(("returncode", "stdout"), [
+    (1, "[]"),
+    (0, "not-json"),
+    (0, "{}"),
+    (0, '[{"LocalAddress":"127.0.0.1","LocalPort":11961}]'),
+])
+def test_windows_listener_inventory_rejects_provider_and_payload_errors(
+        monkeypatch, returncode, stdout):
+    def fake_run(command, **_kwargs):
+        stderr = "CmdletizationQuery_NotFound" if returncode else ""
+        return subprocess.CompletedProcess(command, returncode, stdout=stdout, stderr=stderr)
+
+    monkeypatch.setattr(_session_server, "subprocess", SimpleNamespace(run=fake_run))
+
+    with pytest.raises(OwnedServerError):
+        listener_rows(11961, platform_name="win32")
 
 
 @pytest.mark.skipif(sys.platform not in {"darwin", "win32"}, reason="exact process/listener proof adapter is supported on Darwin and Windows")
@@ -791,6 +834,55 @@ def test_owned_server_stop_unknown_retains_handle_and_close_never_blind_kills(tm
         assert process.poll() is None
         assert daemon._session_server_handles[key] is handle
         assert len(calls) == 1
+    finally:
+        if daemon is not None:
+            daemon.close()
+        if process is not None and process.poll() is None:
+            process.terminate()
+            process.wait(timeout=3)
+
+
+@pytest.mark.skipif(sys.platform not in {"darwin", "win32"}, reason="exact process/listener proof adapter is supported on Darwin and Windows")
+def test_owned_server_stop_keeps_unknown_when_windows_listener_query_fails(tmp_path, monkeypatch):
+    daemon = None
+    process = None
+    provider_calls = []
+    try:
+        daemon, project_id, server_command, _xml, _hash = _make_daemon(tmp_path, monkeypatch)
+        started = _start(daemon, project_id, key="provider-error-stop-start")
+        assert started["success"] is True, started
+        session_id = started["data"]["session_id"]
+        process = server_command.processes[0]
+        key = (project_id, session_id)
+        handle = daemon._session_server_handles[key]
+
+        def failed_provider(command, **_kwargs):
+            provider_calls.append(list(command))
+            return subprocess.CompletedProcess(
+                command, 1, stdout="", stderr="CmdletizationQuery_NotFound,CimJobException",
+            )
+
+        monkeypatch.setattr(_session_server, "subprocess", SimpleNamespace(run=failed_provider))
+        monkeypatch.setattr(
+            daemon.session_server_launcher, "listener_reader",
+            lambda port: listener_rows(port, platform_name="win32"),
+        )
+
+        result = _stop(daemon, project_id, session_id, key="provider-error-stop")
+        assert result["success"] is False
+        assert result["error"]["code"] == "SERVER_OWNERSHIP_UNKNOWN"
+        assert result["error"]["execution_state_unknown"] is True
+        assert result["data"]["server_stopped"] is False
+        assert daemon.store.job(result["execution"]["job_id"])["status"] == "UNKNOWN"
+        assert daemon.session_lifecycle.get(project_id, session_id)["state"] == "DISCONNECTED"
+        assert daemon._session_server_handles[key] is handle
+        assert process.poll() is None
+        assert len(provider_calls) == 1
+
+        daemon.close()
+        assert len(provider_calls) == 1
+        assert process.poll() is None
+        assert daemon._session_server_handles[key] is handle
     finally:
         if daemon is not None:
             daemon.close()

@@ -438,10 +438,15 @@ def _darwin_listener_rows(port: int) -> list[ListenerRow]:
 
 def _windows_listener_rows(port: int) -> list[ListenerRow]:
     script = (
-        f"$ErrorActionPreference='Stop'; "
-        f"$rows=Get-NetTCPConnection -State Listen -LocalPort {port} | "
-        "Select-Object LocalAddress,LocalPort,OwningProcess; "
-        "ConvertTo-Json -InputObject @($rows) -Compress"
+        "$ErrorActionPreference='Stop'; "
+        "try { "
+        "$all=@(Get-NetTCPConnection -ErrorAction Stop); "
+        f"$rows=@($all | Where-Object {{ $_.State -eq 'Listen' -and $_.LocalPort -eq {port} }} | "
+        "Select-Object LocalAddress,LocalPort,OwningProcess); "
+        "ConvertTo-Json -InputObject @($rows) -Compress "
+        "} catch { "
+        "[Console]::Error.WriteLine('Windows TCP listener inventory failed'); exit 1 "
+        "}"
     )
     result = subprocess.run(
         ["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", script],

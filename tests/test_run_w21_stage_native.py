@@ -170,7 +170,8 @@ class _FakeStdioSession:
                  session_start_unknown_job_id: str | None = None,
                  job_status_fault: str | None = None,
                  solve_fault: str | None = None,
-                 probe_payload_override: Any | None = None):
+                 probe_payload_override: Any | None = None,
+                 connect_identity: dict[str, Any] | None = None):
         self.plan = plan
         self.state = state
         self.wrong_model_field = wrong_model_field
@@ -188,6 +189,13 @@ class _FakeStdioSession:
         self.job_status_fault = job_status_fault
         self.solve_fault = solve_fault
         self.probe_payload_override = probe_payload_override
+        self.connect_identity = {
+            "remote_engine_version": "6.4.0.293",
+            "remote_engine_build": "293",
+            "remote_engine_build_source": "remote-connect-reply",
+        }
+        if connect_identity is not None:
+            self.connect_identity.update(connect_identity)
         self.calls: list[tuple[str, dict]] = []
         self.project_id = "project-test"
         self.session_id = "session-test"
@@ -381,7 +389,7 @@ class _FakeStdioSession:
                 "runtime_id": "comsol64", "endpoint": {"host": "127.0.0.1", "port": 2036},
                 "server_ownership": "mcp_managed", "server_instance_id": self.server_id,
                 "worker_instance_id": "worker-test", "worker_epoch": self.worker_epoch,
-                "remote_engine_version": "6.4.0.293", "remote_engine_build": "293",
+                **self.connect_identity,
             }}
         if action == "model_create":
             ref = self._ref()
@@ -1563,6 +1571,88 @@ def test_metadata_only_protocol_binds_model_generation_separately_from_worker_ep
     assert "project.create.wait" not in [action for action, _ in fake.calls]
     assert any(action == "session.disconnect" for action, _ in fake.calls)
     assert any(action == "session.stop" for action, _ in fake.calls)
+
+
+@pytest.mark.parametrize(("selected_version", "selected_build", "remote_version", "remote_build",
+                          "remote_build_source", "canonical_version", "canonical_build_source"), [
+    ("6.4.0.293", "293", "COMSOL Multiphysics 6.4 (开发版本: 293)", None,
+     "NOT_REPORTED", "6.4.0", "remote_version_text"),
+    ("6.4.0.293", "293", "COMSOL Multiphysics 6.4 (Build: 293)", None,
+     "NOT_REPORTED", "6.4.0", "remote_version_text"),
+    ("6.3.0.290", "290", "COMSOL Multiphysics 6.3 (Build: 290)", None,
+     "NOT_REPORTED", "6.3.0", "remote_version_text"),
+    ("6.4.0.293", "293", "6.4.0.293", "293",
+     "remote-connect-reply", "6.4.0", "remote_explicit_build"),
+], ids=["localized-64", "english-64", "english-63", "numeric-compat"])
+def test_session_connect_version_identity_is_parsed_in_full_protocol(
+        selected_version, selected_build, remote_version, remote_build,
+        remote_build_source, canonical_version, canonical_build_source, tmp_path, monkeypatch):
+    _patch_isolation(monkeypatch)
+    plan = _plan(tmp_path, mode=runner.SOLVE_READBACK_MODE)
+    plan["requested_version"] = selected_version[:3]
+    plan["selected_comsol"]["version"] = selected_version
+    plan["selected_comsol"]["build"] = selected_build
+    plan["freeze_sha256"] = runner.sha256_value({
+        key: value for key, value in plan.items() if key != "freeze_sha256"
+    })
+    state = _state(tmp_path, schema=runner.SOLVE_READBACK_SCHEMA)
+    state.value["freeze_sha256"] = plan["freeze_sha256"]
+    state.save()
+    fake = _FakeStdioSession(plan, state, connect_identity={
+        "remote_engine_version": remote_version,
+        "remote_engine_build": remote_build,
+        "remote_engine_build_source": remote_build_source,
+    })
+
+    report = asyncio.run(runner.run_metadata_protocol(runner._MCPCalls(fake), plan, state,
+        clock=lambda: 100.0, preflight=lambda: []))
+    identity = report["remote_engine_identity"]
+    assert identity["normalized_version"] == canonical_version
+    assert identity["normalized_build"] == selected_build
+    assert identity["version_source"] == "remote_version_text"
+    assert identity["build_source"] == canonical_build_source
+    assert identity["remote_engine_version_raw"] == remote_version
+    assert identity["remote_engine_build_raw"] == remote_build
+    assert identity["remote_engine_build_source_raw"] == remote_build_source
+    assert report["remote_engine_version"] == remote_version
+    assert report["remote_engine_build"] == remote_build
+    assert report["native_admission"] == report["physical_validation"] == "UNVERIFIED"
+    assert report["status"] == "SOLVE_READBACK_CAPTURED_ONLY_NOT_ADMISSION"
+    actions = [action for action, _ in fake.calls]
+    assert actions.count("study.solve") == 1
+    assert actions.index("session.connect") < actions.index("model_create")
+
+
+@pytest.mark.parametrize(("remote_version", "remote_build", "remote_build_source"), [
+    ("6.40.0.293", "293", "remote-connect-reply"),
+    ("6.4.0.293", None, "NOT_REPORTED"),
+    ("COMSOL Multiphysics 6.4 (Build: 293)", "292", "remote-connect-reply"),
+    ("COMSOL Multiphysics 6.3 (Build: 293)", None, "NOT_REPORTED"),
+    ("COMSOL Multiphysics 6.4 (Build: 294)", None, "NOT_REPORTED"),
+    ("COMSOL Multiphysics 6.4 (Build: 293) trailing", None, "NOT_REPORTED"),
+    ("6.4.0.293", "293", "NOT_REPORTED"),
+], ids=["false-prefix", "missing-build", "conflicting-build", "wrong-version",
+       "wrong-build", "trailing-data", "contradictory-source"])
+def test_session_connect_rejects_ambiguous_or_mismatched_version_evidence(
+        remote_version, remote_build, remote_build_source, tmp_path, monkeypatch):
+    _patch_isolation(monkeypatch)
+    plan = _plan(tmp_path)
+    state = _state(tmp_path)
+    fake = _FakeStdioSession(plan, state, connect_identity={
+        "remote_engine_version": remote_version,
+        "remote_engine_build": remote_build,
+        "remote_engine_build_source": remote_build_source,
+    })
+    with pytest.raises(runner.RunnerError, match="COMSOL|build|version"):
+        asyncio.run(runner.run_metadata_protocol(runner._MCPCalls(fake), plan, state,
+            clock=lambda: 100.0, preflight=lambda: []))
+    actions = [action for action, _ in fake.calls]
+    assert actions.count("session.connect") == 1
+    assert "model_create" not in actions
+    assert "probe.execute" not in actions
+    assert "study.solve" not in actions
+    assert "session.disconnect" in actions and "session.stop" in actions
+    assert state.value["status"] == "FAILED"
 
 
 def test_project_create_pending_response_uses_one_frozen_readonly_wait(tmp_path, monkeypatch):

@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "unit": "W21 Windows6.4 V2 short-home current-source attempt",
-  "updated_at_utc": "2026-09-29T09:56:32Z",
+  "updated_at_utc": "2026-09-29T10:18:57Z",
   "overall_status": "PARTIAL",
   "source_package_status": "PASS_MAIN_VERIFIED",
   "native_status": "LATEST_3160730_RUN_IDENTITY_MISMATCH_STOP_UNKNOWN; PRIOR_CONNECT_QUIESCENCE_VERIFIED; SOLVE_READBACK_NOT_RUN",
-  "next_action": "Repair localized remote version/build parsing and Windows empty-listener enumeration; add source-bound abandoned-stop quiescence recovery using the existing atomic proof system. Preserve the original stop UNKNOWN. Do not restart, replay or clean up until durable disposition is verified; then use a new reviewed Windows6.4 freeze, followed by6.3 and W23-W26.",
+  "next_action": "Preserve the original Server stop UNKNOWN and complete the source-bound quiescence disposition; do not restart, replay or clean up before durable disposition is verified. Complete the independent localized version/build parsing repair. Then prioritize only a newly reviewed Windows6.4-to-6.3 canonical solve/readback chain. The listener enumeration change is scoped offline software evidence, not post-change Windows/native verification.",
   "candidate": {
     "source_commit": "9c5ced6272dd876cf9c28c6c6f73b943bd76b96c",
     "evidence_root": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-v2-20260928T235840Z-9c5ced6",
@@ -1476,8 +1476,8 @@
       "solution_tuple_reads": 0,
       "field_reads": 0
     },
-    "current_process_disposition": "NOT_YET_READ_ONLY_VERIFIED; handoff diagnostics pending",
-    "next_action": "Repair localized remote version/build parsing and Windows empty-listener enumeration; add source-bound abandoned-stop quiescence recovery using the existing atomic proof system. Preserve the original stop UNKNOWN. Do not restart, replay or clean up until durable disposition is verified; then use a new reviewed Windows6.4 freeze, followed by6.3 and W23-W26.",
+    "current_process_disposition": "Worker retirement is read-only confirmed; original Server stop remains UNKNOWN and is not durably reconciled.",
+    "next_action": "Complete the independent localized version/build parsing repair and source-bound abandoned-stop quiescence disposition. Preserve the original stop UNKNOWN; do not restart, replay or clean up until durable disposition is verified. The listener enumeration fix is offline software evidence only and has not been re-tested on Windows.",
     "readonly_diagnostics": {
       "status": "PASS_READONLY_OBSERVATION_ONLY",
       "connect_result": "SUCCEEDED",
@@ -1521,8 +1521,109 @@
           "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback-prepare-review-20260929/read_listener_absence.stdout",
           "sha256": "ceda9cee0bbe4f061187b18af284e1506bf20b49c8959bd104fafeb199088946",
           "remote_exit_code": 0
+        },
+        "read_worker_retirement.stdout": {
+          "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback-prepare-review-20260929/read_worker_retirement.stdout",
+          "remote_exit_code": 0,
+          "sha256": "06267ac62f5e8eaef2e88a434e66a6469e1b5049999233fe4625b364e7173f2e"
         }
+      },
+      "worker_retirement": {
+        "status": "READ_ONLY_WORKER_RETIREMENT_CONFIRMED",
+        "worker_close_events": {
+          "started_event_id": 15,
+          "reaped_event_id": 16
+        },
+        "worker_identity": {
+          "pid": 25124,
+          "start_epoch_ms": 1790675499988,
+          "worker_epoch": 3,
+          "exact_popen_handle": true,
+          "wait_confirmed": true,
+          "exit_code": 1
+        },
+        "disconnect_operation": {
+          "operation_id": "d496bf3b-a6f4-40ce-9574-aaf922d7e11f",
+          "request_id": "9bfe33f4-763f-45c5-b7cf-a0ec77028757",
+          "job_id": "18588a3a-da3f-4163-92ec-cd9a022e9df5",
+          "status": "SUCCEEDED",
+          "client_state": "RETIRED",
+          "response_state": "DISCONNECTED"
+        },
+        "lifecycle_readback": {
+          "state": "UNKNOWN",
+          "client_state": "RETIRED",
+          "revision": 8
+        },
+        "server_stop_unknown": {
+          "operation_id": "8f91a0ec-ab71-41c4-90f2-a00bee016733",
+          "request_id": "d26119c9-2727-4f16-b57f-091add8c1815",
+          "job_id": "e2d821c1-9a30-4561-ae73-0c9a022e9df5",
+          "status": "UNKNOWN",
+          "durably_reconciled": false
+        },
+        "limits": "Confirms exact Worker Popen retirement only; it does not reconcile the earlier Server stop UNKNOWN or establish a native solve/readback result."
       }
     }
+  },
+  "listener_query_software_repair": {
+    "status": "SCOPED_OFFLINE_SOFTWARE_PASS",
+    "scope": "Windows listener enumeration helper and session-server stop fail-closed behavior; offline synthetic transport only.",
+    "affected_unique_tests": 25,
+    "test_summary": {
+      "passed": 25,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "test_command": "env PYTHONDONTWRITEBYTECODE=1 /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -B -m pytest -p no:cacheprovider tests/test_session_server_control.py --junitxml=/Volumes/CTestEff/w21-listener-query-fix-final-junit.xml --basetemp=/Volumes/CTestEff/j",
+    "receipt": {
+      "path": "/Volumes/CTestEff/w21-listener-query-fix-receipt.json",
+      "sha256": "a74bb4c14ec7a66287962f17e62c775c604bc66ea390debf46b49b5d11add59e"
+    },
+    "final_junit": {
+      "path": "/Volumes/CTestEff/w21-listener-query-fix-final-junit.xml",
+      "sha256": "5f92bc9aedc6610c7237bc67c6d6fbc2a6dbce4d4aa0b8890f2d75bff2415af0"
+    },
+    "final_stdout": {
+      "path": "/Volumes/CTestEff/w21-listener-query-fix-final.stdout",
+      "sha256": "5f469aa154d9b343ce6b850dbf8e2091a2a707c53b329792ce94102506275d39"
+    },
+    "sources": {
+      "comsol_mcp/_session_server.py": "1496c4cc42c9a6bb2086cbac8ab646d1bb4b2faf972acf5729faf797df742780",
+      "tests/test_session_server_control.py": "6eeea136492f724739a6ec547baea64a9c116572c99c029752726cfc88371b46"
+    },
+    "preserved_initial_failed_attempt": {
+      "exit_code": 1,
+      "summary": {
+        "tests": 25,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0
+      },
+      "junit": {
+        "path": "/Volumes/CTestEff/w21-listener-query-fix-junit.xml",
+        "sha256": "e6b809928bb1fb6f5cd8a250dac72d55011b4e8a13de20a44f3bedd8e477d427"
+      },
+      "stdout": {
+        "path": "/Volumes/CTestEff/w21-listener-query-fix.stdout",
+        "sha256": "e64831af8430a9eb3521362fb3d81a78cdf12b153f16072a006615cd556f3f1b"
+      },
+      "failure": "One test assertion expected lifecycle UNKNOWN after pre-stop ownership validation failed. Production retained DISCONNECTED; the test was corrected to assert durable operation UNKNOWN plus unchanged lifecycle."
+    },
+    "pre_repair_windows_census": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solve-readback-prepare-review-20260929/read_listener_absence.stdout",
+      "sha256": "ceda9cee0bbe4f061187b18af284e1506bf20b49c8959bd104fafeb199088946",
+      "observed_rows": 258,
+      "target_port": 11961,
+      "matching_listeners": 0,
+      "meaning": "Pre-repair Windows observation only: full TCP inventory followed by local filtering found no matching listener; the earlier provider-filtered query errored. This is not a post-repair Windows/native verification and does not prove the original stop UNKNOWN cause uniquely."
+    },
+    "native_status": "NOT_RUN",
+    "limitations": [
+      "No Windows or remote execution was run after this software change.",
+      "No COMSOL/native run was performed.",
+      "The original session.stop UNKNOWN remains undurably reconciled; this software test does not close it."
+    ]
   }
 }

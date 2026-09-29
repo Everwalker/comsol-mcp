@@ -353,6 +353,90 @@ def _comsol_identity(root: Path, version: str) -> dict[str, Any]:
     }
 
 
+def _comsol_numeric_version(value: Any, *, label: str, build: int | None = None) -> tuple[int, int, int]:
+    if not isinstance(value, str) or re.fullmatch(r"[0-9]+(?:\.[0-9]+){1,3}", value) is None:
+        raise RunnerError(f"{label} is not an unambiguous numeric COMSOL version")
+    parts = [int(part) for part in value.split(".")]
+    if len(parts) == 4:
+        if build is None or parts[-1] != build:
+            raise RunnerError(f"{label} four-part version does not bind its build")
+        parts.pop()
+    if any(part < 0 for part in parts) or parts[0] < 1 or parts[1] < 0:
+        raise RunnerError(f"{label} contains an invalid version component")
+    if len(parts) == 2:
+        parts.append(0)
+    return parts[0], parts[1], parts[2]
+
+
+def _comsol_build_number(value: Any, *, label: str) -> int:
+    if type(value) is int:
+        number = value
+    elif isinstance(value, str) and re.fullmatch(r"[0-9]+", value) is not None:
+        number = int(value)
+    else:
+        raise RunnerError(f"{label} is missing or malformed")
+    if number <= 0:
+        raise RunnerError(f"{label} is missing or malformed")
+    return number
+
+
+def _resolve_remote_comsol_identity(
+        connected: Mapping[str, Any], selected: Mapping[str, Any]) -> dict[str, Any]:
+    """Strictly resolve remote version/build evidence against the frozen install."""
+    selected_build = _comsol_build_number(selected.get("build"), label="frozen COMSOL build")
+    selected_version = _comsol_numeric_version(
+        selected.get("version"), label="frozen COMSOL version", build=selected_build,
+    )
+
+    raw_version = connected.get("remote_engine_version")
+    raw_build = connected.get("remote_engine_build")
+    raw_build_source = connected.get("remote_engine_build_source")
+    inline = re.fullmatch(
+        r"COMSOL Multiphysics (?P<version>[0-9]+\.[0-9]+(?:\.[0-9]+)?) "
+        r"\((?:Build: (?P<english_build>[0-9]+)|开发版本: (?P<localized_build>[0-9]+))\)",
+        raw_version if isinstance(raw_version, str) else "",
+    )
+    if inline is not None:
+        remote_version_text = inline.group("version")
+        inline_build = _comsol_build_number(
+            inline.group("english_build") or inline.group("localized_build"),
+            label="remote version-text build",
+        )
+        remote_version = _comsol_numeric_version(remote_version_text, label="remote COMSOL version")
+        build_source = "remote_version_text"
+        if raw_build is not None:
+            explicit_build = _comsol_build_number(raw_build, label="remote COMSOL build")
+            if explicit_build != inline_build or raw_build_source == "NOT_REPORTED":
+                raise RunnerError("remote version-text and explicit build evidence conflict")
+    else:
+        if not isinstance(raw_version, str) or re.fullmatch(
+                r"[0-9]+(?:\.[0-9]+){1,3}", raw_version) is None:
+            raise RunnerError("remote COMSOL version text is unrecognized or ambiguous")
+        if raw_build is None or raw_build_source == "NOT_REPORTED":
+            raise RunnerError("remote COMSOL build has no independent reported value")
+        explicit_build = _comsol_build_number(raw_build, label="remote COMSOL build")
+        remote_version = _comsol_numeric_version(
+            raw_version, label="remote COMSOL version", build=explicit_build,
+        )
+        inline_build = explicit_build
+        build_source = "remote_explicit_build"
+
+    if remote_version != selected_version or inline_build != selected_build:
+        raise RunnerError("remote COMSOL version/build differs from the frozen Server/runtime")
+    if (raw_build_source is not None
+            and (not isinstance(raw_build_source, str) or not raw_build_source.strip())):
+        raise RunnerError("remote COMSOL build source is malformed")
+    return {
+        "normalized_version": ".".join(str(part) for part in remote_version),
+        "normalized_build": str(inline_build),
+        "version_source": "remote_version_text",
+        "build_source": build_source,
+        "remote_engine_version_raw": raw_version,
+        "remote_engine_build_raw": raw_build,
+        "remote_engine_build_source_raw": raw_build_source,
+    }
+
+
 def _check_64_receipt(path: Path, *, mode: str = METADATA_MODE) -> dict[str, Any]:
     if path.is_symlink() or not path.is_file():
         label = "solve-readback" if mode == SOLVE_READBACK_MODE else "metadata-only probe"
@@ -1829,10 +1913,11 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
                 or connected.get("endpoint") != dict(endpoint) or connected.get("server_ownership") != "mcp_managed"
                 or not isinstance(server_instance, str) or not server_instance
                 or not isinstance(connected.get("worker_instance_id"), str)
-                or type(worker_epoch) is not int or worker_epoch <= 0
-                or not str(connected.get("remote_engine_version", "")).startswith(plan["selected_comsol"]["version"])
-                or str(connected.get("remote_engine_build")) != str(plan["selected_comsol"]["build"])):
+                or type(worker_epoch) is not int or worker_epoch <= 0):
             raise RunnerError("session.connect identity/version/build differs from the frozen Server/runtime")
+        remote_engine_identity = _resolve_remote_comsol_identity(
+            connected, plan["selected_comsol"],
+        )
 
         # model_create has no ModelRef yet, but is explicitly session-scoped.
         model_response = await dispatch("model_create", "model_create", {
@@ -2176,6 +2261,8 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
             "server_instance_id": server_instance, "worker_instance_id": connected["worker_instance_id"],
             "remote_engine_version": connected["remote_engine_version"],
             "remote_engine_build": connected["remote_engine_build"],
+            "remote_engine_build_source": connected.get("remote_engine_build_source"),
+            "remote_engine_identity": remote_engine_identity,
             "worker_epoch": worker_epoch, "model_binding": binding,
             "fixture_sha256": plan["fixture_sha256"],
             "fixture_readback": dict(fixture_readback),
