@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "unit": "W21 Windows6.4 V2 short-home current-source attempt",
-  "updated_at_utc": "2026-09-29T02:08:23.339137+00:00",
+  "updated_at_utc": "2026-09-29T02:42:36.081627+00:00",
   "overall_status": "PARTIAL",
   "source_package_status": "PASS_MAIN_VERIFIED",
   "native_status": "NOT_ACCEPTED_SESSION_START_UNKNOWN",
-  "next_action": "Read-only reconciliation of the original Windows6.4 UNKNOWN operation: correlate remaining COMSOL processes, descendants, listeners and task logs; repair startup-failure state reconciliation and separate non-sensitive process diagnostics from token storage. No restart, replay or cleanup before original-operation quiescence is established. Then perform one authorized short-root native startup comparison, followed by Windows6.4 and 6.3 start/connect/small-model solve/result readback. W23 analytic geometry work continues independently; no new acceptance gates.",
+  "next_action": "Finish startup identity/error/exit persistence and non-sensitive diagnostic separation; extend the existing session.recover path for the exact abandoned session.start with a same-host quiescence disposition. Preserve original UNKNOWN/failure history and missing exit code; do not trust imported PASS receipts or mark native success. After controlled reconciliation and a freshly approved short-root plan, execute one minimal Windows6.4 native startup comparison, then connect/small-model solve/result readback and Windows6.3. Continue W23 analytic geometry in parallel; no new acceptance gates.",
   "candidate": {
     "source_commit": "9c5ced6272dd876cf9c28c6c6f73b943bd76b96c",
     "evidence_root": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-v2-20260928T235840Z-9c5ced6",
@@ -132,5 +132,44 @@
     "sha256": "5703efb9f042429deeb96ee5d9536fccd8fcbe6bc3f7435a78e35b34398c9b6b",
     "control_filelist_sha256": "c1923ebefc30acd4cf779d12d3d441d47980f5ec091cb8f6d62a9a3037ee5d4b",
     "auto_review_rejection_record_sha256": "960bb5a20a23d36e25f35eae94519b5f429660d0b1625fd5c5d0010cc58d6501"
+  },
+  "latest_readonly_reconciliation": {
+    "status": "READONLY_OBSERVATIONS_COMPLETE_DURABLE_RECOVERY_PENDING",
+    "daemon_pid": 20888,
+    "daemon_observation": "PROCESS_NOT_FOUND",
+    "canonical_comsol_java_candidate_count": 0,
+    "listener_rows_scanned": 56,
+    "listener_owner_query_unresolved": 0,
+    "associated_listener_count": 0,
+    "listener_observed_at_utc": "2026-09-29T02:38:49.7113086Z",
+    "original_operation_status": "RUNNING",
+    "original_job_status": "RUNNING",
+    "original_result_present": false,
+    "job_observed_at_utc": "2026-09-29T02:42:36.081627+00:00",
+    "startup_errors": [
+      "CORE_RL_magick_.dll failed to load",
+      "COMSOL startup failed",
+      "com.comsol.bridge.application initialization failed"
+    ],
+    "interpretation": "Observations support current host quiescence of this failed start; do not prove successful startup, historic exit code, or the sole DLL load root cause. Original durable rows remain RUNNING and have not been edited. A controlled same-host recovery must reconcile the original request before any new native launch.",
+    "native_restart_replay_cleanup_performed": false,
+    "evidence": [
+      {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-v2-20260928T235840Z-9c5ced6/readonly_unknown_session_logs_v1_receipt.json",
+        "sha256": "7ee861b96548f1cf2cabad1f4662b56d19ff5adcd27d98e8633de7138e5fcbb5"
+      },
+      {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-v2-20260928T235840Z-9c5ced6/readonly_unknown_session_process_listener_v1_receipt.json",
+        "sha256": "5ff5cb6a37213b3ff075d5dc10d2782f3e76d713deb7847d043cb6b88bd66b55"
+      },
+      {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-v2-20260928T235840Z-9c5ced6/readonly_listener_owner_check_v1_receipt.json",
+        "sha256": "808bcb39adcc1e10223c98a573a94c1b0f5901a04d0146535afcc9ff0648e251"
+      },
+      {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-v2-20260928T235840Z-9c5ced6/readonly_original_job_current_v2_receipt.json",
+        "sha256": "9cc98da7a8d975555b3cdc4d35dd373f84035c785e497816d28987fca9ffc40b"
+      }
+    ]
   }
 }
