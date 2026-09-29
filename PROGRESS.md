@@ -1,6 +1,12 @@
 # COMSOL MCP full-project progress
 
-**Current stage: W21 Windows 6.4 targeted field metadata captured — PARTIAL (empty Shape table). Overall project: PARTIAL.** The Windows 6.4 → 6.3 canonical native round remains scoped PASS on its exact earlier runtime source. The master plan remains 26 work packages, 272 actions, 60 validation targets and 6 environments; the final independent Reviewer has not started. The authoritative plan and task ledger remain [MAIN_ACCEPTANCE_PLAN](docs/full_project_execution/MAIN_ACCEPTANCE_PLAN.md), [TASKS.json](docs/full_project_execution/state/TASKS.json) and [RESUME.json](docs/full_project_execution/state/RESUME.json).
+**Current round: Windows 6.4 → 6.3 canonical native solve/readback — scoped PASS, evidence rechecked. Capability expansion deferred for this round. Overall project: PARTIAL.** The Windows 6.4 → 6.3 canonical native round remains scoped PASS on its exact earlier runtime source. The master plan remains 26 work packages, 272 actions, 60 validation targets and 6 environments; the final independent Reviewer has not started. The authoritative plan and task ledger remain [MAIN_ACCEPTANCE_PLAN](docs/full_project_execution/MAIN_ACCEPTANCE_PLAN.md), [TASKS.json](docs/full_project_execution/state/TASKS.json) and [RESUME.json](docs/full_project_execution/state/RESUME.json).
+
+## Current round scope and handoff
+
+Per the latest user direction, this round is limited to the canonical chain below. Both actual runs already completed on runtime source `45399a5`; this round rechecked their original receipt hashes, freeze/run identities, successful non-UNKNOWN action responses, single solve/read counts, selected-value hashes and recorded owned cleanup. All matched. No new native execution or replay was needed; cleanup is evidence from those completed runs, not a new live process census.
+
+The uncommitted automatic-unit-controls candidate in `tools/run_w21_stage_native.py` and `tests/test_run_w21_stage_native.py` is **NOT ACCEPTED**: its latest focused run had 8 PASS / 4 FAIL, followed by corrections that are **NOT_RUN**. Preserve the draft and failure evidence; it is excluded from this canonical PASS and this documentation sync. No executor test/native operation remains active. Next round: validate that existing draft before any upload/native use, then resume the original W21 and W23–W26 work. No additional capability work in this round.
 
 ## Latest native finding
 
@@ -8,7 +14,7 @@ Runtime source `4c2cbc9`, Windows 6.4 build 293, run `w21-64-20260929T155143Z-06
 
 [Compact native checkpoint](docs/full_project_execution/project_session/FIELD_IDENTITY_PROBE_SOFTWARE_CHECKPOINT.json#targeted_native_windows64_20260930) binds source/archive/freeze/request/model/revision/receipt/state hashes. Full evidence is on SSD at `/Volumes/SSD/Comsol-MCP/execution-scratch/w21-targeted-probe-w21r13`. Initial upload/extraction auto-review refusals were resolved through the same normal channels using existing user authorization; no alternate transfer or replay was used.
 
-Next: extend the existing solve/readback runner with one frozen multi-expression read (`T`, `T/1[K]`, `1`) and no requested units. Preserve one solve/one field read and all existing budgets; compare actual temperature and dimensionless controls, then bind real solver fields and complete historical mesh to the original stage-transfer requirements. Do not interpret empty tables or requested-unit echoes as unit proof.
+Deferred to the next implementation round: extend the existing solve/readback runner with one frozen multi-expression read (`T`, `T/1[K]`, `1`) and no requested units. Preserve one solve/one field read and all existing budgets; compare actual temperature and dimensionless controls, then bind real solver fields and complete historical mesh to the original stage-transfer requirements. Do not interpret empty tables or requested-unit echoes as unit proof.
 
 ## Latest W21 software result
 

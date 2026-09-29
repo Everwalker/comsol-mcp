@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "phase": "W21_WINDOWS64_TARGETED_NATIVE_CAPTURE_PARTIAL_UNIT_CONTROLS_NEXT",
+  "phase": "W21_CANONICAL_WINDOWS64_WINDOWS63_PASS_RECONFIRMED_EXPANSION_DEFERRED_THIS_ROUND",
   "task": "W01_W26_CONTINUOUS_IMPLEMENTATION",
-  "status": "TARGETED_NATIVE_CAPTURE_PARTIAL_EMPTY_SHAPE; CANONICAL_BASELINES_PASS; OVERALL_PARTIAL",
+  "status": "CANONICAL_NATIVE_CHAIN_SCOPED_PASS; UNIT_CONTROLS_DRAFT_UNACCEPTED; OVERALL_PARTIAL",
   "candidate_source": "2bdcc75bd86e66f6d2004cdbf84901d5f26f1d49",
   "completed_work": [
     "PIN source restoration completed and verified: 10832 files, zero missing LFS backing objects; repository HEAD matches pinned commit/tree.",
@@ -150,7 +150,7 @@
     "W21 solve-readback probe integration: 98 unique offline protocol tests PASS (96 existing module cases plus 2 new tests); 64 KiB raw observation/hash is bound to exact project/session/ModelRef/revision before solve; UNKNOWN halts later solve dispatch. Synthetic transport only, native NOT_RUN, admission UNVERIFIED. Evidence is in PRODUCTION_RUNNER_SOFTWARE_CHECKPOINT.json#latest_solve_readback.",
     "W21 canonical Windows6.4→6.3 native chain on source45399a5: one solve/tuple/field read each, exact ownedcleanup, actual receipts and hashes main-reviewed; scopedPASS only."
   ],
-  "next_action": "Implement frozen single-read T, T/1[K], 1 automatic-unit controls in existing canonical solve/readback runner with no spec.units; same one-solve/one-read budgets. Validate software, then actual Windows6.4→6.3 controls; implement real field/unit/full historical mesh stage admission and readback, originalW23–W26, final independent review.",
+  "next_action": "This user-requested narrow round is complete: both original Windows 6.4→6.3 canonical native solve/readback receipts rechecked without replay. Do not expand capabilities this round. Next implementation round: resume existing uncommitted auto-unit-controls draft, rerun tests after corrections (latest actual focused run 8 PASS/4 FAIL; corrected state NOT_RUN), review and stage-sync before any native use; then original W21 and W23–W26, final independent Reviewer.",
   "active_jobs": [],
   "blockers": [
     "Both Windows canonical solve/readback baselines remain scopedPASS on45399a5. New4c2cbc9 Windows6.4 metadata capture completed/cleaned but info/Shape table empty; declaredT observed, intrinsicunit/activeDOF/mesh/stage transfer stillUNVERIFIED. No live/UNKNOWN operation in this new run;6.3 duplicate empty-table captureNOT_RUN. Continue automatic-unit controls; no external blocker for this step.",
@@ -180,7 +180,7 @@
     "native_solve_budget_remaining": 0,
     "evidence": "docs/full_project_execution/evidence/luna_process_reconciliation/mac_readonly_snapshot_20260926T2152Z.json"
   },
-  "updated_at": "2026-09-29T14:49:21.097336+00:00",
+  "updated_at": "2026-09-29T16:35:04.931657+00:00",
   "note": "Original scope remains through W26. User explicitly resumed after the test-efficiency analysis; implement efficiency improvements first. OpenViking task-detail retrieval was denied by auto-review because it would disclose internal roadmap identifiers externally; no workaround. Use current frozen workpack and read-only local memory only. Do not rerun bootstrap/init on resume. Source files now contain executor edits; do not rerun bootstrap/init. Git metadata is an APFS pointer managed by main agent; migration requires bundle/source transfer, not copying only the repository pointer. Git metadata migration is documented by evidence/git_metadata_relocation.json and owned by the main agent; do not copy the APFS git pointer to another machine without source bundle/archive. GUI permission boundary and checkpoint solution-scope caveat recorded. This executor has one W24 native setup-only failure with exact cleanup verified; the durable operation/job UNKNOWN records remain unchanged. No W24 solver submission occurred. Saved-MPH readback supplement uses separate time/evidence and zero study/solver calls; run08 remains FAIL_OR_INCOMPLETE. Root raw SQLite recomputation is linked under native_resume_saved_artifact_supplement.raw_recomputation_evidence; original run08 remains FAIL_OR_INCOMPLETE and no solve budget is restored. Latest checkpoint 2026-09-27T03:50:43Z: W24 0334Z setup run failed pre-model due Python 3.14 missing mcp, with exact cleanup; 0346Z candidate pins the validated 3.12.13 environment and passes a production no-engine registry/daemon preflight. Native setup remains pending root review; science implementation continues offline. Latest checkpoint 2026-09-27T09:09:28Z: W24 0841Z candidate was invoked once at 0857Z and failed before any engine/Worker birth because project.inspect received an injected idempotency_key; project.create persisted successfully. Exact read-only SQLite hash and operation result are in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_contract_diagnostic.json. The runner now omits the unnecessary inspect key; actual ControlDaemon focused regression is 2/2 PASS in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_runner_regression_receipt.json. No native retry or acceptance is claimed; release F04 runtime integration is active, so refresh closure and root review are required before another launch. Windows COMSOL 6.3 remains required/unassessed; only macOS 6.3 is USER_REQUESTED_SKIP.",
   "native_resume_smoke": {
     "status": "FAIL_OR_INCOMPLETE_POINT_SCHEMA_FAILURE; SOLVED_CHILD_ARTIFACT_DURABLE; SOLVE_BUDGET_EXHAUSTED; SEPARATE_SAVED_MPH_READBACK_PASS",
@@ -2646,7 +2646,7 @@
     "W26",
     "Final independent Reviewer and repair loop"
   ],
-  "latest_user_direction": "Temporarily pause capability expansion for one round. Prioritize the real canonical Windows6.4 then Windows6.3 native start/connect/solve/readback/cleanup chain. Only fixes necessary for this chain and safe disposition of its existing UNKNOWN operation continue; do not expand field mapping, probes or W23-W26 capabilities during this round. Overall MASTER_GOAL through W26 remains active.",
+  "latest_user_direction": "Pause capability expansion for approximately one round and establish the Windows 6.4→6.3 canonical native solve/readback chain; existing actual dual-version chain verified against original evidence.",
   "field_identity_probe_checkpoint": {
     "status": "PASS_SCOPED_OFFLINE",
     "checkpoint": "docs/full_project_execution/project_session/FIELD_IDENTITY_PROBE_SOFTWARE_CHECKPOINT.json",
