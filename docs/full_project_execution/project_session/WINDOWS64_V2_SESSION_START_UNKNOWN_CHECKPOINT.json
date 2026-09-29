@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "unit": "W21 Windows6.4 V2 short-home current-source attempt",
-  "updated_at_utc": "2026-09-29T05:14:28.300795+00:00",
+  "updated_at_utc": "2026-09-29T06:12:08Z",
   "overall_status": "PARTIAL",
   "source_package_status": "PASS_MAIN_VERIFIED",
   "native_status": "NOT_ACCEPTED_SESSION_START_UNKNOWN",
-  "next_action": "Keep recovery request 8ec17d18-88f7-4e5c-a797-6d1500ca20ac at UNKNOWN_NO_RETRY. The one recover attempt returned is_error=true without an operation ID, and the read-only SQLite check found no durable recovery row. The 15e7bea route writes recover-specific job/lifecycle state only after store.begin; controller startup reconciliation can independently explain the original job's RECONCILING state. Finish safe-error/held-handle driver diagnostics, then have main review a fresh single recovery request against the latest quiescence observations. Never replay the prior request, and do not start the bounded short-path native chain before durable reconciliation of the original operation. The exact error remains unavailable because the driver discarded response error details; see recovery_driver_attempt for route and permission evidence.",
+  "next_action": "Preserve the original Windows6.4 session.start and both distinct session.recover attempts as UNKNOWN_NO_RETRY; neither recovery created a durable operation. The latest request aa289248-28c8-4f92-ab9e-c16bcaaec5dc was rejected with PROJECT_WORKSPACE_IDENTITY_MISMATCH because the recovery environment omitted COMSOL_PROJECT_ROOT and production ProjectAuthority resolved the source fallback instead of the matching frozen workspace. Review the corrected driver hash and explicit frozen workspace-root binding before any new, distinct single recovery request. Never replay either prior request. Do not start the short-path native chain until the original operation is durably reconciled and same-host safe closure is established. This recover finding does not explain the earlier JNI file-not-found startup error or the prior daemon exit.",
   "candidate": {
     "source_commit": "9c5ced6272dd876cf9c28c6c6f73b943bd76b96c",
     "evidence_root": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-v2-20260928T235840Z-9c5ced6",
@@ -84,7 +84,7 @@
     "cleanup_permitted": false,
     "stop_or_cleanup_performed": false,
     "new_session_start_permitted_by_this_checkpoint": false,
-    "reason": "The original durable operation remains RUNNING/UNKNOWN without finished result or native process identity; preserve the original UNKNOWN and investigate the same job/daemon first."
+    "reason": "The original durable session.start remains UNKNOWN and the source job remains RECONCILING without a result. The latest fresh recover was rejected before any durable recovery row was created by PROJECT_WORKSPACE_IDENTITY_MISMATCH; a distinct later request may be considered only after main reviews the corrected driver and exact frozen workspace-root binding. Do not replay either prior recover request, start a new session, or run the native chain before durable reconciliation and safe same-host closure."
   },
   "prior_path_repair": {
     "checkpoint": "docs/full_project_execution/project_session/WINDOWS_SHORT_HOME_PATH_CHECKPOINT.json",
@@ -177,7 +177,7 @@
       "error_lines": [
         "2026-09-29T08:24:53.094+0800 Internal error, Exception while initializing bridge.",
         "java.lang.RuntimeException: Exception when initializing COMSOL libraries: Exception:",
-        "\tcom.comsol.nativejni.FlNativeException: \u627e\u4e0d\u5230\u6587\u4ef6\u3002"
+        "\tcom.comsol.nativejni.FlNativeException: 找不到文件。"
       ],
       "receipt_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-v2-20260928T235840Z-9c5ced6/readonly_startup_log_reference_v3_receipt.json",
       "receipt_sha256": "1e6c0864834927f088b7e80f73a3b30f6aad525fdac125a73665baa5c33f1910",
@@ -519,6 +519,94 @@
       "cause_status": "UNRESOLVED; response error details were discarded by the driver. Project policy has project_write=true; no exact rejection code or permission-denial cause is established."
     }
   },
+  "recovery_driver_diagnostics": {
+    "status": "HARMLESS_MCP_PROCESS_HANDLE_PROBE_UNVERIFIED",
+    "source_head": "15e7bea61e9ef06b29d9a51f55fcddebcb773b7a",
+    "purpose": "Observe a disposable Python child through a read-only Win32 process handle around MCP stdio shutdown; not a recovery request or native COMSOL check.",
+    "driver": {
+      "local_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-recovery-15e7bea/run_session_recovery_once_v2.py",
+      "sha256": "4bdd0542aa62481bd171b651a8711081f9bcacd0394eccff7ab9564cc17ba94d",
+      "local_test_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-recovery-15e7bea/test_recovery_process_handle_v1.py",
+      "local_test_sha256": "67893ba48cdbb62b03525308cb805d88cf5990b823b831e29245c4a222084399"
+    },
+    "local_verification": {
+      "status": "PASS",
+      "ordinary_tests_passed": 12,
+      "subtests_passed": 3,
+      "failures": 0,
+      "errors": 0,
+      "junit_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-recovery-15e7bea/process-handle-observer-v1-tests.xml",
+      "junit_sha256": "042eae9ac5ac8103d053af4f6367379f944c54533fbfad37d44d73766d7e1775",
+      "command": "PYTHONDONTWRITEBYTECODE=1 /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -I -B -m pytest -p no:cacheprovider -q --junitxml=process-handle-observer-v1-tests.xml test_recovery_process_handle_v1.py",
+      "ast_parse_five_files": "PASS",
+      "mcp_stdio_transport_smoke": "PASS_TRANSPORT_ONLY; local platform guard returned WINDOWS_ONLY; no child created"
+    },
+    "win32_observer_contract": {
+      "OpenProcess": "DWORD, BOOL, DWORD -> pointer-sized HANDLE; access 0x00101000 = PROCESS_QUERY_LIMITED_INFORMATION | SYNCHRONIZE",
+      "GetProcessTimes": "HANDLE, FILETIME*, FILETIME*, FILETIME*, FILETIME* -> BOOL; FILETIME is two DWORDs",
+      "IsProcessInJob": "HANDLE, NULL HANDLE, BOOL* -> BOOL; indicates membership in any Job only; SDK Job attribution remains UNVERIFIED",
+      "WaitForSingleObject": "HANDLE, DWORD -> DWORD; WAIT_OBJECT_0=0, WAIT_TIMEOUT=258, WAIT_FAILED=0xFFFFFFFF",
+      "GetExitCodeProcess": "HANDLE, DWORD* -> BOOL; called only after WAIT_OBJECT_0; timeout is STILL_ACTIVE at observation and does not query exit code",
+      "CloseHandle": "HANDLE -> BOOL; owned observation handles released in finally",
+      "birth_conversion": "floor((FILETIME_ticks - 116444736000000000) / 10000) Unix epoch milliseconds",
+      "wait_limit_ms": 1000,
+      "mutating_process_apis": "NONE"
+    },
+    "windows_harmless_probe": {
+      "remote_directory": "C:\\Temp\\w21r15e7\\win32-handle-probe-v1",
+      "uploaded_source_files_hash_verified": true,
+      "uploaded_sources": [
+        {
+          "name": "run_session_recovery_once_v2.py",
+          "sha256": "4bdd0542aa62481bd171b651a8711081f9bcacd0394eccff7ab9564cc17ba94d"
+        },
+        {
+          "name": "harmless_mcp_child_server_v1.py",
+          "sha256": "5a2b104effe79c8127fca6720e818bd277bb657beb69942f485ee63d2b305b22"
+        },
+        {
+          "name": "run_harmless_mcp_process_handle_probe_v1.py",
+          "sha256": "e1773f0f758c37e8f5dee59d3c0e7a400122288c44790257a65da878812ea8cd"
+        }
+      ],
+      "mcp_version": "1.30.0",
+      "stdio_initialized": true,
+      "stdio_tools_listed": true,
+      "tool_call_count": 1,
+      "status": "MCP_PROBE_EXCEPTION",
+      "safe_exception_type": "BrokenResourceError",
+      "child_pid_birth_identity": "NOT_RETURNED",
+      "observer_before_stdio_close": "NOT_OBSERVED",
+      "observer_after_stdio_close": "NOT_OBSERVED",
+      "process_exit_code": "UNVERIFIED",
+      "mcp_stderr_bytes": 89,
+      "mcp_stderr_raw_retained": false,
+      "outer_ssh_stderr_bytes": 596,
+      "outer_ssh_stderr_sha256": "be2a813c5e264e6e4b05c9816b17dc6eb039a1cc247767c8927d259fa5541e12",
+      "probe_receipt": {
+        "local_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-recovery-15e7bea/windows-harmless-child-probe-v1-receipt.json",
+        "sha256": "8cd45388a2f6fdc56fddc2da77425d16045886dd873abc9bd6b92064b5b4e0c8",
+        "remote_receipt_path": "C:\\Temp\\w21r15e7\\win32-handle-probe-v1\\receipt-v1\\receipt.json"
+      },
+      "execution_receipt": {
+        "local_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-recovery-15e7bea/windows-harmless-child-probe-v1-execution.json",
+        "sha256": "515755f885225e6689ab087522ba5dc653a71816b6e985f3d67a0270ce13e1b9"
+      },
+      "final_summary_receipt": {
+        "local_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-recovery-15e7bea/win32-process-handle-observer-final-receipt.json",
+        "sha256": "f6aa96f8a02ac435af365ac6475800776d5d5682338a5a151a7243ee98084b46"
+      },
+      "recovery_dispatch": "NOT_RUN",
+      "COMSOL_daemon_worker_or_original_database_touched": false,
+      "retry_or_remote_cleanup": "NOT_RUN"
+    },
+    "retained_failed_command": {
+      "command": "PYTHONDONTWRITEBYTECODE=1 /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -I -B -m unittest -v test_recovery_process_handle_v1",
+      "exit_code": 1,
+      "reason": "-I excludes cwd from module-name lookup; direct-file unittest and pytest reruns passed"
+    },
+    "reconstruction_entry": "Read the local driver, probe server, probe runner, test module, JUnit and the two local receipts at the paths above; the three remote source filenames and verified hashes are listed above. No script or raw log copied into this checkpoint."
+  },
   "recovery_driver_prior_controller_init_attempt": {
     "status": "CONTROLLER_START_NO_RECOVERY_DISPATCH_OUTCOME_UNVERIFIED",
     "native_status": "NOT_RUN",
@@ -604,5 +692,91 @@
         "sha256": "a52c7bdd7cc2bdfb3ebd05ad93320422a0cb5ebb16f12640f13af2ad773152b2"
       }
     ]
+  },
+  "fresh_recovery_attempt_20260929T061208Z": {
+    "status": "UNKNOWN_NO_RETRY_RECOVERY_REJECTED",
+    "native_status": "NOT_RUN",
+    "source_head": "15e7bea61e9ef06b29d9a51f55fcddebcb773b7a",
+    "driver_sha256": "4bdd0542aa62481bd171b651a8711081f9bcacd0394eccff7ab9564cc17ba94d",
+    "dispatch_count": 1,
+    "request_id": "aa289248-28c8-4f92-ab9e-c16bcaaec5dc",
+    "idempotency_key_sha256": "2ecf55726ee9709fb1bc273e1782a544c03b1b57126a315e0500774a5fc9f125",
+    "response": {
+      "is_error": true,
+      "success": false,
+      "error_code": "PROJECT_WORKSPACE_IDENTITY_MISMATCH",
+      "returned_operation_id": null
+    },
+    "backup": {
+      "status": "CONSISTENT_READONLY_SOURCE_BACKUP",
+      "bytes": 139264,
+      "sha256": "14b81ffbbf0dd8658832c16e561f9883cbc6113cac9207890555375fcab39196"
+    },
+    "preflight": {
+      "source_exact_reconciling_without_result": true,
+      "prior_control_identity_observed_dead": true,
+      "prior_control_pid": 32880,
+      "prior_control_birth_epoch_ms": 1790658270497,
+      "only_nonterminal_operation_is_target": true
+    },
+    "post_dispatch_readonly_state": {
+      "recovery_request_rows": 0,
+      "new_operation_count": 0,
+      "original_source_identity_match": true,
+      "source_job_status": "RECONCILING",
+      "source_operation_status": "RECONCILING",
+      "source_result_present": false,
+      "lifecycle_state": "STARTING"
+    },
+    "controller_process_observation": {
+      "pid": 27724,
+      "birth_epoch_ms": 1790662326841,
+      "before_stdio_close": "HANDLE_OPEN_BIRTH_MATCHED",
+      "birth_match": true,
+      "in_any_job": true,
+      "after_stdio_close": "EXITED",
+      "exit_code": 0,
+      "sdk_job_attribution": "UNVERIFIED",
+      "sidecar_sha256": "c32c67f1ae38bf115bf00851f89713d9988767d29867d293fd185e318251834a"
+    },
+    "workspace_binding_diagnosis": {
+      "status": "CONFIRMED_FOR_THIS_RECOVER_REJECTION",
+      "production_route": "ProjectAuthority._verify_workspace_binding",
+      "comsol_project_root_present": false,
+      "resolved_binding": "source_fallback",
+      "rejection_code": "PROJECT_WORKSPACE_IDENTITY_MISMATCH",
+      "readonly_row_count": 1,
+      "frozen_workspace_match": true,
+      "canonical": true,
+      "exists": true,
+      "workspace_sha256": "536d0100272edddc1045c8dd85e717a9ee2a3e77f8261255ef356cd688035e61",
+      "scope_limit": "Explains this recover rejection only; does not explain the earlier JNI file-not-found startup failure or the earlier daemon exit."
+    },
+    "evidence": [
+      {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-fresh-recover-plan-20260929T054245Z/main-execute.stdout",
+        "sha256": "0c664f35e60e04398a2ebc046b12b496d1644734696062f710128fc9adeee86d"
+      },
+      {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-fresh-recover-plan-20260929T054245Z/main-execute-receipt.json",
+        "sha256": "65271f03e57c9092331640b636c12121ee90b88097bdc8512a34f3a54172434c"
+      },
+      {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-fresh-recover-plan-20260929T054245Z/readonly-workspace-binding-receipt.json",
+        "sha256": "e8f80d31a029f5336689ea2f2d560f9d21bce3031318e9e76edec04205131e38"
+      }
+    ],
+    "retry_policy": "NEVER_REPLAY_THIS_REQUEST; any later recovery must use a newly reviewed driver and distinct request/key",
+    "interpretation": "One fresh session.recover was dispatched. It created no durable recover operation and returned the exact workspace identity mismatch. Original session.start and original job remain UNKNOWN/RECONCILING; no result exists. The observer held a birth-matched process handle and later observed exit code 0, but SDK Job attribution is UNVERIFIED."
+  },
+  "workspace_root_driver_repair": {
+    "status": "PASS_SCOPED_OFFLINE_MAIN_REVIEWED",
+    "native_status": "NOT_RUN",
+    "driver_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-recovery-15e7bea/run_session_recovery_once_v3.py",
+    "driver_sha256": "447c6578ddace78bbbf8d5fab296d90cc9ea9c3c1bb1d420e472608cc4586346",
+    "receipt_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-recovery-15e7bea/recovery-driver-workspace-root-v3-receipt.json",
+    "receipt_sha256": "2176f01d3101ee45b1cb5aa3640db27609782de414d68881dc83689d35474fe4",
+    "tests": "6 V3 workspace-binding tests plus 12 existing V2 observer tests, 3 subtests; no failures/errors. V3 Windows not run.",
+    "change": "Require explicit frozen COMSOL_PROJECT_ROOT and exact persisted project workspace before controller start; compare backup/live project identity; daemon baseline 27724/birth1790662326841. No production authorization relaxation."
   }
 }

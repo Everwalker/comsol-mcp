@@ -143,7 +143,7 @@
       "checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json"
     }
   ],
-  "next_action": "Preserve the original Windows6.4 session.start and the one attempted session.recover as UNKNOWN_NO_RETRY. The recover response was is_error=true with no operation ID and no durable request row; source/policy evidence and the exact read-only receipt are in WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json. Finish the safe-error/held-handle driver diagnostics, then have main review a fresh single recovery request against the latest quiescence observations. Never replay the prior request. Do not start the bounded short-path native chain before durable reconciliation of the original operation; existing authorization for that later chain remains in place.",
+  "next_action": "Preserve the original Windows6.4 session.start and both distinct session.recover attempts as UNKNOWN_NO_RETRY; neither recovery created a durable operation. The latest request aa289248-28c8-4f92-ab9e-c16bcaaec5dc was rejected with PROJECT_WORKSPACE_IDENTITY_MISMATCH because the recovery environment omitted COMSOL_PROJECT_ROOT and production ProjectAuthority resolved the source fallback instead of the matching frozen workspace. Review the corrected driver hash and explicit frozen workspace-root binding before any new, distinct single recovery request. Never replay either prior request. Do not start the short-path native chain until the original operation is durably reconciled and same-host safe closure is established. This recover finding does not explain the earlier JNI file-not-found startup error or the prior daemon exit.",
   "active_jobs": [],
   "blockers": [
     "W23 failed setup owned Server 75272 and daemon 75260 remain preserved: cleanup SIGTERM was rejected by automatic approval and explicit authorization is pending; no cleanup or relaunch authorized by elapsed time.",
@@ -172,7 +172,7 @@
     "native_solve_budget_remaining": 0,
     "evidence": "docs/full_project_execution/evidence/luna_process_reconciliation/mac_readonly_snapshot_20260926T2152Z.json"
   },
-  "updated_at": "2026-09-29T05:42:45Z",
+  "updated_at": "2026-09-29T06:12:08Z",
   "note": "Original scope remains through W26. User explicitly resumed after the test-efficiency analysis; implement efficiency improvements first. OpenViking task-detail retrieval was denied by auto-review because it would disclose internal roadmap identifiers externally; no workaround. Use current frozen workpack and read-only local memory only. Do not rerun bootstrap/init on resume. Source files now contain executor edits; do not rerun bootstrap/init. Git metadata is an APFS pointer managed by main agent; migration requires bundle/source transfer, not copying only the repository pointer. Git metadata migration is documented by evidence/git_metadata_relocation.json and owned by the main agent; do not copy the APFS git pointer to another machine without source bundle/archive. GUI permission boundary and checkpoint solution-scope caveat recorded. This executor has one W24 native setup-only failure with exact cleanup verified; the durable operation/job UNKNOWN records remain unchanged. No W24 solver submission occurred. Saved-MPH readback supplement uses separate time/evidence and zero study/solver calls; run08 remains FAIL_OR_INCOMPLETE. Root raw SQLite recomputation is linked under native_resume_saved_artifact_supplement.raw_recomputation_evidence; original run08 remains FAIL_OR_INCOMPLETE and no solve budget is restored. Latest checkpoint 2026-09-27T03:50:43Z: W24 0334Z setup run failed pre-model due Python 3.14 missing mcp, with exact cleanup; 0346Z candidate pins the validated 3.12.13 environment and passes a production no-engine registry/daemon preflight. Native setup remains pending root review; science implementation continues offline. Latest checkpoint 2026-09-27T09:09:28Z: W24 0841Z candidate was invoked once at 0857Z and failed before any engine/Worker birth because project.inspect received an injected idempotency_key; project.create persisted successfully. Exact read-only SQLite hash and operation result are in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_contract_diagnostic.json. The runner now omits the unnecessary inspect key; actual ControlDaemon focused regression is 2/2 PASS in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_runner_regression_receipt.json. No native retry or acceptance is claimed; release F04 runtime integration is active, so refresh closure and root review are required before another launch. Windows COMSOL 6.3 remains required/unassessed; only macOS 6.3 is USER_REQUESTED_SKIP.",
   "native_resume_smoke": {
     "status": "FAIL_OR_INCOMPLETE_POINT_SCHEMA_FAILURE; SOLVED_CHILD_ARTIFACT_DURABLE; SOLVE_BUDGET_EXHAUSTED; SEPARATE_SAVED_MPH_READBACK_PASS",
@@ -2722,7 +2722,7 @@
       "tests/test_session_server.py": "211855691e0a3a66d140e484395aafac9f2f163b6bc716392375bb732c2d8ab3",
       "tests/test_run_w21_stage_native.py": "487f53ea01e13fe6a4a9dab276b139d5f6f273249af0b9cb26632ec037b6943a"
     },
-    "next_action": "The short-home path guard passed scoped offline checks only. Finish safe-error/held-handle diagnostics for the one real recover attempt, then have main review a fresh single recovery request against the latest quiescence observations. Never replay the prior request. The already-authorized short-path chain remains gated on durable reconciliation; do not start it before that.",
+    "next_action": "The short-home path guard passed scoped offline checks only. The fresh recover attempt was rejected because COMSOL_PROJECT_ROOT was absent and production workspace binding used the source fallback, producing PROJECT_WORKSPACE_IDENTITY_MISMATCH. Review the corrected driver and frozen workspace-root binding before a distinct new recovery request. Preserve both prior requests as UNKNOWN_NO_RETRY; the already-authorized short-path native chain remains gated on durable reconciliation and safe same-host closure.",
     "critical_dll_guard_followup": {
       "status": "PASS_SCOPED_OFFLINE_SOFTWARE",
       "native_status": "NOT_RUN",
@@ -2811,7 +2811,7 @@
     "solver_dispatches": 0,
     "replay_permitted": false,
     "cleanup_permitted": false,
-    "next_action": "Preserve the original Windows6.4 session.start and the one attempted session.recover as UNKNOWN_NO_RETRY. The recover response was is_error=true with no operation ID and no durable request row; source/policy evidence and the exact read-only receipt are in WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json. Finish the safe-error/held-handle driver diagnostics, then have main review a fresh single recovery request against the latest quiescence observations. Never replay the prior request. Do not start the bounded short-path native chain before durable reconciliation of the original operation; existing authorization for that later chain remains in place.",
+    "next_action": "Preserve the original Windows6.4 session.start and both distinct session.recover attempts as UNKNOWN_NO_RETRY; neither recovery created a durable operation. The latest request aa289248-28c8-4f92-ab9e-c16bcaaec5dc was rejected with PROJECT_WORKSPACE_IDENTITY_MISMATCH because the recovery environment omitted COMSOL_PROJECT_ROOT and production ProjectAuthority resolved the source fallback instead of the matching frozen workspace. Review the corrected driver hash and explicit frozen workspace-root binding before any new, distinct single recovery request. Never replay either prior request. Do not start the short-path native chain until the original operation is durably reconciled and same-host safe closure is established. This recover finding does not explain the earlier JNI file-not-found startup error or the prior daemon exit.",
     "image_library_basename": "CORE_RL_magick_.dll",
     "image_library_relative_alias": "ext\\graphicsmagick\\win64\\CORE_RL_magick_.dll",
     "image_library_exists": true,
@@ -2865,7 +2865,7 @@
       "status": "PASS_SOURCE_UPLOADED_AND_REMOTE_HASH_VERIFIED",
       "source_head": "15e7bea61e9ef06b29d9a51f55fcddebcb773b7a",
       "checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json",
-      "next_action": "Source upload and all 107 remote hash checks are complete under the user's persistent project-source upload authorization. Finish safe-error/held-handle driver diagnostics, then have main review a fresh single recovery request against the latest quiescence observations. Never replay the prior request. The already-authorized short-path chain must wait for durable reconciliation of the original operation.",
+      "next_action": "Source 15e7bea upload and remote hash verification remain complete. The first recover request remains UNKNOWN_NO_RETRY. A distinct fresh request was attempted once and rejected with PROJECT_WORKSPACE_IDENTITY_MISMATCH because COMSOL_PROJECT_ROOT was absent and production workspace binding used a mismatching source fallback. Main must review the corrected driver and exact frozen workspace-root binding before any new distinct recovery request; do not replay prior requests or start the native chain before durable reconciliation and safe same-host closure.",
       "source_files": 104,
       "archive_members": 107,
       "archive_bytes": 942059,
@@ -2913,6 +2913,26 @@
       "total_operations": 2,
       "route_conclusion": "At source 15e7bea, recover-specific writes follow store.begin; the absent row means no durable recover operation was created. Startup reconcile_after_restart independently explains RECONCILING. Exact failure cause remains unknown because the driver dropped response error details.",
       "native_status": "NOT_RUN"
+    },
+    "fresh_recovery_attempt": {
+      "status": "UNKNOWN_NO_RETRY_RECOVERY_REJECTED",
+      "request_id": "aa289248-28c8-4f92-ab9e-c16bcaaec5dc",
+      "response": {
+        "is_error": true,
+        "success": false,
+        "error_code": "PROJECT_WORKSPACE_IDENTITY_MISMATCH",
+        "returned_operation_id": null
+      },
+      "post_dispatch_readonly_state": {
+        "recovery_request_rows": 0,
+        "new_operation_count": 0,
+        "original_source_identity_match": true,
+        "source_job_status": "RECONCILING",
+        "source_operation_status": "RECONCILING",
+        "source_result_present": false,
+        "lifecycle_state": "STARTING"
+      },
+      "checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json#fresh_recovery_attempt_20260929T061208Z"
     }
   },
   "windows64_current_daemon_readonly": {
