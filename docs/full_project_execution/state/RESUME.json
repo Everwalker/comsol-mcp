@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "phase": "W21_WINDOWS64_CHAIN_PASS_WINDOWS63_START_UNKNOWN_DIAGNOSIS",
+  "phase": "W21_WINDOWS63_START_RECOVERED_WAIT_PARAMETER_REPAIR",
   "task": "W01_W26_CONTINUOUS_IMPLEMENTATION",
   "status": "WINDOWS64_CANONICAL_CHAIN_SCOPED_PASS; WINDOWS63_START_UNKNOWN; OVERALL_PARTIAL",
   "candidate_source": "2bdcc75bd86e66f6d2004cdbf84901d5f26f1d49",
@@ -149,10 +149,10 @@
     },
     "W21 solve-readback probe integration: 98 unique offline protocol tests PASS (96 existing module cases plus 2 new tests); 64 KiB raw observation/hash is bound to exact project/session/ModelRef/revision before solve; UNKNOWN halts later solve dispatch. Synthetic transport only, native NOT_RUN, admission UNVERIFIED. Evidence is in PRODUCTION_RUNNER_SOFTWARE_CHECKPOINT.json#latest_solve_readback."
   ],
-  "next_action": "Inspect task daemon diagnostics and READY-to-finish path; repair only evidenced canonical startup coordination issue, preserving original UNKNOWN.",
+  "next_action": "Validate minimal explicit session.start rpc_timeout_s=45 change, preserving outer 45s and total 900s budgets; then freeze a new 6.3 canonical native attempt. Underlying timeout mechanism remains a hypothesis until native evidence.",
   "active_jobs": [],
   "blockers": [
-    "Windows6.4 canonical chain scoped PASS. Windows6.3 start UNKNOWN, durable RUNNING, lifecycle STARTING; current-host complete inventories quiet, historical outcome unresolved. Solve/readback NOT_RUN. Probe/mapping/stage-transfer/convergence/physical work remains unresolved.",
+    "Windows6.4 canonical chain scoped PASS. Original Windows6.3 interrupted start safely reconciled to historical UNKNOWN/current lifecycle STOPPED revision3; solve/readback NOT_RUN. Next candidate fixes missing start RPC wait parameter only. Metadata/mapping/stage-transfer/physical work remains separate.",
     "W23 failed setup owned Server 75272 and daemon 75260 remain preserved: cleanup SIGTERM was rejected by automatic approval and explicit authorization is pending; no cleanup or relaunch authorized by elapsed time.",
     "W24 managed setup and sensitivity software can be frozen from published baselines; native 14-case setup/readmission/science remains NOT_RUN. New-epoch budget identity software is main-reviewed PASS; production orchestration software is main-reviewed PASS at a4684f8; actual native evidence remains required; historical 10-solve budget is not authorization for 14 solves.",
     "Earlier W24 0841Z/0857Z pre-birth failure and 0517Z ExternalStrain FAIL/UNKNOWN/safe_retry=false remain historical failures; full cure/reference-state/viscoelastic/static-shape acceptance is open.",
@@ -179,7 +179,7 @@
     "native_solve_budget_remaining": 0,
     "evidence": "docs/full_project_execution/evidence/luna_process_reconciliation/mac_readonly_snapshot_20260926T2152Z.json"
   },
-  "updated_at": "2026-09-29T13:39:35.694174+00:00",
+  "updated_at": "2026-09-29T13:56:29.909118+00:00",
   "note": "Original scope remains through W26. User explicitly resumed after the test-efficiency analysis; implement efficiency improvements first. OpenViking task-detail retrieval was denied by auto-review because it would disclose internal roadmap identifiers externally; no workaround. Use current frozen workpack and read-only local memory only. Do not rerun bootstrap/init on resume. Source files now contain executor edits; do not rerun bootstrap/init. Git metadata is an APFS pointer managed by main agent; migration requires bundle/source transfer, not copying only the repository pointer. Git metadata migration is documented by evidence/git_metadata_relocation.json and owned by the main agent; do not copy the APFS git pointer to another machine without source bundle/archive. GUI permission boundary and checkpoint solution-scope caveat recorded. This executor has one W24 native setup-only failure with exact cleanup verified; the durable operation/job UNKNOWN records remain unchanged. No W24 solver submission occurred. Saved-MPH readback supplement uses separate time/evidence and zero study/solver calls; run08 remains FAIL_OR_INCOMPLETE. Root raw SQLite recomputation is linked under native_resume_saved_artifact_supplement.raw_recomputation_evidence; original run08 remains FAIL_OR_INCOMPLETE and no solve budget is restored. Latest checkpoint 2026-09-27T03:50:43Z: W24 0334Z setup run failed pre-model due Python 3.14 missing mcp, with exact cleanup; 0346Z candidate pins the validated 3.12.13 environment and passes a production no-engine registry/daemon preflight. Native setup remains pending root review; science implementation continues offline. Latest checkpoint 2026-09-27T09:09:28Z: W24 0841Z candidate was invoked once at 0857Z and failed before any engine/Worker birth because project.inspect received an injected idempotency_key; project.create persisted successfully. Exact read-only SQLite hash and operation result are in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_contract_diagnostic.json. The runner now omits the unnecessary inspect key; actual ControlDaemon focused regression is 2/2 PASS in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_runner_regression_receipt.json. No native retry or acceptance is claimed; release F04 runtime integration is active, so refresh closure and root review are required before another launch. Windows COMSOL 6.3 remains required/unassessed; only macOS 6.3 is USER_REQUESTED_SKIP.",
   "native_resume_smoke": {
     "status": "FAIL_OR_INCOMPLETE_POINT_SCHEMA_FAILURE; SOLVED_CHILD_ARTIFACT_DURABLE; SOLVE_BUDGET_EXHAUSTED; SEPARATE_SAVED_MPH_READBACK_PASS",
@@ -3445,7 +3445,7 @@
   },
   "current_readonly_diagnosis": {
     "checkpoint": "project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json#canonical_native_chain_windows63_attempt_20260929T132702Z",
-    "status": "UNKNOWN_RETAINED_CURRENT_HOST_QUIET",
-    "next_action": "Inspect task daemon diagnostics and READY-to-finish path; repair only evidenced canonical startup coordination issue, preserving original UNKNOWN."
+    "status": "ORIGINAL_UNKNOWN_RETAINED_CURRENT_QUIESCENCE_PROVEN_AND_AUDITED",
+    "next_action": "Validate minimal explicit session.start rpc_timeout_s=45 change, preserving outer 45s and total 900s budgets; then freeze a new 6.3 canonical native attempt. Underlying timeout mechanism remains a hypothesis until native evidence."
   }
 }

@@ -703,6 +703,8 @@ def test_srb_ok(tmp_path, monkeypatch):
         tmp_path, monkeypatch, solve_fault="result_unit_metadata_conflict",
     )
     actions = [action for action, _ in fake.calls]
+    start_params = next(params for action, params in fake.calls if action == "session.start")
+    assert start_params["execution"]["rpc_timeout_s"] == runner.RPC_WAIT_S == 45
     assert actions.count("study.solve") == 1
     assert actions.count("dataset.solution_indices") == 1
     assert actions.count("result.evaluate") == 1

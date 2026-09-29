@@ -2629,7 +2629,7 @@
       }
     },
     "scope": "Current-host quiet only; no historical startup success/exit code or lifecycle recovery claimed. No restart/replay/cleanup dispatched.",
-    "next_action": "Inspect task daemon diagnostics and READY-to-finish path; repair only evidenced canonical startup coordination issue, preserving original UNKNOWN.",
+    "next_action": "Validate minimal explicit session.start rpc_timeout_s=45 change, preserving outer 45s and total 900s budgets; then freeze a new 6.3 canonical native attempt. Underlying timeout mechanism remains a hypothesis until native evidence.",
     "local_evidence": {
       "freeze63.json": {
         "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-smoke-mesh-w21r10/freeze63.json",
@@ -2646,6 +2646,109 @@
       "read_current_host_quiescence63.stdout": {
         "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-smoke-mesh-w21r10/read_current_host_quiescence63.stdout",
         "sha256": "6140361dc644348ad97983279ba5445b828584daebaa289d33d4c0aeb63255f2"
+      }
+    },
+    "safe_disposition": {
+      "scope": "ABANDONED_UNKNOWN_START_CURRENT_HOST_QUIESCENCE",
+      "public_recovery": {
+        "call_started": true,
+        "error_type": null,
+        "public": {
+          "error_code": null,
+          "new_worker_created": false,
+          "recovery_status": "PARTIAL_HISTORICAL_UNKNOWN_RETAINED",
+          "replayed_requests": 0,
+          "resolved_jobs": [
+            {
+              "historical_unknown_preserved": true,
+              "job_id": "e14540ce-97c8-40b9-b26f-9f249ace9635",
+              "operation_id": null,
+              "outcome_resolution": "UNVERIFIED_HISTORICAL_UNKNOWN",
+              "quiescence_resolution": "PROVEN_AND_AUDITED",
+              "replayed": false,
+              "resolution_scope": "ABANDONED_UNKNOWN_START_CURRENT_HOST_QUIESCENCE"
+            }
+          ],
+          "success": true
+        },
+        "request_id": "24a01eed-e43b-4dbe-95b9-2e4322290d62",
+        "stderr_bytes": 89,
+        "stderr_sha256": "3545d995359d61b6d3dae1f8550dc4b030c5e93a42a5fdbe778b127776534410"
+      },
+      "source_job_status": "UNKNOWN",
+      "lifecycle_state": "STOPPED",
+      "lifecycle_revision": 3,
+      "original_historical_outcome": "UNKNOWN_RETAINED",
+      "proof_evidence_sha256": "edfdf4eba1b8624285413f5543982abff70aded6d29d8cc20dcb2e8ca9ed889c",
+      "source_result_binding_sha256": "67a5ed372bf7d2de282eeef3e86a14279686b398d1a199f90a2ac96a609ff7de",
+      "source_result_digest_independently_verified": true,
+      "startup_pid_observation": {
+        "startup_pid_count": 1,
+        "startup_pid_live_count": 0,
+        "startup_pid_unresolved_count": 0
+      },
+      "daemon_diagnostic": {
+        "files": [
+          {
+            "exists": true,
+            "file_alias": "control-daemon-identity.json",
+            "identity": {
+              "birth": "start_epoch_ms:1790688521519",
+              "errno": null,
+              "error_category": null,
+              "event": "DAEMON_READY",
+              "exception_type": null,
+              "exit_code": null,
+              "observed_at_utc": "2026-09-29T13:28:42.501Z",
+              "pid": 26676,
+              "schema": "COMSOL_CONTROL_DAEMON_IDENTITY_V1",
+              "winerror": null
+            },
+            "keys": [
+              "birth",
+              "errno",
+              "error_category",
+              "event",
+              "exception_type",
+              "exit_code",
+              "observed_at_utc",
+              "pid",
+              "schema",
+              "winerror"
+            ],
+            "sha256": "5e12423bd4c2fc7b40e957479ef240e83a3f3bdf775e56c71b1fbbbcd867b392",
+            "size": 256
+          },
+          {
+            "exception_types": [],
+            "exists": true,
+            "file_alias": "control.log",
+            "frames": [],
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "size": 0
+          },
+          {
+            "exists": false,
+            "file_alias": "control-errors.log"
+          }
+        ],
+        "processes": [
+          {
+            "alive": false,
+            "pid": 4316,
+            "start_epoch_ms": null
+          },
+          {
+            "alive": false,
+            "pid": 26676,
+            "start_epoch_ms": null
+          }
+        ],
+        "scope": "READONLY_DAEMON_DIAGNOSTICS"
+      },
+      "local_post_recovery_evidence": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-smoke-mesh-w21r10/read_start63_after_recovery.stdout",
+        "sha256": "35b95cc895be2743d7c89619e707877f83b339a46c55b3f9c06a5bc22cd1b6f7"
       }
     }
   }

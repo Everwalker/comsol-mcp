@@ -539,5 +539,30 @@
     "test_scratch_limitation": "CTestEff basetemp roots were not checked for prior existence before pytest; /Volumes/CTestEff/x may have had contents replaced. No further access or cleanup performed. Existing c may also have been partially cleaned before EPERM; no further access. Formal final JUnit/source hashes independently verified.",
     "native_after_fix": "NOT_RUN",
     "acceptance": "Complete metadata capture remains PARTIAL. Canonical solve/readback criteria and Java output caps unchanged."
+  },
+  "session_start_rpc_wait_alignment_20260929": {
+    "status": "PASS_SOFTWARE_ONLY",
+    "change": "Explicitly pass existing RPC_WAIT_S=45 for session.start; ordinary outer RPC 45s and total 900s unchanged. No new wait/replay/recovery branch.",
+    "tests": 118,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "evidence": {
+      "runner.junit.xml": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-start-rpc45-final-singlechar-01/runner.junit.xml",
+        "sha256": "fa6d772c1a72d090776807a69b4764f076ac71a6f5c3b1cfa013a2c9da5f64b8"
+      },
+      "runner.log": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-start-rpc45-final-singlechar-01/runner.log",
+        "sha256": "b33dc5ff592ca8f075351f0189cc2ba747ff83f0a76152bb1076dd14a3bb5b9d"
+      }
+    },
+    "source_sha256": {
+      "tools/run_w21_stage_native.py": "abf93fd4946899621e1ffbd05cc26213e5bc21eca11547e8938bc032a84f5b02",
+      "tests/test_run_w21_stage_native.py": "0c9f356c88ec7595b9f40fd1097ce581afce397fa4cd6b1fa52802bdbe748037"
+    },
+    "reproduce": "Run tests/test_run_w21_stage_native.py with the existing project Python, no pytest cache and a new one-character /Volumes/CTestEff/<unused> basetemp. Never reuse an existing directory.",
+    "prior_test_attempts": "Longer basetemp paths failed existing Windows path-budget fixture checks. Failed logs remain on external SSD; final one-character path passed 118 tests.",
+    "native_acceptance": "NOT_RUN_FOR_THIS_CHANGE; no root-cause-resolution claim"
   }
 }

@@ -1961,7 +1961,8 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
         start_response = await dispatch("session.start", "operation_call",
             _operation_params("session.start", start_args,
                               {"project_id": project_id, "request_id": request_ids["session_start"],
-                               "idempotency_key": keys["session_start"]}), counted_server_birth=True)
+                               "idempotency_key": keys["session_start"],
+                               "rpc_timeout_s": RPC_WAIT_S}), counted_server_birth=True)
         started = _assert_success(start_response, "session.start")
         session_id = started.get("session_id")
         endpoint = started.get("endpoint")
