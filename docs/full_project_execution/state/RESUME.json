@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "phase": "W21_AUTO_UNIT_CONTROLS_NATIVE_WINDOWS64_WINDOWS63_PASS_STAGE_BINDING_NEXT",
+  "phase": "W21_CURRENT_MESH_CAPTURE_SOFTWARE_PASS_STAGE_INTEGRATION_NEXT",
   "task": "W01_W26_CONTINUOUS_IMPLEMENTATION",
-  "status": "AUTO_UNIT_NATIVE_BOTH_WINDOWS_SCOPED_PASS; OVERALL_PARTIAL",
+  "status": "MESH_HELPER_SOFTWARE_31_PASS; NATIVE_INTEGRATION_NOT_RUN; OVERALL_PARTIAL",
   "candidate_source": "2bdcc75bd86e66f6d2004cdbf84901d5f26f1d49",
   "completed_work": [
     "PIN source restoration completed and verified: 10832 files, zero missing LFS backing objects; repository HEAD matches pinned commit/tree.",
@@ -150,9 +150,10 @@
     "W21 solve-readback probe integration: 98 unique offline protocol tests PASS (96 existing module cases plus 2 new tests); 64 KiB raw observation/hash is bound to exact project/session/ModelRef/revision before solve; UNKNOWN halts later solve dispatch. Synthetic transport only, native NOT_RUN, admission UNVERIFIED. Evidence is in PRODUCTION_RUNNER_SOFTWARE_CHECKPOINT.json#latest_solve_readback.",
     "W21 canonical Windows6.4→6.3 native chain on source45399a5: one solve/tuple/field read each, exact ownedcleanup, actual receipts and hashes main-reviewed; scopedPASS only.",
     "W21 auto-unit-controls runner: 138 unique offline tests PASS; main fixed actual real/imag payload incompatibility and verified final diff/source/JUnit hashes. New profile native NOT_RUN.",
-    "W21 actual Windows6.4→6.3 auto-unit-controls on40c9838: both one-solve/one-read, full shape[3,1,5,637], K/1/1, exact numerical controls and ownedcleanup PASS; main verified receipt/state/freeze and field hashes. Stage admission remains UNVERIFIED."
+    "W21 actual Windows6.4→6.3 auto-unit-controls on40c9838: both one-solve/one-read, full shape[3,1,5,637], K/1/1, exact numerical controls and ownedcleanup PASS; main verified receipt/state/freeze and field hashes. Stage admission remains UNVERIFIED.",
+    "W21 bounded complete current-mesh capture/comparison helper:31 unique offline tests PASS, main reviewed exact source and evidence hashes; historical mesh/admission and native stage integration remain UNVERIFIED/NOT_RUN."
   ],
-  "next_action": "Implement original W21 actual stage field/unit/full historical mesh and result bindings using verified automatic unit controls on40c9838. Preserve initial-vs-predecessor semantics and exact attempt/model/revision bindings; no broad admission PASS without evidence. Continue original W23–W26, then independent final Reviewer and repairs.",
+  "next_action": "Integrate current mesh snapshots under managed stage ownership before/after initial-stage solve; persist exact attempt-bound evidence for subsequent stages. Distinguish initial-state dispatch prerequisites from predecessor mapping and post-solve acceptance; do not mark historical mesh/admission verified by this helper alone. Continue original W21/W23–W26, final independent Reviewer and repair loop.",
   "active_jobs": [],
   "blockers": [
     "W23 failed setup owned Server 75272 and daemon 75260 remain preserved: cleanup SIGTERM was rejected by automatic approval and explicit authorization is pending; no cleanup or relaunch authorized by elapsed time.",
@@ -181,7 +182,7 @@
     "native_solve_budget_remaining": 0,
     "evidence": "docs/full_project_execution/evidence/luna_process_reconciliation/mac_readonly_snapshot_20260926T2152Z.json"
   },
-  "updated_at": "2026-09-29T17:04:31.865541+00:00",
+  "updated_at": "2026-09-29T17:34:39.414069+00:00",
   "note": "Original scope remains through W26. User explicitly resumed after the test-efficiency analysis; implement efficiency improvements first. OpenViking task-detail retrieval was denied by auto-review because it would disclose internal roadmap identifiers externally; no workaround. Use current frozen workpack and read-only local memory only. Do not rerun bootstrap/init on resume. Source files now contain executor edits; do not rerun bootstrap/init. Git metadata is an APFS pointer managed by main agent; migration requires bundle/source transfer, not copying only the repository pointer. Git metadata migration is documented by evidence/git_metadata_relocation.json and owned by the main agent; do not copy the APFS git pointer to another machine without source bundle/archive. GUI permission boundary and checkpoint solution-scope caveat recorded. This executor has one W24 native setup-only failure with exact cleanup verified; the durable operation/job UNKNOWN records remain unchanged. No W24 solver submission occurred. Saved-MPH readback supplement uses separate time/evidence and zero study/solver calls; run08 remains FAIL_OR_INCOMPLETE. Root raw SQLite recomputation is linked under native_resume_saved_artifact_supplement.raw_recomputation_evidence; original run08 remains FAIL_OR_INCOMPLETE and no solve budget is restored. Latest checkpoint 2026-09-27T03:50:43Z: W24 0334Z setup run failed pre-model due Python 3.14 missing mcp, with exact cleanup; 0346Z candidate pins the validated 3.12.13 environment and passes a production no-engine registry/daemon preflight. Native setup remains pending root review; science implementation continues offline. Latest checkpoint 2026-09-27T09:09:28Z: W24 0841Z candidate was invoked once at 0857Z and failed before any engine/Worker birth because project.inspect received an injected idempotency_key; project.create persisted successfully. Exact read-only SQLite hash and operation result are in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_contract_diagnostic.json. The runner now omits the unnecessary inspect key; actual ControlDaemon focused regression is 2/2 PASS in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_runner_regression_receipt.json. No native retry or acceptance is claimed; release F04 runtime integration is active, so refresh closure and root review are required before another launch. Windows COMSOL 6.3 remains required/unassessed; only macOS 6.3 is USER_REQUESTED_SKIP.",
   "native_resume_smoke": {
     "status": "FAIL_OR_INCOMPLETE_POINT_SCHEMA_FAILURE; SOLVED_CHILD_ARTIFACT_DURABLE; SOLVE_BUDGET_EXHAUSTED; SEPARATE_SAVED_MPH_READBACK_PASS",

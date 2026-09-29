@@ -120,5 +120,51 @@
     "No COMSOL solve or native scientific acceptance",
     "T021/T047 and original W21 scope remain open"
   ],
-  "next_action": "Implement and calibrate a documented supported native field/unit/topology/frame profile and actual output producer before opening production stage dispatch; continue remaining MASTER_GOAL scope."
+  "next_action": "Implement and calibrate a documented supported native field/unit/topology/frame profile and actual output producer before opening production stage dispatch; continue remaining MASTER_GOAL scope.",
+  "current_mesh_snapshot_20260930": {
+    "status": "PASS_SCOPED_OFFLINE",
+    "native_status": "NOT_RUN",
+    "candidate_files": [
+      {
+        "path": "comsol_mcp/_w21_mesh_evidence.py",
+        "role": "candidate_implementation",
+        "sha256": "8d13794d74547742a4dd38e1516eca3c7102980cc856c96e974216261e193181"
+      },
+      {
+        "path": "tests/test_w21_mesh_evidence.py",
+        "role": "candidate_tests",
+        "sha256": "9a79d9ee9b4289f3166f7687d2f66f85c902dcbd2f11a38f748e9c7f23382dfa"
+      }
+    ],
+    "receipt": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-mesh-evidence-20260930/receipt.json",
+      "sha256": "32f467657a876a522ea4f61431a69980c000ceca53af64720151ffbb592b96c4"
+    },
+    "test": {
+      "basetemp": "/Volumes/CTestEff/mm",
+      "command": "env TMPDIR=/Volumes/CTestEff/mesh_tmp_0930 /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -B -m pytest -q tests/test_w21_mesh_evidence.py --basetemp=/Volumes/CTestEff/mm --junitxml=/Volumes/SSD/Comsol-MCP/execution-scratch/w21-mesh-evidence-20260930/repair-rerun-02/junit.xml",
+      "counts": {
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0,
+        "tests": 31
+      },
+      "exit_code": 0,
+      "junit": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-mesh-evidence-20260930/repair-rerun-02/junit.xml",
+      "junit_sha256": "d9980348eb117b99f7c8036f3b47c83d741ffb5e86545988f7ed055dbb5a8f78",
+      "log": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-mesh-evidence-20260930/repair-rerun-02/pytest.log",
+      "log_sha256": "780990ab4ab3f804db21c0fe60471057c18125ffabb7f1166eed873f8a165510",
+      "python": "3.12.13",
+      "tmpdir": "/Volumes/CTestEff/mesh_tmp_0930",
+      "unique_case_names": 31
+    },
+    "main_review": "Reviewed complete block capture, documented fixed element arities, scalar budget, source binding and content hashes, strict snapshot validation, limited claim semantics and raw Worker UNKNOWN propagation. Independently verified manifest/dependency/source/log/JUnit hashes and 31 unique cases. Native/stage integration not yet tested. No unchanged-suite rerun.",
+    "limits": [
+      "CURRENT_MESH_CAPTURE_ONLY",
+      "atomic_snapshot=false",
+      "same-count content drift can escape",
+      "historical mesh/source-target mapping/frame/DOF/history UNVERIFIED"
+    ],
+    "next_action": "Integrate current mesh snapshots under managed stage ownership before/after initial-stage solve; persist exact attempt-bound evidence for subsequent stages. Distinguish initial-state dispatch prerequisites from predecessor mapping and post-solve acceptance; do not mark historical mesh/admission verified by this helper alone."
+  }
 }

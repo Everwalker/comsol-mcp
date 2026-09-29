@@ -1,6 +1,14 @@
 # COMSOL MCP full-project progress
 
-**Current stage: W21 automatic unit controls — native Windows 6.4 → 6.3 scoped PASS. Overall project: PARTIAL.** The Windows 6.4 → 6.3 canonical native round remains scoped PASS on its exact earlier runtime source. The master plan remains 26 work packages, 272 actions, 60 validation targets and 6 environments; the final independent Reviewer has not started. The authoritative plan and task ledger remain [MAIN_ACCEPTANCE_PLAN](docs/full_project_execution/MAIN_ACCEPTANCE_PLAN.md), [TASKS.json](docs/full_project_execution/state/TASKS.json) and [RESUME.json](docs/full_project_execution/state/RESUME.json).
+**Current stage: W21 complete current-mesh capture helper — software PASS, native/integration NOT_RUN. Overall project: PARTIAL.** The Windows 6.4 → 6.3 canonical native round remains scoped PASS on its exact earlier runtime source. The master plan remains 26 work packages, 272 actions, 60 validation targets and 6 environments; the final independent Reviewer has not started. The authoritative plan and task ledger remain [MAIN_ACCEPTANCE_PLAN](docs/full_project_execution/MAIN_ACCEPTANCE_PLAN.md), [TASKS.json](docs/full_project_execution/state/TASKS.json) and [RESUME.json](docs/full_project_execution/state/RESUME.json).
+
+## Current mesh evidence implementation
+
+A read-only internal helper now streams every vertex coordinate, documented element corner index and geometric entity assignment through bounded MeshSequence block getters. Content hashes are independent of block size; observation identity and limited claim semantics have a separate evidence hash. Fixed element arities, full shape/index checks, a 65,536-scalar cap, metadata drift checks and strict snapshot validation reject incomplete evidence. Worker UNKNOWN/timeout exceptions propagate without subsequent reads.
+
+**Software PASS: 31 unique focused tests, 0 failed/error/skipped. Native/integration NOT_RUN.** Main reviewed the diff and checked source/dependency/manifest/log/JUnit hashes. The initial 23 PASS / 7 FAIL and later reruns are retained. [Compact checkpoint](docs/full_project_execution/project_session/STAGE_BACKEND_SOFTWARE_CHECKPOINT.json#current_mesh_snapshot_20260930); full local evidence `/Volumes/SSD/Comsol-MCP/execution-scratch/w21-mesh-evidence-20260930`.
+
+This is current mesh content capture only, not atomic/historical mesh, source-target mapping, frame, DOF or solver-history acceptance. Next: integrate snapshots under managed ownership around the initial-stage solve and persist source-attempt evidence; distinguish first-stage initialization prerequisites from predecessor transfer and post-solve acceptance. The existing admission stub is still UNVERIFIED. Continue original W21/W23–W26 and final independent review.
 
 ## Current W21 unit-controls stage
 
