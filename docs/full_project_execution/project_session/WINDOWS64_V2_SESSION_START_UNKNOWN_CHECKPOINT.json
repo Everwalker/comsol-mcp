@@ -2922,5 +2922,119 @@
     "local_receipt": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solver-path-w21r12/solve_readback64_receipt.json",
     "reproduce_freeze": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solver-path-w21r12/freeze64.json",
     "max_windows_path_utf16_including_nul": 259
+  },
+  "canonical_native_chain_windows63_shared_path_candidate": {
+    "status": "PASS_SCOPED_CANONICAL_NATIVE_CHAIN",
+    "run_id": "w21-63-20260929T144407Z-d0bfcdb8",
+    "freeze_sha256": "b1f0809dcba293269f4c396842d3eedc6b98366446041dbb51bc2f6cee2228ba",
+    "receipt_sha256": "be15075fb7baeedccbe0607f0bc1c9ba8d920e446c0a458b2f2b66ba9f179ec1",
+    "runtime": {
+      "build": "290",
+      "root": "C:\\Program Files\\COMSOL\\COMSOL63\\Multiphysics",
+      "runtime_id": "comsol-install:C%3A%5CProgram%20Files%5CCOMSOL%5CCOMSOL63%5CMultiphysics",
+      "server_executable_sha256": "74b83b834a342de62f2a0eb4c256e7eb241e2438902413bf96c0a57a228ff533",
+      "version": "6.3.0"
+    },
+    "shape": [
+      1,
+      1,
+      5,
+      637
+    ],
+    "unit_readback": "K",
+    "selected_tuple": {
+      "inner": 5,
+      "outer": 1,
+      "solnum": 5
+    },
+    "selected_tuple_field_sha256": "7f7c3cd612d6492d27ba9eb102e37ff93884d0c6343fcc33d4fbf382221b6a90",
+    "full_dataset_field_sha256": "25a37a316f4ce0e4067f3fb4d0f03c327c5f2b974a1c1e9d12ef56cdee25601a",
+    "selected_real_min": 299.99999999999994,
+    "selected_real_max": 304.3906746707166,
+    "response_json_bytes": 375420,
+    "counts": {
+      "study_dispatch": 1,
+      "solver_dispatch": 1,
+      "solution_tuple_reads": 1,
+      "field_reads": 1
+    },
+    "cleanup": {
+      "owned_server_stopped": true,
+      "server_stop_evidence": {
+        "birth": "start_epoch_ms:1790693172422",
+        "child_reaped": true,
+        "exit_confirmed": true,
+        "listener_absent": true,
+        "pid": 34476,
+        "returncode": 1,
+        "server_stopped": true
+      },
+      "status": "CLEANUP_COMPLETE",
+      "worker_retired": true
+    },
+    "native_admission": "UNVERIFIED",
+    "physical_validation": "UNVERIFIED",
+    "probe": "PARTIAL",
+    "review": "Actual receipt/state/freeze/request IDs, finite selected values/hash, tuple, budget, runtime and exact owned cleanup checked. Not convergence, mapping, stage transfer or physical acceptance.",
+    "source_head": "45399a5f7a5ff5a6ec6690d5f008a23faf54ae0c",
+    "actual_exit_code": 0,
+    "local_receipt": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solver-path-w21r12/solve_readback63_receipt.json",
+    "reproduce_freeze": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-solver-path-w21r12/freeze63.json",
+    "max_windows_path_utf16_including_nul": 259
+  },
+  "canonical_native_chain_windows_round_20260929": {
+    "status": "PASS_SCOPED_CANONICAL_NATIVE_CHAIN_BOTH_WINDOWS_VERSIONS",
+    "source_head": "45399a5f7a5ff5a6ec6690d5f008a23faf54ae0c",
+    "execution_order": [
+      "Windows 6.4.0 build 293",
+      "Windows 6.3.0 build 290"
+    ],
+    "software_tests": 298,
+    "shared_fixture_sha256": "d227053f2a7c5c00e6a9b35cc7fc63fd59af2ce4ec30780e92c6a3ad3e9e491d",
+    "unchanged_budgets": {
+      "cleanup_reserve_seconds": 60,
+      "execution_timeout_seconds": 240,
+      "field_reads": 1,
+      "geometry_run": 1,
+      "mesh_run": 1,
+      "ordinary_rpc_wait_seconds": 45,
+      "project_create_wait_calls_max": 1,
+      "project_create_wait_timeout_seconds": 30,
+      "queue_timeout_seconds": 30,
+      "seconds_from_session_start_dispatch": 900,
+      "server_births_max": 1,
+      "solution_tuple_reads": 1,
+      "solver_dispatch": 1,
+      "study_dispatch": 1,
+      "worker_births_max": 1
+    },
+    "runs": {
+      "64": {
+        "checkpoint_key": "canonical_native_chain_windows64_shared_path_candidate",
+        "run_id": "w21-64-20260929T144015Z-95b9b5b5",
+        "receipt_sha256": "8b37b57fd5f5403a248caa623bd46e4d461dd4d038f4e3af4bd2fa11568ae988"
+      },
+      "63": {
+        "checkpoint_key": "canonical_native_chain_windows63_shared_path_candidate",
+        "run_id": "w21-63-20260929T144407Z-d0bfcdb8",
+        "receipt_sha256": "be15075fb7baeedccbe0607f0bc1c9ba8d920e446c0a458b2f2b66ba9f179ec1"
+      }
+    },
+    "reproduce_entry": "tools/run_w21_stage_native.py prepare --version 6.4 --mode solve-readback (explicit installed COMSOL/JDK/source/evidence/server-home roots), review frozen plan then execute --plan <freeze.json> --freeze-sha256 <hash>; repeat prepare/execute for6.3 with --prerequisite-64-receipt <actual successful64receipt>. Never execute historical freeze files again.",
+    "source_package": {
+      "archive_sha256": "fc195518a1f8d47197a8ac32106534a931045ee0e799ca0131ca561067e4e8b6",
+      "manifest_sha256": "976eef6c8158eb44493e65b42791f5e63168f199534abda52c21b15c40d567f3",
+      "tracked_files": 107
+    },
+    "historical_failures": "Original63start UNKNOWN safely reconciled; original63solve native-file-create UNKNOWN retained with19/19 terminalWorker requests and complete quiet census; no historical outcome relabeledPASS.",
+    "still_not_accepted": [
+      "auxiliary metadata probe completeness",
+      "actual spatial-coordinate and intrinsic mesh mapping",
+      "stage-transfer admission",
+      "numerical convergence",
+      "physical validation",
+      "full-project release acceptance"
+    ],
+    "next_action": "Resume original W21 fields/units/mesh mapping and actual stage-transfer-result acceptance using these real platform baselines; continue original W23–W26, then unified independent Reviewer and repair loop. No new gates or parallel progress system."
   }
 }
