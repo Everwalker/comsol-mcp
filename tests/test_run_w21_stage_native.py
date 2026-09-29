@@ -39,7 +39,8 @@ SPEC.loader.exec_module(runner)
 
 
 def _plan(tmp_path: Path, *, worker_epoch: int = 7,
-          mode: str = runner.METADATA_MODE) -> dict:
+          mode: str = runner.METADATA_MODE,
+          field_readback_profile: str | None = None) -> dict:
     root = REPOSITORY
     task_root = tmp_path.parent
     run_root = tmp_path / "run"
@@ -69,6 +70,9 @@ def _plan(tmp_path: Path, *, worker_epoch: int = 7,
         "fixture_sha256": runner.sha256_file(runner.FIXTURE),
         "probe_sha256": runner.sha256_file(runner.PROBE),
         "probe_request": {"mode": "full"},
+        "field_readback_profile": runner._normalize_field_readback_profile(
+            mode, field_readback_profile,
+        ),
         "project_workspace": str(workspace_root / "field-identity-probe"),
         "isolation_receipt": str(run_root / "owned_server_isolation.json"),
         "published_tool_schemas": {
@@ -536,7 +540,51 @@ class _FakeStdioSession:
             elif self.solve_fault == "result_bad_hash":
                 execution["request_hash"] = "not-a-sha256"
             point_count = 32769 if self.solve_fault == "numeric_cap" else 2
-            if point_count == 2:
+            profile = self.plan.get("field_readback_profile")
+            expressions = ["T"]
+            units = {"T": "K"}
+            if profile == runner.AUTO_UNIT_CONTROLS_PROFILE:
+                expressions = list(runner.AUTO_UNIT_CONTROL_EXPRESSIONS)
+                if self.solve_fault == "auto_permuted_expressions":
+                    expressions = ["1", "T", "T/1[K]"]
+                source = [300.0, 301.0] if point_count == 2 else [300.0] * point_count
+                later = [302.0, 303.0] if point_count == 2 else [302.0] * point_count
+                scaled_source, scaled_later = list(source), list(later)
+                one_source, one_later = [1.0] * point_count, [1.0] * point_count
+                if self.solve_fault == "auto_numeric_mismatch":
+                    scaled_later[0] += 0.1
+                elif self.solve_fault == "auto_unit_missing_numeric_mismatch":
+                    scaled_later[0] += 0.1
+                elif self.solve_fault == "auto_ones_mismatch":
+                    one_later[0] = 0.9
+                by_expression = {
+                    "T": [[source, later]],
+                    "T/1[K]": [[scaled_source, scaled_later]],
+                    "1": [[one_source, one_later]],
+                }
+                values = [by_expression[name] for name in expressions]
+                units = {"T": "K", "T/1[K]": "1", "1": "1"}
+                if self.solve_fault == "auto_unit_mismatch":
+                    units["T"] = "degC"
+                elif self.solve_fault == "auto_unit_missing":
+                    units.pop("T")
+                if self.solve_fault in {
+                    "auto_real_imag", "auto_imaginary_mismatch", "auto_nonfinite_imag",
+                    "auto_unit_missing_numeric_mismatch",
+                }:
+                    def with_real_imag(value):
+                        if isinstance(value, list):
+                            return [with_real_imag(item) for item in value]
+                        return {"real": float(value), "imag": 0.0}
+
+                    values = with_real_imag(values)
+                    if self.solve_fault == "auto_imaginary_mismatch":
+                        values[expressions.index("T/1[K]")][0][1][0]["imag"] = 0.25
+                    elif self.solve_fault == "auto_nonfinite_imag":
+                        values[expressions.index("T")][0][1][0]["imag"] = float("nan")
+                    elif self.solve_fault == "auto_unit_missing_numeric_mismatch":
+                        units.pop("T")
+            elif point_count == 2:
                 values = [[[[300.0, 301.0], [302.0, 303.0]]]]
             else:
                 values = [[[[300.0] * point_count, [302.0] * point_count]]]
@@ -550,18 +598,30 @@ class _FakeStdioSession:
             ]
             if self.solve_fault == "wrong_tuple":
                 pairs[1]["solnum"] = 7
+            if profile == runner.AUTO_UNIT_CONTROLS_PROFILE:
+                response_expressions = list(expressions)
+                if self.solve_fault == "auto_missing_expression":
+                    response_expressions.pop()
+                elif self.solve_fault == "auto_duplicate_expression":
+                    response_expressions[-1] = response_expressions[0]
+                field_units = {"expression": units, "point": "m"}
+            else:
+                response_expressions = ["T"]
+                field_units = {"expression": units, "point": "m"}
             field_array = {
                 "values": values, "axes": ["expression", "outer", "inner", "point"],
-                "shape": [1, 1, 2, point_count], "coords": {
-                    "expression": ["T"], "outer": [1], "inner": [1, 2],
+                "shape": [len(expressions), 1, 2, point_count], "coords": {
+                    "expression": list(response_expressions), "outer": [1], "inner": [1, 2],
                     "point": list(range(1, point_count + 1)),
                     "spatial": ([[0.0, 0.0, 0.0], [0.05, 0.0, 0.0]]
                                 if point_count == 2 else None),
-                }, "units": {"expression": {"T": "K"}, "point": "m"},
+                }, "units": field_units,
                 "metadata": {"pair_mapping_complete": True, "solution_pairs": pairs,
                               "unit_readback_status": "VERIFIED"},
                 "is_complex": False,
             }
+            if self.solve_fault == "auto_complex":
+                field_array["is_complex"] = True
             budget_record = {"status": "PASS", "allowed": True, "publish_allowed": True}
             budget_status = "PASS"
             budget_publish = True
@@ -571,10 +631,10 @@ class _FakeStdioSession:
                 budget_publish = False
             data = {
                 "status": {"ok": True}, "dataset": "dset1", "solution": "sol1",
-                "expressions": ["T"],
+                "expressions": list(response_expressions),
                 "storage": "inline", "values": values, "field_array": field_array,
                 "solution_axes": {"outer": [1], "inner": [1, 2], "pair_mapping_complete": True},
-                "expression_units": {"T": "K"},
+                "expression_units": dict(units),
                 "result_budget": {"status": budget_status, "publish_allowed": budget_publish,
                                   "records": [budget_record]},
                 "cleanup": {"cleanup_failed": self.solve_fault in {"cleanup_unknown", "cleanup_failed_only"}},
@@ -690,9 +750,11 @@ def _patch_isolation(monkeypatch):
     monkeypatch.setattr(runner, "_mark_isolation_receipt_stopped", lambda *_args: None)
 
 
-def _run_solve_readback(tmp_path, monkeypatch, *, solve_fault=None, unknown_on=None):
+def _run_solve_readback(tmp_path, monkeypatch, *, solve_fault=None, unknown_on=None,
+                        field_readback_profile=None):
     _patch_isolation(monkeypatch)
-    plan = _plan(tmp_path, mode=runner.SOLVE_READBACK_MODE)
+    plan = _plan(tmp_path, mode=runner.SOLVE_READBACK_MODE,
+                 field_readback_profile=field_readback_profile)
     state = _state(tmp_path, schema=runner.SOLVE_READBACK_SCHEMA)
     fake = _FakeStdioSession(plan, state, solve_fault=solve_fault, unknown_on=unknown_on)
     report = asyncio.run(runner.run_metadata_protocol(
@@ -772,6 +834,167 @@ def test_srb_ok(tmp_path, monkeypatch):
         "solution": {"dataset": "dset1", "solution": "sol1"},
         "aggregate": "none", "complex_mode": "preserve", "storage": "inline",
     }
+
+
+def test_srb_auto_unit_controls_freezes_exact_expressions_and_preserves_complete_values(
+        tmp_path, monkeypatch):
+    plan, state, fake, report = _run_solve_readback(
+        tmp_path, monkeypatch, field_readback_profile=runner.AUTO_UNIT_CONTROLS_PROFILE,
+    )
+    result_params = next(params for action, params in fake.calls if action == "result.evaluate")
+    spec = result_params["arguments"]["spec"]
+    assert spec["expressions"] == ["T", "T/1[K]", "1"]
+    assert "units" not in spec
+    assert plan["field_readback_profile"] == report["field_readback_profile"] == "auto-unit-controls"
+    assert report["budgets"] == runner._mode_budgets(runner.SOLVE_READBACK_MODE)
+    assert report["study_dispatch"] == report["solver_dispatch"] == 1
+    assert report["native_admission"] == report["physical_validation"] == "UNVERIFIED"
+    capture = report["solve_readback"]
+    assert capture["field_readback_profile"] == "auto-unit-controls"
+    assert capture["field_array_shape"] == [3, 1, 2, 2]
+    assert capture["field_expressions"] == ["T", "T/1[K]", "1"]
+    assert capture["tuple"] == {"outer": 1, "inner": 2, "solnum": 2}
+    assert capture["field_values"] == [302.0, 303.0]
+    readbacks = capture["field_readbacks"]
+    assert list(readbacks) == ["T", "T/1[K]", "1"]
+    assert readbacks["T"]["full_dataset_values"] == [[[300.0, 301.0], [302.0, 303.0]]]
+    assert readbacks["T/1[K]"]["selected_tuple_values"] == [302.0, 303.0]
+    assert readbacks["1"]["selected_tuple_values"] == [1.0, 1.0]
+    assert readbacks["T"]["unit"] == "K"
+    assert readbacks["T/1[K]"]["unit"] == readbacks["1"]["unit"] == "1"
+    for row in readbacks.values():
+        assert row["tuple"] == capture["tuple"]
+        assert row["tuple_binding_sha256"] == capture["tuple_binding_sha256"]
+        assert row["full_dataset_values_sha256"] == runner.sha256_value(row["full_dataset_values"])
+        assert row["selected_tuple_values_sha256"] == runner.sha256_value(row["selected_tuple_values"])
+    assert capture["unit_controls"]["status"] == "PASS"
+    assert capture["unit_controls"]["unit_status"] == "PASS"
+    assert capture["unit_controls"]["numeric_status"] == "PASS"
+    assert state.value["field_readback_progress"]["unit_controls_sha256"] == runner.sha256_value(
+        capture["unit_controls"]
+    )
+    assert report["cleanup"]["status"] == "CLEANUP_COMPLETE"
+    assert [action for action, _ in fake.calls].count("result.evaluate") == 1
+
+
+def test_srb_auto_unit_controls_maps_permuted_expression_coordinates_by_name(tmp_path, monkeypatch):
+    _plan, _state, fake, report = _run_solve_readback(
+        tmp_path, monkeypatch, field_readback_profile=runner.AUTO_UNIT_CONTROLS_PROFILE,
+        solve_fault="auto_permuted_expressions",
+    )
+    capture = report["solve_readback"]
+    assert capture["unit_controls"]["status"] == "PASS"
+    assert capture["field_readbacks"]["T"]["selected_tuple_values"] == [302.0, 303.0]
+    assert capture["field_readbacks"]["1"]["selected_tuple_values"] == [1.0, 1.0]
+    assert [action for action, _ in fake.calls].count("result.evaluate") == 1
+
+
+def test_srb_auto_unit_controls_preserves_real_imag_fieldarray_scalars(tmp_path, monkeypatch):
+    _plan, _state, _fake, report = _run_solve_readback(
+        tmp_path, monkeypatch, field_readback_profile=runner.AUTO_UNIT_CONTROLS_PROFILE,
+        solve_fault="auto_real_imag",
+    )
+    capture = report["solve_readback"]
+    temperature = capture["field_readbacks"]["T"]
+    assert temperature["selected_tuple_values"] == [
+        {"real": 302.0, "imag": 0.0}, {"real": 303.0, "imag": 0.0},
+    ]
+    assert temperature["selected_tuple_values_sha256"] == runner.sha256_value(
+        temperature["selected_tuple_values"]
+    )
+    assert temperature["full_dataset_values_sha256"] == runner.sha256_value(
+        temperature["full_dataset_values"]
+    )
+    assert capture["unit_controls"]["status"] == "PASS"
+    assert capture["unit_controls"]["numeric_checks"][
+        "all_imaginary_components_zero"]["status"
+    ] == "PASS"
+
+
+def test_srb_auto_unit_controls_fails_nonzero_imaginary_even_when_unit_is_missing(
+        tmp_path, monkeypatch):
+    _plan, _state, _fake, report = _run_solve_readback(
+        tmp_path, monkeypatch, field_readback_profile=runner.AUTO_UNIT_CONTROLS_PROFILE,
+        solve_fault="auto_imaginary_mismatch",
+    )
+    controls = report["solve_readback"]["unit_controls"]
+    assert controls["status"] == "FAIL"
+    assert controls["unit_status"] == "PASS"
+    assert controls["numeric_status"] == "FAIL"
+    assert controls["numeric_checks"]["all_imaginary_components_zero"]["status"] == "FAIL"
+
+
+def test_srb_auto_unit_controls_nonfinite_imaginary_is_rejected_before_receipt(
+        tmp_path, monkeypatch):
+    _patch_isolation(monkeypatch)
+    plan = _plan(tmp_path, mode=runner.SOLVE_READBACK_MODE,
+                 field_readback_profile=runner.AUTO_UNIT_CONTROLS_PROFILE)
+    state = _state(tmp_path, schema=runner.SOLVE_READBACK_SCHEMA)
+    fake = _FakeStdioSession(plan, state, solve_fault="auto_nonfinite_imag")
+    with pytest.raises(runner.RunnerError, match="nonfinite"):
+        asyncio.run(runner.run_metadata_protocol(
+            runner._MCPCalls(fake), plan, state, clock=lambda: 100.0, preflight=lambda: [],
+        ))
+    assert [action for action, _ in fake.calls][-2:] == ["session.disconnect", "session.stop"]
+    assert state.value["field_reads"] == 0
+
+
+@pytest.mark.parametrize(("fault", "expected"), [
+    ("auto_numeric_mismatch", "FAIL"),
+    ("auto_ones_mismatch", "FAIL"),
+    ("auto_unit_mismatch", "FAIL"),
+    ("auto_unit_missing", "UNVERIFIED"),
+    ("auto_unit_missing_numeric_mismatch", "FAIL"),
+], ids=["scaled-values", "constant-one", "different-unit", "missing-unit",
+       "missing-unit-with-numeric-failure"])
+def test_srb_auto_unit_controls_preserves_counterexamples_without_passing(
+        fault, expected, tmp_path, monkeypatch):
+    _plan, _state, _fake, report = _run_solve_readback(
+        tmp_path, monkeypatch, field_readback_profile=runner.AUTO_UNIT_CONTROLS_PROFILE,
+        solve_fault=fault,
+    )
+    controls = report["solve_readback"]["unit_controls"]
+    assert controls["status"] == expected
+    if fault == "auto_unit_missing_numeric_mismatch":
+        assert controls["unit_status"] == "UNVERIFIED"
+        assert controls["numeric_status"] == "FAIL"
+    assert report["status"] == "SOLVE_READBACK_CAPTURED_ONLY_NOT_ADMISSION"
+    assert report["native_admission"] == report["physical_validation"] == "UNVERIFIED"
+    assert report["cleanup"]["status"] == "CLEANUP_COMPLETE"
+    assert set(report["solve_readback"]["field_readbacks"]) == set(
+        runner.AUTO_UNIT_CONTROL_EXPRESSIONS
+    )
+
+
+@pytest.mark.parametrize("fault", ["auto_missing_expression", "auto_duplicate_expression"])
+def test_srb_auto_unit_controls_rejects_missing_or_duplicate_fields(fault, tmp_path, monkeypatch):
+    _patch_isolation(monkeypatch)
+    plan = _plan(tmp_path, mode=runner.SOLVE_READBACK_MODE,
+                 field_readback_profile=runner.AUTO_UNIT_CONTROLS_PROFILE)
+    state = _state(tmp_path, schema=runner.SOLVE_READBACK_SCHEMA)
+    fake = _FakeStdioSession(plan, state, solve_fault=fault)
+    with pytest.raises(runner.RunnerError, match="coordinates do not contain"):
+        asyncio.run(runner.run_metadata_protocol(
+            runner._MCPCalls(fake), plan, state, clock=lambda: 100.0, preflight=lambda: [],
+        ))
+    actions = [action for action, _ in fake.calls]
+    assert actions.count("result.evaluate") == 1
+    assert actions[-2:] == ["session.disconnect", "session.stop"]
+    assert state.value["field_reads_possible"] == 1
+    assert state.value["field_reads"] == 0
+
+
+def test_srb_auto_unit_controls_keeps_existing_complex_field_refusal(tmp_path, monkeypatch):
+    _patch_isolation(monkeypatch)
+    plan = _plan(tmp_path, mode=runner.SOLVE_READBACK_MODE,
+                 field_readback_profile=runner.AUTO_UNIT_CONTROLS_PROFILE)
+    state = _state(tmp_path, schema=runner.SOLVE_READBACK_SCHEMA)
+    fake = _FakeStdioSession(plan, state, solve_fault="auto_complex")
+    with pytest.raises(runner.RunnerError, match="not a real-valued FieldArray"):
+        asyncio.run(runner.run_metadata_protocol(
+            runner._MCPCalls(fake), plan, state, clock=lambda: 100.0, preflight=lambda: [],
+        ))
+    assert [action for action, _ in fake.calls][-2:] == ["session.disconnect", "session.stop"]
 
 
 def test_srb_preserves_bounded_table_limit_probe_and_continues_readback(tmp_path, monkeypatch):
@@ -1258,6 +1481,7 @@ def test_srb_freeze(tmp_path, monkeypatch):
     assert plan["schema"] == runner.SOLVE_READBACK_SCHEMA
     assert plan["kind"] == runner.SOLVE_READBACK_KIND
     assert plan["mode"] == runner.SOLVE_READBACK_MODE
+    assert plan["field_readback_profile"] == runner.SINGLE_FIELD_PROFILE
     assert plan["probe_request"] == {"mode": "full"}
     assert plan["budgets"] == runner._mode_budgets(runner.SOLVE_READBACK_MODE)
     assert plan["budgets"]["study_dispatch"] == plan["budgets"]["solver_dispatch"] == 1
@@ -1271,6 +1495,24 @@ def test_srb_freeze(tmp_path, monkeypatch):
     assert {"study_solve", "solution_indices", "result_evaluate"} <= plan["request_ids"].keys()
     assert {"study_solve", "solution_indices", "result_evaluate"} <= plan["idempotency_keys"].keys()
     assert result["status"] == "PREPARED_ONLY"
+
+    auto_profile = runner.prepare(
+        version="6.4", mode=runner.SOLVE_READBACK_MODE,
+        field_readback_profile=runner.AUTO_UNIT_CONTROLS_PROFILE,
+        comsol_root=tmp_path / "COMSOL64-auto", jdk_home=tmp_path / "JDK11",
+        evidence_root=evidence, server_home_root=evidence / "h",
+    )
+    auto_plan = auto_profile["plan"]
+    assert auto_plan["field_readback_profile"] == runner.AUTO_UNIT_CONTROLS_PROFILE
+    assert auto_plan["budgets"] == plan["budgets"]
+    assert auto_profile["status"] == "PREPARED_ONLY"
+    with pytest.raises(runner.RunnerError, match="only in solve-readback"):
+        runner.prepare(
+            version="6.4", mode=runner.METADATA_MODE,
+            field_readback_profile=runner.AUTO_UNIT_CONTROLS_PROFILE,
+            comsol_root=tmp_path / "COMSOL64-invalid-profile", jdk_home=tmp_path / "JDK11",
+            evidence_root=evidence, server_home_root=evidence / "h-invalid-profile",
+        )
 
     metadata_receipt = evidence / "metadata-only-receipt.json"
     metadata_receipt.write_text(json.dumps({
@@ -1506,6 +1748,139 @@ def test_srb_receipt_gate_requires_durable_solve_capture_and_cleanup(tmp_path):
         runner._check_64_receipt(receipt_path, mode=runner.METADATA_MODE)
     with pytest.raises(runner.RunnerError, match="complete actual 6.4 solve-readback"):
         runner._check_64_receipt(metadata_path, mode=runner.SOLVE_READBACK_MODE)
+    with pytest.raises(runner.RunnerError, match="matching 6.4 profile"):
+        runner._check_64_receipt(
+            receipt_path, mode=runner.SOLVE_READBACK_MODE,
+            field_readback_profile=runner.AUTO_UNIT_CONTROLS_PROFILE,
+        )
+
+
+def test_srb_auto_unit_controls_receipt_must_match_profile_and_recompute(tmp_path, monkeypatch):
+    _patch_prepare_environment(monkeypatch)
+    run_root = tmp_path / "v6.4-auto"
+    run_root.mkdir()
+    receipt_path = run_root / "solve_readback_receipt.json"
+    tuple_value = {"outer": 1, "inner": 2, "solnum": 2}
+    tuple_binding_sha256 = "c" * 64
+    full_by_expression_plain = {
+        "T": [[[300.0, 301.0], [302.0, 303.0]]],
+        "T/1[K]": [[[300.0, 301.0], [302.0, 303.0]]],
+        "1": [[[1.0, 1.0], [1.0, 1.0]]],
+    }
+    full_by_expression = {
+        expression: [[[{"real": value, "imag": 0.0} for value in points]
+                     for points in outer] for outer in dataset]
+        for expression, dataset in full_by_expression_plain.items()
+    }
+    units = {"T": "K", "T/1[K]": "1", "1": "1"}
+    field_readbacks = {}
+    for expression in runner.AUTO_UNIT_CONTROL_EXPRESSIONS:
+        full_values = full_by_expression[expression]
+        selected_values = full_values[0][1]
+        field_readbacks[expression] = {
+            "expression": expression, "dataset": "dset1", "solution": "sol1",
+            "shape": [1, 2, 2], "outer_indices": [1], "inner_indices": [1, 2],
+            "tuple": tuple_value, "tuple_binding_sha256": tuple_binding_sha256,
+            "full_dataset_field_sha256": "a" * 64,
+            "unit": units[expression], "full_dataset_values": full_values,
+            "full_dataset_values_sha256": runner.sha256_value(full_values),
+            "selected_tuple_values": selected_values,
+            "selected_tuple_values_sha256": runner.sha256_value(selected_values),
+        }
+    controls = runner._auto_unit_control_evidence(field_readbacks, selected_tuple=tuple_value)
+    field_operation = {
+        "project_id": "project-test", "session_id": "session-test",
+        "model_ref": {"model_tag": "w21model", "generation": 1},
+        "request_id": "request-result", "idempotency_key": "idem-result",
+        "operation_id": "operation-result", "request_hash": "d" * 64,
+        "job_id": "job-result", "revision_before": 3, "revision_after": 3,
+        "worker_observation_ref": {"observation_id": "obs-test", "sha256": "e" * 64},
+        "field_sha256": "a" * 64,
+        "selected_tuple_field_sha256": runner.sha256_value(
+            full_by_expression["T"][0][1]
+        ),
+    }
+    for row in field_readbacks.values():
+        row["field_operation"] = field_operation
+    solve_readback = {
+        "status": "CAPTURED", "dataset": "dset1", "solution": "sol1",
+        "field_sha256": "a" * 64, "field_operation": field_operation,
+        "field_readback_profile": runner.AUTO_UNIT_CONTROLS_PROFILE,
+        "tuple": tuple_value, "tuple_binding_sha256": tuple_binding_sha256,
+        "field_readbacks": field_readbacks, "unit_controls": controls,
+    }
+    receipt = {
+        "schema": runner.SOLVE_READBACK_SCHEMA, "kind": runner.SOLVE_READBACK_KIND,
+        "mode": runner.SOLVE_READBACK_MODE,
+        "field_readback_profile": runner.AUTO_UNIT_CONTROLS_PROFILE,
+        "status": "SOLVE_READBACK_CAPTURED_ONLY_NOT_ADMISSION",
+        "selected_comsol": {"version": "6.4.0.293"},
+        "study_dispatch": 1, "solver_dispatch": 1,
+        "solve_readback": solve_readback,
+        "solution_tuple_readback": {"status": "VERIFIED", "target_tuple": tuple_value},
+        "cleanup": {"status": "CLEANUP_COMPLETE", "worker_retired": True,
+                    "owned_server_stopped": True},
+    }
+    receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
+    receipt_hash = runner.sha256_file(receipt_path)
+    state = {
+        "schema": runner.SOLVE_READBACK_SCHEMA,
+        "status": receipt["status"], "receipt_path": str(receipt_path.resolve()),
+        "receipt_sha256": receipt_hash,
+        "study_dispatch": 1, "study_dispatch_possible": 1,
+        "study_dispatch_status": "CONFIRMED",
+        "solver_dispatch": 1, "solver_dispatch_possible": 1,
+        "solver_dispatch_status": "CONFIRMED",
+        "solution_tuple_reads": 1, "solution_tuple_reads_possible": 1,
+        "solution_tuple_reads_status": "CONFIRMED",
+        "field_reads": 1, "field_reads_possible": 1,
+        "field_reads_status": "CONFIRMED",
+        "solution_tuple_readback_progress": {"status": "VERIFIED", "tuple": tuple_value},
+        "field_readback_progress": {
+            "status": "VERIFIED", "field_sha256": "a" * 64,
+            "field_readback_profile": runner.AUTO_UNIT_CONTROLS_PROFILE,
+            "unit_controls_sha256": runner.sha256_value(controls),
+        },
+    }
+    (run_root / "state.json").write_text(json.dumps(state), encoding="utf-8")
+    (run_root / "owned_server_isolation.json").write_text(
+        json.dumps({"status": "STOPPED"}), encoding="utf-8",
+    )
+    checked = runner._check_64_receipt(
+        receipt_path, mode=runner.SOLVE_READBACK_MODE,
+        field_readback_profile=runner.AUTO_UNIT_CONTROLS_PROFILE,
+    )
+    assert checked["field_readback_profile"] == runner.AUTO_UNIT_CONTROLS_PROFILE
+    assert checked["sha256"] == receipt_hash
+
+    mismatched_receipt = dict(receipt)
+    mismatched_receipt["field_readback_profile"] = runner.SINGLE_FIELD_PROFILE
+    mismatched_path = run_root / "solve_readback_single_field.json"
+    mismatched_path.write_text(json.dumps(mismatched_receipt), encoding="utf-8")
+    with pytest.raises(runner.RunnerError, match="matching 6.4 profile"):
+        runner._check_64_receipt(
+            mismatched_path, mode=runner.SOLVE_READBACK_MODE,
+            field_readback_profile=runner.AUTO_UNIT_CONTROLS_PROFILE,
+        )
+
+    evidence = tmp_path.parent
+    step = runner.prepare(
+        version="6.3", mode=runner.SOLVE_READBACK_MODE,
+        field_readback_profile=runner.AUTO_UNIT_CONTROLS_PROFILE,
+        comsol_root=tmp_path / "COMSOL63", jdk_home=tmp_path / "JDK11",
+        evidence_root=evidence, server_home_root=evidence / "h",
+        prerequisite_64_receipt=receipt_path,
+    )
+    assert step["plan"]["field_readback_profile"] == runner.AUTO_UNIT_CONTROLS_PROFILE
+    assert step["plan"]["prerequisite_64_receipt"]["sha256"] == receipt_hash
+
+    with pytest.raises(runner.RunnerError, match="single-field profile cannot use"):
+        runner.prepare(
+            version="6.3", mode=runner.SOLVE_READBACK_MODE,
+            comsol_root=tmp_path / "COMSOL63b", jdk_home=tmp_path / "JDK11",
+            evidence_root=evidence, server_home_root=evidence / "h",
+            prerequisite_64_receipt=receipt_path,
+        )
 
 
 def test_prepare_freezes_full_source_identity_without_starting_services(tmp_path, monkeypatch):

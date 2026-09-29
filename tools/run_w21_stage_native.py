@@ -34,6 +34,13 @@ SOLVE_READBACK_SCHEMA = "W21_SOLVE_READBACK_MCP_RUN_V1"
 METADATA_MODE = "metadata-only"
 SOLVE_READBACK_MODE = "solve-readback"
 SOLVE_READBACK_KIND = "W21_PUBLIC_SOLVE_READBACK_CAPTURE_ONLY"
+SINGLE_FIELD_PROFILE = "single-field"
+AUTO_UNIT_CONTROLS_PROFILE = "auto-unit-controls"
+FIELD_READBACK_PROFILES = (SINGLE_FIELD_PROFILE, AUTO_UNIT_CONTROLS_PROFILE)
+AUTO_UNIT_CONTROL_EXPRESSIONS = ("T", "T/1[K]", "1")
+AUTO_UNIT_CONTROL_EXPECTED_UNITS = {"T": "K", "T/1[K]": "1", "1": "1"}
+AUTO_UNIT_CONTROL_ABS_TOL = 1e-10
+AUTO_UNIT_CONTROL_REL_TOL = 1e-12
 RUN_BUDGET_S = 900
 RPC_WAIT_S = 45
 CLEANUP_RESERVE_S = 60
@@ -285,6 +292,202 @@ def _mode_budgets(mode: str) -> dict[str, Any]:
     raise AssertionError("unreachable")
 
 
+def _normalize_field_readback_profile(mode: str, profile: str | None) -> str | None:
+    if mode == METADATA_MODE:
+        if profile is not None:
+            raise RunnerError("field-readback profiles are available only in solve-readback mode")
+        return None
+    if mode != SOLVE_READBACK_MODE:
+        _mode_schema(mode)
+    selected = SINGLE_FIELD_PROFILE if profile is None else profile
+    if selected not in FIELD_READBACK_PROFILES:
+        raise RunnerError("field-readback profile is not a supported frozen solve-readback profile")
+    return selected
+
+
+def _frozen_field_readback_profile(plan: Mapping[str, Any]) -> str | None:
+    mode = plan.get("mode", METADATA_MODE)
+    profile = plan.get("field_readback_profile")
+    if mode == SOLVE_READBACK_MODE and "field_readback_profile" not in plan:
+        raise RunnerError("frozen solve-readback plan omits its field-readback profile")
+    return _normalize_field_readback_profile(mode, profile)
+
+
+def _field_readback_expressions(profile: str) -> tuple[str, ...]:
+    if profile == AUTO_UNIT_CONTROLS_PROFILE:
+        return AUTO_UNIT_CONTROL_EXPRESSIONS
+    if profile == SINGLE_FIELD_PROFILE:
+        return ("T",)
+    raise RunnerError("field-readback profile is not supported")
+
+
+def _auto_unit_control_evidence(field_readbacks: Mapping[str, Any], *,
+                                selected_tuple: Mapping[str, Any]) -> dict[str, Any]:
+    """Recompute the three frozen unit/numeric controls from complete tuple arrays."""
+    if set(field_readbacks) != set(AUTO_UNIT_CONTROL_EXPRESSIONS):
+        raise RunnerError("auto-unit-controls receipt has missing or unexpected expression fields")
+    if (set(selected_tuple) != {"outer", "inner", "solnum"}
+            or any(type(selected_tuple.get(axis)) is not int or selected_tuple[axis] < 1
+                   for axis in ("outer", "inner", "solnum"))):
+        raise RunnerError("auto-unit-controls selected solution tuple is malformed")
+
+    def real_imag(value: Any) -> tuple[float, float]:
+        if isinstance(value, Mapping):
+            if set(value) != {"real", "imag"}:
+                raise RunnerError("auto-unit-controls scalar complex payload is malformed")
+            real_value, imaginary_value = value["real"], value["imag"]
+        else:
+            real_value, imaginary_value = value, 0.0
+        if (type(real_value) not in (int, float)
+                or type(imaginary_value) not in (int, float)):
+            raise RunnerError("auto-unit-controls receipt contains invalid numeric values")
+        try:
+            real_value = float(real_value)
+            imaginary_value = float(imaginary_value)
+        except (OverflowError, TypeError, ValueError):
+            raise RunnerError("auto-unit-controls receipt contains invalid numeric values") from None
+        if not math.isfinite(real_value) or not math.isfinite(imaginary_value):
+            raise RunnerError("auto-unit-controls receipt contains non-finite numeric values")
+        return real_value, imaginary_value
+
+    def iter_scalars(value: Any):
+        if isinstance(value, list):
+            for item in value:
+                yield from iter_scalars(item)
+        else:
+            yield value
+
+    units: dict[str, Any] = {}
+    vectors: dict[str, list[float]] = {}
+    imaginary_vectors: dict[str, list[float]] = {}
+    common_axes: tuple[list[Any], list[Any]] | None = None
+    common_shape: list[int] | None = None
+    for expression in AUTO_UNIT_CONTROL_EXPRESSIONS:
+        row = field_readbacks.get(expression)
+        if not isinstance(row, Mapping):
+            raise RunnerError("auto-unit-controls receipt has a malformed expression readback")
+        unit = row.get("unit")
+        units[expression] = unit
+        values = row.get("selected_tuple_values")
+        if not isinstance(values, list) or not values:
+            raise RunnerError("auto-unit-controls receipt lacks complete selected-tuple values")
+        vector: list[float] = []
+        imaginary_vector: list[float] = []
+        for value in values:
+            real_value, imaginary_value = real_imag(value)
+            vector.append(real_value)
+            imaginary_vector.append(imaginary_value)
+        if row.get("selected_tuple_values_sha256") != sha256_value(values):
+            raise RunnerError("auto-unit-controls selected-tuple values hash does not match")
+        full_values = row.get("full_dataset_values")
+        shape = row.get("shape")
+        outer_indices = row.get("outer_indices")
+        inner_indices = row.get("inner_indices")
+        if (not isinstance(full_values, list) or not isinstance(shape, list)
+                or not isinstance(outer_indices, list) or not isinstance(inner_indices, list)
+                or tuple(shape) != _nested_shape(full_values)
+                or len(shape) != 3 or any(type(size) is not int or size < 1 for size in shape)
+                or len(outer_indices) != shape[0] or len(inner_indices) != shape[1]
+                or any(type(index) is not int or index < 1 for index in outer_indices)
+                or any(type(index) is not int or index < 1 for index in inner_indices)
+                or len(outer_indices) != len(set(outer_indices))
+                or len(inner_indices) != len(set(inner_indices))
+                or type(selected_tuple.get("outer")) is not int
+                or type(selected_tuple.get("inner")) is not int
+                or selected_tuple["outer"] not in outer_indices
+                or selected_tuple["inner"] not in inner_indices
+                or row.get("tuple") != dict(selected_tuple)
+                or row.get("full_dataset_values_sha256") != sha256_value(full_values)):
+            raise RunnerError("auto-unit-controls receipt lacks complete shape/tuple-bound field values")
+        _numeric_payload_count(full_values, finite=True)
+        for scalar in iter_scalars(full_values):
+            real_imag(scalar)
+        selected_from_full = full_values[outer_indices.index(selected_tuple["outer"])][
+            inner_indices.index(selected_tuple["inner"])
+        ]
+        if selected_from_full != values:
+            raise RunnerError("auto-unit-controls selected values do not match the exact tuple in full data")
+        axes = (outer_indices, inner_indices)
+        if common_axes is None:
+            common_axes, common_shape = axes, shape
+        elif common_axes != axes or common_shape != shape:
+            raise RunnerError("auto-unit-controls expressions do not share the same dataset axes/shape")
+        vectors[expression] = vector
+        imaginary_vectors[expression] = imaginary_vector
+
+    unit_missing = False
+    unit_mismatch = False
+    for expression, expected in AUTO_UNIT_CONTROL_EXPECTED_UNITS.items():
+        actual = units[expression]
+        if not isinstance(actual, str) or not actual.strip():
+            unit_missing = True
+        elif actual != expected:
+            unit_mismatch = True
+    unit_status = "FAIL" if unit_mismatch else "UNVERIFIED" if unit_missing else "PASS"
+
+    temperatures = vectors["T"]
+    normalized = vectors["T/1[K]"]
+    ones = vectors["1"]
+    if len(temperatures) != len(normalized) or not ones:
+        raise RunnerError("auto-unit-controls selected tuple arrays have inconsistent point counts")
+    differences = [abs(left - right) for left, right in zip(temperatures, normalized)]
+    equality_limits = [AUTO_UNIT_CONTROL_ABS_TOL + AUTO_UNIT_CONTROL_REL_TOL * max(abs(left), abs(right))
+                       for left, right in zip(temperatures, normalized)]
+    ones_errors = [abs(value - 1.0) for value in ones]
+    ones_limits = [AUTO_UNIT_CONTROL_ABS_TOL + AUTO_UNIT_CONTROL_REL_TOL * max(abs(value), 1.0)
+                   for value in ones]
+    equality_passed = all(math.isfinite(error) and error <= limit
+                          for error, limit in zip(differences, equality_limits))
+    ones_passed = all(math.isfinite(error) and error <= limit
+                      for error, limit in zip(ones_errors, ones_limits))
+    numeric_status = "PASS" if equality_passed and ones_passed else "FAIL"
+    imaginary_values = [value for expression_values in imaginary_vectors.values()
+                        for value in expression_values]
+    imaginary_passed = all(value == 0.0 for value in imaginary_values)
+    if not imaginary_passed:
+        numeric_status = "FAIL"
+    if numeric_status == "FAIL" or unit_status == "FAIL":
+        status = "FAIL"
+    elif unit_status == "UNVERIFIED":
+        status = "UNVERIFIED"
+    else:
+        status = "PASS"
+    return {
+        "profile": AUTO_UNIT_CONTROLS_PROFILE,
+        "status": status,
+        "selected_tuple": dict(selected_tuple),
+        "expected_units": dict(AUTO_UNIT_CONTROL_EXPECTED_UNITS),
+        "observed_units": units,
+        "unit_status": unit_status,
+        "numeric_status": numeric_status,
+        "numeric_checks": {
+            "T_over_1K_equals_T": {
+                "status": "PASS" if equality_passed else "FAIL",
+                "absolute_tolerance": AUTO_UNIT_CONTROL_ABS_TOL,
+                "relative_tolerance": AUTO_UNIT_CONTROL_REL_TOL,
+                "max_absolute_difference": (max(differences)
+                                            if all(math.isfinite(value) for value in differences)
+                                            else None),
+                "max_allowed_difference": max(equality_limits),
+                "point_count": len(differences),
+            },
+            "one_is_one": {
+                "status": "PASS" if ones_passed else "FAIL",
+                "absolute_tolerance": AUTO_UNIT_CONTROL_ABS_TOL,
+                "relative_tolerance": AUTO_UNIT_CONTROL_REL_TOL,
+                "max_absolute_difference": max(ones_errors),
+                "max_allowed_difference": max(ones_limits),
+                "point_count": len(ones_errors),
+            },
+            "all_imaginary_components_zero": {
+                "status": "PASS" if imaginary_passed else "FAIL",
+                "max_absolute_imaginary": max(abs(value) for value in imaginary_values),
+                "point_count": len(imaginary_values),
+            },
+        },
+    }
+
+
 def _published_tool_schemas(root: Path, names: tuple[str, ...] | None = None) -> dict[str, Any]:
     """Read the schemas from the actual registered FastMCP tool registry."""
     root_text = str(root.resolve(strict=True))
@@ -437,7 +640,8 @@ def _resolve_remote_comsol_identity(
     }
 
 
-def _check_64_receipt(path: Path, *, mode: str = METADATA_MODE) -> dict[str, Any]:
+def _check_64_receipt(path: Path, *, mode: str = METADATA_MODE,
+                      field_readback_profile: str | None = None) -> dict[str, Any]:
     if path.is_symlink() or not path.is_file():
         label = "solve-readback" if mode == SOLVE_READBACK_MODE else "metadata-only probe"
         raise RunnerError(f"6.3 preparation requires a real 6.4 {label} receipt")
@@ -458,10 +662,17 @@ def _check_64_receipt(path: Path, *, mode: str = METADATA_MODE) -> dict[str, Any
         return {"path": str(path.resolve()), "sha256": sha256_file(path)}
     if mode != SOLVE_READBACK_MODE:
         raise RunnerError("6.3 receipt mode is unsupported")
+    requested_profile = _normalize_field_readback_profile(mode, field_readback_profile)
     solve_readback = value.get("solve_readback")
     tuple_readback = value.get("solution_tuple_readback")
     cleanup = value.get("cleanup")
     selected_comsol = value.get("selected_comsol")
+    receipt_profile = value.get("field_readback_profile")
+    if requested_profile == AUTO_UNIT_CONTROLS_PROFILE:
+        if receipt_profile != AUTO_UNIT_CONTROLS_PROFILE:
+            raise RunnerError("6.3 auto-unit-controls requires a matching 6.4 profile receipt")
+    elif receipt_profile not in (None, SINGLE_FIELD_PROFILE):
+        raise RunnerError("6.3 single-field profile cannot use a different 6.4 field-readback profile")
     if (value.get("schema") != SOLVE_READBACK_SCHEMA
             or value.get("kind") != SOLVE_READBACK_KIND
             or value.get("mode") != SOLVE_READBACK_MODE
@@ -489,6 +700,32 @@ def _check_64_receipt(path: Path, *, mode: str = METADATA_MODE) -> dict[str, Any
             or state.get("receipt_path") != str(path.resolve())
             or state.get("receipt_sha256") != receipt_hash):
         raise RunnerError("6.4 solve-readback receipt does not match its durable completion state")
+    if requested_profile == AUTO_UNIT_CONTROLS_PROFILE:
+        controls = solve_readback.get("unit_controls")
+        field_readbacks = solve_readback.get("field_readbacks")
+        if (not isinstance(controls, Mapping)
+                or not isinstance(field_readbacks, Mapping)
+                or controls.get("profile") != AUTO_UNIT_CONTROLS_PROFILE
+                or solve_readback.get("field_readback_profile") != AUTO_UNIT_CONTROLS_PROFILE
+                or not _valid_sha256(solve_readback.get("tuple_binding_sha256"))
+                or set(field_readbacks) != set(AUTO_UNIT_CONTROL_EXPRESSIONS)
+                or any(not isinstance(row, Mapping)
+                       or row.get("expression") != expression
+                       or row.get("dataset") != solve_readback.get("dataset")
+                       or row.get("solution") != solve_readback.get("solution")
+                       or row.get("tuple_binding_sha256") != solve_readback.get("tuple_binding_sha256")
+                       or row.get("full_dataset_field_sha256") != solve_readback.get("field_sha256")
+                       or row.get("field_operation") != solve_readback.get("field_operation")
+                       for expression, row in field_readbacks.items())):
+            raise RunnerError("6.4 receipt lacks auto-unit-controls evidence")
+        selected_tuple = solve_readback.get("tuple")
+        if not isinstance(selected_tuple, Mapping):
+            raise RunnerError("6.4 auto-unit-controls receipt lacks its exact selected tuple")
+        recomputed_controls = _auto_unit_control_evidence(
+            field_readbacks, selected_tuple=selected_tuple,
+        )
+        if controls != recomputed_controls or controls.get("status") != "PASS":
+            raise RunnerError("6.4 auto-unit-controls evidence did not pass its frozen unit/numeric controls")
     expected_accounting = {
         "study_dispatch": 1, "study_dispatch_possible": 1,
         "study_dispatch_status": "CONFIRMED",
@@ -508,6 +745,11 @@ def _check_64_receipt(path: Path, *, mode: str = METADATA_MODE) -> dict[str, Any
             or not isinstance(field_progress, Mapping) or field_progress.get("status") != "VERIFIED"
             or field_progress.get("field_sha256") != solve_readback.get("field_sha256")):
         raise RunnerError("6.4 solve-readback durable state lacks its exact tuple/field evidence")
+    if requested_profile == AUTO_UNIT_CONTROLS_PROFILE:
+        controls = solve_readback["unit_controls"]
+        if (field_progress.get("field_readback_profile") != AUTO_UNIT_CONTROLS_PROFILE
+                or field_progress.get("unit_controls_sha256") != sha256_value(controls)):
+            raise RunnerError("6.4 durable state lacks matching auto-unit-controls evidence")
     isolation_path = path.parent / "owned_server_isolation.json"
     if isolation_path.is_symlink() or not isolation_path.is_file():
         raise RunnerError("6.4 solve-readback receipt lacks the owned-server cleanup record")
@@ -516,6 +758,7 @@ def _check_64_receipt(path: Path, *, mode: str = METADATA_MODE) -> dict[str, Any
         raise RunnerError("6.4 solve-readback owned-server record is not safely stopped")
     return {"path": str(path.resolve()), "sha256": receipt_hash,
             "mode": SOLVE_READBACK_MODE, "kind": SOLVE_READBACK_KIND,
+            "field_readback_profile": receipt_profile,
             "cleanup_status": "CLEANUP_COMPLETE"}
 
 
@@ -657,10 +900,12 @@ def prepare(*, version: str, comsol_root: Path, jdk_home: Path,
             server_home_root: Path | None = None,
             mode: str = METADATA_MODE, probe_discovery_only: bool = False,
             probe_feature_info_tag: str | None = None,
-            probe_table_id: str | None = None) -> dict[str, Any]:
+            probe_table_id: str | None = None,
+            field_readback_profile: str | None = None) -> dict[str, Any]:
     if version not in {"6.4", "6.3"}:
         raise RunnerError("selected version must be exactly 6.4 or 6.3")
     schema = _mode_schema(mode)
+    selected_field_profile = _normalize_field_readback_profile(mode, field_readback_profile)
     probe_request = _normalize_probe_request(
         discovery_only=probe_discovery_only,
         feature_info_tag=probe_feature_info_tag,
@@ -684,7 +929,10 @@ def prepare(*, version: str, comsol_root: Path, jdk_home: Path,
     if version == "6.3":
         if prerequisite_64_receipt is None:
             raise RunnerError("6.3 cannot be prepared before a successful cleaned-up 6.4 probe")
-        prerequisite = _check_64_receipt(prerequisite_64_receipt, mode=mode)
+        prerequisite = _check_64_receipt(
+            prerequisite_64_receipt, mode=mode,
+            field_readback_profile=selected_field_profile,
+        )
     elif prerequisite_64_receipt is not None:
         raise RunnerError("6.4 is the first-version step and accepts no earlier receipt")
 
@@ -768,6 +1016,7 @@ def prepare(*, version: str, comsol_root: Path, jdk_home: Path,
         "prerequisite_64_receipt": prerequisite,
         "request_ids": request_ids, "idempotency_keys": idempotency,
         "probe_request": probe_request,
+        "field_readback_profile": selected_field_profile,
         "budgets": _mode_budgets(mode),
         "route": "public stdio MCP; ControlDaemon; OwnedServerLauncher; one registered session",
         "prepare_side_effects": "filesystem receipts/directories only; no MCP call or COMSOL process",
@@ -797,6 +1046,7 @@ def prepare(*, version: str, comsol_root: Path, jdk_home: Path,
 def verify_plan(plan: Mapping[str, Any], *, expected_sha256: str,
                 source_root: Path = REPOSITORY) -> None:
     mode = plan.get("mode", METADATA_MODE)
+    _frozen_field_readback_profile(plan)
     if plan.get("schema") != _mode_schema(mode) or plan.get("kind") not in (None, _mode_kind(mode)):
         raise RunnerError("frozen mode/schema/kind identity is inconsistent")
     if plan.get("budgets") != _mode_budgets(mode):
@@ -935,15 +1185,17 @@ def _resolve_solve_tuple(solution_data: Mapping[str, Any], *,
 
 def _extract_solve_field(solution_data: Mapping[str, Any], field_data: Mapping[str, Any], *,
                          dataset: str,
-                         resolved_tuple: tuple[dict[str, Any], dict[str, Any]] | None = None
+                         resolved_tuple: tuple[dict[str, Any], dict[str, Any]] | None = None,
+                         field_readback_profile: str = SINGLE_FIELD_PROFILE,
                          ) -> tuple[dict[str, Any], dict[str, Any]]:
-    """Bind the selected actual SolutionInfo tuple to one returned FieldArray row."""
+    """Bind complete returned expressions and the exact SolutionInfo tuple."""
     from comsol_mcp._g3_results import (
         W21_FIELD_READBACK_MAX_JSON_BYTES,
         W21_FIELD_READBACK_MAX_NUMERIC_SCALARS,
     )
 
     selected, binding = resolved_tuple or _resolve_solve_tuple(solution_data, dataset=dataset)
+    expected_expressions = _field_readback_expressions(field_readback_profile)
 
     field = field_data.get("field_array")
     status_witness = field_data.get("status")
@@ -976,10 +1228,19 @@ def _extract_solve_field(solution_data: Mapping[str, Any], field_data: Mapping[s
             or not isinstance(shape, list) or tuple(shape) != _nested_shape(values)
             or len(shape) != 4
             or any(type(size) is not int or size < 1 for size in shape)
-            or shape[0] != 1):
+            or shape[0] != len(expected_expressions)):
         raise RunnerError("result.evaluate FieldArray axes, shape, or native solution-pair metadata are incomplete")
-    if (field_data.get("expressions") != ["T"]
-            or coords.get("expression") != ["T"]
+    response_expressions = field_data.get("expressions")
+    coordinate_expressions = coords.get("expression")
+    if (not isinstance(response_expressions, list)
+            or not isinstance(coordinate_expressions, list)
+            or any(not isinstance(name, str) or not name for name in response_expressions)
+            or any(not isinstance(name, str) or not name for name in coordinate_expressions)
+            or len(response_expressions) != len(set(response_expressions))
+            or len(coordinate_expressions) != len(set(coordinate_expressions))
+            or set(response_expressions) != set(expected_expressions)
+            or set(coordinate_expressions) != set(expected_expressions)
+            or response_expressions != coordinate_expressions
             or not isinstance(coords.get("outer"), list)
             or coords["outer"] != binding.get("outer_indices")
             or not isinstance(coords.get("inner"), list)
@@ -1009,10 +1270,18 @@ def _extract_solve_field(solution_data: Mapping[str, Any], field_data: Mapping[s
             or actual_pairs.count({"outer": selected["outer"], "inner": selected["inner"],
                                    "solnum": selected["solnum"]}) != 1):
         raise RunnerError("result.evaluate FieldArray pair mapping differs from dataset.solution_indices")
-    selected_field = values[0][coords["outer"].index(selected["outer"])][
-        coords["inner"].index(selected["inner"])
-    ]
-    if not isinstance(selected_field, list) or not selected_field:
+    outer_offset = coords["outer"].index(selected["outer"])
+    inner_offset = coords["inner"].index(selected["inner"])
+    expression_offsets = {name: index for index, name in enumerate(coordinate_expressions)}
+    selected_fields = {
+        expression: values[expression_offsets[expression]][outer_offset][inner_offset]
+        for expression in expected_expressions
+    }
+    if any(not isinstance(row, list) or len(row) != shape[3]
+           for row in selected_fields.values()):
+        raise RunnerError("resolved solution tuple has incomplete expression field values")
+    selected_field = selected_fields["T"]
+    if not selected_field:
         raise RunnerError("resolved solution tuple has no nonempty field values")
     count = _numeric_payload_count(values, finite=True)
     spatial_coordinates = coords.get("spatial")
@@ -1061,6 +1330,39 @@ def _extract_solve_field(solution_data: Mapping[str, Any], field_data: Mapping[s
         "mesh_intrinsic_identity": "UNVERIFIED",
         "read_scope": "complete returned dataset FieldArray; target tuple extracted by exact native pair witness",
     }
+    if field_readback_profile == AUTO_UNIT_CONTROLS_PROFILE:
+        unit_table = field.get("units")
+        expression_units = (unit_table.get("expression")
+                            if isinstance(unit_table, Mapping) else None)
+        field_readbacks: dict[str, Any] = {}
+        for expression in expected_expressions:
+            full_values = values[expression_offsets[expression]]
+            selected_values = selected_fields[expression]
+            unit = expression_units.get(expression) if isinstance(expression_units, Mapping) else None
+            field_readbacks[expression] = {
+                "expression": expression,
+                "dataset": dataset,
+                "solution": selected["solution"],
+                "shape": list(shape[1:]),
+                "outer_indices": list(coords["outer"]),
+                "inner_indices": list(coords["inner"]),
+                "tuple": {key: selected[key] for key in ("outer", "inner", "solnum")},
+                "tuple_binding_sha256": sha256_value(binding),
+                "unit": unit if isinstance(unit, str) else None,
+                "full_dataset_values": full_values,
+                "full_dataset_values_sha256": sha256_value(full_values),
+                "full_dataset_field_sha256": sha256_value(field),
+                "selected_tuple_values": selected_values,
+                "selected_tuple_values_sha256": sha256_value(selected_values),
+            }
+        controls = _auto_unit_control_evidence(
+            field_readbacks,
+            selected_tuple={key: selected[key] for key in ("outer", "inner", "solnum")},
+        )
+        selected_output["field_readback_profile"] = field_readback_profile
+        selected_output["field_expressions"] = list(expected_expressions)
+        selected_output["field_readbacks"] = field_readbacks
+        selected_output["unit_controls"] = controls
     return selected_output, binding
 
 
@@ -1544,6 +1846,7 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
     if state.value.get("status") != "PREPARED" or state.value.get("action_history"):
         raise RunnerError("state is not pristine PREPARED; replay is forbidden")
     mode = plan.get("mode", METADATA_MODE)
+    field_profile = _frozen_field_readback_profile(plan)
     if (plan.get("schema") != _mode_schema(mode)
             or plan.get("kind") not in (None, _mode_kind(mode))
             or plan.get("budgets") != _mode_budgets(mode)):
@@ -2428,9 +2731,10 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
             result_request = request_ids["result_evaluate"]
             result_key = keys["result_evaluate"]
             result_revision_before = binding["revision"]
+            expressions = list(_field_readback_expressions(field_profile or SINGLE_FIELD_PROFILE))
             result_params = _operation_params("result.evaluate", {
                 "spec": {
-                    "expressions": ["T"],
+                    "expressions": expressions,
                     "solution": {"dataset": "dset1", "solution": target_solution},
                     "aggregate": "none", "complex_mode": "preserve", "storage": "inline",
                 },
@@ -2443,10 +2747,10 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
                 "rpc_timeout_s": budgets["ordinary_rpc_wait_seconds"],
             })
             result_response = await dispatch("result.evaluate", "operation_call", result_params)
-            result_data = _assert_success(result_response, "result.evaluate(T)")
+            result_data = _assert_success(result_response, "result.evaluate(field profile)")
             result_ticket = _validate_managed_result_ticket(
                 result_response, binding, request_id=result_request, idempotency_key=result_key,
-                expected_revision=result_revision_before, label="result.evaluate(T)",
+                expected_revision=result_revision_before, label="result.evaluate(field profile)",
                 allow_one_revision_advance=True,
             )
             cleanup = result_data.get("cleanup")
@@ -2455,6 +2759,7 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
                 raise RunnerError("result.evaluate temporary-node cleanup is incomplete or unknown")
             solve_readback, exact_binding = _extract_solve_field(
                 tuple_data, result_data, dataset="dset1", resolved_tuple=resolved_tuple,
+                field_readback_profile=field_profile or SINGLE_FIELD_PROFILE,
             )
             if exact_binding.get("selection_resolution", {}).get("status") != "VERIFIED":
                 raise RunnerError("result field tuple did not retain its exact SolutionInfo selection witness")
@@ -2470,6 +2775,12 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
                 "revision_before": result_revision_before,
                 "revision_after": result_ticket["revision"],
             }
+            if field_profile == AUTO_UNIT_CONTROLS_PROFILE:
+                state.value["field_readback_progress"].update({
+                    "field_readback_profile": field_profile,
+                    "unit_controls_sha256": sha256_value(solve_readback["unit_controls"]),
+                    "unit_controls_status": solve_readback["unit_controls"]["status"],
+                })
             state.save()
             tuple_readback = {
                 "status": "VERIFIED", "dataset": "dset1", "solution": target_solution,
@@ -2484,6 +2795,8 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
                 },
             }
             result_evidence = {
+                "project_id": project_id, "session_id": session_id,
+                "model_ref": dict(binding["model_ref"]),
                 "request_id": result_request, "idempotency_key": result_key,
                 "operation_id": result_ticket["operation_id"],
                 "request_hash": result_ticket["request_hash"], "job_id": result_ticket["job_id"],
@@ -2493,8 +2806,11 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
                 "field_sha256": solve_readback["full_dataset_field_sha256"],
                 "selected_tuple_field_sha256": solve_readback["field_values_sha256"],
             }
+            for field_readback in solve_readback.get("field_readbacks", {}).values():
+                field_readback["field_operation"] = dict(result_evidence)
             solve_readback.update({
                 "status": "CAPTURED", "study_tag": "std1",
+                "field_readback_profile": field_profile,
                 "field_sha256": solve_readback["full_dataset_field_sha256"],
                 "solve_operation": {
                     "request_id": solve_request, "idempotency_key": solve_key,
@@ -2520,6 +2836,7 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
 
         report = {
             "schema": plan["schema"], "mode": mode, "kind": plan["kind"],
+            "field_readback_profile": field_profile,
             "run_id": plan["run_id"], "freeze_sha256": plan["freeze_sha256"],
             "status": status, "requested_version": plan["requested_version"],
             "selected_comsol": plan["selected_comsol"], "selected_jdk": plan["selected_jdk"],
@@ -2800,6 +3117,8 @@ def _parser() -> argparse.ArgumentParser:
     prep = commands.add_parser("prepare", help="freeze source/runtime identity; never launches MCP or COMSOL")
     prep.add_argument("--version", choices=("6.4", "6.3"), required=True)
     prep.add_argument("--mode", choices=(METADATA_MODE, SOLVE_READBACK_MODE), default=METADATA_MODE)
+    prep.add_argument("--field-readback-profile", choices=FIELD_READBACK_PROFILES,
+                      help="solve-readback expression profile; default is the legacy T-only capture")
     prep.add_argument("--comsol-root", type=Path, required=True)
     prep.add_argument("--jdk-home", type=Path, required=True)
     prep.add_argument("--evidence-root", type=Path, required=True)
@@ -2831,7 +3150,8 @@ def main(argv: list[str] | None = None) -> int:
                              mode=args.mode,
                              probe_discovery_only=args.probe_discovery_only,
                              probe_feature_info_tag=args.probe_feature_info_tag,
-                             probe_table_id=args.probe_table_id)
+                             probe_table_id=args.probe_table_id,
+                             field_readback_profile=args.field_readback_profile)
         else:
             plan, state = _load_plan(args.plan, args.freeze_sha256)
             result = asyncio.run(_execute_stdio(plan, state))

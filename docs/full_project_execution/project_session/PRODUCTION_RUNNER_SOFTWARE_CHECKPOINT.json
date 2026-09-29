@@ -605,5 +605,42 @@
     ],
     "main_review": "Shared Windows short state root, legacy-root preservation, ambiguous/redirected root refusal, actual recovery filename path budget, and unchanged 260 guard reviewed. Final four-module regression/source fingerprints verified. Prior path-fixture failures retained. No native PASS inferred.",
     "native_execution": "NOT_RUN_FOR_THIS_CHANGE"
+  },
+  "auto_unit_controls_20260930": {
+    "status": "PASS_SCOPED_OFFLINE",
+    "native_status": "NOT_RUN",
+    "source_sha256": {
+      "tools/run_w21_stage_native.py": "e803f28184d5a0b408163e1edaa1fc2c396775d02285716ab6e592a952f6ec8f",
+      "tests/test_run_w21_stage_native.py": "9f11ebe6dd958fba65ff52deef3098dff2dbc20cb90550e05072e6038aa231de"
+    },
+    "receipt": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-auto-unit-controls-7afde37/run-receipt-final.json",
+      "sha256": "9b8dfd71c2e2f6fb50eefbbb0c3fc4516532b8683b0da383fddf679f7382012f"
+    },
+    "test": {
+      "basetemp": "/Volumes/CTestEff/8",
+      "command": "/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -B -m pytest -q tests/test_run_w21_stage_native.py --basetemp=/Volumes/CTestEff/8 --junitxml=/Volumes/SSD/Comsol-MCP/execution-scratch/w21-auto-unit-controls-7afde37/runner-final2.xml",
+      "counts": {
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0,
+        "tests": 138
+      },
+      "environment": {
+        "PYTHONDONTWRITEBYTECODE": "1",
+        "TMPDIR": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-auto-unit-controls-7afde37/tmp-final2"
+      },
+      "exit_code": 0,
+      "junit": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-auto-unit-controls-7afde37/runner-final2.xml",
+        "sha256": "909d0bb84e4dae2afd60f5477f808a21f4d08030ba6fafe62a1f0ccfb9bf1cc7"
+      },
+      "log": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-auto-unit-controls-7afde37/runner-final2.log",
+        "sha256": "a48ab88d5858ad5d50c633c8265c87dfc1d4e92b3a2e229dad3dd71ceb154417"
+      },
+      "unique_testcase_names": 138
+    },
+    "main_review": "Reviewed frozen expression request, no requested units, actual real/imag representation retained with zero-imag check, exact tuple and full array hashes, unit/numeric negative controls, same-profile prerequisite recomputation, unchanged budgets and owned cleanup. Verified 138 unique JUnit cases and source/log/manifest hashes. No duplicate test run. Existing native admission and physical validation remain UNVERIFIED."
   }
 }
