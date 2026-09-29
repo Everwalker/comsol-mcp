@@ -153,5 +153,36 @@
     "java_compile": "javac -cp <COMSOL64>/apiplugins/com.comsol.api_1.0.0.jar -d <temporary-output> tools/java/NativeW23RadiationGeometryV2.java",
     "notes": "Synthetic curve harness source/class/results remain at receipt paths with hashes. Native area integral/topology/balance require separate execution; analytical area is not that evidence."
   },
-  "next_action": "Derive full true-axis swept Port backing/cap domains and changed PML face/edge/corner maps for all required tilted cases; review continuity/Jacobians, then implement authentic native geometry/capture/quadrature/balance and freeze resources before native execution."
+  "next_action": "Implement a versioned COMSOL geometry/selection/PML adapter using verified same-version APIs; preserve v2 evidence. Native geometry and field acceptance require actual production execution; Qabs/units/optical acceptance remain open.",
+  "latest_port_transition_candidate": {
+    "status": "PASS_SCOPED_OFFLINE_GEOMETRY",
+    "schema_id": "urn:comsol-mcp:w23:port-transition-plan:1.0.0",
+    "case_count": 19,
+    "unique_test_passes": 75,
+    "new_candidate_tests": 19,
+    "legacy_v2_tests": 56,
+    "source_sha256": {
+      "docs/full_project_execution/w23_overlap/PORT_TRANSITION_IMPLEMENTATION_PLAN.md": "804c4c0fdd00924910d637880a98cc2f03f730fb98b5f9320f1c462c3df8922f",
+      "tests/test_w23_port_transition.py": "16a0d20c5b5da1958b827db8226acfc254961716d056fb2c8840582d5932cb1b",
+      "tools/w23_port_transition.py": "9af1ed2fc5bd6f13b6539ed14af4d4120d69978dc0f458479201918ec85f2d11"
+    },
+    "plan_sha256": "c0570ae6ff6720f44fb3e99ccb2168b860c6c89f90151b42672411b2e00f081d",
+    "receipt": "/Volumes/SSD/Comsol-MCP/execution-scratch/w23-port-transition/executable_partition_classifier_receipt_20260929.json",
+    "receipt_sha256": "850a115ef04f6ca1ce1b883d2a4abd5f986edcad9a9577bdefd06de375043f6a",
+    "main_boundary_regression": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w23-port-transition/main_classifier_boundary_samples.json",
+      "sha256": "34b9a40e1d3fff4c23efd80ebbe303294dba13a520928677304a2cf92522917c",
+      "sampled_points": 948,
+      "scope": "Supplemental classification regression, not a global proof or native result"
+    },
+    "main_review": "Reviewed biarc endpoint/tangent construction, signed-distance tubes, analytic extrema and positive Jacobian bounds, full Port preservation, half-open executable piece/region ownership and adapter rejection. Verified all source and JUnit hashes and 75 unique passing cases.",
+    "native_geometry": "NOT_RUN",
+    "native_support": "NOT_IMPLEMENTED",
+    "native_pml_compatibility": "UNVERIFIED",
+    "reproduce": [
+      "PYTHONDONTWRITEBYTECODE=1 /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -m pytest -p no:cacheprovider --basetemp=/Volumes/CTestEff/v2 -q tests/test_w23_radiation_geometry_v2.py --junitxml=/Volumes/SSD/Comsol-MCP/execution-scratch/w23-port-transition/v2-compatibility-junit.xml",
+      "PYTHONDONTWRITEBYTECODE=1 /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -m pytest -p no:cacheprovider --basetemp=/Volumes/CTestEff/d4 -q tests/test_w23_port_transition.py --junitxml=/Volumes/SSD/Comsol-MCP/execution-scratch/w23-port-transition/focus-classifier-final03-junit.xml"
+    ],
+    "next_action": "Implement a versioned COMSOL geometry/selection/PML adapter using verified same-version APIs; preserve v2 evidence. Native geometry and field acceptance require actual production execution; Qabs/units/optical acceptance remain open."
+  }
 }
