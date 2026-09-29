@@ -5,7 +5,7 @@
   "overall_status": "PARTIAL",
   "source_package_status": "PASS_MAIN_VERIFIED",
   "native_status": "NOT_ACCEPTED_SESSION_START_UNKNOWN",
-  "next_action": "Do not replay recovery request8ec17d18-88f7-4e5c-a797-6d1500ca20ac. Raw read-only evidence confirms original start RECONCILING, recovery request rows0, controller32880 DAEMON_READY then observed dead with no exit event; no quiescence disposition. Audit MCP1.30 Windows process-tree cleanup and public session.recover pre-persistence rejection paths separately, preserving unavailable error details as UNKNOWN. Repair and verify before another controlled action; new short-root native source is staged, not executed.",
+  "next_action": "Keep recovery request 8ec17d18-88f7-4e5c-a797-6d1500ca20ac at UNKNOWN_NO_RETRY. The one recover attempt returned is_error=true without an operation ID, and the read-only SQLite check found no durable recovery row. The 15e7bea route writes recover-specific job/lifecycle state only after store.begin; controller startup reconciliation can independently explain the original job's RECONCILING state. Finish safe-error/held-handle driver diagnostics, then have main review a fresh single recovery request against the latest quiescence observations. Never replay the prior request, and do not start the bounded short-path native chain before durable reconciliation of the original operation. The exact error remains unavailable because the driver discarded response error details; see recovery_driver_attempt for route and permission evidence.",
   "candidate": {
     "source_commit": "9c5ced6272dd876cf9c28c6c6f73b943bd76b96c",
     "evidence_root": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-v2-20260928T235840Z-9c5ced6",
@@ -362,7 +362,7 @@
       "Preserve verified historical UNKNOWN quiescence across control restart."
     ],
     "limits": "Offline software tests use synthetic host observations and localhost Python children. The separately captured Windows query passed read-only, but the original database has not been recovered and no fresh COMSOL startup has run.",
-    "next_action": "Freeze and verify a current-source recovery driver; consistent SQLite backup before starting a fresh controller on the old task home; run existing authenticated session.recover once. After actual reconciliation, one short-root Windows 6.4 solve-readback attempt, then 6.3."
+    "next_action": "The scoped offline recovery implementation passed 130 unique tests across four affected modules; source and JUnit hashes were main-verified. The single real session.recover attempt was not durably accepted (is_error=true, no operation ID, zero request rows). Finish safe-error/held-handle driver diagnostics, then have main review a fresh single recovery request against the latest quiescence observations. Never replay the prior request; do not start native work before durable reconciliation of the original operation."
   },
   "recovery_source_handoff": {
     "status": "PASS_SOURCE_UPLOADED_AND_REMOTE_HASH_VERIFIED",
@@ -485,7 +485,39 @@
       "receipt_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-recovery-15e7bea/readonly_v4_recovery_diagnostic_v1_receipt.json",
       "receipt_sha256": "d932982b24c4b1ab3a33288d99f9e9b62b46dd69f4819e9d27b9b90c74a5ca06"
     },
-    "unresolved": "Recovery response error details were discarded by driver; empty log and DAEMON_READY without exit event do not establish why controller died. Do not invent a cause or replay."
+    "unresolved": "The real MCP response had is_error=true and no operation ID, but the driver discarded its structured error. The source audit and zero recovery rows show no durable recovery operation was created; they do not identify the precise pre-begin failure. The project policy readback includes project_write=true. Do not infer PERMISSION_DENIED or another cause. Do not replay this request; finish safe-error/held-handle diagnostics before main reviews any fresh recovery request.",
+    "readonly_project_permission_query": {
+      "status": "OBSERVED_READ_ONLY",
+      "receipt_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-recovery-15e7bea/project_permissions_readonly_20260929T052724Z.json",
+      "receipt_sha256": "89100826e6194e9fb08302fcf6054ea0d9339b2d57b4a60327a7cc6a134b66e3",
+      "row_count": 1,
+      "schema_version": 1,
+      "record_schema_version": 1,
+      "revision": 1,
+      "project_policy_permissions": {
+        "inspect": true,
+        "project_write": true,
+        "compute": false,
+        "host_control": true,
+        "trusted_code": true
+      },
+      "scope": "One exact project row from the fixed Windows operations database; SQLite mode=ro and query_only=ON; output limited to row count, schema/revision, and these permission booleans.",
+      "mutation_performed": false
+    },
+    "recover_begin_route_audit": {
+      "source_head": "15e7bea61e9ef06b29d9a51f55fcddebcb773b7a",
+      "public_route_matches_driver_request_shape": true,
+      "source_locations": {
+        "comsol_mcp/_control_daemon.py:_dispatch_session_recover": "7690-7697",
+        "comsol_mcp/_control_daemon.py:_begin_session_mutation": "4648-4698",
+        "comsol_mcp/_control_daemon.py:ControlDaemon.__init__": "371-373",
+        "comsol_mcp/_operation_store.py:reconcile_after_restart": "1715-1743"
+      },
+      "observed_request_row_count": 0,
+      "observed_total_operations": 2,
+      "conclusion": "On the reviewed route, recover-specific job/lifecycle writes occur after _begin_session_mutation persists store.begin. The missing recovery row therefore shows no durable recover operation was created; it does not identify whether dispatch failed before the handler, at a pre-begin check, or during begin persistence. Daemon startup reconcile_after_restart independently changes an older nonterminal job to RECONCILING, so that status is not evidence the recovery handler ran.",
+      "cause_status": "UNRESOLVED; response error details were discarded by the driver. Project policy has project_write=true; no exact rejection code or permission-denial cause is established."
+    }
   },
   "recovery_driver_prior_controller_init_attempt": {
     "status": "CONTROLLER_START_NO_RECOVERY_DISPATCH_OUTCOME_UNVERIFIED",

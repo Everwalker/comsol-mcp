@@ -143,7 +143,7 @@
       "checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json"
     }
   ],
-  "next_action": "Do not replay recovery request8ec17d18-88f7-4e5c-a797-6d1500ca20ac. Raw read-only evidence confirms original start RECONCILING, recovery request rows0, controller32880 DAEMON_READY then observed dead with no exit event; no quiescence disposition. Audit MCP1.30 Windows process-tree cleanup and public session.recover pre-persistence rejection paths separately, preserving unavailable error details as UNKNOWN. Repair and verify before another controlled action; new short-root native source is staged, not executed.",
+  "next_action": "Preserve the original Windows6.4 session.start and the one attempted session.recover as UNKNOWN_NO_RETRY. The recover response was is_error=true with no operation ID and no durable request row; source/policy evidence and the exact read-only receipt are in WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json. Finish the safe-error/held-handle driver diagnostics, then have main review a fresh single recovery request against the latest quiescence observations. Never replay the prior request. Do not start the bounded short-path native chain before durable reconciliation of the original operation; existing authorization for that later chain remains in place.",
   "active_jobs": [],
   "blockers": [
     "W23 failed setup owned Server 75272 and daemon 75260 remain preserved: cleanup SIGTERM was rejected by automatic approval and explicit authorization is pending; no cleanup or relaunch authorized by elapsed time.",
@@ -172,7 +172,7 @@
     "native_solve_budget_remaining": 0,
     "evidence": "docs/full_project_execution/evidence/luna_process_reconciliation/mac_readonly_snapshot_20260926T2152Z.json"
   },
-  "updated_at": "2026-09-29T05:14:28.300795+00:00",
+  "updated_at": "2026-09-29T05:42:45Z",
   "note": "Original scope remains through W26. User explicitly resumed after the test-efficiency analysis; implement efficiency improvements first. OpenViking task-detail retrieval was denied by auto-review because it would disclose internal roadmap identifiers externally; no workaround. Use current frozen workpack and read-only local memory only. Do not rerun bootstrap/init on resume. Source files now contain executor edits; do not rerun bootstrap/init. Git metadata is an APFS pointer managed by main agent; migration requires bundle/source transfer, not copying only the repository pointer. Git metadata migration is documented by evidence/git_metadata_relocation.json and owned by the main agent; do not copy the APFS git pointer to another machine without source bundle/archive. GUI permission boundary and checkpoint solution-scope caveat recorded. This executor has one W24 native setup-only failure with exact cleanup verified; the durable operation/job UNKNOWN records remain unchanged. No W24 solver submission occurred. Saved-MPH readback supplement uses separate time/evidence and zero study/solver calls; run08 remains FAIL_OR_INCOMPLETE. Root raw SQLite recomputation is linked under native_resume_saved_artifact_supplement.raw_recomputation_evidence; original run08 remains FAIL_OR_INCOMPLETE and no solve budget is restored. Latest checkpoint 2026-09-27T03:50:43Z: W24 0334Z setup run failed pre-model due Python 3.14 missing mcp, with exact cleanup; 0346Z candidate pins the validated 3.12.13 environment and passes a production no-engine registry/daemon preflight. Native setup remains pending root review; science implementation continues offline. Latest checkpoint 2026-09-27T09:09:28Z: W24 0841Z candidate was invoked once at 0857Z and failed before any engine/Worker birth because project.inspect received an injected idempotency_key; project.create persisted successfully. Exact read-only SQLite hash and operation result are in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_contract_diagnostic.json. The runner now omits the unnecessary inspect key; actual ControlDaemon focused regression is 2/2 PASS in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_runner_regression_receipt.json. No native retry or acceptance is claimed; release F04 runtime integration is active, so refresh closure and root review are required before another launch. Windows COMSOL 6.3 remains required/unassessed; only macOS 6.3 is USER_REQUESTED_SKIP.",
   "native_resume_smoke": {
     "status": "FAIL_OR_INCOMPLETE_POINT_SCHEMA_FAILURE; SOLVED_CHILD_ARTIFACT_DURABLE; SOLVE_BUDGET_EXHAUSTED; SEPARATE_SAVED_MPH_READBACK_PASS",
@@ -2414,7 +2414,7 @@
     {
       "stage": "W21_PRODUCTION_MCP_RUNNER",
       "agent": "/root/luna_test_efficiency",
-      "status": "REPAIR_SYNCED_NEW_PREPARATION_RUNNING",
+      "status": "SUPERSEDED_HISTORICAL_ZERO_SOLVE_PLAN",
       "scope": "New runner+tests through actual public stdioMCP/session-owned lifecycle; nativeexecute not authorized to agent yet",
       "native_status": "NOT_RUN",
       "limits_for_proposed_discovery": {
@@ -2434,7 +2434,7 @@
         ]
       },
       "checkpoint": "docs/full_project_execution/project_session/RUNNER_RESPONSE_CONTRACT_CHECKPOINT.json",
-      "next_action": "Freeze a new isolated Windows6.4 metadata-only run from committed repaired source, link the old failure and preserve its project; no original replay. At most1Server/1Worker/900seconds/0study-or-solver. Output composition repair remains separate; then actual stage chain6.4,6.3,W23-W26.",
+      "next_action": "This earlier 0-study/0-solver metadata-only plan is superseded by the separately frozen W21 solve-readback candidate (9d5aab1); retain this entry as history. Current candidate limits are 1 Server, 1 Worker, 1 study and 1 solver, a 900 s total window with 60 s cleanup reserve and bounded 45 s RPC / 30 s queue / 240 s execution. The already-authorized short-path chain remains gated on durable reconciliation of the original UNKNOWN; do not replay the prior recovery request or start native work before that.",
       "commit": "0027d85721c3bf05861cbc8327935e44fa4e8a21",
       "candidate_commit": "0501e8cb643b973c286b266eaae9e460e5bd1f38"
     },
@@ -2572,7 +2572,7 @@
       "current process ownership/quiescence (only parent-reported name-only snapshot is attached)",
       "full Windows 6.3/6.4 platform acceptance"
     ],
-    "next_action": "Await the pending narrowly scoped read-only daemon-liveness authorization, then reconcile the exact original request/idempotency/operation/job and owned-server state and investigate the DLL load/startup-class errors. Preserve UNKNOWN. Do not issue another session.start, replay, stop or cleanup.",
+    "next_action": "The previously requested read-only daemon-liveness and project-policy queries have now been executed and are recorded in the current V2 checkpoint. Finish safe-error/held-handle driver diagnostics, then have main review a fresh single recovery request against the latest quiescence observations. Never replay the prior request; do not start native work before durable reconciliation of the original operation.",
     "current_upload_approval": {
       "status": "APPROVED_UPLOADED_PREPARATION_MAIN_VERIFIED",
       "reason": "Automatic approval review rejected SCP source export, recognizing only read-only dependency permission",
@@ -2588,7 +2588,7 @@
       "main_upload_receipt": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-20260928T1655Z-0501e8c/main_authorized_upload_receipt.json",
       "freeze_sha256": "75adad904dd251d5f40980bfdb33fea6ca2d2f813170f6f5d7ddaaec91d8e3a8",
       "run_root": "C:\\Temp\\w21_win64_metadata_prepare_20260928T1655Z_0501e8c\\evidence\\6.4\\w21-64-20260928T225727Z-145bc8e6",
-      "next_action": "Use the newly committed short-home path repair to prepare a fresh Windows6.4 V2 candidate; the old uploaded/frozen candidate is historical and must not be replayed."
+      "next_action": "Historical 0501e8c metadata candidate: its one native attempt failed at CreateProcess with WinError206 and is not to be replayed. The current recovery/source state is tracked under the Windows64 V2 checkpoint."
     },
     "repaired_metadata_execution": {
       "status": "FAILED",
@@ -2722,7 +2722,7 @@
       "tests/test_session_server.py": "211855691e0a3a66d140e484395aafac9f2f163b6bc716392375bb732c2d8ab3",
       "tests/test_run_w21_stage_native.py": "487f53ea01e13fe6a4a9dab276b139d5f6f273249af0b9cb26632ec037b6943a"
     },
-    "next_action": "Finish startup identity/error/exit persistence and non-sensitive diagnostic separation; extend the existing session.recover path for the exact abandoned session.start with a same-host quiescence disposition. Preserve original UNKNOWN/failure history and missing exit code; do not trust imported PASS receipts or mark native success. After controlled reconciliation and a freshly approved short-root plan, execute one minimal Windows6.4 native startup comparison, then connect/small-model solve/result readback and Windows6.3. Continue W23 analytic geometry in parallel; no new acceptance gates.",
+    "next_action": "The short-home path guard passed scoped offline checks only. Finish safe-error/held-handle diagnostics for the one real recover attempt, then have main review a fresh single recovery request against the latest quiescence observations. Never replay the prior request. The already-authorized short-path chain remains gated on durable reconciliation; do not start it before that.",
     "critical_dll_guard_followup": {
       "status": "PASS_SCOPED_OFFLINE_SOFTWARE",
       "native_status": "NOT_RUN",
@@ -2811,7 +2811,7 @@
     "solver_dispatches": 0,
     "replay_permitted": false,
     "cleanup_permitted": false,
-    "next_action": "Finish review of the one-shot recovery driver against frozen15e7bea; source is uploaded and all107 archive members verified remotely. Back up original SQLite before controller startup, record controller auto-reconciliation separately, and dispatch existing session.recover once. Preserve UNKNOWN history and no replay. After actual safe reconciliation, execute the bounded new short-root Windows6.4 start/connect/solve/readback comparison, then6.3 and W23-W26.",
+    "next_action": "Preserve the original Windows6.4 session.start and the one attempted session.recover as UNKNOWN_NO_RETRY. The recover response was is_error=true with no operation ID and no durable request row; source/policy evidence and the exact read-only receipt are in WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json. Finish the safe-error/held-handle driver diagnostics, then have main review a fresh single recovery request against the latest quiescence observations. Never replay the prior request. Do not start the bounded short-path native chain before durable reconciliation of the original operation; existing authorization for that later chain remains in place.",
     "image_library_basename": "CORE_RL_magick_.dll",
     "image_library_relative_alias": "ext\\graphicsmagick\\win64\\CORE_RL_magick_.dll",
     "image_library_exists": true,
@@ -2852,7 +2852,7 @@
       "status": "SOFTWARE_IMPLEMENTATION_IN_PROGRESS_NATIVE_NOT_RUN",
       "checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json",
       "executor": "/root/luna_stage_output",
-      "next_action": "Complete separately frozen solve-readback mode using the existing managed public run_study and strict result path; first reconcile original UNKNOWN, then Windows 6.4 before 6.3. No original replay."
+      "next_action": "The 9d5aab1 solve-readback candidate is software-only and native NOT_RUN. Finish diagnostics and have main review a fresh recovery request; never replay the prior request. After durable reconciliation of the original operation, use the already-authorized bounded short-path chain: Windows 6.4 solve-readback, then 6.3. This record does not claim stage_run or native admission."
     },
     "startup_recovery_software": {
       "status": "PASS_SCOPED_OFFLINE",
@@ -2865,7 +2865,7 @@
       "status": "PASS_SOURCE_UPLOADED_AND_REMOTE_HASH_VERIFIED",
       "source_head": "15e7bea61e9ef06b29d9a51f55fcddebcb773b7a",
       "checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json",
-      "next_action": "Await exact-source upload authorization; continue local recovery driver and solve-readback/W23 implementation.",
+      "next_action": "Source upload and all 107 remote hash checks are complete under the user's persistent project-source upload authorization. Finish safe-error/held-handle driver diagnostics, then have main review a fresh single recovery request against the latest quiescence observations. Never replay the prior request. The already-authorized short-path chain must wait for durable reconciliation of the original operation.",
       "source_files": 104,
       "archive_members": 107,
       "archive_bytes": 942059,
@@ -2896,6 +2896,23 @@
         "verification_exit_code": 0,
         "extraction_output_capture": "Local UTF-8 decoding failed after the extraction call; no replay. Subsequent independent read-only comparison verified every archive member and exact destination file set."
       }
+    },
+    "source_lineage_note": "9c5ced6 is the historical Windows6.4 V2 candidate baseline; 15e7bea is the uploaded recovery-driver source; 9d5aab1 is the separately prepared solve-readback source. The latter remains software-only and native NOT_RUN.",
+    "recovery_readonly_audit": {
+      "status": "OBSERVED_READ_ONLY",
+      "permission_receipt_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-recovery-15e7bea/project_permissions_readonly_20260929T052724Z.json",
+      "permission_receipt_sha256": "89100826e6194e9fb08302fcf6054ea0d9339b2d57b4a60327a7cc6a134b66e3",
+      "project_policy": {
+        "inspect": true,
+        "project_write": true,
+        "compute": false,
+        "host_control": true,
+        "trusted_code": true
+      },
+      "recovery_request_rows": 0,
+      "total_operations": 2,
+      "route_conclusion": "At source 15e7bea, recover-specific writes follow store.begin; the absent row means no durable recover operation was created. Startup reconcile_after_restart independently explains RECONCILING. Exact failure cause remains unknown because the driver dropped response error details.",
+      "native_status": "NOT_RUN"
     }
   },
   "windows64_current_daemon_readonly": {
@@ -2926,7 +2943,7 @@
     "final_junit_sha256": "92d98fac7a54f0c2af47860df3ee8f5644f7b8722a0bc6f2c90e0765e3cacb8e",
     "reproduce": "PYTHONDONTWRITEBYTECODE=1 /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -B -m pytest -q tests/test_run_w21_stage_native.py -p no:cacheprovider --basetemp=/Volumes/CTestEff/g --junitxml=/Volumes/CTestEff/w21-session-start-recovery-module-final-20260929T165000Z/junit.xml",
     "limits": "Synthetic stdio transport only; original Windows V2 operation remains UNKNOWN, no native startup/result acceptance.",
-    "next_action": "Finish review of the one-shot recovery driver against frozen15e7bea; source is uploaded and all107 archive members verified remotely. Back up original SQLite before controller startup, record controller auto-reconciliation separately, and dispatch existing session.recover once. Preserve UNKNOWN history and no replay. After actual safe reconciliation, execute the bounded new short-root Windows6.4 start/connect/solve/readback comparison, then6.3 and W23-W26."
+    "next_action": "The 58-case offline runner review is complete. The separate real session.recover attempt returned is_error=true with no operation ID, and no durable recovery row was recorded; its exact error details were lost. Finish safe-error/held-handle diagnostics, then have main review a fresh single recovery request against the latest quiescence observations. Never replay the prior request; do not start native work before durable reconciliation of the original operation."
   },
   "project_source_upload_authorization": {
     "status": "USER_APPROVED",
