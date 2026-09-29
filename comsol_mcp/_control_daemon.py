@@ -49,6 +49,7 @@ from ._session_context import (
     SessionIdentityConflict,
     active_session_context,
     use_session_context,
+    runtime_state_root,
 )
 from ._session_server import ManagedServerHandle, OwnedServerError, OwnedServerLauncher
 from ._session_lifecycle import (
@@ -3572,7 +3573,7 @@ class ControlDaemon:
         from ._java_worker import JavaWorkerPaths
         from ._runtime_installation import inspect_installation
 
-        state_root = self.home / "session-runtime-state"
+        state_root = runtime_state_root(self.home, platform_name=platform.system())
         if state_root.is_symlink():
             raise ExecutionContractError("PERMISSION_DENIED", "session runtime state root cannot be a symlink")
         state_root.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -6400,7 +6401,7 @@ class ControlDaemon:
         if len(java_homes) != 1:
             raise RuntimeError("one exact local Java home could not be resolved")
 
-        state_root = self.home / "session-runtime-state"
+        state_root = runtime_state_root(self.home, platform_name=platform.system())
         if state_root.is_symlink() or not state_root.is_dir():
             raise RuntimeError("task session-state root is missing or redirected")
         state_root = state_root.resolve(strict=True)

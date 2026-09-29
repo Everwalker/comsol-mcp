@@ -13,6 +13,7 @@ from contextvars import ContextVar, copy_context
 from dataclasses import dataclass, field
 import hashlib
 import ipaddress
+import os
 from pathlib import Path
 import threading
 from typing import Any, Callable, ClassVar, Iterator
@@ -208,6 +209,39 @@ def session_state_directory(state_root: Path, project_id: str, session_id: str) 
     if not home.is_relative_to(root) or home.parent != sessions_root.resolve():
         raise SessionContextError("derived session directory escapes its state root")
     return home
+
+
+def runtime_state_root(control_home: Path, *, platform_name: str | None = None) -> Path:
+    """Select this control home’s session-state layout without migrating it.
+
+    New Windows homes use the short ``s`` directory because COMSOL creates
+    recovery files below the owned Server tree. Existing legacy homes retain
+    ``session-runtime-state``. If both layouts exist, callers cannot safely
+    infer which one owns a persisted session, so selection fails closed.
+    """
+    if not isinstance(control_home, Path):
+        raise SessionContextError("control home must be a Path")
+    name = platform_name if platform_name is not None else os.name
+    is_windows = str(name).casefold() in {"nt", "win32", "windows"}
+    legacy = control_home / "session-runtime-state"
+    if not is_windows:
+        if legacy.is_symlink():
+            raise SessionContextError("legacy session-state root cannot be a symlink")
+        return legacy
+
+    short = control_home / "s"
+    for candidate in (legacy, short):
+        if candidate.is_symlink():
+            raise SessionContextError("session-state root cannot be a symlink")
+        if candidate.exists() and not candidate.is_dir():
+            raise SessionContextError("session-state root must be a directory")
+    legacy_exists = legacy.is_dir()
+    short_exists = short.is_dir()
+    if legacy_exists and short_exists:
+        raise SessionContextError("legacy and short session-state roots are ambiguous")
+    if legacy_exists:
+        return legacy
+    return short
 
 
 @dataclass

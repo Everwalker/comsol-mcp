@@ -26,6 +26,7 @@ from comsol_mcp._session_context import (
     SessionSchedulerClosed,
     capture_session_callback,
     current_session_context,
+    runtime_state_root,
     use_session_context,
 )
 from comsol_mcp._managed_backend import ManagedBackend
@@ -204,6 +205,35 @@ def test_runtime_classpath_is_a_real_immutable_tuple():
             preferences_dir=Path("/tmp/prefs"),
             session_state_root=Path("/tmp/state"),
         )
+
+
+def test_runtime_state_root_uses_short_new_windows_layout_and_preserves_legacy(tmp_path):
+    control_home = tmp_path / "control-home"
+    assert runtime_state_root(control_home, platform_name="Windows") == control_home / "s"
+    assert runtime_state_root(control_home, platform_name="Linux") == (
+        control_home / "session-runtime-state"
+    )
+
+    # Existing legacy homes remain on their original tree; selection does not
+    # copy or rename a session into the shorter Windows layout.
+    legacy = control_home / "session-runtime-state"
+    legacy.mkdir(parents=True)
+    assert runtime_state_root(control_home, platform_name="Windows") == legacy
+
+    (control_home / "s").mkdir()
+    with pytest.raises(SessionContextError, match="ambiguous"):
+        runtime_state_root(control_home, platform_name="Windows")
+
+
+def test_runtime_state_root_rejects_redirected_windows_layout(tmp_path):
+    control_home = tmp_path / "control"
+    control_home.mkdir()
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (control_home / "s").symlink_to(outside, target_is_directory=True)
+
+    with pytest.raises(SessionContextError, match="symlink"):
+        runtime_state_root(control_home, platform_name="Windows")
 
 
 def test_lazy_client_factories_and_disconnect_are_session_local(monkeypatch):

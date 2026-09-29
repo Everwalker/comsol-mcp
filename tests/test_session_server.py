@@ -13,6 +13,7 @@ import pytest
 from comsol_mcp._platform_process import process_identity
 from comsol_mcp._session_context import (
     CanonicalSocket, OwnedServerProcessIdentity, SessionRuntimeConfig,
+    runtime_state_root,
     session_state_directory,
 )
 from comsol_mcp._session_server import (
@@ -117,12 +118,22 @@ def test_windows_server_budget_uses_full_hashed_session_suffix_and_fails_closed(
     assert budget["command_line_limit_utf16_units_including_nul"] == 32767
     assert budget["path_utf16_units_including_nul"]["launcher"] <= 260
     assert budget["path_utf16_units_including_nul"]["critical_image_library"] <= 260
+    assert budget["path_utf16_units_including_nul"]["native_recovery_solution_file"] <= 260
     assert budget["path_utf16_units_including_nul"]["owned_server_cwd"] <= 260
     assert budget["command_line_utf16_units_including_nul"] < 32767
     assert len(state_root.parent.parent.name) == 16
     assert len(session_root.name) == 64
     assert all(char in "0123456789abcdef" for char in session_root.name)
     assert not state_root.exists()
+
+    legacy_root = state_root.parent / "session-runtime-state"
+    legacy_recovery_file = (
+        session_state_directory(legacy_root, "project", "session") / "owned-server" /
+        "recovery" / "MPHRecovery9999999999date Sep 29 2026 10-04 PM.mph" /
+        f"solution{'9' * 20}.mphbin{'9' * 20}"
+    )
+    assert (_utf16_units_with_nul(str(legacy_recovery_file))
+            == budget["path_utf16_units_including_nul"]["native_recovery_solution_file"] + 20)
 
     deep_home = tmp_path / ("r" * 120) / ("s" * 120) / "h" / "0123456789abcdef"
     deep_state_root = deep_home / "control-private" / "session-runtime-state"
@@ -146,8 +157,50 @@ def _windows_state_root_for_test(anchor: str, padding: int) -> Path:
     if padding:
         parts.append(Path("x" * padding))
     parts.extend((Path("w21-budget"), Path("h"), Path("0123456789abcdef"),
-                  Path("control-private"), Path("session-runtime-state")))
-    return Path(*parts)
+                  Path("control-private")))
+    return runtime_state_root(Path(*parts), platform_name="Windows")
+
+
+def test_windows_native_recovery_path_budget_covers_pid_and_long_filename_maxima(tmp_path):
+    state_root = _windows_state_root_for_test(tmp_path.anchor, 0)
+    budget = windows_owned_server_path_budget(state_root, "project", "session")
+    measured = budget["path_utf16_units_including_nul"]["native_recovery_solution_file"]
+    session_root = session_state_directory(state_root, "project", "session")
+    recovery_file = (
+        session_root / "owned-server" / "recovery" /
+        "MPHRecovery9999999999date Sep 29 2026 10-04 PM.mph" /
+        f"solution{'9' * 20}.mphbin{'9' * 20}"
+    )
+    assert measured == _utf16_units_with_nul(str(recovery_file))
+    assert measured <= 260
+
+
+def test_windows_native_recovery_path_overflow_fails_closed(tmp_path):
+    state_root = None
+    for padding in range(0, 180):
+        candidate = _windows_state_root_for_test(tmp_path.anchor, padding)
+        root = session_state_directory(candidate, "project", "session") / "owned-server"
+        native_file = (
+            root / "recovery" /
+            "MPHRecovery9999999999date Sep 29 2026 10-04 PM.mph" /
+            f"solution{'9' * 20}.mphbin{'9' * 20}"
+        )
+        others = {
+            "launcher": root / "installation" / "bin" / "win64" / "comsolmphserver.exe",
+            "critical_image_library": (
+                root / "installation" / "ext" / "graphicsmagick" /
+                "win64" / "CORE_RL_magick_.dll"
+            ),
+        }
+        if (_utf16_units_with_nul(str(native_file)) > 260
+                and all(_utf16_units_with_nul(str(path)) <= 260 for path in others.values())):
+            state_root = candidate
+            break
+    assert state_root is not None, "test root must isolate native recovery path overflow"
+
+    with pytest.raises(OwnedServerError, match="path budget exceeded: native_recovery_solution_file"):
+        windows_owned_server_path_budget(state_root, "project", "session")
+    assert not state_root.exists()
 
 
 def test_windows_image_library_path_budget_rejects_before_birth_when_launcher_fits(tmp_path):
@@ -205,10 +258,11 @@ def test_windows_server_budget_counts_exact_260_boundary_without_claiming_launch
             break
     assert state_root is not None, "test root must represent the exact counted boundary"
 
-    budget = windows_owned_server_path_budget(state_root, "project", "session")
-    lengths = budget["path_utf16_units_including_nul"]
-    assert lengths["critical_image_library"] == 260
-    assert lengths["launcher"] <= 260
+    paths = _windows_server_paths_for_test(state_root)
+    assert _utf16_units_with_nul(str(paths["critical_image_library"])) == 260
+    assert _utf16_units_with_nul(str(paths["launcher"])) <= 260
+    with pytest.raises(OwnedServerError, match="path budget exceeded: native_recovery_solution_file"):
+        windows_owned_server_path_budget(state_root, "project", "session")
 
 
 def test_windows_owned_launcher_passes_exact_validated_executable_to_popen(tmp_path):
@@ -216,8 +270,10 @@ def test_windows_owned_launcher_passes_exact_validated_executable_to_popen(tmp_p
     executable = source / "bin/win64/comsolmphserver.exe"
     executable.parent.mkdir(parents=True)
     executable.write_bytes(b"synthetic Windows launcher")
-    state_root = (tmp_path.parent / "s" / "h" / "0123456789abcdef" /
-                  "control-private" / "session-runtime-state")
+    state_root = runtime_state_root(
+        tmp_path.parent / "h" / "0123456789abcdef" / "control-private",
+        platform_name="Windows",
+    )
     runtime = SessionRuntimeConfig(
         runtime_id="fixture-runtime", comsol_version="6.4.0.293",
         installation_root=source, java_executable=tmp_path / "jdk/bin/java.exe",

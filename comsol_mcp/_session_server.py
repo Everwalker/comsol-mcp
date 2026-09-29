@@ -368,6 +368,15 @@ def windows_owned_server_path_budget(session_state_root: Path, project_id: str,
         "recovery": directories.recovery,
         "logs": directories.logs,
         "log_file": directories.log_file,
+        # COMSOL writes solver output below recovery using its PID and two
+        # generated Java-long decimal values. Budget the observed filename
+        # shape at the maximum widths (10 PID digits, 20 digits per long),
+        # rather than checking only the recovery directory itself.
+        "native_recovery_solution_file": (
+            directories.recovery /
+            "MPHRecovery9999999999date Sep 29 2026 10-04 PM.mph" /
+            f"solution{'9' * 20}.mphbin{'9' * 20}"
+        ),
     }
     path_units = {name: _utf16_units_with_nul(str(path))
                   for name, path in path_values.items()}

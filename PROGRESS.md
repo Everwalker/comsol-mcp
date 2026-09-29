@@ -22,12 +22,12 @@ The earlier 6.3 interrupted start was safely reconciled by one public `session.r
 
 ## Accepted software evidence
 
-The latest start RPC wait-parameter repair passed 118 runner tests (0 failures/errors/skips), including an assertion on the actual start request. Prior longer-path test attempts failed fixture path budgets and remain on SSD; the final short-path run passed. The preceding bounded-observation repair also passed 118 runner tests, including 6 focused cases. The preceding path/Worker-envelope/revision repair passed 127 affected tests, including real production registration, result-construction and ledger paths. Earlier backend, session, project and recovery checks remain in the [software checkpoint](docs/full_project_execution/project_session/PRODUCTION_RUNNER_SOFTWARE_CHECKPOINT.json), with reproduction commands and hashes. Counts overlap and are not additive. Software tests alone do not establish native or physical acceptance; the scoped native result is recorded separately above.
+The latest shared Windows path repair passed 298 tests across session context, Server, daemon sessions and runner (0 failures/errors/skips). It preserves legacy roots and checks the native recovery-file path under the unchanged 260-unit limit. The preceding start RPC wait-parameter repair passed 118 runner tests (0 failures/errors/skips), including an assertion on the actual start request. Prior longer-path test attempts failed fixture path budgets and remain on SSD; the final short-path run passed. The preceding bounded-observation repair also passed 118 runner tests, including 6 focused cases. The preceding path/Worker-envelope/revision repair passed 127 affected tests, including real production registration, result-construction and ledger paths. Earlier backend, session, project and recovery checks remain in the [software checkpoint](docs/full_project_execution/project_session/PRODUCTION_RUNNER_SOFTWARE_CHECKPOINT.json), with reproduction commands and hashes. Counts overlap and are not additive. Software tests alone do not establish native or physical acceptance; the scoped native result is recorded separately above.
 
 ## Next action
 
-1. Repair only the necessary Windows runtime-state path layout and existing path-budget coverage, preserving old sessions and full identity hashes.
-2. Run relevant software checks, then a new isolated Windows 6.3 canonical solve/readback/cleanup attempt under unchanged budgets. Path preflight alone is not native acceptance.
+1. Software repair passed 298 tests; freeze the reviewed shared path candidate.
+2. Verify the same candidate natively in Windows 6.4, then 6.3, including solve/readback/cleanup under unchanged budgets. Path preflight alone is not native acceptance.
 3. Preserve both historical UNKNOWN attempts and separate metadata/mapping/physical gaps; unrelated capability expansion stays paused this round.
 
 ## Remaining project scope

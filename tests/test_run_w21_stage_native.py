@@ -27,6 +27,7 @@ from comsol_mcp._control_daemon import ControlDaemon
 from comsol_mcp._execution_contract import ExecutionContractError, SessionLedger, model_ref_from_mapping
 from comsol_mcp._execution_service import ExecutionService
 from comsol_mcp._g2_code import describe_source, execution_result
+from comsol_mcp._session_context import runtime_state_root
 
 
 REPOSITORY = Path(__file__).resolve().parents[1]
@@ -40,18 +41,19 @@ SPEC.loader.exec_module(runner)
 def _plan(tmp_path: Path, *, worker_epoch: int = 7,
           mode: str = runner.METADATA_MODE) -> dict:
     root = REPOSITORY
+    task_root = tmp_path.parent
     run_root = tmp_path / "run"
     workspace_root = run_root / "workspaces"
     workspace_root.mkdir(parents=True)
-    server_home_root = tmp_path / "h"
-    server_home_root.mkdir()
-    server_home_id = "0123456789abcdef"
+    server_home_root = task_root / "h"
+    server_home_root.mkdir(exist_ok=True)
+    server_home_id = hashlib.sha256(str(tmp_path).encode("utf-8")).hexdigest()[:16]
     server_home = server_home_root / server_home_id
     plan = {
         "schema": runner._mode_schema(mode), "mode": mode, "kind": runner._mode_kind(mode),
         "run_id": "w21-test-run",
         "run_root": str(run_root),
-        "task_root": str(tmp_path),
+        "task_root": str(task_root),
         "server_home_root": str(server_home_root),
         "server_home_id": server_home_id,
         "server_home_path_budget": runner._server_home_budget(server_home),
@@ -1043,8 +1045,8 @@ def test_compute_policy(mode, compute_allowed, tmp_path, monkeypatch):
     _patch_isolation(monkeypatch)
     runner_root = tmp_path / "runner"
     runner_root.mkdir()
-    plan = _plan(runner_root, mode=mode)
-    state = _state(runner_root, schema=runner._mode_schema(mode))
+    plan = _plan(tmp_path, mode=mode)
+    state = _state(tmp_path, schema=runner._mode_schema(mode))
     fake = _FakeStdioSession(plan, state)
     asyncio.run(runner.run_metadata_protocol(
         runner._MCPCalls(fake), plan, state, clock=lambda: 100.0, preflight=lambda: [],
@@ -1097,8 +1099,7 @@ def test_srb_eval_revision_advance_is_bound_into_the_report(tmp_path, monkeypatc
 
 def test_srb_freeze(tmp_path, monkeypatch):
     _patch_prepare_environment(monkeypatch)
-    evidence = tmp_path / "e"
-    evidence.mkdir()
+    evidence = tmp_path.parent
     result = runner.prepare(
         version="6.4", mode=runner.SOLVE_READBACK_MODE,
         comsol_root=tmp_path / "COMSOL64", jdk_home=tmp_path / "JDK11",
@@ -1130,7 +1131,7 @@ def test_srb_freeze(tmp_path, monkeypatch):
     }), encoding="utf-8")
     metadata_step = runner.prepare(
         version="6.3", comsol_root=tmp_path / "COMSOL63", jdk_home=tmp_path / "JDK11",
-        evidence_root=evidence, server_home_root=evidence / "h63",
+        evidence_root=evidence, server_home_root=evidence / "r",
         prerequisite_64_receipt=metadata_receipt,
     )
     assert metadata_step["plan"]["mode"] == runner.METADATA_MODE
@@ -1140,7 +1141,7 @@ def test_srb_freeze(tmp_path, monkeypatch):
         runner.prepare(
             version="6.3", mode=runner.SOLVE_READBACK_MODE,
             comsol_root=tmp_path / "COMSOL63", jdk_home=tmp_path / "JDK11",
-            evidence_root=evidence, server_home_root=evidence / "h63-solve",
+            evidence_root=evidence, server_home_root=evidence / "q",
             prerequisite_64_receipt=metadata_receipt,
         )
 
@@ -1359,10 +1360,9 @@ def test_srb_receipt_gate_requires_durable_solve_capture_and_cleanup(tmp_path):
 
 def test_prepare_freezes_full_source_identity_without_starting_services(tmp_path, monkeypatch):
     _patch_prepare_environment(monkeypatch)
-    # Keep the test-owned path compact enough for the frozen Windows DLL
-    # MAX_PATH preflight, independent of pytest's test-function temp prefix.
-    evidence = tmp_path / "e"
-    evidence.mkdir()
+    # Use the short basetemp itself; run IDs and server-home IDs provide
+    # per-prepare uniqueness without adding test-function path length.
+    evidence = tmp_path.parent
 
     result = runner.prepare(version="6.4", comsol_root=tmp_path / "COMSOL64",
                             jdk_home=tmp_path / "JDK11", evidence_root=evidence,
@@ -1386,6 +1386,12 @@ def test_prepare_freezes_full_source_identity_without_starting_services(tmp_path
     assert len(plan["server_home_id"]) == 16
     assert plan["server_home_path_budget"]["command_line_utf16_units_including_nul"] <= 32767
     assert max(plan["server_home_path_budget"]["path_utf16_units_including_nul"].values()) <= 260
+    expected_state_root = runtime_state_root(
+        Path(plan["server_home"]) / "control-private", platform_name="Windows",
+    )
+    assert expected_state_root.name == "s"
+    assert (plan["server_home_path_budget"]["path_utf16_units_including_nul"]["session_state_root"]
+            == len(str(expected_state_root).encode("utf-16-le")) // 2 + 1)
     assert result["status"] == "PREPARED_ONLY"
     assert not Path(plan["project_workspace"]).exists()
     assert not Path(plan["server_home"]).exists()
@@ -1395,8 +1401,7 @@ def test_prepare_freezes_full_source_identity_without_starting_services(tmp_path
 def test_prepare_accepts_explicit_short_runtime_root_inside_task(tmp_path, monkeypatch):
     _patch_prepare_environment(monkeypatch)
     # Exercise a genuinely short requested root without inheriting long labels.
-    evidence = tmp_path / "t"
-    evidence.mkdir()
+    evidence = tmp_path.parent
     requested_root = evidence / "r"
     result = runner.prepare(version="6.4", comsol_root=tmp_path / "COMSOL64",
                             jdk_home=tmp_path / "JDK11", evidence_root=evidence,
@@ -1409,8 +1414,7 @@ def test_prepare_accepts_explicit_short_runtime_root_inside_task(tmp_path, monke
 
 def test_prepare_assigns_distinct_uncreated_runtime_homes_per_run(tmp_path, monkeypatch):
     _patch_prepare_environment(monkeypatch)
-    evidence = tmp_path / "task"
-    evidence.mkdir()
+    evidence = tmp_path.parent
     first = runner.prepare(version="6.4", comsol_root=tmp_path / "COMSOL64",
                            jdk_home=tmp_path / "JDK11", evidence_root=evidence)
     second = runner.prepare(version="6.4", comsol_root=tmp_path / "COMSOL64",
@@ -1646,8 +1650,7 @@ def test_prepare_bind_root(tmp_path, monkeypatch):
         return resolved
 
     monkeypatch.setattr(runner, "_bind_candidate_source", record_binding)
-    evidence = tmp_path / "e"
-    evidence.mkdir()
+    evidence = tmp_path.parent
     prepared = runner.prepare(
         version="6.4", comsol_root=tmp_path / "COMSOL64",
         jdk_home=tmp_path / "jdk", evidence_root=evidence,
@@ -1736,13 +1739,12 @@ def test_freeze_reads_current_public_stdio_and_logical_query_schemas(monkeypatch
 
 
 def test_verify_plan_rejects_hash_mismatch_and_source_manifest_drift(tmp_path, monkeypatch):
-    task_root = tmp_path / "task"
-    task_root.mkdir()
-    run_root = task_root / "run"
-    run_root.mkdir()
+    task_root = tmp_path.parent
+    run_root = tmp_path / "task" / "run"
+    run_root.mkdir(parents=True)
     server_home_root = task_root / "h"
-    server_home_root.mkdir()
-    server_home_id = "0123456789abcdef"
+    server_home_root.mkdir(exist_ok=True)
+    server_home_id = hashlib.sha256(str(tmp_path).encode("utf-8")).hexdigest()[:16]
     server_home = server_home_root / server_home_id
     plan = {
         "schema": runner.SCHEMA, "mode": runner.METADATA_MODE,

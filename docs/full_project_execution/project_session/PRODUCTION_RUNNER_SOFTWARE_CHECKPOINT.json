@@ -564,5 +564,46 @@
     "reproduce": "Run tests/test_run_w21_stage_native.py with the existing project Python, no pytest cache and a new one-character /Volumes/CTestEff/<unused> basetemp. Never reuse an existing directory.",
     "prior_test_attempts": "Longer basetemp paths failed existing Windows path-budget fixture checks. Failed logs remain on external SSD; final one-character path passed 118 tests.",
     "native_acceptance": "NOT_RUN_FOR_THIS_CHANGE; no root-cause-resolution claim"
+  },
+  "windows_native_solver_path_repair_20260929": {
+    "status": "PASS_SOFTWARE_ONLY",
+    "tests": 298,
+    "receipt": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-solver-path-shortroot-final2-20260929/receipt.json",
+    "receipt_sha256": "4abeea964ba74e6ad697fbd563489b80c77dc40c93c7a9938320bbaac6de3cdc",
+    "junit": {
+      "errors": 0,
+      "failures": 0,
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-solver-path-shortroot-final2-20260929/focused.xml",
+      "sha256": "6d1d772717081dc938541264f84b3a8903c7981f2d4404ec0cef07cad52b2792",
+      "skipped": 0,
+      "unique_testcases": 298
+    },
+    "source_sha256": {
+      "comsol_mcp/_control_daemon.py": "399dd10eb5fa043ff9624b3606e77769badc37888e7894e050e8f653c96e220a",
+      "comsol_mcp/_session_context.py": "6c1222cdeaed6f14208f4ead0f9b82beccf96b7c1a445d0a8b43107878e2406d",
+      "comsol_mcp/_session_server.py": "f6404e5fcf970446d8b10b16586b5e91d73ea2be5b36ddaa0caf25c6c21de8fd",
+      "tests/test_control_daemon_sessions.py": "94f78b7ff81c35b217e9b177971207ac95b37ded10a4ee5c6b7ff81b2eb7f12b",
+      "tests/test_run_w21_stage_native.py": "dda081549270429921c775bb377e213b3344c2bc5df4a8100195177a332dbafe",
+      "tests/test_session_context.py": "5ca27f69b8f0ce1592413e3a7cc5d04618ab293d7ba2a3cba3ead9b8ea9bfd17",
+      "tests/test_session_server.py": "dda18e07e32ec291b56716aee1adbf0179b06ce4931bea4d66d3da47daf1e321",
+      "tools/run_w21_stage_native.py": "e02e3e804f9f6d70abf069bffc89b21f950468fb229e4719b1d7c3daeda26ce3"
+    },
+    "reproduction": [
+      "/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python",
+      "-B",
+      "-m",
+      "pytest",
+      "tests/test_session_context.py",
+      "tests/test_session_server.py",
+      "tests/test_control_daemon_sessions.py",
+      "tests/test_run_w21_stage_native.py",
+      "--basetemp",
+      "/Volumes/CTestEff/o",
+      "--junitxml",
+      "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-solver-path-shortroot-final2-20260929/focused.xml",
+      "-q"
+    ],
+    "main_review": "Shared Windows short state root, legacy-root preservation, ambiguous/redirected root refusal, actual recovery filename path budget, and unchanged 260 guard reviewed. Final four-module regression/source fingerprints verified. Prior path-fixture failures retained. No native PASS inferred.",
+    "native_execution": "NOT_RUN_FOR_THIS_CHANGE"
   }
 }

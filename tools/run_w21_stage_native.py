@@ -583,6 +583,7 @@ def _task_owned_server_home_root(task_root: Path, requested: Path | None, *,
 def _server_home_budget(server_home: Path) -> dict[str, Any]:
     try:
         from comsol_mcp._session_server import windows_owned_server_path_budget
+        from comsol_mcp._session_context import runtime_state_root
     except ModuleNotFoundError as exc:
         module = exc.name if isinstance(exc.name, str) else "unknown"
         if re.fullmatch(r"[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*", module) is None:
@@ -593,9 +594,11 @@ def _server_home_budget(server_home: Path) -> dict[str, Any]:
         # The real project/session IDs are assigned after public project.create.
         # The shared session_state_directory helper makes their hash exactly 64
         # hex characters, so any fixed labels produce the exact path length.
+        state_root = runtime_state_root(
+            Path(server_home) / "control-private", platform_name="Windows",
+        )
         return windows_owned_server_path_budget(
-            Path(server_home) / "control-private" / "session-runtime-state",
-            "w21-preflight-project", "w21-preflight-session",
+            state_root, "w21-preflight-project", "w21-preflight-session",
         )
     except Exception as exc:
         if isinstance(exc, RunnerError):

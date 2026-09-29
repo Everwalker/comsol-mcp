@@ -54,6 +54,48 @@ def _create_project(daemon: ControlDaemon, label: str) -> dict:
     return response["data"]["project"]
 
 
+def test_windows_runtime_resolution_uses_shared_short_root_and_keeps_existing_legacy(tmp_path, monkeypatch):
+    workspace = tmp_path / "workspaces"
+    workspace.mkdir()
+    resolver = lambda runtime_id, _project, _session, _root, state_root: SessionRuntimeConfig(
+        runtime_id=runtime_id, comsol_version="6.4.0.293",
+        installation_root=tmp_path / "COMSOL64",
+        java_executable=tmp_path / "jdk" / "bin" / "java.exe",
+        classpath=(tmp_path / "COMSOL64" / "client.jar",),
+        preferences_dir=state_root / "preferences",
+        session_state_root=state_root,
+    )
+    monkeypatch.setattr("comsol_mcp._control_daemon.platform.system", lambda: "Windows")
+    daemon = ControlDaemon(
+        tmp_path / "control", project_root=workspace, registry={},
+        session_runtime_resolver=resolver,
+    )
+    try:
+        runtime = daemon._resolve_session_runtime(
+            "fixture-runtime", "project-new", "session-new", workspace,
+        )
+        assert runtime.session_state_root == tmp_path / "control" / "s"
+        assert runtime.session_state_root.is_dir()
+    finally:
+        daemon.close()
+
+    # If the legacy root already exists, a daemon for that home continues to
+    # resolve the old location instead of silently starting a parallel tree.
+    legacy_home = tmp_path / "legacy-control"
+    legacy = legacy_home / "session-runtime-state"
+    legacy.mkdir(parents=True)
+    legacy_daemon = ControlDaemon(
+        legacy_home, project_root=workspace, registry={}, session_runtime_resolver=resolver,
+    )
+    try:
+        runtime = legacy_daemon._resolve_session_runtime(
+            "fixture-runtime", "project-old", "session-old", workspace,
+        )
+        assert runtime.session_state_root == legacy
+    finally:
+        legacy_daemon.close()
+
+
 def _record(daemon: ControlDaemon, project_id: str, session_id: str, *, state="CONNECTED") -> dict:
     return daemon.session_lifecycle.save(new_lifecycle_record(
         project_id=project_id,
