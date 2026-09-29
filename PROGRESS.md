@@ -4,11 +4,11 @@
 
 ## Current Windows 6.4 state
 
-**PARTIAL:** latest native run `w21-64-20260929T130508Z-abd555f3`, source `30a3f10`, freeze `1251c40a…5df79d`, exited 2. Native fixture construction, one study/solver execution and solution-index read succeeded. A read-only durable lookup confirms the original temperature-field job also **SUCCEEDED**: T in K, shape `[1,1,5,70874]`, exact session/ModelRef at revision 4, temporary Eval node verified removed. The persisted result is 45,447,416 bytes.
+**PASS — scoped canonical Windows 6.4 native chain.** Run `w21-64-20260929T132007Z-820b0f09`, runtime source `2bdcc75`, COMSOL 6.4.0 build 293, exited 0. Public MCP start/connect/model construction → one solve → exact solution-index read → full temperature field readback → owned cleanup all completed. Field shape is `[1,1,5,637]`, unit readback K, selected tuple `(outer=1, inner=5, solnum=5)`; selected values are approximately 300–304.380 K. The complete field response was 375,596 bytes under the unchanged 45s RPC wait and native budgets. Returned-field hashes and request/model/revision bindings were checked by the main Agent.
 
-Public field delivery timed out, so runner state remains **UNKNOWN** and owned lifecycle cleanup was not dispatched. No result reread or replay was issued. A subsequent read-only check verified all 69 Worker requests terminal with matching IDs/hashes; complete process and 56-row listener inventories had zero task/canonical/unresolved matches. This establishes current-host quiet, not historical owned-exit or full-chain PASS. The original runner UNKNOWN is preserved. Exact evidence: [latest native checkpoint](docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json#native_attempt_20260929T130508Z). Windows 6.3 remains **NOT_RUN**.
+Cleanup is proven for the exact owned Server PID 2796/birth: child reaped, exit confirmed, listener absent; Worker retired and temporary Eval node verified removed. [Canonical 6.4 checkpoint](docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json#canonical_native_chain_windows64) contains the compact result, exact fingerprints, reproduction entry and local receipt identities. **Windows 6.3 remains NOT_RUN** and is next.
 
-The auxiliary structural probe is explicitly RAW_UNINTERPRETED/PARTIAL (`TABLE_ROW_LIMIT_EXCEEDED`); its limits and complete metadata-only acceptance remain unchanged. Native field production is now demonstrated, while public delivery and canonical cleanup remain incomplete.
+This is minimal coarse-mesh (`hauto=9`) production-chain acceptance only. The auxiliary structural probe remains RAW_UNINTERPRETED/PARTIAL. Actual spatial coordinates, intrinsic mesh mapping, stage-transfer admission, numerical convergence and physical validation are not established. The preceding fine-mesh run produced a real 45MB field result but its public reply timed out; its runner UNKNOWN remains preserved and current-host quiescence was separately verified. It is not retroactively counted as a complete chain.
 
 The preceding `a3c2af8` artifact job remains UNKNOWN: its public ENGINE_UNRESPONSIVE reply omitted the ambiguity flag, leading the runner to complete cleanup. Later read-only complete process/listener inventories confirmed current-host quiet; the original UNKNOWN remains unchanged. The missing-session and deterministic no-service refusal repairs passed 125 software tests and are included in the latest candidate.
 
@@ -16,13 +16,13 @@ Earlier failures remain preserved. Source `3133136` created native `mcp1` but it
 
 ## Accepted software evidence
 
-The session model-selection repair and UNKNOWN-code handling passed 177 backend/session/store tests and 110 runner tests. The additional authoritative project-binding repair passed 21 daemon/project/backend tests and now passes native model creation and inspection; solve/readback is still unexecuted. Earlier scoped software evidence: localized version parsing 109 tests, Windows listener enumeration 25, stop-only recovery 149, probe integration 98. Counts overlap and must not be added as a unique total. These results do not establish field, physical or overall acceptance. Reproduction commands and hashes: [software checkpoint](docs/full_project_execution/project_session/PRODUCTION_RUNNER_SOFTWARE_CHECKPOINT.json).
+The latest bounded-observation repair passed 118 runner tests, including 6 focused cases. The preceding path/Worker-envelope/revision repair passed 127 affected tests, including real production registration, result-construction and ledger paths. Earlier backend, session, project and recovery checks remain in the [software checkpoint](docs/full_project_execution/project_session/PRODUCTION_RUNNER_SOFTWARE_CHECKPOINT.json), with reproduction commands and hashes. Counts overlap and are not additive. Software tests alone do not establish native or physical acceptance; the scoped native result is recorded separately above.
 
 ## Next action
 
-1. Public wait is 45s; the field job persisted success in ~20.2s. Public result.evaluate cannot filter outer/inner tuples. The new smoke candidate changes only mesh hauto 2 → 9, retaining geometry, physics, materials, time grid and complete field read; no timeout/limit increase or convergence claim. Native after this fixture change is NOT_RUN.
-2. The bounded-observation repair passed 118 runner tests and now reached native solve/field production. The fixture parameter received main diff inspection; its next native run must validate public readback and owned cleanup.
-3. After a complete verified 6.4 canonical receipt, execute Windows 6.3. Unrelated capability expansion remains paused; overall project acceptance stays PARTIAL.
+1. Prepare Windows 6.3 using the same reviewed runtime source and the actual successful 6.4 solve/readback/cleanup receipt.
+2. Verify the 6.3 runtime identity, frozen source and unchanged budget, then execute its canonical native chain once. Do not replay historical runs.
+3. Preserve all separate PARTIAL/UNVERIFIED metadata, mapping and physical work; unrelated capability expansion stays paused this round.
 
 ## Remaining project scope
 

@@ -4,8 +4,8 @@
   "updated_at_utc": "2026-09-29T11:36:36.583380+00:00",
   "overall_status": "PARTIAL",
   "source_package_status": "PASS_MAIN_VERIFIED",
-  "native_status": "PARTIAL_NATIVE_SOLVE_FIELD_DURABLE_SUCCEEDED_PUBLIC_TRANSPORT_UNKNOWN",
-  "next_action": "Fresh canonical smoke candidate uses mesh hauto=9 instead of 2, with the same physics/materials/time grid and full result read. No budget increase or field truncation; no convergence/physical acceptance claimed.",
+  "native_status": "WINDOWS64_CANONICAL_CHAIN_SCOPED_PASS; WINDOWS63_NOT_RUN; OVERALL_PARTIAL",
+  "next_action": "Prepare Windows6.3 from the same 2bdcc75 runtime source, binding the actual successful cleaned-up 6.4 receipt; verify runtime/version/source/budget and execute once.",
   "candidate": {
     "source_commit": "9c5ced6272dd876cf9c28c6c6f73b943bd76b96c",
     "evidence_root": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-v2-20260928T235840Z-9c5ced6",
@@ -2455,5 +2455,146 @@
     "change": "hauto 2 -> 9 for minimal canonical smoke workload only; retain geometry, physics, materials, time grids and complete field read",
     "validation": "Main diff inspection only; no redundant software suite rerun for mesh-size parameter. Next actual native run is required.",
     "limitations": "No numerical convergence or physical validation claim."
+  },
+  "canonical_native_chain_windows64": {
+    "status": "PASS_SCOPED_CANONICAL_NATIVE_CHAIN",
+    "source_head": "2bdcc75bd86e66f6d2004cdbf84901d5f26f1d49",
+    "run_id": "w21-64-20260929T132007Z-820b0f09",
+    "freeze_sha256": "4a2c1df6f33b857a927c0e4788a4f8ac07df127a47c8b1f3b922eaebad2e5982",
+    "receipt_sha256": "4bc00094be2b2d732b96f46730e3a08457f4860f5b479b92977d7208bac38b6f",
+    "shape": [
+      1,
+      1,
+      5,
+      637
+    ],
+    "unit_readback": "K",
+    "selected_tuple": {
+      "inner": 5,
+      "outer": 1,
+      "solnum": 5
+    },
+    "selected_tuple_sha256": "547f45a27d4c4872995b22d4a8d32c86696cc5487a85ca7b51982c2eba022249",
+    "full_dataset_field_sha256": "3bee612b06f81b58b25a52a6b5e41b0f6c83ae771cf84636c6119da1578f1966",
+    "selected_real_min": 299.99999999999994,
+    "selected_real_max": 304.3799759431567,
+    "response_json_bytes": 375596,
+    "counts": {
+      "study_dispatch": 1,
+      "solver_dispatch": 1,
+      "solution_tuple_reads": 1,
+      "field_reads": 1
+    },
+    "cleanup": {
+      "owned_server_stopped": true,
+      "server_stop_evidence": {
+        "birth": "start_epoch_ms:1790688097363",
+        "child_reaped": true,
+        "exit_confirmed": true,
+        "listener_absent": true,
+        "pid": 2796,
+        "returncode": 1,
+        "server_stopped": true
+      },
+      "status": "CLEANUP_COMPLETE",
+      "worker_retired": true
+    },
+    "native_admission": "UNVERIFIED",
+    "physical_validation": "UNVERIFIED",
+    "probe": "PARTIAL",
+    "review": "Actual receipt/hash, request IDs, exact tuple, returned values hash, counts, identities and owned cleanup verified; not numerical convergence or stage-transfer acceptance.",
+    "engine": {
+      "build": "293",
+      "root": "C:\\Program Files\\COMSOL\\COMSOL64\\Multiphysics",
+      "runtime_id": "comsol-install:C%3A%5CProgram%20Files%5CCOMSOL%5CCOMSOL64%5CMultiphysics",
+      "server_executable_sha256": "901760d88bfb5b5f1f8dcc8a32eb4a7696d420c80d296b7341a0e48134e56a74",
+      "version": "6.4.0"
+    },
+    "remote_engine_version": "COMSOL Multiphysics 6.4 (开发版本: 293)",
+    "project_id": "6d29aa6c-7cb1-48ea-8a48-ca6e494c1f50",
+    "session_id": "session-9c40b5a61ddd4674b2abd8c26f3107c6",
+    "model_binding": {
+      "model_ref": {
+        "generation": 1,
+        "model_tag": "mcp1",
+        "schema_version": 1,
+        "server_instance_id": "d8804ff53bebd4114d0d546acee1680163d406d5eba8ce17ce952b7319e07ec3",
+        "session_id": "session-9c40b5a61ddd4674b2abd8c26f3107c6"
+      },
+      "model_tag": "mcp1",
+      "project_id": "6d29aa6c-7cb1-48ea-8a48-ca6e494c1f50",
+      "revision": 4,
+      "server_instance_id": "d8804ff53bebd4114d0d546acee1680163d406d5eba8ce17ce952b7319e07ec3",
+      "session_id": "session-9c40b5a61ddd4674b2abd8c26f3107c6",
+      "worker_epoch": 2
+    },
+    "solve_operation": {
+      "idempotency_key": "f2c7234b-386f-4cd6-a5e0-ce078366b836",
+      "job_id": "17c43b66-c389-435c-9a33-f4914e36dea8",
+      "operation_id": "a81cfd18-ab9c-4f1c-ba1c-049bf2dd3854",
+      "request_hash": "53cf38fab17bfeb57e6973472733cbdc30014fcc4c05fe0fc023550bcba2610f",
+      "request_id": "137ee192-8d5d-4eb7-bcc2-12bc895206a8",
+      "revision_after": 3,
+      "revision_before": 2
+    },
+    "tuple_readback": {
+      "dataset": "dset1",
+      "operation": {
+        "idempotency_key": "dd4504b1-fd5a-4c2b-9ba3-4126f3b045a5",
+        "job_id": "49abcf8e-9c07-440d-ae69-3e4aa50edca5",
+        "operation_id": "838d88a3-ecc0-4232-ba69-ca18031d6077",
+        "raw_binding_sha256": "b65f57432fb8a9a4b2be5a13817804921c9a84a668b0c6021c059f31a3a81341",
+        "request_hash": "238ecaaa94758a4f80184b8591366e924b453fff389ccc8f22a8f41cc048ef28",
+        "request_id": "a80c4558-4a89-492f-acda-489a9ee222ba",
+        "revision": 3
+      },
+      "solution": "sol1",
+      "source": "managed dataset.solution_indices readback; SolutionInfo.getSolnum(outer, strict)",
+      "status": "VERIFIED",
+      "target_tuple": {
+        "inner": 5,
+        "outer": 1,
+        "solnum": 5
+      }
+    },
+    "field_operation": {
+      "field_sha256": "3bee612b06f81b58b25a52a6b5e41b0f6c83ae771cf84636c6119da1578f1966",
+      "idempotency_key": "35921704-94d3-47c4-8041-8920d2559264",
+      "job_id": "613afafc-637a-4a59-8a31-aeddfaf06e63",
+      "operation_id": "75529fe7-0969-4d23-adcb-0fdd9e5d3421",
+      "request_hash": "5b563e25632590ec5c971954b50f748aa543002db5819bc0b6e6d8bda54c16e1",
+      "request_id": "d5697c47-c72e-4805-b89d-402ea7c91c77",
+      "revision_after": 4,
+      "revision_before": 3,
+      "selected_tuple_field_sha256": "547f45a27d4c4872995b22d4a8d32c86696cc5487a85ca7b51982c2eba022249",
+      "worker_observation_ref": {
+        "observation_id": "obs_7cef47754595431491cc04f528be13da",
+        "sha256": "cb34a04241272248d3692ec242f4e30ee7f09f5a9c93bf60e86df4e38f4e6165"
+      }
+    },
+    "evidence": {
+      "freeze64.json": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-smoke-mesh-w21r10/freeze64.json",
+        "sha256": "1675e26b7582a480975d9bd07ed4ee6b68dd5c992e4e093c30ae8f99aa7b0a89"
+      },
+      "state64-after-execute.json": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-smoke-mesh-w21r10/state64-after-execute.json",
+        "sha256": "9f786bbd0461d0859edf2ff28d9833591b847acea5100d4c5b049098f29afc23"
+      },
+      "solve_readback64_receipt.json": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-smoke-mesh-w21r10/solve_readback64_receipt.json",
+        "sha256": "4bc00094be2b2d732b96f46730e3a08457f4860f5b479b92977d7208bac38b6f"
+      },
+      "main-review64.json": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-smoke-mesh-w21r10/main-review64.json",
+        "sha256": "bbe12e7cf1e64418ee15e8a633a792c2616d99929898ed235551d40aa6756ae5"
+      },
+      "source-manifest.json": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-smoke-mesh-w21r10/source-manifest.json",
+        "sha256": "9905d194aaa01ac80c938f35111e33d994ab4c274ba9bf2867aab73b80c3dbed"
+      }
+    },
+    "reproduce_entry": "tools/run_w21_stage_native.py prepare --version 6.4 --mode solve-readback with explicit COMSOL/JDK/source/evidence roots; then execute the fresh freeze once. Runtime source is pinned to 2bdcc75 and fixture SHA d227053f2a7c5c00e6a9b35cc7fc63fd59af2ce4ec30780e92c6a3ad3e9e491d. Existing local/remote freeze is historical and must not be replayed.",
+    "next_action": "Prepare Windows6.3 from the same 2bdcc75 runtime source, binding the actual successful cleaned-up 6.4 receipt; verify runtime/version/source/budget and execute once."
   }
 }
