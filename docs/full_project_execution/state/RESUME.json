@@ -105,7 +105,8 @@
     "W21 Windows short-home/CreateProcess path hardening is PASS for scoped offline software: 44 focused tests pass; main independently verified four source hashes, seven JUnit hashes/counts and receipt. The earlier WinError206 Windows6.4 attempt remains FAILED terminal; native NOT_RUN and no replay/stop is claimed. See docs/full_project_execution/project_session/WINDOWS_SHORT_HOME_PATH_CHECKPOINT.json.",
     "Windows6.4 V2 source archive/freeze passed main preflight and was uploaded/executed once under authorization, but session.start returned UNKNOWN; read-only store remains RUNNING without finished/result. DLL alias exists with matching canonical hash at exactly 260 UTF-16 units including NUL, a plausible boundary but unproven root cause. control.log is 0B; daemon liveness remains UNVERIFIED pending limited user authorization after automatic review rejected PID parsing from token-bearing control.json. One Server birth possible, Worker/study/solver zero. Preserve UNKNOWN; no replay, stop or cleanup. See docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json.",
     "Added a scoped Windows W21 software preflight guard for the observed GraphicsMagick DLL alias; 57 unique server/runner/lifecycle offline tests pass. This does not diagnose or change the protected V2 session.start UNKNOWN. Receipt: /Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-critical-dll-budget-20260929/final-receipt.json SHA-256 937ea493b79fd9f440abe42c717c88e972e1958f7522c903457b0d1fc88aa35e. Native remains NOT_RUN.",
-    "Approved Windows6.4 V2 read-only control identity projection executed: recorded daemon PID 20888 was not found; native descendants/listeners remain UNVERIFIED and original operation stays UNKNOWN. No native replay/start/stop/cleanup. Historical SSH_TIMEOUT retained; bounded command transport returned successfully."
+    "Approved Windows6.4 V2 read-only control identity projection executed: recorded daemon PID 20888 was not found; native descendants/listeners remain UNVERIFIED and original operation stays UNKNOWN. No native replay/start/stop/cleanup. Historical SSH_TIMEOUT retained; bounded command transport returned successfully.",
+    "W21 runner session.start original-job recovery repaired and main-reviewed: 58 unique offline tests PASS (22 focused cases included), exact request/key/project/operation binding and no replay/post-UNKNOWN mutation. Native NOT_RUN; Windows V2 UNKNOWN remains unchanged."
   ],
   "next_action": "Read-only reconciliation of the original Windows6.4 UNKNOWN operation: correlate remaining COMSOL processes, descendants, listeners and task logs; repair startup-failure state reconciliation and separate non-sensitive process diagnostics from token storage. No restart, replay or cleanup before original-operation quiescence is established. Then perform one authorized short-root native startup comparison, followed by Windows6.4 and 6.3 start/connect/small-model solve/result readback. W23 analytic geometry work continues independently; no new acceptance gates.",
   "active_jobs": [],
@@ -2809,5 +2810,23 @@
     "native_status": "UNKNOWN_UNCHANGED",
     "native_quiescence": "UNVERIFIED",
     "checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json"
+  },
+  "w21_session_start_runner_recovery": {
+    "status": "PASS_SCOPED_OFFLINE",
+    "native_status": "NOT_RUN",
+    "capability": "session.start UNKNOWN/no-job-ID recovers original job by one project-scoped read-only query with exact request/key/project/operation binding; no replay or subsequent mutation",
+    "unique_tests_passed": 58,
+    "focused_tests_included": 22,
+    "main_verified": true,
+    "source_sha256": {
+      "tools/run_w21_stage_native.py": "a86c8f6c26369206773d4cb49af7123feecddeb086b9fb5c60de5346316101f4",
+      "tests/test_run_w21_stage_native.py": "7725b9f6d938ab6dc83aef18d0775a1f421e05eecd9ff0c2bd4ca08fe57dad85"
+    },
+    "receipt": "/Volumes/CTestEff/w21-session-start-recovery-receipt-20260929T170500Z/receipt.json",
+    "receipt_sha256": "dd1de3c73008887d3ac7e748dcad4867892c1ab8a8d8a1d729cec8dcff093e3a",
+    "final_junit": "/Volumes/CTestEff/w21-session-start-recovery-module-final-20260929T165000Z/junit.xml",
+    "final_junit_sha256": "92d98fac7a54f0c2af47860df3ee8f5644f7b8722a0bc6f2c90e0765e3cacb8e",
+    "reproduce": "PYTHONDONTWRITEBYTECODE=1 /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -B -m pytest -q tests/test_run_w21_stage_native.py -p no:cacheprovider --basetemp=/Volumes/CTestEff/g --junitxml=/Volumes/CTestEff/w21-session-start-recovery-module-final-20260929T165000Z/junit.xml",
+    "limits": "Synthetic stdio transport only; original Windows V2 operation remains UNKNOWN, no native startup/result acceptance."
   }
 }

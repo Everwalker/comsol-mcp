@@ -38,5 +38,23 @@
     "Windows breakaway failure refuses unsafe fallback (56e275f)."
   ],
   "scope": "Uses production stdio tool schemas and exact project/session/ModelRef routes. Tests stub transport/lifecycle; no target Windows prepare or native execution.",
-  "next_action": "Freeze committed current source, stage to a unique Windows project directory, run prepare only and inspect freeze before zero-solve metadata execution."
+  "next_action": "Continue exact Windows V2 UNKNOWN process/listener/log reconciliation and startup diagnostics/state repair; no replay before quiescence. Runner repair has not been deployed or tested natively.",
+  "latest_session_start_recovery_repair": {
+    "status": "PASS_SCOPED_OFFLINE",
+    "native_status": "NOT_RUN",
+    "capability": "session.start UNKNOWN/no-job-ID recovers original job by one project-scoped read-only query with exact request/key/project/operation binding; no replay or subsequent mutation",
+    "unique_tests_passed": 58,
+    "focused_tests_included": 22,
+    "main_verified": true,
+    "source_sha256": {
+      "tools/run_w21_stage_native.py": "a86c8f6c26369206773d4cb49af7123feecddeb086b9fb5c60de5346316101f4",
+      "tests/test_run_w21_stage_native.py": "7725b9f6d938ab6dc83aef18d0775a1f421e05eecd9ff0c2bd4ca08fe57dad85"
+    },
+    "receipt": "/Volumes/CTestEff/w21-session-start-recovery-receipt-20260929T170500Z/receipt.json",
+    "receipt_sha256": "dd1de3c73008887d3ac7e748dcad4867892c1ab8a8d8a1d729cec8dcff093e3a",
+    "final_junit": "/Volumes/CTestEff/w21-session-start-recovery-module-final-20260929T165000Z/junit.xml",
+    "final_junit_sha256": "92d98fac7a54f0c2af47860df3ee8f5644f7b8722a0bc6f2c90e0765e3cacb8e",
+    "reproduce": "PYTHONDONTWRITEBYTECODE=1 /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -B -m pytest -q tests/test_run_w21_stage_native.py -p no:cacheprovider --basetemp=/Volumes/CTestEff/g --junitxml=/Volumes/CTestEff/w21-session-start-recovery-module-final-20260929T165000Z/junit.xml",
+    "limits": "Synthetic stdio transport only; original Windows V2 operation remains UNKNOWN, no native startup/result acceptance."
+  }
 }

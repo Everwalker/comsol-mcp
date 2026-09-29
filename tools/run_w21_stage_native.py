@@ -793,7 +793,36 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
             if isinstance(action_record, Mapping) else None
         )
         query_target_project_id = project_id
-        if name == "project.create":
+        if name == "session.start":
+            if (not isinstance(query_target_request_id, str) or not query_target_request_id
+                    or not isinstance(query_target_idempotency_key, str) or not query_target_idempotency_key
+                    or not isinstance(project_id, str) or not project_id):
+                state.value["recovery"]["read_only_query"] = {
+                    "status": "NOT_AVAILABLE_FOR_ACTION", "action": name,
+                }
+                state.save()
+                return
+            if reported_project_id is not None and reported_project_id != project_id:
+                state.value["recovery"]["read_only_query"] = {
+                    "status": "RESPONSE_PROJECT_ID_MISMATCH", "action": name,
+                    "reported_project_id": reported_project_id,
+                    "expected_project_id": project_id,
+                }
+                state.save()
+                return
+            query_target_project_id = project_id
+            if (isinstance(reported_job_id, str) and reported_job_id
+                    and reported_project_id == project_id):
+                operation = "job.status"
+                arguments = {"job_id": reported_job_id}
+            else:
+                # The start request may have dispatched before transport loss.
+                # Search this project once; a row is attributable only if its
+                # request, key, project, and operation all match exactly.
+                operation = "job.list"
+                arguments = {"limit": 100, "project_id": project_id}
+                reported_job_id = None
+        elif name == "project.create":
             query_target_request_id = request_ids["project_create"]
             query_target_idempotency_key = keys["project_create"]
             if isinstance(reported_job_id, str) and reported_job_id:
@@ -861,8 +890,19 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
             "params_sha256": sha256_value(params), "request_id": query_id,
             "original_request_id": query_target_request_id,
             "original_idempotency_key": query_target_idempotency_key,
-            "job_id": reported_job_id if isinstance(reported_job_id, str) else None,
+            "original_operation": name,
+            "original_project_id": query_target_project_id,
+            "job_id": (reported_job_id if isinstance(reported_job_id, str)
+                       and name != "session.start" else None),
         }
+        if name == "session.start" and operation == "job.status":
+            query_record["query_job_id"] = reported_job_id
+        if name == "session.start":
+            query_record["exact_job_identity_confirmed"] = False
+            if operation == "job.list":
+                query_record["query_complete"] = False
+                query_record["matching_job_rows"] = []
+                query_record["match_resolution"] = "NOT_QUERIED"
         state.value["recovery"]["read_only_query"] = query_record
         state.save()
         try:
@@ -878,29 +918,152 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
         if operation == "job.status":
             observed_job_id = (query_data.get("job_id")
                                if isinstance(query_data, Mapping) else None)
-            observed_operation = (query_data.get("operation")
-                                  if isinstance(query_data, Mapping) else None)
-            observed_request_id = (observed_operation.get("request_id")
-                                   if isinstance(observed_operation, Mapping) else None)
-            observed_idempotency_key = (observed_operation.get("idempotency_key")
-                                        if isinstance(observed_operation, Mapping) else None)
+            observed_operation_record = (query_data.get("operation")
+                                         if isinstance(query_data, Mapping) else None)
+            observed_operation = (observed_operation_record.get("operation")
+                                  if isinstance(observed_operation_record, Mapping)
+                                  else observed_operation_record)
+            observed_request_id = (observed_operation_record.get("request_id")
+                                   if isinstance(observed_operation_record, Mapping) else None)
+            observed_idempotency_key = (observed_operation_record.get("idempotency_key")
+                                        if isinstance(observed_operation_record, Mapping) else None)
             observed_project_id = (query_data.get("project_id")
                                    if isinstance(query_data, Mapping) else None)
-            project_matches = (
-                query_target_project_id is None
-                or (isinstance(query_target_project_id, str) and query_target_project_id
-                    and observed_project_id == query_target_project_id)
-            )
-            query_record["exact_job_identity_confirmed"] = bool(
-                isinstance(query_target_request_id, str) and query_target_request_id
-                and isinstance(query_target_idempotency_key, str) and query_target_idempotency_key
-                and observed_job_id == reported_job_id
-                and observed_request_id == query_target_request_id
-                and observed_idempotency_key == query_target_idempotency_key
-                and project_matches)
+            if name == "session.start":
+                metadata = query_data.get("metadata") if isinstance(query_data, Mapping) else None
+                metadata = metadata if isinstance(metadata, Mapping) else {}
+                operation_metadata = (observed_operation_record.get("metadata")
+                                      if isinstance(observed_operation_record, Mapping) else None)
+                operation_metadata = operation_metadata if isinstance(operation_metadata, Mapping) else {}
+                observed_project_candidates = [value for value in (
+                    observed_project_id, metadata.get("project_id"),
+                    (metadata.get("execution") or {}).get("project_id")
+                    if isinstance(metadata.get("execution"), Mapping) else None,
+                    operation_metadata.get("project_id"),
+                    (operation_metadata.get("execution") or {}).get("project_id")
+                    if isinstance(operation_metadata.get("execution"), Mapping) else None,
+                ) if isinstance(value, str) and value]
+                observed_project_id = (
+                    observed_project_candidates[0]
+                    if observed_project_candidates
+                    and len(set(observed_project_candidates)) == 1 else None
+                )
+                exact = bool(
+                    query_response.get("success") is True
+                    and isinstance(query_target_request_id, str) and query_target_request_id
+                    and isinstance(query_target_idempotency_key, str) and query_target_idempotency_key
+                    and isinstance(query_target_project_id, str) and query_target_project_id
+                    and observed_job_id == reported_job_id
+                    and observed_request_id == query_target_request_id
+                    and observed_idempotency_key == query_target_idempotency_key
+                    and observed_operation == "session.start"
+                    and observed_project_id == query_target_project_id
+                )
+                query_record["observed_operation"] = observed_operation
+                query_record["exact_job_identity_confirmed"] = exact
+                if exact:
+                    query_record["job_id"] = reported_job_id
+                    if reported_job_id not in state.value.setdefault("job_ids", []):
+                        state.value["job_ids"].append(reported_job_id)
+            else:
+                project_matches = (
+                    query_target_project_id is None
+                    or (isinstance(query_target_project_id, str) and query_target_project_id
+                        and observed_project_id == query_target_project_id)
+                )
+                query_record["exact_job_identity_confirmed"] = bool(
+                    isinstance(query_target_request_id, str) and query_target_request_id
+                    and isinstance(query_target_idempotency_key, str) and query_target_idempotency_key
+                    and observed_job_id == reported_job_id
+                    and observed_request_id == query_target_request_id
+                    and observed_idempotency_key == query_target_idempotency_key
+                    and project_matches)
             query_record["observed_request_id"] = observed_request_id
             query_record["observed_idempotency_key"] = observed_idempotency_key
-        if operation == "job.list" and isinstance(query_data, Mapping):
+            query_record["observed_project_id"] = observed_project_id
+        if operation == "job.list" and name == "session.start":
+            rows = query_data.get("jobs") if isinstance(query_data, Mapping) else None
+            rows = rows if isinstance(rows, list) else []
+            has_more = query_data.get("has_more") if isinstance(query_data, Mapping) else None
+            next_cursor = query_data.get("next_cursor") if isinstance(query_data, Mapping) else None
+            totals = []
+            if isinstance(query_data, Mapping):
+                totals = [query_data[key] for key in ("total_count", "total")
+                          if key in query_data]
+            totals_valid = all(type(total) is int and total == len(rows) for total in totals)
+            query_complete = bool(
+                query_response.get("success") is True
+                and isinstance(query_data, Mapping)
+                and isinstance(query_data.get("jobs"), list)
+                and (has_more is False or (has_more is None and bool(totals)))
+                and (next_cursor is None or next_cursor == "")
+                and totals_valid
+                and (bool(totals) or has_more is False)
+            )
+
+            def identity_values(containers: list[Mapping[str, Any]], field: str) -> list[str]:
+                values: list[str] = []
+                for container in containers:
+                    if field not in container:
+                        continue
+                    value = container.get(field)
+                    if value is None:
+                        continue
+                    if not isinstance(value, str) or not value:
+                        return []
+                    values.append(value)
+                return values
+
+            exact_rows: list[dict[str, Any]] = []
+            for row in rows:
+                if not isinstance(row, Mapping):
+                    continue
+                metadata = row.get("metadata") if isinstance(row.get("metadata"), Mapping) else {}
+                metadata_execution = (metadata.get("execution")
+                                      if isinstance(metadata.get("execution"), Mapping) else {})
+                operation_record = row.get("operation") if isinstance(row.get("operation"), Mapping) else {}
+                operation_metadata = (operation_record.get("metadata")
+                                      if isinstance(operation_record.get("metadata"), Mapping) else {})
+                operation_execution = (operation_metadata.get("execution")
+                                       if isinstance(operation_metadata.get("execution"), Mapping) else {})
+                containers = [row, metadata, metadata_execution, operation_record,
+                              operation_metadata, operation_execution]
+                request_values = identity_values(containers, "request_id")
+                idempotency_values = identity_values(containers, "idempotency_key")
+                project_values = identity_values(containers, "project_id")
+                raw_operation = row.get("operation")
+                observed_operation = (raw_operation.get("operation")
+                                      if isinstance(raw_operation, Mapping) else raw_operation)
+                job_id = row.get("job_id")
+                if (request_values and set(request_values) == {query_target_request_id}
+                        and idempotency_values
+                        and set(idempotency_values) == {query_target_idempotency_key}
+                        and project_values and set(project_values) == {query_target_project_id}
+                        and observed_operation == "session.start"):
+                    exact_rows.append({
+                        "job_id": job_id if isinstance(job_id, str) and job_id else None,
+                        "status": row.get("status"),
+                        "request_id": query_target_request_id,
+                        "idempotency_key": query_target_idempotency_key,
+                        "project_id": query_target_project_id,
+                        "operation": observed_operation,
+                    })
+            query_record["query_complete"] = query_complete
+            query_record["matching_job_rows"] = exact_rows
+            query_record["exact_job_identity_confirmed"] = False
+            query_record["match_resolution"] = "INCOMPLETE_QUERY" if not query_complete else "NO_EXACT_MATCH"
+            if query_complete and len(exact_rows) == 1 and isinstance(exact_rows[0]["job_id"], str):
+                job_id = exact_rows[0]["job_id"]
+                query_record["job_id"] = job_id
+                query_record["exact_job_identity_confirmed"] = True
+                query_record["match_resolution"] = "UNIQUE_EXACT_MATCH"
+                if job_id not in state.value.setdefault("job_ids", []):
+                    state.value["job_ids"].append(job_id)
+            elif query_complete and len(exact_rows) > 1:
+                query_record["match_resolution"] = "AMBIGUOUS_EXACT_MATCH"
+            elif query_complete and len(exact_rows) == 1:
+                query_record["match_resolution"] = "MATCH_MISSING_JOB_ID"
+        elif operation == "job.list" and isinstance(query_data, Mapping):
             rows = query_data.get("jobs")
             matches = []
             if isinstance(rows, list):
@@ -983,9 +1146,12 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
         summary = _response_summary(response)
         state.value["actions"][name]["response"] = summary
         job_id = summary.get("job_id")
-        if isinstance(job_id, str) and job_id and job_id not in state.value.setdefault("job_ids", []):
+        unknown_response = _is_unknown(response)
+        if (isinstance(job_id, str) and job_id
+                and not (name == "session.start" and unknown_response)
+                and job_id not in state.value.setdefault("job_ids", [])):
             state.value["job_ids"].append(job_id)
-        if _is_unknown(response):
+        if unknown_response:
             state.value["actions"][name]["status"] = "UNKNOWN"
             state.value["status"] = "UNKNOWN"
             state.value["unknown_action"] = name

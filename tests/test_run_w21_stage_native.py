@@ -144,7 +144,12 @@ class _FakeStdioSession:
                  project_create_fault: str | None = None,
                  project_wait_fault: str | None = None,
                  unknown_on: str | None = None,
-                 timeout_on: str | None = None):
+                 timeout_on: str | None = None,
+                 job_list_rows: list[dict] | None = None,
+                 job_list_has_more: bool = False,
+                 job_list_timeout: bool = False,
+                 session_start_unknown_job_id: str | None = None,
+                 job_status_fault: str | None = None):
         self.plan = plan
         self.state = state
         self.wrong_model_field = wrong_model_field
@@ -155,6 +160,11 @@ class _FakeStdioSession:
         self.project_wait_fault = project_wait_fault
         self.unknown_on = unknown_on
         self.timeout_on = timeout_on
+        self.job_list_rows = job_list_rows
+        self.job_list_has_more = job_list_has_more
+        self.job_list_timeout = job_list_timeout
+        self.session_start_unknown_job_id = session_start_unknown_job_id
+        self.job_status_fault = job_status_fault
         self.calls: list[tuple[str, dict]] = []
         self.project_id = "project-test"
         self.session_id = "session-test"
@@ -229,11 +239,19 @@ class _FakeStdioSession:
 
         if self.timeout_on == action:
             raise asyncio.TimeoutError("injected transport timeout")
+        if action == "job.list" and self.job_list_timeout:
+            raise asyncio.TimeoutError("injected read-only job.list timeout")
         if self.unknown_on == action:
             if action == "fixture.execute":
                 return {"success": False, "execution_state_unknown": True,
                         "data": {"job_id": "job-test", "status": "UNKNOWN",
                                  "project_id": self.project_id}}
+            if action == "session.start":
+                data = {"status": "UNKNOWN"}
+                if self.session_start_unknown_job_id is not None:
+                    data.update({"job_id": self.session_start_unknown_job_id,
+                                 "project_id": self.project_id})
+                return {"success": False, "execution_state_unknown": True, "data": data}
             return {"success": False, "execution_state_unknown": True,
                     "data": {"status": "UNKNOWN"}}
 
@@ -357,14 +375,41 @@ class _FakeStdioSession:
                 original_request = self.plan["request_ids"]["project_create"]
                 original_key = self.plan["idempotency_keys"]["project_create"]
                 job_id, project_id = "project-create-job", None
+                operation_name = "project.create"
+            elif query.get("action") == "session.start":
+                original_request = self.plan["request_ids"]["session_start"]
+                original_key = self.plan["idempotency_keys"]["session_start"]
+                job_id, project_id = query.get("query_job_id"), self.project_id
+                operation_name = "session.start"
             else:
                 original_request = self.plan["request_ids"]["fixture_execute"]
                 original_key = self.plan["idempotency_keys"]["fixture_execute"]
                 job_id, project_id = "job-test", self.project_id
+                operation_name = "fixture.execute"
+            if self.job_status_fault == "wrong_request":
+                original_request = "foreign-request"
+            elif self.job_status_fault == "wrong_idempotency":
+                original_key = "foreign-idempotency"
+            elif self.job_status_fault == "wrong_project":
+                project_id = "foreign-project"
+            elif self.job_status_fault == "wrong_operation":
+                operation_name = "session.connect"
+            operation_record = {"request_id": original_request,
+                                "idempotency_key": original_key}
+            if query.get("action") == "session.start":
+                operation_record["operation"] = operation_name
+                if self.job_status_fault == "missing_operation":
+                    operation_record.pop("operation")
+                elif self.job_status_fault == "missing_request":
+                    operation_record.pop("request_id")
+                elif self.job_status_fault == "missing_idempotency":
+                    operation_record.pop("idempotency_key")
+            return_data = {"job_id": job_id, "status": "SUCCEEDED", "project_id": project_id,
+                           "operation": operation_record}
+            if query.get("action") == "session.start":
+                return_data["metadata"] = {"project_id": project_id}
             return {"success": True, "data": {
-                "job_id": job_id, "status": "RUNNING", "project_id": project_id,
-                "operation": {"request_id": original_request,
-                              "idempotency_key": original_key},
+                **return_data,
             }}
         if action == "job.list":
             query = self.state.value["recovery"]["read_only_query"]
@@ -374,6 +419,23 @@ class _FakeStdioSession:
                        "request_id": original_id,
                        "idempotency_key": self.plan["idempotency_keys"]["project_create"],
                        "project_id": None}
+            elif original_id == self.plan["request_ids"]["session_start"]:
+                if self.job_list_rows is None:
+                    job = {
+                        "job_id": "job-session-start", "status": "SUCCEEDED",
+                        "metadata": {"project_id": self.project_id},
+                        "operation": {
+                            "operation": "session.start",
+                            "request_id": original_id,
+                            "idempotency_key": self.plan["idempotency_keys"]["session_start"],
+                        },
+                    }
+                    jobs = [job]
+                else:
+                    jobs = [dict(row) for row in self.job_list_rows]
+                return {"success": True, "data": {
+                    "jobs": jobs, "total": len(jobs), "has_more": self.job_list_has_more,
+                }}
             else:
                 job = {"job_id": "job-test", "status": "RUNNING", "request_id": original_id,
                        "idempotency_key": self.plan["idempotency_keys"]["fixture_execute"],
@@ -973,6 +1035,189 @@ def test_project_create_wait_timeout_queries_original_job_once_without_replaying
     assert query["original_idempotency_key"] == plan["idempotency_keys"]["project_create"]
     assert query["exact_job_identity_confirmed"] is True
     assert query["observed_request_id"] == plan["request_ids"]["project_create"]
+    assert state.value["status"] == "UNKNOWN"
+
+
+def _session_start_job_row(plan, *, project_id="project-test", job_id="job-session-start",
+                           status="SUCCEEDED"):
+    return {
+        "job_id": job_id,
+        "status": status,
+        "metadata": {"project_id": project_id},
+        "operation": {
+            "operation": "session.start",
+            "request_id": plan["request_ids"]["session_start"],
+            "idempotency_key": plan["idempotency_keys"]["session_start"],
+        },
+    }
+
+
+@pytest.mark.parametrize("start_failure", ["timeout", "unknown_no_job_id"])
+def test_unknown_session_start_queries_one_project_scoped_job_list_and_never_continues(
+        start_failure, tmp_path, monkeypatch):
+    _patch_isolation(monkeypatch)
+    plan = _plan(tmp_path)
+    state = _state(tmp_path)
+    fake = _FakeStdioSession(
+        plan, state,
+        timeout_on="session.start" if start_failure == "timeout" else None,
+        unknown_on="session.start" if start_failure == "unknown_no_job_id" else None,
+        job_list_rows=[_session_start_job_row(plan, status="SUCCEEDED")],
+    )
+    with pytest.raises(runner.RunnerError, match="session.start.*UNKNOWN"):
+        asyncio.run(runner.run_metadata_protocol(runner._MCPCalls(fake), plan, state,
+            clock=lambda: 100.0, preflight=lambda: []))
+
+    operations = [action for action, _ in fake.calls]
+    start_index = operations.index("session.start")
+    assert operations.count("session.start") == 1
+    assert operations.count("job.list") == 1
+    assert operations[start_index + 1:] == ["job.list"]
+    query_call = next(params for action, params in fake.calls if action == "job.list")
+    assert query_call["operation_id"] == "job.list"
+    assert query_call["arguments"] == {"limit": 100, "project_id": fake.project_id}
+    assert query_call["execution"]["project_id"] == fake.project_id
+    query = state.value["recovery"]["read_only_query"]
+    assert query["status"] == "QUERY_RESPONSE_RECORDED"
+    assert query["action"] == "session.start"
+    assert query["original_request_id"] == plan["request_ids"]["session_start"]
+    assert query["original_idempotency_key"] == plan["idempotency_keys"]["session_start"]
+    assert query["original_project_id"] == fake.project_id
+    assert query["original_operation"] == "session.start"
+    assert query["query_complete"] is True
+    assert query["match_resolution"] == "UNIQUE_EXACT_MATCH"
+    assert query["exact_job_identity_confirmed"] is True
+    assert query["matching_job_rows"] == [{
+        "job_id": "job-session-start", "status": "SUCCEEDED",
+        "request_id": plan["request_ids"]["session_start"],
+        "idempotency_key": plan["idempotency_keys"]["session_start"],
+        "project_id": fake.project_id, "operation": "session.start",
+    }]
+    assert state.value["job_ids"] == ["job-session-start"]
+    assert state.value["recovery"]["job_ids"] == ["job-session-start"]
+    assert state.value["status"] == "UNKNOWN"
+    assert state.value["recovery"]["replay_permitted"] is False
+    assert state.value["recovery"]["cleanup_permitted"] is False
+
+
+@pytest.mark.parametrize("fault", [
+    "wrong_request", "wrong_idempotency", "wrong_project", "wrong_operation",
+    "missing_request", "missing_idempotency", "missing_project", "missing_operation",
+    "missing_job_id", "duplicate",
+])
+def test_session_start_job_list_rejects_nonunique_or_incomplete_bindings(fault, tmp_path, monkeypatch):
+    _patch_isolation(monkeypatch)
+    plan = _plan(tmp_path)
+    state = _state(tmp_path)
+    row = _session_start_job_row(plan)
+    if fault == "wrong_request":
+        row["operation"]["request_id"] = "foreign-request"
+    elif fault == "wrong_idempotency":
+        row["operation"]["idempotency_key"] = "foreign-idempotency"
+    elif fault == "wrong_project":
+        row["metadata"]["project_id"] = "foreign-project"
+    elif fault == "wrong_operation":
+        row["operation"]["operation"] = "session.connect"
+    elif fault == "missing_request":
+        row["operation"].pop("request_id")
+    elif fault == "missing_idempotency":
+        row["operation"].pop("idempotency_key")
+    elif fault == "missing_project":
+        row["metadata"].pop("project_id")
+    elif fault == "missing_operation":
+        row["operation"].pop("operation")
+    elif fault == "missing_job_id":
+        row.pop("job_id")
+    elif fault == "duplicate":
+        row = [row, dict(row)]
+    fake = _FakeStdioSession(plan, state, timeout_on="session.start",
+                             job_list_rows=row if isinstance(row, list) else [row])
+    with pytest.raises(runner.RunnerError, match="session.start transport outcome is UNKNOWN"):
+        asyncio.run(runner.run_metadata_protocol(runner._MCPCalls(fake), plan, state,
+            clock=lambda: 100.0, preflight=lambda: []))
+
+    operations = [action for action, _ in fake.calls]
+    assert operations.count("session.start") == 1
+    assert operations.count("job.list") == 1
+    assert operations[operations.index("session.start") + 1:] == ["job.list"]
+    query = state.value["recovery"]["read_only_query"]
+    assert query["exact_job_identity_confirmed"] is False
+    assert state.value["job_ids"] == []
+    if fault == "duplicate":
+        assert query["match_resolution"] == "AMBIGUOUS_EXACT_MATCH"
+        assert len(query["matching_job_rows"]) == 2
+    elif fault == "missing_job_id":
+        assert query["match_resolution"] == "MATCH_MISSING_JOB_ID"
+        assert len(query["matching_job_rows"]) == 1
+    else:
+        assert query["match_resolution"] == "NO_EXACT_MATCH"
+        assert query["matching_job_rows"] == []
+    assert state.value["status"] == "UNKNOWN"
+
+
+def test_session_start_job_list_does_not_treat_truncated_page_as_complete(tmp_path, monkeypatch):
+    _patch_isolation(monkeypatch)
+    plan = _plan(tmp_path)
+    state = _state(tmp_path)
+    fake = _FakeStdioSession(plan, state, timeout_on="session.start",
+                             job_list_rows=[_session_start_job_row(plan)],
+                             job_list_has_more=True)
+    with pytest.raises(runner.RunnerError, match="session.start transport outcome is UNKNOWN"):
+        asyncio.run(runner.run_metadata_protocol(runner._MCPCalls(fake), plan, state,
+            clock=lambda: 100.0, preflight=lambda: []))
+    operations = [action for action, _ in fake.calls]
+    assert operations.count("job.list") == 1
+    query = state.value["recovery"]["read_only_query"]
+    assert query["query_complete"] is False
+    assert query["match_resolution"] == "INCOMPLETE_QUERY"
+    assert query["exact_job_identity_confirmed"] is False
+    assert state.value["job_ids"] == []
+    assert operations[operations.index("session.start") + 1:] == ["job.list"]
+
+
+def test_session_start_job_list_timeout_keeps_unknown_and_does_not_retry(tmp_path, monkeypatch):
+    _patch_isolation(monkeypatch)
+    plan = _plan(tmp_path)
+    state = _state(tmp_path)
+    fake = _FakeStdioSession(plan, state, timeout_on="session.start", job_list_timeout=True)
+    with pytest.raises(runner.RunnerError, match="session.start transport outcome is UNKNOWN"):
+        asyncio.run(runner.run_metadata_protocol(runner._MCPCalls(fake), plan, state,
+            clock=lambda: 100.0, preflight=lambda: []))
+    operations = [action for action, _ in fake.calls]
+    assert operations.count("session.start") == 1
+    assert operations.count("job.list") == 1
+    assert operations[operations.index("session.start") + 1:] == ["job.list"]
+    query = state.value["recovery"]["read_only_query"]
+    assert query["status"] == "QUERY_UNKNOWN"
+    assert query["exact_job_identity_confirmed"] is not True
+    assert state.value["job_ids"] == []
+    assert state.value["status"] == "UNKNOWN"
+
+
+@pytest.mark.parametrize("fault", [None, "wrong_request", "wrong_idempotency", "wrong_project",
+                                   "wrong_operation", "missing_request", "missing_idempotency",
+                                   "missing_operation"])
+def test_session_start_reported_job_id_requires_exact_job_status_binding(fault, tmp_path, monkeypatch):
+    _patch_isolation(monkeypatch)
+    plan = _plan(tmp_path)
+    state = _state(tmp_path)
+    fake = _FakeStdioSession(
+        plan, state, unknown_on="session.start",
+        session_start_unknown_job_id="job-reported-by-start", job_status_fault=fault,
+    )
+    with pytest.raises(runner.RunnerError, match="session.start returned UNKNOWN"):
+        asyncio.run(runner.run_metadata_protocol(runner._MCPCalls(fake), plan, state,
+            clock=lambda: 100.0, preflight=lambda: []))
+    operations = [action for action, _ in fake.calls]
+    assert operations.count("session.start") == 1
+    assert operations.count("job.status") == 1
+    assert "job.list" not in operations
+    assert operations[operations.index("session.start") + 1:] == ["job.status"]
+    query = state.value["recovery"]["read_only_query"]
+    assert query["query_job_id"] == "job-reported-by-start"
+    assert query["exact_job_identity_confirmed"] is (fault is None)
+    assert query.get("job_id") == ("job-reported-by-start" if fault is None else None)
+    assert state.value["job_ids"] == (["job-reported-by-start"] if fault is None else [])
     assert state.value["status"] == "UNKNOWN"
 
 
