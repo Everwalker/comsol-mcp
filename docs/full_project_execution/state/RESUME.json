@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "phase": "W21_WINDOWS_SHORT_HOME_PATH_REPAIR",
+  "phase": "W21_WINDOWS64_V2_SESSION_START_UNKNOWN_RECOVERY",
   "task": "W01_W26_CONTINUOUS_IMPLEMENTATION",
-  "status": "PARTIAL_EXECUTION_CONTINUING_NATIVE_UNVERIFIED",
-  "candidate_source": "docs/full_project_execution/project_session/WINDOWS_SHORT_HOME_PATH_CHECKPOINT.json (four exact source/test SHA256 values pinned in checkpoint)",
+  "status": "PARTIAL_EXECUTION_CONTINUING_NATIVE_UNKNOWN",
+  "candidate_source": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-v2-20260928T235840Z-9c5ced6/w21-windows64-metadata-v2-9c5ced6-20260928T235840Z.tar.gz (sha256 7f96b2c25cb2d5c4194db44b21952e3add20cc8ac96f0a82d3e02e1dc567088c)",
   "completed_work": [
     "PIN source restoration completed and verified: 10832 files, zero missing LFS backing objects; repository HEAD matches pinned commit/tree.",
     "tools/init_completion.py --repo repository completed; frozen inventory: 26 work packages, 272 actions, 60 tests x 6 targets = 360 test cells.",
@@ -102,9 +102,10 @@
       "checkpoint": "docs/full_project_execution/project_session/EXPERIMENT_READS_SOFTWARE_CHECKPOINT.json",
       "native_acceptance": "NOT_RUN"
     },
-    "W21 Windows short-home/CreateProcess path hardening is PASS for scoped offline software: 44 focused tests pass; main independently verified four source hashes, seven JUnit hashes/counts and receipt. The earlier WinError206 Windows6.4 attempt remains FAILED terminal; native NOT_RUN and no replay/stop is claimed. See docs/full_project_execution/project_session/WINDOWS_SHORT_HOME_PATH_CHECKPOINT.json."
+    "W21 Windows short-home/CreateProcess path hardening is PASS for scoped offline software: 44 focused tests pass; main independently verified four source hashes, seven JUnit hashes/counts and receipt. The earlier WinError206 Windows6.4 attempt remains FAILED terminal; native NOT_RUN and no replay/stop is claimed. See docs/full_project_execution/project_session/WINDOWS_SHORT_HOME_PATH_CHECKPOINT.json.",
+    "Windows6.4 V2 source archive/freeze passed main preflight and was uploaded/executed once under authorization, but session.start returned UNKNOWN; read-only store remains RUNNING without finished/result. DLL alias exists with matching canonical hash at exactly 260 UTF-16 units including NUL, a plausible boundary but unproven root cause. control.log is 0B; daemon liveness remains UNVERIFIED pending limited user authorization after automatic review rejected PID parsing from token-bearing control.json. One Server birth possible, Worker/study/solver zero. Preserve UNKNOWN; no replay, stop or cleanup. See docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json."
   ],
-  "next_action": "Prepare a fresh Windows6.4 V2 candidate with a short task-owned h/<16-hex> server-home; verify source closure and frozen path budget, then continue bounded Windows6.4 followed by Windows6.3 field/unit/mesh validation. Do not replay the terminal WinError206 freeze. Native remains NOT_RUN.",
+  "next_action": "Await the pending narrowly scoped read-only daemon-liveness authorization, then reconcile the exact original request/idempotency/operation/job and owned-server state and investigate the DLL load/startup-class errors. Preserve UNKNOWN. Do not issue another session.start, replay, stop or cleanup.",
   "active_jobs": [],
   "blockers": [
     "W23 failed setup owned Server 75272 and daemon 75260 remain preserved: cleanup SIGTERM was rejected by automatic approval and explicit authorization is pending; no cleanup or relaunch authorized by elapsed time.",
@@ -133,7 +134,7 @@
     "native_solve_budget_remaining": 0,
     "evidence": "docs/full_project_execution/evidence/luna_process_reconciliation/mac_readonly_snapshot_20260926T2152Z.json"
   },
-  "updated_at": "2026-09-28T23:50:15Z",
+  "updated_at": "2026-09-29T00:50:38Z",
   "note": "Original scope remains through W26. User explicitly resumed after the test-efficiency analysis; implement efficiency improvements first. OpenViking task-detail retrieval was denied by auto-review because it would disclose internal roadmap identifiers externally; no workaround. Use current frozen workpack and read-only local memory only. Do not rerun bootstrap/init on resume. Source files now contain executor edits; do not rerun bootstrap/init. Git metadata is an APFS pointer managed by main agent; migration requires bundle/source transfer, not copying only the repository pointer. Git metadata migration is documented by evidence/git_metadata_relocation.json and owned by the main agent; do not copy the APFS git pointer to another machine without source bundle/archive. GUI permission boundary and checkpoint solution-scope caveat recorded. This executor has one W24 native setup-only failure with exact cleanup verified; the durable operation/job UNKNOWN records remain unchanged. No W24 solver submission occurred. Saved-MPH readback supplement uses separate time/evidence and zero study/solver calls; run08 remains FAIL_OR_INCOMPLETE. Root raw SQLite recomputation is linked under native_resume_saved_artifact_supplement.raw_recomputation_evidence; original run08 remains FAIL_OR_INCOMPLETE and no solve budget is restored. Latest checkpoint 2026-09-27T03:50:43Z: W24 0334Z setup run failed pre-model due Python 3.14 missing mcp, with exact cleanup; 0346Z candidate pins the validated 3.12.13 environment and passes a production no-engine registry/daemon preflight. Native setup remains pending root review; science implementation continues offline. Latest checkpoint 2026-09-27T09:09:28Z: W24 0841Z candidate was invoked once at 0857Z and failed before any engine/Worker birth because project.inspect received an injected idempotency_key; project.create persisted successfully. Exact read-only SQLite hash and operation result are in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_contract_diagnostic.json. The runner now omits the unnecessary inspect key; actual ControlDaemon focused regression is 2/2 PASS in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_runner_regression_receipt.json. No native retry or acceptance is claimed; release F04 runtime integration is active, so refresh closure and root review are required before another launch. Windows COMSOL 6.3 remains required/unassessed; only macOS 6.3 is USER_REQUESTED_SKIP.",
   "native_resume_smoke": {
     "status": "FAIL_OR_INCOMPLETE_POINT_SCHEMA_FAILURE; SOLVED_CHILD_ARTIFACT_DURABLE; SOLVE_BUDGET_EXHAUSTED; SEPARATE_SAVED_MPH_READBACK_PASS",
@@ -747,7 +748,7 @@
     "cleanup": "exact PID and ports absent; global COMSOL/Worker inventory quiescent",
     "scope": "API-only evidence; no optical, numerical, or physical acceptance"
   },
-  "recent_checkpoint": "docs/full_project_execution/project_session/WINDOWS_SHORT_HOME_PATH_CHECKPOINT.json",
+  "recent_checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json",
   "root_resume_summary_correction": {
     "at": "2026-09-27T05:10:40.509110+00:00",
     "reason": "Prevent stale0346 relaunch from oldtop-level recovery summary; historical evidence retained",
@@ -926,6 +927,23 @@
       "native_comsol_acceptance": "NOT_RUN",
       "prior_windows64_attempt": "FAILED_TERMINAL_WINERROR206_NO_REPLAY",
       "next_action": "Prepare a fresh task-owned short-home Windows6.4 V2 candidate, then validate 6.4 followed by 6.3 under a new bounded plan."
+    },
+    {
+      "at_utc": "2026-09-29T00:50:38Z",
+      "scope": "w21-windows64-v2-session-start-unknown",
+      "status": "PARTIAL_NATIVE_UNKNOWN_NOT_ACCEPTED",
+      "summary": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json",
+      "source_package": "PASS_MAIN_VERIFIED",
+      "native_session_start": "UNKNOWN",
+      "server_births_possible": 1,
+      "worker_births": 0,
+      "study_dispatches": 0,
+      "solver_dispatches": 0,
+      "next_action": "Await the pending narrow read-only daemon-liveness authorization; then reconcile the same original operation/job/daemon and investigate the image-library/startup-class error. Preserve UNKNOWN; do not start, replay, stop or clean up another session.",
+      "image_library_path_units_including_nul": 260,
+      "image_library_exists_and_hash_match": true,
+      "daemon_liveness": "UNVERIFIED_LIMITED_AUTHORIZATION_PENDING",
+      "native_execute_authorization": "AUTHORIZED_AND_USED_ONCE"
     }
   ],
   "windows_readonly_summary": {
@@ -975,8 +993,8 @@
   },
   "acceptance_cells_changed": false,
   "current_execution_checkpoint": {
-    "path": "docs/full_project_execution/project_session/WINDOWS_SHORT_HOME_PATH_CHECKPOINT.json",
-    "status": "PASS_SCOPED_SOFTWARE_NATIVE_NOT_RUN"
+    "path": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json",
+    "status": "PARTIAL_NATIVE_SESSION_START_UNKNOWN_NOT_ACCEPTED"
   },
   "w24_setup_candidate_0841z_native_attempt": {
     "candidate_id": "W24-CURE-HIST-AXISYM-01",
@@ -1001,11 +1019,11 @@
     "next": "Wait for stable F04 runtime handoff; refresh closure and submit a new candidate for root review. No automatic rerun."
   },
   "verified_git_sync": {
-    "head": "6199a99c8fecb6abee10a4ec3564d6b8b1dbfeec",
-    "origin_main": "6199a99c8fecb6abee10a4ec3564d6b8b1dbfeec",
-    "status": "HEAD_EQUALS_ORIGIN_MAIN_BEFORE_THIS_STAGE",
-    "checked_at_utc": "2026-09-28T23:50:15Z",
-    "note": "This is the clean fetched baseline before the short-home source/checkpoint commit; verify the stage commit separately after pushing."
+    "head": "9c5ced6272dd876cf9c28c6c6f73b943bd76b96c",
+    "origin_main": "9c5ced6272dd876cf9c28c6c6f73b943bd76b96c",
+    "status": "HEAD_EQUALS_ORIGIN_MAIN",
+    "verified_by": "main_agent_official_push_fetch",
+    "note": "Verified source baseline for the V2 archive; the commit carrying the current documentation update identifies this checkpoint."
   },
   "w24_static_shape_science_admission_repair": {
     "status": "SCOPED_SOFTWARE_REPAIR_ACCEPTED_NATIVE_NOT_RUN",
@@ -2502,7 +2520,7 @@
       "current process ownership/quiescence (only parent-reported name-only snapshot is attached)",
       "full Windows 6.3/6.4 platform acceptance"
     ],
-    "next_action": "Prepare a fresh Windows6.4 V2 candidate from the committed short-home path repair, verify the frozen source closure and conservative path budget, then proceed to separately bounded Windows6.4 followed by Windows6.3 field/unit/mesh work. Do not replay the terminal WinError206 candidate.",
+    "next_action": "Await the pending narrowly scoped read-only daemon-liveness authorization, then reconcile the exact original request/idempotency/operation/job and owned-server state and investigate the DLL load/startup-class errors. Preserve UNKNOWN. Do not issue another session.start, replay, stop or cleanup.",
     "current_upload_approval": {
       "status": "APPROVED_UPLOADED_PREPARATION_MAIN_VERIFIED",
       "reason": "Automatic approval review rejected SCP source export, recognizing only read-only dependency permission",
@@ -2653,5 +2671,51 @@
       "tests/test_run_w21_stage_native.py": "487f53ea01e13fe6a4a9dab276b139d5f6f273249af0b9cb26632ec037b6943a"
     },
     "next_action": "Prepare fresh Windows6.4 V2 short-home candidate; then 6.4 followed by 6.3."
+  },
+  "windows_v2_session_start_unknown": {
+    "status": "UNKNOWN_NOT_ACCEPTED",
+    "native_status": "NOT_ACCEPTED",
+    "checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json",
+    "evidence_root": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-v2-20260928T235840Z-9c5ced6",
+    "run_id": "w21-64-20260929T000959Z-5855b33e",
+    "archive_sha256": "7f96b2c25cb2d5c4194db44b21952e3add20cc8ac96f0a82d3e02e1dc567088c",
+    "freeze_file_sha256": "7af12e7f2fa14f54b7d207d7ed6ba15446747b2192e8a5337c4d3b80b5ff031b",
+    "canonical_freeze_sha256": "2a9359f4b799ea11066d2fbfa5911373d39d6e11dcb662ea2607ec2230342e6d",
+    "state_after_sha256": "32a9424c3382157d8973e3a288d1b24e83b4d45ea00ae784d46b62cfd51c7415",
+    "session_start_request_id": "2b0f1f09-5b93-45b4-b9f3-2d466581652a",
+    "session_start_idempotency_key": "310a79da-bbb0-408a-895a-62e36110177c",
+    "operation_id": "9e9c6f63-8905-42e9-b320-5313df0e7dce",
+    "job_id": "75407ced-fbdc-496d-a2fc-ab8b544a0efb",
+    "project_id": "915442e2-22c9-4a92-9d62-d65582e0e85a",
+    "session_id": "session-107418ef98a240888adf5e0687d7b26b",
+    "database_job_state": "RUNNING_NO_FINISHED_AT_NO_RESULT",
+    "lifecycle": "STARTING_SERVER_UNKNOWN_NO_NATIVE_IDENTITY_OR_ENDPOINT",
+    "possible_server_births": 1,
+    "worker_births": 0,
+    "study_dispatches": 0,
+    "solver_dispatches": 0,
+    "replay_permitted": false,
+    "cleanup_permitted": false,
+    "next_action": "Await the pending narrow read-only daemon-liveness authorization; then reconcile the same original operation/job/daemon and investigate the image-library/startup-class error. Preserve UNKNOWN; do not start, replay, stop or clean up another session.",
+    "image_library_basename": "CORE_RL_magick_.dll",
+    "image_library_relative_alias": "ext\\graphicsmagick\\win64\\CORE_RL_magick_.dll",
+    "image_library_exists": true,
+    "image_library_alias_sha256": "e81919b7a42030868ad97341a77564efb0997305a4e81b1598168cfaa0c67df7",
+    "image_library_canonical_sha256": "e81919b7a42030868ad97341a77564efb0997305a4e81b1598168cfaa0c67df7",
+    "image_library_path_utf16_units_including_nul": 260,
+    "image_library_hashes_match": true,
+    "image_library_path_is_proven_root_cause": false,
+    "control_log_bytes": 0,
+    "control_errors_log_exists": false,
+    "operations_sqlite_wal_bytes": 292552,
+    "server_port_file_exists": false,
+    "exact_private_executable_path_match_count": 0,
+    "daemon_liveness": "UNVERIFIED",
+    "daemon_pid_query_status": "AUTO_REVIEW_REJECTED_TOKEN_BEARING_CONTROL_JSON_PARSE; LIMITED_USER_AUTHORIZATION_PENDING",
+    "native_execute_authorization": "AUTHORIZED_AND_USED_ONCE",
+    "proposed_short_taskroot": "C:\\Temp\\w21v3_9c5ced6",
+    "proposed_short_taskroot_status": "NOT_CREATED_MEASURED_EXAMPLE_ONLY",
+    "proposed_image_library_alias_path_units_including_nul": 224,
+    "proposed_path_mitigation_proven": false
   }
 }

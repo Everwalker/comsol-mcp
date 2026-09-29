@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "unit": "W21 Windows6.4 V2 short-home current-source attempt",
+  "updated_at_utc": "2026-09-29T00:50:38Z",
+  "overall_status": "PARTIAL",
+  "source_package_status": "PASS_MAIN_VERIFIED",
+  "native_status": "NOT_ACCEPTED_SESSION_START_UNKNOWN",
+  "next_action": "Await the pending narrow read-only daemon-liveness authorization; then reconcile the same original operation/job/daemon and investigate the image-library/startup-class error. Preserve UNKNOWN; do not start, replay, stop or clean up another session.",
+  "candidate": {
+    "source_commit": "9c5ced6272dd876cf9c28c6c6f73b943bd76b96c",
+    "evidence_root": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-v2-20260928T235840Z-9c5ced6",
+    "archive": "w21-windows64-metadata-v2-9c5ced6-20260928T235840Z.tar.gz",
+    "archive_sha256": "7f96b2c25cb2d5c4194db44b21952e3add20cc8ac96f0a82d3e02e1dc567088c",
+    "archive_scope": "Main verified 105 source files against Git 9c5ced6 plus 3 archive metadata files; 103 dependency closure and 3+11 schema/runtime identities; pristine state had zero unexpected entries.",
+    "freeze_file_sha256": "7af12e7f2fa14f54b7d207d7ed6ba15446747b2192e8a5337c4d3b80b5ff031b",
+    "canonical_freeze_sha256": "2a9359f4b799ea11066d2fbfa5911373d39d6e11dcb662ea2607ec2230342e6d",
+    "prepare_receipt": "metadata_prepare_v2_complete_receipt.json",
+    "prepare_receipt_sha256": "81cf9143f56eb468c0103d078c8bcc3fe19f3c7f8aa9cef5b3196d5388703134"
+  },
+  "execution": {
+    "main_execute_receipt": "main_execute_v2_receipt.json",
+    "main_execute_receipt_sha256": "d90e62e9373d79ec6428fe827915357671b51c7bb37e844bbe055cc4783124a2",
+    "exit_code": 2,
+    "run_id": "w21-64-20260929T000959Z-5855b33e",
+    "action": "session.start",
+    "request_id": "2b0f1f09-5b93-45b4-b9f3-2d466581652a",
+    "idempotency_key": "310a79da-bbb0-408a-895a-62e36110177c",
+    "response_status": "UNKNOWN",
+    "error_code": "EXECUTION_STATE_UNKNOWN",
+    "state_after_sha256": "32a9424c3382157d8973e3a288d1b24e83b4d45ea00ae784d46b62cfd51c7415",
+    "possible_server_births": 1,
+    "worker_births": 0,
+    "study_dispatches": 0,
+    "solver_dispatches": 0
+  },
+  "readonly_reconciliation": {
+    "request_id": "2b0f1f09-5b93-45b4-b9f3-2d466581652a",
+    "idempotency_key": "310a79da-bbb0-408a-895a-62e36110177c",
+    "operation_id": "9e9c6f63-8905-42e9-b320-5313df0e7dce",
+    "job_id": "75407ced-fbdc-496d-a2fc-ab8b544a0efb",
+    "project_id": "915442e2-22c9-4a92-9d62-d65582e0e85a",
+    "session_id": "session-107418ef98a240888adf5e0687d7b26b",
+    "database_job_state": "RUNNING",
+    "finished_at": "ABSENT",
+    "result": "ABSENT",
+    "lifecycle_state": "STARTING",
+    "server_state": "UNKNOWN",
+    "native_process_identity": "ABSENT",
+    "endpoint": "ABSENT",
+    "evidence_files": [
+      {
+        "file": "readonly_final_operation_v2.stdout.bin",
+        "sha256": "8810e39a5c7c74885762421e566edd1caa6c65b09e92920c6b5991d49673444b"
+      },
+      {
+        "file": "readonly_lifecycle_row_v2d.stdout.bin",
+        "sha256": "0e920a02caf022c96ef6649511bbb419ea91da89aea522db3b7cc49a92bdd5e5"
+      }
+    ]
+  },
+  "diagnostic_observation": {
+    "evidence_file": "readonly_image_library_fingerprint_v2c.stdout.bin",
+    "sha256": "96250f5f63827ac9f9818826646226868c89d27be1ade2974f9f4c2a406ff007",
+    "data_handling": "Sanitized bounded fingerprint summary only; raw logs/stdout are not reproduced here.",
+    "reported_startup_errors": [
+      "Failed to load CORE_RL_magick_.dll",
+      "Failed startup class com.comsol.bridge.application"
+    ],
+    "image_library": {
+      "basename": "CORE_RL_magick_.dll",
+      "task_relative_alias": "ext\\graphicsmagick\\win64\\CORE_RL_magick_.dll",
+      "exists": true,
+      "canonical_resolution_same_relative_file": true,
+      "path_utf16_units_including_nul": 260,
+      "alias_sha256": "e81919b7a42030868ad97341a77564efb0997305a4e81b1598168cfaa0c67df7",
+      "canonical_sha256": "e81919b7a42030868ad97341a77564efb0997305a4e81b1598168cfaa0c67df7",
+      "hashes_match": true,
+      "interpretation": "The MAX_PATH boundary is a plausible contributing factor or mitigation target, not a proven sole root cause."
+    },
+    "diagnosis_status": "INITIAL_READ_ONLY_DIAGNOSTICS_COMPLETE_ROOT_CAUSE_UNRESOLVED"
+  },
+  "recovery_guard": {
+    "replay_permitted": false,
+    "cleanup_permitted": false,
+    "stop_or_cleanup_performed": false,
+    "new_session_start_permitted_by_this_checkpoint": false,
+    "reason": "The original durable operation remains RUNNING/UNKNOWN without finished result or native process identity; preserve the original UNKNOWN and investigate the same job/daemon first."
+  },
+  "prior_path_repair": {
+    "checkpoint": "docs/full_project_execution/project_session/WINDOWS_SHORT_HOME_PATH_CHECKPOINT.json",
+    "offline_tests": 44,
+    "native_acceptance": "NOT_ESTABLISHED"
+  },
+  "control_and_process_state": {
+    "control_log_bytes": 0,
+    "control_errors_log_exists": false,
+    "operations_sqlite_wal_bytes": 292552,
+    "owned_server_directory_exists": true,
+    "server_port_file_exists": false,
+    "exact_private_executable_path_match_count": 0,
+    "daemon_liveness": "UNVERIFIED",
+    "daemon_pid_query": "Not completed: parsing PID from token-bearing control.json was rejected by automatic review; no workaround used."
+  },
+  "permission_boundary": {
+    "native_execute_authorization": "AUTHORIZED_AND_USED_ONCE; this is not blocked.",
+    "limited_read_only_daemon_liveness_authorization": "REQUESTED_FROM_USER; RESPONSE_PENDING",
+    "review_rejection": "Automatic approval review rejected the PID extraction from token-bearing control.json.",
+    "effect": "Daemon liveness remains UNVERIFIED; no process was started, stopped or cleaned up by the rejected query."
+  },
+  "candidate_after_diagnosis_only": {
+    "taskroot_example": "C:\\Temp\\w21v3_9c5ced6",
+    "status": "MEASURED_EXAMPLE_NOT_CREATED",
+    "library_alias_path_utf16_units_including_nul": 224,
+    "current_units_including_nul": 260,
+    "estimated_reduction_units": 36,
+    "preserves_random_home_id_length": 16,
+    "preserves_session_identity_hash_length": 64,
+    "note": "A shorter root may mitigate the path boundary but is not proof of startup root cause and is not authorization to start another session."
+  },
+  "latest_local_summary": {
+    "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-v2-20260928T235840Z-9c5ced6/diagnostic_context_for_handoff_v2.json",
+    "sha256": "5703efb9f042429deeb96ee5d9536fccd8fcbe6bc3f7435a78e35b34398c9b6b",
+    "control_filelist_sha256": "c1923ebefc30acd4cf779d12d3d441d47980f5ec091cb8f6d62a9a3037ee5d4b",
+    "auto_review_rejection_record_sha256": "960bb5a20a23d36e25f35eae94519b5f429660d0b1625fd5c5d0010cc58d6501"
+  }
+}
