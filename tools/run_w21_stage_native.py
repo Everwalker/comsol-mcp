@@ -58,6 +58,7 @@ STAGE_READ_ACTION_COUNTERS = {
 }
 W21_FIELD_READBACK_MAX_NUMERIC_SCALARS = 65_536
 W21_FIELD_READBACK_MAX_JSON_BYTES = 8 * 1024 * 1024
+W21_FIELD_IDENTITY_PROBE_MAX_JSON_UTF8_BYTES = 65_536
 
 
 class RunnerError(RuntimeError):
@@ -1028,6 +1029,46 @@ def _response_summary(payload: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def _parse_field_identity_probe(raw_payload: Any, *, expected_model_tag: str) -> dict[str, Any]:
+    """Preserve the bounded probe JSON without interpreting it as admission evidence."""
+    if isinstance(raw_payload, str):
+        raw_json = raw_payload
+        raw_bytes = raw_json.encode("utf-8")
+        if len(raw_bytes) > W21_FIELD_IDENTITY_PROBE_MAX_JSON_UTF8_BYTES:
+            raise RunnerError("field identity probe payload exceeds its frozen JSON byte limit")
+        try:
+            payload = json.loads(raw_json)
+        except json.JSONDecodeError as exc:
+            raise RunnerError("field identity probe returned malformed JSON") from exc
+    elif isinstance(raw_payload, Mapping):
+        try:
+            raw_bytes = canonical_bytes(raw_payload)
+        except (TypeError, ValueError) as exc:
+            raise RunnerError("field identity probe returned non-JSON data") from exc
+        if len(raw_bytes) > W21_FIELD_IDENTITY_PROBE_MAX_JSON_UTF8_BYTES:
+            raise RunnerError("field identity probe payload exceeds its frozen JSON byte limit")
+        raw_json = raw_bytes.decode("utf-8")
+        payload = dict(raw_payload)
+    else:
+        raise RunnerError("field identity probe returned no structured payload")
+
+    if not isinstance(payload, Mapping):
+        raise RunnerError("field identity probe JSON root is not an object")
+    identity = payload.get("identity")
+    if (payload.get("probe") != "W21FieldIdentityProbe"
+            or payload.get("status") != "STRUCTURE_CAPTURED_ONLY"
+            or payload.get("native_admission") != "UNVERIFIED"
+            or not isinstance(identity, Mapping)
+            or identity.get("model_tag") != expected_model_tag):
+        raise RunnerError("probe output is incomplete or claims a scope outside metadata capture")
+    return {
+        "payload": dict(payload),
+        "raw_payload_json": raw_json,
+        "raw_payload_bytes": len(raw_bytes),
+        "raw_payload_sha256": hashlib.sha256(raw_bytes).hexdigest(),
+    }
+
+
 class _RunState:
     def __init__(self, path: Path, state: dict[str, Any]):
         self.path = path
@@ -1812,9 +1853,7 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
         fixture_dir = project_workspace / "fixtures"
         fixture_dir.mkdir(mode=0o700)
         staged: dict[str, str] = {}
-        source_items = (("W21Fixture.java", FIXTURE),)
-        if plan.get("mode", METADATA_MODE) == METADATA_MODE:
-            source_items += (("W21FieldIdentityProbe.java", PROBE),)
+        source_items = (("W21Fixture.java", FIXTURE), ("W21FieldIdentityProbe.java", PROBE))
         for short_name, source in source_items:
             source_hash = plan["source_manifest"][f"tools/java/{short_name}"]
             if sha256_file(source) != source_hash:
@@ -1878,49 +1917,79 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
              "rpc_timeout_s": RPC_WAIT_S}))
         binding["revision"] = _validate_model_inspect(after_fixture, binding)
         mode = plan.get("mode", METADATA_MODE)
-        probe = None
+        probe: dict[str, Any] | None = None
+        probe_observation: dict[str, Any] | None = None
         solve_readback = None
         tuple_readback = None
+
+        # Capture the same bounded, read-only Java metadata in both modes so
+        # the solve-readback receipt can bind exploratory model structure to
+        # the exact model revision used by the subsequent solve. The probe
+        # never runs geometry, mesh, a Study, or a result field read.
+        await register_source("probe.register", keys["probe_register"],
+                              request_ids["probe_register"], staged["W21FieldIdentityProbe.java"])
+        probe_revision_before = binding["revision"]
+        probe_response = await dispatch("probe.execute", "operation_call", _operation_params(
+            "code.execute_java", {"source_artifact": staged["W21FieldIdentityProbe.java"],
+                "entrypoint": "W21FieldIdentityProbe", "arguments": {
+                    "expected_model_tag": binding["model_tag"], "physics_tag": "ht"},
+                "mode": "trusted", "timeout_s": 240},
+            {"project_id": project_id, "session_id": session_id, "model_ref": binding["model_ref"],
+             "expected_revision": probe_revision_before, "idempotency_key": keys["probe_execute"],
+             "request_id": request_ids["probe_execute"], "rpc_timeout_s": RPC_WAIT_S}))
+        probe_data = _assert_success(probe_response, "code.execute_java(W21FieldIdentityProbe)")
+        if probe_data.get("execution_success") is not True:
+            raise RunnerError("field identity probe did not return execution_success=true")
+        probe_execution = probe_response.get("execution")
+        if (not isinstance(probe_execution, Mapping)
+                or probe_execution.get("project_id") != project_id
+                or probe_execution.get("session_id") != session_id
+                or probe_execution.get("model_ref") != binding["model_ref"]
+                or type(probe_execution.get("revision")) is not int
+                or probe_execution.get("revision") != probe_revision_before):
+            raise RunnerError("probe reply omitted the exact project/session/ModelRef/revision")
+        binding["revision"] = probe_execution["revision"]
+        parsed_probe = _parse_field_identity_probe(
+            probe_data.get("readback"), expected_model_tag=binding["model_tag"],
+        )
+        probe = parsed_probe["payload"]
+        probe_observation = {
+            "status": "RAW_UNINTERPRETED" if mode == SOLVE_READBACK_MODE
+                      else "CAPTURED_ONLY_NOT_ADMISSION",
+            "source_sha256": plan["probe_sha256"],
+            "raw_payload_sha256": parsed_probe["raw_payload_sha256"],
+            "semantic_payload_sha256": sha256_value(probe),
+            "raw_payload_bytes": parsed_probe["raw_payload_bytes"],
+            "project_id": project_id, "session_id": session_id,
+            "model_ref": dict(binding["model_ref"]),
+            "revision": probe_execution["revision"],
+            "request_id": request_ids["probe_execute"],
+            "idempotency_key": keys["probe_execute"],
+        }
+        if mode == SOLVE_READBACK_MODE:
+            probe_observation["raw_payload_json"] = parsed_probe["raw_payload_json"]
+        state.value["probe_capture"] = {
+            "status": "RAW_UNINTERPRETED" if mode == SOLVE_READBACK_MODE else "CAPTURED",
+            "source_sha256": plan["probe_sha256"],
+            "raw_payload_sha256": parsed_probe["raw_payload_sha256"],
+            "semantic_payload_sha256": sha256_value(probe),
+            "project_id": project_id, "session_id": session_id,
+            "model_ref": dict(binding["model_ref"]),
+            "revision": probe_execution["revision"],
+            "request_id": request_ids["probe_execute"],
+            "idempotency_key": keys["probe_execute"],
+        }
+        if mode == SOLVE_READBACK_MODE:
+            # Keep the raw bounded JSON durable before any solve intent can be
+            # written. If the later solve becomes UNKNOWN, this observation
+            # remains evidence but never changes admission status.
+            state.value["probe_capture"]["raw_payload_json"] = parsed_probe["raw_payload_json"]
+        else:
+            state.value["probe_capture"]["payload_sha256"] = sha256_value(probe)
+        state.save()
+
         if mode == METADATA_MODE:
-            await register_source("probe.register", keys["probe_register"],
-                                  request_ids["probe_register"], staged["W21FieldIdentityProbe.java"])
-            probe_response = await dispatch("probe.execute", "operation_call", _operation_params(
-                "code.execute_java", {"source_artifact": staged["W21FieldIdentityProbe.java"],
-                    "entrypoint": "W21FieldIdentityProbe", "arguments": {
-                        "expected_model_tag": binding["model_tag"], "physics_tag": "ht"},
-                    "mode": "trusted", "timeout_s": 240},
-                {"project_id": project_id, "session_id": session_id, "model_ref": binding["model_ref"],
-                 "expected_revision": binding["revision"], "idempotency_key": keys["probe_execute"],
-                 "request_id": request_ids["probe_execute"], "rpc_timeout_s": RPC_WAIT_S}))
-            probe_data = _assert_success(probe_response, "code.execute_java(W21FieldIdentityProbe)")
-            if probe_data.get("execution_success") is not True:
-                raise RunnerError("field identity probe did not return execution_success=true")
-            probe_execution = probe_response.get("execution")
-            if (not isinstance(probe_execution, Mapping)
-                    or probe_execution.get("project_id") != project_id
-                    or probe_execution.get("session_id") != session_id
-                    or probe_execution.get("model_ref") != binding["model_ref"]
-                    or type(probe_execution.get("revision")) is not int
-                    or probe_execution.get("revision") != binding["revision"]):
-                raise RunnerError("probe reply omitted the exact project/session/ModelRef/revision")
-            binding["revision"] = probe_execution["revision"]
-            raw_probe = probe_data.get("readback")
-            if isinstance(raw_probe, str):
-                try:
-                    probe = json.loads(raw_probe)
-                except json.JSONDecodeError as exc:
-                    raise RunnerError("field identity probe returned malformed JSON") from exc
-            elif isinstance(raw_probe, Mapping):
-                probe = dict(raw_probe)
-            else:
-                raise RunnerError("field identity probe returned no structured payload")
-            if (probe.get("probe") != "W21FieldIdentityProbe"
-                    or probe.get("status") != "STRUCTURE_CAPTURED_ONLY"
-                    or probe.get("native_admission") != "UNVERIFIED"
-                    or probe.get("identity", {}).get("model_tag") != binding["model_tag"]):
-                raise RunnerError("probe output is incomplete or claims a scope outside metadata capture")
             status = "FIELD_PROBE_CAPTURED_ONLY_NOT_ADMISSION"
-            state.value["probe_capture"] = {"status": "CAPTURED", "payload_sha256": sha256_value(probe)}
         elif mode == SOLVE_READBACK_MODE:
             budgets = plan["budgets"]
             if (budgets.get("study_dispatch") != 1 or budgets.get("solver_dispatch") != 1
@@ -2119,7 +2188,8 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
         if mode == METADATA_MODE:
             report.update({"probe_sha256": plan["probe_sha256"], "probe_readback": probe})
         else:
-            report.update({"solution_tuple_readback": tuple_readback,
+            report.update({"probe_observation": probe_observation,
+                           "solution_tuple_readback": tuple_readback,
                            "solve_readback": solve_readback})
         state.save()
 

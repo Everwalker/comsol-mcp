@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 from contextlib import asynccontextmanager
 from concurrent.futures import ThreadPoolExecutor
+import hashlib
 import importlib.util
 import json
 from pathlib import Path
@@ -18,6 +19,7 @@ import sys
 import textwrap
 import threading
 from types import ModuleType, SimpleNamespace
+from typing import Any
 
 import pytest
 
@@ -167,7 +169,8 @@ class _FakeStdioSession:
                  job_list_timeout: bool = False,
                  session_start_unknown_job_id: str | None = None,
                  job_status_fault: str | None = None,
-                 solve_fault: str | None = None):
+                 solve_fault: str | None = None,
+                 probe_payload_override: Any | None = None):
         self.plan = plan
         self.state = state
         self.wrong_model_field = wrong_model_field
@@ -184,6 +187,7 @@ class _FakeStdioSession:
         self.session_start_unknown_job_id = session_start_unknown_job_id
         self.job_status_fault = job_status_fault
         self.solve_fault = solve_fault
+        self.probe_payload_override = probe_payload_override
         self.calls: list[tuple[str, dict]] = []
         self.project_id = "project-test"
         self.session_id = "session-test"
@@ -268,6 +272,16 @@ class _FakeStdioSession:
             assert query.get("params_sha256") == runner.sha256_value(params)
         if action not in {"job.list", "job.status"}:
             self._assert_pre_dispatch_intent(params)
+        if action == "study.solve":
+            durable = json.loads(self.state.path.read_text(encoding="utf-8"))
+            capture = durable.get("probe_capture")
+            assert isinstance(capture, dict)
+            assert capture.get("status") == "RAW_UNINTERPRETED"
+            assert capture.get("project_id") == self.project_id
+            assert capture.get("session_id") == self.session_id
+            assert capture.get("model_ref") == params["execution"]["model_ref"]
+            assert capture.get("revision") == params["execution"]["expected_revision"]
+            assert durable.get("study_dispatch") == durable.get("solver_dispatch") == 0
         self.calls.append((action or name, params))
 
         if self.timeout_on == action:
@@ -394,13 +408,16 @@ class _FakeStdioSession:
             execution = self._execution_reply(params)
             if self.probe_revision_drift:
                 execution["revision"] += 1
-            return {"success": True, "data": {
-                "execution_success": True,
-                "readback": {
+            payload = self.probe_payload_override
+            if payload is None:
+                payload = json.dumps({
                     "probe": "W21FieldIdentityProbe", "status": "STRUCTURE_CAPTURED_ONLY",
                     "native_admission": "UNVERIFIED",
                     "identity": {"model_tag": "w21model"},
-                },
+                }, ensure_ascii=False, separators=(",", ":"))
+            return {"success": True, "data": {
+                "execution_success": True,
+                "readback": payload,
             }, "execution": execution}
         if action == "study.solve":
             execution = self._ticket_reply(
@@ -633,12 +650,28 @@ def test_srb_ok(tmp_path, monkeypatch):
     assert actions.count("study.solve") == 1
     assert actions.count("dataset.solution_indices") == 1
     assert actions.count("result.evaluate") == 1
-    assert "probe.register" not in actions and "probe.execute" not in actions
+    assert actions.count("probe.register") == actions.count("probe.execute") == 1
+    assert actions.index("probe.execute") < actions.index("study.solve")
     assert report["mode"] == runner.SOLVE_READBACK_MODE
     assert report["kind"] == runner.SOLVE_READBACK_KIND
     assert report["study_dispatch"] == report["solver_dispatch"] == 1
     assert report["native_admission"] == report["physical_validation"] == "UNVERIFIED"
     assert report["status"] == "SOLVE_READBACK_CAPTURED_ONLY_NOT_ADMISSION"
+    observation = report["probe_observation"]
+    assert observation["status"] == "RAW_UNINTERPRETED"
+    assert observation["source_sha256"] == plan["probe_sha256"]
+    assert observation["project_id"] == report["project_id"]
+    assert observation["session_id"] == report["session_id"]
+    assert observation["model_ref"] == report["model_binding"]["model_ref"]
+    assert observation["revision"] == state.value["study_solve_progress"]["revision_before"]
+    assert observation["request_id"] == plan["request_ids"]["probe_execute"]
+    assert observation["idempotency_key"] == plan["idempotency_keys"]["probe_execute"]
+    raw_probe = observation["raw_payload_json"]
+    assert len(raw_probe.encode("utf-8")) == observation["raw_payload_bytes"]
+    assert hashlib.sha256(raw_probe.encode("utf-8")).hexdigest() == observation["raw_payload_sha256"]
+    assert json.loads(raw_probe)["native_admission"] == "UNVERIFIED"
+    persisted = json.loads((Path(plan["run_root"]) / "solve_readback_receipt.json").read_text())
+    assert persisted["probe_observation"] == observation
     captured = report["solve_readback"]
     assert captured["tuple"] == {"outer": 1, "inner": 2, "solnum": 2}
     assert captured["field_values"] == [302.0, 303.0]
@@ -656,10 +689,15 @@ def test_srb_ok(tmp_path, monkeypatch):
     assert captured["cleanup"]["cleanup_failed"] is False
     assert report["cleanup"]["status"] == "CLEANUP_COMPLETE"
     solve_params = next(params for action, params in fake.calls if action == "study.solve")
+    probe_params = next(params for action, params in fake.calls if action == "probe.execute")
     tuple_params = next(params for action, params in fake.calls
                         if action == "dataset.solution_indices")
     result_params = next(params for action, params in fake.calls if action == "result.evaluate")
     assert solve_params["study_tag"] == "std1"
+    assert probe_params["execution"]["request_id"] == plan["request_ids"]["probe_execute"]
+    assert probe_params["execution"]["idempotency_key"] == plan["idempotency_keys"]["probe_execute"]
+    assert probe_params["execution"]["model_ref"] == solve_params["execution"]["model_ref"]
+    assert probe_params["execution"]["expected_revision"] == solve_params["execution"]["expected_revision"]
     for params in (solve_params, tuple_params, result_params):
         assert params["execution"]["queue_timeout_s"] == 30
         assert params["execution"]["execution_timeout_s"] == 240
@@ -669,6 +707,54 @@ def test_srb_ok(tmp_path, monkeypatch):
         "aggregate": "none", "complex_mode": "preserve", "storage": "inline",
     }
     assert state.value["study_dispatch"] == state.value["solver_dispatch"] == 1
+
+
+def test_srb_probe_unknown_is_durable_and_never_reaches_solve(tmp_path, monkeypatch):
+    _patch_isolation(monkeypatch)
+    plan = _plan(tmp_path, mode=runner.SOLVE_READBACK_MODE)
+    state = _state(tmp_path, schema=runner.SOLVE_READBACK_SCHEMA)
+    fake = _FakeStdioSession(plan, state, unknown_on="probe.execute")
+
+    with pytest.raises(runner.RunnerError, match="probe.execute returned UNKNOWN"):
+        asyncio.run(runner.run_metadata_protocol(
+            runner._MCPCalls(fake), plan, state, clock=lambda: 100.0, preflight=lambda: [],
+        ))
+
+    actions = [action for action, _ in fake.calls]
+    assert actions.count("probe.execute") == 1
+    assert actions.count("job.list") == 1
+    assert "study.solve" not in actions
+    assert "dataset.solution_indices" not in actions
+    assert "result.evaluate" not in actions
+    assert "session.disconnect" not in actions and "session.stop" not in actions
+    assert state.value["status"] == "UNKNOWN"
+    assert state.value["unknown_action"] == "probe.execute"
+    assert state.value["recovery"]["request_id"] == plan["request_ids"]["probe_execute"]
+    assert state.value["recovery"]["idempotency_key"] == plan["idempotency_keys"]["probe_execute"]
+    assert state.value["recovery"]["replay_permitted"] is False
+    assert state.value["study_dispatch"] == state.value["solver_dispatch"] == 0
+
+
+def test_srb_probe_payload_limit_refuses_before_solve(tmp_path, monkeypatch):
+    _patch_isolation(monkeypatch)
+    plan = _plan(tmp_path, mode=runner.SOLVE_READBACK_MODE)
+    state = _state(tmp_path, schema=runner.SOLVE_READBACK_SCHEMA)
+    fake = _FakeStdioSession(
+        plan, state,
+        probe_payload_override="x" * (runner.W21_FIELD_IDENTITY_PROBE_MAX_JSON_UTF8_BYTES + 1),
+    )
+
+    with pytest.raises(runner.RunnerError, match="probe payload exceeds"):
+        asyncio.run(runner.run_metadata_protocol(
+            runner._MCPCalls(fake), plan, state, clock=lambda: 100.0, preflight=lambda: [],
+        ))
+
+    actions = [action for action, _ in fake.calls]
+    assert actions.count("probe.execute") == 1
+    assert "study.solve" not in actions
+    assert "dataset.solution_indices" not in actions
+    assert "result.evaluate" not in actions
+    assert state.value["status"] == "FAILED"
 
 
 @pytest.mark.parametrize(
@@ -869,20 +955,24 @@ def test_srb_unknown_stops_after_one_readonly_query(
         assert state.value["field_reads_status"] == "UNKNOWN"
 
 
-@pytest.mark.parametrize(("blocked_action", "state_action", "call_threshold", "counter"), [
-    ("study.solve", "study.solve", 8, "study_dispatch"),
-    ("dataset.solution_indices", "solution_indices", 9, "solution_tuple_reads"),
-    ("result.evaluate", "result.evaluate", 10, "field_reads"),
+@pytest.mark.parametrize(("blocked_action", "state_action", "boundary_action", "counter"), [
+    ("study.solve", "study.solve", "probe.execute", "study_dispatch"),
+    ("dataset.solution_indices", "solution_indices", "study.solve", "solution_tuple_reads"),
+    ("result.evaluate", "result.evaluate", "dataset.solution_indices", "field_reads"),
 ], ids=["solve", "tuple", "field"])
 def test_srb_late_server_budget_refuses_before_stage_dispatch(
-        blocked_action, state_action, call_threshold, counter, tmp_path, monkeypatch):
+        blocked_action, state_action, boundary_action, counter, tmp_path, monkeypatch):
     _patch_isolation(monkeypatch)
     plan = _plan(tmp_path, mode=runner.SOLVE_READBACK_MODE)
     state = _state(tmp_path, schema=runner.SOLVE_READBACK_SCHEMA)
     fake = _FakeStdioSession(plan, state)
 
     def near_work_boundary():
-        return 100.0 if len(fake.calls) < call_threshold else 730.0
+        # Bind the synthetic time shift to the last successful operation before
+        # each guarded stage dispatch, so extra metadata calls cannot retarget
+        # this acceptance boundary by changing a positional call count.
+        completed = {action for action, _ in fake.calls}
+        return 730.0 if boundary_action in completed else 100.0
 
     with pytest.raises(runner.RunnerError, match=r"server queue\+execution budget exceeds"):
         asyncio.run(runner.run_metadata_protocol(
