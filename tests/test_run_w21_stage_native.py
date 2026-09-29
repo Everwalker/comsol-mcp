@@ -396,7 +396,9 @@ def _patch_isolation(monkeypatch):
 
 def test_prepare_freezes_full_source_identity_without_starting_services(tmp_path, monkeypatch):
     _patch_prepare_environment(monkeypatch)
-    evidence = tmp_path / "external-evidence"
+    # Keep the test-owned path compact enough for the frozen Windows DLL
+    # MAX_PATH preflight, independent of pytest's test-function temp prefix.
+    evidence = tmp_path / "e"
     evidence.mkdir()
 
     result = runner.prepare(version="6.4", comsol_root=tmp_path / "COMSOL64",
@@ -429,9 +431,10 @@ def test_prepare_freezes_full_source_identity_without_starting_services(tmp_path
 
 def test_prepare_accepts_explicit_short_runtime_root_inside_task(tmp_path, monkeypatch):
     _patch_prepare_environment(monkeypatch)
-    evidence = tmp_path / "task"
+    # Exercise a genuinely short requested root without inheriting long labels.
+    evidence = tmp_path / "t"
     evidence.mkdir()
-    requested_root = evidence / "runtime"
+    requested_root = evidence / "r"
     result = runner.prepare(version="6.4", comsol_root=tmp_path / "COMSOL64",
                             jdk_home=tmp_path / "JDK11", evidence_root=evidence,
                             server_home_root=requested_root)

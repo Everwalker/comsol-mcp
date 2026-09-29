@@ -259,6 +259,13 @@ def windows_owned_server_path_budget(session_state_root: Path, project_id: str,
         "owned_server_cwd": directories.root,
         "private_installation": directories.private_installation,
         "launcher": Path(command[0]),
+        # COMSOL's launcher loads this bundled GraphicsMagick image DLL by an absolute
+        # path during startup. Keep this observed dependency inside the same
+        # legacy MAX_PATH budget; the executable alone is not sufficient.
+        "critical_image_library": (
+            directories.private_installation / "ext" / "graphicsmagick" /
+            "win64" / "CORE_RL_magick_.dll"
+        ),
         "runtime_directory": directories.runtime,
         "port_file": directories.port_file,
         "preferences": directories.preferences,

@@ -13,12 +13,14 @@ import pytest
 from comsol_mcp._platform_process import process_identity
 from comsol_mcp._session_context import (
     CanonicalSocket, OwnedServerProcessIdentity, SessionRuntimeConfig,
+    session_state_directory,
 )
 from comsol_mcp._session_server import (
     ManagedServerHandle,
     OwnedServerError,
     OwnedServerLauncher,
     ServerDirectories,
+    _utf16_units_with_nul,
     _parse_lsof_rows,
     build_server_command,
     prepare_private_loopback_installation,
@@ -102,13 +104,18 @@ def test_server_command_is_session_scoped_and_platform_explicit(tmp_path):
 
 
 def test_windows_server_budget_uses_full_hashed_session_suffix_and_fails_closed(tmp_path):
-    state_root = tmp_path / "h" / "0123456789abcdef" / "control-private" / "session-runtime-state"
+    state_root = _windows_state_root_for_test(tmp_path.anchor, 0)
     budget = windows_owned_server_path_budget(state_root, "project", "session")
+    session_root = session_state_directory(state_root, "project", "session")
     assert budget["path_limit_utf16_units_including_nul"] == 260
     assert budget["command_line_limit_utf16_units_including_nul"] == 32767
     assert budget["path_utf16_units_including_nul"]["launcher"] <= 260
+    assert budget["path_utf16_units_including_nul"]["critical_image_library"] <= 260
     assert budget["path_utf16_units_including_nul"]["owned_server_cwd"] <= 260
     assert budget["command_line_utf16_units_including_nul"] < 32767
+    assert len(state_root.parent.parent.name) == 16
+    assert len(session_root.name) == 64
+    assert all(char in "0123456789abcdef" for char in session_root.name)
     assert not state_root.exists()
 
     deep_home = tmp_path / ("r" * 120) / ("s" * 120) / "h" / "0123456789abcdef"
@@ -118,12 +125,93 @@ def test_windows_server_budget_uses_full_hashed_session_suffix_and_fails_closed(
     assert not deep_home.exists()
 
 
+def _windows_server_paths_for_test(state_root: Path) -> dict[str, Path]:
+    installation = session_state_directory(state_root, "project", "session") / "owned-server" / "installation"
+    return {
+        "launcher": installation / "bin" / "win64" / "comsolmphserver.exe",
+        "critical_image_library": (
+            installation / "ext" / "graphicsmagick" / "win64" / "CORE_RL_magick_.dll"
+        ),
+    }
+
+
+def _windows_state_root_for_test(anchor: str, padding: int) -> Path:
+    parts = [Path(anchor)]
+    if padding:
+        parts.append(Path("x" * padding))
+    parts.extend((Path("w21-budget"), Path("h"), Path("0123456789abcdef"),
+                  Path("control-private"), Path("session-runtime-state")))
+    return Path(*parts)
+
+
+def test_windows_image_library_path_budget_rejects_before_birth_when_launcher_fits(tmp_path):
+    # The synthetic root stays under the filesystem anchor so this check does
+    # not depend on pytest's path length. No path is created by the test.
+    state_root = None
+    for padding in range(0, 180):
+        candidate = _windows_state_root_for_test(tmp_path.anchor, padding)
+        paths = _windows_server_paths_for_test(candidate)
+        launcher_units = _utf16_units_with_nul(str(paths["launcher"]))
+        library_units = _utf16_units_with_nul(str(paths["critical_image_library"]))
+        if launcher_units <= 260 < library_units:
+            state_root = candidate
+            break
+    assert state_root is not None, "test root must expose a launcher-fit / DLL-overflow interval"
+
+    paths = _windows_server_paths_for_test(state_root)
+    assert _utf16_units_with_nul(str(paths["launcher"])) <= 260
+    assert _utf16_units_with_nul(str(paths["critical_image_library"])) > 260
+    session_root = session_state_directory(state_root, "project", "session")
+    server_home = state_root.parent.parent
+    assert not server_home.exists()
+    assert not state_root.exists()
+    assert not session_root.exists()
+    calls = []
+    runtime = SessionRuntimeConfig(
+        runtime_id="fixture-runtime", comsol_version="6.4.0.293",
+        installation_root=tmp_path / "install", java_executable=tmp_path / "jdk/bin/java.exe",
+        classpath=(tmp_path / "client.jar",), preferences_dir=tmp_path / "prefs",
+        session_state_root=state_root,
+    )
+    launcher = OwnedServerLauncher(
+        process_factory=lambda *args, **kwargs: calls.append((args, kwargs)),
+        platform_name="windows",
+    )
+
+    with pytest.raises(OwnedServerError, match="path budget exceeded: critical_image_library requires"):
+        launcher.start(runtime, "project", "session")
+
+    assert calls == []
+    assert not server_home.exists()
+    assert not state_root.exists()
+    assert not session_root.exists()
+
+
+def test_windows_server_budget_counts_exact_260_boundary_without_claiming_launch_success(tmp_path):
+    # This is only conservative path arithmetic; it does not establish that
+    # CreateProcessW or COMSOL will launch a path at this boundary.
+    state_root = None
+    for padding in range(0, 180):
+        candidate = _windows_state_root_for_test(tmp_path.anchor, padding)
+        paths = _windows_server_paths_for_test(candidate)
+        if _utf16_units_with_nul(str(paths["critical_image_library"])) == 260:
+            state_root = candidate
+            break
+    assert state_root is not None, "test root must represent the exact counted boundary"
+
+    budget = windows_owned_server_path_budget(state_root, "project", "session")
+    lengths = budget["path_utf16_units_including_nul"]
+    assert lengths["critical_image_library"] == 260
+    assert lengths["launcher"] <= 260
+
+
 def test_windows_owned_launcher_passes_exact_validated_executable_to_popen(tmp_path):
     source = _installation(tmp_path / "installed")
     executable = source / "bin/win64/comsolmphserver.exe"
     executable.parent.mkdir(parents=True)
     executable.write_bytes(b"synthetic Windows launcher")
-    state_root = tmp_path / "short" / "h" / "0123456789abcdef" / "control-private" / "session-runtime-state"
+    state_root = (tmp_path.parent / "s" / "h" / "0123456789abcdef" /
+                  "control-private" / "session-runtime-state")
     runtime = SessionRuntimeConfig(
         runtime_id="fixture-runtime", comsol_version="6.4.0.293",
         installation_root=source, java_executable=tmp_path / "jdk/bin/java.exe",

@@ -103,7 +103,8 @@
       "native_acceptance": "NOT_RUN"
     },
     "W21 Windows short-home/CreateProcess path hardening is PASS for scoped offline software: 44 focused tests pass; main independently verified four source hashes, seven JUnit hashes/counts and receipt. The earlier WinError206 Windows6.4 attempt remains FAILED terminal; native NOT_RUN and no replay/stop is claimed. See docs/full_project_execution/project_session/WINDOWS_SHORT_HOME_PATH_CHECKPOINT.json.",
-    "Windows6.4 V2 source archive/freeze passed main preflight and was uploaded/executed once under authorization, but session.start returned UNKNOWN; read-only store remains RUNNING without finished/result. DLL alias exists with matching canonical hash at exactly 260 UTF-16 units including NUL, a plausible boundary but unproven root cause. control.log is 0B; daemon liveness remains UNVERIFIED pending limited user authorization after automatic review rejected PID parsing from token-bearing control.json. One Server birth possible, Worker/study/solver zero. Preserve UNKNOWN; no replay, stop or cleanup. See docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json."
+    "Windows6.4 V2 source archive/freeze passed main preflight and was uploaded/executed once under authorization, but session.start returned UNKNOWN; read-only store remains RUNNING without finished/result. DLL alias exists with matching canonical hash at exactly 260 UTF-16 units including NUL, a plausible boundary but unproven root cause. control.log is 0B; daemon liveness remains UNVERIFIED pending limited user authorization after automatic review rejected PID parsing from token-bearing control.json. One Server birth possible, Worker/study/solver zero. Preserve UNKNOWN; no replay, stop or cleanup. See docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json.",
+    "Added a scoped Windows W21 software preflight guard for the observed GraphicsMagick DLL alias; 57 unique server/runner/lifecycle offline tests pass. This does not diagnose or change the protected V2 session.start UNKNOWN. Receipt: /Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-critical-dll-budget-20260929/final-receipt.json SHA-256 937ea493b79fd9f440abe42c717c88e972e1958f7522c903457b0d1fc88aa35e. Native remains NOT_RUN."
   ],
   "next_action": "Await the pending narrowly scoped read-only daemon-liveness authorization, then reconcile the exact original request/idempotency/operation/job and owned-server state and investigate the DLL load/startup-class errors. Preserve UNKNOWN. Do not issue another session.start, replay, stop or cleanup.",
   "active_jobs": [],
@@ -134,7 +135,7 @@
     "native_solve_budget_remaining": 0,
     "evidence": "docs/full_project_execution/evidence/luna_process_reconciliation/mac_readonly_snapshot_20260926T2152Z.json"
   },
-  "updated_at": "2026-09-29T00:50:38Z",
+  "updated_at": "2026-09-29T01:17:07Z",
   "note": "Original scope remains through W26. User explicitly resumed after the test-efficiency analysis; implement efficiency improvements first. OpenViking task-detail retrieval was denied by auto-review because it would disclose internal roadmap identifiers externally; no workaround. Use current frozen workpack and read-only local memory only. Do not rerun bootstrap/init on resume. Source files now contain executor edits; do not rerun bootstrap/init. Git metadata is an APFS pointer managed by main agent; migration requires bundle/source transfer, not copying only the repository pointer. Git metadata migration is documented by evidence/git_metadata_relocation.json and owned by the main agent; do not copy the APFS git pointer to another machine without source bundle/archive. GUI permission boundary and checkpoint solution-scope caveat recorded. This executor has one W24 native setup-only failure with exact cleanup verified; the durable operation/job UNKNOWN records remain unchanged. No W24 solver submission occurred. Saved-MPH readback supplement uses separate time/evidence and zero study/solver calls; run08 remains FAIL_OR_INCOMPLETE. Root raw SQLite recomputation is linked under native_resume_saved_artifact_supplement.raw_recomputation_evidence; original run08 remains FAIL_OR_INCOMPLETE and no solve budget is restored. Latest checkpoint 2026-09-27T03:50:43Z: W24 0334Z setup run failed pre-model due Python 3.14 missing mcp, with exact cleanup; 0346Z candidate pins the validated 3.12.13 environment and passes a production no-engine registry/daemon preflight. Native setup remains pending root review; science implementation continues offline. Latest checkpoint 2026-09-27T09:09:28Z: W24 0841Z candidate was invoked once at 0857Z and failed before any engine/Worker birth because project.inspect received an injected idempotency_key; project.create persisted successfully. Exact read-only SQLite hash and operation result are in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_contract_diagnostic.json. The runner now omits the unnecessary inspect key; actual ControlDaemon focused regression is 2/2 PASS in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_runner_regression_receipt.json. No native retry or acceptance is claimed; release F04 runtime integration is active, so refresh closure and root review are required before another launch. Windows COMSOL 6.3 remains required/unassessed; only macOS 6.3 is USER_REQUESTED_SKIP.",
   "native_resume_smoke": {
     "status": "FAIL_OR_INCOMPLETE_POINT_SCHEMA_FAILURE; SOLVED_CHILD_ARTIFACT_DURABLE; SOLVE_BUDGET_EXHAUSTED; SEPARATE_SAVED_MPH_READBACK_PASS",
@@ -2670,7 +2671,70 @@
       "tests/test_session_server.py": "211855691e0a3a66d140e484395aafac9f2f163b6bc716392375bb732c2d8ab3",
       "tests/test_run_w21_stage_native.py": "487f53ea01e13fe6a4a9dab276b139d5f6f273249af0b9cb26632ec037b6943a"
     },
-    "next_action": "Prepare fresh Windows6.4 V2 short-home candidate; then 6.4 followed by 6.3."
+    "next_action": "Await the pending narrowly scoped daemon-liveness authorization and reconcile the same Windows6.4 V2 session.start UNKNOWN. Do not start, replay, stop or clean up another session; the local DLL path guard is not proof of a Windows startup fix.",
+    "critical_dll_guard_followup": {
+      "status": "PASS_SCOPED_OFFLINE_SOFTWARE",
+      "native_status": "NOT_RUN",
+      "guard": "Windows prebirth path budget includes the exact private-installation alias ext/graphicsmagick/win64/CORE_RL_magick_.dll; reject before directory/process creation if it exceeds 260 UTF-16 units including NUL.",
+      "identity_invariants": "Existing 16-hex server-home child and 64-hex project/session hash remain unchanged.",
+      "boundary": "Exactly 260 is tested as path arithmetic only; it is not Windows CreateProcess or COMSOL startup evidence.",
+      "tests": {
+        "server_control_lifecycle": 21,
+        "runner": 36,
+        "unique_pass": 57,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "junit": [
+        {
+          "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-critical-dll-budget-20260929/final-junit.xml",
+          "sha256": "d0477d6007115647d11eb161729a36d51baf2d00935cd4f2fd0104acb539a4c7",
+          "tests": 21,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-critical-dll-budget-20260929/runner-junit.xml",
+          "sha256": "65a3f437adddab4dfeebe4f3a04de44238328651ca804b57b2479dd07ea3142f",
+          "tests": 36,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      ],
+      "source_sha256": {
+        "comsol_mcp/_session_server.py": "cd5ee27441b50bbf4723614e916e32c5301885f8a06165bd7ddb6232296aacc0",
+        "tests/test_session_server.py": "521c3b20b9b4aba6a95de74b62ca4095c6b7e7259924b58bb3cd45c64e5b261b",
+        "tests/test_run_w21_stage_native.py": "bb0cb8bd96ac01b3c73a56dfd8e397e5e767e1e73a0890504d0feeedd5b4496e"
+      },
+      "receipt": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-critical-dll-budget-20260929/final-receipt.json",
+        "sha256": "937ea493b79fd9f440abe42c717c88e972e1958f7522c903457b0d1fc88aa35e"
+      },
+      "preserved_initial_failures": [
+        {
+          "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-critical-dll-budget-20260929/initial-failure-junit.xml",
+          "sha256": "4828260a6693233eb7972041ad2d2224c43eefccc1dd606cd1594e245f573af8",
+          "tests": 21,
+          "failures": 1
+        },
+        {
+          "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-critical-dll-budget-20260929/runner-long-basetemp-failure-junit.xml",
+          "sha256": "5620163a27cabb6f47b9dcef46ac9032facd9f4c02f9f852bbb887deeb80ef49",
+          "tests": 36,
+          "failures": 27
+        },
+        {
+          "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-critical-dll-budget-20260929/runner-short-basetemp-failure-junit.xml",
+          "sha256": "d8669be3f8d032fea4a99091bd20d9d12587badd3e6799663932e5eaf07a356e",
+          "tests": 36,
+          "failures": 2
+        }
+      ],
+      "interpretation": "This software guard addresses a measured path constraint only. It does not establish the cause or repair of the prior Windows6.4 session.start UNKNOWN."
+    }
   },
   "windows_v2_session_start_unknown": {
     "status": "UNKNOWN_NOT_ACCEPTED",
@@ -2716,6 +2780,14 @@
     "proposed_short_taskroot": "C:\\Temp\\w21v3_9c5ced6",
     "proposed_short_taskroot_status": "NOT_CREATED_MEASURED_EXAMPLE_ONLY",
     "proposed_image_library_alias_path_units_including_nul": 224,
-    "proposed_path_mitigation_proven": false
+    "proposed_path_mitigation_proven": false,
+    "local_critical_dll_guard_followup": {
+      "status": "PASS_SCOPED_OFFLINE_SOFTWARE",
+      "receipt_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-critical-dll-budget-20260929/final-receipt.json",
+      "receipt_sha256": "937ea493b79fd9f440abe42c717c88e972e1958f7522c903457b0d1fc88aa35e",
+      "native_status": "NOT_RUN",
+      "original_unknown_unchanged": true,
+      "no_replay_stop_or_cleanup": true
+    }
   }
 }
