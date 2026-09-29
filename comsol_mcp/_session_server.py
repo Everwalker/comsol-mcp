@@ -147,6 +147,70 @@ def create_server_directories(runtime: SessionRuntimeConfig, project_id: str,
     return directories
 
 
+def owned_server_preferences_directory(
+    runtime: SessionRuntimeConfig,
+    project_id: str,
+    session_id: str,
+    process_identity: OwnedServerProcessIdentity,
+    *,
+    platform_name: str | None = None,
+) -> Path:
+    """Resolve the existing preference directory for this exact owned Server.
+
+    The Server's ``-login auto`` credentials are stored in its preference
+    tree.  A Worker attaching to that Server must use the same private tree
+    when it connects without explicit credentials.  This helper only verifies
+    the already-created session/Server paths; it never creates or copies
+    preferences and never reads the login file.
+    """
+    if not isinstance(runtime, SessionRuntimeConfig):
+        raise OwnedServerError("owned Server runtime identity is unavailable")
+    if not isinstance(process_identity, OwnedServerProcessIdentity):
+        raise OwnedServerError("exact owned Server process identity is unavailable")
+    try:
+        session_root = session_state_directory(
+            runtime.session_state_root, project_id, session_id,
+        )
+        owned_root = session_root / "owned-server"
+        preferences = owned_root / "preferences"
+        if (owned_root.is_symlink() or not owned_root.is_dir()
+                or preferences.is_symlink() or not preferences.is_dir()):
+            raise OwnedServerError("owned Server preference directory is missing or aliased")
+        session_root_real = session_root.resolve(strict=True)
+        owned_root_real = owned_root.resolve(strict=True)
+        preferences_real = preferences.resolve(strict=True)
+        if (owned_root_real.parent != session_root_real
+                or preferences_real.parent != owned_root_real):
+            raise OwnedServerError("owned Server preference directory escapes its session scope")
+
+        directories = _server_directories(owned_root_real)
+        command = build_server_command(
+            directories, platform_name=platform_name or sys.platform,
+            validate_launcher=False,
+        )
+        expected_executable = Path(command[0]).resolve(strict=True)
+        observed_executable = Path(process_identity.executable).resolve(strict=True)
+        if observed_executable != expected_executable:
+            raise OwnedServerError("owned Server process belongs to a different session or runtime path")
+        selected_platform = platform_name or sys.platform
+        if selected_platform in {"win32", "nt", "windows"}:
+            # The isolated Windows install deliberately aliases bin/win64 to
+            # the inspected runtime. Resolving the launched executable thus
+            # points outside owned_root, but it must still be this runtime's
+            # exact Server binary.
+            runtime_executable = (
+                Path(runtime.installation_root).resolve(strict=True)
+                / "bin" / "win64" / "comsolmphserver.exe"
+            ).resolve(strict=True)
+            if expected_executable != runtime_executable:
+                raise OwnedServerError("owned Server launcher differs from the bound runtime installation")
+        return preferences_real
+    except OwnedServerError:
+        raise
+    except Exception as exc:
+        raise OwnedServerError("owned Server preference binding could not be verified") from exc
+
+
 def prepare_private_loopback_installation(source_root: Path, private_root: Path) -> dict[str, Any]:
     """Build an isolated installation view and bind its private WebBridge XML to loopback.
 

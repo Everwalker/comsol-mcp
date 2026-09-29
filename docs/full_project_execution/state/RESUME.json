@@ -148,7 +148,7 @@
       "checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json"
     }
   ],
-  "next_action": "Continue read-only source/config analysis of the 164eec3 session.connect UNKNOWN. Worker returned ENGINE_CALL_FAILED with a credential-acquisition message; source/job and lifecycle remain UNKNOWN. The current-host scan found no task-matched candidate process or associated socket, but no durable reconciliation occurred. Do not replay, reconnect, stop, clean up, or launch; main decides any later controlled action. Solve/readback remains NOT_RUN. Details: WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json#connect_readonly_diagnostic_v1.",
+  "next_action": "Finish the exact same-host durable disposition for the 164eec3 session.connect UNKNOWN while preserving its result; never replay it or clean up. The preferences binding fix has scoped offline tests only. After safe disposition and main review of a new source freeze containing the repair, continue the already authorized bounded Windows 6.4 then 6.3 solve-readback plan; native solve/readback remains NOT_RUN.",
   "active_jobs": [],
   "blockers": [
     "W23 failed setup owned Server 75272 and daemon 75260 remain preserved: cleanup SIGTERM was rejected by automatic approval and explicit authorization is pending; no cleanup or relaunch authorized by elapsed time.",
@@ -177,7 +177,7 @@
     "native_solve_budget_remaining": 0,
     "evidence": "docs/full_project_execution/evidence/luna_process_reconciliation/mac_readonly_snapshot_20260926T2152Z.json"
   },
-  "updated_at": "2026-09-29T07:20:20Z",
+  "updated_at": "2026-09-29T08:02:20Z",
   "note": "Original scope remains through W26. User explicitly resumed after the test-efficiency analysis; implement efficiency improvements first. OpenViking task-detail retrieval was denied by auto-review because it would disclose internal roadmap identifiers externally; no workaround. Use current frozen workpack and read-only local memory only. Do not rerun bootstrap/init on resume. Source files now contain executor edits; do not rerun bootstrap/init. Git metadata is an APFS pointer managed by main agent; migration requires bundle/source transfer, not copying only the repository pointer. Git metadata migration is documented by evidence/git_metadata_relocation.json and owned by the main agent; do not copy the APFS git pointer to another machine without source bundle/archive. GUI permission boundary and checkpoint solution-scope caveat recorded. This executor has one W24 native setup-only failure with exact cleanup verified; the durable operation/job UNKNOWN records remain unchanged. No W24 solver submission occurred. Saved-MPH readback supplement uses separate time/evidence and zero study/solver calls; run08 remains FAIL_OR_INCOMPLETE. Root raw SQLite recomputation is linked under native_resume_saved_artifact_supplement.raw_recomputation_evidence; original run08 remains FAIL_OR_INCOMPLETE and no solve budget is restored. Latest checkpoint 2026-09-27T03:50:43Z: W24 0334Z setup run failed pre-model due Python 3.14 missing mcp, with exact cleanup; 0346Z candidate pins the validated 3.12.13 environment and passes a production no-engine registry/daemon preflight. Native setup remains pending root review; science implementation continues offline. Latest checkpoint 2026-09-27T09:09:28Z: W24 0841Z candidate was invoked once at 0857Z and failed before any engine/Worker birth because project.inspect received an injected idempotency_key; project.create persisted successfully. Exact read-only SQLite hash and operation result are in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_contract_diagnostic.json. The runner now omits the unnecessary inspect key; actual ControlDaemon focused regression is 2/2 PASS in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_runner_regression_receipt.json. No native retry or acceptance is claimed; release F04 runtime integration is active, so refresh closure and root review are required before another launch. Windows COMSOL 6.3 remains required/unassessed; only macOS 6.3 is USER_REQUESTED_SKIP.",
   "native_resume_smoke": {
     "status": "FAIL_OR_INCOMPLETE_POINT_SCHEMA_FAILURE; SOLVED_CHILD_ARTIFACT_DURABLE; SOLVE_BUDGET_EXHAUSTED; SEPARATE_SAVED_MPH_READBACK_PASS",
@@ -1037,7 +1037,8 @@
   "acceptance_cells_changed": false,
   "current_execution_checkpoint": {
     "path": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json",
-    "status": "PARTIAL_CONNECT_UNKNOWN_DIAGNOSED_NOT_DURABLY_RECONCILED_SOLVE_READBACK_NOT_RUN"
+    "status": "PARTIAL_CONNECT_UNKNOWN_DIAGNOSED_NOT_DURABLY_RECONCILED_SOLVE_READBACK_NOT_RUN",
+    "auth_preferences_software": "PASS_SCOPED_OFFLINE; 22 unique tests; native NOT_RUN"
   },
   "w24_setup_candidate_0841z_native_attempt": {
     "candidate_id": "W24-CURE-HIST-AXISYM-01",
@@ -3017,13 +3018,14 @@
     "cleanup_permitted": false,
     "execute_receipt_sha256": "461bd61db71372733ff4afc7f3fb5b5d6f40f4edc70a914c3e671c2ee2fe628a",
     "state_after_execute_sha256": "7ddd5d10720285d6160d5e68966a7db171d2ab2d583f8c8075cfc43297f34d16",
-    "next_action": "Continue read-only root-cause analysis only; no replay, reconnect, stop, cleanup, or launch.",
+    "next_action": "This native session.connect operation remains UNKNOWN and has not been replayed or cleaned up. The same-session preferences binding is a scoped offline source repair only; finish safe durable disposition and review a new exact freeze before any bounded continuation. Solve/readback remains NOT_RUN.",
     "diagnostic_checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json#connect_readonly_diagnostic_v1",
     "worker_failure_code": "ENGINE_CALL_FAILED",
     "persisted_operation_and_job_status": "UNKNOWN",
     "lifecycle_status": "UNKNOWN_REVISION_4_WORKER_EPOCH_1",
     "current_host_observation": "NO_TASK_MATCHED_PROCESS_CANDIDATE_OR_ASSOCIATED_SOCKET_OBSERVED; NOT_DURABLY_RECONCILED",
-    "native_retry_or_cleanup_performed": false
+    "native_retry_or_cleanup_performed": false,
+    "auth_preferences_software_checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json#auth_preferences_binding_software"
   },
   "latest_runner_compute_policy_repair": {
     "status": "PASS_SCOPED_OFFLINE_MAIN_REVIEWED",
@@ -3041,5 +3043,29 @@
     "prior_path_budget_failure": "/Volumes/CTestEff/h-project-compute-policy.xml (retained; scratch path budget, not native)",
     "in_executed_164eec3_freeze": false,
     "native_status": "NOT_RUN"
+  },
+  "auth_preferences_binding_software": {
+    "status": "PASS_SCOPED_OFFLINE_MAIN_SOURCE_DIFF_REVIEWED",
+    "native_status": "NOT_RUN",
+    "unique_tests_passed": 22,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "summary": "mcp_managed Workers now use the exact same-session existing owned Server preferences; same-runtime Windows bin/win64 symlink is accepted. shared/user_owned and explicit credentials are unchanged.",
+    "source_sha256": {
+      "comsol_mcp/_managed_backend.py": "bf1eaf85f70357e7ba013e3a5adc379efc44ce1877f9f6befa35fe89cdd6913f",
+      "comsol_mcp/_session_server.py": "cfca04122b07fe6aea06470b7b23ef6e49020c2aa1700bb3631454ee0b342c01",
+      "tests/test_session_server_control.py": "7d78cfdadd8adb8f51605fe2cb5b59310781f9934c86e658b21279fe6a5774dc"
+    },
+    "receipt": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/auth-prefs-binding-20260929/auth-preferences-binding-receipt.json",
+      "sha256": "794e95972d5ce54273ef3291a5ab58878777c1e77ed412096cd1a323764b8ad7"
+    },
+    "junit": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/auth-prefs-binding-20260929/session-auth-junit.xml",
+      "sha256": "475020ee6b1b2fd18c4660987fa3771e86dafaf4ec145bd3ff9942ce3eb9e4a5"
+    },
+    "checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json#auth_preferences_binding_software",
+    "native_scope": "The 164eec3 session.connect attempt remains UNKNOWN; this software repair does not prove native causality or solve/readback."
   }
 }

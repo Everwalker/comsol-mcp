@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager, nullcontext
 from contextvars import ContextVar
+from dataclasses import replace
 import hashlib
 import ipaddress
 import json
@@ -473,15 +474,32 @@ class ManagedBackend:
             raise SessionConnectFailure("SERVER_OWNERSHIP_UNKNOWN", "MCP-managed Server requires its exact live process identity",
                                         safe_retry=False, uncertain=False, dispatched=False)
         try:
+            runtime_for_worker = runtime
             session_home = session_state_directory(runtime.session_state_root, project_id, session_id)
             session_home.mkdir(mode=0o700, parents=True, exist_ok=True)
             if session_home.is_symlink() or not session_home.resolve().is_relative_to(runtime.session_state_root.resolve()):
                 raise ValueError("session state directory is not private")
             worker_state = session_home / "worker"
-            preferences = runtime.preferences_dir
+            if server_ownership == "mcp_managed":
+                backend_home = self.home.resolve(strict=True)
+                session_home_real = session_home.resolve(strict=True)
+                if self.home.is_symlink() or backend_home.parent != session_home_real:
+                    raise ValueError("managed Worker backend is not bound to this session")
+                from ._session_server import owned_server_preferences_directory
+
+                preferences = owned_server_preferences_directory(
+                    runtime, project_id, session_id, owned_process,
+                )
+                runtime_for_worker = replace(runtime, preferences_dir=preferences)
+            else:
+                preferences = runtime.preferences_dir
             if preferences.is_symlink():
                 raise ValueError("COMSOL preferences directory cannot be a symlink")
-            preferences.mkdir(mode=0o700, parents=True, exist_ok=True)
+            if server_ownership == "mcp_managed":
+                if not preferences.is_dir():
+                    raise ValueError("owned Server preferences directory is unavailable")
+            else:
+                preferences.mkdir(mode=0o700, parents=True, exist_ok=True)
             if not isinstance(host, str) or not host.strip() or type(port) is not int or not 1 <= port <= 65535:
                 raise ValueError("endpoint is invalid")
             if existing_worker is not None:
@@ -494,10 +512,12 @@ class ManagedBackend:
                 # This injection is reserved for deterministic tests/host
                 # adapters. The default production path below always validates
                 # the inspected installation, JDK and exact classpath.
-                worker = self.session_worker_factory(runtime, worker_state)
+                worker = self.session_worker_factory(runtime_for_worker, worker_state)
             else:
                 paths = JavaWorkerPaths(
-                    runtime.installation_root, runtime.java_executable.parent.parent, preferences,
+                    runtime_for_worker.installation_root,
+                    runtime_for_worker.java_executable.parent.parent,
+                    runtime_for_worker.preferences_dir,
                     project_root=self.project_root,
                 )
                 paths.validate()

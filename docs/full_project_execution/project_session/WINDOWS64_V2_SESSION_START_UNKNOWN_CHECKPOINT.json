@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "unit": "W21 Windows6.4 V2 short-home current-source attempt",
-  "updated_at_utc": "2026-09-29T07:26:16Z",
+  "updated_at_utc": "2026-09-29T08:02:20Z",
   "overall_status": "PARTIAL",
   "source_package_status": "PASS_MAIN_VERIFIED",
   "native_status": "PARTIAL_CONNECT_UNKNOWN_DIAGNOSED_NOT_DURABLY_RECONCILED_SOLVE_READBACK_NOT_RUN",
-  "next_action": "Continue the local design for a guarded durable quiescence disposition when recovery sees the dead Worker connect. Keep the exact operation/job and lifecycle UNKNOWN until that source change is implemented, reviewed, and verified; do not replay, reconnect, stop, or clean up. The Equinox log marker is not the owned Server process exit code, and installation setup history is not current runtime evidence. Preserve the separate verified V3 disposition for the older session.start.",
+  "next_action": "Finish the exact same-host durable disposition for the 164eec3 session.connect UNKNOWN while preserving its result; do not replay or clean up. The scoped preferences binding is software-only. After safe disposition and main review of a new exact source freeze containing the repair, continue the existing bounded Windows 6.4 then 6.3 solve-readback plan. No native solve/readback is claimed.",
   "candidate": {
     "source_commit": "9c5ced6272dd876cf9c28c6c6f73b943bd76b96c",
     "evidence_root": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-v2-20260928T235840Z-9c5ced6",
@@ -1068,6 +1068,80 @@
       },
       "actual_server_pid_exit_code": "UNVERIFIED",
       "follow_up": "The current recovery source 6476 refuses dead Worker connect. A local change is being designed to persist same-host quiescence while retaining the original UNKNOWN; it is not yet implemented, tested, or deployed."
+    }
+  },
+  "auth_preferences_binding_software": {
+    "status": "PASS_SCOPED_OFFLINE",
+    "native_status": "NOT_RUN",
+    "change": "For only mcp_managed sessions, pass the existing exact session owned-server/preferences path into the Worker runtime/JavaWorkerPaths. Validate the backend real parent against the hashed project/session home and bind the Windows private bin/win64 symlink to the inspected runtime. shared/user_owned and explicit credentials behavior are unchanged; no credential reference is required.",
+    "failure_relation": "The prior native connect reported credential acquisition failure. This source fix addresses the separate-preferences route; the current native attempt remains UNKNOWN and this software result does not prove native causality or recover/retry it.",
+    "main_source_review": "PASS_DIFF_REVIEWED_ARTIFACT_HASH_CHECK_PENDING",
+    "unique_tests_passed": 22,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "source_sha256": {
+      "comsol_mcp/_managed_backend.py": "bf1eaf85f70357e7ba013e3a5adc379efc44ce1877f9f6befa35fe89cdd6913f",
+      "comsol_mcp/_session_server.py": "cfca04122b07fe6aea06470b7b23ef6e49020c2aa1700bb3631454ee0b342c01",
+      "tests/test_session_server_control.py": "7d78cfdadd8adb8f51605fe2cb5b59310781f9934c86e658b21279fe6a5774dc"
+    },
+    "receipt": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/auth-prefs-binding-20260929/auth-preferences-binding-receipt.json",
+      "sha256": "794e95972d5ce54273ef3291a5ab58878777c1e77ed412096cd1a323764b8ad7"
+    },
+    "junit": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/auth-prefs-binding-20260929/session-auth-junit.xml",
+      "sha256": "475020ee6b1b2fd18c4660987fa3771e86dafaf4ec145bd3ff9942ce3eb9e4a5",
+      "tests": 22,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "stdout_log": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/auth-prefs-binding-20260929/session-auth.log",
+      "sha256": "8fe25d3133275c6a258e953ae41945c66915551fd5437ca003c5025e3208bf6d"
+    },
+    "official_documentation": [
+      "https://doc.comsol.com/6.3/doc/com.comsol.help.comsol/comsol_ref_running.38.31.html",
+      "https://doc.comsol.com/6.4/doc/com.comsol.help.comsol/comsol_ref_running.38.31.html",
+      "https://doc.comsol.com/6.3/doc/com.comsol.help.comsol/comsol_api_general.47.15.html",
+      "https://doc.comsol.com/6.4/doc/com.comsol.help.comsol/comsol_api_general.47.15.html"
+    ],
+    "historical_successful_same_preferences_recipe": {
+      "source_path": "docs/full_project_execution/function_evaluate/windows_native_20260927_01/source/tools/run_w21_native.py",
+      "source_sha256": "87e096e044c04c10f1160b5de3df1f1a374a0e8d0cecc5822f72634b72f62b9d",
+      "source_lines": {
+        "server_preferences_and_auto_login": "65-90",
+        "worker_private_prefs_and_no_credential_connect": "109-112",
+        "same_prefs_environment_binding": "178-181"
+      },
+      "receipts": [
+        {
+          "path": "docs/full_project_execution/function_evaluate/windows_native_20260927_01/evidence/windows_remote/native63_attempt1/summary.json",
+          "sha256": "40f407f475364d8831216d70e0c3f9622595fb67e06749e46bfa641a3d4198c1",
+          "engine": "COMSOL 6.3 build 290",
+          "status": "COMPLETED",
+          "acceptance": "PASS",
+          "server_connect_success": true
+        },
+        {
+          "path": "docs/full_project_execution/function_evaluate/windows_native_20260927_01/evidence/windows_remote/native64_attempt3/summary.json",
+          "sha256": "39aa4342786b8ec8ee5352af986e305ce9e95273d1c1b6d8b82c6eecb1b4b234",
+          "engine": "COMSOL 6.4 build 293",
+          "status": "COMPLETED",
+          "acceptance": "PASS",
+          "server_connect_success": true
+        }
+      ],
+      "scope_limit": "Historical candidate evidence supports the same task-private -login auto preferences recipe; it does not establish this source change as a current native acceptance."
+    },
+    "connect_unknown_unchanged": {
+      "operation_status": "UNKNOWN",
+      "job_status": "UNKNOWN",
+      "lifecycle_status": "UNKNOWN",
+      "replay_permitted": false,
+      "cleanup_permitted": false,
+      "solve_readback": "NOT_RUN"
     }
   }
 }

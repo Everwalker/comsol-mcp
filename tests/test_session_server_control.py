@@ -4,6 +4,7 @@ from contextlib import contextmanager
 import hashlib
 import json
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import textwrap
@@ -14,10 +15,13 @@ import pytest
 from comsol_mcp._control_daemon import ControlDaemon
 from comsol_mcp._platform_process import process_identity
 from comsol_mcp._session_context import (
-    CanonicalSocket, SessionEndpointIdentity, SessionRuntimeConfig,
+    CanonicalSocket, OwnedServerProcessIdentity, SessionEndpointIdentity, SessionRuntimeConfig,
     SessionRuntimeContext, session_state_directory,
 )
-from comsol_mcp._session_server import OwnedServerError, OwnedServerLauncher, listener_rows
+from comsol_mcp._session_server import (
+    OwnedServerError, OwnedServerLauncher, create_server_directories,
+    listener_rows, owned_server_preferences_directory,
+)
 
 
 def _sleeping_child():
@@ -174,6 +178,145 @@ def _make_daemon(tmp_path, monkeypatch, *, server_launcher=None, worker=None,
     return daemon, project_response["data"]["project"]["project_id"], server_command, source_xml, source_xml_hash
 
 
+def _owned_preferences_fixture(tmp_path, *, project_id="project-a", session_id="session-a"):
+    state_root = tmp_path / "runtime-state"
+    installation = tmp_path / "source-installation"
+    installation.mkdir(parents=True)
+    session_root = session_state_directory(state_root, project_id, session_id)
+    runtime = SessionRuntimeConfig(
+        runtime_id="fixture-runtime", comsol_version="6.4.0.293",
+        installation_root=installation,
+        java_executable=tmp_path / "jdk/bin/java",
+        classpath=(installation / "client.jar",),
+        preferences_dir=session_root / "preferences", session_state_root=state_root,
+    )
+    directories = create_server_directories(runtime, project_id, session_id)
+    launcher = directories.private_installation / "bin" / "comsol"
+    launcher.parent.mkdir(parents=True)
+    launcher.write_text("test-only launcher identity\n", encoding="utf-8")
+    identity = OwnedServerProcessIdentity(
+        pid=1234, birth="start_epoch_ms:1234", executable=str(launcher.resolve()),
+        listener_sockets=(CanonicalSocket("127.0.0.1", 2036),), start_epoch_ms=1234,
+    )
+    return runtime, directories, identity
+
+
+def _windows_owned_preferences_fixture(tmp_path):
+    runtime, directories, _identity = _owned_preferences_fixture(tmp_path)
+    private_bin = directories.private_installation / "bin"
+    shutil.rmtree(private_bin)
+    runtime_executable = runtime.installation_root / "bin" / "win64" / "comsolmphserver.exe"
+    runtime_executable.parent.mkdir(parents=True)
+    runtime_executable.write_text("test-only runtime launcher identity\n", encoding="utf-8")
+    private_win64 = private_bin / "win64"
+    private_win64.parent.mkdir(parents=True)
+    private_win64.symlink_to(runtime_executable.parent, target_is_directory=True)
+    identity = OwnedServerProcessIdentity(
+        pid=1234, birth="start_epoch_ms:1234", executable=str(runtime_executable.resolve()),
+        listener_sockets=(CanonicalSocket("127.0.0.1", 2036),), start_epoch_ms=1234,
+    )
+    return runtime, directories, identity
+
+
+def test_owned_server_preferences_are_existing_and_session_bound(tmp_path):
+    runtime, directories, identity = _owned_preferences_fixture(tmp_path)
+
+    actual = owned_server_preferences_directory(
+        runtime, "project-a", "session-a", identity, platform_name="darwin",
+    )
+
+    assert actual == directories.preferences.resolve()
+    assert actual != runtime.preferences_dir
+    assert actual.is_dir()
+
+
+@pytest.mark.parametrize("bad_path", ["missing", "symlink"], ids=["missing", "alias"])
+def test_owned_server_preferences_reject_missing_or_symlinked_path(tmp_path, bad_path):
+    runtime, directories, identity = _owned_preferences_fixture(tmp_path)
+    if bad_path == "missing":
+        directories.preferences.rmdir()
+    else:
+        directories.preferences.rmdir()
+        outside = tmp_path / "outside-preferences"
+        outside.mkdir()
+        directories.preferences.symlink_to(outside, target_is_directory=True)
+
+    with pytest.raises(OwnedServerError):
+        owned_server_preferences_directory(
+            runtime, "project-a", "session-a", identity, platform_name="darwin",
+        )
+    if bad_path == "missing":
+        assert not directories.preferences.exists()
+
+
+def test_owned_server_preferences_reject_process_from_another_session(tmp_path):
+    runtime_a, _directories_a, identity_a = _owned_preferences_fixture(
+        tmp_path / "a", project_id="project-a", session_id="session-a",
+    )
+    runtime_b, directories_b, _identity_b = _owned_preferences_fixture(
+        tmp_path / "b", project_id="project-b", session_id="session-b",
+    )
+
+    with pytest.raises(OwnedServerError, match="different session"):
+        owned_server_preferences_directory(
+            runtime_b, "project-b", "session-b", identity_a, platform_name="darwin",
+        )
+    assert directories_b.preferences.is_dir()
+
+
+def test_owned_server_preferences_accept_windows_runtime_bin_symlink(tmp_path):
+    runtime, directories, identity = _windows_owned_preferences_fixture(tmp_path)
+
+    actual = owned_server_preferences_directory(
+        runtime, "project-a", "session-a", identity, platform_name="windows",
+    )
+
+    assert (directories.private_installation / "bin" / "win64").is_symlink()
+    assert actual == directories.preferences.resolve()
+
+
+def test_owned_server_preferences_reject_windows_runtime_mismatch(tmp_path):
+    from dataclasses import replace
+
+    runtime, _directories, identity = _windows_owned_preferences_fixture(tmp_path)
+    other_installation = tmp_path / "other-installation"
+    other_executable = other_installation / "bin" / "win64" / "comsolmphserver.exe"
+    other_executable.parent.mkdir(parents=True)
+    other_executable.write_text("test-only unrelated runtime identity\n", encoding="utf-8")
+    mismatched_runtime = replace(runtime, installation_root=other_installation)
+
+    with pytest.raises(OwnedServerError, match="bound runtime installation"):
+        owned_server_preferences_directory(
+            mismatched_runtime, "project-a", "session-a", identity,
+            platform_name="windows",
+        )
+
+
+def test_mcp_managed_worker_rejects_backend_outside_exact_session(tmp_path):
+    from comsol_mcp._managed_backend import ManagedBackend, SessionConnectFailure
+    from comsol_mcp._operation_store import OperationStore
+
+    runtime, _directories, identity = _owned_preferences_fixture(tmp_path)
+    store = OperationStore(tmp_path / "operations.sqlite3")
+    worker_factory_calls = []
+    backend = ManagedBackend(
+        tmp_path / "different-session" / "backend", store,
+        session_worker_factory=lambda *args: worker_factory_calls.append(args),
+    )
+    try:
+        with pytest.raises(SessionConnectFailure) as raised:
+            backend.connect_session(
+                runtime=runtime, project_id="project-a", session_id="session-a",
+                host="127.0.0.1", port=2036, operation_id="op", request_id="req",
+                event_callback=lambda _event: None, server_ownership="mcp_managed",
+                owned_process=identity,
+            )
+        assert raised.value.code == "RUNTIME_CONFIGURATION_REQUIRED"
+        assert worker_factory_calls == []
+    finally:
+        store.close()
+
+
 def _start(daemon, project_id, key="server-start"):
     return daemon.dispatch({
         "operation": "session.start",
@@ -203,8 +346,14 @@ def test_public_owned_server_start_attach_disconnect_retire_stop(tmp_path, monke
         if identity.get("alive") is not True or type(identity.get("start_epoch_ms")) is not int:
             worker_process.terminate(); worker_process.wait(timeout=3)
             pytest.skip("host cannot provide exact process birth identity")
+        worker_runtimes = []
+
+        def worker_factory(runtime, _worker_state):
+            worker_runtimes.append(runtime)
+            return worker
+
         daemon, project_id, server_command, installed_xml, installed_hash = _make_daemon(
-            tmp_path, monkeypatch, worker=worker,
+            tmp_path, monkeypatch, worker_factory=worker_factory,
         )
 
         started = _start(daemon, project_id)
@@ -243,6 +392,15 @@ def test_public_owned_server_start_attach_disconnect_retire_stop(tmp_path, monke
         })
         assert connected["success"] is True, connected
         assert connected["data"]["server_ownership"] == "mcp_managed"
+        assert len(worker_runtimes) == 1
+        server_command_args = server_command.commands[0]
+        server_preferences = Path(
+            server_command_args[server_command_args.index("-prefsdir") + 1]
+        ).resolve()
+        original_runtime = daemon._session_runtime_configs[(project_id, session_id)]
+        assert worker_runtimes[0] is not original_runtime
+        assert worker_runtimes[0].preferences_dir == server_preferences
+        assert server_preferences != original_runtime.preferences_dir
         lifecycle = daemon.session_lifecycle.get(project_id, session_id)
         assert lifecycle["state"] == "CONNECTED"
         assert lifecycle["server_ownership"] == "mcp_managed"
