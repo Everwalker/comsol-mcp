@@ -415,5 +415,42 @@
     },
     "native_after_fix": "NOT_RUN",
     "root_review": "Production diff and actual JUnit/source hashes verified; no runner validation relaxed."
+  },
+  "artifact_register_session_binding": {
+    "status": "PASS_SCOPED_OFFLINE_MAIN_REVIEWED",
+    "change": [
+      "comsol_mcp/_managed_backend.py: artifact.register no-service guard is a validation-stage safe-retry refusal",
+      "tools/run_w21_stage_native.py: fixture.register and probe.register execution include exact project_id and session_id",
+      "tests/test_artifact_registration_import.py: durable no-service refusal is FAILED, retryable, and has no artifact/Worker event",
+      "tests/test_run_w21_stage_native.py: runner protocol asserts artifact registrations carry the exact session"
+    ],
+    "tests": {
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "unique_testcases": 125
+    },
+    "commands": [
+      "PYTHONDONTWRITEBYTECODE=1 TMPDIR=/Volumes/CTestEff/c /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -B -m pytest -q -p no:cacheprovider --basetemp=/Volumes/CTestEff/z --junitxml=/Volumes/SSD/Comsol-MCP/execution-scratch/w21-artifact-register-20260929/focus-short.junit.xml tests/test_artifact_registration_import.py::test_artifact_register_without_managed_service_is_retryable_failed_not_unknown tests/test_run_w21_stage_native.py::test_srb_ok",
+      "PYTHONDONTWRITEBYTECODE=1 TMPDIR=/Volumes/CTestEff/c /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -B -m pytest -q -p no:cacheprovider --basetemp=/Volumes/CTestEff/y --junitxml=/Volumes/SSD/Comsol-MCP/execution-scratch/w21-artifact-register-20260929/regression.junit.xml tests/test_artifact_registration_import.py tests/test_run_w21_stage_native.py"
+    ],
+    "source_sha256": {
+      "comsol_mcp/_control_daemon.py": "af471f5f6291c995a19014b36de888c8bbc4434a95cef4c4906b01f0e8d734af",
+      "comsol_mcp/_managed_backend.py": "f678fcfed9164a7944fcaa16acb4d7d57d5ed6b46e13a545d4979269ee254a05",
+      "tests/test_artifact_registration_import.py": "a68a48abd4119c6598c091e64e34fd47551676dc4bacb2dc35e9e165f1da48dc",
+      "tests/test_control_daemon_projects.py": "557b89cf275ec4fa6e200f4edae36f1ae5b9f31acaa513487df75242e2806d0b",
+      "tests/test_run_w21_stage_native.py": "0426ef49c7dcd6c4c15dd7800c094bbf71ffdd8e2a4a3e780bbfa201bf27a3d2",
+      "tools/run_w21_stage_native.py": "c372f880e1c294bbc2be6ef2183ce4abfe248d53e93b67f1b4ec8924b002f7c4"
+    },
+    "receipt": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-artifact-register-20260929/receipt.json",
+      "sha256": "d354106f4bbadabda70997c53a44bda15526235600c3f3885782435dc13e5084"
+    },
+    "junit": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-artifact-register-20260929/regression.junit.xml",
+      "sha256": "b8424b981c4063e6aedb9c2103514ac2eb976b505c9f3698a220c79ecf5ca595"
+    },
+    "native_after_fix": "NOT_RUN",
+    "original_unknown": "PRESERVED; CURRENT_HOST_QUIESCENCE_VERIFIED_READONLY"
   }
 }

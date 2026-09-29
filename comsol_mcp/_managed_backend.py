@@ -1548,7 +1548,12 @@ class ManagedBackend:
         if not isinstance(request_id, str) or not request_id:
             raise ExecutionContractError("INVALID_REQUEST", "artifact.register requires execution.request_id")
         if self.service is None:
-            raise ExecutionContractError("ENGINE_UNRESPONSIVE", "connect to the managed local COMSOL runtime before registering project artifacts")
+            raise ExecutionContractError(
+                "ENGINE_UNRESPONSIVE",
+                "connect to the managed local COMSOL runtime before registering project artifacts",
+                safe_retry=True,
+                stage="validation",
+            )
         if "project_write" not in self.service.ledger.permissions:
             raise ExecutionContractError("PERMISSION_DENIED", "artifact.register requires project_write permission")
         host_identity = local_artifact_host_identity()

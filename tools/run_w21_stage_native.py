@@ -1956,7 +1956,8 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
                 "artifact.register", {"project_id": project_id, "path": path,
                     "role": "w21_probe_source", "classification": "task_owned_frozen_java_source",
                     "idempotency_key": key, "request_id": request_id},
-                {"project_id": project_id, "idempotency_key": key, "request_id": request_id,
+                {"project_id": project_id, "session_id": session_id,
+                 "idempotency_key": key, "request_id": request_id,
                  "rpc_timeout_s": RPC_WAIT_S}))
             result = _assert_success(response, label)
             if result.get("sha256") != sha256_file(Path(path)):

@@ -4,8 +4,8 @@
   "updated_at_utc": "2026-09-29T11:36:36.583380+00:00",
   "overall_status": "PARTIAL",
   "source_package_status": "PASS_MAIN_VERIFIED",
-  "native_status": "PARTIAL_NATIVE_MODEL_CREATED_CLEANUP_COMPLETE_SOLVE_NOT_RUN",
-  "next_action": "Repair canonical public execution project binding against authoritative session context, run targeted cross-layer regression tests, then prepare a separate 6.4 candidate; 6.3 follows successful 6.4 readback.",
+  "native_status": "PARTIAL_MODEL_CREATE_INSPECT_PASS_ARTIFACT_REGISTER_UNKNOWN_CURRENT_HOST_QUIESCENT",
+  "next_action": "Repair artifact registration session context and public/durable unknown-state consistency; preserve old UNKNOWN, then test a separate 6.4 candidate. No old-session reuse.",
   "candidate": {
     "source_commit": "9c5ced6272dd876cf9c28c6c6f73b943bd76b96c",
     "evidence_root": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-v2-20260928T235840Z-9c5ced6",
@@ -2016,5 +2016,115 @@
       }
     },
     "next_action": "Repair canonical public execution project binding against authoritative session context, run targeted cross-layer regression tests, then prepare a separate 6.4 candidate; 6.3 follows successful 6.4 readback."
+  },
+  "native_attempt_20260929T120553Z": {
+    "run_id": "w21-64-20260929T120553Z-50ca03a4",
+    "source_head": "a3c2af8b953584c0bfbee47a866528de87abbfe9",
+    "freeze_sha256": "91c389d602f60a364f123d4eeb5e27f398c6fed9ebf2b12c0dbfab29a6efa408",
+    "status": "PARTIAL_MODEL_CREATE_INSPECT_PASS_ARTIFACT_REGISTER_UNKNOWN_CURRENT_HOST_QUIESCENT",
+    "execute_exit_code": 2,
+    "passed_native_actions": [
+      "project.create",
+      "session.start",
+      "session.connect",
+      "model_create",
+      "model.inspect"
+    ],
+    "failure": {
+      "job_id": "50f464fd-dead-4ae0-a212-9465236386b3",
+      "job_status": "UNKNOWN",
+      "operation": "operation_call",
+      "operation_id": "79a90cd8-5150-4de6-a530-80bd87ea709e",
+      "request_id": "97595150-255a-4705-92b4-b9006eb93d7a",
+      "result": {
+        "data": {},
+        "error": {
+          "code": "ENGINE_UNRESPONSIVE",
+          "message": "connect to the managed local COMSOL runtime before registering project artifacts",
+          "safe_retry": false
+        },
+        "execution": {
+          "idempotency_key": "0ee5bee9-da7c-4b59-bd99-143d409292a0",
+          "job_id": "50f464fd-dead-4ae0-a212-9465236386b3",
+          "operation_id": "79a90cd8-5150-4de6-a530-80bd87ea709e",
+          "request_hash": "1cc966b6c314d01a6ef2c4d41aa1673f3672bdac87f4dff4003222f62746e57b",
+          "request_id": "97595150-255a-4705-92b4-b9006eb93d7a"
+        },
+        "success": false
+      },
+      "result_sha256": "fce68220d18d2e0e79a22d7771e583b08f7bb9ddd41bb8238c95e8b3fdf3a87b",
+      "status": "UNKNOWN"
+    },
+    "runner_status_defect": "Runner interpreted ENGINE_UNRESPONSIVE without unknown flag as deterministic; persisted operation/job is UNKNOWN. Original mismatch preserved; cleanup already occurred.",
+    "cleanup": {
+      "project_id": "e583378c-0bb9-49a9-af79-f8da1d8d5664",
+      "server_stopped": true,
+      "session_id": "session-054e5830accd4e61ab1418b60a79c874",
+      "state": "STOPPED",
+      "stop_evidence": {
+        "birth": "start_epoch_ms:1790683681964",
+        "child_reaped": true,
+        "exit_confirmed": true,
+        "listener_absent": true,
+        "pid": 31088,
+        "returncode": 1,
+        "server_stopped": true
+      },
+      "worker_client_state": "RETIRED"
+    },
+    "current_host_quiescence": {
+      "all_bound_requests_terminal": false,
+      "daemon_initialized": false,
+      "historical_callback_outcome": "UNKNOWN_RETAINED",
+      "job_id": "50f464fd-dead-4ae0-a212-9465236386b3",
+      "mcp_mutation_dispatched": false,
+      "observation": {
+        "listener_inventory": {
+          "canonical_engine_match_count": 0,
+          "owner_query_unresolved_count": 0,
+          "rows_scanned": 56,
+          "status": "COMPLETE",
+          "task_owned_match_count": 0
+        },
+        "observed_at_utc": "2026-09-29T12:10:53.195Z",
+        "process_inventory": {
+          "candidate_count": 0,
+          "canonical_engine_match_count": 0,
+          "status": "COMPLETE",
+          "task_owned_match_count": 0,
+          "unresolved_candidate_count": 0
+        }
+      },
+      "observed_count": 0,
+      "original_result_sha256": "fce68220d18d2e0e79a22d7771e583b08f7bb9ddd41bb8238c95e8b3fdf3a87b",
+      "original_status": "UNKNOWN",
+      "scope": "READONLY_CURRENT_HOST_AND_EXISTING_WORKER_TERMINAL_OBSERVATIONS",
+      "submitted_count": 0
+    },
+    "study_solver_tuple_field_counts": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "evidence": {
+      "state64-after-execute.json": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-project-bind-w21r06/state64-after-execute.json",
+        "sha256": "ca1a385f35dbaa489b3332f8b25454cd3ed22a1c6df38e86d617517e3090e938"
+      },
+      "read_fixture_result.stdout": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-project-bind-w21r06/read_fixture_result.stdout",
+        "sha256": "431ff0470d280c5fc3641070aa819bf745ba83c48da5b5c582f784d0b16283d4"
+      },
+      "read_stop_result.stdout": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-project-bind-w21r06/read_stop_result.stdout",
+        "sha256": "4cb6e70fe0e00682a18e724be5843d693fe2e6dca188f8f9d4fbd837962bb528"
+      },
+      "read_current_host_quiescence.stdout": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-project-bind-w21r06/read_current_host_quiescence.stdout",
+        "sha256": "621c5e1f73f74b10c0d4e8bb7103282dd843cda4071143a9eda06ec710aaa5cb"
+      }
+    },
+    "next_action": "Repair artifact registration session context and public/durable unknown-state consistency; preserve old UNKNOWN, then test a separate 6.4 candidate. No old-session reuse."
   }
 }

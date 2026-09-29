@@ -183,6 +183,29 @@ def test_artifact_register_is_durable_and_idempotent_across_store_reopen(tmp_pat
         reopened.close()
 
 
+def test_artifact_register_without_managed_service_is_retryable_failed_not_unknown(tmp_path):
+    daemon, project_root, _ = _make_daemon(tmp_path)
+    (project_root / "inputs" / "not-registered.step").write_bytes(b"offline refusal fixture")
+    daemon.backend.service = None
+    try:
+        response = _register(daemon, path="inputs/not-registered.step",
+                             key="missing-service-key", request_id="missing-service-request")
+        assert response["success"] is False
+        assert response["error"]["code"] == "ENGINE_UNRESPONSIVE"
+        assert response["error"]["safe_retry"] is True
+        assert response["error"]["stage"] == "validation"
+        job_id = response["execution"]["job_id"]
+        job = daemon.store.job(job_id)
+        assert job["status"] == "FAILED"
+        assert job["result"]["error"]["code"] == "ENGINE_UNRESPONSIVE"
+        assert job["result"]["error"]["safe_retry"] is True
+        assert daemon.store.list_metadata("artifacts") == []
+        assert not any(event["event"] == "worker_request"
+                       for event in daemon.store.events(job_id, offset=0, limit=100))
+    finally:
+        daemon.close()
+
+
 def test_legacy_artifact_writers_cannot_overwrite_registered_schema_v2(tmp_path):
     daemon, project_root, _ = _make_daemon(tmp_path)
     source = project_root / "inputs" / "protected.mph"

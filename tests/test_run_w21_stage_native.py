@@ -267,6 +267,8 @@ class _FakeStdioSession:
                       if execution.get("request_id") == self.plan["request_ids"]["model_inspect_after_fixture"]
                       else "model.inspect")
         elif operation == "artifact.register":
+            assert execution.get("project_id") == self.project_id
+            assert execution.get("session_id") == self.session_id
             action = "fixture.register" if Path(inner["path"]).name == "W21Fixture.java" else "probe.register"
         elif operation == "code.execute_java":
             action = "fixture.execute" if inner.get("entrypoint") == "W21Fixture" else "probe.execute"
