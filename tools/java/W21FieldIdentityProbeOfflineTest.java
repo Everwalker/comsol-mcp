@@ -11,8 +11,11 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /** Offline interface-stub test for the probe collector; no COMSOL runtime is started. */
 public final class W21FieldIdentityProbeOfflineTest {
@@ -36,6 +39,66 @@ public final class W21FieldIdentityProbeOfflineTest {
         require(json.contains("\"dimension\":[0,0,0,0,1]"), "unit dimension present");
         require(json.contains("\"field_unit_linkage\":\"NOT_ESTABLISHED\""), "unit metadata is not linked to field");
         require(utf8(json).length <= W21FieldIdentityProbe.MAX_JSON_UTF8_BYTES, "successful payload byte bound");
+        require(good.tableReads.equals(Arrays.asList("Shape", "Expression")),
+                "default request preserves the existing full table selection");
+
+        Fixture discovery = new Fixture("task-owned-model", new String[][]{{"shape"}});
+        String discovered = discovery.collectWithRequest(request("discovery_only", Boolean.TRUE),
+                new ArrayList<String>());
+        require(discovered.contains("\"status\":\"DISCOVERY_ONLY_CAPTURED\""), "discovery status");
+        require(discovered.contains("\"capture_scope\":\"PHYSICS_FIELDS_AND_FEATURE_INFO_TAGS_ONLY\""),
+                "discovery scope is explicit");
+        require(discovered.contains("\"feature_info_tables\":\"NOT_READ\""),
+                "discovery states tables were not read");
+        require(discovered.contains("\"metadata_complete\":false"),
+                "discovery cannot claim complete metadata");
+        require(discovery.tableReads.isEmpty(), "discovery does not touch Shape or Expression tables");
+
+        Fixture targeted = new Fixture("task-owned-model", new String[][]{{"T", "shape row"}});
+        String targetedJson = targeted.collectWithRequest(request(
+                "feature_info_tag", "fi1", "table_id", "Shape"), Arrays.asList("T"));
+        require(targetedJson.contains("\"status\":\"TARGETED_TABLE_CAPTURED_ONLY\""),
+                "targeted table status");
+        require(targetedJson.contains("\"unselected_feature_info_tables\":\"NOT_READ\""),
+                "targeted response explicitly excludes other tables");
+        require(targetedJson.contains("\"metadata_complete\":false"),
+                "one table cannot claim complete metadata");
+        require(targeted.tableReads.equals(Arrays.asList("Shape")),
+                "targeted request reads only the selected table");
+
+        Fixture targetedOverflow = new Fixture("task-owned-model",
+                rows(W21FieldIdentityProbe.MAX_TABLE_ROWS + 1));
+        String targetedLimit = targetedOverflow.collectWithRequest(request(
+                "feature_info_tag", "fi1", "table_id", "Shape"), new ArrayList<String>());
+        require(targetedLimit.contains("\"status\":\"OUTPUT_LIMIT_EXCEEDED\""),
+                "targeted row overflow is rejected without truncation");
+        require(targetedLimit.contains("\"limit_location\":{"), "overflow has a location receipt");
+        require(targetedLimit.contains("\"physics_tag\":\"ht\""), "overflow names physics tag");
+        require(targetedLimit.contains("\"feature_info_tag\":\"fi1\""), "overflow names FeatureInfo tag");
+        require(targetedLimit.contains("\"table_id\":\"Shape\""), "overflow names selected table");
+        require(targetedLimit.contains("\"actual_rows\":129")
+                && targetedLimit.contains("\"hard_limit\":128"), "overflow reports actual and hard row counts");
+        require(!targetedLimit.contains("raw|shape") && !targetedLimit.contains("\"rows\":"),
+                "overflow contains no partial raw rows");
+        require(targetedOverflow.tableReads.equals(Arrays.asList("Shape")),
+                "overflow never reads the unselected Expression table");
+
+        Fixture absentTag = new Fixture("task-owned-model", new String[][]{{"unused"}});
+        String absent = absentTag.collectWithRequest(request(
+                "feature_info_tag", "missing", "table_id", "Shape"), new ArrayList<String>());
+        require(absent.contains("\"status\":\"FEATURE_INFO_TAG_NOT_FOUND\""),
+                "missing selected FeatureInfo tag is explicit");
+        require(absentTag.tableReads.isEmpty(), "missing tag fails before any table read");
+
+        requireInvalidProbeRequest(request("feature_info_tag", "fi1"), "table/tag pair");
+        requireInvalidProbeRequest(request("table_id", "Shape"), "table/tag pair");
+        requireInvalidProbeRequest(request("feature_info_tag", null, "table_id", null),
+                "explicit null targeted pair");
+        requireInvalidProbeRequest(request("feature_info_tag", "fi1", "table_id", "Units"),
+                "table allowlist");
+        requireInvalidProbeRequest(request("discovery_only", Boolean.TRUE,
+                "feature_info_tag", "fi1", "table_id", "Shape"), "discovery conflict");
+        requireInvalidProbeRequest(request("discovery_only", "true"), "discovery type");
 
         Fixture atRowLimit = new Fixture("task-owned-model", rows(W21FieldIdentityProbe.MAX_TABLE_ROWS));
         String boundary = atRowLimit.collect("task-owned-model");
@@ -108,6 +171,10 @@ public final class W21FieldIdentityProbeOfflineTest {
         System.out.println("VERSION_OVERFLOW_JSON\t" + versionOverflow);
         System.out.println("MODEL_MISMATCH_JSON\t" + mismatch);
         System.out.println("PHYSICS_MISMATCH_JSON\t" + physicsMismatch);
+        System.out.println("DISCOVERY_JSON\t" + discovered);
+        System.out.println("TARGETED_JSON\t" + targetedJson);
+        System.out.println("TARGETED_ROW_OVERFLOW_JSON\t" + targetedLimit);
+        System.out.println("MISSING_FEATURE_INFO_TAG_JSON\t" + absent);
     }
 
     private static final class Fixture {
@@ -116,6 +183,7 @@ public final class W21FieldIdentityProbeOfflineTest {
         final String physicsType;
         final String fieldName;
         final String[] componentNames;
+        final List<String> tableReads = new ArrayList<String>();
         int physicsLookups;
         final FeatureInfo info;
         final PhysicsField field;
@@ -140,6 +208,7 @@ public final class W21FieldIdentityProbeOfflineTest {
                     String name = method.getName();
                     if ("tag".equals(name)) return "fi1";
                     if ("getInfoTable".equals(name)) {
+                        Fixture.this.tableReads.add(String.valueOf(args[0]));
                         return "Shape".equals(args[0]) ? Fixture.this.shapeRows
                                 : new String[][]{{"T", "raw expression row"}};
                     }
@@ -225,6 +294,30 @@ public final class W21FieldIdentityProbeOfflineTest {
         String collectWithVersion(String version) {
             return W21FieldIdentityProbe.collectBoundModel(model, "task-owned-model", "ht",
                     Arrays.asList("T"), version, null);
+        }
+
+        String collectWithRequest(Map<String, Object> request, List<String> lockIds) {
+            return W21FieldIdentityProbe.collectBoundModel(model, "task-owned-model", "ht",
+                    lockIds, "6.4.0.293", null, W21FieldIdentityProbe.parseProbeRequest(request));
+        }
+    }
+
+    private static Map<String, Object> request(Object... entries) {
+        Map<String, Object> value = new LinkedHashMap<String, Object>();
+        for (int i = 0; i < entries.length; i += 2) {
+            value.put((String) entries[i], entries[i + 1]);
+        }
+        return value;
+    }
+
+    private static void requireInvalidProbeRequest(Map<String, Object> request, String label) {
+        try {
+            W21FieldIdentityProbe.parseProbeRequest(request);
+            throw new AssertionError("invalid probe request accepted: " + label);
+        } catch (IllegalArgumentException expected) {
+            // Expected: bad argument combinations fail before a model API call.
+        } catch (RuntimeException expected) {
+            // InputException is private; its fail-closed type/message is tested by rejection.
         }
     }
 

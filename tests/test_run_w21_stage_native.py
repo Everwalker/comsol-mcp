@@ -68,6 +68,7 @@ def _plan(tmp_path: Path, *, worker_epoch: int = 7,
         "source_manifest": runner.source_manifest(root),
         "fixture_sha256": runner.sha256_file(runner.FIXTURE),
         "probe_sha256": runner.sha256_file(runner.PROBE),
+        "probe_request": {"mode": "full"},
         "project_workspace": str(workspace_root / "field-identity-probe"),
         "isolation_receipt": str(run_root / "owned_server_isolation.json"),
         "published_tool_schemas": {
@@ -810,6 +811,154 @@ def test_srb_preserves_bounded_table_limit_probe_and_continues_readback(tmp_path
     assert report["native_admission"] == report["physical_validation"] == "UNVERIFIED"
 
 
+def _targeted_probe_payload(*, tag="info", table_id="Shape"):
+    return {
+        "probe": "W21FieldIdentityProbe", "schema_version": 1,
+        "status": "TARGETED_TABLE_CAPTURED_ONLY", "native_admission": "UNVERIFIED",
+        "payload_complete": False, "metadata_complete": False,
+        "capture_scope": "PHYSICS_FIELDS_AND_ONE_FEATURE_INFO_TABLE_ONLY",
+        "identity": {"model_tag": "w21model", "physics_tag": "ht"},
+        "feature_info": {
+            "requested_tag": tag, "tag": tag, "requested_table_id": table_id,
+            "table": {"requested_table_id": table_id, "status": "AVAILABLE",
+                      "row_count": 1, "rows": [["T", "raw shape"]]},
+            "table_semantics": "RAW_ROWS; COLUMN_MEANINGS_NOT_INFERRED",
+        },
+        "unselected_feature_info_tables": "NOT_READ", "base_unit_system": "NOT_READ",
+    }
+
+
+def test_targeted_probe_request_is_frozen_forwarded_and_reported_partial(tmp_path, monkeypatch):
+    _patch_isolation(monkeypatch)
+    plan = _plan(tmp_path)
+    plan["probe_request"] = {"mode": "targeted", "feature_info_tag": "info", "table_id": "Shape"}
+    state = _state(tmp_path)
+    fake = _FakeStdioSession(plan, state,
+                             probe_payload_override=json.dumps(_targeted_probe_payload(), separators=(",", ":")))
+
+    report = asyncio.run(runner.run_metadata_protocol(
+        runner._MCPCalls(fake), plan, state, clock=lambda: 100.0,
+        preflight=lambda: [{"process_id": 1, "name": "python.exe",
+                            "path_missing": True, "command_line_missing": True}],
+    ))
+
+    probe_call = next(params for action, params in fake.calls if action == "probe.execute")
+    assert probe_call["arguments"]["arguments"]["feature_info_tag"] == "info"
+    assert probe_call["arguments"]["arguments"]["table_id"] == "Shape"
+    assert "discovery_only" not in probe_call["arguments"]["arguments"]
+    assert report["probe_capture"]["request_scope"] == plan["probe_request"]
+    assert report["probe_capture"]["capture_kind"] == "targeted_table"
+    assert report["probe_capture"]["capture_completeness"] == "PARTIAL"
+    assert report["probe_capture"]["metadata_complete"] is False
+    assert report["probe_readback"]["native_admission"] == "UNVERIFIED"
+    assert state.value["probe_capture"]["metadata_complete"] is False
+    assert report["study_dispatch"] == report["solver_dispatch"] == 0
+    assert report["cleanup"]["status"] == "CLEANUP_COMPLETE"
+
+
+def test_discovery_probe_is_explicitly_incomplete_and_never_reads_tables(tmp_path, monkeypatch):
+    _patch_isolation(monkeypatch)
+    plan = _plan(tmp_path)
+    plan["probe_request"] = {"mode": "discovery"}
+    state = _state(tmp_path)
+    payload = {
+        "probe": "W21FieldIdentityProbe", "status": "DISCOVERY_ONLY_CAPTURED",
+        "native_admission": "UNVERIFIED", "payload_complete": False,
+        "metadata_complete": False,
+        "capture_scope": "PHYSICS_FIELDS_AND_FEATURE_INFO_TAGS_ONLY",
+        "identity": {"model_tag": "w21model", "physics_tag": "ht"},
+        "physics_fields": {"status": "AVAILABLE", "count": 1},
+        "feature_info_tags": {"status": "AVAILABLE", "count": 1, "tags": ["info"]},
+        "feature_info_tables": "NOT_READ", "base_unit_system": "NOT_READ",
+    }
+    fake = _FakeStdioSession(plan, state, probe_payload_override=json.dumps(payload, separators=(",", ":")))
+    report = asyncio.run(runner.run_metadata_protocol(
+        runner._MCPCalls(fake), plan, state, clock=lambda: 100.0,
+        preflight=lambda: [{"process_id": 1, "name": "python.exe",
+                            "path_missing": True, "command_line_missing": True}],
+    ))
+    probe_call = next(params for action, params in fake.calls if action == "probe.execute")
+    assert probe_call["arguments"]["arguments"]["discovery_only"] is True
+    assert report["probe_capture"]["capture_kind"] == "discovery"
+    assert report["probe_capture"]["metadata_complete"] is False
+    assert report["probe_readback"]["feature_info_tables"] == "NOT_READ"
+    assert report["study_dispatch"] == report["solver_dispatch"] == 0
+
+
+def _assert_targeted_probe_mismatch_refused(tmp_path, monkeypatch, payload):
+    _patch_isolation(monkeypatch)
+    plan = _plan(tmp_path)
+    plan["probe_request"] = {"mode": "targeted", "feature_info_tag": "info", "table_id": "Shape"}
+    state = _state(tmp_path)
+    fake = _FakeStdioSession(plan, state,
+                             probe_payload_override=json.dumps(payload, separators=(",", ":")))
+    with pytest.raises(runner.RunnerError, match="probe output is incomplete"):
+        asyncio.run(runner.run_metadata_protocol(
+            runner._MCPCalls(fake), plan, state, clock=lambda: 100.0, preflight=lambda: [],
+        ))
+    actions = [action for action, _ in fake.calls]
+    assert actions.count("probe.execute") == 1
+    assert "study.solve" not in actions
+    assert "session.disconnect" in actions and "session.stop" in actions
+
+
+def test_probe_wrong_tag_refused(tmp_path, monkeypatch):
+    _assert_targeted_probe_mismatch_refused(tmp_path, monkeypatch,
+                                            _targeted_probe_payload(tag="other"))
+
+
+def test_probe_wrong_table_refused(tmp_path, monkeypatch):
+    _assert_targeted_probe_mismatch_refused(tmp_path, monkeypatch,
+                                            _targeted_probe_payload(table_id="Expression"))
+
+
+def test_targeted_probe_limit_is_a_bound_partial_capture(tmp_path, monkeypatch):
+    _patch_isolation(monkeypatch)
+    plan = _plan(tmp_path)
+    plan["probe_request"] = {"mode": "targeted", "feature_info_tag": "info", "table_id": "Shape"}
+    state = _state(tmp_path)
+    payload = {
+        "probe": "W21FieldIdentityProbe", "status": "OUTPUT_LIMIT_EXCEEDED",
+        "code": "TABLE_ROW_LIMIT_EXCEEDED", "native_admission": "UNVERIFIED",
+        "payload_complete": False,
+        "limit_location": {"physics_tag": "ht", "feature_info_tag": "info",
+                           "table_id": "Shape", "actual_rows": 129, "hard_limit": 128},
+    }
+    fake = _FakeStdioSession(plan, state, probe_payload_override=json.dumps(payload, separators=(",", ":")))
+    report = asyncio.run(runner.run_metadata_protocol(
+        runner._MCPCalls(fake), plan, state, clock=lambda: 100.0,
+        preflight=lambda: [{"process_id": 1, "name": "python.exe",
+                            "path_missing": True, "command_line_missing": True}],
+    ))
+    assert report["probe_capture"]["capture_kind"] == "table_limit"
+    assert report["probe_capture"]["metadata_complete"] is False
+    assert report["probe_readback"]["limit_location"] == payload["limit_location"]
+    assert state.value["probe_capture"]["capture_completeness"] == "PARTIAL"
+    assert report["study_dispatch"] == report["solver_dispatch"] == 0
+
+
+def test_probe_request_normalization_is_explicit_and_bounded():
+    assert runner._normalize_probe_request() == {"mode": "full"}
+    assert runner._normalize_probe_request(discovery_only=True) == {"mode": "discovery"}
+    assert runner._normalize_probe_request(
+        feature_info_tag="info", table_id="Shape") == {
+            "mode": "targeted", "feature_info_tag": "info", "table_id": "Shape"}
+    with pytest.raises(runner.RunnerError, match="supplied together"):
+        runner._normalize_probe_request(feature_info_tag="info")
+    with pytest.raises(runner.RunnerError, match="Shape or Expression"):
+        runner._normalize_probe_request(feature_info_tag="info", table_id="Units")
+    with pytest.raises(runner.RunnerError, match="mutually exclusive"):
+        runner._normalize_probe_request(discovery_only=True, feature_info_tag="info", table_id="Shape")
+    with pytest.raises(runner.RunnerError, match="text limit"):
+        runner._normalize_probe_request(feature_info_tag="i" * 513, table_id="Shape")
+    with pytest.raises(runner.RunnerError, match="frozen probe request"):
+        runner._frozen_probe_request({"probe_request": {
+            "mode": "targeted", "feature_info_tag": "info", "table_id": "Shape", "extra": True}})
+    with pytest.raises(runner.RunnerError, match="requires a non-empty"):
+        runner._frozen_probe_request({"probe_request": {
+            "mode": "targeted", "feature_info_tag": None, "table_id": None}})
+
+
 def test_metadata_only_rejects_bounded_table_limit_probe(tmp_path, monkeypatch):
     limited_probe = (
         '{"probe":"W21FieldIdentityProbe","status":"OUTPUT_LIMIT_EXCEEDED",'
@@ -1109,6 +1258,7 @@ def test_srb_freeze(tmp_path, monkeypatch):
     assert plan["schema"] == runner.SOLVE_READBACK_SCHEMA
     assert plan["kind"] == runner.SOLVE_READBACK_KIND
     assert plan["mode"] == runner.SOLVE_READBACK_MODE
+    assert plan["probe_request"] == {"mode": "full"}
     assert plan["budgets"] == runner._mode_budgets(runner.SOLVE_READBACK_MODE)
     assert plan["budgets"]["study_dispatch"] == plan["budgets"]["solver_dispatch"] == 1
     assert plan["budgets"]["solution_tuple_reads"] == plan["budgets"]["field_reads"] == 1

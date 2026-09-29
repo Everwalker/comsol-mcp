@@ -43,7 +43,11 @@ public final class W21FieldIdentityProbe {
             if (args == null) return failure("INVALID_INPUT", "ARGUMENTS_MISSING");
             String expectedModelTag = requiredText(args.get("expected_model_tag"), "EXPECTED_MODEL_TAG");
             String physicsTag = requiredText(args.get("physics_tag"), "PHYSICS_TAG");
+            ProbeRequest request = parseProbeRequest(args);
             List<String> lockIds = parseLockIds(args.get("requested_lock_identifiers"));
+            if (request.discoveryOnly && !lockIds.isEmpty()) {
+                throw new InputException("DISCOVERY_MODE_DOES_NOT_READ_LOCKS");
+            }
             String actualModelTag = boundedText(model.tag(), "model_tag");
             if (!expectedModelTag.equals(actualModelTag)) {
                 return failure("MODEL_TAG_MISMATCH", "EXPECTED_MODEL_TAG_MISMATCH");
@@ -59,9 +63,12 @@ public final class W21FieldIdentityProbe {
             } catch (LinkageError ex) {
                 versionError = ex.getClass().getSimpleName();
             }
-            return collectBoundModel(model, expectedModelTag, physicsTag, lockIds, version, versionError);
+            return collectBoundModel(model, expectedModelTag, physicsTag, lockIds, version, versionError,
+                    request);
         } catch (LimitExceeded ex) {
-            return failure("OUTPUT_LIMIT_EXCEEDED", ex.code);
+            return failure("OUTPUT_LIMIT_EXCEEDED", ex.code, ex.limitLocation);
+        } catch (MissingFeatureInfoTag ex) {
+            return encode(ex.payload);
         } catch (InputException ex) {
             return failure("INVALID_INPUT", ex.code);
         } catch (Exception ex) {
@@ -75,8 +82,40 @@ public final class W21FieldIdentityProbe {
     static String collectBoundModel(Model model, String expectedModelTag, String physicsTag,
                                     List<String> lockIds, String comsolVersion,
                                     String versionError) {
+        return collectBoundModel(model, expectedModelTag, physicsTag, lockIds, comsolVersion,
+                versionError, ProbeRequest.full());
+    }
+
+    static ProbeRequest parseProbeRequest(Map<String, Object> args) {
+        Object rawDiscovery = args.get("discovery_only");
+        if (rawDiscovery != null && !(rawDiscovery instanceof Boolean)) {
+            throw new InputException("DISCOVERY_ONLY_MUST_BE_BOOLEAN");
+        }
+        boolean discoveryOnly = Boolean.TRUE.equals(rawDiscovery);
+        boolean hasFeatureTag = args.containsKey("feature_info_tag");
+        boolean hasTableId = args.containsKey("table_id");
+        if (discoveryOnly && (hasFeatureTag || hasTableId)) {
+            throw new InputException("DISCOVERY_AND_TARGETED_TABLE_ARE_MUTUALLY_EXCLUSIVE");
+        }
+        if (hasFeatureTag != hasTableId) {
+            throw new InputException("FEATURE_INFO_TAG_AND_TABLE_ID_MUST_BE_PAIRED");
+        }
+        if (discoveryOnly) return ProbeRequest.discovery();
+        if (!hasFeatureTag) return ProbeRequest.full();
+        String featureInfoTag = requiredText(args.get("feature_info_tag"), "FEATURE_INFO_TAG");
+        String tableId = requiredText(args.get("table_id"), "TABLE_ID");
+        if (!"Shape".equals(tableId) && !"Expression".equals(tableId)) {
+            throw new InputException("TABLE_ID_NOT_ALLOWED");
+        }
+        return ProbeRequest.targeted(featureInfoTag, tableId);
+    }
+
+    static String collectBoundModel(Model model, String expectedModelTag, String physicsTag,
+                                    List<String> lockIds, String comsolVersion,
+                                    String versionError, ProbeRequest request) {
         try {
-            if (model == null || expectedModelTag == null || physicsTag == null || lockIds == null) {
+            if (model == null || expectedModelTag == null || physicsTag == null || lockIds == null
+                    || request == null) {
                 return failure("INVALID_INPUT", "REQUIRED_VALUE_MISSING");
             }
             String actualModelTag = boundedText(model.tag(), "model_tag");
@@ -142,13 +181,38 @@ public final class W21FieldIdentityProbe {
             root.put("identity", identity);
 
             root.put("physics_fields", readFields(physics, budget, root));
+            if (request.discoveryOnly) {
+                root.put("status", "DISCOVERY_ONLY_CAPTURED");
+                root.put("payload_complete", Boolean.FALSE);
+                root.put("metadata_complete", Boolean.FALSE);
+                root.put("capture_scope", "PHYSICS_FIELDS_AND_FEATURE_INFO_TAGS_ONLY");
+                root.put("feature_info_tags", readFeatureInfoTags(physics));
+                root.put("feature_info_tables", "NOT_READ");
+                root.put("base_unit_system", "NOT_READ");
+                root.put("interpretation_limits", interpretationLimits());
+                return encode(root);
+            }
+            if (request.targetedTable) {
+                root.put("status", "TARGETED_TABLE_CAPTURED_ONLY");
+                root.put("payload_complete", Boolean.FALSE);
+                root.put("metadata_complete", Boolean.FALSE);
+                root.put("capture_scope", "PHYSICS_FIELDS_AND_ONE_FEATURE_INFO_TABLE_ONLY");
+                root.put("feature_info", readSelectedFeatureInfo(physics, physicsTag,
+                        request.featureInfoTag, request.tableId, lockIds, budget, root));
+                root.put("unselected_feature_info_tables", "NOT_READ");
+                root.put("base_unit_system", "NOT_READ");
+                root.put("interpretation_limits", interpretationLimits());
+                return encode(root);
+            }
             root.put("feature_info", readFeatureInfo(physics, lockIds, budget, root));
             root.put("base_unit_system", readBaseUnits(model, budget, root));
             root.put("interpretation_limits", interpretationLimits());
 
             return encode(root);
         } catch (LimitExceeded ex) {
-            return failure("OUTPUT_LIMIT_EXCEEDED", ex.code);
+            return failure("OUTPUT_LIMIT_EXCEEDED", ex.code, ex.limitLocation);
+        } catch (MissingFeatureInfoTag ex) {
+            return encode(ex.payload);
         } catch (Exception ex) {
             return failure("READBACK_UNAVAILABLE", ex.getClass().getSimpleName());
         } catch (LinkageError ex) {
@@ -261,8 +325,8 @@ public final class W21FieldIdentityProbe {
                     continue;
                 }
                 item.put("status", "AVAILABLE");
-                item.put("shape_table", readRawTable(info, "Shape", budget, root));
-                item.put("expression_table", readRawTable(info, "Expression", budget, root));
+                item.put("shape_table", readRawTable(info, physics.tag(), tag, "Shape", budget, root));
+                item.put("expression_table", readRawTable(info, physics.tag(), tag, "Expression", budget, root));
                 List<Object> locks = new ArrayList<Object>();
                 for (String identifier : lockIds) {
                     Map<String, Object> lock = map();
@@ -303,7 +367,82 @@ public final class W21FieldIdentityProbe {
         return section;
     }
 
-    private static Map<String, Object> readRawTable(FeatureInfo info, String tableId,
+    private static Map<String, Object> readFeatureInfoTags(Physics physics) {
+        Map<String, Object> section = map();
+        FeatureInfoList infos = physics.featureInfo();
+        if (infos == null) throw new ReadbackFailure("NULL_FEATURE_INFO_LIST");
+        String[] tags = infos.tags();
+        if (tags == null) tags = new String[0];
+        if (tags.length > MAX_FEATURE_INFO_TAGS) {
+            throw new LimitExceeded("FEATURE_INFO_COUNT_LIMIT_EXCEEDED");
+        }
+        List<Object> boundedTags = new ArrayList<Object>();
+        for (String tag : tags) boundedTags.add(boundedText(tag, "feature_info_tag"));
+        section.put("status", tags.length == 0 ? "EMPTY" : "AVAILABLE");
+        section.put("count", Integer.valueOf(tags.length));
+        section.put("tags", boundedTags);
+        return section;
+    }
+
+    private static Map<String, Object> readSelectedFeatureInfo(Physics physics, String physicsTag,
+            String selectedTag, String tableId, List<String> lockIds, Budget budget,
+            Map<String, Object> root) {
+        FeatureInfoList infos = physics.featureInfo();
+        if (infos == null) throw new ReadbackFailure("NULL_FEATURE_INFO_LIST");
+        String[] tags = infos.tags();
+        if (tags == null) tags = new String[0];
+        if (tags.length > MAX_FEATURE_INFO_TAGS) {
+            throw new LimitExceeded("FEATURE_INFO_COUNT_LIMIT_EXCEEDED");
+        }
+        boolean found = false;
+        for (String rawTag : tags) {
+            String tag = boundedText(rawTag, "feature_info_tag");
+            if (selectedTag.equals(tag)) { found = true; break; }
+        }
+        if (!found) {
+            Map<String, Object> missing = map();
+            missing.put("probe", "W21FieldIdentityProbe");
+            missing.put("status", "FEATURE_INFO_TAG_NOT_FOUND");
+            missing.put("code", "REQUESTED_FEATURE_INFO_TAG_NOT_FOUND");
+            missing.put("native_admission", "UNVERIFIED");
+            missing.put("payload_complete", Boolean.FALSE);
+            missing.put("physics_tag", boundedText(physicsTag, "physics_tag"));
+            missing.put("requested_feature_info_tag", boundedText(selectedTag, "feature_info_tag"));
+            throw new MissingFeatureInfoTag(missing);
+        }
+        FeatureInfo info = physics.featureInfo(selectedTag);
+        if (info == null) throw new ReadbackFailure("NULL_FEATURE_INFO_HANDLE");
+        Map<String, Object> item = map();
+        item.put("requested_tag", boundedText(selectedTag, "feature_info_tag"));
+        item.put("tag", boundedText(info.tag(), "feature_info_tag"));
+        if (!selectedTag.equals(item.get("tag"))) throw new ReadbackFailure("FEATURE_INFO_TAG_MISMATCH");
+        item.put("requested_table_id", tableId);
+        item.put("table", readRawTable(info, physicsTag, selectedTag, tableId, budget, root));
+        List<Object> locks = new ArrayList<Object>();
+        for (String identifier : lockIds) {
+            Map<String, Object> lock = map();
+            lock.put("requested_identifier", identifier);
+            try {
+                lock.put("status", "AVAILABLE");
+                lock.put("is_locked", Boolean.valueOf(info.isLocked(identifier)));
+            } catch (Exception ex) {
+                lock.put("status", "UNAVAILABLE");
+                lock.put("error_class", ex.getClass().getSimpleName());
+                root.put("status", "PARTIAL_UNSUPPORTED");
+            } catch (LinkageError ex) {
+                lock.put("status", "UNSUPPORTED");
+                lock.put("error_class", ex.getClass().getSimpleName());
+                root.put("status", "PARTIAL_UNSUPPORTED");
+            }
+            locks.add(lock);
+        }
+        item.put("explicit_identifier_lock_checks", locks);
+        item.put("table_semantics", "RAW_ROWS; COLUMN_MEANINGS_NOT_INFERRED");
+        return item;
+    }
+
+    private static Map<String, Object> readRawTable(FeatureInfo info, String physicsTag,
+                                                     String featureInfoTag, String tableId,
                                                      Budget budget, Map<String, Object> root) {
         Map<String, Object> table = map();
         table.put("requested_table_id", tableId);
@@ -315,10 +454,17 @@ public final class W21FieldIdentityProbe {
                 root.put("status", "PARTIAL_UNSUPPORTED");
                 return table;
             }
-            if (rows.length > MAX_TABLE_ROWS) throw new LimitExceeded("TABLE_ROW_LIMIT_EXCEEDED");
+            if (rows.length > MAX_TABLE_ROWS) {
+                throw new LimitExceeded("TABLE_ROW_LIMIT_EXCEEDED",
+                        tableLimitLocation(physicsTag, featureInfoTag, tableId,
+                                "actual_rows", rows.length, "hard_limit", MAX_TABLE_ROWS));
+            }
             budget.totalRows += rows.length;
             if (budget.totalRows > MAX_TOTAL_TABLE_ROWS) {
-                throw new LimitExceeded("TOTAL_TABLE_ROW_LIMIT_EXCEEDED");
+                throw new LimitExceeded("TOTAL_TABLE_ROW_LIMIT_EXCEEDED",
+                        tableLimitLocation(physicsTag, featureInfoTag, tableId,
+                                "actual_total_rows", budget.totalRows,
+                                "hard_total_limit", MAX_TOTAL_TABLE_ROWS));
             }
             List<Object> rawRows = new ArrayList<Object>();
             for (String[] row : rows) {
@@ -348,6 +494,17 @@ public final class W21FieldIdentityProbe {
             root.put("status", "PARTIAL_UNSUPPORTED");
         }
         return table;
+    }
+
+    private static Map<String, Object> tableLimitLocation(String physicsTag, String featureInfoTag,
+            String tableId, String actualKey, int actualRows, String limitKey, int hardLimit) {
+        Map<String, Object> location = map();
+        location.put("physics_tag", boundedText(physicsTag, "physics_tag"));
+        location.put("feature_info_tag", boundedText(featureInfoTag, "feature_info_tag"));
+        location.put("table_id", tableId);
+        location.put(actualKey, Integer.valueOf(actualRows));
+        location.put(limitKey, Integer.valueOf(hardLimit));
+        return location;
     }
 
     private static Map<String, Object> readBaseUnits(Model model, Budget budget,
@@ -533,12 +690,17 @@ public final class W21FieldIdentityProbe {
     }
 
     private static String failure(String status, String code) {
+        return failure(status, code, null);
+    }
+
+    private static String failure(String status, String code, Map<String, Object> limitLocation) {
         Map<String, Object> result = map();
         result.put("probe", "W21FieldIdentityProbe");
         result.put("status", safeClassName(status));
         result.put("code", safeClassName(code));
         result.put("native_admission", "UNVERIFIED");
         result.put("payload_complete", Boolean.FALSE);
+        if (limitLocation != null) result.put("limit_location", limitLocation);
         try {
             return encode(result);
         } catch (Exception ignored) {
@@ -637,11 +799,45 @@ public final class W21FieldIdentityProbe {
 
     private static final class LimitExceeded extends RuntimeException {
         final String code;
-        LimitExceeded(String code) { this.code = safeClassName(code); }
+        final Map<String, Object> limitLocation;
+        LimitExceeded(String code) { this(code, null); }
+        LimitExceeded(String code, Map<String, Object> limitLocation) {
+            this.code = safeClassName(code);
+            this.limitLocation = limitLocation;
+        }
+    }
+
+    static final class ProbeRequest {
+        final boolean discoveryOnly;
+        final boolean targetedTable;
+        final String featureInfoTag;
+        final String tableId;
+
+        private ProbeRequest(boolean discoveryOnly, boolean targetedTable,
+                             String featureInfoTag, String tableId) {
+            this.discoveryOnly = discoveryOnly;
+            this.targetedTable = targetedTable;
+            this.featureInfoTag = featureInfoTag;
+            this.tableId = tableId;
+        }
+        static ProbeRequest full() { return new ProbeRequest(false, false, null, null); }
+        static ProbeRequest discovery() { return new ProbeRequest(true, false, null, null); }
+        static ProbeRequest targeted(String tag, String table) {
+            return new ProbeRequest(false, true, tag, table);
+        }
+    }
+
+    private static final class MissingFeatureInfoTag extends RuntimeException {
+        final Map<String, Object> payload;
+        MissingFeatureInfoTag(Map<String, Object> payload) { this.payload = payload; }
+    }
+
+    private static final class ReadbackFailure extends RuntimeException {
+        ReadbackFailure(String code) { super(code); }
     }
 
     private static final class InputException extends RuntimeException {
         final String code;
-        InputException(String code) { this.code = safeClassName(code); }
+        InputException(String code) { super(code); this.code = safeClassName(code); }
     }
 }

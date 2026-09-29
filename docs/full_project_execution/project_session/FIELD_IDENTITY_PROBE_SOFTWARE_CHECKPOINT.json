@@ -120,5 +120,55 @@
     "Not integrated into production state_map/admission/output_reader",
     "Windows6.4 then6.3 actual production MCP chain remains incomplete"
   ],
-  "next_action": "Use current-source production MCP path to capture/calibrate field-unit metadata on a task-owned Windows6.4 fixture; implement authenticated field/unit/mesh mapping and exact result producer, verify6.4 then6.3 within frozen budget. Then continue W23-W26."
+  "next_action": "Use current-source production MCP path to capture/calibrate field-unit metadata on a task-owned Windows6.4 fixture; implement authenticated field/unit/mesh mapping and exact result producer, verify6.4 then6.3 within frozen budget. Then continue W23-W26.",
+  "scoped_selection_20260929": {
+    "status": "PASS_SCOPED_SOFTWARE",
+    "source_hashes": {
+      "tests/test_run_w21_stage_native.py": "adeaac73505f808ca3275527603cb23cd5b65e5055949ffcdafb4344aa3b542e",
+      "tools/java/W21FieldIdentityProbe.java": "7b0eae81d922f453ba71361cd17db6c533913e16ce418c943d4ec80782aeb4c7",
+      "tools/java/W21FieldIdentityProbeOfflineTest.java": "57e596befa30060e1f46c41da565d1001c7602c88222974e0b34495587cc722c",
+      "tools/run_w21_stage_native.py": "7f66cbb25f7ce98fc87a717b079678c24911cb1e947351429fe9326245901a0f"
+    },
+    "receipt_sha256": "4cb1206657ec2c99c9cd444e705c96e7bcc01fc558ec49e3c2d1c1fa21a349d0",
+    "unique_pytest_cases": 124,
+    "java_assertions": 58,
+    "json_envelopes": 14,
+    "main_finding_closed": "Frozen targeted null/null may not silently become full; final Python and Java reject invalid targeted values. Default omission remains full.",
+    "native_status": "NOT_RUN",
+    "admission": "UNVERIFIED",
+    "review": "Source diff and original failure reviewed; source/JUnit/log hashes and unique tests independently verified. No unchanged suite rerun.",
+    "capabilities": [
+      "Exact FeatureInfo tag/Shape-or-Expression table selection frozen into runner plan",
+      "Explicit fields/tag-only discovery; selected/discovery payloads always incomplete",
+      "Bounded overflow location, actual row count and unchanged 128-row/64KiB caps",
+      "No silent full-read fallback for invalid targeted inputs"
+    ],
+    "evidence_root": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-probe-scope-20260929",
+    "junit_sha256": "15d4ee25c8fbc7f56e33d02733c86a87cfb3c7c23be11b1bc9c4ab3ca0bf0e15",
+    "java_log_sha256": "6552c58232aa23c6a0f6b1012b913ab7fe1233465599bdde6547eb522b7d907b",
+    "commands": {
+      "java_compile": "/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home/bin/javac -proc:none -encoding UTF-8 -classpath /Applications/COMSOL64/Multiphysics/apiplugins/com.comsol.api_1.0.0.jar -d <SSD receipt dir>/classes tools/java/W21FieldIdentityProbe.java tools/java/W21FieldIdentityProbeOfflineTest.java",
+      "java_harness": "/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home/bin/java -cp <SSD classes>:/Applications/COMSOL64/Multiphysics/apiplugins/com.comsol.api_1.0.0.jar W21FieldIdentityProbeOfflineTest",
+      "pytest": "TMPDIR=/Volumes/CTestEff/6 /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -B -m pytest -q --basetemp=/Volumes/CTestEff/5 --junitxml=<SSD receipt dir>/runner-final.junit.xml tests/test_run_w21_stage_native.py"
+    },
+    "preserved_failures": [
+      {
+        "junit": "runner.junit.xml",
+        "junit_sha256": "680a40a752492ea21a1b34076fa2b7423d344cdba77d07fc662e4399eba70606",
+        "log": "runner.log",
+        "log_sha256": "64cc29c3e8d1265c51458a6c4d3a27512a644006358d41777048ee8806797b54",
+        "result": "not executed: sandbox denied APFS temp creation",
+        "summary": "6 passed, 117 setup errors; PermissionError creating /Volumes/CTestEff/2"
+      },
+      {
+        "junit": "runner-escalated.junit.xml",
+        "junit_sha256": "d5d7634695262862da25dbf767c02802325100468c8b230ffc71e67ef0e69730",
+        "log": "runner-escalated.log",
+        "log_sha256": "654575d8edc8188bd07a9f3d711baef2802c86f0a755b0b7cc002b46ef46e5d2",
+        "result": "fixture path-length failure",
+        "summary": "122 passed, 1 failed; nested test subdirectory exceeded frozen Windows native-recovery path budget before dispatch"
+      }
+    ],
+    "next_action": "Freeze a fresh Windows6.4 metadata-only public MCP run with --probe-feature-info-tag info --probe-table-id Shape; inspect raw actual field/table evidence and owned cleanup. Never infer undocumented columns or stage admission from this capture."
+  }
 }

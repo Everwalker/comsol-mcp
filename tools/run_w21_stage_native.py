@@ -655,10 +655,17 @@ def prepare(*, version: str, comsol_root: Path, jdk_home: Path,
             evidence_root: Path, source_root: Path = REPOSITORY,
             prerequisite_64_receipt: Path | None = None,
             server_home_root: Path | None = None,
-            mode: str = METADATA_MODE) -> dict[str, Any]:
+            mode: str = METADATA_MODE, probe_discovery_only: bool = False,
+            probe_feature_info_tag: str | None = None,
+            probe_table_id: str | None = None) -> dict[str, Any]:
     if version not in {"6.4", "6.3"}:
         raise RunnerError("selected version must be exactly 6.4 or 6.3")
     schema = _mode_schema(mode)
+    probe_request = _normalize_probe_request(
+        discovery_only=probe_discovery_only,
+        feature_info_tag=probe_feature_info_tag,
+        table_id=probe_table_id,
+    )
     if platform.system() != "Windows":
         raise RunnerError("prepare is metadata-only but must run on the target Windows host")
     source_root = source_root.resolve(strict=True)
@@ -760,6 +767,7 @@ def prepare(*, version: str, comsol_root: Path, jdk_home: Path,
         "scratch": str(run_root / "scratch"),
         "prerequisite_64_receipt": prerequisite,
         "request_ids": request_ids, "idempotency_keys": idempotency,
+        "probe_request": probe_request,
         "budgets": _mode_budgets(mode),
         "route": "public stdio MCP; ControlDaemon; OwnedServerLauncher; one registered session",
         "prepare_side_effects": "filesystem receipts/directories only; no MCP call or COMSOL process",
@@ -793,6 +801,7 @@ def verify_plan(plan: Mapping[str, Any], *, expected_sha256: str,
         raise RunnerError("frozen mode/schema/kind identity is inconsistent")
     if plan.get("budgets") != _mode_budgets(mode):
         raise RunnerError("frozen mode budgets differ from the bounded runner contract")
+    _frozen_probe_request(plan)
     candidate = dict(plan)
     observed_hash = candidate.pop("freeze_sha256", None)
     if observed_hash != expected_sha256 or sha256_value(candidate) != expected_sha256:
@@ -1118,7 +1127,58 @@ def _response_summary(payload: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def _normalize_probe_request(*, discovery_only: bool = False,
+                             feature_info_tag: str | None = None,
+                             table_id: str | None = None) -> dict[str, Any]:
+    if type(discovery_only) is not bool:
+        raise RunnerError("probe discovery flag must be boolean")
+    has_tag = feature_info_tag is not None
+    has_table = table_id is not None
+    if discovery_only and (has_tag or has_table):
+        raise RunnerError("probe discovery and targeted table selection are mutually exclusive")
+    if has_tag != has_table:
+        raise RunnerError("probe FeatureInfo tag and table id must be supplied together")
+    if discovery_only:
+        return {"mode": "discovery"}
+    if not has_tag:
+        return {"mode": "full"}
+    if (not isinstance(feature_info_tag, str) or not feature_info_tag
+            or len(feature_info_tag) > 512):
+        raise RunnerError("probe FeatureInfo tag must be non-empty and within the frozen text limit")
+    if not isinstance(table_id, str) or table_id not in {"Shape", "Expression"}:
+        raise RunnerError("probe table id must be Shape or Expression")
+    return {"mode": "targeted", "feature_info_tag": feature_info_tag, "table_id": table_id}
+
+
+def _frozen_probe_request(plan: Mapping[str, Any]) -> dict[str, Any]:
+    request = plan.get("probe_request", {"mode": "full"})
+    if not isinstance(request, Mapping):
+        raise RunnerError("frozen probe request is malformed")
+    mode = request.get("mode")
+    if mode == "full" and set(request) == {"mode"}:
+        return {"mode": "full"}
+    if mode == "discovery" and set(request) == {"mode"}:
+        return {"mode": "discovery"}
+    if mode == "targeted" and set(request) == {"mode", "feature_info_tag", "table_id"}:
+        normalized = _normalize_probe_request(
+            feature_info_tag=request.get("feature_info_tag"), table_id=request.get("table_id"))
+        if normalized.get("mode") != "targeted":
+            raise RunnerError("frozen targeted probe request requires a non-empty tag and table")
+        return normalized
+    raise RunnerError("frozen probe request does not match an explicit bounded selection")
+
+
+def _worker_probe_args(request: Mapping[str, Any]) -> dict[str, Any]:
+    mode = request["mode"]
+    if mode == "full":
+        return {}
+    if mode == "discovery":
+        return {"discovery_only": True}
+    return {"feature_info_tag": request["feature_info_tag"], "table_id": request["table_id"]}
+
+
 def _parse_field_identity_probe(raw_payload: Any, *, expected_model_tag: str,
+                                expected_request: Mapping[str, Any] | None = None,
                                 allow_table_row_limit: bool = False) -> dict[str, Any]:
     """Preserve the bounded probe JSON without interpreting it as admission evidence."""
     if isinstance(raw_payload, str):
@@ -1145,33 +1205,127 @@ def _parse_field_identity_probe(raw_payload: Any, *, expected_model_tag: str,
     if not isinstance(payload, Mapping):
         raise RunnerError("field identity probe JSON root is not an object")
     identity = payload.get("identity")
+    request = _frozen_probe_request({
+        "probe_request": expected_request if expected_request is not None else {"mode": "full"}
+    })
+    request_mode = request["mode"]
+    identity_matches = isinstance(identity, Mapping) and identity.get("model_tag") == expected_model_tag
     complete_capture = (
-        payload.get("probe") == "W21FieldIdentityProbe"
+        request_mode == "full"
+        and payload.get("probe") == "W21FieldIdentityProbe"
         and payload.get("status") == "STRUCTURE_CAPTURED_ONLY"
         and payload.get("native_admission") == "UNVERIFIED"
-        and isinstance(identity, Mapping)
-        and identity.get("model_tag") == expected_model_tag
+        and identity_matches
     )
-    limited_capture = (
-        allow_table_row_limit
-        and set(payload) == {
-            "probe", "status", "code", "native_admission", "payload_complete",
-        }
+    old_limited_capture = (
+        request_mode == "full" and allow_table_row_limit
+        and set(payload) == {"probe", "status", "code", "native_admission", "payload_complete"}
         and payload.get("probe") == "W21FieldIdentityProbe"
         and payload.get("status") == "OUTPUT_LIMIT_EXCEEDED"
         and payload.get("code") == "TABLE_ROW_LIMIT_EXCEEDED"
         and payload.get("native_admission") == "UNVERIFIED"
         and payload.get("payload_complete") is False
     )
-    if not (complete_capture or limited_capture):
+    location = payload.get("limit_location")
+    detailed_limited_capture = (
+        allow_table_row_limit and request_mode == "full"
+        and _valid_table_limit_payload(payload, location, expected_tag=None, expected_table=None)
+    )
+    targeted_limit_capture = (
+        request_mode == "targeted"
+        and _valid_table_limit_payload(payload, location,
+            expected_tag=request["feature_info_tag"], expected_table=request["table_id"])
+    )
+    discovery_capture = (
+        request_mode == "discovery"
+        and payload.get("probe") == "W21FieldIdentityProbe"
+        and payload.get("status") == "DISCOVERY_ONLY_CAPTURED"
+        and payload.get("native_admission") == "UNVERIFIED"
+        and payload.get("payload_complete") is False
+        and payload.get("metadata_complete") is False
+        and payload.get("capture_scope") == "PHYSICS_FIELDS_AND_FEATURE_INFO_TAGS_ONLY"
+        and payload.get("feature_info_tables") == "NOT_READ"
+        and payload.get("base_unit_system") == "NOT_READ"
+        and identity_matches
+        and identity.get("physics_tag") == "ht"
+        and _valid_feature_info_tags(payload.get("feature_info_tags"))
+        and "feature_info" not in payload
+    )
+    targeted_capture = (
+        request_mode == "targeted"
+        and payload.get("probe") == "W21FieldIdentityProbe"
+        and payload.get("status") == "TARGETED_TABLE_CAPTURED_ONLY"
+        and payload.get("native_admission") == "UNVERIFIED"
+        and payload.get("payload_complete") is False
+        and payload.get("metadata_complete") is False
+        and payload.get("capture_scope") == "PHYSICS_FIELDS_AND_ONE_FEATURE_INFO_TABLE_ONLY"
+        and payload.get("unselected_feature_info_tables") == "NOT_READ"
+        and payload.get("base_unit_system") == "NOT_READ"
+        and identity_matches
+        and identity.get("physics_tag") == "ht"
+        and _valid_selected_table(payload.get("feature_info"), request)
+    )
+    if not (complete_capture or old_limited_capture or detailed_limited_capture
+            or targeted_limit_capture or discovery_capture or targeted_capture):
         raise RunnerError("probe output is incomplete or claims a scope outside metadata capture")
+    metadata_complete = bool(complete_capture)
     return {
         "payload": dict(payload),
         "raw_payload_json": raw_json,
         "raw_payload_bytes": len(raw_bytes),
         "raw_payload_sha256": hashlib.sha256(raw_bytes).hexdigest(),
-        "metadata_complete": bool(complete_capture),
+        "metadata_complete": metadata_complete,
+        "capture_kind": ("complete" if complete_capture else "discovery" if discovery_capture
+                         else "targeted_table" if targeted_capture else "table_limit"),
     }
+
+
+def _valid_feature_info_tags(value: Any) -> bool:
+    if not isinstance(value, Mapping) or value.get("status") not in {"AVAILABLE", "EMPTY"}:
+        return False
+    tags = value.get("tags")
+    return (isinstance(tags, list) and type(value.get("count")) is int
+            and value["count"] == len(tags) and len(tags) <= 64
+            and all(isinstance(tag, str) and tag and len(tag) <= 512 for tag in tags))
+
+
+def _valid_selected_table(value: Any, request: Mapping[str, Any]) -> bool:
+    if not isinstance(value, Mapping):
+        return False
+    tag = request["feature_info_tag"]
+    table_id = request["table_id"]
+    table = value.get("table")
+    if (value.get("requested_tag") != tag or value.get("tag") != tag
+            or value.get("requested_table_id") != table_id or not isinstance(table, Mapping)
+            or table.get("requested_table_id") != table_id or table.get("status") != "AVAILABLE"):
+        return False
+    rows = table.get("rows")
+    row_count = table.get("row_count")
+    return (isinstance(rows, list) and type(row_count) is int and row_count == len(rows)
+            and 0 <= row_count <= 128)
+
+
+def _valid_table_limit_payload(payload: Mapping[str, Any], location: Any, *,
+                               expected_tag: str | None,
+                               expected_table: str | None) -> bool:
+    if (set(payload) != {"probe", "status", "code", "native_admission",
+                         "payload_complete", "limit_location"}
+            or payload.get("probe") != "W21FieldIdentityProbe"
+            or payload.get("status") != "OUTPUT_LIMIT_EXCEEDED"
+            or payload.get("code") != "TABLE_ROW_LIMIT_EXCEEDED"
+            or payload.get("native_admission") != "UNVERIFIED"
+            or payload.get("payload_complete") is not False
+            or not isinstance(location, Mapping)
+            or set(location) != {"physics_tag", "feature_info_tag", "table_id", "actual_rows", "hard_limit"}):
+        return False
+    return (location.get("physics_tag") == "ht"
+            and isinstance(location.get("feature_info_tag"), str)
+            and bool(location["feature_info_tag"])
+            and location.get("table_id") in {"Shape", "Expression"}
+            and type(location.get("actual_rows")) is int and location["actual_rows"] > 128
+            and location.get("hard_limit") == 128
+            and (expected_tag is None or location.get("feature_info_tag") == expected_tag)
+            and (expected_table is None or location.get("table_id") == expected_table))
 
 
 def _project_relative_file(project_root: Path, source: Path) -> str:
@@ -2103,10 +2257,12 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
                               request_ids["probe_register"], staged["W21FieldIdentityProbe.java"],
                               staged_relative["W21FieldIdentityProbe.java"])
         probe_revision_before = binding["revision"]
+        probe_request = _frozen_probe_request(plan)
+        probe_arguments = {"expected_model_tag": binding["model_tag"], "physics_tag": "ht"}
+        probe_arguments.update(_worker_probe_args(probe_request))
         probe_response = await dispatch("probe.execute", "operation_call", _operation_params(
             "code.execute_java", {"source_artifact": staged_relative["W21FieldIdentityProbe.java"],
-                "entrypoint": "W21FieldIdentityProbe", "arguments": {
-                    "expected_model_tag": binding["model_tag"], "physics_tag": "ht"},
+                "entrypoint": "W21FieldIdentityProbe", "arguments": probe_arguments,
                 "mode": "trusted", "timeout_s": 240},
             {"project_id": project_id, "session_id": session_id, "model_ref": binding["model_ref"],
              "expected_revision": probe_revision_before, "idempotency_key": keys["probe_execute"],
@@ -2128,8 +2284,12 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
         binding["revision"] = probe_execution["revision"]
         parsed_probe = _parse_field_identity_probe(
             probe_payload, expected_model_tag=binding["model_tag"],
+            expected_request=probe_request,
             allow_table_row_limit=(mode == SOLVE_READBACK_MODE),
         )
+        if (not parsed_probe["metadata_complete"] and probe_request["mode"] == "full"
+                and not (mode == SOLVE_READBACK_MODE and parsed_probe["capture_kind"] == "table_limit")):
+            raise RunnerError("probe output is incomplete or claims a scope outside metadata capture")
         probe = parsed_probe["payload"]
         probe_observation = {
             "status": "RAW_UNINTERPRETED" if mode == SOLVE_READBACK_MODE
@@ -2138,12 +2298,14 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
             "raw_payload_sha256": parsed_probe["raw_payload_sha256"],
             "semantic_payload_sha256": sha256_value(probe),
             "raw_payload_bytes": parsed_probe["raw_payload_bytes"],
+            "request_scope": dict(probe_request),
             "project_id": project_id, "session_id": session_id,
             "model_ref": dict(binding["model_ref"]),
             "revision": probe_execution["revision"],
             "request_id": request_ids["probe_execute"],
             "idempotency_key": keys["probe_execute"],
             "worker_execution": probe_execution_proof,
+            "capture_kind": parsed_probe["capture_kind"],
             "capture_status": probe.get("status"),
             "capture_completeness": "COMPLETE" if parsed_probe["metadata_complete"] else "PARTIAL",
             "metadata_complete": parsed_probe["metadata_complete"],
@@ -2163,6 +2325,8 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
             "request_id": request_ids["probe_execute"],
             "idempotency_key": keys["probe_execute"],
             "worker_execution": probe_execution_proof,
+            "request_scope": dict(probe_request),
+            "capture_kind": parsed_probe["capture_kind"],
             "capture_status": probe.get("status"),
             "capture_completeness": "COMPLETE" if parsed_probe["metadata_complete"] else "PARTIAL",
             "metadata_complete": parsed_probe["metadata_complete"],
@@ -2379,7 +2543,18 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
             "cleanup": {"status": "PENDING"},
         }
         if mode == METADATA_MODE:
-            report.update({"probe_sha256": plan["probe_sha256"], "probe_readback": probe})
+            report.update({
+                "probe_sha256": plan["probe_sha256"], "probe_readback": probe,
+                "probe_capture": {
+                    "request_scope": dict(probe_request),
+                    "capture_kind": parsed_probe["capture_kind"],
+                    "capture_status": probe.get("status"),
+                    "capture_completeness": "COMPLETE" if parsed_probe["metadata_complete"] else "PARTIAL",
+                    "metadata_complete": parsed_probe["metadata_complete"],
+                    "raw_payload_sha256": parsed_probe["raw_payload_sha256"],
+                    "raw_payload_bytes": parsed_probe["raw_payload_bytes"],
+                },
+            })
         else:
             report.update({"probe_observation": probe_observation,
                            "solution_tuple_readback": tuple_readback,
@@ -2631,6 +2806,12 @@ def _parser() -> argparse.ArgumentParser:
     prep.add_argument("--source-root", type=Path, default=REPOSITORY)
     prep.add_argument("--server-home-root", type=Path,
                       help="optional dedicated directory inside --evidence-root for short task-owned runtime homes")
+    prep.add_argument("--probe-discovery-only", action="store_true",
+                      help="freeze a read-only physics-field/FeatureInfo-tag discovery request")
+    prep.add_argument("--probe-feature-info-tag",
+                      help="freeze one exact FeatureInfo tag for bounded table capture")
+    prep.add_argument("--probe-table-id", choices=("Shape", "Expression"),
+                      help="freeze one exact FeatureInfo table; requires --probe-feature-info-tag")
     prep.add_argument("--prerequisite-64-receipt", type=Path)
     run = commands.add_parser("execute", help="one explicitly frozen W21 public MCP run")
     run.add_argument("--plan", type=Path, required=True)
@@ -2647,7 +2828,10 @@ def main(argv: list[str] | None = None) -> int:
                              source_root=args.source_root,
                              prerequisite_64_receipt=args.prerequisite_64_receipt,
                              server_home_root=args.server_home_root,
-                             mode=args.mode)
+                             mode=args.mode,
+                             probe_discovery_only=args.probe_discovery_only,
+                             probe_feature_info_tag=args.probe_feature_info_tag,
+                             probe_table_id=args.probe_table_id)
         else:
             plan, state = _load_plan(args.plan, args.freeze_sha256)
             result = asyncio.run(_execute_stdio(plan, state))

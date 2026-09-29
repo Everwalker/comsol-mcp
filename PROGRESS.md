@@ -1,6 +1,12 @@
 # COMSOL MCP full-project progress
 
-**Current stage: W21 canonical Windows 6.4 → 6.3 native chain — scoped PASS. Overall project: PARTIAL.** This round paused capability expansion and completed the real production MCP chain on both Windows versions. The master plan remains 26 work packages, 272 actions, 60 validation targets and 6 environments; the final independent Reviewer has not started. The authoritative plan and task ledger remain [MAIN_ACCEPTANCE_PLAN](docs/full_project_execution/MAIN_ACCEPTANCE_PLAN.md), [TASKS.json](docs/full_project_execution/state/TASKS.json) and [RESUME.json](docs/full_project_execution/state/RESUME.json).
+**Current stage: W21 bounded field-metadata probe software — scoped PASS; new native capture NOT_RUN. Overall project: PARTIAL.** The Windows 6.4 → 6.3 canonical native round remains scoped PASS on its exact earlier runtime source. The master plan remains 26 work packages, 272 actions, 60 validation targets and 6 environments; the final independent Reviewer has not started. The authoritative plan and task ledger remain [MAIN_ACCEPTANCE_PLAN](docs/full_project_execution/MAIN_ACCEPTANCE_PLAN.md), [TASKS.json](docs/full_project_execution/state/TASKS.json) and [RESUME.json](docs/full_project_execution/state/RESUME.json).
+
+## Latest W21 software result
+
+The existing probe now supports a frozen exact FeatureInfo tag/table or explicit fields/tag-only discovery. Overflow reports bounded location/counts; all output limits remain unchanged. Selected/discovery output is always PARTIAL, and native stage admission remains UNVERIFIED. Main review caught and closed a null-target fallback to full-table reading. Java offline compile/harness passed **58 assertions**; the affected runner module passed **124 unique tests**, 0 failed/error/skipped. Main verified source/log/JUnit hashes and 14 bounded JSON envelopes. Earlier sandbox and fixture-path failures remain preserved. [Compact checkpoint](docs/full_project_execution/project_session/FIELD_IDENTITY_PROBE_SOFTWARE_CHECKPOINT.json#scoped_selection_20260929).
+
+Next: a fresh Windows 6.4 metadata-only run with `--probe-feature-info-tag info --probe-table-id Shape`, then use actual readback to implement the original unit/mesh/stage-transfer requirements. This software result is not new Windows or stage-transfer acceptance.
 
 ## Actually completed and verified
 
@@ -17,7 +23,7 @@ Necessary repairs only: pass the existing 45s RPC wait to `session.start`; use a
 
 ## Software tests and retained failures
 
-Latest affected regression: **298 PASS, 0 failed/error/skipped** across session context, Server, daemon sessions and runner. Main Agent verified the JUnit uniqueness, receipt and source hashes. The earlier start-wait repair passed 118 runner tests; counts overlap and are not additive. [Software checkpoint](docs/full_project_execution/project_session/PRODUCTION_RUNNER_SOFTWARE_CHECKPOINT.json#windows_native_solver_path_repair_20260929) contains exact commands/hashes. Failed long-path fixture runs remain on SSD; only the repaired final regression is PASS.
+Canonical-chain repair regression: **298 PASS, 0 failed/error/skipped** across session context, Server, daemon sessions and runner. Main Agent verified the JUnit uniqueness, receipt and source hashes. The earlier start-wait repair passed 118 runner tests; counts overlap and are not additive. [Software checkpoint](docs/full_project_execution/project_session/PRODUCTION_RUNNER_SOFTWARE_CHECKPOINT.json#windows_native_solver_path_repair_20260929) contains exact commands/hashes. Failed long-path fixture runs remain on SSD; only the repaired final regression is PASS.
 
 Two earlier Windows 6.3 failures remain preserved: interrupted start reached READY without a durable terminal result, then one public recovery proved current-host quiet and set lifecycle STOPPED revision 3 while retaining historical UNKNOWN; the following actual solve failed creating a 271-unit native file path, with 19/19 Worker requests terminal and complete current-host inventories quiet. Neither historical outcome is rewritten as successful. Earlier 6.4 failures and their scoped recovery evidence remain in the same checkpoint.
 
