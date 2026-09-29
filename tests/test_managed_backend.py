@@ -180,3 +180,121 @@ def test_visible_workflow_start_uses_managed_connection_not_legacy_reconnect(tmp
         assert result["success"] and calls == ["managed-connect", "load-and-verify"]
     finally:
         store.close()
+
+
+@pytest.mark.parametrize("operation", ["model_create", "model_load"])
+def test_model_selection_binds_session_context_model_after_legacy_callback(tmp_path, monkeypatch, operation):
+    """The real legacy selection callback and backend must share session-local model state."""
+    from pathlib import Path
+
+    from comsol_mcp._execution_contract import SessionLedger
+    from comsol_mcp._session_context import (
+        CanonicalSocket,
+        SessionEndpointIdentity,
+        SessionRuntimeConfig,
+        SessionRuntimeContext,
+        use_session_context,
+    )
+    import comsol_mcp._server as server_module
+
+    class Worker:
+        generation = 7
+
+        def __init__(self):
+            self.labels = {}
+            self.calls = []
+
+        def client(self):
+            from comsol_mcp._java_worker import RemoteClient
+            return RemoteClient(self)
+
+        def operation_context(self, *_args, **_kwargs):
+            return nullcontext()
+
+        def model_snapshot(self, tag):
+            return {"model_tag": tag, "fingerprint": f"fp:{tag}", "external_event_counter": 0}
+
+        def submit(self, kind, payload, **_kwargs):
+            self.calls.append((kind, dict(payload)))
+            result = None
+            if kind == "modelutil":
+                method, args = payload["method"], payload.get("args", [])
+                if method == "uniquetag":
+                    result = "mcp1"
+                elif method == "tags":
+                    result = []
+                elif method in {"create", "load"}:
+                    tag = args[0]
+                    self.labels[tag] = "Selected model" if method == "create" else Path(args[1]).stem
+                    result = {"$worker_handle": f"model:{tag}", "generation": self.generation,
+                              "java_type": "com.comsol.model.Model"}
+                else:
+                    raise AssertionError(f"unexpected modelutil method: {method}")
+            elif kind == "call":
+                tag = payload["handle"].removeprefix("model:")
+                method, args = payload["method"], payload.get("args", [])
+                if method == "label":
+                    if args:
+                        self.labels[tag] = args[0]
+                    else:
+                        result = self.labels[tag]
+                elif method == "tag":
+                    result = tag
+                elif method == "getFilePath":
+                    result = ""
+                else:
+                    raise AssertionError(f"unexpected model method: {method}")
+            else:
+                raise AssertionError(f"unexpected Worker command: {kind}")
+            return {"ok": True, "status": "SUCCEEDED", "result": result}
+
+    project_root = tmp_path / "workspace"
+    project_root.mkdir()
+    model_path = project_root / "input.mph"
+    model_path.write_bytes(b"synthetic model path fixture")
+    runtime = SessionRuntimeConfig(
+        runtime_id="runtime-a", comsol_version="6.4.0.293",
+        installation_root=tmp_path / "comsol", java_executable=tmp_path / "java",
+        classpath=(tmp_path / "client.jar",), preferences_dir=tmp_path / "prefs",
+        session_state_root=tmp_path / "session-state",
+    )
+    worker = Worker()
+    service = ExecutionService(
+        SessionLedger("session-a", "server-a", server_ownership="mcp_managed"),
+        worker, project_root=project_root,
+    )
+    store = OperationStore(tmp_path / "operations.sqlite3")
+    backend = ManagedBackend(
+        tmp_path / "backend", store, service=service, worker=worker, project_root=project_root,
+    )
+    endpoint = SessionEndpointIdentity(
+        "127.0.0.1", 1278, worker_epoch=1, observed_peer=CanonicalSocket("127.0.0.1", 1278),
+    )
+    context = SessionRuntimeContext(
+        project_id="project-a", session_id="session-a", project_root=project_root,
+        runtime=runtime, endpoint=endpoint, backend=backend, worker=worker,
+        worker_instance_id="worker-a", service=service, client=worker.client(),
+        client_connected=True, server_ownership="mcp_managed",
+    )
+    monkeypatch.setattr(server_module, "_current_model", None)
+    monkeypatch.setattr(server_module, "_mcp_owned_model_tags", set())
+    args = {"name": "Selected model"} if operation == "model_create" else {"path": "input.mph"}
+
+    try:
+        with use_session_context(context):
+            result = backend.invoke(
+                operation, args, {"project_id": "project-a", "session_id": "session-a"},
+                f"op-{operation}", lambda _event: None,
+            )
+            selected_tag = result["data"]["model_tag"]
+            assert result["success"] is True
+            assert result["execution"]["model_ref"]["model_tag"] == selected_tag
+            assert context.current_model._handle == f"model:{selected_tag}"
+            assert context.owned_model_tags == {selected_tag}
+            assert service.ledger.model_ownership[selected_tag] == "mcp_owned"
+            assert any(kind == "call" and payload["method"] == "tag" for kind, payload in worker.calls)
+        assert server_module._current_model is None
+        assert selected_tag not in server_module._mcp_owned_model_tags
+    finally:
+        backend.close()
+        store.close()

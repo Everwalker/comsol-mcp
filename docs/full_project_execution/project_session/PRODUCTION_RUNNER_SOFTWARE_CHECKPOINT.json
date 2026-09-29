@@ -353,5 +353,39 @@
     "scope": "Offline fake stdio protocol only; identity checks still require exact project/session/endpoint/server/Worker bindings. No Worker/daemon changes or native execution.",
     "in_prior_3160730_freeze": false,
     "next_action": "Preserve the latest Windows session.stop UNKNOWN. First finish Windows empty-listener enumeration and source-bound durable abandoned-stop/quiescence recovery using the existing atomic proof system. Do not restart, replay, disconnect, or clean up until its exact durable disposition is verified. Then prepare and review a fresh Windows 6.4 freeze containing the accepted version/build parser and probe integration; execute only after review/authorization, then continue 6.3 and W23-W26."
+  },
+  "model_selection_and_unknown_fix": {
+    "status": "SCOPED_SOFTWARE_PASS_MAIN_REVIEWED",
+    "native_after_repair": "NOT_RUN",
+    "changes": [
+      "Use the existing session_server proxy for backend model selection, adoption ownership and current-model lookup.",
+      "Treat EXECUTION_STATE_UNKNOWN error code as UNKNOWN even without a boolean flag; retain original request/job and prohibit subsequent actions/cleanup."
+    ],
+    "backend_tests": {
+      "focused": 2,
+      "affected": 177,
+      "counting": "focused subset, not additive; affected count from actual terminal output, no affected-suite JUnit generated",
+      "receipt": "/Volumes/SSD/Comsol-MCP/execution-scratch/backend-model-selection-fix-20260929/affected_suite_receipt.json",
+      "receipt_sha256": "647ab946c1b31dcbb06c8104eee58eb5f6c94ffe94e75b0a9a69dc61d3249e2b",
+      "focused_junit_sha256": "af17b0f89e6ae6b3c71b18b05541fa1b8d0a92f642881b018e6f739555e0f961",
+      "reproduce": "python -B -m pytest -p no:cacheprovider --basetemp=<short-external-scratch> -q tests/test_managed_backend.py tests/test_session_context.py tests/test_control_daemon_sessions.py tests/test_operation_store.py"
+    },
+    "runner_tests": {
+      "unique_passed": 110,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "junit": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-model-create-unknown-runnerfix-20260929/final-junit.xml",
+      "junit_sha256": "492a928e53423822d31f983429e72b879a9e54a620f52f06d6d6e962809b6892",
+      "reproduce": "python -B -m pytest -p no:cacheprovider --basetemp=<short-external-scratch> -q tests/test_run_w21_stage_native.py",
+      "prior_attempts": "Long scratch paths caused fixture path-budget failures; retained locally and final short-path run passed."
+    },
+    "source_sha256": {
+      "comsol_mcp/_managed_backend.py": "ef0591876b15112da0675989ae4957b1f6beb9672a3c2df44832f7baf1d5f917",
+      "tests/test_managed_backend.py": "507bae5ff08ae0e9d11f87b1f6b3c3ce07ebcedf93502bab846fbd3a24d8a18a",
+      "tools/run_w21_stage_native.py": "28457ba0399a401a8e1e686c5ca8b3417ca8b2093bb66c3d49ae2a597369a3bc",
+      "tests/test_run_w21_stage_native.py": "ea4352c13bb97b8a2352626e77bcd9a72f5951b9d915c702918760cb06d18ee9"
+    },
+    "review": "Main inspected diff, verified source hashes and focused/runner JUnit, and reviewed actual 177-test command/stdout/exit0."
   }
 }

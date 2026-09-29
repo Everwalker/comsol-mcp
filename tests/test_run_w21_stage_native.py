@@ -171,7 +171,8 @@ class _FakeStdioSession:
                  job_status_fault: str | None = None,
                  solve_fault: str | None = None,
                  probe_payload_override: Any | None = None,
-                 connect_identity: dict[str, Any] | None = None):
+                 connect_identity: dict[str, Any] | None = None,
+                 model_create_unknown_code_only: bool = False):
         self.plan = plan
         self.state = state
         self.wrong_model_field = wrong_model_field
@@ -189,6 +190,7 @@ class _FakeStdioSession:
         self.job_status_fault = job_status_fault
         self.solve_fault = solve_fault
         self.probe_payload_override = probe_payload_override
+        self.model_create_unknown_code_only = model_create_unknown_code_only
         self.connect_identity = {
             "remote_engine_version": "6.4.0.293",
             "remote_engine_build": "293",
@@ -291,6 +293,23 @@ class _FakeStdioSession:
             assert capture.get("revision") == params["execution"]["expected_revision"]
             assert durable.get("study_dispatch") == durable.get("solver_dispatch") == 0
         self.calls.append((action or name, params))
+
+        if action == "model_create" and self.model_create_unknown_code_only:
+            request_id, _ = self._identity_in_params(params)
+            return {
+                "success": False,
+                "error": {
+                    "code": "EXECUTION_STATE_UNKNOWN",
+                    "message": "backend execution failed; inspect worker evidence",
+                    "safe_retry": False,
+                    "type": "AttributeError",
+                },
+                "data": {},
+                "execution": {
+                    "request_id": request_id,
+                    "job_id": "model-create-unknown-job",
+                },
+            }
 
         if self.timeout_on == action:
             raise asyncio.TimeoutError("injected transport timeout")
@@ -1540,6 +1559,37 @@ def test_model_create_foreign_or_invalid_binding_refuses_before_java(field, tmp_
     assert "session.stop" in operations
     assert state.value["status"] == "FAILED"
     assert state.value["failure_cleanup"]["status"] == "CLEANUP_COMPLETE"
+
+
+def test_model_create_unknown_error_code_halts_without_cleanup_and_preserves_ids(tmp_path, monkeypatch):
+    _patch_isolation(monkeypatch)
+    plan = _plan(tmp_path)
+    state = _state(tmp_path)
+    fake = _FakeStdioSession(plan, state, model_create_unknown_code_only=True)
+
+    with pytest.raises(runner.RunnerError, match="model_create returned UNKNOWN"):
+        asyncio.run(runner.run_metadata_protocol(
+            runner._MCPCalls(fake), plan, state,
+            clock=lambda: 100.0, preflight=lambda: [],
+        ))
+
+    actions = [action for action, _ in fake.calls]
+    assert actions.count("model_create") == 1
+    assert "model.inspect" not in actions
+    assert "fixture.register" not in actions and "fixture.execute" not in actions
+    assert "session.disconnect" not in actions and "session.stop" not in actions
+    assert "failure_cleanup.session_disconnect" not in actions
+    model_action = state.value["actions"]["model_create"]
+    assert model_action["request_id"] == plan["request_ids"]["model_create"]
+    assert model_action["response"]["error_code"] == "EXECUTION_STATE_UNKNOWN"
+    assert model_action["response"]["execution_state_unknown"] is True
+    assert model_action["response"]["job_id"] == "model-create-unknown-job"
+    assert state.value["status"] == "UNKNOWN"
+    assert state.value["unknown_action"] == "model_create"
+    assert state.value["recovery"]["request_id"] == plan["request_ids"]["model_create"]
+    assert state.value["recovery"]["job_ids"] == ["model-create-unknown-job"]
+    assert state.value["recovery"]["replay_permitted"] is False
+    assert state.value["recovery"]["cleanup_permitted"] is False
 
 
 def test_metadata_only_protocol_binds_model_generation_separately_from_worker_epoch(tmp_path, monkeypatch):

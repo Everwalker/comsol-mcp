@@ -16,9 +16,11 @@ Three software results remain separate and offline: the 98-test probe integratio
 
 Stop-only recovery software is a scoped, main-reviewed offline PASS: 149 unique affected-suite tests passed, with no failures, errors or skips. The single source-bound Windows `session.recover` then succeeded for current-host quiescence only; its original UNKNOWN result is preserved, with the source job now `RECONCILING`. Recovery receipt, review, 5 offline driver checks, and the 107-file package/manifest evidence are in the [Windows checkpoint](docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json#stop_recovery_attempt_20260929T110853Z). This does not establish a known stop outcome or solve/readback acceptance.
 
+Backend session model binding and runner UNKNOWN-code handling are now main-reviewed **scoped software PASS**: 177 backend/session/store tests and 110 runner tests passed. The backend tests include 2 real-callback synthetic Worker regressions; native execution after these repairs remains **NOT_RUN**. Reproduction commands and exact evidence are in the [software checkpoint](docs/full_project_execution/project_session/PRODUCTION_RUNNER_SOFTWARE_CHECKPOINT.json#model_selection_and_unknown_fix).
+
 ## Next action
 
-1. Fix the backend/runner model registration defect, then prepare a separate Windows 6.4 candidate. Preserve the prior model_create UNKNOWN; do not reuse or clean the old session.
+1. Package the reviewed backend/runner fixes and prepare a separate Windows 6.4 candidate. Preserve the prior model_create UNKNOWN; do not reuse or clean the old session.
 2. Continue the canonical Windows 6.4 solve/readback/cleanup chain with the separate candidate; run Windows 6.3 only against a verified successful 6.4 receipt. Pause all unrelated capability expansion.
 
 ## Remaining project scope

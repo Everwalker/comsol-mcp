@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "unit": "W21 Windows6.4 V2 short-home current-source attempt",
-  "updated_at_utc": "2026-09-29T11:21:48Z",
+  "updated_at_utc": "2026-09-29T11:36:36.583380+00:00",
   "overall_status": "PARTIAL",
   "source_package_status": "PASS_MAIN_VERIFIED",
   "native_status": "PRIOR_STOP_UNKNOWN_CURRENT_HOST_QUIESCENCE_VERIFIED; CURRENT_MODEL_CREATE_UNKNOWN_RETAINED; READONLY_CURRENT_HOST_QUIESCENCE_CONFIRMED; NEW_CANDIDATE_AFTER_FIX_ONLY; SOLVE_READBACK_NOT_RUN",
-  "next_action": "The current model_create attempt is confirmed quiet by the read-only census, but its original result remains UNKNOWN and no ModelRef is registered. Do not reuse or clean the old session or promote its outcome. After the backend/runner defect is fixed, proceed with a new separate Windows 6.4 candidate; solve/readback is NOT_RUN. Run Windows 6.3 only against a verified successful 6.4 solve-readback receipt.",
+  "next_action": "Freeze a separate Windows 6.4 candidate from the reviewed backend session-state and runner UNKNOWN fixes, run its canonical solve/readback/cleanup chain, then Windows 6.3 against a verified successful 6.4 receipt. Preserve prior UNKNOWN jobs and isolated sessions; no reuse or cleanup. Do not expand other capabilities this round.",
   "candidate": {
     "source_commit": "9c5ced6272dd876cf9c28c6c6f73b943bd76b96c",
     "evidence_root": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-v2-20260928T235840Z-9c5ced6",
@@ -1871,5 +1871,6 @@
         "interpretation": "Current-host quiescence confirmed for this isolated attempt only. Historical model_create outcome remains UNKNOWN and no ModelRef is registered; this is not a production recovery flag or PASS."
       }
     }
-  }
+  },
+  "model_selection_repair": "PRODUCTION_RUNNER_SOFTWARE_CHECKPOINT.json#model_selection_and_unknown_fix"
 }

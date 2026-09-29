@@ -833,7 +833,7 @@ class ManagedBackend:
             self.store.put_metadata("revisions", key, metadata)
 
     def adopt(self, tag, *, project_id=None):
-        import comsol_mcp._server as srv
+        from ._server import session_server as srv
         from ._model import _set_current_model
         if self.service is None or self.worker is None:
             raise ExecutionContractError("ENGINE_UNRESPONSIVE", "connect to a server first")
@@ -1046,7 +1046,7 @@ class ManagedBackend:
                 return {"success": True, "data": {}, **self.service.inspect(ref)}
             if operation in {"server_start", "server_disconnect", "prune_loaded_models"}:
                 raise ExecutionContractError("PERMISSION_DENIED", "shared-server lifecycle changes are not enabled by this backend")
-            import comsol_mcp._server as srv
+            from ._server import session_server as srv
             from ._model import _set_current_model
             bound_model = None
             if ref and self.worker is not None:
@@ -1633,7 +1633,7 @@ class ManagedBackend:
             return self.adopt(tag, project_id=execution.get("project_id"))
         ref_mapping = execution.get("model_ref") or arguments.get("model_ref")
         if not isinstance(ref_mapping, dict):
-            import comsol_mcp._server as srv
+            from ._server import session_server as srv
             cur = getattr(srv, "_current_model", None)
             cur_tag = None
             if cur is not None:

@@ -1066,7 +1066,9 @@ def _is_unknown(response: Mapping[str, Any]) -> bool:
                         status.get("execution_state_unknown") is True
                         or status.get("cleanup_failed") is True))
                     or (isinstance(cleanup, Mapping) and cleanup.get("cleanup_failed") is True)))
-                or (isinstance(error, Mapping) and error.get("execution_state_unknown") is True))
+                or (isinstance(error, Mapping) and (
+                    error.get("execution_state_unknown") is True
+                    or error.get("code") == "EXECUTION_STATE_UNKNOWN")))
 
 
 def _public_payload(result: Any) -> dict[str, Any]:
