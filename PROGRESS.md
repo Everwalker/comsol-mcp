@@ -1,12 +1,20 @@
 # COMSOL MCP full-project progress
 
-**Current stage: W21 bounded field-metadata probe software — scoped PASS; new native capture NOT_RUN. Overall project: PARTIAL.** The Windows 6.4 → 6.3 canonical native round remains scoped PASS on its exact earlier runtime source. The master plan remains 26 work packages, 272 actions, 60 validation targets and 6 environments; the final independent Reviewer has not started. The authoritative plan and task ledger remain [MAIN_ACCEPTANCE_PLAN](docs/full_project_execution/MAIN_ACCEPTANCE_PLAN.md), [TASKS.json](docs/full_project_execution/state/TASKS.json) and [RESUME.json](docs/full_project_execution/state/RESUME.json).
+**Current stage: W21 Windows 6.4 targeted field metadata captured — PARTIAL (empty Shape table). Overall project: PARTIAL.** The Windows 6.4 → 6.3 canonical native round remains scoped PASS on its exact earlier runtime source. The master plan remains 26 work packages, 272 actions, 60 validation targets and 6 environments; the final independent Reviewer has not started. The authoritative plan and task ledger remain [MAIN_ACCEPTANCE_PLAN](docs/full_project_execution/MAIN_ACCEPTANCE_PLAN.md), [TASKS.json](docs/full_project_execution/state/TASKS.json) and [RESUME.json](docs/full_project_execution/state/RESUME.json).
+
+## Latest native finding
+
+Runtime source `4c2cbc9`, Windows 6.4 build 293, run `w21-64-20260929T155143Z-06d67ff1`: exact `info / Shape` capture completed, but the native table is AVAILABLE with **0 rows**. Seven physics-field declarations include `temperature → T`; they do not establish active solver DOFs or hidden-state coverage. No intrinsic unit was read. **Transport/owned cleanup scoped PASS; unit/mesh/stage admission UNVERIFIED; capability PARTIAL.** Twelve actions returned success, no UNKNOWN; one Server/Worker, zero study/solver dispatches. Exact PID/birth exit, listener absence and Worker retirement are verified. Per the predeclared condition, Windows 6.3 duplicate empty-table capture was **NOT_RUN**; the earlier two-version solve/readback baseline remains valid.
+
+[Compact native checkpoint](docs/full_project_execution/project_session/FIELD_IDENTITY_PROBE_SOFTWARE_CHECKPOINT.json#targeted_native_windows64_20260930) binds source/archive/freeze/request/model/revision/receipt/state hashes. Full evidence is on SSD at `/Volumes/SSD/Comsol-MCP/execution-scratch/w21-targeted-probe-w21r13`. Initial upload/extraction auto-review refusals were resolved through the same normal channels using existing user authorization; no alternate transfer or replay was used.
+
+Next: extend the existing solve/readback runner with one frozen multi-expression read (`T`, `T/1[K]`, `1`) and no requested units. Preserve one solve/one field read and all existing budgets; compare actual temperature and dimensionless controls, then bind real solver fields and complete historical mesh to the original stage-transfer requirements. Do not interpret empty tables or requested-unit echoes as unit proof.
 
 ## Latest W21 software result
 
 The existing probe now supports a frozen exact FeatureInfo tag/table or explicit fields/tag-only discovery. Overflow reports bounded location/counts; all output limits remain unchanged. Selected/discovery output is always PARTIAL, and native stage admission remains UNVERIFIED. Main review caught and closed a null-target fallback to full-table reading. Java offline compile/harness passed **58 assertions**; the affected runner module passed **124 unique tests**, 0 failed/error/skipped. Main verified source/log/JUnit hashes and 14 bounded JSON envelopes. Earlier sandbox and fixture-path failures remain preserved. [Compact checkpoint](docs/full_project_execution/project_session/FIELD_IDENTITY_PROBE_SOFTWARE_CHECKPOINT.json#scoped_selection_20260929).
 
-Next: a fresh Windows 6.4 metadata-only run with `--probe-feature-info-tag info --probe-table-id Shape`, then use actual readback to implement the original unit/mesh/stage-transfer requirements. This software result is not new Windows or stage-transfer acceptance.
+The fresh Windows 6.4 run above exercised this exact software. The result remains scoped metadata capture and does not establish stage-transfer acceptance.
 
 ## Actually completed and verified
 

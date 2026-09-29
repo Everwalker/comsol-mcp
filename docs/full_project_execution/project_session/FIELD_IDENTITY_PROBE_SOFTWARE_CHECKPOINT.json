@@ -170,5 +170,100 @@
       }
     ],
     "next_action": "Freeze a fresh Windows6.4 metadata-only public MCP run with --probe-feature-info-tag info --probe-table-id Shape; inspect raw actual field/table evidence and owned cleanup. Never infer undocumented columns or stage admission from this capture."
+  },
+  "targeted_native_windows64_20260930": {
+    "status": "PARTIAL",
+    "transport_capture": "PASS_SCOPED_WINDOWS64_TARGETED_NATIVE_CAPTURE",
+    "source_head": "4c2cbc9a1ac822e5a22f32775d8a9ded69273980",
+    "run_id": "w21-64-20260929T155143Z-06d67ff1",
+    "freeze_sha256": "b3895d895e96825261fdb8bde7dea7f955351066789d659464ca15c4cb8def5e",
+    "receipt_sha256": "8df4cb65aeb87763813ba8a9b93817cee2ad5f4213618769c2bd534af8bd6473",
+    "state_sha256": "d26f31b4fbd737e4b6df465f7bace4c52965cc5f7ddc407127b799f87dae9fe1",
+    "runtime": {
+      "build": "293",
+      "root": "C:\\Program Files\\COMSOL\\COMSOL64\\Multiphysics",
+      "runtime_id": "comsol-install:C%3A%5CProgram%20Files%5CCOMSOL%5CCOMSOL64%5CMultiphysics",
+      "server_executable_sha256": "901760d88bfb5b5f1f8dcc8a32eb4a7696d420c80d296b7341a0e48134e56a74",
+      "version": "6.4.0"
+    },
+    "probe_source_sha256": "7b0eae81d922f453ba71361cd17db6c533913e16ce418c943d4ec80782aeb4c7",
+    "request_id": "e0fc27aa-53bc-4f07-9677-80ad85ecb17c",
+    "job_id": "95857507-8076-419d-9fa1-609641057e8d",
+    "model_binding": {
+      "model_ref": {
+        "generation": 1,
+        "model_tag": "mcp1",
+        "schema_version": 1,
+        "server_instance_id": "157fd1f48dd6203c23eff1dec2b32667d10041d5d74c7b3a4ecce35cec135070",
+        "session_id": "session-ba6604d3812e44d284e43f5f6d40854b"
+      },
+      "model_tag": "mcp1",
+      "project_id": "626a7c7e-faf9-40fe-86f1-a82e801ddd1c",
+      "revision": 2,
+      "server_instance_id": "157fd1f48dd6203c23eff1dec2b32667d10041d5d74c7b3a4ecce35cec135070",
+      "session_id": "session-ba6604d3812e44d284e43f5f6d40854b",
+      "worker_epoch": 2
+    },
+    "probe_request": {
+      "feature_info_tag": "info",
+      "mode": "targeted",
+      "table_id": "Shape"
+    },
+    "result": {
+      "shape_rows": 0,
+      "field_declarations": 7,
+      "temperature_field": {
+        "components": [
+          "T"
+        ],
+        "entity_tag": "temperature",
+        "field_name": "T",
+        "status": "AVAILABLE",
+        "tag": "temperature"
+      },
+      "declared_field_tags": [
+        "temperature",
+        "discontinuousdamagedtissueindicator_disc",
+        "continuousdamagedtissueindicator_disc",
+        "thermaldamageindicator_disc",
+        "radiativeintensity_disc",
+        "incidentradiation_disc",
+        "surfaceradiosity_disc"
+      ],
+      "semantic_payload_sha256": "69c62d82a8f78018bc538c406dc0fb70a12c3363f4c45dcf1da09af83c0ccd18",
+      "reported_raw_payload_sha256": "ad99878ddacf97ed9b85484a8b9821fa0b31da9b7ce129768d6c8931729cc4ce",
+      "reported_raw_payload_bytes": 2824,
+      "metadata_complete": false,
+      "field_unit_evidence": "UNVERIFIED",
+      "active_solver_fields": "NOT_ESTABLISHED_BY_DECLARATIONS"
+    },
+    "actions": 12,
+    "study_dispatch": 0,
+    "solver_dispatch": 0,
+    "cleanup": {
+      "owned_server_stopped": true,
+      "server_stop_evidence": {
+        "birth": "start_epoch_ms:1790697531788",
+        "child_reaped": true,
+        "exit_confirmed": true,
+        "listener_absent": true,
+        "pid": 4772,
+        "returncode": 1,
+        "server_stopped": true
+      },
+      "status": "CLEANUP_COMPLETE",
+      "worker_retired": true
+    },
+    "main_review": "Verified freeze/receipt/state/source/request/model/revision/semantic payload and all12 successful action summaries; exact owned PID/birth exit and listener absence. Git/archive107 files independently checked. Console stderr contains only MCP request processing lines.",
+    "windows63": "NOT_RUN: predefined condition stopped duplicate empty-table collection",
+    "evidence_root": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-targeted-probe-w21r13",
+    "package": {
+      "archive": "363c26b4ccdd75260ab517d433bc5bd5704dc45011359b702acafbf4eeac200d",
+      "prepare-w21r13.ps1": "3bdfe4cec817ec2473a8a426f4179b83aabaf69416bf1ac65db0784b4e0fef95",
+      "source-manifest.json": "370ccb7cd393fbc052d5f9b2dd2e93085e8437db0b06756b6ed1d44223f60c1b",
+      "verify-extract-w21r13.ps1": "ed9e1017db5590d7cbed8406c1aeba59d2b905a9b943005317dcb6ba925cd50e",
+      "windows_handoff_snapshot.py": "2d26523215002042d5ff0441dee428de7644dab93ce2f2834f92ac4abd83ad02"
+    },
+    "next_action": "Use canonical result.evaluate without spec.units for one frozen multi-expression native temperature/dimensionless control read after one source solve; retain exact tuple and complete actual values. Then bind actual solver fields and full historical mesh to original stage admission; continue originalW23-W26."
   }
 }
