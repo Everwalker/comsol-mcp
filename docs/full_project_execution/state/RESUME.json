@@ -116,9 +116,17 @@
       "checkpoint": "docs/full_project_execution/project_session/PRODUCTION_RUNNER_SOFTWARE_CHECKPOINT.json",
       "native_acceptance": "NOT_RUN",
       "limits": "Synthetic MCP transport/payload; original Windows UNKNOWN unrecovered; upload pending authorization."
+    },
+    {
+      "scope": "Windows recovery source handoff",
+      "status": "PASS_SOURCE_INTEGRITY_ONLY",
+      "source_head": "15e7bea61e9ef06b29d9a51f55fcddebcb773b7a",
+      "remote_verified_members": 107,
+      "native_status": "NOT_RUN",
+      "checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json"
     }
   ],
-  "next_action": "Await exact-source Windows upload authorization while finishing local recovery-driver review and W23 adapter repairs. Startup recovery and the 90-test solve-readback runner are accepted only for scoped offline software. After authorized source handoff, back up the original SQLite database consistently and execute existing session.recover once. Preserve historical UNKNOWN and missing exit evidence. After safe reconciliation, execute the bounded short-root Windows6.4 startup/connect/solve/readback comparison, then 6.3 and W23-W26; no replay or new acceptance gates.",
+  "next_action": "Finish review of the one-shot recovery driver against frozen15e7bea; source is uploaded and all107 archive members verified remotely. Back up original SQLite before controller startup, record controller auto-reconciliation separately, and dispatch existing session.recover once. Preserve UNKNOWN history and no replay. After actual safe reconciliation, execute the bounded new short-root Windows6.4 start/connect/solve/readback comparison, then6.3 and W23-W26.",
   "active_jobs": [],
   "blockers": [
     "W23 failed setup owned Server 75272 and daemon 75260 remain preserved: cleanup SIGTERM was rejected by automatic approval and explicit authorization is pending; no cleanup or relaunch authorized by elapsed time.",
@@ -147,7 +155,7 @@
     "native_solve_budget_remaining": 0,
     "evidence": "docs/full_project_execution/evidence/luna_process_reconciliation/mac_readonly_snapshot_20260926T2152Z.json"
   },
-  "updated_at": "2026-09-29T04:26:50.715003+00:00",
+  "updated_at": "2026-09-29T04:35:58.974810+00:00",
   "note": "Original scope remains through W26. User explicitly resumed after the test-efficiency analysis; implement efficiency improvements first. OpenViking task-detail retrieval was denied by auto-review because it would disclose internal roadmap identifiers externally; no workaround. Use current frozen workpack and read-only local memory only. Do not rerun bootstrap/init on resume. Source files now contain executor edits; do not rerun bootstrap/init. Git metadata is an APFS pointer managed by main agent; migration requires bundle/source transfer, not copying only the repository pointer. Git metadata migration is documented by evidence/git_metadata_relocation.json and owned by the main agent; do not copy the APFS git pointer to another machine without source bundle/archive. GUI permission boundary and checkpoint solution-scope caveat recorded. This executor has one W24 native setup-only failure with exact cleanup verified; the durable operation/job UNKNOWN records remain unchanged. No W24 solver submission occurred. Saved-MPH readback supplement uses separate time/evidence and zero study/solver calls; run08 remains FAIL_OR_INCOMPLETE. Root raw SQLite recomputation is linked under native_resume_saved_artifact_supplement.raw_recomputation_evidence; original run08 remains FAIL_OR_INCOMPLETE and no solve budget is restored. Latest checkpoint 2026-09-27T03:50:43Z: W24 0334Z setup run failed pre-model due Python 3.14 missing mcp, with exact cleanup; 0346Z candidate pins the validated 3.12.13 environment and passes a production no-engine registry/daemon preflight. Native setup remains pending root review; science implementation continues offline. Latest checkpoint 2026-09-27T09:09:28Z: W24 0841Z candidate was invoked once at 0857Z and failed before any engine/Worker birth because project.inspect received an injected idempotency_key; project.create persisted successfully. Exact read-only SQLite hash and operation result are in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_contract_diagnostic.json. The runner now omits the unnecessary inspect key; actual ControlDaemon focused regression is 2/2 PASS in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_runner_regression_receipt.json. No native retry or acceptance is claimed; release F04 runtime integration is active, so refresh closure and root review are required before another launch. Windows COMSOL 6.3 remains required/unassessed; only macOS 6.3 is USER_REQUESTED_SKIP.",
   "native_resume_smoke": {
     "status": "FAIL_OR_INCOMPLETE_POINT_SCHEMA_FAILURE; SOLVED_CHILD_ARTIFACT_DURABLE; SOLVE_BUDGET_EXHAUSTED; SEPARATE_SAVED_MPH_READBACK_PASS",
@@ -2786,7 +2794,7 @@
     "solver_dispatches": 0,
     "replay_permitted": false,
     "cleanup_permitted": false,
-    "next_action": "Await exact-source Windows upload authorization while finishing local recovery-driver review and W23 adapter repairs. Startup recovery and the 90-test solve-readback runner are accepted only for scoped offline software. After authorized source handoff, back up the original SQLite database consistently and execute existing session.recover once. Preserve historical UNKNOWN and missing exit evidence. After safe reconciliation, execute the bounded short-root Windows6.4 startup/connect/solve/readback comparison, then 6.3 and W23-W26; no replay or new acceptance gates.",
+    "next_action": "Finish review of the one-shot recovery driver against frozen15e7bea; source is uploaded and all107 archive members verified remotely. Back up original SQLite before controller startup, record controller auto-reconciliation separately, and dispatch existing session.recover once. Preserve UNKNOWN history and no replay. After actual safe reconciliation, execute the bounded new short-root Windows6.4 start/connect/solve/readback comparison, then6.3 and W23-W26.",
     "image_library_basename": "CORE_RL_magick_.dll",
     "image_library_relative_alias": "ext\\graphicsmagick\\win64\\CORE_RL_magick_.dll",
     "image_library_exists": true,
@@ -2837,10 +2845,40 @@
       "checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json"
     },
     "recovery_source_handoff": {
-      "status": "PREPARED_VERIFIED_LOCALLY_UPLOAD_AUTHORIZATION_PENDING",
+      "status": "PASS_SOURCE_UPLOADED_AND_REMOTE_HASH_VERIFIED",
       "source_head": "15e7bea61e9ef06b29d9a51f55fcddebcb773b7a",
       "checkpoint": "docs/full_project_execution/project_session/WINDOWS64_V2_SESSION_START_UNKNOWN_CHECKPOINT.json",
-      "next_action": "Await exact-source upload authorization; continue local recovery driver and solve-readback/W23 implementation."
+      "next_action": "Await exact-source upload authorization; continue local recovery driver and solve-readback/W23 implementation.",
+      "source_files": 104,
+      "archive_members": 107,
+      "archive_bytes": 942059,
+      "archive_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-recovery-15e7bea/recovery-source-15e7bea.tar.gz",
+      "archive_sha256": "13fd36f674331e0f50a85f2d6501598808b147af403e5d343a6eeb642b0814ac",
+      "source_manifest_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-recovery-15e7bea/source-manifest.json",
+      "source_manifest_sha256": "2837f8cac79ceba8918d99f26c548a08f851af0d5d48563e913692d640774d87",
+      "git_blob_match": "104/104",
+      "worktree_patch_bytes": 0,
+      "new_files": [],
+      "selection": "All tracked comsol_mcp files, pyproject.toml, tools/windows_handoff_snapshot.py at exact commit; excludes dirty runner/W23, logs, environments, token and runtime data.",
+      "local_verified_extraction": true,
+      "windows_task_directory": "C:\\Temp\\w21r15e7",
+      "windows_task_directory_created": true,
+      "archive_upload_executed": true,
+      "helper_upload_executed": true,
+      "remote_extract_executed": true,
+      "daemon_or_native_started": false,
+      "approval": "User explicitly authorized this upload and future source uploads for this project on 2026-09-29. This does not authorize unrelated data transfer or replay of UNKNOWN operations.",
+      "reproduce": "Generate explicit source manifest from listed Git blobs; require matching working-tree hashes; use existing windows_handoff_snapshot.create_snapshot/extract_verified with no overwrite.",
+      "prior_upload_approval": "Automatic review denied initial upload; no transfer was attempted until explicit user approval.",
+      "remote_verified_members": 107,
+      "remote_verified_source_files": 104,
+      "original_unknown_modified": false,
+      "remote_receipt": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-recovery-15e7bea/windows-source-upload-receipt.json",
+        "sha256": "a95f3302988c43819765f3f82f1abe92e2916e2bb06965baea4df070857001de",
+        "verification_exit_code": 0,
+        "extraction_output_capture": "Local UTF-8 decoding failed after the extraction call; no replay. Subsequent independent read-only comparison verified every archive member and exact destination file set."
+      }
     }
   },
   "windows64_current_daemon_readonly": {
@@ -2871,6 +2909,12 @@
     "final_junit_sha256": "92d98fac7a54f0c2af47860df3ee8f5644f7b8722a0bc6f2c90e0765e3cacb8e",
     "reproduce": "PYTHONDONTWRITEBYTECODE=1 /private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python -B -m pytest -q tests/test_run_w21_stage_native.py -p no:cacheprovider --basetemp=/Volumes/CTestEff/g --junitxml=/Volumes/CTestEff/w21-session-start-recovery-module-final-20260929T165000Z/junit.xml",
     "limits": "Synthetic stdio transport only; original Windows V2 operation remains UNKNOWN, no native startup/result acceptance.",
-    "next_action": "Await exact-source Windows upload authorization while finishing local recovery-driver review and W23 adapter repairs. Startup recovery and the 90-test solve-readback runner are accepted only for scoped offline software. After authorized source handoff, back up the original SQLite database consistently and execute existing session.recover once. Preserve historical UNKNOWN and missing exit evidence. After safe reconciliation, execute the bounded short-root Windows6.4 startup/connect/solve/readback comparison, then 6.3 and W23-W26; no replay or new acceptance gates."
+    "next_action": "Finish review of the one-shot recovery driver against frozen15e7bea; source is uploaded and all107 archive members verified remotely. Back up original SQLite before controller startup, record controller auto-reconciliation separately, and dispatch existing session.recover once. Preserve UNKNOWN history and no replay. After actual safe reconciliation, execute the bounded new short-root Windows6.4 start/connect/solve/readback comparison, then6.3 and W23-W26."
+  },
+  "project_source_upload_authorization": {
+    "status": "USER_APPROVED",
+    "scope": "This and future source uploads for this project",
+    "date": "2026-09-29",
+    "limits": "No authorization inferred for unrelated data transfer, UNKNOWN replay, or native acceptance."
   }
 }

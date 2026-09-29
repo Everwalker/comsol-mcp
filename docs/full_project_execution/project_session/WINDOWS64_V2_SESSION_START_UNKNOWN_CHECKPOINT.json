@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "unit": "W21 Windows6.4 V2 short-home current-source attempt",
-  "updated_at_utc": "2026-09-29T04:17:46Z",
+  "updated_at_utc": "2026-09-29T04:35:58.974810+00:00",
   "overall_status": "PARTIAL",
   "source_package_status": "PASS_MAIN_VERIFIED",
   "native_status": "NOT_ACCEPTED_SESSION_START_UNKNOWN",
-  "next_action": "Await exact-source upload authorization. Preserve the original session.start UNKNOWN without replay, stop or cleanup. Once authorized, freeze/verify the current-source recovery driver and a consistent SQLite backup, then run the existing authenticated session.recover once. Only after durable reconciliation may the bounded short-root Windows 6.4 solve-readback chain be considered, followed by 6.3.",
+  "next_action": "Finish review of the one-shot recovery driver against frozen15e7bea; source is uploaded and all107 archive members verified remotely. Back up original SQLite before controller startup, record controller auto-reconciliation separately, and dispatch existing session.recover once. Preserve UNKNOWN history and no replay. After actual safe reconciliation, execute the bounded new short-root Windows6.4 start/connect/solve/readback comparison, then6.3 and W23-W26.",
   "candidate": {
     "source_commit": "9c5ced6272dd876cf9c28c6c6f73b943bd76b96c",
     "evidence_root": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-v2-20260928T235840Z-9c5ced6",
@@ -177,7 +177,7 @@
       "error_lines": [
         "2026-09-29T08:24:53.094+0800 Internal error, Exception while initializing bridge.",
         "java.lang.RuntimeException: Exception when initializing COMSOL libraries: Exception:",
-        "\tcom.comsol.nativejni.FlNativeException: 找不到文件。"
+        "\tcom.comsol.nativejni.FlNativeException: \u627e\u4e0d\u5230\u6587\u4ef6\u3002"
       ],
       "receipt_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-v2-20260928T235840Z-9c5ced6/readonly_startup_log_reference_v3_receipt.json",
       "receipt_sha256": "1e6c0864834927f088b7e80f73a3b30f6aad525fdac125a73665baa5c33f1910",
@@ -287,7 +287,7 @@
       "queue_timeout_seconds": 30,
       "execution_timeout_seconds": 240
     },
-    "limits": "The solve-readback runner passed scoped offline software review (90 unique tests); no new native invocation occurred. Original Windows V2 UNKNOWN remains unrecovered and exact-source upload authorization is pending. Actual field/unit/mesh evidence must be distinguished from configured expectations. A smoke receipt is not stage-run admission, stage transfer, physical acceptance or overall W21 completion.",
+    "limits": "The solve-readback runner passed scoped offline software review (90 unique tests); no new native invocation occurred. Original Windows V2 UNKNOWN remains unrecovered and source upload and remote integrity verification are complete. Actual field/unit/mesh evidence must be distinguished from configured expectations. A smoke receipt is not stage-run admission, stage transfer, physical acceptance or overall W21 completion.",
     "unknown_behavior": "Preserve exact original job identity and stop dependent actions; never replay an uncertain solve or launch.",
     "executor": "/root/luna_stage_output",
     "main_review": {
@@ -365,7 +365,7 @@
     "next_action": "Freeze and verify a current-source recovery driver; consistent SQLite backup before starting a fresh controller on the old task home; run existing authenticated session.recover once. After actual reconciliation, one short-root Windows 6.4 solve-readback attempt, then 6.3."
   },
   "recovery_source_handoff": {
-    "status": "PREPARED_VERIFIED_LOCALLY_UPLOAD_AUTHORIZATION_PENDING",
+    "status": "PASS_SOURCE_UPLOADED_AND_REMOTE_HASH_VERIFIED",
     "source_head": "15e7bea61e9ef06b29d9a51f55fcddebcb773b7a",
     "source_files": 104,
     "archive_members": 107,
@@ -381,11 +381,21 @@
     "local_verified_extraction": true,
     "windows_task_directory": "C:\\Temp\\w21r15e7",
     "windows_task_directory_created": true,
-    "archive_upload_executed": false,
-    "helper_upload_executed": false,
-    "remote_extract_executed": false,
+    "archive_upload_executed": true,
+    "helper_upload_executed": true,
+    "remote_extract_executed": true,
     "daemon_or_native_started": false,
-    "approval": "Automatic permission review rejected SCP because exact private-source payload and destination were not explicitly authorized in available text. Exact upload/verification/extraction authorization requested; no bypass or alternate channel used.",
-    "reproduce": "Generate explicit source manifest from listed Git blobs; require matching working-tree hashes; use existing windows_handoff_snapshot.create_snapshot/extract_verified with no overwrite."
+    "approval": "User explicitly authorized this upload and future source uploads for this project on 2026-09-29. This does not authorize unrelated data transfer or replay of UNKNOWN operations.",
+    "reproduce": "Generate explicit source manifest from listed Git blobs; require matching working-tree hashes; use existing windows_handoff_snapshot.create_snapshot/extract_verified with no overwrite.",
+    "prior_upload_approval": "Automatic review denied initial upload; no transfer was attempted until explicit user approval.",
+    "remote_verified_members": 107,
+    "remote_verified_source_files": 104,
+    "original_unknown_modified": false,
+    "remote_receipt": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-recovery-15e7bea/windows-source-upload-receipt.json",
+      "sha256": "a95f3302988c43819765f3f82f1abe92e2916e2bb06965baea4df070857001de",
+      "verification_exit_code": 0,
+      "extraction_output_capture": "Local UTF-8 decoding failed after the extraction call; no replay. Subsequent independent read-only comparison verified every archive member and exact destination file set."
+    }
   }
 }
