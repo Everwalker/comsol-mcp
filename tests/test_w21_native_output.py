@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 import hashlib
+import json
 import math
+import os
 from contextvars import ContextVar
 from copy import deepcopy
 from pathlib import Path
@@ -11,6 +14,7 @@ from uuid import uuid4
 
 import pytest
 
+from comsol_mcp._solution_binding import FieldArray
 from comsol_mcp._execution_contract import (
     ExecutionContractError, SessionLedger, canonical_request_hash,
     model_ref_from_mapping,
@@ -109,7 +113,8 @@ def _conservation(*, target_solution=None, mutate_terms=None):
 
 @pytest.fixture
 def project_root():
-    root = Path("/Volumes/CTestEff/w21-native-output") / uuid4().hex
+    configured_root = os.environ.get("W21_STAGE_OUTPUT_TEST_ROOT", "/Volumes/CTestEff/w21-native-output")
+    root = Path(configured_root) / uuid4().hex
     root.mkdir(parents=True, exist_ok=False)
     try:
         yield root
@@ -183,9 +188,19 @@ def _fixture(project_root, *, checks=None, evidence_mode="unverified", fault=Non
                         values = [1.0, 2.0]
                     else:
                         values = [1.5, 2.0] if tuple_value["inner"] == 2 else [10.0, 20.0]
-                    coordinates = [[0.0, 1.0], [0.0, 0.0], [0.0, 0.0]]
+                    if fault == "budget_scalars":
+                        values = [1.0] * 10_923
+                    elif fault == "budget_json":
+                        values = ["x" * (8 * 1024 * 1024 + 1)]
+                    if fault == "complex":
+                        values = ([{"real": 1.0, "imag": 0.25}, {"real": 2.0, "imag": -0.5}]
+                                  if dataset == "dset1"
+                                  else [{"real": 1.5, "imag": 0.5}, {"real": 2.0, "imag": -0.5}])
+                    point_count = len(values)
+                    coordinates = [[float(index) for index in range(point_count)],
+                                   [0.0] * point_count, [0.0] * point_count]
                     if fault == "coordinates" and dataset == "dset2":
-                        coordinates = [[0.0, 0.5], [0.0, 0.0], [0.0, 0.0]]
+                        coordinates[0] = [0.0, 0.5] + [float(index) for index in range(2, point_count)]
                     if fault == "nonfinite":
                         values[0] = float("nan")
                     selection = deepcopy(spec["selection"])
@@ -201,25 +216,77 @@ def _fixture(project_root, *, checks=None, evidence_mode="unverified", fault=Non
                             "dimension": selection["entity_dimension"], "entities": [1, 2],
                             "is_inheriting": False},
                     }
-                    coordinates_evidence = {"values": coordinates, "shape": [3, 2],
+                    coordinates_evidence = {"values": coordinates, "shape": [3, point_count],
                         "source": "PersistentComsolWorker.getStrictFieldReadback -> NumericalFeature.getCoordinates()",
                         "coordinate_frame": "spatial" if evidence_mode == "verified" else "UNVERIFIED"}
                     if evidence_mode == "verified":
                         coordinates_evidence["coordinate_frame_status"] = "VERIFIED"
                     if fault == "frame" and dataset == "dset2":
                         coordinates_evidence["coordinate_frame"] = "material"
+                    expressions = spec["expressions"]
+                    expression_points = []
+                    expression_units = {}
+                    declared_unit = "K"
+                    for expression in expressions:
+                        if expression == "1":
+                            expression_values = [1.0] * point_count
+                            if fault == "constant_complex":
+                                expression_values[0] = {"real": 1.0, "imag": 1e-4}
+                        else:
+                            expression_values = deepcopy(values)
+                            if fault == "wrong_control_numeric" and expression.startswith("("):
+                                first = expression_values[0]
+                                if isinstance(first, Mapping):
+                                    expression_values[0] = {**first, "real": first["real"] + 1.0}
+                                else:
+                                    expression_values[0] = first + 1.0
+                        expression_points.append(expression_values)
+                        if expression == "1":
+                            expression_units[expression] = "1"
+                        elif expression.startswith("(") and fault == "forced_unit":
+                            expression_units[expression] = declared_unit
+                        elif expression.startswith("("):
+                            expression_units[expression] = "1"
+                        else:
+                            expression_units[expression] = "degC" if fault == "unit" else declared_unit
+                    if fault == "missing_unit" and len(expressions) > 1:
+                        expression_units.pop(expressions[1], None)
+                    if fault == "legacy_unit_evidence" and len(expressions) > 1:
+                        expression_units = {expressions[0]: declared_unit}
+                    if fault == "wrong_tuple" and dataset == "dset2":
+                        tuple_value["inner"] += 1
+                    if fault == "legacy_axes_layout":
+                        field_array = FieldArray(
+                            [[expression_points]],
+                            axes=("outer", "inner", "expression", "point"),
+                            coords={"outer": [tuple_value["outer"]], "inner": [tuple_value["inner"]],
+                                    "expression": expressions, "point": list(range(1, point_count + 1))},
+                            units={"expression": expression_units, "outer": "index", "inner": "index",
+                                   "point": "index"},
+                            metadata={"requested_expressions": list(expressions)},
+                            is_complex=any(isinstance(item, Mapping) for row in expression_points for item in row),
+                        ).to_dict()
+                    else:
+                        field_array = FieldArray(
+                            [[[expression_row]] for expression_row in expression_points],
+                            axes=("expression", "outer", "inner", "point"),
+                            coords={"expression": expressions, "outer": [tuple_value["outer"]],
+                                    "inner": [tuple_value["inner"]], "point": list(range(1, point_count + 1))},
+                            units={"expression": expression_units, "outer": "index", "inner": "index",
+                                   "point": "index"},
+                            metadata={"requested_expressions": list(expressions)},
+                            is_complex=any(isinstance(item, Mapping) for row in expression_points for item in row),
+                        ).to_dict()
                     intrinsic = None
-                    if evidence_mode == "verified":
-                        intrinsic_unit = "K" if fault != "unit" else "degC"
-                        intrinsic = {"T": {"status": "VERIFIED", "intrinsic_unit": intrinsic_unit,
-                                            "field_dimensionality": "VERIFIED"}}
+                    if fault == "legacy_unit_evidence":
+                        intrinsic = {expressions[0]: {"status": "VERIFIED", "intrinsic_unit": declared_unit,
+                                                     "field_dimensionality": "VERIFIED"}}
                     strict = {
                         "status": "VERIFIED", "solution_tuple": {**tuple_value,
                             "source": "SolutionInfo.getSolnum(outer, strict)"},
-                        "field_array": {"values": [[[[values[0], values[1]]]]],
-                                        "shape": [1, 1, 1, 2], "units": ["K"]},
+                        "field_array": field_array,
                         "coordinates": coordinates_evidence,
-                        "expression_unit_readback": {"values": {"T": "K"},
+                        "expression_unit_readback": {"values": expression_units,
                             "source": "NumericalFeature.getStringArray('unit')",
                             "interpretation": "configured/model-dependent"},
                         "selection_readback": selection_readback,
@@ -300,6 +367,41 @@ def _produce(fixture):
     )
 
 
+def test_field_readback_requests_combined_automatic_unit_controls(project_root):
+    fixture = _fixture(project_root, checks=[_continuity()], evidence_mode="verified")
+    output = _produce(fixture)
+    backend, _binding, _stage, _plan, _solve_result, _state = fixture
+
+    evaluations = [arguments["spec"] for operation, arguments, *_ in backend.calls
+                   if operation == "result.evaluate"]
+    assert len(evaluations) == 2
+    for spec in evaluations:
+        expression = spec["expressions"][0]
+        assert spec["expressions"] == [expression, f"({expression})/1[K]", "1"]
+        assert "units" not in spec
+    check = output["checks"][0]
+    assert check["automatic_unit_control_scope"] == "automatic_native_expression_unit_dimensionality"
+    assert check["source_unit_control_status"] == check["target_unit_control_status"] == "VERIFIED"
+    controls = check["unit_control_evidence"]["target"]
+    assert controls["numeric_controls"]["normalized_matches_original"]["status"] == "PASS"
+    assert controls["numeric_controls"]["constant_equals_real_one"]["status"] == "PASS"
+    assert controls["threshold"] == {"absolute": 1e-10, "relative": 1e-12}
+    assert controls["units_overridden"] is False
+    assert "active degrees of freedom are not established" in controls["limits"]
+
+    target_ref = next(ref for ref in output["evidence_refs"]
+                      if ref["readphase"] == "temperature-boundary:target-field")
+    record = backend.persisted[target_ref["artifact_id"]]
+    exported = json.loads(Path(record["artifact"]["file_path"]).read_text(encoding="utf-8"))
+    raw = exported["values"]["field"]
+    assert raw["field_array"]["axes"] == ["expression", "outer", "inner", "point"]
+    assert raw["field_array"]["shape"] == [3, 1, 1, 2]
+    assert raw["field_array"]["metadata"]["requested_expressions"] == evaluations[1]["expressions"]
+    sliced = exported["values"]["normalized_field"]["slice"]
+    assert sliced["source_shape"] == [3, 1, 1, 2]
+    assert sliced["axis"] == "expression" and sliced["expression_index"] == 0
+
+
 def test_worker_readback_binds_each_field_observation_and_boundary_tuple_separately(project_root):
     fixture = _fixture(project_root, checks=[_continuity()])
     output = _produce(fixture)
@@ -311,6 +413,8 @@ def test_worker_readback_binds_each_field_observation_and_boundary_tuple_separat
     assert check["source_tuple"]["inner"] == check["target_tuple"]["inner"] == 2  # boundary t=1 s
     assert check["target_tuple"] != output["output_tuple"]
     assert check["measured_error"] == pytest.approx(0.5)
+    assert check["source_unit_control_status"] == check["target_unit_control_status"] == "VERIFIED"
+    assert "coordinate-frame readback" in " ".join(check["missing"])
     assert check["observed_error"] is None and check["status"] == "UNVERIFIED"
 
     source_ref = next(ref for ref in output["evidence_refs"] if ref["readphase"] == "temperature-boundary:source-field")
@@ -360,7 +464,10 @@ def test_verified_field_measurement_reports_real_threshold_fail_without_promotio
     assert not passed
 
 
-@pytest.mark.parametrize("fault", ["unit", "frame", "coordinates", "selection"])
+@pytest.mark.parametrize("fault", [
+    "unit", "forced_unit", "missing_unit", "wrong_control_numeric", "constant_complex",
+    "legacy_unit_evidence", "frame", "coordinates", "selection", "wrong_tuple",
+])
 def test_field_unit_frame_grid_and_selector_mismatches_remain_unverified(project_root, fault):
     fixture = _fixture(project_root, checks=[_continuity()], evidence_mode="verified", fault=fault)
     output = _produce(fixture)
@@ -369,6 +476,74 @@ def test_field_unit_frame_grid_and_selector_mismatches_remain_unverified(project
     assert row["status"] == "UNVERIFIED"
     assert row["observed_error"] is None
     assert row["missing"]
+    if fault in {"unit", "forced_unit", "missing_unit", "wrong_control_numeric", "constant_complex", "legacy_unit_evidence"}:
+        assert row["source_unit_control_status"] == row["target_unit_control_status"] == (
+            "UNVERIFIED" if fault in {"missing_unit", "legacy_unit_evidence"} else "FAIL"
+        )
+        evaluations = [arguments["spec"] for operation, arguments, *_ in fixture[0].calls
+                       if operation == "result.evaluate"]
+        assert len(evaluations) == 2
+        assert all("units" not in spec for spec in evaluations)
+
+
+def test_complex_field_units_compare_real_and_imag_but_constant_stays_real(project_root):
+    fixture = _fixture(project_root, checks=[_continuity()], evidence_mode="verified", fault="complex")
+    output = _produce(fixture)
+    row = output["checks"][0]
+    assert row["source_unit_control_status"] == row["target_unit_control_status"] == "VERIFIED"
+    assert row["observed_error"] == pytest.approx(math.sqrt(0.3125))
+    target_ref = next(ref for ref in output["evidence_refs"]
+                      if ref["readphase"] == "temperature-boundary:target-field")
+    record = fixture[0].persisted[target_ref["artifact_id"]]
+    exported = json.loads(Path(record["artifact"]["file_path"]).read_text(encoding="utf-8"))
+    raw_values = exported["values"]["field"]["field_array"]["values"]
+    assert raw_values[0][0][0][0] == {"real": 1.5, "imag": 0.5}
+    assert raw_values[1][0][0][0] == {"real": 1.5, "imag": 0.5}
+    assert raw_values[2][0][0] == [1.0, 1.0]
+    assert exported["values"]["normalized_field"]["values"][0] == {"real": 1.5, "imag": 0.5}
+
+
+def test_field_readback_rejects_old_outer_inner_expression_axis_layout(project_root):
+    fixture = _fixture(project_root, checks=[_continuity()], evidence_mode="verified", fault="legacy_axes_layout")
+    output = _produce(fixture)
+
+    assert output["status"] == "UNVERIFIED"
+    assert output["checks"][0]["status"] == "UNVERIFIED"
+    assert any("shapes" in item for item in output["checks"][0]["missing"])
+    eval_specs = [arguments["spec"] for operation, arguments, *_ in fixture[0].calls
+                  if operation == "result.evaluate"]
+    assert len(eval_specs) == 1
+    assert len(eval_specs[0]["expressions"]) == 3
+
+
+@pytest.mark.parametrize("fault,reason", [
+    ("budget_scalars", "scalar cap"),
+    ("budget_json", "JSON cap"),
+])
+def test_combined_unit_control_payload_budget_overflow_stays_unverified(project_root, fault, reason):
+    fixture = _fixture(project_root, checks=[_continuity()], evidence_mode="verified", fault=fault)
+    output = _produce(fixture)
+    row = output["checks"][0]
+    assert output["status"] == "UNVERIFIED"
+    assert row["status"] == "UNVERIFIED"
+    assert any(reason in item for item in row["missing"])
+    assert len([call for call in fixture[0].calls if call[0] == "result.evaluate"]) == 1
+
+
+@pytest.mark.parametrize(("expression", "unit"), [
+    ("T)+system('x')", "K"),
+    ("T+1", "K"),
+    ("T", "K];system('x')"),
+    ("T", "kg/(m* )"),
+])
+def test_unit_control_expression_builder_rejects_unsupported_syntax_without_eval(project_root, expression, unit):
+    check = _continuity()
+    check["source_variable"] = expression
+    check["unit"] = unit
+    fixture = _fixture(project_root, checks=[check], evidence_mode="verified")
+    output = _produce(fixture)
+    assert output["checks"][0]["status"] == "UNVERIFIED"
+    assert not [call for call in fixture[0].calls if call[0] == "result.evaluate"]
 
 
 def test_solution_info_time_resolution_rejects_ambiguous_exact_tuple(project_root):
@@ -507,6 +682,8 @@ def test_nonfinite_field_overflow_and_unknown_after_dispatch_fail_closed(project
         _produce(unknown)
     assert len([call for call in backend.calls if call[0] == "result.evaluate"]) == 1
     assert len(backend.sent) == 3  # output tuple, field tuple binding, one submitted evaluation; no retry
+    unknown_eval = next(call[1]["spec"] for call in backend.calls if call[0] == "result.evaluate")
+    assert len(unknown_eval["expressions"]) == 3 and "units" not in unknown_eval
 
 
 def test_max_abs_pairwise_error_handles_g3_preserve_complex_component_mappings():

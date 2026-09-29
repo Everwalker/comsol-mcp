@@ -120,7 +120,7 @@
     "No COMSOL solve or native scientific acceptance",
     "T021/T047 and original W21 scope remain open"
   ],
-  "next_action": "Implement and calibrate a documented supported native field/unit/topology/frame profile and actual output producer before opening production stage dispatch; continue remaining MASTER_GOAL scope.",
+  "next_action": "Complete the existing initial-stage route: phase-specific pre-dispatch prerequisites, actual mapped target fields and automatic units, native dataset/frame and solved-for field identity, exact solution tuple, owned mesh association/captures and saved artifact. Preserve successor mapping/history and continuity/conservation gates. Then run Windows 6.4 followed by 6.3 native stage execution; continue W23-W26 and final independent review.",
   "current_mesh_snapshot_20260930": {
     "status": "PASS_SCOPED_OFFLINE",
     "native_status": "NOT_RUN",
@@ -310,5 +310,94 @@
       "Strict NodePath negative controls assert zero domain Worker calls; ExecutionService pre-snapshot through its adapter may already have occurred."
     ],
     "next_action": "Integrate the existing stage route: distinguish initial-state dispatch prerequisites from predecessor transfer, capture actual declared target fields/automatic units/tuple/owned meshes/saved artifact, preserve successor continuity/conservation requirements, then Windows 6.4 followed by 6.3 native stage execution."
-  }
+  },
+  "automatic_unit_controls_producer_20260930": {
+    "status": "SCOPED_SOFTWARE_PASS",
+    "overall_w21": "PARTIAL",
+    "native": "NOT_RUN_FOR_THIS_PRODUCER",
+    "base_commit": "530fa815d196fd9f46ece96834494a46c255a500",
+    "source_sha256": {
+      "comsol_mcp/_w21_native_output.py": "613a075ee5c466dc27cc3bda76e2cb23c7da76e5e76402da123c52ed37a49eaf",
+      "tests/test_w21_native_output.py": "fa8a304f3962b11f60c5dbf8c5dffed733b8d2fa7abad27c07dee0d33dc7d006"
+    },
+    "behavior": [
+      "One managed strict field Eval requests variable, variable divided by one declared unit, and constant one without spec.units.",
+      "Validate complete canonical expression/outer/inner/point axes, automatic unit K-or-declared/1/1 and all complex values under frozen 1e-10 absolute + 1e-12 relative control tolerance.",
+      "Persist complete three-expression raw capture separately from the explicitly indexed comparator slice.",
+      "Missing/wrong units, normalization/constant errors, wrong tuple/selection, malformed axes and overflow remain unverified; UNKNOWN stops subsequent calls.",
+      "Integral behavior and public operation schemas are unchanged."
+    ],
+    "tests": {
+      "unique_pass": 195,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "focused32_are_subset": true,
+      "junit": {
+        "errors": 0,
+        "failures": 0,
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-stage-unit-controls-20260930/reports/w21-unit-regression-003.xml",
+        "sha256": "3adcd45df944791828f0a72d31c285566c36901cfce6383994daa62648fdc0d5",
+        "skipped": 0,
+        "tests": 195
+      },
+      "log": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-stage-unit-controls-20260930/reports/w21-unit-regression-003.log",
+        "sha256": "c944c84348f42e0300ba44679e45066e0dfbe6a136e6f21c3e1fd7a29df53e96"
+      }
+    },
+    "receipt": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-stage-unit-controls-20260930/w21-stage-unit-controls-20260930-receipt.json",
+      "sha256": "50f45633e120f65346581b45f75e330233ec7631300f4b26e0d5cefded6f13e9"
+    },
+    "main_review": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-stage-unit-controls-20260930/main-review.json",
+      "sha256": "7b72b86c8096cb04ef62fc33ba5268dab5768ddfef019994efa4fb4083159ba7",
+      "source_hashes_verified": 2,
+      "report_hashes_verified": 14,
+      "status": "SCOPED_SOFTWARE_REVIEW_PASS"
+    },
+    "runtime": {
+      "mcp": "1.30.0",
+      "pydantic": "2.13.5",
+      "pytest": "9.1.1",
+      "python": "3.12.13",
+      "venv": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-stage-unit-controls-20260930/venv"
+    },
+    "artifact_store": {
+      "capacity_snapshot": {
+        "available": "1.9GiB",
+        "capacity_percent": 76,
+        "size": "7.8GiB",
+        "used": "5.8GiB"
+      },
+      "filesystem": "APFS",
+      "image": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/te-apfs-20260928-01.sparseimage",
+      "mountpoint": "/Volumes/CTestEff"
+    },
+    "preserved_failures": [
+      "exFAT atomic os.link unsupported; moved tests to existing APFS image",
+      "test fake missing Mapping import",
+      "fresh isolated test environment missing mcp",
+      "main review found fake and implementation shared a wrong expression axis; corrected and reran. Earlier31/194PASS are superseded, not final acceptance."
+    ],
+    "limits": {
+      "active_degrees_of_freedom": "UNVERIFIED",
+      "automatic_unit_controls": "fake producer software tests PASS; native verification NOT_RUN",
+      "coordinate_frame": "UNVERIFIED",
+      "physics_intrinsic_units": "UNVERIFIED",
+      "solver_history": "UNVERIFIED"
+    },
+    "rebuild": {
+      "test_modules": [
+        "tests/test_w21_native_output.py",
+        "tests/test_w21_canonical_contracts.py",
+        "tests/test_g3_results.py"
+      ],
+      "command_record": "Final executed commands are in the receipt. Use fresh TMPDIR/basetemp/JUnit paths and a fresh APFS artifact child on every replay; do not reuse or delete preserved runs.",
+      "environment_recovery": "Historical /private/tmp Python venv was absent; restored isolated SSD test venv from locked dependencies, no system Python changes."
+    },
+    "next_action": "Complete the existing initial-stage route: phase-specific pre-dispatch prerequisites, actual mapped target fields and automatic units, native dataset/frame and solved-for field identity, exact solution tuple, owned mesh association/captures and saved artifact. Preserve successor mapping/history and continuity/conservation gates. Then run Windows 6.4 followed by 6.3 native stage execution; continue W23-W26 and final independent review."
+  },
+  "latest_checkpoint": "automatic_unit_controls_producer_20260930"
 }

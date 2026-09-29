@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import re
 from collections.abc import Mapping, Sequence
 from typing import Any
 from uuid import uuid4
@@ -22,6 +23,10 @@ OUTPUT_CONTRACT = "w21-stage-output-readback/v1"
 _SOLUTION_INFO_SOURCE = "SolutionInfo.getSolnum(outer, strict)"
 _MAX_FIELD_SCALARS = 65_536
 _MAX_FIELD_JSON_BYTES = 8 * 1024 * 1024
+_AUTOMATIC_UNIT_CONTROL_SCOPE = "automatic_native_expression_unit_dimensionality"
+_AUTO_UNIT_ABS_TOL = 1e-10
+_AUTO_UNIT_REL_TOL = 1e-12
+_SAFE_FIELD_EXPRESSION = re.compile(r"[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*")
 
 
 class _EvidenceUnavailable(Exception):
@@ -251,7 +256,142 @@ def _check_tuple(solution_spec: Mapping[str, Any], raw: Mapping[str, Any]) -> tu
     return ({"dataset": dataset, "solution": solution, **pair}, normalized_binding)
 
 
-def _field_payload(evaluation: Mapping[str, Any], expression: str) -> tuple[dict[str, Any], dict[str, Any]]:
+def _safe_declared_unit(value: Any) -> bool:
+    """Accept a deliberately small COMSOL unit grammar before embedding it in an expression."""
+    if not isinstance(value, str) or not value or len(value) > 128 or any(char.isspace() for char in value):
+        return False
+    index = 0
+
+    def parse_atom() -> bool:
+        nonlocal index
+        if index >= len(value):
+            return False
+        if value[index] == "(":
+            index += 1
+            if not parse_product() or index >= len(value) or value[index] != ")":
+                return False
+            index += 1
+        elif value[index] == "%":
+            index += 1
+        elif value[index] == "1":
+            index += 1
+        elif value[index].isascii() and (value[index].isalpha() or value[index] == "_"):
+            index += 1
+            while (index < len(value) and value[index].isascii()
+                   and (value[index].isalnum() or value[index] == "_")):
+                index += 1
+        else:
+            return False
+        if index < len(value) and value[index] == "^":
+            index += 1
+            if index < len(value) and value[index] in "+-":
+                index += 1
+            start = index
+            while index < len(value) and value[index].isdigit() and value[index].isascii():
+                index += 1
+            if index == start:
+                return False
+        return True
+
+    def parse_product() -> bool:
+        nonlocal index
+        if not parse_atom():
+            return False
+        while index < len(value) and value[index] in "*/":
+            index += 1
+            if not parse_atom():
+                return False
+        return True
+
+    return parse_product() and index == len(value)
+
+
+def _field_control_expressions(expression: Any, declared_unit: Any) -> list[str]:
+    if (not isinstance(expression, str) or len(expression) > 256
+            or _SAFE_FIELD_EXPRESSION.fullmatch(expression) is None):
+        raise _EvidenceUnavailable("field unit controls support only a simple qualified variable expression")
+    if not _safe_declared_unit(declared_unit):
+        raise _EvidenceUnavailable("field unit controls reject unsupported or unsafe declared-unit syntax")
+    return [expression, f"({expression})/1[{declared_unit}]", "1"]
+
+
+def _complex_scalar(value: Any, *, label: str) -> complex:
+    if isinstance(value, Mapping):
+        if set(value) != {"real", "imag"} or not _finite(value.get("real")) or not _finite(value.get("imag")):
+            raise _EvidenceUnavailable(f"{label} contains a malformed or nonfinite complex component")
+        return complex(float(value["real"]), float(value["imag"]))
+    if _finite(value):
+        return complex(float(value), 0.0)
+    raise _EvidenceUnavailable(f"{label} contains a nonfinite or nonnumeric value")
+
+
+def _unit_control_evidence(expressions: Sequence[str], expression_values: Sequence[Sequence[Any]],
+                           unit_values: Mapping[str, Any], declared_unit: str) -> dict[str, Any]:
+    original, normalized, constant = expressions
+    readbacks = {expression: unit_values.get(expression) for expression in expressions}
+    failures: list[str] = []
+    missing: list[str] = []
+    for expression, expected in ((original, declared_unit), (normalized, "1"), (constant, "1")):
+        actual = readbacks[expression]
+        if not isinstance(actual, str) or not actual.strip():
+            missing.append(f"automatic unit readback is missing for {expression}")
+        elif actual != expected:
+            failures.append(f"automatic unit readback for {expression} was {actual!r}, expected {expected!r}")
+
+    def compare(left: Sequence[Any], right: Sequence[Any], *, label: str,
+                right_value: complex | None = None) -> dict[str, Any]:
+        if right_value is None and (not left or len(left) != len(right)):
+            return {"status": "FAIL", "point_count": min(len(left), len(right)),
+                    "max_absolute_error": None, "failure": f"{label} point counts do not match"}
+        errors: list[float] = []
+        limits: list[float] = []
+        try:
+            pairs = ((item, right_value) for item in left) if right_value is not None else zip(left, right)
+            for lhs, rhs in pairs:
+                a = _complex_scalar(lhs, label=label)
+                b = rhs if right_value is not None else _complex_scalar(rhs, label=label)
+                error = abs(a - b)
+                scale = max(abs(a), abs(b))
+                limit = _AUTO_UNIT_ABS_TOL + _AUTO_UNIT_REL_TOL * scale
+                if not math.isfinite(error) or not math.isfinite(scale) or not math.isfinite(limit):
+                    raise _EvidenceUnavailable(f"{label} difference or threshold overflowed")
+                errors.append(error)
+                limits.append(limit)
+        except _EvidenceUnavailable as exc:
+            return {"status": "FAIL", "point_count": len(left),
+                    "max_absolute_error": None, "failure": str(exc)}
+        max_error = max(errors, default=0.0)
+        status = "PASS" if all(error <= limit for error, limit in zip(errors, limits)) else "FAIL"
+        return {"status": status, "point_count": len(left),
+                "max_absolute_error": max_error, "max_allowed_error": max(limits, default=0.0)}
+
+    normalized_check = compare(expression_values[0], expression_values[1], label="normalized expression control")
+    constant_check = compare(expression_values[2], (), label="constant-one control", right_value=complex(1.0, 0.0))
+    for label, control in (("normalized expression", normalized_check), ("constant-one", constant_check)):
+        if control.get("status") == "FAIL":
+            failures.append(f"{label} numeric control failed: {control.get('failure', 'tolerance exceeded')}")
+    status = "FAIL" if failures else "UNVERIFIED" if missing else "VERIFIED"
+    return {
+        "status": status,
+        "scope": _AUTOMATIC_UNIT_CONTROL_SCOPE,
+        "source": "strict_field_readback.expression_unit_readback.values",
+        "units_overridden": False,
+        "declared_unit": declared_unit,
+        "expressions": list(expressions),
+        "expression_unit_readbacks": readbacks,
+        "numeric_controls": {"normalized_matches_original": normalized_check,
+                             "constant_equals_real_one": constant_check},
+        "threshold": {"absolute": _AUTO_UNIT_ABS_TOL, "relative": _AUTO_UNIT_REL_TOL},
+        "missing": missing,
+        "failures": failures,
+        "limits": ["active degrees of freedom are not established",
+                   "physics intrinsic units are not established",
+                   "coordinate frame and solver history are not established"],
+    }
+
+
+def _field_payload(evaluation: Mapping[str, Any], expressions: Sequence[str], *,
+                   declared_unit: str) -> tuple[dict[str, Any], dict[str, Any]]:
     evidence = evaluation.get("strict_field_readback")
     if not isinstance(evidence, Mapping) or evidence.get("status") != "VERIFIED":
         raise _EvidenceUnavailable("strict native field/coordinate readback is incomplete")
@@ -262,13 +402,19 @@ def _field_payload(evaluation: Mapping[str, Any], expression: str) -> tuple[dict
     values = field.get("values")
     coords = coordinates.get("values")
     shape = field.get("shape")
-    if (not isinstance(shape, list) or len(shape) != 4 or shape[:3] != [1, 1, 1]
-            or not isinstance(values, list) or len(values) != 1 or not isinstance(values[0], list)
-            or len(values[0]) != 1 or not isinstance(values[0][0], list)
-            or len(values[0][0]) != 1 or not isinstance(values[0][0][0], list)
-            or len(values[0][0][0]) != shape[3] or not isinstance(coords, list)
+    axes = field.get("axes")
+    if (axes != ["expression", "outer", "inner", "point"]
+            or not isinstance(shape, list) or len(shape) != 4
+            or shape[0] != len(expressions) or shape[1:3] != [1, 1]
+            or type(shape[3]) is not int or shape[3] < 1
+            or not isinstance(values, list) or len(values) != len(expressions)
+            or any(not isinstance(expression_row, list) or len(expression_row) != 1
+                   or not isinstance(expression_row[0], list) or len(expression_row[0]) != 1
+                   or not isinstance(expression_row[0][0], list) or len(expression_row[0][0]) != shape[3]
+                   for expression_row in values)
+            or not isinstance(coords, list) or not coords
             or any(not isinstance(axis, list) or len(axis) != shape[3] for axis in coords)):
-        raise _EvidenceUnavailable("strict field/coordinate shapes do not form one complete selected tuple")
+        raise _EvidenceUnavailable("strict field/coordinate shapes do not form one complete three-expression selected tuple")
     scalars = _numeric_scalars(values) + _numeric_scalars(coords)
     if scalars > _MAX_FIELD_SCALARS:
         raise _EvidenceUnavailable("strict field/coordinate scalar cap was exceeded")
@@ -279,17 +425,20 @@ def _field_payload(evaluation: Mapping[str, Any], expression: str) -> tuple[dict
         raise _EvidenceUnavailable("strict field/coordinate payload contains nonfinite data") from exc
     if payload_bytes > _MAX_FIELD_JSON_BYTES:
         raise _EvidenceUnavailable("strict field/coordinate JSON cap was exceeded")
-    real_values: list[Any] = []
-    for item in values[0][0][0]:
-        if isinstance(item, Mapping):
-            real_part, imaginary_part = item.get("real"), item.get("imag")
-            if not _finite(real_part) or not _finite(imaginary_part):
-                raise _EvidenceUnavailable("pointwise complex field contains a nonfinite or nonnumeric component")
-            real_values.append({"real": float(real_part), "imag": float(imaginary_part)})
-        elif _finite(item):
-            real_values.append(float(item))
-        else:
-            raise _EvidenceUnavailable("pointwise field contains a nonfinite or nonnumeric value")
+    field_metadata = field.get("metadata")
+    if (not isinstance(field_metadata, Mapping)
+            or field_metadata.get("requested_expressions") != list(expressions)):
+        raise _EvidenceUnavailable("strict field expression order is not bound to the combined request")
+    expression_values: list[list[Any]] = []
+    for expression_axis_row in values:
+        normalized_values = []
+        for item in expression_axis_row[0][0]:
+            scalar = _complex_scalar(item, label="pointwise field")
+            if isinstance(item, Mapping):
+                normalized_values.append({"real": float(scalar.real), "imag": float(scalar.imag)})
+            else:
+                normalized_values.append(float(scalar.real))
+        expression_values.append(normalized_values)
     coord_rows: list[list[float]] = []
     for row in coords:
         normalized = []
@@ -298,20 +447,25 @@ def _field_payload(evaluation: Mapping[str, Any], expression: str) -> tuple[dict
                 raise _EvidenceUnavailable("native coordinates contain a nonfinite value")
             normalized.append(float(item))
         coord_rows.append(normalized)
-    unit_values = evidence.get("expression_unit_readback", {}).get("values", {})
-    unit = unit_values.get(expression) if isinstance(unit_values, Mapping) else None
+    unit_evidence = evidence.get("expression_unit_readback")
+    unit_values = unit_evidence.get("values", {}) if isinstance(unit_evidence, Mapping) else {}
+    if not isinstance(unit_values, Mapping):
+        unit_values = {}
+    automatic_unit_controls = _unit_control_evidence(expressions, expression_values, unit_values, declared_unit)
+    unit = unit_values.get(expressions[0])
     field_evidence = _plain_json(dict(evidence))
-    intrinsic_units = evidence.get("intrinsic_unit_readback")
-    unit_evidence = intrinsic_units.get(expression) if isinstance(intrinsic_units, Mapping) else None
     frame_evidence = coordinates
-    return ({"values": real_values, "coordinates": coord_rows, "unit_readback": unit,
-             "unit_evidence": _plain_json(dict(unit_evidence)) if isinstance(unit_evidence, Mapping) else None,
-             "configured_unit_evidence": _plain_json(dict(evidence.get("expression_unit_readback")))
-                 if isinstance(evidence.get("expression_unit_readback"), Mapping) else None,
+    return ({"values": expression_values[0], "coordinates": coord_rows, "unit_readback": unit,
+             "automatic_unit_control_evidence": automatic_unit_controls,
+             "reported_expression_unit_readback": _plain_json(dict(unit_evidence))
+                 if isinstance(unit_evidence, Mapping) else None,
              "coordinate_frame": coordinates.get("coordinate_frame"),
              "coordinate_frame_evidence": _plain_json(dict(frame_evidence)),
              "selection_readback": _plain_json(evidence.get("selection_readback")),
-             "shape": list(shape)}, field_evidence)
+             "shape": [1, 1, 1, shape[3]],
+             "slice": {"source": "strict_field_readback.field_array.values",
+                       "source_shape": list(shape), "axis": "expression", "expression_index": 0,
+                       "expression": expressions[0], "requested_expressions": list(expressions)}}, field_evidence)
 
 
 def _selection_readback_matches(value: Any, requested: Mapping[str, Any], *, role: str = "primary") -> bool:
@@ -386,11 +540,23 @@ def _coordinate_pairs_equal(left: Mapping[str, Any], right: Mapping[str, Any]) -
 
 
 def _intrinsic_unit_matches(payload: Mapping[str, Any], expected_unit: Any) -> bool:
-    evidence = payload.get("unit_evidence")
-    if not isinstance(evidence, Mapping) or evidence.get("status") != "VERIFIED":
+    evidence = payload.get("automatic_unit_control_evidence")
+    if (not isinstance(evidence, Mapping) or evidence.get("status") != "VERIFIED"
+            or evidence.get("scope") != _AUTOMATIC_UNIT_CONTROL_SCOPE
+            or evidence.get("units_overridden") is not False
+            or evidence.get("declared_unit") != expected_unit):
         return False
-    return (evidence.get("intrinsic_unit") == expected_unit
-            and evidence.get("field_dimensionality") == "VERIFIED")
+    expressions = evidence.get("expressions")
+    readbacks = evidence.get("expression_unit_readbacks")
+    numeric = evidence.get("numeric_controls")
+    return (isinstance(expressions, list) and len(expressions) == 3
+            and isinstance(readbacks, Mapping)
+            and readbacks.get(expressions[0]) == expected_unit
+            and readbacks.get(expressions[1]) == "1"
+            and readbacks.get(expressions[2]) == "1"
+            and isinstance(numeric, Mapping)
+            and numeric.get("normalized_matches_original", {}).get("status") == "PASS"
+            and numeric.get("constant_equals_real_one", {}).get("status") == "PASS")
 
 
 def _coordinate_frame_matches(payload: Mapping[str, Any], expected_frame: Any) -> bool:
@@ -691,15 +857,17 @@ def produce_stage_output_readback(
         return tuple_value, resolved_binding
 
     def read_field(spec: Mapping[str, Any], selection: Mapping[str, Any], expression: str,
+                   declared_unit: Any,
                    readphase: str, check_hash: str) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
         if (selection.get("kind") not in {"named", "explicit", "all"}
                 or any(not isinstance(selection.get(name), str) or not selection.get(name)
                        for name in ("component", "geometry"))
                 or type(selection.get("entity_dimension")) is not int):
             raise _EvidenceUnavailable("field selection kind/component/geometry/dimension is unsupported")
+        expressions = _field_control_expressions(expression, declared_unit)
         tuple_value, resolved_binding = solution_binding_for(spec, readphase + ":solution-binding")
         evaluation_spec = {
-            "expressions": [expression],
+            "expressions": expressions,
             "solution": {"dataset": spec["dataset"], "solution": tuple_value["solution"],
                          "outer": tuple_value["outer"], "inner": tuple_value["inner"]},
             "aggregate": "none", "complex_mode": "preserve", "selection": dict(selection),
@@ -718,7 +886,7 @@ def produce_stage_output_readback(
                 or actual_tuple.get("inner") != tuple_value["inner"]
                 or actual_tuple.get("solnum") != tuple_value["solnum"]):
             raise _EvidenceUnavailable("strict field reader returned a different actual SolutionInfo tuple")
-        payload, raw_evidence = _field_payload(data, expression)
+        payload, raw_evidence = _field_payload(data, expressions, declared_unit=declared_unit)
         if not _selection_readback_matches(raw_evidence.get("selection_readback"), selection):
             raise _EvidenceUnavailable("native field numerical feature selection differs from the frozen selector")
         ticket = chain[-1]
@@ -826,10 +994,10 @@ def produce_stage_output_readback(
                         or not isinstance(check.get("frame"), str) or not check["frame"]):
                     raise _EvidenceUnavailable("continuity expression/frame contract is malformed")
                 source_tuple, source_binding, source_payload, source_raw, source_ref = read_field(
-                    check["source_solution"], check["source_selection"], check["source_variable"],
+                    check["source_solution"], check["source_selection"], check["source_variable"], check.get("unit"),
                     f"{check_id}:source-field", check_hash)
                 target_tuple, target_binding, target_payload, target_raw, target_ref = read_field(
-                    check["target_solution"], check["target_selection"], check["target_variable"],
+                    check["target_solution"], check["target_selection"], check["target_variable"], check.get("unit"),
                     f"{check_id}:target-field", check_hash)
                 evidence_refs.extend((source_ref, target_ref))
                 row.update(source_tuple=source_tuple, source_solution_binding=source_binding,
@@ -838,6 +1006,14 @@ def produce_stage_output_readback(
                            target_selection_sha256=sha256_json(dict(check["target_selection"])),
                            source_unit_readback=source_payload.get("unit_readback"),
                            target_unit_readback=target_payload.get("unit_readback"),
+                           automatic_unit_control_scope=_AUTOMATIC_UNIT_CONTROL_SCOPE,
+                           source_unit_control_status=source_payload["automatic_unit_control_evidence"]["status"],
+                           target_unit_control_status=target_payload["automatic_unit_control_evidence"]["status"],
+                           unit_control_evidence={
+                               "scope": _AUTOMATIC_UNIT_CONTROL_SCOPE,
+                               "source": source_payload["automatic_unit_control_evidence"],
+                               "target": target_payload["automatic_unit_control_evidence"],
+                           },
                            source_coordinate_frame=source_payload.get("coordinate_frame"),
                            target_coordinate_frame=target_payload.get("coordinate_frame"),
                            source_observation_revision=source_ref["observation_revision"],
@@ -857,14 +1033,19 @@ def produce_stage_output_readback(
                         and _coordinate_frame_matches(target_payload, check.get("frame"))
                         and source_payload.get("coordinate_frame") == target_payload.get("coordinate_frame")
                     )
+                    if not unit_verified:
+                        controls = (source_payload["automatic_unit_control_evidence"],
+                                    target_payload["automatic_unit_control_evidence"])
+                        if any(control.get("status") == "FAIL" for control in controls):
+                            row["missing"].append("automatic native expression-unit dimensionality controls failed")
+                        else:
+                            row["missing"].append("automatic native expression-unit dimensionality controls are incomplete")
+                    if not frame_verified:
+                        row["missing"].append("coordinate-frame readback is unavailable or does not match the frozen frame")
                     if unit_verified and frame_verified:
                         row["unit"] = check["unit"]
                         row["observed_error"], row["reference_scale"] = error, scale
-                        row["measurement_status"] = "VERIFIED_FIELD_UNITS_AND_FRAME"
-                    else:
-                        row["missing"].append(
-                            "intrinsic field-unit and coordinate-frame evidence is unavailable"
-                        )
+                        row["measurement_status"] = "VERIFIED_AUTO_UNIT_CONTROLS_AND_FRAME"
                 else:
                     row["missing"].append("native source/target coordinates do not match exactly")
             elif check.get("kind") == "conservation":
@@ -930,9 +1111,8 @@ def produce_stage_output_readback(
                 row["missing"].append("unsupported check operator")
         except _EvidenceUnavailable as exc:
             row["missing"].append(str(exc))
-        # The G3 result adapter reports configured/model-dependent units and
-        # leaves field coordinate frames UNVERIFIED. Keep those gaps explicit;
-        # the output validator will not infer a requested unit as native proof.
+        # Unit controls establish only automatic expression-unit dimensionality;
+        # they do not promote active DOFs, physics units, frame, or history.
         if row.get("missing"):
             row["status"] = "UNVERIFIED"
         else:
