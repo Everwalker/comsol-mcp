@@ -332,6 +332,34 @@ class _ObservedLifecycleWorker(_InjectedConnectWorker):
         return reply
 
 
+class _RetirementEvidenceWorker(_ObservedLifecycleWorker):
+    """Successful disconnect fixture with the request hash persisted by JavaWorker."""
+
+    def disconnect(self, **kwargs):
+        from comsol_mcp._java_worker import _request_hash
+
+        self.disconnect_calls += 1
+        request_id = kwargs.get("request_id")
+        request_hash = _request_hash({"type": "disconnect", "request_id": request_id})
+        if self.event_callback:
+            self.event_callback({"phase": "submitted", "request_id": request_id,
+                                 "operation_id": self.current_operation_id,
+                                 "request_hash": request_hash, "kind": "disconnect", "metadata": {}})
+        generation = self.metadata["generation"] + 1
+        self.metadata.update(generation=generation, connected=False, server="")
+        reply = {"connected": False, "generation": generation,
+                 "instance_id": self.metadata["instance_id"]}
+        wrapper = {"ok": True, "request_id": request_id, "type": "disconnect",
+                   "status": "SUCCEEDED", "result": dict(reply)}
+        self.request_status[request_id] = wrapper
+        if self.event_callback:
+            self.event_callback({"phase": "observed", "request_id": request_id,
+                                 "operation_id": self.current_operation_id,
+                                 "request_hash": request_hash, "kind": "disconnect",
+                                 "reply": wrapper, "metadata": {}})
+        return reply
+
+
 class _ExitThenFailCloseWorker(_ObservedLifecycleWorker):
     def close(self):
         self.close_calls += 1
@@ -1327,7 +1355,7 @@ def test_session_recover_records_model_quiescence_proof_without_rewriting_unknow
         assert data["historical_unknown_preserved"] is True
         assert data["replayed_requests"] == 0
         assert data["new_worker_created"] is False
-        assert len(data["resolved_jobs"]) == 1
+        assert len(data["resolved_jobs"]) == 1, json.dumps(data, sort_keys=True)
         assert data["resolved_jobs"][0]["job_id"] == job_id
         assert data["resolved_jobs"][0]["outcome_resolution"] == "UNVERIFIED_HISTORICAL_UNKNOWN"
         assert data["resolved_jobs"][0]["quiescence_resolution"] == "PROVEN_AND_AUDITED"
@@ -2538,7 +2566,7 @@ def _empty_host_start_quiescence() -> dict:
     }
 
 
-def _managed_failed_connect_fixture(tmp_path: Path, monkeypatch):
+def _managed_failed_connect_fixture(tmp_path: Path, monkeypatch, *, worker=None):
     """Create the production connect row against a prior exact owned start, without COMSOL."""
     from comsol_mcp._execution_contract import canonical_request_hash
     from comsol_mcp._session_server import ManagedServerHandle, create_server_directories
@@ -2546,7 +2574,7 @@ def _managed_failed_connect_fixture(tmp_path: Path, monkeypatch):
     monkeypatch.setenv("COMSOL_MCP_HOST_CONTROL", "1")
     workspace_root = tmp_path / "workspaces"
     workspace_root.mkdir(parents=True)
-    worker = _FailedTerminalConnectWorker()
+    worker = worker or _FailedTerminalConnectWorker()
     runtime_id = "fixture-runtime"
     server_pid, server_birth, port = 7310, "start_epoch_ms:1234567", 2046
     endpoint = {"host": "127.0.0.1", "port": port}
@@ -2554,6 +2582,10 @@ def _managed_failed_connect_fixture(tmp_path: Path, monkeypatch):
     class Launcher:
         def verify(self, handle):
             return handle.process_identity
+
+        def stop(self, handle):
+            from comsol_mcp._session_server import OwnedServerError
+            raise OwnedServerError("synthetic stop result is uncertain", handle=handle, uncertain=True)
 
     def runtime_resolver(_runtime_id, _project_id, _session_id, _project_root, state_root):
         session_home = session_state_directory(state_root, _project_id, _session_id)
@@ -2666,6 +2698,286 @@ def _dispatch_managed_failed_connect(daemon, project_id, session_id):
         },
         "execution": {"request_id": "failed-managed-connect-request"},
     })
+
+
+def _restart_managed_unknown_stop_daemon(tmp_path, monkeypatch, *, pid_state="dead", census=None):
+    worker = _RetirementEvidenceWorker()
+    original, worker, project_id, session_id, start, identity = _managed_failed_connect_fixture(
+        tmp_path, monkeypatch, worker=worker,
+    )
+    child = worker._process
+    def wait_nonzero(timeout=None):
+        child.wait_calls += 1
+        child.returncode = 1
+        return 1
+    child.wait = wait_nonzero
+    server_alive = {"value": True}
+    worker_alive = {"value": True}
+    worker_birth = 7654321
+
+    def process_probe(pid):
+        if pid == identity["pid"]:
+            state = pid_state if not server_alive["value"] else "live"
+            if state == "dead":
+                return {"alive": False, "start_epoch_ms": None}
+            if state == "live":
+                return {"alive": True, "start_epoch_ms": int(identity["birth"].split(":", 1)[1])}
+            if state == "reused":
+                return {"alive": True, "start_epoch_ms": int(identity["birth"].split(":", 1)[1]) + 1}
+            return {"alive": True, "start_epoch_ms": None}
+        if pid == worker._process.pid:
+            return {"alive": worker_alive["value"],
+                    "start_epoch_ms": worker_birth if worker_alive["value"] else None}
+        if pid == os.getpid():
+            return {"alive": True, "start_epoch_ms": 987654321}
+        return {"alive": False, "start_epoch_ms": None}
+
+    monkeypatch.setattr("comsol_mcp._control_daemon.process_identity", process_probe)
+    connected = original.dispatch({
+        "operation": "session.connect",
+        "arguments": {
+            "project_id": project_id, "session_id": session_id,
+            "idempotency_key": "connect-before-abandoned-stop", "runtime_id": "fixture-runtime",
+            "endpoint": {"host": "127.0.0.1", "port": 2046},
+        },
+        "execution": {"request_id": "connect-before-abandoned-stop-request"},
+    })
+    assert connected["success"] is True, json.dumps(connected, sort_keys=True)
+    disconnected = original.dispatch(_session_mutation_request(
+        "session.disconnect", project_id, session_id, "disconnect-before-abandoned-stop",
+        retire_worker=True,
+    ))
+    assert disconnected["success"] is True, json.dumps(disconnected, sort_keys=True)
+    assert disconnected["data"]["state"] == "DISCONNECTED"
+    assert disconnected["data"]["client_state"] == "RETIRED"
+    assert disconnected["data"]["worker_retirement"]["exact_popen_handle"] is True
+    assert disconnected["data"]["worker_retirement"]["child_reaped"] is True
+    close_reaped = original._session_job_events(disconnected["execution"]["job_id"])
+    close_reaped = [item["metadata"] for item in close_reaped if item.get("event") == "WorkerCloseReaped"]
+    assert len(close_reaped) == 1 and close_reaped[0]["exit_code"] == close_reaped[0]["wait_returncode"] == 1
+    worker_alive["value"] = False
+    stop_request = _session_mutation_request(
+        "session.stop", project_id, session_id, "stop-after-abandoned-disconnect",
+    )
+    stop_request["arguments"]["authorization_ref"] = "synthetic-stop-authorization"
+    stop_result = original.dispatch(stop_request)
+    assert stop_result["success"] is False, stop_result
+    assert stop_result["error"].get("execution_state_unknown") is True, json.dumps(stop_result, sort_keys=True)
+    assert stop_result["data"]["cause_type"] == "OwnedServerError"
+    source = original.store.operation_job(stop_result["execution"]["operation_id"])
+    assert source["status"] == source["operation"]["status"] == "UNKNOWN"
+    original_result = json.loads(json.dumps(source["result"]))
+    assert original.session_lifecycle.get(project_id, session_id)["client_state"] == "RETIRED"
+
+    # The simulated owned process disappears after the uncertain adapter result;
+    # fresh-daemon recovery only observes it and never calls the launcher again.
+    server_alive["value"] = False
+    original.close()
+    from comsol_mcp._control_daemon import ControlDaemon as RestartedDaemon
+    restarted = RestartedDaemon(tmp_path / "control", project_root=tmp_path / "workspaces", registry={})
+    source_after_restart = restarted.store.job(source["job_id"])
+    assert source_after_restart["status"] == source_after_restart["operation"]["status"] == "RECONCILING"
+    assert source_after_restart["result"] == original_result
+    restarted._control_singleton_lock_held = True
+    monkeypatch.setattr("comsol_mcp._control_daemon.process_identity", process_probe)
+    monkeypatch.setattr(
+        restarted, "_observe_session_start_quiescence",
+        lambda *_args: census or _empty_host_start_quiescence(),
+    )
+    return (restarted, worker, project_id, session_id, source,
+            original_result, identity, process_probe)
+
+
+def test_session_recover_resolves_abandoned_unknown_stop_from_current_host_quiescence(
+        tmp_path, monkeypatch):
+    (daemon, worker, project_id, session_id, source, original_result,
+     _identity, _process_probe) = _restart_managed_unknown_stop_daemon(tmp_path, monkeypatch)
+    expected_worker_counts = (worker.start_calls, worker.connect_calls, worker.disconnect_calls, worker.close_calls)
+    try:
+        recovered = daemon.dispatch(_session_mutation_request(
+            "session.recover", project_id, session_id, "recover-abandoned-stop-once",
+        ))
+        assert recovered["success"] is True, json.dumps(recovered, sort_keys=True)
+        data = recovered["data"]
+        assert data["replayed_requests"] == 0
+        assert data["new_worker_created"] is False
+        assert len(data["resolved_jobs"]) == 1, json.dumps(data, sort_keys=True)
+        resolution = data["resolved_jobs"][0]
+        assert resolution["job_id"] == source["job_id"]
+        assert resolution["outcome_resolution"] == "UNVERIFIED_HISTORICAL_UNKNOWN"
+        assert resolution["quiescence_resolution"] == "PROVEN_AND_AUDITED"
+        assert resolution["resolution_scope"] == "ABANDONED_UNKNOWN_STOP_CURRENT_HOST_QUIESCENCE"
+        assert resolution["historical_unknown_preserved"] is True
+        assert resolution["replayed"] is False
+
+        source_after = daemon.store.job(source["job_id"])
+        assert source_after["status"] == source_after["operation"]["status"] == "RECONCILING"
+        assert source_after["result"] == original_result
+        assert daemon._session_lifecycle_recovery_resolution_is_valid(source_after) is True
+        assert daemon._job_quiescence_proven(source_after) is True
+        lifecycle = daemon.session_lifecycle.get(project_id, session_id)
+        assert lifecycle["state"] == "STOPPED"
+        assert lifecycle["client_state"] == "DISCONNECTED"
+        assert lifecycle["server_state"] == "STOPPED"
+        assert lifecycle["server_ownership"] == "unknown"
+        assert lifecycle["endpoint"] is None
+        assert lifecycle["server_process_identity"] is None
+        assert lifecycle["worker_instance_id"] is None
+        assert lifecycle["worker_epoch"] is None
+        assert (worker.start_calls, worker.connect_calls, worker.disconnect_calls, worker.close_calls) == expected_worker_counts
+
+        daemon.close()
+        daemon = ControlDaemon(tmp_path / "control", project_root=tmp_path / "workspaces", registry={})
+        source_after_restart = daemon.store.job(source["job_id"])
+        assert source_after_restart["result"] == original_result
+        assert daemon._session_lifecycle_recovery_resolution_is_valid(source_after_restart) is True
+        monkeypatch.setattr(
+            daemon, "_observe_session_start_quiescence",
+            lambda *_args: pytest.fail("persisted stop proof must not run a new host census"),
+        )
+        again = daemon.dispatch(_session_mutation_request(
+            "session.recover", project_id, session_id, "recover-abandoned-stop-repeat",
+        ))
+        assert again["success"] is True, json.dumps(again, sort_keys=True)
+        assert again["data"]["resolved_jobs"][0]["quiescence_resolution"] == "ALREADY_PROVEN"
+        assert again["data"]["replayed_requests"] == 0
+        assert (worker.start_calls, worker.connect_calls, worker.disconnect_calls, worker.close_calls) == expected_worker_counts
+    finally:
+        daemon.close()
+
+
+@pytest.mark.parametrize("case", [
+    "server-live", "server-pid-reused", "server-pid-unresolved",
+    "incomplete-process-census", "process-match", "listener-owner-unresolved",
+    "missing-worker-reap", "source-has-model-ref", "lifecycle-cas-conflict",
+])
+def test_session_recover_refuses_inexact_abandoned_stop_quiescence(tmp_path, monkeypatch, case):
+    pid_state = "dead"
+    census = None
+    if case == "server-live":
+        pid_state = "live"
+    elif case == "server-pid-reused":
+        pid_state = "reused"
+    elif case == "server-pid-unresolved":
+        pid_state = "unresolved"
+    elif case == "incomplete-process-census":
+        census = _empty_host_start_quiescence()
+        census["process_inventory"]["status"] = "INCOMPLETE"
+    elif case == "process-match":
+        census = _empty_host_start_quiescence()
+        census["process_inventory"]["task_owned_match_count"] = 1
+    elif case == "listener-owner-unresolved":
+        census = _empty_host_start_quiescence()
+        census["listener_inventory"]["owner_query_unresolved_count"] = 1
+
+    (daemon, _worker, project_id, session_id, source, original_result,
+     _identity, _process_probe) = _restart_managed_unknown_stop_daemon(
+         tmp_path, monkeypatch, pid_state=pid_state, census=census,
+     )
+    try:
+        if case == "missing-worker-reap":
+            disconnect = next(item for item in daemon._session_jobs_for_project(project_id)
+                              if item.get("operation", {}).get("operation") == "session.disconnect")
+            event = daemon.store.db.execute(
+                "SELECT id FROM job_events WHERE job_id=? AND event='WorkerCloseReaped'",
+                (disconnect["job_id"],),
+            ).fetchone()
+            assert event is not None
+            daemon.store.db.execute("DELETE FROM job_events WHERE id=?", (event["id"],))
+            daemon.store.db.commit()
+        elif case == "source-has-model-ref":
+            source_now = daemon.store.job(source["job_id"])
+            daemon.store.update_job(source["job_id"], source_now["status"], {
+                "model_ref": {"project_id": project_id, "session_id": session_id,
+                              "model_tag": "must-not-abandon"},
+            })
+
+        if case == "lifecycle-cas-conflict":
+            writer = daemon.store.record_session_lifecycle_recovery_resolution
+
+            def conflict_once(job_id, operation_id, expected_revision, lifecycle_after, evidence):
+                current = daemon.session_lifecycle.get(project_id, session_id)
+                advanced = dict(current)
+                advanced["revision"] += 1
+                daemon.session_lifecycle.save(advanced, expected_revision=current["revision"])
+                return writer(job_id, operation_id, expected_revision, lifecycle_after, evidence)
+
+            monkeypatch.setattr(daemon.store, "record_session_lifecycle_recovery_resolution", conflict_once)
+
+        recovered = daemon.dispatch(_session_mutation_request(
+            "session.recover", project_id, session_id, f"recover-abandoned-stop-{case}",
+        ))
+        assert recovered["success"] is True, json.dumps(recovered, sort_keys=True)
+        assert recovered["data"]["replayed_requests"] == 0
+        assert recovered["data"]["new_worker_created"] is False
+        assert all(item.get("job_id") != source["job_id"]
+                   for item in recovered["data"].get("resolved_jobs", []))
+        assert daemon.store.session_lifecycle_recovery_resolution(source["job_id"]) is None
+        source_after = daemon.store.job(source["job_id"])
+        assert source_after["status"] == source_after["operation"]["status"] == "RECONCILING"
+        assert source_after["result"] == original_result
+        assert daemon._job_quiescence_proven(source_after) is False
+        assert daemon.session_lifecycle.get(project_id, session_id)["state"] == "UNKNOWN"
+    finally:
+        daemon.close()
+
+
+@pytest.mark.parametrize("tamper", ["target-project", "disconnect-history", "source-result"])
+def test_session_stop_abandonment_validator_rejects_changed_persisted_proof_inputs(
+        tmp_path, monkeypatch, tamper):
+    from comsol_mcp._operation_store import session_recovery_evidence_sha256
+
+    (daemon, _worker, project_id, session_id, source, _original_result,
+     _identity, _process_probe) = _restart_managed_unknown_stop_daemon(tmp_path, monkeypatch)
+    try:
+        recovered = daemon.dispatch(_session_mutation_request(
+            "session.recover", project_id, session_id, f"recover-stop-before-{tamper}",
+        ))
+        assert recovered["success"] is True, json.dumps(recovered, sort_keys=True)
+        assert len(recovered["data"]["resolved_jobs"]) == 1
+        source_after = daemon.store.job(source["job_id"])
+        assert daemon._session_lifecycle_recovery_resolution_is_valid(source_after) is True
+
+        if tamper == "target-project":
+            event = daemon.store.session_lifecycle_recovery_resolution(source["job_id"])
+            proof = dict(event["metadata"])
+            proof.pop("evidence_sha256")
+            proof["lifecycle_transition"]["target_lifecycle"]["project_id"] = "foreign-project"
+            digest = session_recovery_evidence_sha256(proof)
+            proof["evidence_sha256"] = digest
+            daemon.store.db.execute(
+                "UPDATE job_events SET metadata=? WHERE id=?",
+                (json.dumps(proof, sort_keys=True), event["id"]),
+            )
+            pointer = dict(source_after["metadata"]["session_lifecycle_recovery_resolution"])
+            pointer["evidence_sha256"] = digest
+            daemon.store.update_job(source["job_id"], source_after["status"], {
+                "session_lifecycle_recovery_resolution": pointer,
+            })
+        elif tamper == "disconnect-history":
+            disconnect = next(item for item in daemon._session_jobs_for_project(project_id)
+                              if item.get("operation", {}).get("operation") == "session.disconnect")
+            changed = json.loads(json.dumps(disconnect["result"]))
+            changed["data"]["worker_retirement"]["worker_instance_id"] = "forged-worker"
+            # Terminal source results are intentionally immutable through the
+            # public writer.  This synthetic corruption fixture bypasses that
+            # guard to verify a fresh reader rejects a damaged predecessor.
+            daemon.store.db.execute(
+                "UPDATE operations SET result=? WHERE operation_id=?",
+                (json.dumps(changed, sort_keys=True), disconnect["operation_id"]),
+            )
+        else:
+            changed = json.loads(json.dumps(source_after["result"]))
+            changed["data"]["cause_type"] = "DifferentFailure"
+            daemon.store.update_job(source["job_id"], source_after["status"], result=changed)
+        daemon.store.db.commit()
+        daemon.close()
+        daemon = ControlDaemon(tmp_path / "control", project_root=tmp_path / "workspaces", registry={})
+        source_fresh = daemon.store.job(source["job_id"])
+        assert daemon._session_lifecycle_recovery_resolution_is_valid(source_fresh) is False
+        assert daemon._job_quiescence_proven(source_fresh) is False
+    finally:
+        daemon.close()
 
 
 def _restart_managed_connect_daemon(tmp_path, monkeypatch, *, pid_state="dead", census=None):

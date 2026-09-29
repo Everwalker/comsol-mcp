@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "unit": "W21 Windows6.4 V2 short-home current-source attempt",
-  "updated_at_utc": "2026-09-29T10:18:57Z",
+  "updated_at_utc": "2026-09-29T10:49:40Z",
   "overall_status": "PARTIAL",
   "source_package_status": "PASS_MAIN_VERIFIED",
   "native_status": "LATEST_3160730_RUN_IDENTITY_MISMATCH_STOP_UNKNOWN; PRIOR_CONNECT_QUIESCENCE_VERIFIED; SOLVE_READBACK_NOT_RUN",
-  "next_action": "Preserve the original Server stop UNKNOWN and complete the source-bound quiescence disposition; do not restart, replay or clean up before durable disposition is verified. Complete the independent localized version/build parsing repair. Then prioritize only a newly reviewed Windows6.4-to-6.3 canonical solve/readback chain. The listener enumeration change is scoped offline software evidence, not post-change Windows/native verification.",
+  "next_action": "Use the main-reviewed source for one fresh, source-bound public recovery attempt that preserves the original session.stop UNKNOWN; then verify its durable disposition without replay, restart, repeated stop/disconnect, or cleanup. The original native stop disposition remains NOT_RUN for this recovery. Only after disposition is verified, freeze a new Windows 6.4 solve/readback/cleanup candidate, then run Windows 6.3 against its verified 6.4 receipt.",
   "candidate": {
     "source_commit": "9c5ced6272dd876cf9c28c6c6f73b943bd76b96c",
     "evidence_root": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/w21-win64-metadata-v2-20260928T235840Z-9c5ced6",
@@ -1625,5 +1625,42 @@
       "No COMSOL/native run was performed.",
       "The original session.stop UNKNOWN remains undurably reconciled; this software test does not close it."
     ]
+  },
+  "stop_recovery_software": {
+    "status": "SCOPED_SOFTWARE_PASS_MAIN_ACCEPTED",
+    "scope": "Abandoned UNKNOWN session.stop current-host quiescence recovery; synthetic/offline software validation only.",
+    "original_stop_unknown_preserved": true,
+    "native_recovery_attempt": "NOT_RUN",
+    "focused_tests": {
+      "passed": 13,
+      "failed": 0,
+      "counting": "subset of the affected-suite run; not additive"
+    },
+    "affected_suite_tests": {
+      "unique": 149,
+      "passed": 149,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "receipt": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/stop-recovery-durable/stop_recovery_software_receipt.json",
+      "sha256": "41631dae61e71f48c8a8b9f83bdaf3bb2c5d419c99a6d40fca261b27311380a2"
+    },
+    "junit": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/stop-recovery-durable/affected-suites.junit.xml",
+      "sha256": "f99b458fbf03b5f1db24d28e916afc0a798d5a2b00e5ebd913fa3457946ce56f"
+    },
+    "source_sha256": {
+      "comsol_mcp/_control_daemon.py": "b7ae8999b73d4a9cf98980021527c54ee3de4e37a477578db99096f452f58162",
+      "comsol_mcp/_operation_store.py": "15e3b5e85dc6ea442c3a23eab7b7283d1cfd06781b1e1e6ecf58ba076fb734b9",
+      "tests/test_control_daemon_sessions.py": "d51b18e16796064a4c3e7e65eee1a52e8b1ef5734d1bf2db99cab22fc4a7f22b"
+    },
+    "main_review": "ACCEPTED_SCOPED_SOFTWARE_ONLY",
+    "limitations": [
+      "No Windows/remote recovery call or COMSOL/native action was performed.",
+      "The original native session.stop UNKNOWN remains retained and is not durably dispositioned by offline tests."
+    ],
+    "reproduce": "PYTHONDONTWRITEBYTECODE=1 python -B -m pytest -p no:cacheprovider -q tests/test_control_daemon_sessions.py tests/test_operation_store.py tests/test_operation_store_migrations.py --basetemp=<short-task-scratch>/pytest --junitxml=<evidence-root>/affected-suites.junit.xml"
   }
 }

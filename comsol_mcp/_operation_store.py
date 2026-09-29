@@ -821,6 +821,81 @@ class OperationStore:
                 return None
             return {**dict(row), "metadata": json.loads(row["metadata"] or "{}")}
 
+    def _abandoned_stop_history_snapshot(
+        self, project_id: str, session_id: str, recovery_job_id: str,
+    ) -> tuple[int, str] | None:
+        """Hash the exact session history while the caller holds the SQLite write transaction."""
+        rows = self.db.execute(
+            "SELECT j.job_id,j.operation_id,j.status AS job_status,j.metadata AS job_metadata,"
+            "o.operation,o.status AS operation_status,o.request_id,o.idempotency_key,o.request_hash,"
+            "o.result AS operation_result FROM jobs j JOIN operations o ON o.operation_id=j.operation_id "
+            "WHERE (json_extract(COALESCE(j.metadata,'{}'),'$.project_id')=? "
+            "OR json_extract(COALESCE(j.metadata,'{}'),'$.execution.project_id')=? "
+            "OR json_extract(COALESCE(j.metadata,'{}'),'$.project_root')=?) ORDER BY j.rowid DESC",
+            (project_id, project_id, project_id),
+        ).fetchall()
+        jobs: list[dict[str, Any]] = []
+        for row in rows:
+            metadata = json.loads(row["job_metadata"] or "{}")
+            if not isinstance(metadata, dict):
+                continue
+            bindings = [metadata.get("runtime_binding"), metadata,
+                        metadata.get("execution"), metadata.get("arguments")]
+            if not any(isinstance(value, dict) and value.get("project_id") == project_id
+                       and value.get("session_id") == session_id for value in bindings):
+                continue
+            try:
+                result = json.loads(row["operation_result"]) if row["operation_result"] else None
+            except (TypeError, json.JSONDecodeError):
+                result = None
+            jobs.append({
+                "job_id": row["job_id"], "operation_id": row["operation_id"],
+                "status": row["job_status"], "metadata": metadata, "result": result,
+                "operation": {
+                    "operation": row["operation"], "status": row["operation_status"],
+                    "request_id": row["request_id"], "idempotency_key": row["idempotency_key"],
+                    "request_hash": row["request_hash"],
+                },
+            })
+        positions = [index for index, item in enumerate(jobs) if item["job_id"] == recovery_job_id]
+        if len(positions) != 1:
+            return None
+        history = jobs[positions[0] + 1:]
+        allowed = {"session.start", "session.connect", "session.disconnect", "session.stop",
+                   "session.recover", "session.inspect", "session.health"}
+        source_stop_count = 0
+        for item in history:
+            operation = item["operation"]
+            name = operation.get("operation")
+            if name not in allowed:
+                return None
+            if name == "session.stop":
+                source_stop_count += 1
+                if (item["status"] not in {"UNKNOWN", "RECONCILING"}
+                        or operation.get("status") != item["status"]):
+                    return None
+            elif (item["status"] not in TERMINAL or operation.get("status") not in TERMINAL):
+                return None
+        if source_stop_count != 1:
+            return None
+        snapshot = []
+        for item in history:
+            operation = item["operation"]
+            snapshot.append({
+                "job_id": item["job_id"], "operation_id": item["operation_id"],
+                "operation": operation.get("operation"),
+                "metadata_sha256": session_recovery_evidence_sha256({"metadata": {
+                    key: value for key, value in item["metadata"].items()
+                    if key not in {"reconciled_quiescent", "session_lifecycle_recovery_resolution"}
+                }}),
+                "result_sha256": session_recovery_evidence_sha256({"result": item["result"]}),
+                "status": operation.get("status"),
+                "request_id": operation.get("request_id"),
+                "idempotency_key": operation.get("idempotency_key"),
+                "request_hash": operation.get("request_hash"),
+            })
+        return len(history), session_recovery_evidence_sha256({"session_history": snapshot})
+
     def mark_interrupted_session_start_unknown(
         self, *, job_id: str, operation_id: str, request_id: str,
         idempotency_key: str, request_hash: str, project_id: str,
@@ -1030,41 +1105,143 @@ class OperationStore:
                 job_id, source_operation_id, expected_lifecycle_revision,
                 lifecycle_after, evidence,
             )
-        required = {
-            "schema_version", "source_job_id", "source_operation_id",
-            "session_recovery_operation_id", "project_id", "session_id",
-            "source_operation", "source_status", "source_operation_status",
-            "source_result_sha256", "original_unknown_reason", "worker_observation",
-            "original_worker_binding", "request_observations", "terminal_reply_identities",
-            "reconnect_baseline", "connection_observation", "worker_close_event_sha256",
-            "worker_close_reaped_event_sha256", "resolution_scope", "classification",
-            "replay_performed", "new_worker_created",
-        }
+        abandoned_stop = evidence.get("resolution_scope") == (
+            "ABANDONED_UNKNOWN_STOP_CURRENT_HOST_QUIESCENCE"
+        )
+        if abandoned_stop:
+            required = {
+                "schema_version", "source_job_id", "source_operation_id", "source_request_id",
+                "source_idempotency_key", "source_request_hash", "session_recovery_operation_id",
+                "session_recovery_job_id", "session_recovery_request_id", "session_recovery_idempotency_key",
+                "project_id", "session_id", "runtime_id", "source_operation", "source_status",
+                "source_operation_status", "source_result_sha256", "original_unknown_reason",
+                "original_unknown_cause_type", "prior_start_job_id", "prior_start_operation_id",
+                "prior_start_result_sha256", "startup_observations_sha256", "prior_disconnect_job_id",
+                "prior_disconnect_operation_id", "prior_disconnect_result_sha256",
+                "prior_disconnect_worker_retirement_sha256", "prior_disconnect_worker_close_started_sha256",
+                "prior_disconnect_worker_close_reaped_sha256", "prior_disconnect_worker_instance_id",
+                "prior_disconnect_worker_epoch", "session_history_job_count",
+                "session_history_sha256", "endpoint", "server_process_identity", "server_pid_observation",
+                "observed_at_utc", "control_daemon_identity", "process_inventory", "listener_inventory",
+                "resolution_scope", "classification", "replay_performed", "new_worker_created",
+            }
+        else:
+            required = {
+                "schema_version", "source_job_id", "source_operation_id",
+                "session_recovery_operation_id", "project_id", "session_id",
+                "source_operation", "source_status", "source_operation_status",
+                "source_result_sha256", "original_unknown_reason", "worker_observation",
+                "original_worker_binding", "request_observations", "terminal_reply_identities",
+                "reconnect_baseline", "connection_observation", "worker_close_event_sha256",
+                "worker_close_reaped_event_sha256", "resolution_scope", "classification",
+                "replay_performed", "new_worker_created",
+            }
         if (not required.issubset(evidence)
                 or evidence.get("schema_version") != 1
                 or evidence.get("source_job_id") != job_id
                 or evidence.get("source_operation_id") != source_operation_id
-                or evidence.get("source_operation") not in {
-                    "session.connect", "session.disconnect", "session.reconnect",
-                }
+                or (evidence.get("source_operation") != "session.stop" if abandoned_stop else
+                    evidence.get("source_operation") not in {
+                        "session.connect", "session.disconnect", "session.reconnect",
+                    })
                 or evidence.get("source_status") not in {"UNKNOWN", "RECONCILING"}
                 or evidence.get("source_operation_status") not in {"UNKNOWN", "RECONCILING"}
                 or evidence.get("replay_performed") is not False
                 or evidence.get("new_worker_created") is not False
-                or not isinstance(evidence.get("worker_observation"), dict)
-                or not isinstance(evidence.get("original_worker_binding"), dict)
-                or not isinstance(evidence.get("request_observations"), list)
-                or not isinstance(evidence.get("terminal_reply_identities"), list)
                 or not isinstance(evidence.get("classification"), str)
                 or not evidence.get("classification")
-                or evidence.get("resolution_scope") not in {
-                    "SESSION_LIFECYCLE_RPC_TERMINAL_QUIESCENCE",
-                    "SESSION_WORKER_RETIRED_EXACT",
-                    "ABANDONED_UNKNOWN_CONNECT_CURRENT_HOST_QUIESCENCE",
-                }):
+                or (not abandoned_stop and (
+                    not isinstance(evidence.get("worker_observation"), dict)
+                    or not isinstance(evidence.get("original_worker_binding"), dict)
+                    or not isinstance(evidence.get("request_observations"), list)
+                    or not isinstance(evidence.get("terminal_reply_identities"), list)
+                    or evidence.get("resolution_scope") not in {
+                        "SESSION_LIFECYCLE_RPC_TERMINAL_QUIESCENCE",
+                        "SESSION_WORKER_RETIRED_EXACT",
+                        "ABANDONED_UNKNOWN_CONNECT_CURRENT_HOST_QUIESCENCE",
+                    }
+                ))
+                or (abandoned_stop and (
+                    evidence.get("source_operation") != "session.stop"
+                    or evidence.get("source_status") != evidence.get("source_operation_status")
+                    or evidence.get("original_unknown_reason") != "EXECUTION_STATE_UNKNOWN"
+                    or evidence.get("original_unknown_cause_type") != "OwnedServerError"
+                    or evidence.get("resolution_scope") != "ABANDONED_UNKNOWN_STOP_CURRENT_HOST_QUIESCENCE"
+                    or evidence.get("classification") != "ABANDONED_UNKNOWN_STOP_CURRENT_HOST_QUIESCENCE"
+                    or not all(isinstance(evidence.get(key), str) and evidence[key]
+                               for key in ("source_request_id", "source_idempotency_key", "source_request_hash",
+                                           "session_recovery_job_id", "session_recovery_request_id",
+                                           "session_recovery_idempotency_key", "project_id", "session_id",
+                                           "runtime_id", "prior_start_job_id", "prior_start_operation_id",
+                                           "prior_disconnect_job_id", "prior_disconnect_operation_id"))
+                    or not all(isinstance(evidence.get(key), str) and len(evidence[key]) == 64
+                               for key in ("source_request_hash", "source_result_sha256",
+                                           "prior_start_result_sha256", "startup_observations_sha256",
+                                           "prior_disconnect_result_sha256",
+                                           "prior_disconnect_worker_retirement_sha256",
+                                           "prior_disconnect_worker_close_started_sha256",
+                                           "prior_disconnect_worker_close_reaped_sha256",
+                                           "session_history_sha256"))
+                    or type(evidence.get("session_history_job_count")) is not int
+                    or evidence.get("session_history_job_count", 0) < 4
+                    or not isinstance(evidence.get("server_process_identity"), dict)
+                    or not isinstance(evidence.get("endpoint"), dict)
+                    or evidence.get("server_pid_observation") != {
+                        "state": "EXITED_EXACT",
+                        "pid": evidence.get("server_process_identity", {}).get("pid"),
+                        "birth": evidence.get("server_process_identity", {}).get("birth"),
+                    }
+                    or not isinstance(evidence.get("observed_at_utc"), str)
+                    or not evidence.get("observed_at_utc")
+                    or not isinstance(evidence.get("control_daemon_identity"), dict)
+                    or not isinstance(evidence.get("process_inventory"), dict)
+                    or not isinstance(evidence.get("listener_inventory"), dict)
+                ))):
             raise ValueError("lifecycle recovery evidence is incomplete or has mismatched source binding")
 
+        if abandoned_stop and (
+                type(evidence.get("prior_disconnect_worker_epoch")) is not int
+                or evidence["prior_disconnect_worker_epoch"] < 1
+                or not isinstance(evidence.get("prior_disconnect_worker_instance_id"), str)
+                or not evidence["prior_disconnect_worker_instance_id"]):
+            raise ValueError("abandoned stop worker retirement identity is incomplete")
+
         abandoned_connect = evidence.get("resolution_scope") == "ABANDONED_UNKNOWN_CONNECT_CURRENT_HOST_QUIESCENCE"
+        if abandoned_stop:
+            processes, listeners = evidence["process_inventory"], evidence["listener_inventory"]
+            control = evidence["control_daemon_identity"]
+            if (set(control) != {"pid", "process_start_epoch_ms", "singleton_lock_held"}
+                    or type(control.get("pid")) is not int or control["pid"] <= 1
+                    or type(control.get("process_start_epoch_ms")) is not int
+                    or control["process_start_epoch_ms"] <= 0 or control.get("singleton_lock_held") is not True
+                    or set(processes) != {
+                        "status", "candidate_count", "unresolved_candidate_count", "task_owned_match_count",
+                        "canonical_engine_match_count", "startup_pid_count", "startup_pid_live_count",
+                        "startup_pid_unresolved_count",
+                    }
+                    or processes.get("status") != "COMPLETE"
+                    or any(type(processes.get(key)) is not int or processes[key] < 0 for key in (
+                        "candidate_count", "unresolved_candidate_count", "task_owned_match_count",
+                        "canonical_engine_match_count", "startup_pid_count", "startup_pid_live_count",
+                        "startup_pid_unresolved_count",
+                    ))
+                    or any(processes.get(key) != 0 for key in (
+                        "candidate_count", "unresolved_candidate_count", "task_owned_match_count",
+                        "canonical_engine_match_count", "startup_pid_live_count", "startup_pid_unresolved_count",
+                    )) or processes.get("startup_pid_count", 0) < 1
+                    or set(listeners) != {
+                        "status", "rows_scanned", "owner_query_unresolved_count",
+                        "task_owned_match_count", "canonical_engine_match_count",
+                    }
+                    or listeners.get("status") != "COMPLETE"
+                    or any(type(listeners.get(key)) is not int or listeners[key] < 0 for key in (
+                        "rows_scanned", "owner_query_unresolved_count", "task_owned_match_count",
+                        "canonical_engine_match_count",
+                    ))
+                    or any(listeners.get(key) != 0 for key in (
+                        "owner_query_unresolved_count", "task_owned_match_count", "canonical_engine_match_count",
+                    ))):
+                raise ValueError("abandoned stop quiescence evidence is incomplete or unresolved")
         if abandoned_connect:
             processes, listeners = evidence.get("process_inventory"), evidence.get("listener_inventory")
             binding = evidence.get("original_worker_binding")
@@ -1114,7 +1291,7 @@ class OperationStore:
                 or proposed["revision"] != expected_lifecycle_revision + 1
                 or proposed["health"] != {"status": "UNKNOWN", "observed_at": None, "source": None}):
             raise ValueError("lifecycle recovery target is not the next exact session revision")
-        if abandoned_connect and (proposed["state"] != "STOPPED"
+        if (abandoned_connect or abandoned_stop) and (proposed["state"] != "STOPPED"
                 or proposed["project_id"] != evidence.get("project_id")
                 or proposed["session_id"] != evidence.get("session_id")
                 or proposed["runtime_id"] != evidence.get("runtime_id")
@@ -1122,14 +1299,15 @@ class OperationStore:
                 or proposed["server_ownership"] != "unknown" or proposed["endpoint"] is not None
                 or proposed["worker_instance_id"] is not None or proposed["worker_epoch"] is not None
                 or proposed["server_instance_id"] is not None or proposed["server_process_identity"] is not None):
-            raise ValueError("abandoned connect may only clear to a non-connected STOPPED lifecycle")
+            raise ValueError("abandoned lifecycle recovery may only clear to a non-connected STOPPED lifecycle")
 
         with self.lock:
             self.db.execute("BEGIN IMMEDIATE")
             try:
                 row = self.db.execute(
                     "SELECT j.job_id,j.operation_id,j.status AS job_status,j.metadata AS job_metadata,"
-                    "o.status AS operation_status,o.operation,o.result AS operation_result "
+                    "o.request_id,o.idempotency_key,o.request_hash,o.status AS operation_status,"
+                    "o.operation,o.metadata AS operation_metadata,o.result AS operation_result "
                     "FROM jobs j JOIN operations o ON o.operation_id=j.operation_id WHERE j.job_id=?",
                     (job_id,),
                 ).fetchone()
@@ -1153,7 +1331,7 @@ class OperationStore:
                 if row["job_status"] not in unresolved or row["operation_status"] not in unresolved:
                     self.db.execute("ROLLBACK")
                     return {"recorded": False, "reason": "SOURCE_NOT_UNRESOLVED", "resolution": None}
-                if abandoned_connect and (
+                if (abandoned_connect or abandoned_stop) and (
                     row["job_status"] != row["operation_status"]
                     or row["job_status"] != evidence.get("source_status")
                     or row["operation_status"] != evidence.get("source_operation_status")
@@ -1164,10 +1342,20 @@ class OperationStore:
                     self.db.execute("ROLLBACK")
                     return {"recorded": False, "reason": "SOURCE_OPERATION_KIND_MISMATCH", "resolution": None}
                 job_metadata = json.loads(row["job_metadata"] or "{}")
+                operation_metadata = json.loads(row["operation_metadata"] or "{}")
                 if (not isinstance(job_metadata, dict)
                         or job_metadata.get("project_id") != project_id
                         or job_metadata.get("session_id") != session_id
-                        or job_metadata.get("operation") != evidence["source_operation"]):
+                        or job_metadata.get("operation") != evidence["source_operation"]
+                        or (abandoned_stop and (
+                            not isinstance(operation_metadata, dict)
+                            or operation_metadata.get("project_id") != project_id
+                            or operation_metadata.get("session_id") != session_id
+                            or operation_metadata.get("operation") != "session.stop"
+                            or row["request_id"] != evidence.get("source_request_id")
+                            or row["idempotency_key"] != evidence.get("source_idempotency_key")
+                            or row["request_hash"] != evidence.get("source_request_hash")
+                        ))):
                     self.db.execute("ROLLBACK")
                     return {"recorded": False, "reason": "SOURCE_SESSION_BINDING_MISMATCH", "resolution": None}
                 try:
@@ -1181,6 +1369,56 @@ class OperationStore:
                 if evidence["source_result_sha256"] != result_digest:
                     self.db.execute("ROLLBACK")
                     return {"recorded": False, "reason": "SOURCE_RESULT_CHANGED", "resolution": None}
+                if abandoned_stop:
+                    source_execution = source_result.get("execution")
+                    source_error, source_data = source_result.get("error"), source_result.get("data")
+                    if (not isinstance(source_execution, dict)
+                            or any(source_execution.get(key) != row[key] for key in (
+                                "request_id", "idempotency_key", "request_hash",
+                            ))
+                            or source_execution.get("operation_id") != source_operation_id
+                            or source_execution.get("job_id") != job_id
+                            or source_result.get("success") is not False
+                            or not isinstance(source_error, dict)
+                            or source_error.get("code") != "EXECUTION_STATE_UNKNOWN"
+                            or source_error.get("execution_state_unknown") is not True
+                            or source_error.get("safe_retry") is not False
+                            or not isinstance(source_data, dict)
+                            or source_data.get("cause_type") != "OwnedServerError"
+                            or source_data.get("server_handle_preserved") is not True
+                            or source_data.get("server_stopped") is not False
+                            or source_data.get("session_id") != session_id):
+                        self.db.execute("ROLLBACK")
+                        return {"recorded": False, "reason": "ABANDONED_STOP_SOURCE_RESULT_MISMATCH", "resolution": None}
+                    recovery = self.db.execute(
+                        "SELECT j.job_id,j.status AS job_status,j.metadata AS job_metadata,"
+                        "o.request_id,o.idempotency_key,o.operation_id,o.operation,o.status AS operation_status,"
+                        "o.metadata AS operation_metadata FROM jobs j JOIN operations o ON o.operation_id=j.operation_id "
+                        "WHERE o.operation_id=?", (evidence["session_recovery_operation_id"],),
+                    ).fetchone()
+                    if (recovery is None or recovery["job_id"] != evidence["session_recovery_job_id"]
+                            or recovery["request_id"] != evidence["session_recovery_request_id"]
+                            or recovery["idempotency_key"] != evidence["session_recovery_idempotency_key"]
+                            or recovery["operation"] != "session.recover"
+                            or recovery["job_status"] not in {"RUNNING", "RECONCILING"}
+                            or recovery["operation_status"] not in {"RUNNING", "RECONCILING"}):
+                        self.db.execute("ROLLBACK")
+                        return {"recorded": False, "reason": "RECOVERY_REQUEST_IDENTITY_MISMATCH", "resolution": None}
+                    recovery_job_metadata = json.loads(recovery["job_metadata"] or "{}")
+                    recovery_operation_metadata = json.loads(recovery["operation_metadata"] or "{}")
+                    if any(not isinstance(value, dict) or value.get("project_id") != project_id
+                           or value.get("session_id") != session_id
+                           or value.get("operation") != "session.recover"
+                           for value in (recovery_job_metadata, recovery_operation_metadata)):
+                        self.db.execute("ROLLBACK")
+                        return {"recorded": False, "reason": "RECOVERY_SESSION_BINDING_MISMATCH", "resolution": None}
+                    history_binding = self._abandoned_stop_history_snapshot(
+                        project_id, session_id, evidence["session_recovery_job_id"],
+                    )
+                    if history_binding != (
+                            evidence["session_history_job_count"], evidence["session_history_sha256"]):
+                        self.db.execute("ROLLBACK")
+                        return {"recorded": False, "reason": "SESSION_HISTORY_CHANGED", "resolution": None}
 
                 session_row = self.db.execute(
                     "SELECT metadata FROM sessions WHERE session_id=?", (session_id,),
@@ -1196,6 +1434,19 @@ class OperationStore:
                 if current["project_id"] != project_id or current["session_id"] != session_id:
                     self.db.execute("ROLLBACK")
                     return {"recorded": False, "reason": "SESSION_LIFECYCLE_IDENTITY_MISMATCH", "resolution": None}
+                if abandoned_stop and (
+                        current["state"] != "UNKNOWN"
+                        or current["runtime_id"] != evidence.get("runtime_id")
+                        or current["client_state"] != "RETIRED"
+                        or current["server_state"] != "MCP_MANAGED"
+                        or current["server_ownership"] != "mcp_managed"
+                        or current["endpoint"] != evidence.get("endpoint")
+                        or current["server_process_identity"] != evidence.get("server_process_identity")
+                        or current["server_instance_id"] is not None
+                        or current["worker_instance_id"] != evidence.get("prior_disconnect_worker_instance_id")
+                        or current["worker_epoch"] != evidence.get("prior_disconnect_worker_epoch")):
+                    self.db.execute("ROLLBACK")
+                    return {"recorded": False, "reason": "ABANDONED_STOP_LIFECYCLE_BINDING_MISMATCH", "resolution": None}
                 if abandoned_connect and (current["state"] != "UNKNOWN"
                         or current["runtime_id"] != evidence.get("runtime_id")
                         or current["server_ownership"] != "mcp_managed"
