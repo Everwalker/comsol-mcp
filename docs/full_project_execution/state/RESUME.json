@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "phase": "W21_INITIAL_NATIVE_DISCOVERY64_PREPARE_ONLY",
+  "phase": "W21_INITIAL_NATIVE_REPAIRED64_PREPARE_ONLY",
   "task": "W01_W26_CONTINUOUS_IMPLEMENTATION",
-  "status": "INITIAL_STAGE_SOFTWARE_PARTIAL; NEW_NATIVE_NOT_RUN; OVERALL_PARTIAL",
-  "candidate_source": "0b5d9efbb517cb4365227ef82bd932b97a4b0b1e",
+  "status": "CURRENT_FIXED_SOFTWARE_CANDIDATE_20261001_PASS_SOFTWARE_ONLY; MAIN_AND_INDEPENDENT_REVIEW_PASS; NEW_NATIVE_AFTER_FIX_NOT_RUN; PREPARE_BUNDLE_AND_READ_ONLY_GUARD_PROPOSAL_FOR_ROOT_REVIEW; R16_ATTEMPT002_002_CLIENT_UNKNOWN_TIMEOUT_IMMUTABLE_NO_RESUME_OR_REPLAY; ORIGINAL_R15_UNKNOWN_NONREPLAYABLE; REPORT003_RECONCILED; CLEANUP_UNVERIFIED; W21_AND_W01_W26_ACTIVE; PUBLICATION_COMMIT37_DIRECT_AUTHORIZATION_PENDING; OVERALL_PARTIAL",
+  "candidate_source": "4760b4a223017a38ef1c4a52f130433fd77c3c14",
   "completed_work": [
     "PIN source restoration completed and verified: 10832 files, zero missing LFS backing objects; repository HEAD matches pinned commit/tree.",
     "tools/init_completion.py --repo repository completed; frozen inventory: 26 work packages, 272 actions, 60 tests x 6 targets = 360 test cells.",
@@ -161,7 +161,7 @@
       "checkpoint": "docs/full_project_execution/project_session/STAGE_BACKEND_SOFTWARE_CHECKPOINT.json#managed_current_mesh_bridge_20260930"
     }
   ],
-  "next_action": "Same Luna prepare distinct discovery-only initial-stage6.4 freeze with unchanged source/budgets; read raw UTF8 and fresh inventory. Main review before execute. Keep full-probe failure and exactcleanup evidence;6.3 requires actual same-profile6.4 success. Continue original W21-W26/finalReviewer.",
+  "next_action": "Prepare a new isolated Windows 6.4 native source bundle and read-only guard proposal for root review, bound to the accepted fixed candidate fingerprint. This is preparation only: no SCP/upload and no new COMSOL run now. After root review, the main Agent may authorize the exact scoped Windows 6.4 dispatch under the active project goal. W22 remains conditional on actual Windows 6.4 native initial-stage acceptance on the reviewed fixed candidate; software and fake controls do not satisfy that gate. Keep W21 and W01-W26 active. Publication commit37 remains blocked after the prior auto-review refusal pending direct informed authorization; do not push or bypass that review.",
   "active_jobs": [],
   "blockers": [
     "W23 failed setup owned Server 75272 and daemon 75260 remain preserved: cleanup SIGTERM was rejected by automatic approval and explicit authorization is pending; no cleanup or relaunch authorized by elapsed time.",
@@ -190,7 +190,7 @@
     "native_solve_budget_remaining": 0,
     "evidence": "docs/full_project_execution/evidence/luna_process_reconciliation/mac_readonly_snapshot_20260926T2152Z.json"
   },
-  "updated_at": "2026-09-30T08:42:33.306662+00:00",
+  "updated_at": "2026-09-30T18:30:56Z",
   "note": "Original scope remains through W26. User explicitly resumed after the test-efficiency analysis; implement efficiency improvements first. OpenViking task-detail retrieval was denied by auto-review because it would disclose internal roadmap identifiers externally; no workaround. Use current frozen workpack and read-only local memory only. Do not rerun bootstrap/init on resume. Source files now contain executor edits; do not rerun bootstrap/init. Git metadata is an APFS pointer managed by main agent; migration requires bundle/source transfer, not copying only the repository pointer. Git metadata migration is documented by evidence/git_metadata_relocation.json and owned by the main agent; do not copy the APFS git pointer to another machine without source bundle/archive. GUI permission boundary and checkpoint solution-scope caveat recorded. This executor has one W24 native setup-only failure with exact cleanup verified; the durable operation/job UNKNOWN records remain unchanged. No W24 solver submission occurred. Saved-MPH readback supplement uses separate time/evidence and zero study/solver calls; run08 remains FAIL_OR_INCOMPLETE. Root raw SQLite recomputation is linked under native_resume_saved_artifact_supplement.raw_recomputation_evidence; original run08 remains FAIL_OR_INCOMPLETE and no solve budget is restored. Latest checkpoint 2026-09-27T03:50:43Z: W24 0334Z setup run failed pre-model due Python 3.14 missing mcp, with exact cleanup; 0346Z candidate pins the validated 3.12.13 environment and passes a production no-engine registry/daemon preflight. Native setup remains pending root review; science implementation continues offline. Latest checkpoint 2026-09-27T09:09:28Z: W24 0841Z candidate was invoked once at 0857Z and failed before any engine/Worker birth because project.inspect received an injected idempotency_key; project.create persisted successfully. Exact read-only SQLite hash and operation result are in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_contract_diagnostic.json. The runner now omits the unnecessary inspect key; actual ControlDaemon focused regression is 2/2 PASS in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_runner_regression_receipt.json. No native retry or acceptance is claimed; release F04 runtime integration is active, so refresh closure and root review are required before another launch. Windows COMSOL 6.3 remains required/unassessed; only macOS 6.3 is USER_REQUESTED_SKIP.",
   "native_resume_smoke": {
     "status": "FAIL_OR_INCOMPLETE_POINT_SCHEMA_FAILURE; SOLVED_CHILD_ARTIFACT_DURABLE; SOLVE_BUDGET_EXHAUSTED; SEPARATE_SAVED_MPH_READBACK_PASS",
@@ -3588,7 +3588,7 @@
     "prior_rejection": "Preserved; exact informed-approval and metadata scope checks allowed same-command retry."
   },
   "initial_stage_discovery64_preparation_20260930": {
-    "status": "PREPARE_ONLY_AUTHORIZED_PENDING",
+    "status": "EXECUTE64_STAGE_RUN_UNKNOWN_NO_REPLAY",
     "source_commit": "0b5d9efbb517cb4365227ef82bd932b97a4b0b1e",
     "remote_source_root": "C:\\Temp\\w21r15\\source",
     "proposed_evidence_root": "C:\\Temp\\w21r15\\s65",
@@ -3601,7 +3601,485 @@
     "source_changes": false,
     "budget_changes": false,
     "scp_upload": false,
-    "execute": "NOT_AUTHORIZED_PENDING_MAIN_FREEZE_REVIEW",
-    "comsol_native": "NOT_RUN"
-  }
+    "execute": "FAILED_EXIT2_EXCEPTIONGROUP_STAGE_RUN_UNKNOWN",
+    "comsol_native": "UNKNOWN_AFTER_STAGE_DEFINE; ACCEPTANCE_NOT_PROVEN",
+    "run_root": "C:\\Temp\\w21r15\\s65\\6.4\\w21-64-20260930T100852Z-5963e4d5",
+    "run_id": "w21-64-20260930T100852Z-5963e4d5",
+    "freeze_sha256": "4e608433e0f857d0aca9987a363e4d75ec31ae1d18bdcf5c48a025e17824c040",
+    "freeze_file_sha256": "e7ac40366cb7eeb6a2f0636918f1d2be784d81c6906158639aff85be29399512",
+    "state_file_sha256": "accde0eaefbc30e85650f930ccf9eaa35572769d40473603046c1ff907c7f395",
+    "main_review": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-native-w21r15/main-discovery64-prepare-review-003.json",
+      "sha256": "fdebe2cd980712b0f16475aa05211d76bb0a04123c195960f912d41fc02fc63d"
+    },
+    "fresh_inventory_time": "2026-09-30T10:14:38.8654714Z",
+    "capture_correction": "Raw-vs-canonical comparison error corrected in newreceipt; oldfalse preserved; all actual hashes independently recomputed",
+    "stderr": "ONLY_COMPLETED_POWERSHELL_PROGRESS_PARSED_FROM_XML; no ErrorRecord",
+    "transport": "All full SSH remote commands<7500; new exclusive capture names; no long combinedscripts",
+    "unknown_action": "stage_run",
+    "original_stage_run_job": "e26f226a-811c-46ca-8a93-5dbc34d9048a",
+    "original_stage_run_operation": "fb88da7f-3bbf-4ca0-8292-192438809847",
+    "original_stage_run_request": "70b50e6b-db70-45c3-b475-35f71f81106b",
+    "original_stage_run_idempotency": "18fcbd1c-35a7-4aab-a161-74c3f6c94a04",
+    "replay_permitted": false,
+    "resource_counts": "one server/worker possible; one stage/study/solver possible UNKNOWN; native actual outcome pending originaljob/read-only receipts",
+    "cleanup": "NOT_YET_READONLY_VERIFIED; do not mutate/restart/kill without original safe disposition"
+  },
+  "github_native_failure_checkpoint_publication_20260930": {
+    "status": "LOCAL_COMMITTED_AUTO_REVIEW_REJECTED_EXACT_DIRECT_APPROVAL_PENDING",
+    "commit": "37e4230ad710e56805bf561a9d1c24f9f16c4a52",
+    "origin_main_last_verified": "4a37191349674badf305dccddeec0f3008522eeb",
+    "scope": "Five cleared docs/state/compact failure summary; raw private evidence excluded; no source changes",
+    "rejection_receipts": "execution-scratch/w21-initial-native-w21r15/publication-auto-review-rejection-001.json and002.json",
+    "question": "Asked for this exact commit and optional future same-scope documentation synchronization; no approval inferred",
+    "next_action": "Do not retry publication before direct human approval. Continue unaffected discovery64 prepare/main-review/native chain. Goal ACTIVE."
+  },
+  "current_local_stage_repair_candidate06_20260930": {
+    "status": "ACCEPTED_SCOPED_SOFTWARE_LOCAL_ONLY",
+    "source_head": "4760b4a223017a38ef1c4a52f130433fd77c3c14",
+    "parent": "37e4230ad710e56805bf561a9d1c24f9f16c4a52",
+    "candidate_fingerprint": "a3c77a62552090529244743da29bd8277a344d51038b2616ec9d431143f9319e",
+    "summary": "docs/full_project_execution/project_session/native_stage_repair_software001.json",
+    "main_review_sha256": "81b6144f6bdb1e79384ed71d6c64230f6c919b2dd56387e6e677a14097aa000f",
+    "focus_tests": {
+      "pass": 17,
+      "fail": 0,
+      "error": 0,
+      "skip": 0
+    },
+    "required_regression_tests": {
+      "pass": 25,
+      "fail": 0,
+      "error": 0,
+      "skip": 0
+    },
+    "native_candidate06": "NOT_RUN",
+    "original_native_attempt": "UNKNOWN_PRESERVED_NONREPLAYABLE; existing details remain in initial_stage_discovery64_preparation_20260930",
+    "publication": "source476 LOCAL_ONLY; commit37 exact direct approval pending; no push"
+  },
+  "r16_preparation_20260930": {
+    "status": "R16_PREPARED_ONLY_PASS; ATTEMPT002_001_PRESEND_REFUSAL_PRESERVED; ATTEMPT002_002_CLIENT_UNKNOWN_TIMEOUT_IMMUTABLE_NO_RESUME_OR_REPLAY; JOB_OPERATION_QUEUED; STAGE_RUNNING_SOLVE_DISPATCHED; OUTPUT_READBACK_SAVE_NOT_RUN; ACCEPTANCE_NOT_EVALUATED; CLEANUP_UNVERIFIED; REPORT003_RECONCILED; LOCAL_REPAIR_AUTHORIZED_NOT_STARTED; NEXT_NATIVE_EXECUTION_REQUIRES_ROOT_AND_INDEPENDENT_REVIEW; ATTEMPT001_UNVERIFIED; ORIGINAL_R15_UNKNOWN_NONREPLAYABLE; OVERALL_PARTIAL",
+    "inventory": {
+      "status": "PASS",
+      "time_utc": "2026-09-30T13:16Z",
+      "new_target_paths": "ABSENT_AT_INVENTORY",
+      "java_and_comsol_process_count": 0,
+      "original_owned_process_observation": "NONE",
+      "protected_service": "OBSERVED_INTACT",
+      "cleanup_claim": "NONE; inventory observations are not cleanup proof"
+    },
+    "task_root": "CREATED_EMPTY_AT_2026-09-30T13:18Z",
+    "transfer": {
+      "status": "EXACT_SIX_FILE_SCP_EXIT0",
+      "bytes": 1155811,
+      "proposal_sha256": "e3dedd07f3147b3b238fb929dcf9a804d0f16afbf2ac40e32c6bc4c3d4558b04"
+    },
+    "remote_hash_verification": {
+      "status": "PASS",
+      "files": 6,
+      "verified_at_utc": "2026-09-30T13:23:26Z"
+    },
+    "source_extraction_verification": {
+      "status": "PASS",
+      "source_head": "4760b4a223017a38ef1c4a52f130433fd77c3c14",
+      "source_files": 107,
+      "archive_members": 110,
+      "archive_sha256": "ec82d3dc41b76e13dd3c4dc03085cbc86ac1afc56eb01f08d78f6f0fb2f2cf4c",
+      "external_manifest_sha256": "9293a33b59b97aa25c6cc097112611becf4ef2d27a747b7b98c254f0a0ec80fb",
+      "runner_closure_sha256": "9f9ad899798de420756c22cc1cf9a9e19e03e78955e4717ffa86b180481d7ebe",
+      "import_origin": "VERIFIED_EXTRACTED_SOURCE",
+      "verification_transport": {
+        "python_mode": "-B",
+        "ssh_exit_code": 0,
+        "python_exit_code": 0
+      }
+    },
+    "offline_compile": "PASS_REPLACEMENT_ATTEMPT; COMPILE_ATTEMPT001_REMAINS_UNVERIFIED",
+    "discovery_only_prepare": "PREPARED_ONLY_PASS",
+    "engine_execute": "CLIENT_UNKNOWN_TIMEOUT; JOB_OPERATION_QUEUED; STAGE_RUNNING_SOLVE_DISPATCHED; OUTPUT_READBACK_SAVE_NOT_RUN; ACCEPTANCE_NOT_EVALUATED",
+    "native_acceptance_or_cleanup_pass": "NOT_ESTABLISHED",
+    "class_artifact_inventory": "COMPLETE_READ_ONLY_NO_OUTPUT_ARTIFACTS_FOR_COMPILE_ATTEMPT001",
+    "postfailure_process_inventory": {
+      "status": "PASS_QUIESCENCE_OBSERVATION",
+      "time_utc": "2026-09-30T13:37:57Z",
+      "java_processes": 0,
+      "javac_processes": 0,
+      "comsol_processes": 0,
+      "owned_processes": 0,
+      "protected_service": "OBSERVED_INTACT",
+      "processes_stopped": 0,
+      "classification": "QUIESCENCE_OBSERVATION_ONLY; NOT_CLEANUP_PASS_OR_NATIVE_PASS"
+    },
+    "upload_or_rerun": "ONE_AUTHORIZED_UPLOAD_AND_OFFLINE_COMPILE_COMPLETED_PASS",
+    "local_compiler_stdio_redirection_script": "ROOT_REVIEWED_SCRIPT_SHA256_PREFIX_7231E218; ONE_AUTHORIZED_EXECUTION_COMPLETED",
+    "engine_execute_authorization": "AUTHORIZED_ONCE_EXACT_WINDOWS_6_4_FOREGROUND; DISPATCHED_ONCE; CLIENT_UNKNOWN_TIMEOUT; REPORT003_READ_ONLY_RECONCILIATION_COMPLETE; NO_REPLAY",
+    "compile_attempt001": {
+      "status": "INVOKED_OUTER_POWERSHELL_FAILURE_NATIVE_EXIT_UNVERIFIED",
+      "attempt": "compileattempt001",
+      "invocation_started": true,
+      "failure": "Outer PowerShell NativeCommandError during verbose-stderr promotion; SSH exited 1 before the actual javac exit code or result JSON was captured.",
+      "javac_exit_code": "UNVERIFIED",
+      "result_json": "NOT_CAPTURED",
+      "failure_preserved": true,
+      "class_artifact_inventory": "COMPLETE_READ_ONLY_NO_OUTPUT_ARTIFACTS"
+    },
+    "latest_offline_compile_status": "PASS",
+    "read_only_artifact_inventory": {
+      "status": "COMPLETE_READ_ONLY",
+      "javac_out": {
+        "files": 0,
+        "class_files": 0,
+        "appledouble_files": 0
+      },
+      "original_args_file": {
+        "preserved": true,
+        "bytes": 34620,
+        "sha256_prefix": "8b8ee44f"
+      },
+      "source_inventory": {
+        "entries": 110,
+        "reparse_entries": 0,
+        "jar_list_matches": 358
+      },
+      "classification": "ATTEMPT001_ARTIFACT_INVENTORY_ONLY; ORIGINAL_JAVAC_EXIT_REMAINS_UNVERIFIED"
+    },
+    "replacement_upload_offline_compile": {
+      "status": "PASS_OFFLINE_COMPILE",
+      "authorization": "ROOT_REVIEWED_ONE_UPLOAD_AND_OFFLINE_COMPILE",
+      "script_sha256_prefix": "7231e218",
+      "upload_status": "PASS",
+      "ssh_exit_code": 0,
+      "powershell_exit_code": 0,
+      "javac_exit_code": 0,
+      "class_records": 22,
+      "cafebabe_records": 22,
+      "appledouble_records": 0,
+      "jar_list_matches": 358,
+      "root_metadata_independent_verification": {
+        "status": "PASS",
+        "receipt_stdout_sha256": "5633f6415aab4ca90aa9af8a5f4706edbde45da04ee5e5f677104e2904c9c980"
+      },
+      "raw_streams": "INDEPENDENT_BYTE_AND_HASH_VERIFICATION_PASS",
+      "prepare_gate": {
+        "status": "PREPARED_ONLY_PASS",
+        "run_id": "w21-64-20260930T135854Z-61390fd7",
+        "canonical_freeze_sha256": "48bab1f63bad9ee09b0015b4788db46d2f9dc995c7fd44287d4dfb17b4131c5e",
+        "raw_freeze_sha256": "a3e592238f4e0fce314424864b9db1f0d2af18dcf483367038b199931918e267",
+        "state_sha256": "eb66bc65b843fe803cc8678d4191d6710d470912e69bfe90368136c75458e692",
+        "checker_diagnostic": {
+          "original_checker_result": "TASK_ROOT_MISMATCH_FALSE_NEGATIVE_PRESERVED",
+          "corrected_local_single_predicate": {
+            "predicate_summary": "task_root equals evidenceRoot/s64",
+            "implementation_match": "PASS",
+            "same_captured_bytes": "PASS"
+          }
+        },
+        "root_independent_review": {
+          "status": "PASS",
+          "scope_summary": "CANONICAL; SOURCE107; CONTRACTS; RUNTIME; BUDGETS_900240260; PRISTINE_ZERO; CLI; READBACK",
+          "review_receipt_sha256": "871212966c1b367fefbca1410be9e50dc922edc38fddec712ed8f02a9bb8414b"
+        },
+        "pre_prepare_read_only_guards": {
+          "status": "PASS_PRE_PREPARE_ONLY",
+          "time_utc": "2026-09-30T13:58Z",
+          "scope": "PREPARE_PRECONDITION_ONLY; DOES_NOT_SATISFY_CURRENT_PRE_EXECUTE_CHECK"
+        }
+      },
+      "executable_freeze": "ROOT_REVIEWED_PREPARE_FREEZE; EXECUTION_AUTHORIZED_ONCE; CLIENT_UNKNOWN_TIMEOUT; ACCEPTANCE_NOT_EVALUATED",
+      "engine_execute": "CLIENT_UNKNOWN_TIMEOUT; JOB_OPERATION_QUEUED; STAGE_RUNNING_SOLVE_DISPATCHED; OUTPUT_READBACK_SAVE_NOT_RUN; ACCEPTANCE_NOT_EVALUATED",
+      "acceptance_boundary": "OFFLINE_COMPILE_AND_PREPARED_ONLY_PASS; NO_ENGINE_EXECUTION_NATIVE_ACCEPTANCE_OR_CLEANUP_PASS",
+      "independent_compile_and_raw_stream_review": {
+        "status": "PASS_ACCEPTED_PERSISTED_AND_RAW_STREAM_BYTE_HASH_VERIFIED",
+        "scope": "COMPILE_ACCEPTANCE_AND_RAW_STDOUT_STDERR_INTEGRITY",
+        "review_receipt_sha256": "62b174afb42445450e922b07dc7fa83252b5265e6840fee3863847bbb83d66ab",
+        "compile_result": "PASS_ACCEPTED_AND_PERSISTED"
+      },
+      "result_persistence": "ACCEPTED_AND_PERSISTED",
+      "execution_wrapper_review": {
+        "status": "PASS_NATIVE_EXIT_PROPAGATION",
+        "scope": "EXEC_WRAPPER_ONLY",
+        "sha256_prefix": "3df798"
+      },
+      "foreground_execute_authorization": {
+        "status": "AUTHORIZED_ONCE; DISPATCHED_ONCE; CLIENT_UNKNOWN_TIMEOUT; RECONCILED",
+        "target": "EXACT_WINDOWS_6_4_FOREGROUND_EXECUTE",
+        "fresh_read_only_guards": "PASS_POST_REFUSAL_BEFORE_ATTEMPT002_002; NOT_POSTRUN_OR_CLEANUP_EVIDENCE",
+        "dispatch_confirmation": "CONFIRMED_ONE_LAUNCH",
+        "execution_status": "CLIENT_UNKNOWN_TIMEOUT; DURABLE_STAGE_RUNNING_SOLVE_DISPATCHED"
+      }
+    },
+    "prepare_only_attempt": {
+      "status": "PREPARED_ONLY_PASS",
+      "run_id": "w21-64-20260930T135854Z-61390fd7",
+      "mode": "PREPARED_ONLY",
+      "python_exit_code": 0,
+      "ssh_exit_code": 0,
+      "canonical_freeze_sha256": "48bab1f63bad9ee09b0015b4788db46d2f9dc995c7fd44287d4dfb17b4131c5e",
+      "raw_freeze_sha256": "a3e592238f4e0fce314424864b9db1f0d2af18dcf483367038b199931918e267",
+      "state_sha256": "eb66bc65b843fe803cc8678d4191d6710d470912e69bfe90368136c75458e692",
+      "checker_diagnostic": {
+        "original_checker_result": "TASK_ROOT_MISMATCH_FALSE_NEGATIVE_PRESERVED",
+        "corrected_local_single_predicate": {
+          "predicate_summary": "task_root equals evidenceRoot/s64",
+          "implementation_match": "PASS",
+          "same_captured_bytes": "PASS"
+        }
+      },
+      "root_independent_review": {
+        "status": "PASS",
+        "scope_summary": "CANONICAL; SOURCE107; CONTRACTS; RUNTIME; BUDGETS_900240260; PRISTINE_ZERO; CLI; READBACK",
+        "review_receipt_sha256": "871212966c1b367fefbca1410be9e50dc922edc38fddec712ed8f02a9bb8414b"
+      },
+      "pre_prepare_read_only_guards": {
+        "status": "PASS_PRE_PREPARE_ONLY",
+        "time_utc": "2026-09-30T13:58Z",
+        "scope": "PREPARE_PRECONDITION_ONLY; DOES_NOT_SATISFY_CURRENT_PRE_EXECUTE_CHECK"
+      }
+    },
+    "execution_wrapper_review": {
+      "status": "PASS_NATIVE_EXIT_PROPAGATION",
+      "scope": "EXEC_WRAPPER_ONLY",
+      "sha256_prefix": "3df798"
+    },
+    "foreground_execute_authorization": {
+      "status": "AUTHORIZED_ONCE; DISPATCHED_ONCE; CLIENT_UNKNOWN_TIMEOUT; RECONCILED",
+      "target": "EXACT_WINDOWS_6_4_FOREGROUND_EXECUTE",
+      "fresh_read_only_guards": "PASS_POST_REFUSAL_BEFORE_ATTEMPT002_002; NOT_POSTRUN_OR_CLEANUP_EVIDENCE",
+      "dispatch_confirmation": "CONFIRMED_ONE_LAUNCH",
+      "execution_status": "CLIENT_UNKNOWN_TIMEOUT; DURABLE_STAGE_RUNNING_SOLVE_DISPATCHED"
+    },
+    "executable_freeze": "ROOT_REVIEWED_PREPARE_FREEZE; EXECUTION_AUTHORIZED_ONCE; CLIENT_UNKNOWN_TIMEOUT; ACCEPTANCE_NOT_EVALUATED",
+    "acceptance_note": "Report003 independently reconciled attempt002-002: client UNKNOWN/TimeoutError; durable job and operation QUEUED; stage RUNNING; solve DISPATCHED. Only the exact bound run pair was observed SUCCEEDED; output readback/save are NOT_RUN and acceptance is NOT_EVALUATED. Cleanup remains UNVERIFIED despite later process absence. The r16 attempt is immutable and is not being resumed or replayed; original r15/0b5 UNKNOWN is separate and non-replayable. Only the three bounded local software repairs are currently authorized. After repair, freeze the fixed candidate and obtain root and independent review; no new native execution is authorized now, and the main Agent must authorize the exact scoped dispatch after review under the existing project goal. W22 remains conditional on actual Windows 6.4 native-stage acceptance on a reviewed fixed candidate. Publication commit37 awaits direct approval; overall W21/W01-W26 and final Reviewer remain incomplete.",
+    "foreground_execute_attempt002_001": {
+      "classification": "PRESEND_REFUSAL_BEFORE_MCP; NOT_STAGE_OR_NATIVE_FAILURE",
+      "ssh_exit_code": 2,
+      "stdout_bytes": 300,
+      "stdout_sha256": "56f0569f472cd9aa0636178a6aed75e9468ea19a92124caddf3cc99ade259488",
+      "reason": "WRAPPER_OMITTED_COMSOL_MCP_HOST_CONTROL",
+      "source_guard": "SOURCE_LINES_4504_4507_REJECT_HOST_CONTROL_OR_TRUSTED_CODE_BEFORE_MCP_IMPORT_START_OR_MKDIR",
+      "mcp_import_start_mkdir": "NOT_REACHED",
+      "local_capture_path_builder_errors": "PRESERVED_GENERICALLY; NO_HOST_METADATA"
+    },
+    "post_refusal_snapshot_before_attempt002_002": {
+      "classification": "PREDISPATCH_SNAPSHOT_ONLY; NOT_CLEANUP_PASS",
+      "prepared_state": "PREPARED_ONLY_UNCHANGED",
+      "raw_freeze_sha256": "a3e592238f4e0fce314424864b9db1f0d2af18dcf483367038b199931918e267",
+      "state_sha256": "eb66bc65b843fe803cc8678d4191d6710d470912e69bfe90368136c75458e692",
+      "actions": 0,
+      "jobs": 0,
+      "counters": "UNCHANGED_ZERO",
+      "read_only_guard": "PASS_POST_REFUSAL",
+      "process_observation": {
+        "time_utc": "2026-09-30T14:39:28Z",
+        "process_state": "QUIET",
+        "protected_service": "OBSERVED_INTACT",
+        "classification": "OBSERVATION_ONLY; NOT_CLEANUP_PASS"
+      },
+      "canonical_freeze_sha256": "48bab1f63bad9ee09b0015b4788db46d2f9dc995c7fd44287d4dfb17b4131c5e"
+    },
+    "corrected_foreground_execute_proposal": {
+      "status": "ROOT_REVIEWED_AND_AUTHORIZED_ONCE; DISPATCHED_ONCE",
+      "proposal_sha256": "17005c798d410e6f4eb176cb99f9448f109b17636c4e6a267e1a228c474583ec",
+      "root_review002_sha256": "78978706815bcce5cbebce336ffe6fcb12541cbeb65e0e210b294e0848422035",
+      "ephemeral_environment_vars": [
+        "HOST_CONTROL=1",
+        "TRUSTED_CODE=1"
+      ],
+      "scope": "SAME_EXISTING_AUTHORIZED_FIXTURE_OWNED_LIFECYCLE; SAME_FREEZE_SOURCE_BUDGETS_AND_KEYS",
+      "dispatch_status": "ONE_LAUNCH_CONFIRMED"
+    },
+    "foreground_execute_attempt002_002": {
+      "classification": "CLIENT_UNKNOWN_TIMEOUT; DURABLE_ACTIVITY_RECONCILED; ACCEPTANCE_NOT_EVALUATED",
+      "command_characters": 2210,
+      "ssh_cli_exit_code": 2,
+      "cli_outcome": "FAILED_EXCEPTIONGROUP",
+      "client_outcome": "UNKNOWN",
+      "client_error": "TimeoutError",
+      "run_id": "w21-64-20260930T135854Z-61390fd7",
+      "canonical_freeze_sha256": "48bab1f63bad9ee09b0015b4788db46d2f9dc995c7fd44287d4dfb17b4131c5e",
+      "candidate_source_head": "4760b4a223017a38ef1c4a52f130433fd77c3c14",
+      "original_identifiers": {
+        "request_id": "4d81f697-e9a6-4ad1-82be-24d0e587cc6e",
+        "idempotency_key": "47d194b5-7243-4385-8b87-f254f8c9311b",
+        "operation_id": "b2811fb0-2e9f-4275-9b18-57bfe09d9a9f",
+        "job_id": "441041d6-1a0e-4758-9bae-77e1206241b7",
+        "attempt_id": "01846260-082e-40aa-b48a-195e0538c8d3"
+      },
+      "identifier_provenance": "ROOT_INDEPENDENT_REPORT003_RECONCILIATION",
+      "durable_state": {
+        "job": "QUEUED",
+        "operation": "QUEUED",
+        "stage": "RUNNING",
+        "solve": "DISPATCHED",
+        "output_readback": "NOT_RUN",
+        "save": "NOT_RUN",
+        "acceptance": "NOT_EVALUATED"
+      },
+      "exact_bound_run_pair": {
+        "status": "SUCCEEDED",
+        "scope": "EXACT_BOUND_PAIR_ONLY; DOES_NOT_ESTABLISH_STAGE_ACCEPTANCE",
+        "report003_sha256": "533a821b7e9aeaca16c1f7df5b99b8bf5020bbefb2bfb455d5be3550ecb8e8cd",
+        "exact_pair_stdout_sha256": "2ba71a21093be47a9ccf5043dc6a7d73a7ac7a8fe6b7317ac3f081341683730f",
+        "exact_pair_receipt_sha256": "6a56b40456508ba391b170572ea18950e233dfb355190c738e6920f9ca7ecf5b"
+      },
+      "worker_event_audit": {
+        "total_events": 4923,
+        "submitted": 2462,
+        "observed": 2461,
+        "outstanding": 1,
+        "source": "REPORT003_READ_ONLY_SQLITE_AGGREGATE_COUNTS"
+      },
+      "cleanup": "UNVERIFIED; LATER_PROCESS_ABSENCE_DOES_NOT_ESTABLISH_CLEANUP",
+      "native_acceptance": "NOT_EVALUATED"
+    },
+    "read_only_reconciliation": {
+      "status": "REPORT003_INDEPENDENT_READ_ONLY_RECONCILIATION_COMPLETE",
+      "scope": "EXACT_RUN_PAIR_STDOUT_RECEIPT_QUERY; DURABLE_STATE; OPERATION; JOB; WORKER_EVENT_LEDGER",
+      "report003_sha256": "533a821b7e9aeaca16c1f7df5b99b8bf5020bbefb2bfb455d5be3550ecb8e8cd",
+      "exact_pair_stdout_sha256": "2ba71a21093be47a9ccf5043dc6a7d73a7ac7a8fe6b7317ac3f081341683730f",
+      "exact_pair_receipt_sha256": "6a56b40456508ba391b170572ea18950e233dfb355190c738e6920f9ca7ecf5b",
+      "root_review_pointer": "main-r16-readonly-failure-review001.json",
+      "root_review_sha256": "573503f3ecaddac8e8a923a5367d04af6eceb5755f4a55f9586c404ae1530071",
+      "identifiers": {
+        "request_id": "4d81f697-e9a6-4ad1-82be-24d0e587cc6e",
+        "idempotency_key": "47d194b5-7243-4385-8b87-f254f8c9311b",
+        "operation_id": "b2811fb0-2e9f-4275-9b18-57bfe09d9a9f",
+        "job_id": "441041d6-1a0e-4758-9bae-77e1206241b7",
+        "attempt_id": "01846260-082e-40aa-b48a-195e0538c8d3"
+      },
+      "cleanup": "UNVERIFIED; NO_CAUSAL_SERVICE_DEATH_ASSERTION"
+    },
+    "next_authorized_local_repair": {
+      "status": "AUTHORIZED_LOCAL_REPAIR_NOT_STARTED",
+      "pending_ticket": "CAPTURE_EARLY_WITHIN_45_SECONDS",
+      "worker_events": "STABLE_FULL_EVENT_PAGINATION; PER_PAGE_1000",
+      "recovery_job_list": "SCHEMA_CONFORMANT; LIMIT_500",
+      "budget_changes": "NO_TIMEOUT_DISPATCH_OR_READ_BUDGET_INCREASE",
+      "scope": "LOCAL_SOFTWARE_REPAIR_ONLY",
+      "post_repair_gate": "FREEZE_FIXED_CANDIDATE; ROOT_REVIEW_AND_INDEPENDENT_REVIEW; ROOT_SCOPED_NATIVE_DISPATCH_AUTHORIZATION_AFTER_REVIEW",
+      "current_native_execution_authorization": "NONE; LOCAL_REPAIRS_ONLY"
+    },
+    "next_action": "Current authorization is local-software-repair only: (1) capture the early pending ticket within 45 seconds; (2) repair stable full-event pagination at 1,000 events per page; (3) use schema-conformant recovery job.list with limit 500. Keep timeout, dispatch, and read budgets unchanged. After these repairs, freeze the fixed candidate and obtain root plus independent review; no new native execution is authorized now, and the main Agent must authorize the exact scoped dispatch after review under the existing project goal. r16 attempt002-002 remains immutable client UNKNOWN/TimeoutError and is not being resumed or replayed; original r15/0b5 UNKNOWN remains separately non-replayable. W22 remains conditional on actual Windows 6.4 native-stage acceptance on a reviewed fixed candidate. Overall W21/W01-W26 and final Reviewer remain incomplete; publication commit37 awaits direct approval.",
+    "next_native_execution_authorization": "NONE; ROOT_AND_INDEPENDENT_REVIEW_REQUIRED_AFTER_LOCAL_REPAIR"
+  },
+  "current_software_candidate_20261001": {
+    "status": "PASS_SOFTWARE_ONLY_ACCEPTED_MAIN_AND_INDEPENDENT; NEW_NATIVE_AFTER_FIX_NOT_RUN",
+    "candidate_id": "w21-r16-raw-metadata-repair-20261001-01",
+    "fingerprint": "7b1ccc6d42e4950a40c8a58245bb8bc942339ab1e2a6e57ee80a3e2c7d5d56cc",
+    "base_source": "4760b4a223017a38ef1c4a52f130433fd77c3c14",
+    "repository_commit": "bbc4a6f68b5a8fe9ce33c733eaa744a12f7fe72f",
+    "push": "NOT_RUN",
+    "changed_files": {
+      "production": 4,
+      "tests": 5
+    },
+    "production_fixes": [
+      "stage_run bounds synchronous Future wait to min(requested_rpc_timeout_seconds, 5 seconds), retaining the original Future/job/attempt",
+      "exact-job WAL snapshot pages at 1000 rows with a 128-page maximum; over-cap results are INCOMPLETE, and complete results require all rows, the manifest, and strict Worker-projection validation",
+      "unknown-job job.list uses the real schema with limit 500 and one complete, unique, read-only lookup; it does not replay work",
+      "strict snapshot input rejects raw SQL NULL and empty string, while public None still maps to {} and legacy events() behavior remains unchanged"
+    ],
+    "unchanged_budgets": "900/240/45/12 reads; 1 solve + study + stage; 260 guard",
+    "pytest": {
+      "status": "PASS",
+      "tests_total": 25,
+      "store_tests": 21,
+      "controller_tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "classification": "EXACT_CANDIDATE_PYTEST_TOTAL"
+    },
+    "preflight": {
+      "status": "PASS",
+      "errors": 0,
+      "skipped": 0
+    },
+    "independent_script_probes_and_controls": {
+      "status": "PASS",
+      "metadata_probes": 9,
+      "fake_positive_controls": 1,
+      "rehashed_downstream_semantic_controls": 8,
+      "classification": "SCRIPT_PROBES_AND_CONTROL_GROUPS_NOT_ADDITIONAL_PYTEST_OR_UNIQUE_TEST_TOTAL"
+    },
+    "review": {
+      "main_agent_review": {
+        "status": "PASS_SOFTWARE_ONLY",
+        "path": "execution-scratch/w21-r16-fixed-independent-review002/main-fixed-software-review001.json",
+        "sha256": "177978297ac7e925dbf7f778c4be80291648a6e92d4a6fa6c8d48e7a14982037"
+      },
+      "independent_current_review": {
+        "status": "PASS_SOFTWARE_ONLY",
+        "path": "execution-scratch/w21-r16-fixed-independent-review002/candidate01_final_review.json",
+        "sha256": "038f55345ff47f1c2e3261c04c396bba403b344e1b86c68a46b141c8f8234704"
+      }
+    },
+    "evidence": {
+      "test_manifest": {
+        "path": "execution-scratch/test-efficiency/w21-r16-raw-metadata-repair-20261001/baseline-afterfix-001.json",
+        "sha256": "97a92e242daa7525bb4e28a96b9cd2362beb5c4183c99bd54fdd1c86c745b4f5"
+      },
+      "test_summary": {
+        "path": "execution-scratch/test-efficiency/20260930T181419Z-f70f12ab.summary.json",
+        "sha256": "ea30b585e4f591d461e1c26863007e6335a5e28ad6ee258855c3b868c8629ad6"
+      },
+      "handoff_v2_historical": {
+        "path": "execution-scratch/test-efficiency/w21-r16-raw-metadata-repair-20261001/complete-repair-review-handoff-v2.json",
+        "sha256": "ed3dadfe4e89e371674f3592fb28b139767c4922afed0335f745feb735fe8039",
+        "status_at_emission": "PENDING_REVIEW_HISTORICAL"
+      },
+      "pre_fix_red_baseline": {
+        "case_count": 21,
+        "expected_failure_count": 2,
+        "expected_failures": "raw SQL NULL and empty string",
+        "classification": "EXPECTED_CLEAN_RED_BEFORE_FIX"
+      }
+    },
+    "report003_worker_event_audit_provenance": {
+      "submitted": 2462,
+      "observed": 2461,
+      "outstanding": 1,
+      "source": "REPORT003_READ_ONLY_SQLITE_AGGREGATE_COUNTS",
+      "qualification": "Historical aggregate counts only; not evidence that the repaired production pagination collector ran.",
+      "worker_request_event_count": 4923,
+      "count_scope": "WORKER_REQUEST_ROWS_ONLY"
+    },
+    "historical_candidate_lineage": [
+      {
+        "candidate": "candidate12",
+        "evidence": "10 tests plus realpath 11 PASS",
+        "classification": "HISTORICAL_OLD_FINGERPRINT"
+      },
+      {
+        "candidate": "candidate17",
+        "evidence": "33 tests PASS; independent P2 failure found afterward",
+        "classification": "NOT_ACCEPTED"
+      },
+      {
+        "candidate": "candidate18",
+        "evidence": "5 supplemental PASS on the same candidate17 source",
+        "classification": "HISTORICAL_SAME_SOURCE_AS_CANDIDATE17"
+      },
+      {
+        "candidate": "prior accepted source476 software checkpoint",
+        "evidence": "previously accepted scoped software; not the latest fixed candidate",
+        "classification": "SUPERSEDED_AS_LATEST_BY_CURRENT_CANDIDATE",
+        "fingerprint": "a3c77a62552090529244743da29bd8277a344d51038b2616ec9d431143f9319e"
+      }
+    ],
+    "native_acceptance": "NOT_RUN_AFTER_FIX; SOFTWARE_ACCEPTANCE_ONLY",
+    "current_next_action": "Prepare a new isolated Windows 6.4 native source bundle and read-only guard proposal for root review, bound to the accepted fixed candidate fingerprint. This is preparation only: no SCP/upload and no new COMSOL run now. After root review, the main Agent may authorize the exact scoped Windows 6.4 dispatch under the active project goal. W22 remains conditional on actual Windows 6.4 native initial-stage acceptance on the reviewed fixed candidate; software and fake controls do not satisfy that gate. Keep W21 and W01-W26 active. Publication commit37 remains blocked after the prior auto-review refusal pending direct informed authorization; do not push or bypass that review.",
+    "repository_commit_verification": {
+      "scope": "SOURCE_ONLY_LOCAL_CHECKPOINT",
+      "parent": "4760b4a223017a38ef1c4a52f130433fd77c3c14",
+      "tree": "c623f53dbf2d2b4bc6e614748dd673c09b0dda40",
+      "committed_files": 9,
+      "staged_files_after_commit": 0,
+      "commit_blob_count": 116,
+      "commit_blobs_match_worktree": "PASS_ROOT_INDEPENDENT_VERIFIED",
+      "push": "NOT_RUN",
+      "remote_activity": "NOT_RUN"
+    }
+  },
+  "current_software_candidate_pointer": "current_software_candidate_20261001"
 }
