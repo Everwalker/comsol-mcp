@@ -1,7 +1,7 @@
 {
   "schema": "W21_LOCAL_STAGE_REPAIR_SOFTWARE_SUMMARY_V1",
-  "updated_at_utc": "2026-09-30T18:30:56Z",
-  "status": "ACCEPTED_SCOPED_SOFTWARE_LOCAL_ONLY",
+  "updated_at_utc": "2026-09-30T23:00:11Z",
+  "status": "ACCEPTED_SCOPED_SOFTWARE; SIX_COMMIT_PUBLICATION_PUSHED_AND_FULL_SHA_VERIFIED; S18_READBACK_ROOT_REVIEW_PASS_METADATA_ONLY; NATIVE_AND_SCIENTIFIC_ACCEPTANCE_INCOMPLETE",
   "w21_status": "PARTIAL_IMPLEMENTATION",
   "overall_project": "ACTIVE_INCOMPLETE",
   "source": {
@@ -64,12 +64,65 @@
     "discovery64": "UNKNOWN_AFTER_STAGE_DEFINE; see RESUME.json#initial_stage_discovery64_preparation_20260930 for the preserved original-job state and no-replay boundary."
   },
   "publication": {
-    "source_head_476": "LOCAL_ONLY_NOT_PUBLISHED",
-    "documentation_commit_37": "EXACT_DIRECT_APPROVAL_PENDING",
-    "push": "NOT_RUN"
+    "source_head_476": "PUBLISHED_AS_ANCESTOR_OF_VERIFIED_MAIN_HEAD",
+    "documentation_commit_37": "PRIOR_AUTO_REVIEW_REJECTION_HISTORICAL; DIRECT_HUMAN_APPROVAL_RECEIVED_FOR_EXACT_SIX_COMMIT_RANGE",
+    "push": "SUCCEEDED_ONCE; FULL_REMOTE_SHA_VERIFIED",
+    "verified_main_head": "fbf672f140a78bac3a8652832623c28435f855e3",
+    "commit_count": 6,
+    "committed_path_count": 18,
+    "evidence": {
+      "status": "PUSH_SUCCEEDED_FULL_SHA_VERIFIED; PRIOR_AUTO_REVIEW_REJECTIONS_PRESERVED_HISTORICAL",
+      "prior_auto_review_rejections": {
+        "status": "HISTORICAL; later direct human approval authorized this exact six-commit publication",
+        "receipts": [
+          "execution-scratch/w21-initial-native-w21r15/publication-auto-review-rejection-001.json",
+          "execution-scratch/w21-initial-native-w21r15/publication-auto-review-rejection-002.json"
+        ]
+      },
+      "direct_human_approval": "APPROVED_EXACT_SIX_COMMITS",
+      "base_head": "4a37191349674badf305dccddeec0f3008522eeb",
+      "first_approved_commit": "37e4230ad710e56805bf561a9d1c24f9f16c4a52",
+      "published_head": "fbf672f140a78bac3a8652832623c28435f855e3",
+      "destination": "https://github.com/Everwalker/comsol-mcp.git refs/heads/main",
+      "commit_count": 6,
+      "committed_path_count": 18,
+      "payload_review": {
+        "status": "PASS_READ_ONLY_EXACT_COMMITTED_PAYLOAD_REVIEW",
+        "path": "execution-scratch/w21-initial-native-w21r17-plan-20261001/publication-six-commits-review001/publication_payload_review.json",
+        "sha256": "97b376da24742fde038093b986f0af782dc4e6511170fddcb4ff162cae5c8b0f"
+      },
+      "push": {
+        "command": "git push origin fbf672f140a78bac3a8652832623c28435f855e3:refs/heads/main",
+        "exit_code": 0,
+        "completed_utc": "2026-09-30T22:36:13.919574Z",
+        "stdout_bytes": 0,
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr_bytes": 118,
+        "stderr_sha256": "ed52e22ff137bd67ce4194ee22f20a82ab2b631e0d18492a7df824a1a02e9950",
+        "capture_directory": "execution-scratch/publication-push-six-001"
+      },
+      "remote_verification": {
+        "command": "git ls-remote origin refs/heads/main",
+        "exit_code": 0,
+        "completed_utc": "2026-09-30T22:36:34.990668Z",
+        "exact_full_sha": "fbf672f140a78bac3a8652832623c28435f855e3",
+        "stdout_bytes": 57,
+        "stdout_sha256": "f6fd2f276835d2bdeebe9dcb51447676fa5119a4b007ab1e0366e8feb1e3bc0e",
+        "stderr_bytes": 0,
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "capture_directory": "execution-scratch/publication-push-six-001"
+      },
+      "additional_pushes": 0,
+      "additional_fetches": 0,
+      "source_commits": {
+        "base_source_4760b4": "PUBLISHED_AS_ANCESTOR_OF_VERIFIED_MAIN_HEAD",
+        "candidate_source_bbc4a6": "PUBLISHED_AS_ANCESTOR_OF_VERIFIED_MAIN_HEAD"
+      },
+      "working_tree_and_untracked": "Excluded from the exact-SHA push; remaining working-tree/untracked changes, including this status sync, are unpublished."
+    }
   },
-  "next_authorized_scope": "Next local-only work is to prepare (not execute) fresh pre-execute read-only guard scripts and exactly one native-capture proposal bound to the prepared r17 freeze/state and fixed candidate for root review. Remote guard execution over SSH has NOT_RUN; there is no GO and no native execute authorization. Do not repeat remote readback, upload, or COMSOL execution before root review. W22 still requires actual Windows 6.4 native initial-stage acceptance on a reviewed fixed candidate. W21 remains PARTIAL and the MASTER W01-W26 goal remains ACTIVE through W26. Publication commit37 remains blocked after the prior auto-review refusal; do not push or bypass it.",
-  "remaining_scope": "W21 and the MASTER W01-W26 goal remain ACTIVE and incomplete through W26. The fixed software candidate is accepted at software scope only. R17 is PREPARED_ONLY with offline compile PASS; no native execution or scientific acceptance occurred. The next step is a fresh pre-execute read-only guard and one native-capture proposal for root review only; no GO or execute authorization exists. W22 requires actual Windows 6.4 native initial-stage acceptance on the reviewed fixed candidate. W23-W26 and final independent Reviewer remain open.",
+  "next_authorized_scope": "Current s18 run w21-64-20260930T221921Z-48908cfd remains PREPARED_ONLY; its raw freeze/state readback and isolation-absence verification passed root review at metadata scope only. Next, prepare the exact initial-stage execute proposal locally for root review. Fresh five actual pre-execute read-only guards, engine GO, native dispatch, and scientific acceptance remain NOT_RUN/NOT_ISSUED; execution requires separate exact authorization after proposal and guard review. Preserve the 128-row hard cap and full-metadata FAIL. Do not replay r17 or resume/replay the original r15/0b5 and r16 UNKNOWN attempts. W22 remains conditional on actual Windows 6.4 native initial-stage acceptance on a reviewed fixed candidate. W21 remains PARTIAL and the MASTER W01-W26 goal remains ACTIVE through W26. Publication remains synchronized; do not repeat the push or fetch. Prior auto-review rejections remain historical, resolved by the direct approval and verified push.",
+  "remaining_scope": "W21 and MASTER W01-W26 remain ACTIVE and incomplete through W26. The fixed software candidate is accepted at software scope only. R17 attempt005 failed its native initial-stage capture probe with scoped r17 cleanup complete; this is not scientific acceptance. Current s18 w21-64-20260930T221921Z-48908cfd is PREPARED_ONLY; freeze/state readback and isolation-absence verification passed root review at metadata scope only. There is no engine GO, native execution, or scientific acceptance. Original r15/0b5 and r16 UNKNOWN states remain separate, immutable, and non-replayable. Next work is a local exact execute proposal for root review, followed after approval by five fresh actual pre-execute read-only guards and separate exact GO authorization. W22 requires actual Windows 6.4 native initial-stage acceptance on a reviewed fixed candidate. W23-W26 and final independent Reviewer remain open.",
   "r16_preparation": {
     "status": "R16_PREPARED_ONLY_PASS; ATTEMPT002_001_PRESEND_REFUSAL_PRESERVED; ATTEMPT002_002_CLIENT_UNKNOWN_TIMEOUT_IMMUTABLE_NO_RESUME_OR_REPLAY; JOB_OPERATION_QUEUED; STAGE_RUNNING_SOLVE_DISPATCHED; OUTPUT_READBACK_SAVE_NOT_RUN; ACCEPTANCE_NOT_EVALUATED; CLEANUP_UNVERIFIED; REPORT003_RECONCILED; LOCAL_REPAIR_AUTHORIZED_NOT_STARTED; NEXT_NATIVE_EXECUTION_REQUIRES_ROOT_AND_INDEPENDENT_REVIEW; ATTEMPT001_UNVERIFIED; ORIGINAL_R15_UNKNOWN_NONREPLAYABLE; OVERALL_PARTIAL",
     "fresh_inventory": {
@@ -389,7 +442,7 @@
     "fingerprint": "7b1ccc6d42e4950a40c8a58245bb8bc942339ab1e2a6e57ee80a3e2c7d5d56cc",
     "base_source": "4760b4a223017a38ef1c4a52f130433fd77c3c14",
     "repository_commit": "bbc4a6f68b5a8fe9ce33c733eaa744a12f7fe72f",
-    "push": "NOT_RUN",
+    "push": "PUBLISHED_AS_ANCESTOR_OF_VERIFIED_MAIN_HEAD",
     "changed_files": {
       "production": 4,
       "tests": 5
@@ -489,7 +542,7 @@
       }
     ],
     "native_acceptance": "NOT_RUN_AFTER_FIX; SOFTWARE_ACCEPTANCE_ONLY",
-    "current_next_action": "Prepare a new isolated Windows 6.4 native source bundle and read-only guard proposal for root review, bound to the accepted fixed candidate fingerprint. This is preparation only: no SCP/upload and no new COMSOL run now. After root review, the main Agent may authorize the exact scoped Windows 6.4 dispatch under the active project goal. W22 remains conditional on actual Windows 6.4 native initial-stage acceptance on the reviewed fixed candidate; software and fake controls do not satisfy that gate. Keep W21 and W01-W26 active. Publication commit37 remains blocked after the prior auto-review refusal pending direct informed authorization; do not push or bypass that review.",
+    "current_next_action": "Current s18 run w21-64-20260930T221921Z-48908cfd remains PREPARED_ONLY; its raw freeze/state readback and isolation-absence verification passed root review at metadata scope only. Next, prepare the exact initial-stage execute proposal locally for root review. Fresh five actual pre-execute read-only guards, engine GO, native dispatch, and scientific acceptance remain NOT_RUN/NOT_ISSUED; execution requires separate exact authorization after proposal and guard review. Preserve the 128-row hard cap and full-metadata FAIL. Do not replay r17 or resume/replay the original r15/0b5 and r16 UNKNOWN attempts. W22 remains conditional on actual Windows 6.4 native initial-stage acceptance on a reviewed fixed candidate. W21 remains PARTIAL and the MASTER W01-W26 goal remains ACTIVE through W26.",
     "repository_commit_verification": {
       "scope": "SOURCE_ONLY_LOCAL_CHECKPOINT",
       "parent": "4760b4a223017a38ef1c4a52f130433fd77c3c14",
@@ -500,7 +553,8 @@
       "commit_blobs_match_worktree": "PASS_ROOT_INDEPENDENT_VERIFIED",
       "push": "NOT_RUN",
       "remote_activity": "NOT_RUN"
-    }
+    },
+    "publication_head_verified": "fbf672f140a78bac3a8652832623c28435f855e3"
   },
   "current_software_candidate_pointer": "current_software_candidate_20261001",
   "current_native_preparation_20261001_r17": {
@@ -621,7 +675,7 @@
     "scientific_acceptance": "NOT_RUN",
     "overall_w21": "PARTIAL",
     "master_goal": "ACTIVE_THROUGH_W26",
-    "current_next_action": "Next action: read-only exact-probe SQL root-cause investigation. After that, root decides whether to prepare a fresh discovery candidate; no fresh candidate is prepared or dispatched yet. Do not retry or implicitly replay r17 attempt005, and do not resume or replay the original r15/0b5 or r16 UNKNOWN attempts. W22 still requires actual Windows 6.4 native initial-stage acceptance on a reviewed fixed candidate. W21 remains PARTIAL and the MASTER W01-W26 goal remains ACTIVE through W26. Publication commit37 remains blocked after the prior auto-review refusal; do not push or bypass it.",
+    "current_next_action": "Next action: prepare a fresh s18 initial-stage PREPARE proposal locally only for root review, using the same executor and its supported --probe-discovery-only request to recover r16’s original frozen discovery scope. This remains local-only planning: no new candidate is prepared or dispatched, no new run ID or keys are assigned, and no GO or SSH is authorized. Keep the 128-row hard cap and full-metadata FAIL; do not relax thresholds or replay r17 or resume/replay the original r15/0b5 and r16 UNKNOWN attempts. Preserve source commit bbc4a6f68b5a8fe9ce33c733eaa744a12f7fe72f, COMSOL 6.4 build 293, thermal-initial-v2, existing budgets and initial-output acceptance criteria, and reuse the already verified 107-source package. No upload, archive, javac, source rebuild, or native execution is authorized. W22 still requires actual Windows 6.4 native initial-stage acceptance on a reviewed fixed candidate. W21 remains PARTIAL and the MASTER W01-W26 goal remains ACTIVE through W26. Publication commit37 remains blocked after the prior auto-review refusal; do not push or bypass it.",
     "resource_admission_005": {
       "status": "PASS_RESOURCE_ADMISSION_ONLY_NOT_NATIVE_ACCEPTANCE",
       "go_authorization": {
@@ -767,7 +821,193 @@
         "interpretation": "Observation only; it does not establish general cleanup or change prior r15/r16 UNKNOWN states."
       },
       "scope": "r17 attempt005 only; no cleanup PASS is inferred for original r15/0b5 or r16 attempts."
+    },
+    "confirmed_probe_limit": {
+      "review_status": "CONFIRMED_BY_ROOT_OUTCOME_REVIEW002",
+      "probe": "W21FieldIdentityProbe",
+      "probe_status": "OUTPUT_LIMIT_EXCEEDED",
+      "code": "TABLE_ROW_LIMIT_EXCEEDED",
+      "limit_location": {
+        "physics_tag": "ht",
+        "feature_info_tag": "info",
+        "table_id": "Expression",
+        "actual_rows": 166,
+        "hard_limit": 128
+      },
+      "probe_raw_readback_sha256": "68b1b28fe3b89debf585d94fd9e074282c54e04bc433eb1c5574db821195902b",
+      "native_admission": "UNVERIFIED",
+      "payload_complete": false,
+      "full_metadata_admission": "FAIL_LIMIT_RETAINED_NOT_WAIVED",
+      "initial_stage_solve_and_reads": "NOT_DISPATCHED_ALL_ACTUAL_AND_POSSIBLE_ZERO"
+    },
+    "root_outcome_review": {
+      "status": "FAIL_NATIVE_PRE_SOLVE_FULL_PROBE_LIMIT",
+      "path": "execution-scratch/w21-initial-native-w21r17-plan-20261001/main-r17-native-outcome-review002.json",
+      "sha256": "c4a61cd097bdd3192129a7fff9d9abb4e37a400876e4c633b73adff682246c0c",
+      "sql_readback": {
+        "path": "execution-scratch/w21-initial-native-w21r17-plan-20261001/probe-sql-readback-001/probe-sql-readback-001.receipt.json",
+        "receipt_sha256": "9a098c39557b18a22fe713edfb58f3d78acd37ecc9c85ca3fee94a64f68a6411",
+        "ssh_exit": 8,
+        "row_counts": {
+          "jobs": 1,
+          "operations": 1
+        },
+        "stdout_bytes": 10137,
+        "stdout_sha256": "aa4e78f1baef8c1eba2604779381b7a5f24ef83130f9e9c48d7e3b6f61a19a99",
+        "sql_mutation_requested": false,
+        "observed_file_invariance": {
+          "database_bytes_and_metadata": "UNCHANGED",
+          "wal_bytes_and_metadata": "UNCHANGED",
+          "shm_bytes_and_mtime": "CHANGED_DURING_READ_ONLY_SQL_OBSERVATION",
+          "specific_cause": "UNVERIFIED",
+          "all_artifacts_unchanged": false
+        },
+        "interpretation": "No SQL mutation was requested. DB and WAL bytes/metadata remained unchanged, while SHM bytes and mtime changed during read-only SQL observation. The specific cause is unverified; this does not establish that all artifacts were unchanged or that the remote filesystem had zero writes."
+      },
+      "identity_scope": "Root confirmed exactly one bound job and one operation and confirmed the id, key, project, session, and source binding; private identifier values are not duplicated here.",
+      "negative_query_assertion": "Preserved: the result used the operation_call wrapper, with the domain operation_id nested in metadata.arguments.operation_id and the domain value in result.data.operation. The original SSH 8 negative assertion and raw receipt remain unchanged; this readback is not promoted to query-wide PASS.",
+      "worker_status_interpretation": "SUCCEEDED describes only metadata Java execution; it does not establish initial-stage acceptance.",
+      "scientific_acceptance": "NOT_RUN",
+      "source_commit": "bbc4a6f68b5a8fe9ce33c733eaa744a12f7fe72f"
     }
   },
-  "current_native_preparation_pointer": "current_native_preparation_20261001_r17"
+  "current_native_preparation_pointer": "current_native_preparation_20261001_s18",
+  "current_native_preparation_20261001_s18": {
+    "status": "PREPARED_ONLY; READBACK_ROOT_REVIEW_PASS_METADATA_ONLY; NO_ENGINE_GO; NATIVE_AND_SCIENTIFIC_ACCEPTANCE_NOT_RUN",
+    "run_id": "w21-64-20260930T221921Z-48908cfd",
+    "software_candidate": {
+      "id": "w21-r16-raw-metadata-repair-20261001-01",
+      "fingerprint": "7b1ccc6d42e4950a40c8a58245bb8bc942339ab1e2a6e57ee80a3e2c7d5d56cc",
+      "source_commit": "bbc4a6f68b5a8fe9ce33c733eaa744a12f7fe72f"
+    },
+    "proposal_review": {
+      "status": "PASS_METADATA_PREPARE_PROPOSAL_ONLY",
+      "path": "execution-scratch/w21-initial-native-w21r17-plan-20261001/prepare-proposal-s18-001/main-prepare-proposal-review001.json",
+      "sha256": "005908a1a7b760939b01b9dab28c1bf7d4102b623147a9a2975088f5b5936c02",
+      "proposal_sha256": "fe9a0d05b0110725e45f862e15eeaceaab7040c693d331a9bb8dd24653acc50f",
+      "engine_go": false,
+      "prepared_candidate_at_review": "NOT_CREATED_AT_PROPOSAL_REVIEW_TIME"
+    },
+    "source_closure": {
+      "status": "PASS_PREPARE_MAY_PROCEED",
+      "receipt": "execution-scratch/w21-initial-native-w21r17-plan-20261001/prepare-proposal-s18-001/authorized-execution-001/source-closure-attempt001/receipt.json",
+      "sha256": "26a63035d16a7d05abfce402e8d8c7770f5ebe189435217f090c03a910b0930d"
+    },
+    "prepare": {
+      "status": "PREPARED_ONLY_IDENTIFIERS_CAPTURED_READBACK_NOT_AUTHORIZED_AT_RECEIPT",
+      "receipt": "execution-scratch/w21-initial-native-w21r17-plan-20261001/prepare-proposal-s18-001/authorized-execution-001/prepare-attempt001/receipt.json",
+      "sha256": "42390d3fa80648a808c549e68b1a9b03d0b509fd1445ff144bfa79b9ebc5d01c"
+    },
+    "freeze": {
+      "canonical_sha256": "42bc3a7941b19aa1cb48401fbe0b772377af9bb934cd01cacf9ca5bacd418621",
+      "raw_sha256": "43a71615785d938d9bddf1dda78560057c5e946663a2cf0c8f34cee031704bb1",
+      "raw_bytes": 66530,
+      "state_raw_sha256": "4d03fb95262bf3beec2b87803eb96b56d93dc2198ab57c0bfa68f134957dfe3c",
+      "state_raw_bytes": 1180,
+      "freeze_state_raw_readback": "PASS_ROOT_REVIEWED_RAW_BASE64_REMOTE_CANONICAL_MATCH",
+      "isolation_absence_verification": "PASS_ROOT_REVIEWED_ABSENT_NONREPARSE"
+    },
+    "readback_validation": {
+      "status": "PASS_ROOT_REVIEWED_METADATA_ONLY",
+      "receipt": "execution-scratch/w21-initial-native-w21r17-plan-20261001/prepare-proposal-s18-001/authorized-execution-001/readback-attempt001/receipt.json",
+      "receipt_sha256": "8d4206c2a377ec15a9c37f69ac25ca47b3afb9b358332951a5bfb433e46c54be",
+      "ssh_exit_code": 0,
+      "readback_count": 1,
+      "stdout_bytes": 125702,
+      "stdout_sha256": "c94d87521bdcd9c385e274c99435f0ea825f714c7947bb36852457687a74b674",
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "raw_base64_remote_and_canonical_validation": "PASS_ROOT_REVIEWED"
+    },
+    "root_review": {
+      "status": "PASS_METADATA_PREPARED_CANDIDATE_ONLY",
+      "path": "execution-scratch/w21-initial-native-w21r17-plan-20261001/main-s18-prepared-candidate-review001.json",
+      "sha256": "c5c22b7b2b807a09cd09561fc626673c4b9e1ba462d96363926357a8c13bf4af",
+      "canonical_raw_state_and_receipt_match": "PASS",
+      "fresh_uuid_count": 32,
+      "fresh_uuid_disjoint_from_r17": true,
+      "freeze_change_summary": "15 fresh path/id/time/discovery fields only; all other freeze values unchanged",
+      "isolation_and_directory_checks": "isolation receipt and server-home leaf absent/non-reparse; run root has 4 entries, home parent empty, all ancestors checked",
+      "engine_go": "NOT_ISSUED",
+      "native_acceptance": "NOT_RUN",
+      "scientific_acceptance": "NOT_RUN",
+      "full_metadata_admission": "PRIOR_R17_FAIL_NOT_WAIVED",
+      "native_metadata_admission": "UNVERIFIED_DISCOVERY_SCOPE",
+      "metadata_row_cap": 128
+    },
+    "prepared_state": {
+      "status": "PREPARED",
+      "history": [],
+      "job_ids": [],
+      "actual_and_possible_counters": {
+        "server_births": 0,
+        "worker_births": 0,
+        "dispatches": 0,
+        "read_calls": 0
+      }
+    },
+    "engine_go": "NOT_ISSUED",
+    "native_execute": "NOT_RUN_NO_ENGINE_GO",
+    "scientific_acceptance": "NOT_RUN",
+    "overall_w21": "PARTIAL",
+    "master_goal": "ACTIVE_THROUGH_W26",
+    "current_next_action": "Current s18 run w21-64-20260930T221921Z-48908cfd remains PREPARED_ONLY; its raw freeze/state readback and isolation-absence verification passed root review at metadata scope only. Next, prepare the exact initial-stage execute proposal locally for root review. Fresh five actual pre-execute read-only guards, engine GO, native dispatch, and scientific acceptance remain NOT_RUN/NOT_ISSUED; execution requires separate exact authorization after proposal and guard review. Preserve the 128-row hard cap and full-metadata FAIL. Do not replay r17 or resume/replay the original r15/0b5 and r16 UNKNOWN attempts. W22 remains conditional on actual Windows 6.4 native initial-stage acceptance on a reviewed fixed candidate. W21 remains PARTIAL and the MASTER W01-W26 goal remains ACTIVE through W26.",
+    "next_gate": {
+      "exact_execute_proposal": "NEXT_LOCAL_PREPARATION_FOR_ROOT_REVIEW",
+      "five_fresh_actual_preexecute_guards": "NOT_RUN",
+      "separate_engine_go": "NOT_ISSUED",
+      "native_dispatch": "NOT_RUN"
+    }
+  },
+  "historical_native_preparation_pointer": "current_native_preparation_20261001_r17",
+  "publication_record": {
+    "status": "PUSH_SUCCEEDED_FULL_SHA_VERIFIED; PRIOR_AUTO_REVIEW_REJECTIONS_PRESERVED_HISTORICAL",
+    "prior_auto_review_rejections": {
+      "status": "HISTORICAL; later direct human approval authorized this exact six-commit publication",
+      "receipts": [
+        "execution-scratch/w21-initial-native-w21r15/publication-auto-review-rejection-001.json",
+        "execution-scratch/w21-initial-native-w21r15/publication-auto-review-rejection-002.json"
+      ]
+    },
+    "direct_human_approval": "APPROVED_EXACT_SIX_COMMITS",
+    "base_head": "4a37191349674badf305dccddeec0f3008522eeb",
+    "first_approved_commit": "37e4230ad710e56805bf561a9d1c24f9f16c4a52",
+    "published_head": "fbf672f140a78bac3a8652832623c28435f855e3",
+    "destination": "https://github.com/Everwalker/comsol-mcp.git refs/heads/main",
+    "commit_count": 6,
+    "committed_path_count": 18,
+    "payload_review": {
+      "status": "PASS_READ_ONLY_EXACT_COMMITTED_PAYLOAD_REVIEW",
+      "path": "execution-scratch/w21-initial-native-w21r17-plan-20261001/publication-six-commits-review001/publication_payload_review.json",
+      "sha256": "97b376da24742fde038093b986f0af782dc4e6511170fddcb4ff162cae5c8b0f"
+    },
+    "push": {
+      "command": "git push origin fbf672f140a78bac3a8652832623c28435f855e3:refs/heads/main",
+      "exit_code": 0,
+      "completed_utc": "2026-09-30T22:36:13.919574Z",
+      "stdout_bytes": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_bytes": 118,
+      "stderr_sha256": "ed52e22ff137bd67ce4194ee22f20a82ab2b631e0d18492a7df824a1a02e9950",
+      "capture_directory": "execution-scratch/publication-push-six-001"
+    },
+    "remote_verification": {
+      "command": "git ls-remote origin refs/heads/main",
+      "exit_code": 0,
+      "completed_utc": "2026-09-30T22:36:34.990668Z",
+      "exact_full_sha": "fbf672f140a78bac3a8652832623c28435f855e3",
+      "stdout_bytes": 57,
+      "stdout_sha256": "f6fd2f276835d2bdeebe9dcb51447676fa5119a4b007ab1e0366e8feb1e3bc0e",
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "capture_directory": "execution-scratch/publication-push-six-001"
+    },
+    "additional_pushes": 0,
+    "additional_fetches": 0,
+    "source_commits": {
+      "base_source_4760b4": "PUBLISHED_AS_ANCESTOR_OF_VERIFIED_MAIN_HEAD",
+      "candidate_source_bbc4a6": "PUBLISHED_AS_ANCESTOR_OF_VERIFIED_MAIN_HEAD"
+    },
+    "working_tree_and_untracked": "Excluded from the exact-SHA push; remaining working-tree/untracked changes, including this status sync, are unpublished."
+  }
 }
