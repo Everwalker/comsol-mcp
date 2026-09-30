@@ -1,0 +1,246 @@
+{
+  "schema": "comsol-mcp-w22-original-requirement-mapping/1",
+  "mapping_status": "READY_FOR_MAIN_INDEX_REVIEW",
+  "claim_boundary": "This maps the recorded historical W22 scoped approval to original requirements. It is not a new scientific review, native run, or acceptance of current HEAD.",
+  "current_repository_head": "0b5d9efbb517cb4365227ef82bd932b97a4b0b1e",
+  "frozen_original_requirements": {
+    "source_commit": "2839e17738838441985ccb7a08a835bd654fe3e1",
+    "implementation_plan": "docs/full_project_execution/contract/04_IMPLEMENTATION_PLAN.md",
+    "acceptance_markdown": "docs/full_project_execution/contract/03_ACCEPTANCE.md",
+    "acceptance_json_sha256": "854c0b52bcc3928434aded04520879c83af4f4fb46019b8096f62b8f0bb3c6c2",
+    "inherited_contract": "docs/full_project_execution/inherited_contracts/W22_CONTRACT.md and .json (Windows COMSOL 6.3/6.4; D1-D6).",
+    "original_scope": {
+      "T016": "ALL targets; import non-axisymmetric Q(x,y) with off-axis hotspot, compare same-radius/different-angle samples; preserve angular information; bind source hash, extrapolation, and units; retain input, sample table, and actual result plot.",
+      "T045": "ALL_MODULES; parameterized ring array to non-axisymmetric interpolated heat flux, actual materials/cooling/solve, distance scan and power optimization, with figures/data. Power budget and ROI metrics must be independently recomputable; report infeasible targets honestly; retain MPH, recipe, power/temperature table, logs, and acceptance record."
+    },
+    "requirement_ids": [
+      "W22",
+      "T016",
+      "T045"
+    ]
+  },
+  "historical_approval_identity": {
+    "decision": "W22_SCOPED_APPROVED",
+    "reviewer_identity": "/root/reviewer (host-created independent reviewer context, as recorded in review/W22_FINAL_REVIEW.md)",
+    "approval_record": "docs/handoff_w22_vcsel/review/W22_FINAL_REVIEW.md",
+    "approval_record_sha256": "fef640ada7b52ab0ce9d9aab7864905867fc0db3468eee72f6f80fca89264eba",
+    "result_record": "docs/handoff_w22_vcsel/W22_RESULT.json",
+    "result_record_sha256": "d5fde2023dc4b8abe5143a9dad53fbb0e0f03eea2905fd7a46a2468e47db6b5b",
+    "approved_production_source_commit_recorded": "44b8e1931b47da564edb600d2127b28859d07b36",
+    "approved_source_commit_available_in_current_git_object_store": false,
+    "current_candidate_is_equivalent_to_approved_source": "UNVERIFIED; do not inherit historical PASS to current HEAD 0b5d9ef.",
+    "final_wheel_sha256_recorded_and_bound_by_both_main_delivery_package_origin_receipts": "c1d82034e19e1f0fd897f3ec76911a3ccad229ed35f613148633bfb56f923ae6",
+    "reported_source_snapshot_sha256": "01c574b0482c7b6039c04f48ec0bce4a2110ef1f344269a0a7dce3c12164f96f",
+    "reported_source_snapshot_path": "../delivery/W22_SOURCE_44b8e19.tar.gz (relative to docs/handoff_w22_vcsel)",
+    "source_snapshot_file_now_located": false,
+    "source_snapshot_file_status": "UNVERIFIED; the recorded archive path was not found in the current SSD project tree. Reviewer-recorded hash is preserved, not freshly revalidated here.",
+    "frozen_benchmark": "docs/handoff_w22_vcsel/benchmark_spec.json",
+    "benchmark_sha256": "d94322296feff1cd7678e345bf798616a704c638c8c108d3c8f78f4128f4b1fe",
+    "w22_scope": "D1-D6; stop before W23. Windows 6.3 and 6.4 only. Mac native W22, GUI, cloud Host, and measured device calibration are not claimed."
+  },
+  "evidence_identity": {
+    "scope_targets": [
+      {
+        "target": "Windows COMSOL 6.3",
+        "build": 290,
+        "main_run_ids": [
+          "full63_01",
+          "controls63_01",
+          "delivery63_01"
+        ],
+        "reviewer_fresh_run": "reviewer63_02",
+        "reviewer_reopen_run": "reviewer_reopen63_01",
+        "final_delivery_summary_sha256": "1d004be079ec1faf161d2d2a2ec3b1b490dfbee044600841fc97f992d3da6f2f",
+        "package_origin_sha256": "0325e60a9af2bc1cf56434329580abb188e5135d62d26fee730cb3e82f286837",
+        "raw_transcripts": {
+          "full63_01": {
+            "path": "evidence/w22_vcsel/windows/full63_01/transcript.jsonl",
+            "sha256": "5ac5c042f92e6ebec9b9ec61a9319ddea569505138687228a5e7ff2bceb001a9",
+            "matches_combined_review": true
+          },
+          "controls63_01": {
+            "path": "evidence/w22_vcsel/windows/controls63_01/transcript.jsonl",
+            "sha256": "5a10bddedbb2369e3ff4ff6660decc37a3b4a880211bfbae6801ad5714c3866d",
+            "matches_combined_review": true
+          },
+          "delivery63_01": {
+            "path": "evidence/w22_vcsel/windows/delivery63_01/transcript.jsonl",
+            "sha256": "259ef5a5733dd832d46eb059fb6b036f564534514c00d273cc54346eec2b39c9",
+            "matches_combined_review": true
+          }
+        },
+        "saved_model_sha256": "8640ca262fdabc4a63f1359139d36afe25f6215b141766a1c2cad3930b3e796d",
+        "source_plot_sha256": "4908b92185ac6246bcaac3fd61b36d3c3924350c0a6a38397ace3b5eb64d7669",
+        "temperature_plot_sha256": "a5015dbee78964e6f028ba873a42344b0ed4a3b242c7121ce3f98155256cb3da"
+      },
+      {
+        "target": "Windows COMSOL 6.4",
+        "build": 293,
+        "main_run_ids": [
+          "full64_01",
+          "controls64_01",
+          "delivery64_01"
+        ],
+        "reviewer_fresh_run": "reviewer64_02",
+        "reviewer_reopen_run": "reviewer_reopen64_01",
+        "final_delivery_summary_sha256": "c808249a3fb5ac01cac6b69d7e93d62a9e58c4e58c3b8e621ccef6cb7bf71835",
+        "package_origin_sha256": "0325e60a9af2bc1cf56434329580abb188e5135d62d26fee730cb3e82f286837",
+        "raw_transcripts": {
+          "full64_01": {
+            "path": "evidence/w22_vcsel/windows/full64_01/transcript.jsonl",
+            "sha256": "e672754fee474ec962782d8ccc7591e8793c68aa5e7981be4a3ffc95b209041c",
+            "matches_combined_review": true
+          },
+          "controls64_01": {
+            "path": "evidence/w22_vcsel/windows/controls64_01/transcript.jsonl",
+            "sha256": "dfe85d4c77ba1872b1799daea3ebb960a2c766ba35b629234ace1d215461dd4c",
+            "matches_combined_review": true
+          },
+          "delivery64_01": {
+            "path": "evidence/w22_vcsel/windows/delivery64_01/transcript.jsonl",
+            "sha256": "e1075b6cf8020e661fc2d4368907f2faa551a05326864c9f275fff01e74ecec1",
+            "matches_combined_review": true
+          }
+        },
+        "saved_model_sha256": "d62f90b1dd46d8144bc312985892317d7e03a75e7ac7039717253b7fcb3a61fb",
+        "source_plot_sha256": "a83fd50dc04cab8a0a809f6ab6097df61e234be4453de786db87a85611ee837c",
+        "temperature_plot_sha256": "e77815e75341804381970df49a996da088e019b0dcb9d7afd37edb7b9cde2f9e"
+      }
+    ],
+    "shared_source_manifest_path": "evidence/w22_vcsel/windows/delivery{63,64}_01/project/source/manifest.json",
+    "shared_source_manifest_sha256": "9fd3a145c9ebb46072edc396ced3cc420fa7fe14ac6d6289a76c40adb5c6bb12",
+    "review_acceptance_identity": {
+      "per_version_combined_checks_reported": 886,
+      "per_version_fresh_reopen_checks_reported": 122,
+      "per_version_combined_review": [
+        "docs/handoff_w22_vcsel/review/COMBINED63_REVIEW.json",
+        "docs/handoff_w22_vcsel/review/COMBINED64_REVIEW.json"
+      ],
+      "per_version_fresh_reopen_review": [
+        "docs/handoff_w22_vcsel/review/FRESH_REOPEN63_REVIEW.json",
+        "docs/handoff_w22_vcsel/review/FRESH_REOPEN64_REVIEW.json"
+      ],
+      "mapping_recheck_scope": "The review records and counts were read; this mapping did not rerun checks or re-audit all 886/122 assertions."
+    }
+  },
+  "requirement_mappings": [
+    {
+      "requirement": "T016 — static 2D spot integrity / W22 D1 and D5",
+      "scoped_target_status": "PASS_RECORDED_BY_INDEPENDENT_W22_REVIEW for Windows COMSOL 6.3 and 6.4 only",
+      "original_test_status": "PARTIAL: frozen T016 matrix is ALL; no Mac native W22 is claimed. Current effective scope marks macOS arm64/Intel COMSOL 6.3 USER_REQUESTED_SKIP (not PASS/N/A); both Mac 6.4 targets remain UNVERIFIED.",
+      "evidence_range": [
+        "evidence/w22_vcsel/windows/delivery63_01/",
+        "evidence/w22_vcsel/windows/delivery64_01/",
+        "evidence/w22_vcsel/windows/reviewer63_02/",
+        "evidence/w22_vcsel/windows/reviewer64_02/",
+        "docs/handoff_w22_vcsel/review/COMBINED{63,64}_REVIEW.json",
+        "docs/handoff_w22_vcsel/review/FRESH_REOPEN{63,64}_REVIEW.json"
+      ],
+      "source_and_parameters": "Shared delivered basis manifest SHA-256 9fd3a145c9ebb46072edc396ced3cc420fa7fe14ac6d6289a76c40adb5c6bb12; 19 emitter positions with 18 active, one disabled outer-ring position; normalized 2D Gaussian synthetic source, sigma0=2 mm, slope=0.05, absorption=0.6, 101x101 grid, L=10/20/30 mm; source and mm-equivalent angular probes and zero extrapolation are reported in the independent review.",
+      "acceptance_identity": "benchmark d9432229…f1fe; approved source commit recorded as 44b8e1931b47da564edb600d2127b28859d07b36; final wheel c1d82034…f923ae6; independent reviewer /root/reviewer.",
+      "remaining": "Physical calibration is UNVERIFIED; Mac target evidence absent. Source archive bytes/commit object cannot be rebound from current local tree."
+    },
+    {
+      "requirement": "W22 original: parameterized array/ring power (T045 / D1)",
+      "scoped_target_status": "PASS_RECORDED_BY_INDEPENDENT_W22_REVIEW for Windows COMSOL 6.3 and 6.4 only",
+      "original_test_status": "PARTIAL at the broader T045 ALL_MODULES scope; approval covers the frozen synthetic thermal benchmark and two Windows versions, not all module/platform combinations or measured VCSEL data.",
+      "evidence_range": [
+        "evidence/w22_vcsel/windows/delivery{63,64}_01/project/source/manifest.json",
+        "evidence/w22_vcsel/windows/full{63,64}_01/",
+        "evidence/w22_vcsel/windows/delivery{63,64}_01/summary.json"
+      ],
+      "source_and_parameters": "One center (radius 0), six at radius 6 mm, twelve positions at radius 12 mm with one disabled; active group powers are parameterized. Frozen search varied center p0={0.6,0.8,1.0} W and ring1 p1={0.65,0.75,0.85} W; outer active emitter power was derived from fixed 12.45 W total. Input is explicitly synthetic, not measured-device data.",
+      "acceptance_identity": "Same benchmark, source commit record, wheel, target builds, and reviewer identity as the historical approval identity above.",
+      "remaining": "Do not present synthetic geometry, absorption, kernel, or power settings as calibrated physical properties."
+    },
+    {
+      "requirement": "W22 original: distance scan and limited power optimization (T045 / D3-D4)",
+      "scoped_target_status": "PASS_RECORDED_BY_INDEPENDENT_W22_REVIEW for Windows COMSOL 6.3 and 6.4 only",
+      "original_test_status": "PARTIAL for broader ALL_MODULES/platform coverage. This is the best feasible candidate among the finite frozen 27; it is not a global optimum.",
+      "evidence_range": [
+        "evidence/w22_vcsel/windows/full{63,64}_01/",
+        "evidence/w22_vcsel/windows/controls{63,64}_01/",
+        "evidence/w22_vcsel/windows/delivery{63,64}_01/",
+        "evidence/w22_vcsel/windows/reviewer{63,64}_02/",
+        "docs/handoff_w22_vcsel/review/COMBINED{63,64}_REVIEW.json"
+      ],
+      "source_and_parameters": "L candidates 10/20/30 mm; 27 unique candidates per version; total emitted power 12.45 W; each active emitter bounded 0–1 W; minimum ROI mean rise 3 K; objective is area-weighted ROI std(deltaT)/mean(deltaT) at 60 s. Selected L=30 mm, center=0.6 W, first ring=0.65 W each, outer active ring=0.7227272727 W each.",
+      "acceptance_identity": "Historical combined reviews report 886 checks/version. Full search source transcripts match review-pinned hashes. Original full runs and controls remain FAILED; later cache controls and delivery evidence are additive and preserve those failures.",
+      "remaining": "No global-optimum claim. The original failure records must remain visible alongside the approved composite evidence."
+    },
+    {
+      "requirement": "W22 original: material, cooling and thermal/power budget (T045 / D2)",
+      "scoped_target_status": "PASS_RECORDED_BY_INDEPENDENT_W22_REVIEW for the frozen modeled physics on Windows COMSOL 6.3 and 6.4",
+      "original_test_status": "PARTIAL at the broad ALL_MODULES and physical-calibration scope; synthetic benchmark only, measured-device/wafer validation UNVERIFIED.",
+      "evidence_range": [
+        "docs/handoff_w22_vcsel/benchmark_spec.json",
+        "evidence/w22_vcsel/windows/delivery{63,64}_01/summary.json",
+        "evidence/w22_vcsel/windows/delivery{63,64}_01/project/w22_final.mph",
+        "evidence/w22_vcsel/windows/delivery{63,64}_01/project/{sourceplot,temperatureplot}.png",
+        "docs/handoff_w22_vcsel/review/W22_FINAL_REVIEW.md"
+      ],
+      "source_and_parameters": "Square slab 40x40x1 mm; k=20 W/(m K), rho=3000 kg/m3, Cp=700 J/(kg K); T0=Tamb=300 K; top positive inward alpha*incident W/m2 with alpha=0.6; bottom h=500 W/(m2 K); insulated sides; circular ROI radius 15 mm; outputs at 0/1/5/20/60 s. At the selected 12.45 W candidate the report records slab incident 12.407610 W, slab absorbed 7.444566 W, ROI absorbed 6.330966 W, and 60 s ROI mean approximately 313.510892 K with std approximately 2.582998 K.",
+      "acceptance_identity": "Independent review records actual COMSOL integrals and native readback, compares each version to a frozen 3D spectral reference, and reports thermal/outgoing/storage terms separately.",
+      "remaining": "Synthetic inputs and the assumed alpha/material/cooling are not a physical calibration."
+    },
+    {
+      "requirement": "T016 and T045 original acceptance status",
+      "scoped_target_status": "W22 D1-D6 historical decision is W22_SCOPED_APPROVED for Windows COMSOL 6.3 build 290 and 6.4 build 293.",
+      "original_test_status": "PARTIAL overall: T016's frozen matrix is ALL and T045's is ALL_MODULES. The inherited W22 contract and approved review are Windows-only; Mac native W22 is not claimed. Mac 6.3 arm64/x86_64 are USER_REQUESTED_SKIP, not PASS or N/A; Mac 6.4 remains UNVERIFIED.",
+      "evidence_range": [
+        "docs/full_project_execution/contract/03_ACCEPTANCE.md#T016-and-T045",
+        "docs/full_project_execution/inherited_contracts/W22_CONTRACT.md",
+        "docs/handoff_w22_vcsel/W22_RESULT.json",
+        "docs/handoff_w22_vcsel/review/W22_FINAL_REVIEW.md"
+      ],
+      "acceptance_identity": "W22_RESULT records D1-D6 PASS_BOTH_VERSIONS_INDEPENDENTLY_APPROVED; W22_FINAL_REVIEW is the independent approval. These scoped statuses may populate W22 evidence pointers but do not close the broader T016/T045 matrices or revalidate current HEAD.",
+      "remaining": "Main may map W22 to the historical scoped approval while retaining broader T016/T045 status PARTIAL and the explicit Mac/physical/source-binding gaps."
+    }
+  ],
+  "per_deliverable_historical_decision": {
+    "reviewed_status": "Each D1-D6 is reported PASS for both Windows versions in review/W22_FINAL_REVIEW.md and W22_RESULT.json; this mapping records that decision without new scientific revalidation.",
+    "D1": "PASS_RECORDED_SCOPED",
+    "D2": "PASS_RECORDED_SCOPED",
+    "D3": "PASS_RECORDED_SCOPED",
+    "D4": "PASS_RECORDED_SCOPED",
+    "D5": "PASS_RECORDED_SCOPED",
+    "D6": "PASS_RECORDED_SCOPED"
+  },
+  "preserved_failures_and_unknowns": [
+    "full63_01/full64_01 completed 27 cases and remain FAILED at the same-source cache reuse assertion; their raw transcripts were hash-matched to independent combined review receipts.",
+    "controls63_01/controls64_01 remain FAILED at output preparation after cache/source mutation controls; delivery runs complete the output/save path. No failed run is overwritten or promoted.",
+    "Mac native W22 is not claimed; Mac COMSOL 6.3 arm64 and Intel are explicitly USER_REQUESTED_SKIP in effective scope, not PASS; Mac 6.4 remains UNVERIFIED.",
+    "GUI and cloud Host acceptance are UNVERIFIED.",
+    "Physical calibration against measured device/wafer inputs is UNVERIFIED.",
+    "Historical source commit object 44b8e19 and the report-referenced source archive are unavailable in the current local source store; historical source/wheel identity is reviewer-recorded but not rebound to current HEAD 0b5d9ef."
+  ],
+  "recommended_task_index_mapping_for_main_review": {
+    "status": "PRIOR_W22_SCOPED_APPROVAL_MAPPED; ORIGINAL_T016_T045_SCOPE_PARTIAL",
+    "implementation_paths": [
+      "comsol_mcp/_vcsel_source.py (present at current HEAD; not proven byte-identical to historical approved commit)",
+      "docs/handoff_w22_vcsel/"
+    ],
+    "evidence": [
+      "docs/handoff_w22_vcsel/W22_RESULT.json",
+      "docs/handoff_w22_vcsel/review/W22_FINAL_REVIEW.md",
+      "docs/handoff_w22_vcsel/review/COMBINED63_REVIEW.json",
+      "docs/handoff_w22_vcsel/review/COMBINED64_REVIEW.json",
+      "docs/handoff_w22_vcsel/review/FRESH_REOPEN63_REVIEW.json",
+      "docs/handoff_w22_vcsel/review/FRESH_REOPEN64_REVIEW.json",
+      "evidence/w22_vcsel/windows/{full,controls,delivery,reviewer,reviewer_reopen}{63,64}_*/"
+    ],
+    "blockers_or_unknowns": [
+      "historical source archive/current source rebind",
+      "T016 ALL and T045 ALL_MODULES outside approved Windows 6.3/6.4 scope",
+      "Mac native W22",
+      "physical calibration"
+    ]
+  },
+  "task_record_before_mapping": {
+    "path": "docs/full_project_execution/state/TASKS.json",
+    "id": "W22",
+    "status": "PRIOR_SCOPED_APPROVAL_TO_MAP",
+    "implementation_paths": [],
+    "evidence": []
+  }
+}

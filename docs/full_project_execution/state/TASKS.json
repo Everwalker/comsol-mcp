@@ -590,8 +590,8 @@
         "4c2cbc9 Windows6.4 targeted info/Shape native capture completed:12 actions successful,0solves,ownedcleanup complete. Shape table0rows;7field declarations includeT but activeDOF/history/unit not established. CapabilityPARTIAL/admissionUNVERIFIED;6.3 duplicate empty-table captureNOT_RUN per predeclared condition. Next frozen no-unit-override T/T-per-K/1 control read; no test cell promoted.",
         "Initial-stage integration scoped software accepted on 24-file fingerprint ffdc8c25e4528c2cb42c358a6e1ee4e89898fb172a8891dbee3bcbc86766442a: 566 unique cases = 565 PASS + one Windows owner-semantics SKIP, 0 failures/errors. Main R1/R2/R3/R4 findings repaired, producer positive and 11 tamper cases verified. Fresh Windows initial-stage native NOT_RUN; successor mapping/history and T021/T047 remain open."
       ],
-      "current_stage": "Initial-stage integration scoped software accepted: 565 PASS, one Windows-conditional SKIP, no failures/errors; fresh native NOT_RUN.",
-      "next_action": "Synchronize the accepted scoped software candidate to GitHub, then package and prepare a fresh source-bound Windows 6.4 initial-stage freeze; main-review it before executing within the existing budget. Follow with 6.3 only after the actual successful same-profile 6.4 receipt. Continue W21 successor transfer/history, W23-W26 and final independent review. Preserve all historical failures and UNKNOWN operations; no replay.",
+      "current_stage": "Initial-stage scoped software accepted and synced0b5d9ef; local package and independent planning/index reviews complete. Exact SCP approval pending; new native upload/prepare/compile/execute NOT_RUN.",
+      "next_action": "Await the direct exact-payload SCP approval requested after auto-review rejection; upload/prepare/remotecompile/execute remain NOT_RUN. Local successor API planning, W22 requirement mapping, W24 index correction and W26 readiness review are recorded; do not repeat these audits. Fixed native software candidate remains 0b5d9efbb517cb4365227ef82bd932b97a4b0b1e with unchanged 107-source closure and six-file payload. After approval, recheck payload hashes and remote task root, SCP upload, verify/extract/compile/prepare Windows6.4 only, then main-review the exact freeze before bounded execution. Windows6.3 requires the actual successful same-profile6.4 receipt. Continue original W21-W26 and final independent review, preserving Mac6.3 user skips and historical failures.",
       "automatic_unit_controls_checkpoint": "docs/full_project_execution/project_session/STAGE_BACKEND_SOFTWARE_CHECKPOINT.json#automatic_unit_controls_producer_20260930",
       "initial_stage_integration_checkpoint": "docs/full_project_execution/project_session/STAGE_BACKEND_SOFTWARE_CHECKPOINT.json#initial_stage_integration_20260930"
     },
@@ -610,11 +610,24 @@
       ],
       "original_delivery": "静态非轴对称热源、阵列/环功率、距离扫描、热预算。",
       "source_row": "| W22 VCSEL领域验收包 | G5 | W20, W21, W18 | T045, T016 | 静态非轴对称热源、阵列/环功率、距离扫描、热预算。 |",
-      "status": "PRIOR_SCOPED_APPROVAL_TO_MAP",
-      "implementation_paths": [],
-      "evidence": [],
+      "status": "PRIOR_SCOPED_APPROVAL_MAPPED_ORIGINAL_SCOPE_PARTIAL",
+      "implementation_paths": [
+        "comsol_mcp/_vcsel_source.py",
+        "docs/handoff_w22_vcsel/"
+      ],
+      "evidence": [
+        "docs/handoff_w22_vcsel/W22_RESULT.json",
+        "docs/handoff_w22_vcsel/review/W22_FINAL_REVIEW.md",
+        "docs/handoff_w22_vcsel/review/COMBINED63_REVIEW.json",
+        "docs/handoff_w22_vcsel/review/COMBINED64_REVIEW.json",
+        "docs/handoff_w22_vcsel/review/FRESH_REOPEN63_REVIEW.json",
+        "docs/handoff_w22_vcsel/review/FRESH_REOPEN64_REVIEW.json",
+        "docs/full_project_execution/w22/W22_ORIGINAL_REQUIREMENT_MAPPING.json",
+        "docs/full_project_execution/w22/W22_ORIGINAL_REQUIREMENT_MAPPING.md"
+      ],
       "blockers": [],
-      "note": "Retain scoped prior approval. Map exact target/evidence applicability; do not blanket-pass original requirements."
+      "note": "Historical independent W22_SCOPED_APPROVED maps D1-D6 to Windows COMSOL6.3 build290 and6.4 build293: static non-axisymmetric source, array/ring power,27-candidate distance/power search, native thermal budget and fresh/reopen delivery. Historical source44b8e193 and wheel c1d82034 remain scope identities; equivalence to current source is UNVERIFIED. Original T016 ALL/T045 ALL_MODULES remain PARTIAL; Mac6.3 is USER_REQUESTED_SKIP, Mac6.4 native W22 and measured-device physical calibration UNVERIFIED. Failed full/controls records are preserved.",
+      "next_action": "Preserve the approved historical benchmark and mapped evidence; bind current source and affected checks before any fresh native W22 claim. Complete remaining permitted original matrix coverage and calibration evidence where applicable; no blanket approval inheritance."
     },
     {
       "id": "W23",
@@ -742,7 +755,12 @@
         "tools/w24_static_shape_sensitivity.py",
         "tests/test_run_native_w24_static_shape_science.py",
         "tests/test_w24_static_shape_pair_comparison.py",
-        "tests/test_w24_static_shape_sensitivity.py"
+        "tests/test_w24_static_shape_sensitivity.py",
+        "tools/run_native_w24_physical_controls.py",
+        "tests/test_w24_physical_controls.py",
+        "comsol_mcp/_g3_w20_validation.py",
+        "tests/test_g3_7_w20_validation.py",
+        "tools/test_efficiency_t058_baseline.json"
       ],
       "evidence": [
         "docs/full_project_execution/w24/evidence/setup_only_candidate_20260927T0117Z/offline_checks.json",
@@ -775,7 +793,10 @@
         "docs/full_project_execution/w24/CURE_V2_CAPTURE_SOFTWARE_CHECKPOINT.json",
         "docs/full_project_execution/w24/SAVED_PRODUCER_CHAIN_CHECKPOINT.json",
         "docs/full_project_execution/w24/FULL_XMESH_STATE_SOFTWARE_CHECKPOINT.json",
-        "docs/full_project_execution/w24/EQUATION_VIEW_SOFTWARE_CHECKPOINT.json"
+        "docs/full_project_execution/w24/EQUATION_VIEW_SOFTWARE_CHECKPOINT.json",
+        "docs/full_project_execution/w24/SENSITIVITY_SOFTWARE_CHECKPOINT.json",
+        "docs/full_project_execution/w24/PHYSICAL_CONTROLS_SOFTWARE_CHECKPOINT.json",
+        "docs/full_project_execution/w24/T058_ASSUMPTION_REPORT_CHECKPOINT.json"
       ],
       "blockers": [
         "The W24 0841Z setup-only attempt failed before engine/Worker birth at project.inspect; preserve its FAIL_OR_INCOMPLETE result and do not replay the stale candidate.",
@@ -785,7 +806,7 @@
         "Windows COMSOL 6.3 remains required and unassessed; only macOS COMSOL 6.3 arm64/x86_64 are USER_REQUESTED_SKIP.",
         "Stress component identity still requires complete native Equation View descriptions/units and both mechanics benchmarks; values or names alone are insufficient."
       ],
-      "note": "W24 PARTIAL: baseline admission/revision software78 isolated PASS, native/science NOT_RUN. Sensitivity14-solve matrix is plan-only; implement variants and retain full gel/UV/reference-state/viscoelastic scope.",
+      "note": "W24 PARTIAL. Accepted historical software checkpoints include 14-slot sensitivity, two-control physical campaign (271 regression PASS at its frozen candidate), and T058 assumption/provenance report (323 regression PASS at its frozen candidate). These overlapping counts are not additive and are not a fresh current-HEAD regression. T058 report presentation is implemented; original T047 full lifecycle/history and T058 sensitivity/calibration/physical validation remain incomplete. Native controls and full gel/UV/reference-state/viscoelastic/static-shape acceptance remain NOT_RUN/UNVERIFIED.",
       "execution_notes": [
         "0330Z native attempt: COMSOL 6.4.0.293 server PID 90771/port 63979 and one Worker PID 90848/port 63988; Python 3.14 lacked mcp during production ControlDaemon registry construction, before model setup. 0 solve submissions; exact cleanup and global quiescence verified.",
         "0346Z offline candidate adds exact Python interpreter/distribution inventory and a pre-birth production no-engine gate. Actual pip check passed; collect_legacy_registry and ControlDaemon construction/close passed; JDK11 compile and 37 focused tests passed. Software-only; no native result.",
@@ -801,7 +822,11 @@
         "Actual Study.run save producer receipt plus complete stdUV/stdBake/stdCool and Worker2 chain:142 isolated and142 latest-base integration tests PASS; Java compile PASS. Original false attribution rejected; native solve/reopen and scientific history remain NOT_RUN.",
         "V3 full-Xmesh state capture and immutable lineage authentication accepted for scoped software:141 isolated and141 main integration PASS; original nested-alias counterexample2 main PASS. Native branch identity/reference semantics and W24 science remain UNVERIFIED/NOT_RUN.",
         "Equation View raw-table capture and authenticated V3 association scoped software:149 isolated and149 main tests PASS;114 source fingerprints verified. Exact-cell associations preserve ambiguity; branch/reference semantics UNVERIFIED and native NOT_RUN."
-      ]
+      ],
+      "current_checkpoint": "docs/full_project_execution/w24/T058_ASSUMPTION_REPORT_CHECKPOINT.json",
+      "current_native_controls_checkpoint": "docs/full_project_execution/w24/PHYSICAL_CONTROLS_SOFTWARE_CHECKPOINT.json",
+      "next_action": "Reuse accepted software checkpoints; inspect actual native bindings before freezing permitted-host control/setup/science candidates. Do not repeat the completed T058 report implementation or restore stale setup candidates. Preserve Windows6.3 requirement and Mac6.3 USER_REQUESTED_SKIP; continue original W21-W26 scope.",
+      "historical_execution_notes_qualification": "Execution notes preserve observations from earlier candidates. Later canonical checkpoints supersede implementation TODOs only; failed/UNKNOWN native observations remain preserved and do not become PASS."
     },
     {
       "id": "W25",
