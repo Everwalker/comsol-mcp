@@ -2,7 +2,7 @@
   "schema_version": 1,
   "phase": "W21_INITIAL_NATIVE_REPAIRED64_PREPARE_ONLY",
   "task": "W01_W26_CONTINUOUS_IMPLEMENTATION",
-  "status": "CURRENT_FIXED_SOFTWARE_CANDIDATE_20261001_PASS_SOFTWARE_ONLY; MAIN_AND_INDEPENDENT_REVIEW_PASS; NEW_NATIVE_AFTER_FIX_NOT_RUN; PREPARE_BUNDLE_AND_READ_ONLY_GUARD_PROPOSAL_FOR_ROOT_REVIEW; R16_ATTEMPT002_002_CLIENT_UNKNOWN_TIMEOUT_IMMUTABLE_NO_RESUME_OR_REPLAY; ORIGINAL_R15_UNKNOWN_NONREPLAYABLE; REPORT003_RECONCILED; CLEANUP_UNVERIFIED; W21_AND_W01_W26_ACTIVE; PUBLICATION_COMMIT37_DIRECT_AUTHORIZATION_PENDING; OVERALL_PARTIAL",
+  "status": "CURRENT_FIXED_SOFTWARE_CANDIDATE_PASS_SOFTWARE_ONLY; R17_PREPARED_ONLY_PASS_ROOT_REVIEWED; OFFLINE_COMPILE_PASS; NATIVE_EXECUTE_NOT_RUN; SCIENCE_NOT_RUN; NEXT_FRESH_PREEXEC_GUARD_AND_SINGLE_CAPTURE_PROPOSAL_ROOT_REVIEW_ONLY_NO_GO; R15_R16_UNKNOWN_NONREPLAYABLE; CLEANUP_UNVERIFIED; W21_PARTIAL; MASTER_GOAL_ACTIVE_W26; PUBLICATION_COMMIT37_DIRECT_AUTHORIZATION_PENDING; OVERALL_PARTIAL",
   "candidate_source": "4760b4a223017a38ef1c4a52f130433fd77c3c14",
   "completed_work": [
     "PIN source restoration completed and verified: 10832 files, zero missing LFS backing objects; repository HEAD matches pinned commit/tree.",
@@ -161,7 +161,7 @@
       "checkpoint": "docs/full_project_execution/project_session/STAGE_BACKEND_SOFTWARE_CHECKPOINT.json#managed_current_mesh_bridge_20260930"
     }
   ],
-  "next_action": "Prepare a new isolated Windows 6.4 native source bundle and read-only guard proposal for root review, bound to the accepted fixed candidate fingerprint. This is preparation only: no SCP/upload and no new COMSOL run now. After root review, the main Agent may authorize the exact scoped Windows 6.4 dispatch under the active project goal. W22 remains conditional on actual Windows 6.4 native initial-stage acceptance on the reviewed fixed candidate; software and fake controls do not satisfy that gate. Keep W21 and W01-W26 active. Publication commit37 remains blocked after the prior auto-review refusal pending direct informed authorization; do not push or bypass that review.",
+  "next_action": "Next local-only work is to prepare (not execute) fresh pre-execute read-only guard scripts and exactly one native-capture proposal bound to the prepared r17 freeze/state and fixed candidate for root review. Remote guard execution over SSH has NOT_RUN; there is no GO and no native execute authorization. Do not repeat remote readback, upload, or COMSOL execution before root review. W22 still requires actual Windows 6.4 native initial-stage acceptance on a reviewed fixed candidate. W21 remains PARTIAL and the MASTER W01-W26 goal remains ACTIVE through W26. Publication commit37 remains blocked after the prior auto-review refusal; do not push or bypass it.",
   "active_jobs": [],
   "blockers": [
     "W23 failed setup owned Server 75272 and daemon 75260 remain preserved: cleanup SIGTERM was rejected by automatic approval and explicit authorization is pending; no cleanup or relaunch authorized by elapsed time.",
@@ -190,7 +190,7 @@
     "native_solve_budget_remaining": 0,
     "evidence": "docs/full_project_execution/evidence/luna_process_reconciliation/mac_readonly_snapshot_20260926T2152Z.json"
   },
-  "updated_at": "2026-09-30T18:30:56Z",
+  "updated_at": "2026-09-30T20:05:25Z",
   "note": "Original scope remains through W26. User explicitly resumed after the test-efficiency analysis; implement efficiency improvements first. OpenViking task-detail retrieval was denied by auto-review because it would disclose internal roadmap identifiers externally; no workaround. Use current frozen workpack and read-only local memory only. Do not rerun bootstrap/init on resume. Source files now contain executor edits; do not rerun bootstrap/init. Git metadata is an APFS pointer managed by main agent; migration requires bundle/source transfer, not copying only the repository pointer. Git metadata migration is documented by evidence/git_metadata_relocation.json and owned by the main agent; do not copy the APFS git pointer to another machine without source bundle/archive. GUI permission boundary and checkpoint solution-scope caveat recorded. This executor has one W24 native setup-only failure with exact cleanup verified; the durable operation/job UNKNOWN records remain unchanged. No W24 solver submission occurred. Saved-MPH readback supplement uses separate time/evidence and zero study/solver calls; run08 remains FAIL_OR_INCOMPLETE. Root raw SQLite recomputation is linked under native_resume_saved_artifact_supplement.raw_recomputation_evidence; original run08 remains FAIL_OR_INCOMPLETE and no solve budget is restored. Latest checkpoint 2026-09-27T03:50:43Z: W24 0334Z setup run failed pre-model due Python 3.14 missing mcp, with exact cleanup; 0346Z candidate pins the validated 3.12.13 environment and passes a production no-engine registry/daemon preflight. Native setup remains pending root review; science implementation continues offline. Latest checkpoint 2026-09-27T09:09:28Z: W24 0841Z candidate was invoked once at 0857Z and failed before any engine/Worker birth because project.inspect received an injected idempotency_key; project.create persisted successfully. Exact read-only SQLite hash and operation result are in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_contract_diagnostic.json. The runner now omits the unnecessary inspect key; actual ControlDaemon focused regression is 2/2 PASS in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_runner_regression_receipt.json. No native retry or acceptance is claimed; release F04 runtime integration is active, so refresh closure and root review are required before another launch. Windows COMSOL 6.3 remains required/unassessed; only macOS 6.3 is USER_REQUESTED_SKIP.",
   "native_resume_smoke": {
     "status": "FAIL_OR_INCOMPLETE_POINT_SCHEMA_FAILURE; SOLVED_CHILD_ARTIFACT_DURABLE; SOLVE_BUDGET_EXHAUSTED; SEPARATE_SAVED_MPH_READBACK_PASS",
@@ -4081,5 +4081,125 @@
       "remote_activity": "NOT_RUN"
     }
   },
-  "current_software_candidate_pointer": "current_software_candidate_20261001"
+  "current_software_candidate_pointer": "current_software_candidate_20261001",
+  "current_native_preparation_20261001_r17": {
+    "status": "PREPARED_ONLY_PASS; ROOT_REVIEWED_PREPARE_AND_OFFLINE_COMPILE_ONLY; NATIVE_EXECUTE_NOT_RUN; SCIENCE_NOT_RUN",
+    "run_id": "w21-64-20260930T194645Z-f3f44f88",
+    "software_candidate": {
+      "id": "w21-r16-raw-metadata-repair-20261001-01",
+      "fingerprint": "7b1ccc6d42e4950a40c8a58245bb8bc942339ab1e2a6e57ee80a3e2c7d5d56cc",
+      "source_commit": "bbc4a6f68b5a8fe9ce33c733eaa744a12f7fe72f",
+      "base_source": "4760b4a223017a38ef1c4a52f130433fd77c3c14",
+      "source_closure_sha256": "c304a9e2f417779d1b44c2b79a0ac91c6a0c793f024ead9665a18c53a3cafd23"
+    },
+    "documentation_history": {
+      "head_at_r17_preparation": "151b7d2",
+      "source_and_documentation_history_separate": true,
+      "documentation_commit_at_record_emission": "NOT_CREATED; this status sync remains separate and uncommitted"
+    },
+    "preparation": {
+      "probe_mode": "FULL",
+      "attempts": 1,
+      "metadata_only_pass": true,
+      "new_home_id": "c9299e3e3e4848c3",
+      "fresh_run_uuid_count": 32,
+      "old_uuid_overlap": 0,
+      "probe_selection": "DEFAULT",
+      "mode": "INITIAL_STAGE_PREPARE_ONLY",
+      "comsol_version": "6.4",
+      "comsol_build": 293,
+      "server_max_path_utf16_units_including_nul": 259,
+      "server_path_limit_utf16_units_including_nul": 260,
+      "atomic_path_utf16_units_including_nul": 185,
+      "atomic_path_limit_utf16_units_including_nul": 260
+    },
+    "freeze": {
+      "canonical_sha256": "1a148eb2fec84cc81d2fbc20c5ead74e05f80e8847825782cda2774b2c4fce84",
+      "raw_sha256": "677d02a2473b79389b828c4142b409eae688f6607119d3a861b840b785ae2dbe",
+      "raw_bytes": 66525,
+      "state_raw_sha256": "d9bb365d47ed297526cc53f9c44a30417f66730cc95435c1f481e0bab42d9a5e",
+      "state_raw_bytes": 1180
+    },
+    "prepared_state": {
+      "status": "PREPARED",
+      "history": [],
+      "job_ids": [],
+      "unknown_action": null,
+      "actual_and_possible_counters": {
+        "server_births": 0,
+        "worker_births": 0,
+        "dispatches": 0,
+        "wait_calls": 0,
+        "read_calls": 0
+      },
+      "native_execution_authorization": "NONE"
+    },
+    "transfer": {
+      "status": "EXACT_SIX_FILE_TRANSFER_AND_REMOTE_VERIFICATION_PASS",
+      "files": 6,
+      "bytes": 1159457,
+      "source_files": 107,
+      "archive_members": 110,
+      "source_head": "bbc4a6f68b5a8fe9ce33c733eaa744a12f7fe72f",
+      "candidate_import_origin": "VERIFIED_EXTRACTED_SOURCE",
+      "scope": "PRIVATE_SIX_FILE_R17_SOURCE_PAYLOAD; NOT_A_GIT_PUSH",
+      "git_push": "NOT_RUN"
+    },
+    "offline_compile": {
+      "status": "PASS_OFFLINE_ONLY",
+      "javac_exit": 0,
+      "classpath_jar_matches": 358,
+      "jar_match_split": {
+        "plugins": 323,
+        "apiplugins": 35
+      },
+      "class_files": 22,
+      "cafe_babe_classes": 22,
+      "comsol_engine_started": false
+    },
+    "unchanged_budgets": "900/240/45/12 reads; 1 solve + study + stage; 260 guard",
+    "root_review": {
+      "status": "PASS_PREPARE_AND_OFFLINE_COMPILE_ONLY; NOT_EXECUTE_AUTHORIZATION",
+      "path": "execution-scratch/w21-initial-native-w21r17-plan-20261001/preparation-001/main-prepared-candidate-review001.json",
+      "sha256": "c2ccd1cf77b57f774d6150e6108b79fa4b170bb47cc43f7dcf32dd8206bf506c"
+    },
+    "handoff_validation": {
+      "status": "PACKAGE_PREPARED_READY_FOR_ROOT_REVIEW",
+      "path": "execution-scratch/w21-initial-native-w21r17-plan-20261001/preparation-001/prepared-handoff-validation-001.json",
+      "sha256": "d5f34a2a9f782ff0a99eb8d95da4b3bb395276ce868dbb809a48d455f0968f6d"
+    },
+    "readback_validation": {
+      "initial_receipt": "execution-scratch/w21-initial-native-w21r17-plan-20261001/preparation-001/freeze-state-readback-001.receipt.json",
+      "initial_result": "FAIL_LOCAL_RAW_VS_CANONICAL_DIGEST_INTERPRETATION; remote raw readback succeeded",
+      "corrected_local_receipt": "execution-scratch/w21-initial-native-w21r17-plan-20261001/preparation-001/freeze-state-readback-local-validation-001.json",
+      "corrected_local_receipt_sha256": "d80e91bab88b3cfcfa611a1f66e065b7cb087e960e475a7711f6377ab9588557",
+      "corrected_local_validation": "PASS",
+      "additional_remote_reread": "NOT_RUN"
+    },
+    "failure_and_observation_history": {
+      "resource_handle": "V2 alias H resolved to Get-History -Id, not a HOME variable; raw first failure preserved; V3 read-only recovery PASS. Quiet observations do not establish cleanup.",
+      "six_file_verification": [
+        {
+          "attempt": 1,
+          "status": "FAIL_POWERSHELL_DICTIONARY_FORMATTER",
+          "evidence": "execution-scratch/w21-initial-native-w21r17-plan-20261001/preparation-001/verify-six-001.receipt.json"
+        },
+        {
+          "attempt": 2,
+          "status": "PASS",
+          "evidence": "execution-scratch/w21-initial-native-w21r17-plan-20261001/preparation-001/verify-six-002.receipt.json"
+        }
+      ],
+      "saved_isolation_metadata": "RUNNING_AT_CAPTURE_ONLY; not a live-state guarantee",
+      "quiet_process_observation": "OBSERVATION_ONLY; not cleanup proof or a live-state guarantee",
+      "cleanup": "NOT_ESTABLISHED"
+    },
+    "historical_native_unknowns": "Original r15/0b5 and r16 attempt002-002 UNKNOWN IDs and provenance remain in their existing records; neither is resumed or replayed. Report003 aggregate counts remain historical SQLite counts, not proof the repaired production pagination collector ran.",
+    "native_execute": "NOT_RUN",
+    "scientific_acceptance": "NOT_RUN",
+    "overall_w21": "PARTIAL",
+    "master_goal": "ACTIVE_THROUGH_W26",
+    "current_next_action": "Next local-only work is to prepare (not execute) fresh pre-execute read-only guard scripts and exactly one native-capture proposal bound to the prepared r17 freeze/state and fixed candidate for root review. Remote guard execution over SSH has NOT_RUN; there is no GO and no native execute authorization. Do not repeat remote readback, upload, or COMSOL execution before root review. W22 still requires actual Windows 6.4 native initial-stage acceptance on a reviewed fixed candidate. W21 remains PARTIAL and the MASTER W01-W26 goal remains ACTIVE through W26. Publication commit37 remains blocked after the prior auto-review refusal; do not push or bypass it."
+  },
+  "current_native_preparation_pointer": "current_native_preparation_20261001_r17"
 }
