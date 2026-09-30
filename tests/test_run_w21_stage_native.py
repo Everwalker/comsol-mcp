@@ -14,13 +14,17 @@ import copy
 import hashlib
 import importlib.util
 import json
+import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
+import tempfile
 import textwrap
 import threading
 from types import ModuleType, SimpleNamespace
 from typing import Any
+from uuid import uuid4
 
 import pytest
 
@@ -39,15 +43,16 @@ assert SPEC.loader is not None
 SPEC.loader.exec_module(runner)
 
 
-def _plan(tmp_path: Path, *, worker_epoch: int = 7,
+def _plan(tmp_path: Path, *, worker_epoch: int = 7, task_root_override: Path | None = None,
+          server_home_root_override: Path | None = None,
           mode: str = runner.METADATA_MODE,
           field_readback_profile: str | None = None) -> dict:
     root = REPOSITORY
-    task_root = tmp_path.parent
+    task_root = task_root_override or tmp_path.parent
     run_root = tmp_path / "run"
     workspace_root = run_root / "workspaces"
     workspace_root.mkdir(parents=True)
-    server_home_root = task_root / "h"
+    server_home_root = server_home_root_override or task_root / "h"
     server_home_root.mkdir(exist_ok=True)
     server_home_id = hashlib.sha256(str(tmp_path).encode("utf-8")).hexdigest()[:16]
     server_home = server_home_root / server_home_id
@@ -165,6 +170,39 @@ def _state(tmp_path: Path, *, schema: str = runner.SCHEMA) -> runner._RunState:
     return runner._RunState(path, value)
 
 
+def _short_owned_temp_root() -> tuple[Path, Path]:
+    """Create a real, exclusive short directory under the configured temp root."""
+    tmp_root = Path(os.environ.get("TMPDIR") or tempfile.gettempdir()).resolve(strict=True)
+    if not tmp_root.is_dir() or tmp_root.is_symlink():
+        raise AssertionError("configured temporary root must be an existing real directory")
+    # One UTF-16-unit candidates keep real Windows path-budget checks under
+    # 260 units. Existing names are never reused or overwritten. The private-
+    # use fallback is only a path component and is never sent to COMSOL.
+    alphabet = "abcdefghijklmnopqrstuvwxyz0123456789"
+    names = list(alphabet) + [chr(codepoint) for codepoint in range(0xE000, 0xE100)]
+    for name in names:
+        candidate = tmp_root / name
+        if candidate.exists() or candidate.is_symlink():
+            continue
+        try:
+            candidate.mkdir(exist_ok=False)
+        except FileExistsError:
+            continue
+        if candidate.is_symlink() or candidate.resolve(strict=True) != candidate:
+            candidate.rmdir()
+            raise AssertionError("temporary test root resolved through an alias")
+        return tmp_root, candidate
+    raise AssertionError("no absent one-character temporary directory is available")
+
+
+def _remove_short_owned_temp_root(tmp_root: Path, owned_root: Path) -> None:
+    if (owned_root.parent.resolve(strict=True) != tmp_root.resolve(strict=True)
+            or owned_root.is_symlink() or not owned_root.is_dir()
+            or owned_root.resolve(strict=True) != owned_root):
+        raise AssertionError("refusing to remove a changed temporary test root")
+    shutil.rmtree(owned_root)
+
+
 def _patch_prepare_environment(monkeypatch):
     monkeypatch.setattr(runner.platform, "system", lambda: "Windows")
     monkeypatch.setenv("COMSOL_MCP_TOOL_PROFILE", "full")
@@ -202,6 +240,7 @@ class _FakeStdioSession:
                  timeout_on: str | None = None,
                  job_list_rows: list[dict] | None = None,
                  job_list_has_more: bool = False,
+                 stage_job_list_fault: str | None = None,
                  job_list_timeout: bool = False,
                  session_start_unknown_job_id: str | None = None,
                  job_status_fault: str | None = None,
@@ -223,6 +262,7 @@ class _FakeStdioSession:
         self.timeout_on = timeout_on
         self.job_list_rows = job_list_rows
         self.job_list_has_more = job_list_has_more
+        self.stage_job_list_fault = stage_job_list_fault
         self.job_list_timeout = job_list_timeout
         self.session_start_unknown_job_id = session_start_unknown_job_id
         self.job_status_fault = job_status_fault
@@ -880,9 +920,11 @@ class _FakeStdioSession:
                         },
                     },
                 }
+                jobs = [job, dict(job)] if self.stage_job_list_fault == "duplicate" else [job]
                 return {"success": True, "data": {
-                    "jobs": [job], "total": 1, "has_more": False,
-                    "offset": 0, "limit": 1000, "next_cursor": None,
+                    "jobs": jobs, "total": len(jobs),
+                    "has_more": self.stage_job_list_fault == "truncated",
+                    "offset": 0, "limit": 500, "next_cursor": None,
                 }}
             else:
                 job = {"job_id": "job-test", "status": "RUNNING", "request_id": original_id,
@@ -1391,9 +1433,13 @@ def test_initial_stage_worker_uncertainty_stays_unknown_and_never_cleans_up(
 def test_initial_stage_success_shaped_wait_expiry_is_unknown_and_never_cleans_up(tmp_path, monkeypatch):
     # Mirror ControlDaemon.job.wait: success=True with the original job row
     # plus wait_expired=True when the one frozen wait window elapses.
-    plan, state, fake = _prepare_initial_stage(
-        tmp_path, monkeypatch, stage_fault="wait_expired", unknown_on="skip-producer-fixture",
-    )
+    # Isolate the read-only recovery protocol from pytest's long temporary
+    # path; real Windows MAX_PATH boundaries have separate required tests.
+    with monkeypatch.context() as fixture_patch:
+        fixture_patch.setattr(runner, "_server_home_budget", lambda _path: {"test_fixture": True})
+        plan, state, fake = _prepare_initial_stage(
+            tmp_path, monkeypatch, stage_fault="wait_expired", unknown_on="skip-producer-fixture",
+        )
     with pytest.raises(runner.RunnerError, match="stage_run_wait returned UNKNOWN"):
         asyncio.run(runner.run_metadata_protocol(
             runner._MCPCalls(fake), plan, state, clock=lambda: 100.0, preflight=lambda: [],
@@ -1420,7 +1466,17 @@ def test_initial_stage_success_shaped_wait_expiry_is_unknown_and_never_cleans_up
 
 def test_initial_stage_rpc_loss_uses_one_project_scoped_unique_job_list_query(tmp_path, monkeypatch):
     _patch_isolation(monkeypatch)
-    plan = _plan(tmp_path, mode=runner.INITIAL_STAGE_MODE)
+    # This protocol regression concerns the unknown-outcome query, not native
+    # Windows path admission. Isolate that separate preflight with a test-local
+    # budget stub; production MAX_PATH checks remain covered by real path-budget
+    # tests. The runner still validates the actual live job.list schema below.
+    with monkeypatch.context() as fixture_patch:
+        fixture_patch.setattr(runner, "_server_home_budget", lambda _path: {"test_fixture": True})
+        plan = _plan(
+            tmp_path, task_root_override=tmp_path,
+            server_home_root_override=tmp_path / "owned-server-home",
+            mode=runner.INITIAL_STAGE_MODE,
+        )
     state = _state(tmp_path, schema=runner.INITIAL_STAGE_SCHEMA)
     state.value["run_id"] = plan["run_id"]
     state.value["freeze_sha256"] = plan["freeze_sha256"]
@@ -1436,7 +1492,11 @@ def test_initial_stage_rpc_loss_uses_one_project_scoped_unique_job_list_query(tm
     assert actions.count("job.status") == 0
     assert "session.disconnect" not in actions and "session.stop" not in actions
     query_params = next(params for action, params in fake.calls if action == "job.list")
-    assert query_params["arguments"] == {"limit": 1000, "project_id": fake.project_id}
+    assert query_params["arguments"] == {"limit": 500, "project_id": fake.project_id}
+    # Validate against the exact live logical registry schema, not the minimal
+    # fake plan schema.  This catches a regression above the catalog's maximum.
+    from comsol_mcp._g2_registry import validate_call
+    validate_call("job.list", query_params["arguments"])
     query = state.value["recovery"]["read_only_query"]
     assert query["original_operation"] == "experiment.stage_run"
     assert query["query_complete"] is True
@@ -1447,9 +1507,54 @@ def test_initial_stage_rpc_loss_uses_one_project_scoped_unique_job_list_query(tm
     assert state.value["recovery"]["replay_permitted"] is False
 
 
+@pytest.mark.parametrize(("fault", "resolution"), [
+    ("duplicate", "AMBIGUOUS_EXACT_MATCH"),
+    ("truncated", "INCOMPLETE_QUERY"),
+])
+def test_initial_stage_rpc_loss_fails_closed_on_ambiguous_or_incomplete_job_list(
+        tmp_path, monkeypatch, fault, resolution):
+    _patch_isolation(monkeypatch)
+    with monkeypatch.context() as fixture_patch:
+        fixture_patch.setattr(runner, "_server_home_budget", lambda _path: {"test_fixture": True})
+        plan = _plan(
+            tmp_path, task_root_override=tmp_path,
+            server_home_root_override=tmp_path / "owned-server-home",
+            mode=runner.INITIAL_STAGE_MODE,
+        )
+    state = _state(tmp_path, schema=runner.INITIAL_STAGE_SCHEMA)
+    state.value["run_id"] = plan["run_id"]
+    state.value["freeze_sha256"] = plan["freeze_sha256"]
+    state.save()
+    fake = _FakeStdioSession(
+        plan, state, timeout_on="experiment.stage_run", stage_job_list_fault=fault,
+    )
+    with pytest.raises(runner.RunnerError, match="stage_run transport outcome is UNKNOWN"):
+        asyncio.run(runner.run_metadata_protocol(
+            runner._MCPCalls(fake), plan, state, clock=lambda: 100.0, preflight=lambda: [],
+        ))
+    actions = [action for action, _ in fake.calls]
+    assert actions.count("experiment.stage_run") == actions.count("job.list") == 1
+    assert "stage_run.wait" not in actions and "job.status" not in actions
+    query_params = next(params for action, params in fake.calls if action == "job.list")
+    assert query_params["arguments"] == {"limit": 500, "project_id": fake.project_id}
+    from comsol_mcp._g2_registry import validate_call
+    validate_call("job.list", query_params["arguments"])
+    query = state.value["recovery"]["read_only_query"]
+    assert query["query_complete"] is (fault != "truncated")
+    assert query["match_resolution"] == resolution
+    assert query["exact_job_identity_confirmed"] is False
+    assert "job-stage-run" not in state.value["job_ids"]
+    assert state.value["status"] == "UNKNOWN"
+    assert state.value["recovery"]["replay_permitted"] is False
+
+
 def test_initial_stage_wait_rpc_loss_queries_same_run_job_once_without_cleanup(tmp_path, monkeypatch):
     _patch_isolation(monkeypatch)
-    plan = _plan(tmp_path, mode=runner.INITIAL_STAGE_MODE)
+    # This test covers recovery only; production path-budget enforcement is
+    # covered by dedicated real-budget regression tests.
+    with monkeypatch.context() as fixture_patch:
+        fixture_patch.setattr(runner, "_server_home_budget", lambda _path: {"test_fixture": True})
+        plan = _plan(tmp_path, mode=runner.INITIAL_STAGE_MODE)
     state = _state(tmp_path, schema=runner.INITIAL_STAGE_SCHEMA)
     state.value["run_id"] = plan["run_id"]
     state.value["freeze_sha256"] = plan["freeze_sha256"]
@@ -2700,56 +2805,60 @@ def test_srb_auto_unit_controls_receipt_must_match_profile_and_recompute(tmp_pat
 
 def test_prepare_freezes_full_source_identity_without_starting_services(tmp_path, monkeypatch):
     _patch_prepare_environment(monkeypatch)
-    # Use the short basetemp itself; run IDs and server-home IDs provide
-    # per-prepare uniqueness without adding test-function path length.
-    evidence = tmp_path.parent
-
-    result = runner.prepare(version="6.4", comsol_root=tmp_path / "COMSOL64",
-                            jdk_home=tmp_path / "JDK11", evidence_root=evidence,
-                            server_home_root=evidence / "h")
-    plan = result["plan"]
-    expected_files = {
-        "tools/run_w21_stage_native.py", "tools/java/W21Fixture.java",
-        "tools/java/W21FieldIdentityProbe.java", "tools/run_function_evaluate_probe.py",
-        "comsol_mcp/worker_java/PersistentComsolWorker.java",
-        "comsol_mcp/_control_client.py", "comsol_mcp/_g2_registry.py",
-        "docs/comsol_mcp_design_v1/02_ACTION_CATALOG.json",
-    }
-    assert expected_files <= plan["source_manifest"].keys()
-    assert not any(Path(name).name.startswith("._") for name in plan["source_manifest"])
-    assert plan["source_manifest_sha256"] == runner.sha256_value(plan["source_manifest"])
-    assert plan["fixture_sha256"] == plan["source_manifest"]["tools/java/W21Fixture.java"]
-    assert plan["probe_sha256"] == plan["source_manifest"]["tools/java/W21FieldIdentityProbe.java"]
-    assert plan["budgets"]["study_dispatch"] == plan["budgets"]["solver_dispatch"] == 0
-    assert Path(plan["server_home"]).parent == Path(plan["server_home_root"])
-    assert Path(plan["server_home_root"]).name == "h"
-    assert len(plan["server_home_id"]) == 16
-    assert plan["server_home_path_budget"]["command_line_utf16_units_including_nul"] <= 32767
-    assert max(plan["server_home_path_budget"]["path_utf16_units_including_nul"].values()) <= 260
-    expected_state_root = runtime_state_root(
-        Path(plan["server_home"]) / "control-private", platform_name="Windows",
-    )
-    assert expected_state_root.name == "s"
-    assert (plan["server_home_path_budget"]["path_utf16_units_including_nul"]["session_state_root"]
-            == len(str(expected_state_root).encode("utf-16-le")) // 2 + 1)
-    assert result["status"] == "PREPARED_ONLY"
-    assert not Path(plan["project_workspace"]).exists()
-    assert not Path(plan["server_home"]).exists()
-    assert json.loads((Path(result["run_root"]) / "state.json").read_text())["status"] == "PREPARED"
+    tmp_root, evidence = _short_owned_temp_root()
+    try:
+        result = runner.prepare(version="6.4", comsol_root=evidence / "COMSOL64",
+                                jdk_home=evidence / "JDK11", evidence_root=evidence,
+                                server_home_root=evidence / "h")
+        plan = result["plan"]
+        expected_files = {
+            "tools/run_w21_stage_native.py", "tools/java/W21Fixture.java",
+            "tools/java/W21FieldIdentityProbe.java", "tools/run_function_evaluate_probe.py",
+            "comsol_mcp/worker_java/PersistentComsolWorker.java",
+            "comsol_mcp/_control_client.py", "comsol_mcp/_g2_registry.py",
+            "docs/comsol_mcp_design_v1/02_ACTION_CATALOG.json",
+        }
+        assert expected_files <= plan["source_manifest"].keys()
+        assert not any(Path(name).name.startswith("._") for name in plan["source_manifest"])
+        assert plan["source_manifest_sha256"] == runner.sha256_value(plan["source_manifest"])
+        assert plan["fixture_sha256"] == plan["source_manifest"]["tools/java/W21Fixture.java"]
+        assert plan["probe_sha256"] == plan["source_manifest"]["tools/java/W21FieldIdentityProbe.java"]
+        assert plan["budgets"]["study_dispatch"] == plan["budgets"]["solver_dispatch"] == 0
+        assert Path(plan["server_home"]).parent == Path(plan["server_home_root"])
+        assert Path(plan["server_home_root"]).name == "h"
+        assert len(plan["server_home_id"]) == 16
+        assert plan["server_home_path_budget"]["command_line_utf16_units_including_nul"] <= 32767
+        assert max(plan["server_home_path_budget"]["path_utf16_units_including_nul"].values()) <= 260
+        expected_state_root = runtime_state_root(
+            Path(plan["server_home"]) / "control-private", platform_name="Windows",
+        )
+        assert expected_state_root.name == "s"
+        assert (plan["server_home_path_budget"]["path_utf16_units_including_nul"]["session_state_root"]
+                == len(str(expected_state_root).encode("utf-16-le")) // 2 + 1)
+        assert result["status"] == "PREPARED_ONLY"
+        assert not Path(plan["project_workspace"]).exists()
+        assert not Path(plan["server_home"]).exists()
+        assert json.loads((Path(result["run_root"]) / "state.json").read_text())["status"] == "PREPARED"
+    finally:
+        _remove_short_owned_temp_root(tmp_root, evidence)
 
 
 def test_prepare_accepts_explicit_short_runtime_root_inside_task(tmp_path, monkeypatch):
     _patch_prepare_environment(monkeypatch)
-    # Exercise a genuinely short requested root without inheriting long labels.
-    evidence = tmp_path.parent
-    requested_root = evidence / "r"
-    result = runner.prepare(version="6.4", comsol_root=tmp_path / "COMSOL64",
-                            jdk_home=tmp_path / "JDK11", evidence_root=evidence,
-                            server_home_root=requested_root)
-    plan = result["plan"]
-    assert Path(plan["server_home_root"]) == requested_root
-    assert Path(plan["server_home"]).parent == requested_root
-    assert not Path(plan["server_home"]).exists()
+    # Exercise a genuinely short requested root inside a uniquely owned temp dir.
+    tmp_root, evidence = _short_owned_temp_root()
+    try:
+        requested_root = evidence / "r"
+        result = runner.prepare(version="6.4", comsol_root=evidence / "COMSOL64",
+                                jdk_home=evidence / "JDK11", evidence_root=evidence,
+                                server_home_root=requested_root)
+        plan = result["plan"]
+        assert Path(plan["server_home_root"]) == requested_root
+        assert Path(plan["server_home"]).parent == requested_root
+        assert not Path(plan["server_home"]).exists()
+        assert max(plan["server_home_path_budget"]["path_utf16_units_including_nul"].values()) <= 260
+    finally:
+        _remove_short_owned_temp_root(tmp_root, evidence)
 
 
 def test_prepare_assigns_distinct_uncreated_runtime_homes_per_run(tmp_path, monkeypatch):

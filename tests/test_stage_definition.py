@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from contextlib import nullcontext
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
 from copy import deepcopy
 import hashlib
 import json
@@ -1006,6 +1007,89 @@ def test_public_initial_stage_run_unknown_preflight_is_persisted_and_never_dispa
             assert reopened.get_stage_attempt_for_operation(project_id, model_ref, record["operation_id"]) == record
     finally:
         reopened.close()
+
+
+@pytest.mark.parametrize("requested_timeout", [45.0, 2.0])
+def test_stage_run_rpc_wait_is_capped_without_cancelling_original_future(
+        tmp_path, monkeypatch, requested_timeout):
+    """An expired RPC wait returns pending while the one original job keeps running."""
+    daemon, _service, _worker, project_id, model_ref, execution, _host = _setup(tmp_path)
+    queued = threading.Event()
+    release = threading.Event()
+    executor = ThreadPoolExecutor(max_workers=1)
+    original_futures = []
+    observed_timeouts = []
+
+    class ExpiringWait:
+        def result(self, timeout=None):
+            observed_timeouts.append(timeout)
+            raise FutureTimeout()
+
+    def submit(_context, function):
+        def delayed_original_operation():
+            queued.set()
+            assert release.wait(timeout=5.0)
+            return function()
+        original_futures.append(executor.submit(delayed_original_operation))
+        return ExpiringWait()
+
+    try:
+        defined = daemon.dispatch({
+            "operation": "experiment.stage_define", "arguments": {"definition": _plan_v2()},
+            "execution": execution,
+        })
+        assert defined["success"] is True, defined
+        _seed_test_only_accepted_predecessor(daemon, project_id, model_ref, stage_id="preheat")
+        monkeypatch.setattr(daemon.session_scheduler, "submit", submit)
+        # Keep this reproduction off the Worker/COMSOL path.  Once released,
+        # the real stage coordinator records a normal unverified admission
+        # failure on the original durable job.
+        daemon.backend.stage_native_admission = lambda **_kwargs: {"status": "UNVERIFIED"}
+
+        run_request_id = f"bounded-stage-wait-{requested_timeout}"
+        pending = daemon.dispatch({
+            "operation": "experiment.stage_run",
+            "arguments": {"stage_id": "cooldown", "source_attempt_id": next(
+                row["attempt_id"] for row in daemon.store.list_stage_attempts(
+                    project_id, model_ref, stage_id="preheat") if row["status"] == "ACCEPTED"
+            )},
+            "execution": {
+                **execution, "request_id": run_request_id,
+                "idempotency_key": run_request_id, "rpc_timeout_s": requested_timeout,
+            },
+        })
+        assert queued.wait(timeout=2.0)
+        assert pending["success"] is True and pending["data"]["status"] == "QUEUED"
+        job_id = pending["data"]["job_id"]
+        assert pending["execution"]["job_id"] == job_id
+
+        expected_wait = min(requested_timeout, 5.0)
+        assert observed_timeouts == [expected_wait]
+        assert original_futures[0].done() is False
+        release.set()
+        original_result = original_futures[0].result(timeout=5.0)
+        assert original_result["success"] is False
+        assert original_futures[0].done() is True
+
+        terminal = daemon.dispatch({
+            "operation": "job.wait",
+            "arguments": {"job_id": job_id, "timeout_s": 2.0, "poll_interval_s": 0.01},
+            "execution": {"project_id": project_id},
+        })
+        assert terminal["success"] is True, terminal
+        assert terminal["data"]["job_id"] == job_id
+        assert terminal["data"]["status"] == "FAILED"
+        assert daemon.store.operation_job(pending["execution"]["operation_id"])["job_id"] == job_id
+        assert len(original_futures) == 1
+    finally:
+        release.set()
+        for future in original_futures:
+            try:
+                future.result(timeout=5.0)
+            except Exception:
+                pass
+        executor.shutdown(wait=True, cancel_futures=False)
+        daemon.close()
 
 
 def _install_fake_stage_backend(daemon, service, *, mode, monkeypatch=None,

@@ -25,6 +25,22 @@ def _validate_initial_proof(value, proof):
     )
 
 
+def _refresh_initial_event_snapshot_receipt(proof):
+    """Rebind a deliberate event mutation to a valid snapshot manifest."""
+    from comsol_mcp._stage_contract import sha256_json
+
+    rows = proof["job_event_rows"]
+    collection = proof["worker_event_collection"]
+    proof["worker_event_rows"] = [copy.deepcopy(row) for row in rows
+                                  if row.get("event") == "worker_request"]
+    collection["events_sha256"] = sha256_json(rows)
+    page_size = collection["page_size"]
+    for page in collection["pages"]:
+        offset = page["offset"]
+        page_rows = rows[offset:offset + page_size]
+        page["events_sha256"] = sha256_json(page_rows)
+
+
 def test_registered_initial_stage_accepts_complete_fake_worker_output(tmp_path):
     value = build_initial_stage_fixture(tmp_path)
     try:
@@ -49,14 +65,25 @@ def test_registered_initial_stage_accepts_complete_fake_worker_output(tmp_path):
         assert proof["mesh_snapshot_readback"]["status"] == "CURRENT_MESH_CAPTURE_ONLY"
         assert proof["saved_artifact"]["sha256"] == proof["saved_artifact_observed_sha256"]
         event_collection = proof["worker_event_collection"]
-        assert event_collection == {
-            "status": "COMPLETE", "complete": True, "limit": 1000,
-            "sentinel_checked": True,
-            "fetched_job_event_count": event_collection["fetched_job_event_count"],
-            "worker_request_event_count": len(proof["worker_event_rows"]),
-            "overflow_sentinel_count": 0,
-        }
+        assert event_collection["schema"] == "operation-store-job-event-snapshot/v1"
+        assert event_collection["status"] == "COMPLETE"
+        assert event_collection["complete"] is True
+        assert event_collection["page_size"] == event_collection["limit"] == 1000
+        assert event_collection["sentinel_checked"] is True
+        assert event_collection["terminal_sentinel_checked"] is True
+        assert event_collection["terminal_sentinel"]["checked"] is True
+        assert event_collection["terminal_sentinel"]["count"] == 0
+        assert (event_collection["expected_event_count"]
+                == event_collection["fetched_event_count"]
+                == event_collection["fetched_job_event_count"])
         assert event_collection["fetched_job_event_count"] < 1000
+        assert event_collection["job_row_count"] == 1
+        assert event_collection["worker_request_event_count"] == len(proof["worker_event_rows"])
+        assert event_collection["overflow_sentinel_count"] == 0
+        assert len(event_collection["event_ids"]) == event_collection["expected_event_count"]
+        assert event_collection["snapshot_last_id"] == event_collection["event_ids"][-1]
+        assert len(event_collection["events_sha256"]) == 64
+        assert len(event_collection["pages"]) == event_collection["expected_page_count"]
         dispatches = proof["solve_save_dispatches"]
         phase_handles = {}
         for dispatch in dispatches:
@@ -189,7 +216,7 @@ def test_initial_acceptance_rejects_missing_or_tampered_event_collection(tmp_pat
         for candidate in mutations:
             valid, missing_reasons = _validate_initial_proof(value, candidate)
             assert valid is False
-            assert "complete bounded Worker job-event collection with empty overflow sentinel" in missing_reasons
+            assert "complete bounded exact-job event snapshot and Worker projection" in missing_reasons
     finally:
         value["daemon"].close()
 
@@ -209,7 +236,7 @@ def test_initial_acceptance_rejects_cross_phase_model_handle_tamper(tmp_path):
         assert phase_handles["solve"] != phase_handles["save"]
         auxiliary_ids = {row["worker_request_id"] for row in proof["worker_auxiliary_requests"]}
         tampered = 0
-        for row in proof["worker_event_rows"]:
+        for row in proof["job_event_rows"]:
             envelope = row.get("metadata")
             if (not isinstance(envelope, dict) or envelope.get("request_id") not in auxiliary_ids
                     or envelope.get("phase") not in {"submitted", "observed"}
@@ -220,11 +247,11 @@ def test_initial_acceptance_rejects_cross_phase_model_handle_tamper(tmp_path):
                 binding["model_handle"] = phase_handles["solve"]
                 tampered += 1
         assert tampered == 8  # submit/observe rows for all four save-phase label calls
+        _refresh_initial_event_snapshot_receipt(proof)
         valid, missing = _validate_initial_proof(value, proof)
         assert valid is False
-        assert any("auxiliary Worker request is outside the safe root-operation allowlist" == item
-                   or "auxiliary Worker receiver matches the correlated Model handle for its phase" == item
-                   for item in missing)
+        assert "complete bounded exact-job event snapshot and Worker projection" not in missing
+        assert "auxiliary Worker receiver matches the correlated Model handle for its phase" in missing
     finally:
         value["daemon"].close()
 
@@ -270,8 +297,11 @@ def test_initial_acceptance_rejects_tampered_model_label_auxiliary_evidence(tmp_
         value["daemon"].close()
 
 
-def test_initial_stage_event_overflow_sentinel_blocks_acceptance(tmp_path):
-    value = build_initial_stage_fixture(tmp_path, fault="event_overflow", runner_profile=True)
+def test_initial_stage_snapshot_page_limit_blocks_acceptance(tmp_path, monkeypatch):
+    import comsol_mcp._operation_store as operation_store
+
+    monkeypatch.setattr(operation_store, "JOB_EVENT_SNAPSHOT_MAX_PAGES", 1)
+    value = build_initial_stage_fixture(tmp_path, runner_profile=True, event_padding_total=1101)
     try:
         result = value["result"]
         assert result is not None and result["success"] is False
@@ -282,12 +312,123 @@ def test_initial_stage_event_overflow_sentinel_blocks_acceptance(tmp_path):
         collection = output["worker_event_collection"]
         assert collection["status"] == "INCOMPLETE"
         assert collection["complete"] is False
-        assert collection["fetched_job_event_count"] == 1000
-        assert collection["overflow_sentinel_count"] == 1
-        assert "complete bounded Worker job-event collection with empty overflow sentinel" in output["missing"]
+        assert collection["expected_event_count"] == 1101
+        assert collection["expected_page_count"] == 2
+        assert collection["max_page_count"] == 1
+        assert collection["fetched_event_count"] == 0
+        assert collection["fetched_job_event_count"] == 0
+        assert collection["terminal_sentinel_checked"] is False
+        assert collection["terminal_sentinel"]["checked"] is False
+        assert collection["terminal_sentinel_count"] == 0
+        assert any("bounded page limit" in issue for issue in collection["issues"])
+        assert "complete bounded exact-job event snapshot and Worker projection" in output["missing"]
         missing = attempt["result"]["output_missing"]
         assert output["missing"] == missing
         assert output["missing"] == result["data"]["attempt"]["result"]["output_missing"]
+    finally:
+        value["daemon"].close()
+
+
+def test_initial_acceptance_collects_complete_job_snapshot_above_1000(tmp_path, monkeypatch):
+    """A valid Worker transcript must survive unrelated events beyond row 1000."""
+    import comsol_mcp._w21_stage_backend as stage_backend
+
+    captured = []
+    original_validator = stage_backend.validate_initial_output_acceptance
+
+    def capture_validation(evidence, **kwargs):
+        captured.append(copy.deepcopy(evidence))
+        return original_validator(evidence, **kwargs)
+
+    monkeypatch.setattr(stage_backend, "validate_initial_output_acceptance", capture_validation)
+    value = build_initial_stage_fixture(tmp_path, runner_profile=True, event_padding_total=1101)
+    try:
+        assert value["event_padding_receipt"] is not None, {
+            "event_padding_reads": value.get("event_padding_reads"),
+            "result": value.get("result"),
+            "attempt_status": value.get("attempt", {}).get("status"),
+            "attempt_evidence_kinds": [row.get("kind") for row in value.get("attempt", {}).get("evidence", [])],
+        }
+        padding = value["event_padding_receipt"]
+        assert padding["original_event_count"] <= 1000
+        assert padding["final_event_count"] == 1101
+        assert padding["all_original_worker_events_precede_padding"] is True
+        # Controller validation and the store's transactional finalization
+        # independently validate the same frozen evidence payload.
+        assert len(captured) == 2
+        assert captured[0] == captured[1]
+        evidence = captured[0]
+        assert evidence["worker_job_id"] == padding["job_id"]
+        assert len(evidence["worker_event_rows"]) == padding["original_worker_request_event_count"]
+        valid, missing = original_validator(
+            evidence,
+            binding=evidence["stage_attempt_binding"],
+            stage=next(row for row in value["definition"]["stages"]
+                       if row["stage_id"] == value["stage_id"]),
+            stage_run_operation_id=evidence["stage_run_operation_id"],
+            solve_revision=evidence["solve_revision"],
+            output_revision=evidence["output_revision"],
+            observed_artifact_sha256=evidence["saved_artifact_observed_sha256"],
+        )
+        assert valid is True, missing
+        assert value["result"] is not None and value["result"]["success"] is True, {
+            "error_code": value["result"].get("error", {}).get("code"),
+            "output_missing": value["result"].get("data", {}).get("output_missing"),
+            "event_padding": padding,
+        }
+        proof = value["result"]["data"]["initial_output_acceptance"]["native_evidence"]
+        assert proof["worker_event_collection"]["complete"] is True
+        assert proof["worker_event_collection"]["expected_event_count"] == 1101
+        assert proof["worker_event_collection"]["fetched_event_count"] == 1101
+        assert len(proof["job_event_rows"]) == 1101
+        assert len(proof["worker_event_rows"]) == padding["original_worker_request_event_count"]
+
+        def invoke(candidate):
+            return original_validator(
+                candidate,
+                binding=evidence["stage_attempt_binding"],
+                stage=next(row for row in value["definition"]["stages"]
+                           if row["stage_id"] == value["stage_id"]),
+                stage_run_operation_id=evidence["stage_run_operation_id"],
+                solve_revision=evidence["solve_revision"],
+                output_revision=evidence["output_revision"],
+                observed_artifact_sha256=evidence["saved_artifact_observed_sha256"],
+            )
+
+        tamper_cases = {
+            "truncated": lambda candidate: candidate["job_event_rows"].pop(),
+            "mixed_nonworker": lambda candidate: candidate["job_event_rows"][
+                padding["original_event_count"]
+            ].update({"event": "worker_request"}),
+            "duplicate": lambda candidate: candidate["job_event_rows"].__setitem__(
+                1, copy.deepcopy(candidate["job_event_rows"][0]),
+            ),
+            "foreign_job": lambda candidate: candidate["job_event_rows"][0].update(
+                {"job_id": "foreign-job"},
+            ),
+            "out_of_order": lambda candidate: candidate["job_event_rows"].__setitem__(
+                slice(0, 2), reversed(candidate["job_event_rows"][:2]),
+            ),
+            "wrong_last_id": lambda candidate: candidate["worker_event_collection"].update(
+                {"snapshot_last_id": candidate["worker_event_collection"]["snapshot_last_id"] + 1},
+            ),
+            "wrong_digest": lambda candidate: candidate["worker_event_collection"].update(
+                {"events_sha256": "0" * 64},
+            ),
+            "wrong_page": lambda candidate: candidate["worker_event_collection"]["pages"][0].update(
+                {"offset": 1},
+            ),
+            "wrong_sentinel": lambda candidate: candidate["worker_event_collection"][
+                "terminal_sentinel"
+            ].update({"count": 1, "event_id": 999999}),
+            "worker_projection": lambda candidate: candidate["worker_event_rows"].pop(),
+        }
+        for fault, mutate in tamper_cases.items():
+            tampered = copy.deepcopy(evidence)
+            mutate(tampered)
+            accepted, reasons = invoke(tampered)
+            assert accepted is False, fault
+            assert "complete bounded exact-job event snapshot and Worker projection" in reasons, fault
     finally:
         value["daemon"].close()
 

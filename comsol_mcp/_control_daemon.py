@@ -2598,7 +2598,11 @@ class ControlDaemon:
                                  data={"engine_dispatched": False}, safe_retry=False)
             return self._finish(record, result, "FAILED")
         try:
-            return future.result(timeout=timeouts["rpc_timeout_s"])
+            # The public stage_run call is only a bounded synchronous wait on
+            # the original durable operation.  Its actual execution budget is
+            # carried unchanged by the scheduler task; do not wait longer
+            # than the API's short RPC window or cancel/replace the Future.
+            return future.result(timeout=min(timeouts["rpc_timeout_s"], 5.0))
         except FutureTimeout:
             return self._pending(record, rpc_wait_expired=True, **pending_attempt_details())
 
@@ -3200,24 +3204,42 @@ class ControlDaemon:
                                         if isinstance(preflight_artifact_id, str) else None)
                     job_record = self.store.operation_job(solve_operation_id)
                     job_id = job_record.get("job_id") if isinstance(job_record, Mapping) else None
-                    fetched_job_event_rows = (self.store.events(job_id, limit=1000)
-                                              if isinstance(job_id, str) else [])
-                    overflow_sentinel_rows = (self.store.events(
-                        job_id, offset=len(fetched_job_event_rows), limit=1,
-                    ) if isinstance(job_id, str) else [])
-                    worker_event_rows = fetched_job_event_rows
-                    worker_event_rows = [item for item in worker_event_rows
+                    job_event_snapshot = (
+                        self.store.collect_job_event_snapshot(job_id)
+                        if isinstance(job_id, str) and job_id else None
+                    )
+                    fetched_job_event_rows = (
+                        job_event_snapshot.get("events", [])
+                        if isinstance(job_event_snapshot, Mapping) else []
+                    )
+                    worker_event_rows = [item for item in fetched_job_event_rows
                                          if isinstance(item, Mapping) and item.get("event") == "worker_request"]
                     worker_event_collection = {
-                        "status": "COMPLETE" if isinstance(job_id, str) and not overflow_sentinel_rows
-                                 else "INCOMPLETE",
-                        "complete": bool(isinstance(job_id, str) and not overflow_sentinel_rows),
-                        "limit": 1000,
-                        "sentinel_checked": isinstance(job_id, str),
-                        "fetched_job_event_count": len(fetched_job_event_rows),
-                        "worker_request_event_count": len(worker_event_rows),
-                        "overflow_sentinel_count": len(overflow_sentinel_rows),
+                        key: value for key, value in job_event_snapshot.items()
+                        if key != "events"
+                    } if isinstance(job_event_snapshot, Mapping) else {
+                        "schema": "operation-store-job-event-snapshot/v1",
+                        "job_id": job_id,
+                        "status": "INCOMPLETE",
+                        "complete": False,
+                        "issues": ["exact stage-run job id is unavailable"],
                     }
+                    worker_event_collection.update({
+                        # Retain explicit legacy aliases as a compact summary;
+                        # acceptance recomputes the complete v1 page receipt.
+                        "limit": worker_event_collection.get("page_size"),
+                        "sentinel_checked": bool(
+                            isinstance(worker_event_collection.get("terminal_sentinel"), Mapping)
+                            and worker_event_collection["terminal_sentinel"].get("checked") is True
+                        ),
+                        "fetched_job_event_count": worker_event_collection.get("fetched_event_count", 0),
+                        "worker_request_event_count": len(worker_event_rows),
+                        "overflow_sentinel_count": (
+                            worker_event_collection.get("terminal_sentinel", {}).get("count", 0)
+                            if isinstance(worker_event_collection.get("terminal_sentinel"), Mapping)
+                            else 0
+                        ),
+                    })
                     output_evidence["worker_event_collection"] = dict(worker_event_collection)
                     submitted_rpc_ids = {
                         item.get("metadata", {}).get("request_id")
@@ -3285,6 +3307,7 @@ class ControlDaemon:
                             dict(mesh_artifact_record) if isinstance(mesh_artifact_record, Mapping) else None
                         ),
                         "solve_save_dispatches": solve_save_dispatches,
+                        "job_event_rows": [dict(item) for item in fetched_job_event_rows],
                         "worker_event_rows": [dict(item) for item in worker_event_rows],
                         "worker_job_id": job_id,
                         "worker_epoch": worker_epoch,

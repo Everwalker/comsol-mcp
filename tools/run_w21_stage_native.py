@@ -3084,7 +3084,10 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
                 arguments = {"job_id": reported_job_id}
             else:
                 operation = "job.list"
-                arguments = {"limit": 1000, "project_id": project_id}
+                # The logical job.list catalog caps a page at 500 rows. Keep
+                # recovery to one read-only page and fail closed if that page
+                # does not prove completeness; never over-request the schema.
+                arguments = {"limit": 500, "project_id": project_id}
         elif (isinstance(reported_job_id, str) and reported_job_id
                 and isinstance(project_id, str) and project_id
                 and reported_project_id == project_id):

@@ -26,6 +26,7 @@ def build_initial_stage_fixture(
     stage_run_idempotency_key: str | None = None,
     stage_define_execution_options: Mapping[str, Any] | None = None,
     stage_run_execution_options: Mapping[str, Any] | None = None,
+    event_padding_total: int | None = None,
 ) -> dict[str, Any]:
     """Run a stored first-stage plan through the actual managed producer path."""
     import comsol_mcp._managed_backend as managed_backend
@@ -442,6 +443,8 @@ def build_initial_stage_fixture(
                     "execution": run_execution}
     public_dispatches.append(json.loads(json.dumps(run_dispatch, allow_nan=False)))
     hash_restore = None
+    event_padding_receipt = None
+    event_padding_reads: list[dict[str, Any]] = []
     if fault == "artifact_mismatch":
         import comsol_mcp._w21_stage_backend as stage_backend
         hash_restore = stage_backend.hash_saved_artifact
@@ -453,20 +456,69 @@ def build_initial_stage_fixture(
             return digest, size
 
         stage_backend.hash_saved_artifact = hash_then_corrupt
-    if fault == "event_overflow":
-        original_events = daemon.store.events
+    if event_padding_total is not None:
+        if type(event_padding_total) is not int or not 1001 <= event_padding_total <= 10000:
+            daemon.close()
+            raise ValueError("event_padding_total must be an integer from 1001 through 10000")
+        padding_injected = False
         original_add_event = daemon.store.add_event
-        injected_overflow = False
 
-        def events_with_overflow_sentinel(job_id: str, offset: int = 0, limit: int = 100):
-            nonlocal injected_overflow
-            if not injected_overflow and offset == 0 and limit == 1000:
-                for index in range(1000):
-                    original_add_event(job_id, "fixture-overflow-padding", {"index": index})
-                injected_overflow = True
-            return original_events(job_id, offset=offset, limit=limit)
+        def pad_exact_solve_job(job_id: str) -> None:
+            nonlocal padding_injected, event_padding_receipt
+            if padding_injected:
+                return
+            with daemon.store.lock:
+                row = daemon.store.db.execute(
+                    "SELECT o.operation FROM jobs j JOIN operations o ON o.operation_id=j.operation_id "
+                    "WHERE j.job_id=?", (job_id,),
+                ).fetchone()
+                if row is None or row[0] != "experiment.stage_run":
+                    return
+                event_count = int(daemon.store.db.execute(
+                    "SELECT COUNT(*) FROM job_events WHERE job_id=?", (job_id,),
+                ).fetchone()[0])
+                worker_event_count = int(daemon.store.db.execute(
+                    "SELECT COUNT(*) FROM job_events WHERE job_id=? AND event='worker_request'", (job_id,),
+                ).fetchone()[0])
+                if event_count > 1000 or event_count >= event_padding_total:
+                    raise AssertionError(
+                        "fixture's original event transcript must fit the legacy 1000-row page before padding"
+                    )
+                additional = event_padding_total - event_count
+                for index in range(additional):
+                    original_add_event(job_id, "fixture-pagination-padding", {"index": index})
+                event_padding_receipt = {
+                    "job_id": job_id,
+                    "original_event_count": event_count,
+                    "original_worker_request_event_count": worker_event_count,
+                    "padding_event_count": additional,
+                    "final_event_count": event_padding_total,
+                    "all_original_worker_events_precede_padding": True,
+                }
+                padding_injected = True
 
-        daemon.store.events = events_with_overflow_sentinel
+        snapshot_method = getattr(daemon.store, "collect_job_event_snapshot", None)
+        if callable(snapshot_method):
+            def snapshot_with_padding(job_id: str, *, page_size: int = 1000):
+                pad_exact_solve_job(job_id)
+                return snapshot_method(job_id, page_size=page_size)
+            daemon.store.collect_job_event_snapshot = snapshot_with_padding
+        else:
+            original_events = daemon.store.events
+            def events_with_padded_transcript(job_id: str, offset: int = 0, limit: int = 100):
+                with daemon.store.lock:
+                    row = daemon.store.db.execute(
+                        "SELECT o.operation FROM jobs j JOIN operations o ON o.operation_id=j.operation_id "
+                        "WHERE j.job_id=?", (job_id,),
+                    ).fetchone()
+                event_padding_reads.append({
+                    "job_id": job_id, "offset": offset, "limit": limit,
+                    "operation": row[0] if row is not None else None,
+                })
+                if offset == 0 and limit == 1000 and row is not None and row[0] == "experiment.stage_run":
+                    pad_exact_solve_job(job_id)
+                return original_events(job_id, offset=offset, limit=limit)
+            daemon.store.events = events_with_padded_transcript
     # This direct ControlDaemon fixture bypasses connect_session(), so supply
     # the same Worker-owned compatibility client/connected state that a real
     # managed session installs before the registered legacy wrappers run.
@@ -488,4 +540,6 @@ def build_initial_stage_fixture(
             "stage_id": stage_id, "definition": definition,
             "stage_define_execution": define_execution, "stage_run_execution": run_execution,
             "public_dispatches": public_dispatches,
-            "defined": defined, "result": result, "attempt": attempt, "fault": fault}
+            "defined": defined, "result": result, "attempt": attempt, "fault": fault,
+            "event_padding_receipt": event_padding_receipt,
+            "event_padding_reads": event_padding_reads}

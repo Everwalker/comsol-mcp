@@ -19,6 +19,9 @@ from ._stage_contract import sha256_json
 ADMISSION_CONTRACT = "w21-stage-native-admission/v1"
 OUTPUT_CONTRACT = "w21-stage-output-readback/v1"
 INITIAL_OUTPUT_ACCEPTANCE_SCOPE = "INITIAL_OUTPUT_AND_SOURCE_ARTIFACT_ONLY"
+INITIAL_JOB_EVENT_SNAPSHOT_SCHEMA = "operation-store-job-event-snapshot/v1"
+INITIAL_JOB_EVENT_SNAPSHOT_PAGE_SIZE = 1000
+INITIAL_JOB_EVENT_SNAPSHOT_MAX_PAGES = 128
 
 
 class StageWorkerDispatchGate:
@@ -1114,6 +1117,113 @@ def _initial_event_index(rows: Any) -> tuple[dict[str, dict[str, list[tuple[Mapp
     return indexed, malformed
 
 
+def _initial_job_event_snapshot_rows(evidence: Mapping[str, Any], *, job_id: Any
+                                     ) -> tuple[bool, list[dict[str, Any]], list[dict[str, Any]]]:
+    """Recompute the bounded all-event receipt and its exact Worker projection."""
+    raw_rows = evidence.get("job_event_rows")
+    declared_workers = evidence.get("worker_event_rows")
+    collection = evidence.get("worker_event_collection")
+    if not isinstance(raw_rows, list) or not isinstance(collection, Mapping):
+        return False, [], []
+    if any(not isinstance(row, Mapping) for row in raw_rows):
+        return False, [], []
+    rows = [dict(row) for row in raw_rows]
+    ids = [row.get("id") for row in rows]
+    if any(type(value) is not int or value <= 0 for value in ids):
+        return False, rows, []
+    worker_rows = [row for row in rows if row.get("event") == "worker_request"]
+    workers_match = (
+        isinstance(declared_workers, list)
+        and all(isinstance(row, Mapping) for row in declared_workers)
+        and [dict(row) for row in declared_workers] == worker_rows
+    )
+    count = len(rows)
+    page_size = collection.get("page_size")
+    max_pages = collection.get("max_page_count")
+    expected_pages = collection.get("expected_page_count")
+    pages = collection.get("pages")
+    last_id = collection.get("snapshot_last_id")
+    sentinel = collection.get("terminal_sentinel")
+    if type(page_size) is not int or not 1 <= page_size <= INITIAL_JOB_EVENT_SNAPSHOT_PAGE_SIZE:
+        return False, rows, worker_rows
+    expected_page_count = (count + page_size - 1) // page_size if count else 0
+    if (collection.get("schema") != INITIAL_JOB_EVENT_SNAPSHOT_SCHEMA
+            or collection.get("status") != "COMPLETE"
+            or collection.get("complete") is not True
+            or collection.get("job_id") != job_id
+            or type(collection.get("job_row_count")) is not int
+            or collection.get("job_row_count") != 1
+            or type(max_pages) is not int or max_pages != INITIAL_JOB_EVENT_SNAPSHOT_MAX_PAGES
+            or type(expected_pages) is not int or expected_pages != expected_page_count
+            or expected_page_count > max_pages
+            or type(collection.get("expected_event_count")) is not int
+            or collection.get("expected_event_count") != count
+            or type(collection.get("fetched_event_count")) is not int
+            or collection.get("fetched_event_count") != count
+            or type(collection.get("fetched_job_event_count")) is not int
+            or collection.get("fetched_job_event_count") != count
+            or collection.get("limit") != page_size
+            or type(collection.get("worker_request_event_count")) is not int
+            or collection.get("worker_request_event_count") != len(worker_rows)
+            or not workers_match
+            or collection.get("event_ids") != ids
+            or ids != sorted(set(ids))
+            or type(last_id) is not int
+            or last_id != (ids[-1] if ids else 0)
+            or type(collection.get("id_sha256")) is not str
+            or collection.get("id_sha256") != hashlib.sha256(
+                ",".join(str(value) for value in ids).encode("ascii")
+            ).hexdigest()
+            or type(collection.get("events_sha256")) is not str
+            or collection.get("events_sha256") != sha256_json(rows)
+            or collection.get("sentinel_checked") is not True
+            or collection.get("terminal_sentinel_checked") is not True
+            or type(collection.get("terminal_sentinel_count")) is not int
+            or collection.get("terminal_sentinel_count") != 0
+            or type(collection.get("overflow_sentinel_count")) is not int
+            or collection.get("overflow_sentinel_count") != 0
+            or collection.get("issues") != []
+            or not isinstance(sentinel, Mapping)
+            or sentinel.get("checked") is not True
+            or sentinel.get("job_id") != job_id
+            or type(sentinel.get("snapshot_last_id")) is not int
+            or sentinel.get("snapshot_last_id") != last_id
+            or type(sentinel.get("offset")) is not int
+            or sentinel.get("offset") != count
+            or type(sentinel.get("count")) is not int
+            or sentinel.get("count") != 0
+            or sentinel.get("event_id") is not None
+            or not isinstance(pages, list) or len(pages) != expected_page_count):
+        return False, rows, worker_rows
+
+    for index, page in enumerate(pages):
+        offset = index * page_size
+        page_rows = rows[offset:offset + page_size]
+        page_ids = ids[offset:offset + page_size]
+        if (not isinstance(page, Mapping)
+                or type(page.get("index")) is not int
+                or page.get("index") != index
+                or type(page.get("offset")) is not int
+                or page.get("offset") != offset
+                or type(page.get("count")) is not int
+                or page.get("count") != len(page_rows)
+                or (page.get("first_id") is not None and type(page.get("first_id")) is not int)
+                or page.get("first_id") != (page_ids[0] if page_ids else None)
+                or (page.get("last_id") is not None and type(page.get("last_id")) is not int)
+                or page.get("last_id") != (page_ids[-1] if page_ids else None)
+                or page.get("id_sha256") != hashlib.sha256(
+                    ",".join(str(value) for value in page_ids).encode("ascii")
+                ).hexdigest()
+                or page.get("events_sha256") != sha256_json(page_rows)):
+            return False, rows, worker_rows
+    if any(row.get("job_id") != job_id
+           or not isinstance(row.get("event"), str) or not row.get("event")
+           or not isinstance(row.get("metadata"), Mapping)
+           for row in rows):
+        return False, rows, worker_rows
+    return True, rows, worker_rows
+
+
 def _initial_event_generation(event: Mapping[str, Any]) -> int | None:
     """Resolve the Worker epoch from the event's managed binding or request."""
     wrapper = event.get("metadata") if isinstance(event.get("metadata"), Mapping) else event
@@ -1558,27 +1668,14 @@ def validate_initial_output_acceptance(
                     or matching[0].get("revision") != expected_revision):
                 missing.append("solve/save dispatch revision matches its independent stage revision")
 
-    event_rows = evidence.get("worker_event_rows")
-    event_index, malformed_events = _initial_event_index(event_rows)
     worker_job_id = evidence.get("worker_job_id")
     worker_epoch = evidence.get("worker_epoch")
-    collection = evidence.get("worker_event_collection")
-    collection_valid = (
-        isinstance(collection, Mapping)
-        and collection.get("status") == "COMPLETE"
-        and collection.get("complete") is True
-        and collection.get("limit") == 1000
-        and collection.get("sentinel_checked") is True
-        and type(collection.get("fetched_job_event_count")) is int
-        and 0 <= collection["fetched_job_event_count"] <= 1000
-        and type(collection.get("worker_request_event_count")) is int
-        and collection.get("worker_request_event_count") == (len(event_rows) if isinstance(event_rows, list) else -1)
-        and collection["fetched_job_event_count"] >= collection["worker_request_event_count"]
-        and type(collection.get("overflow_sentinel_count")) is int
-        and collection.get("overflow_sentinel_count") == 0
+    collection_valid, _complete_job_event_rows, event_rows = _initial_job_event_snapshot_rows(
+        evidence, job_id=worker_job_id,
     )
+    event_index, malformed_events = _initial_event_index(event_rows)
     if not collection_valid:
-        missing.append("complete bounded Worker job-event collection with empty overflow sentinel")
+        missing.append("complete bounded exact-job event snapshot and Worker projection")
     if (not isinstance(event_rows, list) or not event_rows or malformed_events
             or not isinstance(worker_job_id, str) or not worker_job_id
             or type(worker_epoch) is not int or worker_epoch < 1):

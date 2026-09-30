@@ -18,6 +18,9 @@ from uuid import uuid4
 # never permitted to replay a claimed continuation after restart.
 SCHEMA_VERSION = 1
 TERMINAL = ("SUCCEEDED", "FAILED", "CANCELLED", "EXPIRED", "LOST")
+JOB_EVENT_SNAPSHOT_SCHEMA = "operation-store-job-event-snapshot/v1"
+JOB_EVENT_SNAPSHOT_PAGE_SIZE = 1000
+JOB_EVENT_SNAPSHOT_MAX_PAGES = 128
 METADATA_TABLES = {
     "sessions": "session_id",
     "runtimes": "runtime_id",
@@ -112,6 +115,18 @@ def _dumps_canonical(value: Any) -> str:
                 return [_sanitize(x) for x in item]
             return item
         return json.dumps(_sanitize(value), sort_keys=True)
+
+
+def _job_event_snapshot_sha256(value: Any) -> str:
+    """Use the same strict canonical JSON encoding as stage evidence hashes."""
+    canonical = json.dumps(
+        value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False,
+    )
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _reject_nonstandard_json_constant(value: str) -> None:
+    raise ValueError(f"non-standard JSON constant: {value}")
 
 
 def session_recovery_evidence_sha256(value: dict[str, Any]) -> str:
@@ -1904,6 +1919,170 @@ class OperationStore:
                     (job_id, max(0, min(int(limit), 1000)), max(0, int(offset))),
                 )
             ]
+
+    def _job_event_snapshot_page(self, job_id: str, snapshot_last_id: int,
+                                 *, limit: int, offset: int) -> list[dict[str, Any]]:
+        """Read one page constrained to the caller's immutable event-id bound."""
+        rows = self.db.execute(
+            "SELECT id,job_id,event,metadata,created_at FROM job_events "
+            "WHERE job_id=? AND id<=? ORDER BY id LIMIT ? OFFSET ?",
+            (job_id, snapshot_last_id, limit, offset),
+        ).fetchall()
+        result: list[dict[str, Any]] = []
+        for row in rows:
+            item = dict(row)
+            try:
+                item["metadata"] = json.loads(
+                    item.get("metadata"),
+                    parse_constant=_reject_nonstandard_json_constant,
+                )
+            except (TypeError, UnicodeDecodeError, ValueError):
+                item["metadata"] = None
+            result.append(item)
+        return result
+
+    def collect_job_event_snapshot(self, job_id: str, *,
+                                   page_size: int = JOB_EVENT_SNAPSHOT_PAGE_SIZE) -> dict[str, Any]:
+        """Collect one exact job's full event log in a bounded SQLite snapshot.
+
+        The first read fixes the WAL snapshot; every page is additionally
+        bounded by the captured maximum event id. A later event append cannot
+        shift offsets or be mixed into this receipt. The collector retains all
+        rows for downstream validation and returns a compact, recomputable
+        page/id manifest.
+        """
+        if not isinstance(job_id, str) or not job_id:
+            raise ValueError("job_id must be a non-empty string")
+        if type(page_size) is not int or not 1 <= page_size <= JOB_EVENT_SNAPSHOT_PAGE_SIZE:
+            raise ValueError(
+                f"page_size must be an integer from 1 through {JOB_EVENT_SNAPSHOT_PAGE_SIZE}"
+            )
+
+        issues: list[str] = []
+        events: list[dict[str, Any]] = []
+        pages: list[dict[str, Any]] = []
+        event_ids: list[int] = []
+        page_count = 0
+        expected_event_count = 0
+        snapshot_last_id = 0
+        job_row_count = 0
+        terminal_sentinel: dict[str, Any] = {
+            "checked": False, "job_id": job_id, "snapshot_last_id": 0,
+            "offset": 0, "count": 0, "event_id": None,
+        }
+
+        with self.lock:
+            self.db.execute("BEGIN")
+            try:
+                # Reading the exact job row establishes its binding within the
+                # same SQLite read transaction as count/max and all page reads.
+                job_rows = self.db.execute(
+                    "SELECT job_id FROM jobs WHERE job_id=?", (job_id,),
+                ).fetchall()
+                job_row_count = len(job_rows)
+                if job_row_count != 1:
+                    issues.append("exact job row cardinality is not one")
+                aggregate = self.db.execute(
+                    "SELECT COUNT(*) AS event_count,COALESCE(MAX(id),0) AS last_id "
+                    "FROM job_events WHERE job_id=?", (job_id,),
+                ).fetchone()
+                expected_event_count = int(aggregate["event_count"])
+                snapshot_last_id = int(aggregate["last_id"])
+                page_count = ((expected_event_count + page_size - 1) // page_size
+                              if expected_event_count else 0)
+                if page_count > JOB_EVENT_SNAPSHOT_MAX_PAGES:
+                    issues.append("job event snapshot exceeds the bounded page limit")
+                else:
+                    previous_id = 0
+                    for page_index in range(page_count):
+                        offset = page_index * page_size
+                        expected_count = min(page_size, expected_event_count - offset)
+                        page_rows = self._job_event_snapshot_page(
+                            job_id, snapshot_last_id, limit=page_size, offset=offset,
+                        )
+                        page_ids: list[int] = []
+                        for item in page_rows:
+                            row_id = item.get("id")
+                            if (item.get("job_id") != job_id
+                                    or type(row_id) is not int or row_id <= previous_id
+                            or row_id > snapshot_last_id
+                            or not isinstance(item.get("event"), str)
+                            or not item.get("event")
+                            or not isinstance(item.get("metadata"), dict)):
+                                issues.append("job event page contains a foreign, malformed, duplicate, or unordered row")
+                            if type(row_id) is int:
+                                page_ids.append(row_id)
+                                previous_id = row_id
+                            events.append(item)
+                        if len(page_rows) != expected_count:
+                            issues.append("job event page cardinality differs from its frozen offset/count")
+                        event_ids.extend(page_ids)
+                        pages.append({
+                            "index": page_index,
+                            "offset": offset,
+                            "count": len(page_rows),
+                            "first_id": page_ids[0] if page_ids else None,
+                            "last_id": page_ids[-1] if page_ids else None,
+                            "id_sha256": hashlib.sha256(
+                                ",".join(str(value) for value in page_ids).encode("ascii")
+                            ).hexdigest(),
+                            "events_sha256": _job_event_snapshot_sha256(page_rows),
+                        })
+
+                    sentinel = self.db.execute(
+                        "SELECT id FROM job_events WHERE job_id=? AND id<=? "
+                        "ORDER BY id LIMIT 1 OFFSET ?",
+                        (job_id, snapshot_last_id, expected_event_count),
+                    ).fetchone()
+                    terminal_sentinel = {
+                        "checked": True, "job_id": job_id,
+                        "snapshot_last_id": snapshot_last_id,
+                        "offset": expected_event_count,
+                        "count": 1 if sentinel is not None else 0,
+                        "event_id": int(sentinel[0]) if sentinel is not None else None,
+                    }
+                    if sentinel is not None:
+                        issues.append("bounded terminal sentinel found an uncounted event")
+
+                if len(events) != expected_event_count:
+                    issues.append("fetched job event count differs from the finite count snapshot")
+                if len(event_ids) != expected_event_count or event_ids != sorted(set(event_ids)):
+                    issues.append("job event id list is incomplete, duplicated, or unordered")
+                if ((event_ids and event_ids[-1] != snapshot_last_id)
+                        or (not event_ids and snapshot_last_id != 0)):
+                    issues.append("last event id differs from the captured snapshot maximum")
+                self.db.execute("COMMIT")
+            except Exception:
+                self.db.execute("ROLLBACK")
+                raise
+
+        id_sha256 = hashlib.sha256(
+            ",".join(str(value) for value in event_ids).encode("ascii")
+        ).hexdigest()
+        events_sha256 = _job_event_snapshot_sha256(events)
+        complete = not issues and job_row_count == 1 and terminal_sentinel["checked"] is True
+        return {
+            "schema": JOB_EVENT_SNAPSHOT_SCHEMA,
+            "job_id": job_id,
+            "status": "COMPLETE" if complete else "INCOMPLETE",
+            "complete": complete,
+            "page_size": page_size,
+            "max_page_count": JOB_EVENT_SNAPSHOT_MAX_PAGES,
+            "expected_page_count": page_count,
+            "expected_event_count": expected_event_count,
+            "fetched_event_count": len(events),
+            "snapshot_last_id": snapshot_last_id,
+            "event_ids": event_ids,
+            "id_sha256": id_sha256,
+            "events_sha256": events_sha256,
+            "pages": pages,
+            "terminal_sentinel": terminal_sentinel,
+            "terminal_sentinel_checked": terminal_sentinel["checked"],
+            "terminal_sentinel_count": terminal_sentinel["count"],
+            "job_row_count": job_row_count,
+            "issues": issues,
+            "events": events,
+        }
 
     def compact_terminal_job_metadata(self, job_ids: list[str], *, project_id: str | None = None) -> list[str]:
         """Compact selected terminal job-view metadata without deleting audit data.

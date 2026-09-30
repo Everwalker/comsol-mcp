@@ -1,4 +1,5 @@
 from comsol_mcp._operation_store import IdempotencyConflict, OperationStore, SCHEMA_VERSION
+import pytest
 import sqlite3
 import threading
 
@@ -123,6 +124,194 @@ def test_list_metadata_rejects_unapproved_table_name(tmp_path):
     assert store.list_metadata("sessions") == [{"server": "one"}]
     with pytest.raises(ValueError, match="unsupported metadata table"):
         store.list_metadata("sessions; DROP TABLE jobs")
+
+
+def test_job_event_snapshot_collects_large_exact_job_in_bounded_pages(tmp_path):
+    """A full job audit must not depend on the legacy 1000-row event page."""
+    import hashlib
+    import json
+
+    store = OperationStore(tmp_path / "large-event-snapshot.sqlite")
+    try:
+        record, _ = store.begin(
+            request_id="large-event-snapshot", idempotency_key="large-event-snapshot",
+            request_hash="a" * 64, operation="experiment.stage_run",
+        )
+        job_id = record["job_id"]
+        for index in range(4923):
+            store.add_event(job_id, "worker_request" if index % 2 else "progress", {"index": index})
+
+        snapshot = store.collect_job_event_snapshot(job_id, page_size=1000)
+        assert snapshot["job_id"] == job_id
+        assert snapshot["complete"] is True
+        assert snapshot["expected_event_count"] == 4923
+        assert snapshot["fetched_event_count"] == 4923
+        assert len(snapshot["events"]) == 4923
+        event_ids = [row["id"] for row in snapshot["events"]]
+        assert event_ids == sorted(set(event_ids))
+        assert snapshot["id_sha256"] == hashlib.sha256(
+            ",".join(str(event_id) for event_id in event_ids).encode("ascii")
+        ).hexdigest()
+        assert snapshot["events_sha256"] == hashlib.sha256(
+            json.dumps(
+                snapshot["events"], ensure_ascii=False, sort_keys=True,
+                separators=(",", ":"), allow_nan=False,
+            ).encode("utf-8")
+        ).hexdigest()
+        assert [page["count"] for page in snapshot["pages"]] == [1000, 1000, 1000, 1000, 923]
+        assert [page["offset"] for page in snapshot["pages"]] == [0, 1000, 2000, 3000, 4000]
+        for page, offset in zip(snapshot["pages"], (0, 1000, 2000, 3000, 4000), strict=True):
+            page_rows = snapshot["events"][offset:offset + page["count"]]
+            assert page["events_sha256"] == hashlib.sha256(
+                json.dumps(
+                    page_rows, ensure_ascii=False, sort_keys=True,
+                    separators=(",", ":"), allow_nan=False,
+                ).encode("utf-8")
+            ).hexdigest()
+        assert snapshot["terminal_sentinel_checked"] is True
+        assert snapshot["terminal_sentinel_count"] == 0
+    finally:
+        store.close()
+
+
+def test_job_event_snapshot_excludes_append_after_frozen_read_snapshot(tmp_path, monkeypatch):
+    store = OperationStore(tmp_path / "snapshot-reader.sqlite")
+    writer = OperationStore(tmp_path / "snapshot-reader.sqlite")
+    try:
+        record, _ = store.begin(
+            request_id="snapshot-late-append", idempotency_key="snapshot-late-append",
+            request_hash="b" * 64, operation="experiment.stage_run",
+        )
+        job_id = record["job_id"]
+        for index in range(3):
+            store.add_event(job_id, "progress", {"index": index})
+        original_page = store._job_event_snapshot_page
+        appended = False
+
+        def append_after_snapshot_page(selected_job_id, snapshot_last_id, *, limit, offset):
+            nonlocal appended
+            if not appended:
+                writer.add_event(selected_job_id, "late-append", {"outside_snapshot": True})
+                appended = True
+            return original_page(
+                selected_job_id, snapshot_last_id, limit=limit, offset=offset,
+            )
+
+        monkeypatch.setattr(store, "_job_event_snapshot_page", append_after_snapshot_page)
+        snapshot = store.collect_job_event_snapshot(job_id, page_size=2)
+        assert appended is True
+        assert snapshot["complete"] is True
+        assert snapshot["expected_event_count"] == 3
+        assert snapshot["fetched_event_count"] == 3
+        assert snapshot["snapshot_last_id"] == snapshot["events"][-1]["id"]
+        assert all(row["event"] != "late-append" for row in snapshot["events"])
+        assert [row["event"] for row in store.events(job_id)] == [
+            "progress", "progress", "progress", "late-append",
+        ]
+    finally:
+        writer.close()
+        store.close()
+
+
+@pytest.mark.parametrize(
+    "raw_metadata,expected_metadata",
+    [
+        (None, None),
+        ("", None),
+        ("not-json", None),
+        ("null", None),
+        ("[]", []),
+        ("NaN", None),
+    ],
+    ids=["sql-null", "empty-text", "invalid-json", "json-null", "json-array", "nonstandard-nan"],
+)
+def test_job_event_snapshot_marks_malformed_metadata_incomplete(
+    tmp_path, raw_metadata, expected_metadata,
+):
+    store = OperationStore(tmp_path / "snapshot-malformed.sqlite")
+    try:
+        record, _ = store.begin(
+            request_id="snapshot-malformed", idempotency_key="snapshot-malformed",
+            request_hash="c" * 64, operation="experiment.stage_run",
+        )
+        job_id = record["job_id"]
+        store.add_event(job_id, "progress", {"ok": True})
+        store.db.execute(
+            "UPDATE job_events SET metadata=? WHERE job_id=?", (raw_metadata, job_id),
+        )
+        row_count_before = store.db.execute(
+            "SELECT COUNT(*) FROM job_events WHERE job_id=?", (job_id,),
+        ).fetchone()[0]
+        snapshot = store.collect_job_event_snapshot(job_id)
+        row_count_after = store.db.execute(
+            "SELECT COUNT(*) FROM job_events WHERE job_id=?", (job_id,),
+        ).fetchone()[0]
+        assert snapshot["complete"] is False
+        assert snapshot["status"] == "INCOMPLETE"
+        assert snapshot["events"][0]["metadata"] == expected_metadata
+        assert row_count_after == row_count_before == 1
+        assert store.db.execute(
+            "SELECT metadata FROM job_events WHERE job_id=?", (job_id,),
+        ).fetchone()[0] == raw_metadata
+        assert any("malformed" in issue for issue in snapshot["issues"])
+    finally:
+        store.close()
+
+
+@pytest.mark.parametrize("metadata", [None, {}], ids=["public-none", "legal-empty-object"])
+def test_job_event_snapshot_accepts_valid_empty_object_metadata(tmp_path, metadata):
+    store = OperationStore(tmp_path / "snapshot-empty-object.sqlite")
+    try:
+        record, _ = store.begin(
+            request_id="snapshot-empty-object", idempotency_key="snapshot-empty-object",
+            request_hash="e" * 64, operation="experiment.stage_run",
+        )
+        job_id = record["job_id"]
+        store.add_event(job_id, "progress", metadata)
+
+        raw_metadata = store.db.execute(
+            "SELECT metadata FROM job_events WHERE job_id=?", (job_id,),
+        ).fetchone()[0]
+        snapshot = store.collect_job_event_snapshot(job_id)
+
+        assert raw_metadata == "{}"
+        assert snapshot["complete"] is True
+        assert snapshot["status"] == "COMPLETE"
+        assert snapshot["expected_event_count"] == snapshot["fetched_event_count"] == 1
+        assert snapshot["events"][0]["metadata"] == {}
+        assert snapshot["issues"] == []
+    finally:
+        store.close()
+
+
+def test_job_event_snapshot_stops_at_finite_page_cap(tmp_path, monkeypatch):
+    import comsol_mcp._operation_store as operation_store
+
+    store = OperationStore(tmp_path / "snapshot-page-cap.sqlite")
+    try:
+        record, _ = store.begin(
+            request_id="snapshot-page-cap", idempotency_key="snapshot-page-cap",
+            request_hash="d" * 64, operation="experiment.stage_run",
+        )
+        job_id = record["job_id"]
+        for index in range(4):
+            store.add_event(job_id, "progress", {"index": index})
+        monkeypatch.setattr(operation_store, "JOB_EVENT_SNAPSHOT_MAX_PAGES", 2)
+        at_limit = store.collect_job_event_snapshot(job_id, page_size=2)
+        assert at_limit["complete"] is True
+        assert at_limit["expected_page_count"] == 2
+        assert at_limit["fetched_event_count"] == 4
+
+        store.add_event(job_id, "progress", {"index": 4})
+        over_limit = store.collect_job_event_snapshot(job_id, page_size=2)
+        assert over_limit["complete"] is False
+        assert over_limit["expected_page_count"] == 3
+        assert over_limit["fetched_event_count"] == 0
+        assert over_limit["pages"] == []
+        assert over_limit["terminal_sentinel_checked"] is False
+        assert any("bounded page limit" in issue for issue in over_limit["issues"])
+    finally:
+        store.close()
 
 
 def test_finish_persists_unknown_without_terminal_timestamp(tmp_path):
