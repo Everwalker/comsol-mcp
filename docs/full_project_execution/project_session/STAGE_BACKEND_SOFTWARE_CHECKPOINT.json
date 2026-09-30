@@ -120,7 +120,7 @@
     "No COMSOL solve or native scientific acceptance",
     "T021/T047 and original W21 scope remain open"
   ],
-  "next_action": "Next local-only work is to prepare (not execute) fresh pre-execute read-only guard scripts and exactly one native-capture proposal bound to the prepared r17 freeze/state and fixed candidate for root review. Remote guard execution over SSH has NOT_RUN; there is no GO and no native execute authorization. Do not repeat remote readback, upload, or COMSOL execution before root review. W22 still requires actual Windows 6.4 native initial-stage acceptance on a reviewed fixed candidate. W21 remains PARTIAL and the MASTER W01-W26 goal remains ACTIVE through W26. Publication commit37 remains blocked after the prior auto-review refusal; do not push or bypass it.",
+  "next_action": "Next action: read-only exact-probe SQL root-cause investigation. After that, root decides whether to prepare a fresh discovery candidate; no fresh candidate is prepared or dispatched yet. Do not retry or implicitly replay r17 attempt005, and do not resume or replay the original r15/0b5 or r16 UNKNOWN attempts. W22 still requires actual Windows 6.4 native initial-stage acceptance on a reviewed fixed candidate. W21 remains PARTIAL and the MASTER W01-W26 goal remains ACTIVE through W26. Publication commit37 remains blocked after the prior auto-review refusal; do not push or bypass it.",
   "current_mesh_snapshot_20260930": {
     "status": "PASS_SCOPED_OFFLINE",
     "native_status": "NOT_RUN",
@@ -1013,7 +1013,7 @@
   },
   "current_software_candidate_pointer": "current_software_candidate_20261001",
   "current_native_preparation_20261001_r17": {
-    "status": "PREPARED_ONLY_PASS; ROOT_REVIEWED_PREPARE_AND_OFFLINE_COMPILE_ONLY; NATIVE_EXECUTE_NOT_RUN; SCIENCE_NOT_RUN",
+    "status": "PREPARE_AND_OFFLINE_COMPILE_PASS; ATTEMPT005_NATIVE_INITIAL_STAGE_CAPTURE_PROBE_FAIL; R17_FAILURE_CLEANUP_COMPLETE; SCIENTIFIC_ACCEPTANCE_NOT_RUN",
     "run_id": "w21-64-20260930T194645Z-f3f44f88",
     "software_candidate": {
       "id": "w21-r16-raw-metadata-repair-20261001-01",
@@ -1122,14 +1122,161 @@
       ],
       "saved_isolation_metadata": "RUNNING_AT_CAPTURE_ONLY; not a live-state guarantee",
       "quiet_process_observation": "OBSERVATION_ONLY; not cleanup proof or a live-state guarantee",
-      "cleanup": "NOT_ESTABLISHED"
+      "cleanup": "NOT_ESTABLISHED",
+      "attempt005_cleanup": "R17 attempt005 failure cleanup is recorded separately as complete; the earlier PREPARE-only snapshot cleanup remains NOT_ESTABLISHED."
     },
     "historical_native_unknowns": "Original r15/0b5 and r16 attempt002-002 UNKNOWN IDs and provenance remain in their existing records; neither is resumed or replayed. Report003 aggregate counts remain historical SQLite counts, not proof the repaired production pagination collector ran.",
-    "native_execute": "NOT_RUN",
+    "native_execute": "FAIL_INITIAL_STAGE_CAPTURE_PROBE_ATTEMPT005",
     "scientific_acceptance": "NOT_RUN",
     "overall_w21": "PARTIAL",
     "master_goal": "ACTIVE_THROUGH_W26",
-    "current_next_action": "Next local-only work is to prepare (not execute) fresh pre-execute read-only guard scripts and exactly one native-capture proposal bound to the prepared r17 freeze/state and fixed candidate for root review. Remote guard execution over SSH has NOT_RUN; there is no GO and no native execute authorization. Do not repeat remote readback, upload, or COMSOL execution before root review. W22 still requires actual Windows 6.4 native initial-stage acceptance on a reviewed fixed candidate. W21 remains PARTIAL and the MASTER W01-W26 goal remains ACTIVE through W26. Publication commit37 remains blocked after the prior auto-review refusal; do not push or bypass it."
+    "current_next_action": "Next action: read-only exact-probe SQL root-cause investigation. After that, root decides whether to prepare a fresh discovery candidate; no fresh candidate is prepared or dispatched yet. Do not retry or implicitly replay r17 attempt005, and do not resume or replay the original r15/0b5 or r16 UNKNOWN attempts. W22 still requires actual Windows 6.4 native initial-stage acceptance on a reviewed fixed candidate. W21 remains PARTIAL and the MASTER W01-W26 goal remains ACTIVE through W26. Publication commit37 remains blocked after the prior auto-review refusal; do not push or bypass it.",
+    "resource_admission_005": {
+      "status": "PASS_RESOURCE_ADMISSION_ONLY_NOT_NATIVE_ACCEPTANCE",
+      "go_authorization": {
+        "path": "execution-scratch/w21-initial-native-w21r17-plan-20261001/execute-design-005/go-authorization-005.json",
+        "sha256": "98923bbf5eab9e9c37f4d40c1a777aa3d1a16f378b030f399ab05e129b2ece3c",
+        "authorization_status": "GO_NATIVE_EXECUTE_ONCE"
+      },
+      "actual_five_guard_review": {
+        "path": "execution-scratch/w21-initial-native-w21r17-plan-20261001/execute-design-005/main-actual-guard-review005.json",
+        "sha256": "22fa11832624f5028daebdd24b966664c9c118145ba91106ddd40bacbcb16c53",
+        "status": "PASS_ACTUAL_GUARDS_ONLY"
+      },
+      "five_guard_receipts": [
+        {
+          "path": "execution-scratch/w21-initial-native-w21r17-plan-20261001/execute-design-005/guard-capture/design005-freeze_state-001.receipt.json",
+          "sha256": "60f107e1815facd956ee53d2aed79b863bb5e1a432ee954d5463e2ce1a3aba1c",
+          "status": "PASS"
+        },
+        {
+          "path": "execution-scratch/w21-initial-native-w21r17-plan-20261001/execute-design-005/guard-capture/design005-paths_server_home-001.receipt.json",
+          "sha256": "bbf60c504b02d0ebc482843ad9f157060e12caa1f162ab600ce537474d0fb616",
+          "status": "PASS"
+        },
+        {
+          "path": "execution-scratch/w21-initial-native-w21r17-plan-20261001/execute-design-005/guard-capture/design005-process_listeners-001.receipt.json",
+          "sha256": "f96f700e6d55b4dfcd1db7aeea84aa2292f9dd0acb3c6ee1a3aa117a5da13325",
+          "status": "PASS"
+        },
+        {
+          "path": "execution-scratch/w21-initial-native-w21r17-plan-20261001/execute-design-005/guard-capture/design005-runtime-001.receipt.json",
+          "sha256": "0fdfb7fd8080cab89b77d8d5d8b8b01b5da71e1ff298ca6ce4aae2c5afe624f6",
+          "status": "PASS"
+        },
+        {
+          "path": "execution-scratch/w21-initial-native-w21r17-plan-20261001/execute-design-005/guard-capture/design005-source_closure-001.receipt.json",
+          "sha256": "78722f4c01a7c7490a7198c364b7e165a6725828c6ba68c3f8d44e80538ed391",
+          "status": "PASS"
+        }
+      ],
+      "interpretation": "Resource admission only; it does not establish a successful native execute or scientific acceptance."
+    },
+    "execution_attempt005": {
+      "status": "FAIL_INITIAL_STAGE_CAPTURE_PROBE",
+      "path": "execution-scratch/w21-initial-native-w21r17-plan-20261001/execute-design-005/raw-capture/execute-attempt005.receipt.json",
+      "sha256": "d5f5681b4071506b23d7f445347bec3ff5ef3a8f76c07d2a47b37b140d5e4ef9",
+      "started_utc": "2026-09-30T21:18:23.735415+00:00",
+      "ended_utc": "2026-09-30T21:18:51.972108+00:00",
+      "ssh_exit": 2,
+      "run_id": "w21-64-20260930T194645Z-f3f44f88",
+      "freeze_sha256": "1a148eb2fec84cc81d2fbc20c5ead74e05f80e8847825782cda2774b2c4fce84",
+      "proposal_sha256": "f6a72d0c34fdbd100dd12a1ac8e8b5d3940c927f0ecb9d062fc55fb5bc9151d4",
+      "execute_proposal_review_sha256": "8ca950a0077d34e6229da62eddae3a2d6a380e54b0d5538b2ca632e1c200973f",
+      "go_authorization_sha256": "98923bbf5eab9e9c37f4d40c1a777aa3d1a16f378b030f399ab05e129b2ece3c",
+      "actual_guard_review_sha256": "22fa11832624f5028daebdd24b966664c9c118145ba91106ddd40bacbcb16c53",
+      "stdout_bytes": 252,
+      "stdout_sha256": "0ec2a6d80033368f28759961185a7e18812535a2f58de49330e0945838d7d539",
+      "stderr_bytes": 573,
+      "stderr_sha256": "60d7974f3e62c7a11111edf2a249386ad4382b4206eaefc323a12bac2f9a1711",
+      "failure": "ExceptionGroup; cause RunnerError: probe output is incomplete or claims a scope outside metadata capture.",
+      "retry_or_implicit_replay": "NONE"
+    },
+    "reconciliation_attempt002": {
+      "status": "FAILED_DETERMINISTIC_REFUSAL_NO_IMPLICIT_REPLAY",
+      "receipt": {
+        "path": "execution-scratch/w21-initial-native-w21r17-plan-20261001/reconciliation-001/state-readback-attempt002.receipt.json",
+        "sha256": "b978db3b54b4ab4bfdfd38469cc3d36a27a7eaee28b544c1ad045efdfe912139",
+        "status": "COMPLETED",
+        "ssh_exit": 0
+      },
+      "state": {
+        "path": "execution-scratch/w21-initial-native-w21r17-plan-20261001/reconciliation-001/state-readback-attempt002.state.json",
+        "sha256": "551e2c985856395d8f80373a3d2443887dfeeb26fe72857fb2c7886f4699d134",
+        "bytes": 9552,
+        "status": "FAILED",
+        "failure": "deterministic refusal; no implicit replay",
+        "unknown_action": null
+      },
+      "resource_counts": {
+        "geometry_run": 1,
+        "mesh_run": 1,
+        "server_births_possible": 1,
+        "worker_births_possible": 1
+      },
+      "operation_dispatches": {
+        "stage_define": {
+          "actual": 0,
+          "possible": 0,
+          "status": "NOT_DISPATCHED"
+        },
+        "stage_run": {
+          "actual": 0,
+          "possible": 0,
+          "status": "NOT_DISPATCHED"
+        },
+        "study": {
+          "actual": 0,
+          "possible": 0,
+          "status": "NOT_DISPATCHED"
+        },
+        "solver": {
+          "actual": 0,
+          "possible": 0,
+          "status": "NOT_DISPATCHED"
+        },
+        "underlying_solve": {
+          "actual": 0,
+          "possible": 0,
+          "status": "NOT_DISPATCHED"
+        },
+        "field_reads": {
+          "actual": 0,
+          "possible": 0,
+          "status": "NOT_DISPATCHED"
+        },
+        "solution_tuple_reads": {
+          "actual": 0,
+          "possible": 0,
+          "status": "NOT_DISPATCHED"
+        },
+        "stage_run_wait_calls": {
+          "actual": 0,
+          "possible": 0,
+          "status": "NOT_DISPATCHED"
+        }
+      }
+    },
+    "r17_cleanup": {
+      "status": "CLEANUP_COMPLETE_FOR_R17_ATTEMPT005_FAILURE_ONLY",
+      "evidence_source": "reconciliation-001/state-readback-attempt002.state.json failure_cleanup",
+      "server_stopped": true,
+      "worker_retired": true,
+      "owned_server_isolation_snapshot": {
+        "path": "execution-scratch/w21-initial-native-w21r17-plan-20261001/reconciliation-001/state-readback-attempt002.owned_server_isolation.json",
+        "sha256": "70e610deef1c53dd347d61a06a35fe09fd5832dba8b90e02a3b6e7558dfda0cf",
+        "bytes": 302,
+        "status": "STOPPED"
+      },
+      "process_observation": {
+        "path": "execution-scratch/w21-initial-native-w21r17-plan-20261001/reconciliation-001/process-observation-attempt001.receipt.json",
+        "sha256": "23304f553757d1a54eb4e1daee5cb8d2fb055a4f7ebf5906f068a5f36b3565e3",
+        "status": "COMPLETED_SCOPED_OBSERVATION_ONLY",
+        "observed": "No Java, COMSOL, or W21-owned processes; protected services unchanged.",
+        "interpretation": "Observation only; it does not establish general cleanup or change prior r15/r16 UNKNOWN states."
+      },
+      "scope": "r17 attempt005 only; no cleanup PASS is inferred for original r15/0b5 or r16 attempts."
+    }
   },
   "current_native_preparation_pointer": "current_native_preparation_20261001_r17"
 }
