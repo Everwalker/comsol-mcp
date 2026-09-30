@@ -2052,7 +2052,8 @@ def study_create(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> d
     return result
 
 
-def study_inspect(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+def study_inspect(worker: Any, model_tag: str, arguments: Mapping[str, Any], *,
+                  _w21_initial_stage_context: bool = False) -> dict[str, Any]:
     args = operation_arguments(arguments, ("path",), ("path",))
     canonical, node, tag = _study_context(worker, model_tag, args["path"])
     steps = _study_step_rows(node, canonical)
@@ -2061,7 +2062,7 @@ def study_inspect(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> 
                                       "getLastComputationVersion", "isGenPlots", "isGenConv",
                                       "isGenIntermediatePlots", "isStoreSolution", "isPlotUndefVals",
                                       "isStoreCompleteHistory"))
-    return {
+    result = {
         "path": canonical,
         "study": tag,
         "label": call_probe(node, "label")["value"] if call_probe(node, "label")["ok"] else None,
@@ -2081,6 +2082,20 @@ def study_inspect(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> 
             "physics activation is read per step with solveFor() and reported inside each step row",
         ],
     }
+    if _w21_initial_stage_context:
+        native = call_probe(node, "getSolverSequences", "SolverSequence")
+        tags = native.get("value") if native.get("ok") else None
+        if isinstance(tags, (list, tuple)) and all(isinstance(item, str) and item for item in tags):
+            result["_w21_initial_stage_solver_sequences"] = {
+                "status": "VERIFIED", "type": "SolverSequence",
+                "tags": list(tags), "source": "Study.getSolverSequences(String)",
+            }
+        else:
+            result["_w21_initial_stage_solver_sequences"] = {
+                "status": "UNVERIFIED", "type": "SolverSequence", "tags": None,
+                "source": "Study.getSolverSequences(String)", "error": native.get("error"),
+            }
+    return result
 
 
 def _study_step_rows(study: Any, study_path: Mapping[str, Any]) -> list[dict[str, Any]]:
@@ -2705,7 +2720,8 @@ def solver_list(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> di
     }
 
 
-def _solver_tree(node: Any, depth: int, *, prefix: Mapping[str, Any]) -> list[dict[str, Any]]:
+def _solver_tree(node: Any, depth: int, *, prefix: Mapping[str, Any],
+                 include_active: bool = False) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for tag in _feature_tags(node):
         child = _call(node, "feature", tag)
@@ -2733,10 +2749,17 @@ def _solver_tree(node: Any, depth: int, *, prefix: Mapping[str, Any]) -> list[di
             "allowlist_entry_required": snapshot["allowlist_entry_required"],
             "children": [],
         }
+        if include_active:
+            active = call_probe(child, "isActive")
+            row["is_active"] = active.get("value") if active.get("ok") else None
+            row["active_read_error"] = active.get("error")
         child_container = call_probe(child, "feature")
         if depth > 1 and child_container["ok"] and child_container["value"] is not None:
             try:
-                row["children"] = _solver_tree(child, depth - 1, prefix={"segments": path["segments"]})
+                row["children"] = _solver_tree(
+                    child, depth - 1, prefix={"segments": path["segments"]},
+                    include_active=include_active,
+                )
             except ExecutionContractError as exc:
                 row["children_error"] = describe_engine_failure(exc, "feature")
         rows.append(row)
@@ -2783,7 +2806,8 @@ def _solver_path_remediation(worker: Any, model_tag: str) -> dict[str, Any]:
     }
 
 
-def solver_inspect(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+def solver_inspect(worker: Any, model_tag: str, arguments: Mapping[str, Any], *,
+                   _w21_initial_stage_context: Any = None) -> dict[str, Any]:
     args = operation_arguments(arguments, ("path", "depth"), ("path",))
     depth = args.get("depth")
     depth = 2 if depth is None else require_int(depth, "depth", minimum=1, maximum=4)
@@ -2803,6 +2827,64 @@ def solver_inspect(worker: Any, model_tag: str, arguments: Mapping[str, Any]) ->
         ) from exc
     parsed = NodePath.from_wire(canonical)
     root = parsed.segments[-1].collection if parsed.segments else None
+    if (isinstance(_w21_initial_stage_context, Mapping)
+            and _w21_initial_stage_context.get("purpose") == "initial_stage_output"
+            and _w21_initial_stage_context.get("variables_xmesh_ticket") is True):
+        expected_path = _w21_initial_stage_context.get("variables_feature_path")
+        expected_solver = _w21_initial_stage_context.get("solver_tag")
+        expected_feature = _w21_initial_stage_context.get("variables_feature_tag")
+        if (root != "feature" or canonical != expected_path
+                or not isinstance(expected_solver, str) or not expected_solver
+                or not isinstance(expected_feature, str) or not expected_feature
+                or len(parsed.segments) < 2
+                or parsed.segments[0].collection != "sol"
+                or parsed.segments[0].tag != expected_solver
+                or parsed.segments[-1].tag != expected_feature
+                or node_type(node) != "Variables"):
+            raise ExecutionContractError(
+                "STAGE_PROFILE_UNVERIFIED",
+                "private Variables.xmeshInfo ticket is not bound to the exact active Variables NodePath",
+                stage="validation",
+            )
+        active = call_probe(node, "isActive")
+        if not active.get("ok") or active.get("value") is not True:
+            raise ExecutionContractError(
+                "STAGE_PROFILE_UNVERIFIED",
+                "the exact Variables feature is no longer readable as active before xmeshInfo",
+                stage="validation",
+            )
+        dofs = call_probe(node, "getVariablesXmeshReadback",
+                          include_engine_failure_details=True)
+        if not dofs.get("ok"):
+            error = dofs.get("error")
+            # The Worker helper owns xmeshInfo plus clearXmesh in one call.
+            # Once that call is dispatched, any failed reply leaves cleanup
+            # unresolved from this layer and must dirty the ticketed state.
+            raise ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN",
+                "Variables.xmeshInfo/clearXmesh returned no successful terminal readback",
+                stage="post_dispatch",
+                details={"worker_error": dict(error) if isinstance(error, Mapping) else None,
+                         "cleanup": "UNVERIFIED"},
+            )
+        value = dofs.get("value")
+        if (not isinstance(value, Mapping) or value.get("status") != "VERIFIED"
+                or value.get("feature_tag") != expected_feature
+                or value.get("feature_active") is not True
+                or value.get("cleanup") != "clearXmesh"):
+            raise ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN",
+                "Variables.xmeshInfo did not return a verified summary with completed clearXmesh cleanup",
+                stage="post_dispatch",
+                details={"cleanup": value.get("cleanup") if isinstance(value, Mapping) else None},
+            )
+        return {
+            "kind": "variables_xmesh_readback",
+            "path": canonical,
+            "solver": expected_solver,
+            "feature_tag": expected_feature,
+            "initial_xmesh_dof_readback": dict(value),
+        }
     if root == "sol":
         solver_tag = validate_tag(parsed.segments[0].tag, "sol")
         snapshot = _probe_snapshot(node, ("isEmpty", "isInitialized", "getDefaultSolnum",
@@ -2827,7 +2909,8 @@ def solver_inspect(worker: Any, model_tag: str, arguments: Mapping[str, Any]) ->
             "warning_message": snapshot["values"].get("getWarningMessage"),
             "parameter_names": snapshot["values"].get("getPNames"),
             "parameter_values": snapshot["values"].get("getPVals"),
-            "features": _solver_tree(node, depth, prefix=canonical),
+            "features": _solver_tree(node, depth, prefix=canonical,
+                                     include_active=_w21_initial_stage_context),
             "read_errors": snapshot["errors"],
             "allowlist_entry_required": snapshot["allowlist_entry_required"],
             "type_vocabulary": {

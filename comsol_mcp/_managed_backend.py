@@ -238,6 +238,10 @@ class ManagedBackend:
         # W21 output reader. They are kept in a context variable instead of a
         # request flag, so public result.evaluate callers cannot enable them.
         self._stage_output_mode_context = ContextVar(f"comsol_w21_output_mode_{id(self)}", default=None)
+        # Initial-stage admission/output metadata can only be requested by
+        # backend-owned readers. This context never comes from an operation
+        # argument and preserves the public G3 schemas.
+        self._stage_native_context = ContextVar(f"comsol_w21_initial_stage_{id(self)}", default=None)
         # Full current-mesh snapshots are similarly restricted to the
         # backend-owned stage evidence reader. The public mesh.inspect schema
         # remains unchanged and cannot select this branch.
@@ -275,7 +279,8 @@ class ManagedBackend:
     def project_root(self, value):
         self._base_project_root = Path(value).resolve()
 
-    def stage_native_admission(self, *, binding, plan, stage):
+    def stage_native_admission(self, *, binding, plan, stage, event_callback=None,
+                               authorize_callback=None):
         """Return the current fail-closed native admission state for one stage.
 
         A caller declaration cannot populate these facts.  This build has no
@@ -283,9 +288,14 @@ class ManagedBackend:
         not authorize a stage solve.  Keeping the response here makes the
         missing native capability explicit at the dispatch boundary.
         """
-        from ._w21_stage_backend import ADMISSION_CONTRACT
+        from ._w21_stage_backend import ADMISSION_CONTRACT, is_registered_initial_state_stage
 
-        del plan, stage
+        if is_registered_initial_state_stage(plan, stage):
+            from ._w21_initial_stage import produce_initial_stage_preflight
+            return produce_initial_stage_preflight(
+                self, binding=binding, plan=plan, stage=stage,
+                event_callback=event_callback, authorize_callback=authorize_callback,
+            )
         return {
             "contract": ADMISSION_CONTRACT,
             "producer": "managed-backend-unverified",
@@ -1065,24 +1075,32 @@ class ManagedBackend:
             from ._server import session_server as srv
             from ._model import _set_current_model
             bound_model = None
-            if ref and self.worker is not None:
-                bound_model = self.worker.client().model(ref.model_tag)
-                _set_current_model(bound_model, origin="bound-request")
             if stage_marker is not None:
-                if (bound_model is None or not isinstance(getattr(bound_model, "_handle", None), str)
-                        or type(getattr(bound_model, "_generation", None)) is not int
-                        or not callable(event_callback)):
+                if (ref is None or self.worker is None or not callable(event_callback)):
                     raise ExecutionContractError(
                         "WORKER_IDENTITY_UNAVAILABLE",
-                        "W21 stage dispatch requires the exact managed RemoteModel and Worker event callback",
+                        "W21 stage dispatch requires a bound ModelRef, Worker, and event callback",
                     )
                 backend_binding = {
                     "phase": stage_marker["phase"],
                     "model_tag": ref.model_tag,
-                    "model_handle": bound_model._handle,
-                    "worker_generation": bound_model._generation,
+                    "model_handle": None,
+                    "worker_generation": getattr(self.worker, "generation", None),
                     "save_target_path": str(stage_save_target) if stage_save_target is not None else None,
+                    "model_ref": ref.as_dict(),
+                    "project_id": execution.get("project_id"),
+                    "attempt_id": stage_marker["attempt_id"],
+                    "expected_revision": stage_marker["expected_revision"],
+                    "request_id": stage_marker["request_id"],
+                    "operation_id": operation_id,
+                    "binding_sha256": stage_marker["binding_sha256"],
                 }
+                if (type(backend_binding["worker_generation"]) is not int
+                        or backend_binding["worker_generation"] < 1):
+                    raise ExecutionContractError(
+                        "WORKER_IDENTITY_UNAVAILABLE",
+                        "W21 stage dispatch has no current Worker generation",
+                    )
                 original_event_callback = event_callback
 
                 def bound_stage_event(event):
@@ -1090,7 +1108,27 @@ class ManagedBackend:
                     enriched["w21_backend_binding"] = dict(backend_binding)
                     original_event_callback(enriched)
 
+                # Model resolution and _set_current_model can perform genuine
+                # Worker reads (including getFilePath) before the solve/save
+                # callback is entered. Bind those requests to the stage before
+                # issuing them; the first model command has no handle yet, so
+                # its exact tag/ModelRef/attempt binding deliberately carries
+                # model_handle=None until the returned RemoteModel is known.
                 callback_target[0] = bound_stage_event
+                bound_model = self.worker.client().model(ref.model_tag)
+                if (not isinstance(getattr(bound_model, "_handle", None), str)
+                        or not bound_model._handle
+                        or type(getattr(bound_model, "_generation", None)) is not int
+                        or bound_model._generation != backend_binding["worker_generation"]):
+                    raise ExecutionContractError(
+                        "WORKER_IDENTITY_UNAVAILABLE",
+                        "W21 stage model resolution returned a different Worker handle or generation",
+                    )
+                backend_binding["model_handle"] = bound_model._handle
+                _set_current_model(bound_model, origin="bound-request")
+            elif ref and self.worker is not None:
+                bound_model = self.worker.client().model(ref.model_tag)
+                _set_current_model(bound_model, origin="bound-request")
             # Validate configured paths too, not only paths present in this request.
             if self.worker is not None:
                 from ._state import _read_workflow_state
@@ -2321,7 +2359,30 @@ class ManagedBackend:
         function = DISPATCH.get(operation)
         if function is None:
             raise ExecutionContractError("UNSUPPORTED_OPERATION", f"G3 operation is not executable: {operation}")
-        effect = _G3_EFFECT_MAP.get(str(EFFECTS.get(operation, "")).upper())
+        native_ticket_context = self._stage_native_context.get(None)
+        catalog_effect = str(EFFECTS.get(operation, "")).upper()
+        private_xmesh_ticket = False
+        if (isinstance(native_ticket_context, Mapping)
+                and native_ticket_context.get("variables_xmesh_ticket") is True):
+            exact_path = native_ticket_context.get("variables_feature_path")
+            if (operation != "solver.inspect"
+                    or native_ticket_context.get("purpose") != "initial_stage_output"
+                    or native_ticket_context.get("readphase") != "initial-stage-active-variables-xmesh"
+                    or not isinstance(exact_path, Mapping)
+                    or body.get("path") != exact_path
+                    or execution.get("expected_revision") != native_ticket_context.get("expected_revision")
+                    or execution.get("expected_revision") != native_ticket_context.get("solve_revision")):
+                raise ExecutionContractError(
+                    "PERMISSION_DENIED",
+                    "private Variables.xmeshInfo ticket requires its exact path and current solve revision",
+                    stage="pre_dispatch",
+                )
+            # This is the server-owned initial-stage ephemeral xmesh lifecycle.
+            # It reuses the registered solver.inspect implementation while
+            # requiring project_write authority and a real EVALUATE ticket.
+            catalog_effect = "EVALUATE"
+            private_xmesh_ticket = True
+        effect = _G3_EFFECT_MAP.get(catalog_effect)
         if effect is None:
             raise ExecutionContractError("PERMISSION_DENIED", f"unclassified G3 effect for operation {operation}")
         isolation = (
@@ -2329,7 +2390,8 @@ class ManagedBackend:
             if (operation in REQUIRES_ISOLATION and effect in {"evaluate", "project_write", "compute", "state_write", "trusted_code"})
             else None
         )
-        alias = self._g2_alias(operation)
+        alias = ("w21_initial_variables_xmesh" if private_xmesh_ticket
+                 else self._g2_alias(operation))
 
         registered_import = None
         import_body = body
@@ -2387,11 +2449,35 @@ class ManagedBackend:
                 if registered_import is not None:
                     domain_body = dict(import_body)
                 output_mode = self._stage_output_mode_context.get(None)
+                native_context = self._stage_native_context.get(None)
                 mesh_snapshot_mode = self._stage_mesh_snapshot_context.get(None)
                 if operation == "result.evaluate" and output_mode == "strict_field_readback":
-                    data = function(self.worker, model_tag, domain_body, strict_field_readback=True)
+                    if (isinstance(native_context, Mapping)
+                            and native_context.get("purpose") == "initial_stage_output"):
+                        data = function(
+                            self.worker, model_tag, domain_body,
+                            strict_field_readback=True,
+                            _w21_initial_output_context=dict(native_context),
+                        )
+                    else:
+                        data = function(self.worker, model_tag, domain_body, strict_field_readback=True)
                 elif operation == "result.evaluate" and output_mode == "strict_metric_evidence":
                     data = function(self.worker, model_tag, domain_body, strict_metric_evidence=True)
+                elif (operation in {"study.inspect", "solver.inspect"}
+                      and isinstance(native_context, Mapping)
+                      and native_context.get("purpose") in {
+                          "initial_stage_admission", "initial_stage_output"}):
+                    data = function(
+                        self.worker, model_tag, domain_body,
+                        _w21_initial_stage_context=dict(native_context),
+                    )
+                elif (operation == "dataset.solution_indices"
+                      and isinstance(native_context, Mapping)
+                      and native_context.get("purpose") == "initial_stage_output"):
+                    data = function(
+                        self.worker, model_tag, domain_body,
+                        _w21_initial_stage_context=dict(native_context),
+                    )
                 elif operation == "mesh.inspect" and isinstance(mesh_snapshot_mode, dict):
                     data = function(self.worker, model_tag, domain_body,
                                     _strict_snapshot_mode=mesh_snapshot_mode)

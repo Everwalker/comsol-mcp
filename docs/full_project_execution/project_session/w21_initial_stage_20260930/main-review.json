@@ -1,0 +1,116 @@
+{
+  "schema": "W21_INITIAL_STAGE_MAIN_SOFTWARE_REVIEW_V1",
+  "reviewed_at": "2026-09-30T05:41:21.028521+00:00",
+  "status": "ACCEPTED_SCOPED_SOFTWARE",
+  "base_commit": "6100906b01c32498481ea4ea32cd5045d07add2e",
+  "candidate_fingerprint": "ffdc8c25e4528c2cb42c358a6e1ee4e89898fb172a8891dbee3bcbc86766442a",
+  "fingerprint_method": "SHA256 of UTF-8 sorted compact JSON path-to-SHA256 map for 24 code/test files",
+  "source_hashes_verified": 24,
+  "receipt_sha256": "e7702eb4390ae6ff203174dabcf88291dfc23268cb2c35ead9f7c58da7332b3b",
+  "evidence_hashes_verified": 26,
+  "tests": {
+    "unique_cases": 566,
+    "passed": 565,
+    "skipped": 1,
+    "failed": 0,
+    "errored": 0,
+    "three_junit_reports_have_no_overlapping_classname_name_pairs": true,
+    "reports": [
+      {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-integration-20260930/reports/combined-affected-alpha-001.xml",
+        "sha256": "79ca03c5ea336a8fe22f345e9bdb02b395d8998f427bec58fe36bc87c98d9fbf",
+        "cases": 280,
+        "testsuite_attributes": {
+          "tests": 280,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "result_counts": {
+          "passed": 280,
+          "skipped": 0,
+          "failed": 0,
+          "errored": 0
+        },
+        "modules": {
+          "test_operation_store": 10,
+          "test_run_w21_stage_native": 156,
+          "test_stage_definition": 83,
+          "test_w21_initial_stage_execution": 31
+        },
+        "skipped_cases": [],
+        "timestamp": "2026-09-30T13:15:41.052584+08:00"
+      },
+      {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-integration-20260930/reports/affected-followup-six-001.xml",
+        "sha256": "572ba5718821f5e32171935694166b22647d66bac8f080cb8f729456ff0a088c",
+        "cases": 245,
+        "testsuite_attributes": {
+          "tests": 245,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "result_counts": {
+          "passed": 245,
+          "skipped": 0,
+          "failed": 0,
+          "errored": 0
+        },
+        "modules": {
+          "test_execution_contract": 10,
+          "test_g3_results": 113,
+          "test_g3_w16": 80,
+          "test_registration": 3,
+          "test_w21_native_output": 32,
+          "test_w21_stage_backend": 7
+        },
+        "skipped_cases": [],
+        "timestamp": "2026-09-30T13:17:01.895300+08:00"
+      },
+      {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-integration-20260930/reports/java-worker-r17-001.xml",
+        "sha256": "ca37538a796c32cfbd995cdd570c9a12d5a6527afea3994ab5da668904093edd",
+        "cases": 41,
+        "testsuite_attributes": {
+          "tests": 41,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 1
+        },
+        "result_counts": {
+          "passed": 40,
+          "skipped": 1,
+          "failed": 0,
+          "errored": 0
+        },
+        "modules": {
+          "TestWorkerAllowlist": 7,
+          "test_java_worker": 34
+        },
+        "skipped_cases": [
+          {
+            "classname": "tests.test_java_worker",
+            "name": "test_windows_existing_foreign_lock_root_is_rejected_without_takeover",
+            "reason": "Windows owner semantics only"
+          }
+        ],
+        "timestamp": "2026-09-30T12:30:30.099909+08:00"
+      }
+    ]
+  },
+  "review_scope": [
+    "Cohesive backend/daemon/store/G3/Java transport and runner production changes reviewed in preceding main review checkpoints.",
+    "Final successor fixture adaptation reviewed; synthetic predecessor is explicitly test-only, successor mapping/frame/history checks remain enforced.",
+    "Actual producer-path software positive accepted; all eleven main tamper cases rejected on stable validator source.",
+    "R1 event correlation and terminal states; R2 normal wait expiry; R3 unique Variables xmesh observation budget; R4 private EVALUATE mutation ticket and cleanup findings repaired.",
+    "Rebuild 002 retains historical commands separately and requires fresh basetemp/XML paths."
+  ],
+  "limits": {
+    "native_initial_stage": "NOT_RUN",
+    "scientific_acceptance": "UNVERIFIED",
+    "overall_project": "PARTIAL",
+    "final_independent_reviewer": "NOT_STARTED"
+  },
+  "full_raw_evidence_retained": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-integration-20260930"
+}

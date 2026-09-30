@@ -645,6 +645,7 @@ def produce_stage_output_readback(
 ) -> dict[str, Any]:
     """Read actual result fields/integrals through managed G3 service tickets."""
     from ._managed_backend import _G3_EFFECT_MAP
+    from ._w21_stage_backend import is_registered_initial_state_stage
 
     if (not isinstance(binding, Mapping) or not isinstance(stage, Mapping)
             or not isinstance(plan, Mapping) or not isinstance(solve_result, Mapping)):
@@ -674,15 +675,51 @@ def produce_stage_output_readback(
     checks = stage.get("checks")
     if not isinstance(checks, list):
         raise ExecutionContractError("INVALID_REQUEST", "stage checks are malformed", stage="validation")
+    initial_state_route = is_registered_initial_state_stage(plan, stage)
+    initial_action_plan: list[str] = []
+    initial_action_cursor = 0
+    initial_action_cap: int | None = None
+    if initial_state_route:
+        from ._w21_stage_backend import initial_stage_managed_action_plan
+
+        action_record = backend.store.get_metadata(
+            "artifacts", f"w21-initial-stage-preflight:{binding.get('attempt_id')}",
+        )
+        expected_action_plan = initial_stage_managed_action_plan(plan, stage)
+        if (not isinstance(action_record, Mapping)
+                or action_record.get("kind") != "w21_initial_stage_preflight"
+                or action_record.get("binding") != dict(binding)
+                or action_record.get("managed_internal_action_plan") != expected_action_plan
+                or not isinstance(expected_action_plan, list)):
+            raise ExecutionContractError(
+                "STAGE_PROFILE_UNVERIFIED",
+                "initial managed-action plan is not bound to the persisted preflight",
+                stage="pre_dispatch",
+            )
+        initial_action_plan = list(expected_action_plan)
+        initial_action_cap = action_record.get("internal_read_cap")
+        if initial_action_cap is not None and (
+                type(initial_action_cap) is not int or initial_action_cap != 12
+                or len(initial_action_plan) > initial_action_cap):
+            raise ExecutionContractError(
+                "STAGE_PROFILE_UNVERIFIED",
+                "initial managed-action plan exceeds the frozen runner profile cap",
+                stage="pre_dispatch",
+            )
+        initial_action_cursor = 1  # the persisted preflight already consumed its first action
     current_revision = model_revision
     operation_index = 0
     chain: list[dict[str, Any]] = []
     all_events: list[dict[str, Any]] = []
     evidence_refs: list[dict[str, Any]] = []
+    last_initial_dataset_readback: dict[str, Any] | None = None
+    last_initial_mesh_association: dict[str, Any] | None = None
 
     def managed_call(operation: str, arguments: Mapping[str, Any], *, readphase: str,
-                     strict_mode: str | None = None) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-        nonlocal current_revision, operation_index
+                     strict_mode: str | None = None,
+                     native_context: Mapping[str, Any] | None = None,
+                     effect_override: str | None = None) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+        nonlocal current_revision, operation_index, initial_action_cursor
         operation_index += 1
         child_operation_id = f"w21-output-{uuid4().hex}"
         child_request_id = f"w21-output-request-{uuid4().hex}"
@@ -691,8 +728,23 @@ def produce_stage_output_readback(
             "expected_revision": current_revision, "request_id": child_request_id,
             "idempotency_key": f"{binding['attempt_id']}:output:{operation_index}",
         }
+        if (effect_override is not None
+                and (not initial_state_route or operation != "solver.inspect"
+                     or readphase != "initial-stage-active-variables-xmesh"
+                     or effect_override != "EVALUATE")):
+            raise ExecutionContractError(
+                "STAGE_PROFILE_UNVERIFIED",
+                "private stage output effect override is outside the exact Variables.xmeshInfo ticket",
+                stage="pre_dispatch",
+            )
+        effective_effect = effect_override or operation_effect(operation)
         if callable(authorize_callback):
-            authorize_callback(operation, dict(arguments), child_execution)
+            # The private xmesh observation is ticketed as EVALUATE, which
+            # requires the same project_write authority as result.evaluate.
+            # The domain operation remains solver.inspect and its caller-supplied
+            # flags cannot select this server-owned effect override.
+            auth_operation = "result.evaluate" if effect_override == "EVALUATE" else operation
+            authorize_callback(auth_operation, dict(arguments), child_execution)
         events: list[dict[str, Any]] = []
         worker = getattr(backend, "worker", None)
         worker_generation = getattr(worker, "generation", None)
@@ -704,6 +756,38 @@ def produce_stage_output_readback(
                 "stage output Worker epoch is unavailable or malformed",
                 stage="pre_dispatch",
             )
+
+        if initial_state_route:
+            if operation == "study.inspect" and readphase == "initial-stage-study-solver-binding":
+                planned_actions = ["study.inspect:postsolve"]
+            elif operation == "solver.inspect" and readphase == "initial-stage-active-variables":
+                planned_actions = ["solver.inspect:active-variables"]
+            elif operation == "solver.inspect" and readphase == "initial-stage-active-variables-xmesh":
+                planned_actions = ["Variables.xmeshInfo:active-variables"]
+            elif operation == "dataset.solution_indices" and readphase == "initial-stage-output-tuple":
+                planned_actions = ["dataset.solution_indices:output-tuple"]
+            elif operation == "dataset.solution_indices" and readphase == "initial-stage-solution-mesh-association":
+                planned_actions = ["dataset.solution_indices:solution-mesh-association"]
+            elif operation == "dataset.solution_indices" and readphase.startswith("initial-target-field:"):
+                field_index = readphase.split(":", 2)[1]
+                if not field_index.isdigit():
+                    raise ExecutionContractError("STAGE_PROFILE_UNVERIFIED", "initial field action index is malformed", stage="pre_dispatch")
+                planned_actions = [f"dataset.solution_indices:field-binding:{field_index}"]
+            elif operation == "result.evaluate" and readphase.startswith("initial-target-field:"):
+                field_index = readphase.split(":", 2)[1]
+                if not field_index.isdigit():
+                    raise ExecutionContractError("STAGE_PROFILE_UNVERIFIED", "initial Eval action index is malformed", stage="pre_dispatch")
+                planned_actions = [f"result.evaluate:field:{field_index}"]
+            else:
+                raise ExecutionContractError("STAGE_PROFILE_UNVERIFIED", "unexpected initial managed observation action", stage="pre_dispatch")
+            next_cursor = initial_action_cursor + len(planned_actions)
+            # Reserve the one final mesh.inspect action before this Worker
+            # dispatch so the actual route cannot exceed its immutable plan.
+            if (initial_action_plan[initial_action_cursor:next_cursor] != planned_actions
+                    or next_cursor >= len(initial_action_plan)
+                    or (initial_action_cap is not None and next_cursor + 1 > initial_action_cap)):
+                raise ExecutionContractError("STAGE_PROFILE_UNVERIFIED", "initial managed-action budget/order differs before Worker dispatch", stage="pre_dispatch")
+            initial_action_cursor = next_cursor
 
         def capture(event: Any) -> None:
             if not isinstance(event, Mapping):
@@ -732,9 +816,24 @@ def produce_stage_output_readback(
         mode_context = getattr(backend, "_stage_output_mode_context", None)
         if strict_mode is not None and mode_context is not None:
             mode_token = mode_context.set(strict_mode)
+        native_token = None
+        native_mode = getattr(backend, "_stage_native_context", None)
+        if initial_state_route and native_mode is not None:
+            private_context = dict(native_context or {})
+            private_context.setdefault("purpose", "initial_stage_output")
+            private_context.setdefault("binding", dict(binding))
+            private_context.setdefault("stage_run_operation_id", stage_run_operation_id)
+            private_context.setdefault("solve_revision", model_revision)
+            private_context.setdefault("readphase", readphase)
+            private_context.setdefault("expected_revision", current_revision)
+            if effect_override == "EVALUATE":
+                private_context["variables_xmesh_ticket"] = True
+            native_token = native_mode.set(private_context)
         try:
             reply = backend.invoke(operation, dict(arguments), child_execution, child_operation_id, capture)
         finally:
+            if native_token is not None:
+                native_mode.reset(native_token)
             if mode_token is not None:
                 mode_context.reset(mode_token)
         if not isinstance(reply, Mapping) or reply.get("success") is not True or not isinstance(reply.get("execution"), Mapping):
@@ -745,7 +844,7 @@ def produce_stage_output_readback(
         managed_request_id = execution.get("request_id")
         ticket_hash = execution.get("request_hash")
         state_now = backend.service.ledger._state_for(ledger_ref)
-        read_only = _G3_EFFECT_MAP.get(str(operation_effect(operation)).upper()) == "inspect"
+        read_only = _G3_EFFECT_MAP.get(str(effective_effect).upper()) == "inspect"
         expected_delta = 0 if read_only else 1
         if (execution.get("model_ref") != ref or execution.get("session_id") != ref.get("session_id")
                 or execution.get("project_id") not in (None, project_id)
@@ -833,9 +932,13 @@ def produce_stage_output_readback(
             "child_request_id": child_request_id, "request_id": child_request_id,
             "managed_operation_id": managed_operation_id, "request_hash": ticket_hash,
             "managed_request_id": managed_request_id,
+            "managed_ticket_operation": (
+                "w21_initial_variables_xmesh" if effect_override == "EVALUATE"
+                else operation.replace(".", "_") if not read_only else None
+            ),
             "revision_witness": "service-inspect-no-ticket" if read_only else "managed-evaluate-ticket",
             "expected_revision": current_revision, "revision": revision,
-            "effect": operation_effect(operation), "worker_requests": event_rows,
+            "effect": effective_effect, "worker_requests": event_rows,
         }
         chain.append(chain_row)
         current_revision = revision
@@ -845,11 +948,24 @@ def produce_stage_output_readback(
         from ._g3_ops import EFFECTS
         return EFFECTS.get(operation, "READ")
 
-    def solution_binding_for(spec: Mapping[str, Any], readphase: str) -> tuple[dict[str, Any], dict[str, Any]]:
-        reply, _ = managed_call("dataset.solution_indices", {"path": spec["dataset"]}, readphase=readphase)
+    def solution_binding_for(spec: Mapping[str, Any], readphase: str, *,
+                             selected_tuple: Mapping[str, Any] | None = None) -> tuple[dict[str, Any], dict[str, Any]]:
+        nonlocal last_initial_dataset_readback, last_initial_mesh_association
+        private_context = ({"purpose": "initial_stage_output",
+                           **({"selected_tuple": dict(selected_tuple)} if isinstance(selected_tuple, Mapping) else {})}
+                          if initial_state_route else None)
+        reply, _ = managed_call("dataset.solution_indices", {"path": spec["dataset"]},
+                                readphase=readphase, native_context=private_context)
         data = reply.get("data")
+        if isinstance(data, Mapping) and isinstance(data.get("data"), Mapping):
+            data = data["data"]
         if not isinstance(data, Mapping):
             raise _EvidenceUnavailable("dataset.solution_indices returned no native binding")
+        if initial_state_route:
+            candidate = data.get("w21_initial_stage_dataset")
+            last_initial_dataset_readback = dict(candidate) if isinstance(candidate, Mapping) else None
+            association = data.get("w21_initial_stage_mesh_association")
+            last_initial_mesh_association = dict(association) if isinstance(association, Mapping) else None
         try:
             tuple_value, resolved_binding = _check_tuple(spec, data)
         except _EvidenceUnavailable:
@@ -872,8 +988,15 @@ def produce_stage_output_readback(
                          "outer": tuple_value["outer"], "inner": tuple_value["inner"]},
             "aggregate": "none", "complex_mode": "preserve", "selection": dict(selection),
         }
+        private_context = None
+        if initial_state_route:
+            private_context = {
+                "purpose": "initial_stage_output",
+                "dataset_identity": dict(last_initial_dataset_readback or {}),
+                "target_variable": expression,
+            }
         reply, _ = managed_call("result.evaluate", {"spec": evaluation_spec}, readphase=readphase,
-                                strict_mode="strict_field_readback")
+                                strict_mode="strict_field_readback", native_context=private_context)
         data = reply.get("data")
         if not isinstance(data, Mapping):
             raise _EvidenceUnavailable("result.evaluate returned no strict field readback")
@@ -942,6 +1065,306 @@ def produce_stage_output_readback(
             selection_sha256=sha256_json(dict(term["selection"])), tuple_binding=tuple_value,
         )
         return tuple_value, resolved_binding, integral, unit, {"metric": metric_evidence, "evidence_ref": evidence_ref}
+
+    if initial_state_route:
+        def operation_data(reply: Mapping[str, Any]) -> Mapping[str, Any] | None:
+            data = reply.get("data")
+            if isinstance(data, Mapping) and isinstance(data.get("data"), Mapping):
+                data = data["data"]
+            return data if isinstance(data, Mapping) else None
+
+        def unverified_initial(reason: str, *, output_tuple: Mapping[str, Any] | None = None,
+                               output_binding: Mapping[str, Any] | None = None,
+                               dataset_identity: Mapping[str, Any] | None = None,
+                               study_solver_binding: Mapping[str, Any] | None = None,
+                               variables_dof_readback: Mapping[str, Any] | None = None,
+                               mesh_association: Mapping[str, Any] | None = None,
+                               fields: Sequence[Mapping[str, Any]] = ()) -> dict[str, Any]:
+            return {
+                "contract": OUTPUT_CONTRACT,
+                "producer": "managed-backend-initial-output-readback",
+                "status": "UNVERIFIED", "binding": dict(binding),
+                "stage_run_operation_id": stage_run_operation_id,
+                "solve_revision": model_revision, "model_revision": model_revision,
+                "output_revision": current_revision,
+                "target_selection_sha256": sha256_json(dict(target_selection)),
+                "output_tuple": dict(output_tuple) if isinstance(output_tuple, Mapping) else None,
+                "solution_binding": dict(output_binding) if isinstance(output_binding, Mapping) else None,
+                "initial_output_scope": "INITIAL_OUTPUT_AND_SOURCE_ARTIFACT_ONLY",
+                "initial_source_facts": "NOT_APPLICABLE",
+                "history_identity": "NOT_APPLICABLE",
+                "study_solver_binding": dict(study_solver_binding or {}),
+                "dataset_identity": dict(dataset_identity or {}),
+                "variables_dof_readback": dict(variables_dof_readback or {}),
+                "solution_mesh_association": dict(mesh_association or {}),
+                "initial_field_readbacks": [dict(row) for row in fields],
+                "checks": [], "evidence_refs": evidence_refs,
+                "revision_chain": chain,
+                "managed_internal_action_plan": list(initial_action_plan),
+                "internal_read_cap": initial_action_cap,
+                "output_missing": [reason],
+            }
+
+        stage_segments = (stage.get("study_target", {}).get("segments")
+                          if isinstance(stage.get("study_target"), Mapping) else None)
+        if (not isinstance(stage_segments, list) or len(stage_segments) != 1
+                or not isinstance(stage_segments[0], Mapping)
+                or stage_segments[0].get("collection") != "study"
+                or not isinstance(stage_segments[0].get("tag"), str)):
+            return unverified_initial("registered study target is unavailable")
+        study_tag = stage_segments[0]["tag"]
+        study_reply, _ = managed_call(
+            "study.inspect",
+            {"path": {"segments": [{"collection": "study", "tag": study_tag}]}},
+            readphase="initial-stage-study-solver-binding",
+            native_context={"purpose": "initial_stage_output", "study_tag": study_tag},
+        )
+        study_data = operation_data(study_reply)
+        solver_sequence_evidence = (study_data.get("_w21_initial_stage_solver_sequences")
+                                    if isinstance(study_data, Mapping) else None)
+        solver_tags = solver_sequence_evidence.get("tags") if isinstance(solver_sequence_evidence, Mapping) else None
+        attached_rows = study_data.get("solver_sequences") if isinstance(study_data, Mapping) else None
+        if (not isinstance(study_data, Mapping) or study_data.get("study") != study_tag
+                or not isinstance(solver_sequence_evidence, Mapping)
+                or solver_sequence_evidence.get("status") != "VERIFIED"
+                or solver_sequence_evidence.get("source") != "Study.getSolverSequences(String)"
+                or not isinstance(solver_tags, list) or len(solver_tags) != 1
+                or not isinstance(solver_tags[0], str) or not solver_tags[0]
+                or not isinstance(attached_rows, list)
+                or not any(isinstance(row, Mapping) and row.get("solver") == solver_tags[0]
+                           for row in attached_rows)):
+            return unverified_initial("Study does not resolve one exact attached SolverSequence",
+                                      study_solver_binding={"study": dict(study_data or {}),
+                                                            "solver_sequences": dict(solver_sequence_evidence or {})})
+        solver_tag = solver_tags[0]
+        solver_reply, _ = managed_call(
+            "solver.inspect",
+            {"path": {"segments": [{"collection": "sol", "tag": solver_tag}]}},
+            readphase="initial-stage-active-variables",
+            native_context={"purpose": "initial_stage_output", "study_tag": study_tag,
+                            "solver_tag": solver_tag},
+        )
+        solver_data = operation_data(solver_reply)
+        def flatten_features(rows: Any) -> list[Mapping[str, Any]]:
+            flattened: list[Mapping[str, Any]] = []
+            if not isinstance(rows, list):
+                return flattened
+            for row in rows:
+                if not isinstance(row, Mapping):
+                    continue
+                flattened.append(row)
+                flattened.extend(flatten_features(row.get("children")))
+            return flattened
+        feature_rows = flatten_features(solver_data.get("features") if isinstance(solver_data, Mapping) else None)
+        variables_features = [row for row in feature_rows if row.get("type_id") == "Variables"]
+        active_variables = [row for row in variables_features if row.get("is_active") is True]
+        study_solver_binding = {
+            "status": "VERIFIED" if (isinstance(solver_data, Mapping)
+                and solver_data.get("kind") == "solver_sequence"
+                and solver_data.get("solver") == solver_tag
+                and solver_data.get("study") == study_tag
+                and solver_data.get("is_attached") is True
+                and len(active_variables) == 1) else "UNVERIFIED",
+            "study_tag": study_tag, "study_solver_sequences": dict(solver_sequence_evidence),
+            "attached_solver_sequences": _plain_json(attached_rows),
+            "solver_tag": solver_tag,
+            "solver_readback": _plain_json(dict(solver_data)) if isinstance(solver_data, Mapping) else None,
+            "variables_feature_count": len(variables_features),
+            "active_variables_feature_count": len(active_variables),
+        }
+        if study_solver_binding["status"] != "VERIFIED":
+            return unverified_initial("Study/SolverSequence/active Variables identity is incomplete",
+                                      study_solver_binding=study_solver_binding)
+        variables_feature = active_variables[0]
+        variables_path = variables_feature.get("path")
+        if not isinstance(variables_path, Mapping):
+            return unverified_initial("the unique active Variables feature has no exact NodePath",
+                                      study_solver_binding=study_solver_binding)
+        xmesh_reply, _ = managed_call(
+            "solver.inspect", {"path": dict(variables_path)},
+            readphase="initial-stage-active-variables-xmesh",
+            native_context={
+                "purpose": "initial_stage_output", "study_tag": study_tag,
+                "solver_tag": solver_tag, "variables_feature_tag": variables_feature.get("tag"),
+                "variables_feature_path": dict(variables_path),
+            },
+            effect_override="EVALUATE",
+        )
+        xmesh_data = operation_data(xmesh_reply)
+        xmesh = (xmesh_data.get("initial_xmesh_dof_readback")
+                 if isinstance(xmesh_data, Mapping) else None)
+        if (not isinstance(xmesh, Mapping) or xmesh.get("status") != "VERIFIED"
+                or xmesh.get("feature_tag") != variables_feature.get("tag")
+                or xmesh.get("feature_active") is not True
+                or type(xmesh.get("n_dofs")) is not int or xmesh.get("n_dofs") <= 0
+                or xmesh.get("cleanup") != "clearXmesh"):
+            return unverified_initial("active Variables xmeshInfo DOF readback is incomplete",
+                                      study_solver_binding=study_solver_binding,
+                                      variables_dof_readback=xmesh if isinstance(xmesh, Mapping) else {})
+        study_solver_binding["variables_feature_path"] = dict(variables_path)
+        study_solver_binding["variables_dof_readback"] = dict(xmesh)
+
+        try:
+            output_tuple, output_binding = solution_binding_for(target_selection, "initial-stage-output-tuple")
+        except _EvidenceUnavailable as exc:
+            return unverified_initial(str(exc), study_solver_binding=study_solver_binding,
+                                      variables_dof_readback=xmesh)
+        dataset_identity = dict(last_initial_dataset_readback or {})
+        if (dataset_identity.get("status") != "VERIFIED"
+                or dataset_identity.get("dataset") != output_tuple.get("dataset")
+                or dataset_identity.get("solution") != output_tuple.get("solution")
+                or dataset_identity.get("dataset_type") != "Solution"
+                or dataset_identity.get("frametype") not in {"mesh", "material", "spatial", "geometry"}
+                or type(dataset_identity.get("spatial_dimension")) is not int
+                or dataset_identity.get("component") is None
+                or dataset_identity.get("geometry") is None):
+            return unverified_initial("actual Solution dataset/frame/component/geometry binding is incomplete",
+                                      output_tuple=output_tuple, output_binding=output_binding,
+                                      dataset_identity=dataset_identity, study_solver_binding=study_solver_binding,
+                                      variables_dof_readback=xmesh)
+        try:
+            # This second READ binds the actual selected SolutionInfo pair to
+            # its solver mesh; it does not compare mesh DOFs with Eval points.
+            solution_binding_for(target_selection, "initial-stage-solution-mesh-association",
+                                 selected_tuple=output_tuple)
+            association_reply = chain[-1]
+            association_call_data = last_initial_mesh_association
+        except _EvidenceUnavailable as exc:
+            return unverified_initial(str(exc), output_tuple=output_tuple,
+                                      output_binding=output_binding, dataset_identity=dataset_identity,
+                                      study_solver_binding=study_solver_binding,
+                                      variables_dof_readback=xmesh)
+        mesh_association = dict(association_call_data or {})
+        if (mesh_association.get("status") != "VERIFIED"
+                or mesh_association.get("dataset") != output_tuple.get("dataset")
+                or mesh_association.get("solution") != output_tuple.get("solution")
+                or mesh_association.get("selected_tuple") != {
+                    key: output_tuple.get(key) for key in ("dataset", "solution", "outer", "inner", "solnum")}
+                or mesh_association.get("geometry") != dataset_identity.get("geometry")
+                or not isinstance(mesh_association.get("mesh_tag"), str)
+                or not mesh_association.get("mesh_tag")):
+            return unverified_initial("selected SolutionInfo-to-mesh association is incomplete",
+                                      output_tuple=output_tuple, output_binding=output_binding,
+                                      dataset_identity=dataset_identity, study_solver_binding=study_solver_binding,
+                                      variables_dof_readback=xmesh, mesh_association=mesh_association)
+
+        fields: list[dict[str, Any]] = []
+        mappings = stage.get("variable_mappings")
+        if not isinstance(mappings, list) or not mappings:
+            return unverified_initial("registered initial stage has no variable mappings",
+                                      output_tuple=output_tuple, output_binding=output_binding,
+                                      dataset_identity=dataset_identity, study_solver_binding=study_solver_binding,
+                                      variables_dof_readback=xmesh, mesh_association=mesh_association)
+        field_names = xmesh.get("field_names")
+        field_dofs = xmesh.get("field_n_dofs")
+        dof_by_name = ({name: count for name, count in zip(field_names, field_dofs)}
+                       if isinstance(field_names, list) and isinstance(field_dofs, list)
+                       and len(field_names) == len(field_dofs) else {})
+        selection = {
+            "kind": "all", "component": dataset_identity["component"],
+            "geometry": dataset_identity["geometry"],
+            "entity_dimension": dataset_identity["spatial_dimension"],
+        }
+        for mapping_index, mapping in enumerate(mappings):
+            if not isinstance(mapping, Mapping):
+                return unverified_initial("registered variable mapping row is malformed",
+                                          output_tuple=output_tuple, output_binding=output_binding,
+                                          dataset_identity=dataset_identity, study_solver_binding=study_solver_binding,
+                                          variables_dof_readback=xmesh, mesh_association=mesh_association,
+                                          fields=fields)
+            target_variable, target_unit = mapping.get("target_variable"), mapping.get("target_unit")
+            if (not isinstance(target_variable, str) or not target_variable
+                    or not isinstance(target_unit, str) or not target_unit
+                    or dof_by_name.get(target_variable, 0) <= 0):
+                return unverified_initial("mapped target variable is absent from active Variables field DOFs",
+                                          output_tuple=output_tuple, output_binding=output_binding,
+                                          dataset_identity=dataset_identity, study_solver_binding=study_solver_binding,
+                                          variables_dof_readback=xmesh, mesh_association=mesh_association,
+                                          fields=fields)
+            mapping_hash = sha256_json(dict(mapping))
+            try:
+                actual_tuple, resolved_binding, field_payload, raw_field, field_ref = read_field(
+                    target_selection, selection, target_variable, target_unit,
+                    f"initial-target-field:{mapping_index}", mapping_hash,
+                )
+            except _EvidenceUnavailable as exc:
+                return unverified_initial(str(exc), output_tuple=output_tuple,
+                                          output_binding=output_binding,
+                                          dataset_identity=dataset_identity,
+                                          study_solver_binding=study_solver_binding,
+                                          variables_dof_readback=xmesh,
+                                          mesh_association=mesh_association, fields=fields)
+            unit_controls = field_payload.get("automatic_unit_control_evidence")
+            if (actual_tuple != output_tuple
+                    or field_payload.get("unit_readback") != target_unit
+                    or not _intrinsic_unit_matches(field_payload, target_unit)
+                    or not _coordinate_frame_matches(field_payload, dataset_identity.get("frametype"))):
+                return unverified_initial("mapped field tuple/unit/frame controls are incomplete",
+                                          output_tuple=output_tuple, output_binding=output_binding,
+                                          dataset_identity=dataset_identity, study_solver_binding=study_solver_binding,
+                                          variables_dof_readback=xmesh, mesh_association=mesh_association,
+                                          fields=fields + [{
+                                              "mapping_index": mapping_index, "mapping": dict(mapping),
+                                              "mapping_sha256": mapping_hash,
+                                              "target_variable": target_variable, "target_unit": target_unit,
+                                              "tuple": actual_tuple, "solution_binding": resolved_binding,
+                                              "normalized_field": field_payload, "field_readback": raw_field,
+                                              "evidence_ref": field_ref,
+                                          }])
+            fields.append({
+                "mapping_index": mapping_index, "mapping": dict(mapping),
+                "mapping_sha256": mapping_hash, "target_variable": target_variable,
+                "target_unit": target_unit, "target_dof_count": dof_by_name[target_variable],
+                "tuple": actual_tuple, "solution_binding": resolved_binding,
+                "normalized_field": field_payload, "field_readback": raw_field,
+                "automatic_unit_control_evidence": dict(unit_controls),
+                "coordinate_frame": dataset_identity.get("frametype"),
+                "selection": dict(selection), "evidence_ref": field_ref,
+            })
+            evidence_refs.append(field_ref)
+        output_ticket = next((row for row in chain
+                              if row.get("readphase") == "initial-stage-output-tuple"), None)
+        if isinstance(output_ticket, Mapping):
+            output_tuple_ref = _artifact_ref(
+                backend, {"output_tuple": output_tuple, "solution_binding": output_binding},
+                binding=binding, stage_run_operation_id=stage_run_operation_id,
+                model_revision=output_ticket["revision"], child_operation_id=output_ticket["child_operation_id"],
+                managed_operation_id=output_ticket["managed_operation_id"],
+                request_id=output_ticket["request_id"], request_hash=output_ticket["request_hash"],
+                revision_witness=output_ticket["revision_witness"], worker_requests=output_ticket["worker_requests"],
+                readphase=output_ticket["readphase"],
+                check_definition_sha256=sha256_json({"kind": "initial-output-tuple", "target_selection": dict(target_selection)}),
+                selection_sha256=sha256_json(dict(target_selection)), tuple_binding=output_tuple,
+            )
+            evidence_refs.append(output_tuple_ref)
+        return {
+            "contract": OUTPUT_CONTRACT,
+            "producer": "managed-backend-initial-output-readback",
+            "status": "VERIFIED", "binding": dict(binding),
+            "stage_run_operation_id": stage_run_operation_id,
+            "solve_revision": model_revision, "model_revision": model_revision,
+            "output_revision": current_revision,
+            "target_selection_sha256": sha256_json(dict(target_selection)),
+            "output_tuple": output_tuple, "solution_binding": output_binding,
+            "initial_output_scope": "INITIAL_OUTPUT_AND_SOURCE_ARTIFACT_ONLY",
+            "initial_source_facts": "NOT_APPLICABLE", "history_identity": "NOT_APPLICABLE",
+            "study_solver_binding": study_solver_binding,
+            "dataset_identity": dataset_identity,
+            "variables_dof_readback": dict(xmesh),
+            "solution_mesh_association": mesh_association,
+            "initial_field_readbacks": fields,
+            "checks": [], "evidence_refs": evidence_refs,
+            "revision_chain": chain,
+            "managed_internal_action_plan": list(initial_action_plan),
+            "internal_read_cap": initial_action_cap,
+            "internal_read_count_before_mesh": initial_action_cursor,
+            "worker_events": [{"readphase": item["readphase"], "operation": item["operation"],
+                                "operation_id": item["event"].get("operation_id"),
+                                "phase": item["event"].get("phase"),
+                                "request_id": item["event"].get("request_id"),
+                                "request_hash": item["event"].get("request_hash")}
+                               for item in all_events],
+        }
 
     try:
         output_tuple, output_binding = solution_binding_for(target_selection, "stage-output-tuple")

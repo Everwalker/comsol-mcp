@@ -177,6 +177,11 @@ LEGACY_TOOL_EFFECTS: dict[str, str] = {
         "set_physics_selection", "manage_variables", "create_solver_config", "configure_solver",
     )},
     **{name: "evaluate" for name in ("evaluate_expressions", "get_core_metrics")},
+    # Private managed ticket alias for the W21 initial-stage Variables.xmeshInfo
+    # create/clear observation. This name is deliberately absent from the
+    # published legacy fallback set; only the server-owned initial-stage
+    # ContextVar branch may route it into ExecutionService.
+    "w21_initial_variables_xmesh": "evaluate",
     **{name: "compute" for name in ("run_feature", "run_study", "run_visible_main_iteration", "run_study_async", "runtime_poc_v64")},
     **{name: "file_write" for name in ("save_main_model_snapshot", "commit_current_main_model", "save_model")},
     "start_visible_main_workflow": "project_write",

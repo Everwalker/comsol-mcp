@@ -7,6 +7,8 @@ import com.comsol.model.MeshSequence;
 import com.comsol.model.ModelParam;
 import com.comsol.model.NumericalFeature;
 import com.comsol.model.ResultParam;
+import com.comsol.model.SolverFeature;
+import com.comsol.model.XmeshInfo;
 import com.comsol.util.exceptions.FlException;
 import com.comsol.model.util.ModelChangeInfo;
 import com.comsol.model.util.ModelChangedHandler;
@@ -117,6 +119,11 @@ public final class PersistentComsolWorker {
       // this returns real/imaginary field values and coordinates only after
       // enforcing a complete-payload scalar and serialized-JSON byte limit.
       "getStrictFieldReadback",
+      // W21 initial-output admission reads only the field/count/case summary
+      // of one actual Variables feature. The typed adapter performs the
+      // documented Variables.xmeshInfo()/clearXmesh() lifecycle and never
+      // serializes DOF coordinates or an unbounded XmeshInfo object.
+      "getVariablesXmeshReadback",
       // Restart/model inspection needs only the embedded Model.FileResourceList
       // tag inventory. This narrow adapter is type-checked below and returns
       // strings; it does not expose FileResourceList or a generic file() handle.
@@ -149,7 +156,7 @@ public final class PersistentComsolWorker {
       // SolutionInfo.getISol(outer,inner) returns zero-based [iMulti,iSol], and
       // SolverSequence.getMesh(geometry,iMulti) returns the associated mesh tag.
       // This does not prove topology, DOF, frame, or history equivalence.
-      "getISol", "getMesh",
+      "getISol", "getMesh", "getSolverSequences",
       // W18: plot group, geometry/mesh image, and export inspection/execution
       "isPlotGroup", "axis", "camera", "showFrame", "image", "plot",
       // ProbeFeature.genResult(String): explicit write, never history-read preparation.
@@ -632,6 +639,10 @@ public final class PersistentComsolWorker {
       if (!args.isEmpty()) throw new IllegalArgumentException("getStrictFieldReadback takes no arguments");
       return getStrictFieldReadback(target);
     }
+    if ("getVariablesXmeshReadback".equals(method)) {
+      if (!args.isEmpty()) throw new IllegalArgumentException("getVariablesXmeshReadback takes no arguments");
+      return getVariablesXmeshReadback(target);
+    }
     if ("getFileResourceTags".equals(method)) {
       if (!args.isEmpty()) throw new IllegalArgumentException("getFileResourceTags takes no arguments");
       return getFileResourceTags(target);
@@ -842,6 +853,74 @@ public final class PersistentComsolWorker {
     double[][][] imaginary = complex ? feature.getImagData() : null;
     return strictFieldPayload(real, imaginary, coordinates, complex,
         W21_FIELD_MAX_NUMERIC_SCALARS, W21_FIELD_MAX_JSON_BYTES);
+  }
+
+  /**
+   * Read the bounded solved-for-DOF summary of one Variables feature and
+   * release the Xmesh object in the same Worker request. COMSOL documents
+   * Variables.xmeshInfo() as the solved-for (non-internal) DOFs; unlike the
+   * SolverSequence overload it allocates data that must be cleared.
+   */
+  private Object getVariablesXmeshReadback(Object target) throws Exception {
+    if (!(target instanceof SolverFeature)) {
+      throw new WorkerFailure("INITIAL_DOF_READBACK_TARGET_INVALID",
+          "getVariablesXmeshReadback is only valid for a SolverFeature handle");
+    }
+    SolverFeature feature = (SolverFeature) target;
+    if (!feature.isActive()) {
+      return map("status", "INACTIVE", "feature_tag", feature.tag(),
+          "feature_active", false, "cleanup", "NOT_CREATED");
+    }
+    XmeshInfo info = null;
+    try {
+      info = feature.xmeshInfo();
+      if (info == null) {
+        throw new WorkerFailure("INITIAL_DOF_READBACK_UNAVAILABLE",
+            "Variables.xmeshInfo() returned null");
+      }
+      String[] meshCases = info.meshCases();
+      String[] fieldNames = info.fieldNames();
+      int[] fieldDofs = info.fieldNDofs();
+      String[] geometries = info.geoms();
+      int totalDofs = info.nDofs();
+      if (meshCases == null || meshCases.length == 0 || meshCases.length > 64
+          || fieldNames == null || fieldNames.length == 0 || fieldNames.length > 256
+          || fieldDofs == null || fieldDofs.length != fieldNames.length
+          || geometries == null || geometries.length == 0 || geometries.length > 64
+          || totalDofs < 0) {
+        throw new WorkerFailure("INITIAL_DOF_READBACK_INVALID_SHAPE",
+            "Variables.xmeshInfo() returned an incomplete or unbounded summary");
+      }
+      long summedDofs = 0L;
+      List<Integer> counts = new ArrayList<>();
+      for (int index = 0; index < fieldNames.length; index++) {
+        if (fieldNames[index] == null || fieldNames[index].isEmpty() || fieldDofs[index] < 0) {
+          throw new WorkerFailure("INITIAL_DOF_READBACK_INVALID_SHAPE",
+              "Variables.xmeshInfo() returned an invalid field name or DOF count");
+        }
+        summedDofs += fieldDofs[index];
+        counts.add(fieldDofs[index]);
+      }
+      if (summedDofs != (long) totalDofs) {
+        throw new WorkerFailure("INITIAL_DOF_READBACK_INVALID_SHAPE",
+            "Variables.xmeshInfo() per-field counts do not sum to nDofs");
+      }
+      for (String value : meshCases) {
+        if (value == null || value.isEmpty()) throw new WorkerFailure(
+            "INITIAL_DOF_READBACK_INVALID_SHAPE", "mesh case tag is empty");
+      }
+      for (String value : geometries) {
+        if (value == null || value.isEmpty()) throw new WorkerFailure(
+            "INITIAL_DOF_READBACK_INVALID_SHAPE", "geometry tag is empty");
+      }
+      return map("status", "VERIFIED", "feature_tag", feature.tag(),
+          "feature_active", true, "scope", "variables_solved_for_dofs",
+          "mesh_cases", Arrays.asList(meshCases), "n_dofs", totalDofs,
+          "field_names", Arrays.asList(fieldNames), "field_n_dofs", counts,
+          "geometries", Arrays.asList(geometries), "cleanup", "clearXmesh");
+    } finally {
+      if (info != null) feature.clearXmesh();
+    }
   }
 
   /** Package-visible for the offline Java contract harness; production uses fixed limits above. */

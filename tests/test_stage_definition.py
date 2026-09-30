@@ -202,6 +202,37 @@ def _setup(tmp_path, permissions=None):
     return daemon, service, worker, project_id, model_ref, execution, host
 
 
+def _seed_test_only_accepted_predecessor(daemon, project_id, model_ref, *, stage_id="preheat"):
+    """Create a visibly synthetic predecessor so generic successor tests avoid initial-stage admission."""
+    from comsol_mcp._stage_contract import canonical_json, sha256_json
+
+    record, reused = daemon.store.begin_stage_attempt(
+        project_id=project_id, model_ref=model_ref, stage_id=stage_id, expected_revision=0,
+        request_id=f"test-only-{stage_id}-source-request",
+        operation_id=f"test-only-{stage_id}-source-operation",
+        idempotency_key=f"test-only-{stage_id}-source-idempotency", request_hash="a" * 64,
+    )
+    assert reused is False
+    synthetic = dict(record)
+    synthetic.pop("sha256", None)
+    synthetic.update({
+        "status": "ACCEPTED", "version": record["version"] + 1,
+        "engine_dispatched": True, "execution_status": "SOLVE_SUCCEEDED",
+        "acceptance_status": "ACCEPTED",
+        "evidence": [{"kind": "test_only_synthetic_source_attempt",
+                      "synthetic": True, "native_result": False,
+                      "scientific_acceptance_claim": False}],
+        "result": {"fixture_only": True, "native_acceptance_claimed": False},
+    })
+    synthetic["sha256"] = sha256_json(synthetic)
+    daemon.store.db.execute(
+        "UPDATE stage_attempts SET status=?,version=?,record_json=? WHERE attempt_id=?",
+        (synthetic["status"], synthetic["version"], canonical_json(synthetic), synthetic["attempt_id"]),
+    )
+    assert daemon.store.get_stage_attempt(project_id, model_ref, record["attempt_id"]) == synthetic
+    return synthetic
+
+
 def _call_public(host, name, **kwargs):
     return asyncio.run(host.tools[name](**kwargs)).structuredContent
 
@@ -921,7 +952,7 @@ def test_stage_attempt_readback_rejects_record_tamper(tmp_path):
         daemon.close()
 
 
-def test_public_stage_run_direct_and_fallback_persist_no_dispatch_unverified_attempt(tmp_path):
+def test_public_initial_stage_run_unknown_preflight_is_persisted_and_never_dispatched(tmp_path):
     daemon, _service, worker, project_id, model_ref, execution, host = _setup(tmp_path)
     try:
         defined = _call_public(host, "experiment_stage_define", definition=_plan_v2(), execution=execution)
@@ -929,15 +960,16 @@ def test_public_stage_run_direct_and_fallback_persist_no_dispatch_unverified_att
         run_execution = {**execution, "request_id": "stage-run-1", "idempotency_key": "stage-run-key-1"}
         direct = _call_public(host, "experiment_stage_run", stage_id="preheat", execution=run_execution)
         assert direct["success"] is False, direct
-        assert direct["error"]["code"] == "STAGE_PROFILE_UNVERIFIED"
+        assert direct["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
         attempt = direct["data"]["attempt"]
-        assert attempt["status"] == "NOT_DISPATCHED_UNVERIFIED"
+        assert attempt["status"] == "UNKNOWN"
+        assert attempt["execution_status"] == "UNKNOWN"
         assert attempt["project_id"] == project_id and attempt["model_ref"] == model_ref
         assert attempt["plan_id"] == "heat-cycle-v2" and attempt["stage_id"] == "preheat"
         assert attempt["expected_revision"] == 0 and attempt["engine_dispatched"] is False
-        assert direct["data"]["worker_rpc_performed"] is False
-        assert direct["data"]["solve_started"] is False
-        assert len(direct["data"]["missing_evidence"]) == 4
+        assert direct["data"]["engine_dispatched"] is False
+        assert attempt["evidence"] == [{"error_type": "AssertionError", "kind": "control-state"}]
+        assert worker.calls == ["operation_context"]
         replay = _call_public(host, "experiment_stage_run", stage_id="preheat", execution=run_execution)
         assert replay == direct
 
@@ -946,17 +978,22 @@ def test_public_stage_run_direct_and_fallback_persist_no_dispatch_unverified_att
             arguments={"stage_id": "preheat"},
             execution={**execution, "request_id": "stage-run-2", "idempotency_key": "stage-run-key-2"},
         )
-        assert fallback["success"] is False and fallback["error"]["code"] == "STAGE_PROFILE_UNVERIFIED"
-        assert fallback["data"]["attempt"]["attempt_number"] == 2
-        assert fallback["data"]["attempt"]["operation_id"] != attempt["operation_id"]
-        assert worker.calls == []
+        assert fallback["success"] is False and fallback["error"]["code"] == "STAGE_ATTEMPT_UNRESOLVED"
+        assert fallback["data"]["stage_attempt_created"] is False
+        assert worker.calls == ["operation_context"]
         persisted = daemon.store.list_stage_attempts(project_id, model_ref, stage_id="preheat")
-        assert [row["status"] for row in persisted] == ["NOT_DISPATCHED_UNVERIFIED", "NOT_DISPATCHED_UNVERIFIED"]
+        assert [row["status"] for row in persisted] == ["UNKNOWN"]
         operation_rows = daemon.store.db.execute(
-            "SELECT operation,status,result FROM operations WHERE operation='experiment.stage_run' ORDER BY created_at,operation_id"
+            "SELECT operation_id,status,result FROM operations WHERE operation='experiment.stage_run'"
         ).fetchall()
-        assert len(operation_rows) == 2 and all(row["status"] == "FAILED" for row in operation_rows)
-        assert all(json.loads(row["result"])["error"]["code"] == "STAGE_PROFILE_UNVERIFIED" for row in operation_rows)
+        operation_state_by_id = {
+            row["operation_id"]: (row["status"], json.loads(row["result"])["error"]["code"])
+            for row in operation_rows
+        }
+        assert operation_state_by_id == {
+            direct["execution"]["operation_id"]: ("UNKNOWN", "EXECUTION_STATE_UNKNOWN"),
+            fallback["execution"]["operation_id"]: ("FAILED", "STAGE_ATTEMPT_UNRESOLVED"),
+        }
         database_path = daemon.store.path
     finally:
         daemon.close()
@@ -964,7 +1001,7 @@ def test_public_stage_run_direct_and_fallback_persist_no_dispatch_unverified_att
     reopened = OperationStore(database_path)
     try:
         records = reopened.list_stage_attempts(project_id, model_ref, stage_id="preheat")
-        assert [row["attempt_number"] for row in records] == [1, 2]
+        assert [row["attempt_number"] for row in records] == [1]
         for record in records:
             assert reopened.get_stage_attempt_for_operation(project_id, model_ref, record["operation_id"]) == record
     finally:
@@ -1000,9 +1037,10 @@ def _install_fake_stage_backend(daemon, service, *, mode, monkeypatch=None,
     def invoke(operation, arguments, execution, operation_id, event_callback):
         calls.append(operation)
         if operation == "run_study" and mode == "before_dispatch":
+            marker = execution.get("_w21_stage_marker")
+            assert isinstance(marker, dict) and isinstance(marker.get("attempt_id"), str)
             current = daemon.store.get_stage_attempt(
-                execution["project_id"], execution["model_ref"],
-                daemon.store.list_stage_attempts(execution["project_id"], execution["model_ref"])[-1]["attempt_id"],
+                execution["project_id"], execution["model_ref"], marker["attempt_id"],
             )
             assert current["status"] == "DISPATCH_INTENT"
             raise RuntimeError("injected failure after persisted intent and before Worker submission")
@@ -1177,6 +1215,7 @@ def test_stage_uses_real_worker_rpc_identity_and_persists_before_send(
             "execution": execution,
         })
         assert defined["success"] is True, defined
+        source_attempt = _seed_test_only_accepted_predecessor(daemon, project_id, model_ref)
         project = daemon.project_authority.get_project(project_id)
 
         def transport(body, *, timeout_s=None):
@@ -1190,7 +1229,7 @@ def test_stage_uses_real_worker_rpc_identity_and_persists_before_send(
             assert request_type == "call", body
             method = body["method"]
             args = body.get("args", [])
-            rows = daemon.store.list_stage_attempts(project_id, model_ref)
+            rows = daemon.store.list_stage_attempts(project_id, model_ref, stage_id="cooldown")
             attempt = rows[-1]
             if method in {"run", "save"}:
                 assert attempt["status"] == "RUNNING" and attempt["engine_dispatched"] is True
@@ -1203,14 +1242,14 @@ def test_stage_uses_real_worker_rpc_identity_and_persists_before_send(
 
             if method == "study" and not args:
                 result = {"$worker_handle": "study-collection", "generation": 71, "java_type": "StudyList"}
-            elif method == "study" and args == ["std1"]:
-                result = {"$worker_handle": "study-std1", "generation": 71, "java_type": "Study"}
-            elif method == "get" and args == ["std1"]:
-                result = {"$worker_handle": "study-std1", "generation": 71, "java_type": "Study"}
+            elif method == "study" and args == ["std2"]:
+                result = {"$worker_handle": "study-std2", "generation": 71, "java_type": "Study"}
+            elif method == "get" and args == ["std2"]:
+                result = {"$worker_handle": "study-std2", "generation": 71, "java_type": "Study"}
             elif method == "tags":
-                result = ["std1"]
+                result = ["std2"]
             elif method == "label":
-                result = "Study 1"
+                result = "Study 2"
             elif method == "run":
                 if mode == "timeout":
                     service.adapter.fingerprint = "stage-solve-may-have-run"
@@ -1251,10 +1290,12 @@ def test_stage_uses_real_worker_rpc_identity_and_persists_before_send(
 
         daemon.backend.registry.update({"run_study": run_callback, "save_model": save_callback})
         result = daemon.dispatch({
-            "operation": "experiment.stage_run", "arguments": {"stage_id": "preheat"},
+            "operation": "experiment.stage_run", "arguments": {
+                "stage_id": "cooldown", "source_attempt_id": source_attempt["attempt_id"],
+            },
             "execution": {**execution, "request_id": stage_request, "idempotency_key": stage_request},
         })
-        rows = daemon.store.list_stage_attempts(project_id, model_ref)
+        rows = daemon.store.list_stage_attempts(project_id, model_ref, stage_id="cooldown")
         attempt = rows[-1]
         actual_runs = [item for item in sent if item.get("method") == "run"]
         actual_saves = [item for item in sent if item.get("method") == "save"]
@@ -1281,12 +1322,15 @@ def test_stage_uses_real_worker_rpc_identity_and_persists_before_send(
             assert attempt["status"] == "UNKNOWN"
             retry_id = f"{stage_request}-retry"
             retried = daemon.dispatch({
-                "operation": "experiment.stage_run", "arguments": {"stage_id": "preheat"},
+                "operation": "experiment.stage_run", "arguments": {
+                    "stage_id": "cooldown", "source_attempt_id": source_attempt["attempt_id"],
+                },
                 "execution": {**execution, "request_id": retry_id, "idempotency_key": retry_id},
             })
             assert retried["success"] is False
             assert len([item for item in sent if item.get("method") == "run"]) == expected_runs
-            assert all(item["status"] != "ACCEPTED" for item in daemon.store.list_stage_attempts(project_id, model_ref))
+            assert all(item["status"] != "ACCEPTED" for item in
+                       daemon.store.list_stage_attempts(project_id, model_ref, stage_id="cooldown"))
     finally:
         daemon.close()
         if "worker" in locals():
@@ -1315,6 +1359,7 @@ def test_stage_output_worker_event_ticket_revision_and_no_save_on_unknown(tmp_pa
             "execution": execution,
         })
         assert defined["success"] is True, defined
+        source_attempt = _seed_test_only_accepted_predecessor(daemon, project_id, model_ref)
         calls = _install_fake_stage_backend(daemon, service, mode="normal")
 
         def output_reader(*, binding, stage, plan, stage_run_operation_id, model_revision,
@@ -1442,7 +1487,9 @@ def test_stage_output_worker_event_ticket_revision_and_no_save_on_unknown(tmp_pa
         daemon.backend.stage_output_readback = output_reader
         stage_request = f"output-phase-{output_mode}"
         result = daemon.dispatch({
-            "operation": "experiment.stage_run", "arguments": {"stage_id": "preheat"},
+            "operation": "experiment.stage_run", "arguments": {
+                "stage_id": "cooldown", "source_attempt_id": source_attempt["attempt_id"],
+            },
             "execution": {**execution, "request_id": stage_request, "idempotency_key": stage_request},
         })
         attempt = result["data"]["attempt"]
@@ -1478,9 +1525,12 @@ def test_stage_dispatch_intent_and_unknown_response_are_never_replayed(tmp_path,
             "execution": execution,
         })
         assert defined["success"] is True, defined
+        source_attempt = _seed_test_only_accepted_predecessor(daemon, project_id, model_ref)
         calls = _install_fake_stage_backend(daemon, service, mode=mode)
         first = daemon.dispatch({
-            "operation": "experiment.stage_run", "arguments": {"stage_id": "preheat"},
+            "operation": "experiment.stage_run", "arguments": {
+                "stage_id": "cooldown", "source_attempt_id": source_attempt["attempt_id"],
+            },
             "execution": {**execution, "request_id": f"fault-{mode}", "idempotency_key": f"fault-{mode}"},
         })
         assert first["success"] is False and first["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
@@ -1490,13 +1540,16 @@ def test_stage_dispatch_intent_and_unknown_response_are_never_replayed(tmp_path,
         assert any(row["kind"] == "dispatch-intent" for row in attempt["evidence"])
 
         retry = daemon.dispatch({
-            "operation": "experiment.stage_run", "arguments": {"stage_id": "preheat"},
+            "operation": "experiment.stage_run", "arguments": {
+                "stage_id": "cooldown", "source_attempt_id": source_attempt["attempt_id"],
+            },
             "execution": {**execution, "request_id": f"retry-{mode}", "idempotency_key": f"retry-{mode}"},
         })
         assert retry["success"] is False
         assert retry["error"]["code"] in {"STAGE_ATTEMPT_UNRESOLVED", "REVISION_CONFLICT"}
         assert calls == ["run_study"]
-        assert all(row["status"] != "ACCEPTED" for row in daemon.store.list_stage_attempts(project_id, model_ref))
+        assert all(row["status"] != "ACCEPTED" for row in
+                   daemon.store.list_stage_attempts(project_id, model_ref, stage_id="cooldown"))
     finally:
         daemon.close()
 
@@ -1511,12 +1564,15 @@ def test_inflight_stage_reentry_reports_dispatch_without_second_solve(tmp_path):
             "execution": execution,
         })
         assert defined["success"] is True, defined
+        source_attempt = _seed_test_only_accepted_predecessor(daemon, project_id, model_ref)
         calls = _install_fake_stage_backend(
             daemon, service, mode="hold_after_dispatch",
             dispatched_event=dispatched, release_event=release,
         )
         request = {
-            "operation": "experiment.stage_run", "arguments": {"stage_id": "preheat"},
+            "operation": "experiment.stage_run", "arguments": {
+                "stage_id": "cooldown", "source_attempt_id": source_attempt["attempt_id"],
+            },
             "execution": {**execution, "request_id": "stage-inflight", "idempotency_key": "stage-inflight",
                            "rpc_timeout_s": 0.3},
         }
@@ -1554,6 +1610,7 @@ def test_stage_save_success_followed_by_hash_failure_is_unknown_and_not_accepted
             "execution": execution,
         })
         assert defined["success"] is True, defined
+        source_attempt = _seed_test_only_accepted_predecessor(daemon, project_id, model_ref)
         calls = _install_fake_stage_backend(daemon, service, mode="save_hash_failure")
 
         def fail_after_save(_path):
@@ -1561,14 +1618,17 @@ def test_stage_save_success_followed_by_hash_failure_is_unknown_and_not_accepted
 
         monkeypatch.setattr(_w21_stage_backend, "hash_saved_artifact", fail_after_save)
         result = daemon.dispatch({
-            "operation": "experiment.stage_run", "arguments": {"stage_id": "preheat"},
+            "operation": "experiment.stage_run", "arguments": {
+                "stage_id": "cooldown", "source_attempt_id": source_attempt["attempt_id"],
+            },
             "execution": {**execution, "request_id": "fault-save-hash", "idempotency_key": "fault-save-hash"},
         })
         assert result["success"] is False and result["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
         attempt = result["data"]["attempt"]
         assert attempt["status"] == "UNKNOWN" and attempt["engine_dispatched"] is True
         assert calls == ["run_study", "save_model"]
-        assert not any(row["status"] == "ACCEPTED" for row in daemon.store.list_stage_attempts(project_id, model_ref))
+        assert not any(row["status"] == "ACCEPTED" for row in
+                       daemon.store.list_stage_attempts(project_id, model_ref, stage_id="cooldown"))
         assert list((Path(daemon.project_authority.get_project(project_id)["workspace"]) / "stage_outputs").glob("*.mph"))
     finally:
         daemon.close()
@@ -1586,6 +1646,7 @@ def test_stage_ledger_change_during_saved_artifact_hash_blocks_verified_binding(
             "execution": execution,
         })
         assert defined["success"] is True, defined
+        source_attempt = _seed_test_only_accepted_predecessor(daemon, project_id, model_ref)
         calls = _install_fake_stage_backend(daemon, service, mode="save_hash_failure")
         original_hash = _w21_stage_backend.hash_saved_artifact
 
@@ -1600,7 +1661,9 @@ def test_stage_ledger_change_during_saved_artifact_hash_blocks_verified_binding(
 
         monkeypatch.setattr(_w21_stage_backend, "hash_saved_artifact", mutate_ledger_after_hash)
         result = daemon.dispatch({
-            "operation": "experiment.stage_run", "arguments": {"stage_id": "preheat"},
+            "operation": "experiment.stage_run", "arguments": {
+                "stage_id": "cooldown", "source_attempt_id": source_attempt["attempt_id"],
+            },
             "execution": {**execution, "request_id": f"ledger-{mutation}", "idempotency_key": f"ledger-{mutation}"},
         })
         assert result["success"] is False and result["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
@@ -1608,7 +1671,8 @@ def test_stage_ledger_change_during_saved_artifact_hash_blocks_verified_binding(
         assert attempt["status"] == "UNKNOWN" and attempt["engine_dispatched"] is True
         assert calls == ["run_study", "save_model"]
         assert not any(row["kind"] == "saved-stage-artifact" for row in attempt["evidence"])
-        assert all(row["status"] != "ACCEPTED" for row in daemon.store.list_stage_attempts(project_id, model_ref))
+        assert all(row["status"] != "ACCEPTED" for row in
+                   daemon.store.list_stage_attempts(project_id, model_ref, stage_id="cooldown"))
     finally:
         daemon.close()
 
@@ -1629,9 +1693,12 @@ def test_stage_requires_exact_solve_and_save_reply_identity(tmp_path, mode, expe
             "execution": execution,
         })
         assert defined["success"] is True, defined
+        source_attempt = _seed_test_only_accepted_predecessor(daemon, project_id, model_ref)
         calls = _install_fake_stage_backend(daemon, service, mode=mode)
         result = daemon.dispatch({
-            "operation": "experiment.stage_run", "arguments": {"stage_id": "preheat"},
+            "operation": "experiment.stage_run", "arguments": {
+                "stage_id": "cooldown", "source_attempt_id": source_attempt["attempt_id"],
+            },
             "execution": {**execution, "request_id": mode, "idempotency_key": mode},
         })
         assert result["success"] is False and result["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
@@ -1639,7 +1706,8 @@ def test_stage_requires_exact_solve_and_save_reply_identity(tmp_path, mode, expe
         assert attempt["status"] == "UNKNOWN" and attempt["engine_dispatched"] is True
         assert calls == expected_calls
         assert not any(row["kind"] == "saved-stage-artifact" for row in attempt["evidence"])
-        assert all(row["status"] != "ACCEPTED" for row in daemon.store.list_stage_attempts(project_id, model_ref))
+        assert all(row["status"] != "ACCEPTED" for row in
+                   daemon.store.list_stage_attempts(project_id, model_ref, stage_id="cooldown"))
     finally:
         daemon.close()
 
@@ -1839,8 +1907,6 @@ def test_stage_output_real_managed_backend_persists_model_snapshot_and_binding_r
     remain on their production paths. No scientific or isolation PASS is claimed.
     """
     import comsol_mcp._managed_backend as managed_backend
-    from comsol_mcp._stage_contract import canonical_json, sha256_json
-
     monkeypatch.setattr(managed_backend, "configured_receipt",
                         lambda: "TEST_ONLY_SYNTHETIC_OWNED_SERVER_RECEIPT")
     monkeypatch.setattr(managed_backend, "verify_owned_server",
@@ -1861,6 +1927,8 @@ def test_stage_output_real_managed_backend_persists_model_snapshot_and_binding_r
     numerical_tags = []
     numerical_properties = {}
     selection_state = {}
+    observed_unit_arrays = []
+    observed_field_arrays = []
     readback_output = {}
 
     def handle(name, generation=worker_generation, java_type="Object"):
@@ -2006,7 +2074,17 @@ def test_stage_output_real_managed_backend_persists_model_snapshot_and_binding_r
                 elif method == "getInt":
                     result = props.get(args[0], 1)
                 elif method == "getStringArray":
-                    result = ["K"] if args[0] == "unit" else list(props.get("expr", ["T"]))
+                    expressions = list(props.get("expr", ["T"]))
+                    if args[0] == "unit":
+                        unit_by_expression = {"T": "K", "(T)/1[K]": "1", "1": "1"}
+                        unexpected = [expression for expression in expressions
+                                      if expression not in unit_by_expression]
+                        if unexpected:
+                            raise AssertionError(f"unexpected test-only expression: {unexpected[0]}")
+                        result = [unit_by_expression[expression] for expression in expressions]
+                        observed_unit_arrays.append(dict(zip(expressions, result)))
+                    else:
+                        result = expressions
                 elif method == "isComplex":
                     result = False
                 elif method == "getCoordinatesShape":
@@ -2014,10 +2092,26 @@ def test_stage_output_real_managed_backend_persists_model_snapshot_and_binding_r
                               "point_count": 2, "source": "native NumericalFeature.getCoordinates()",
                               "values_transmitted": False, "wire_payload": "shape-only"}
                 elif method == "getStrictFieldReadback":
-                    result = {"layout": "expression,solnum,point", "shape": [1, 1, 2],
-                              "is_complex": False, "real": [[[300.0, 301.0]]], "imag": None,
+                    expressions = list(props.get("expr", ["T"]))
+                    values_by_expression = {
+                        "T": [300.0, 301.0],
+                        "(T)/1[K]": [300.0, 301.0],
+                        "1": [1.0, 1.0],
+                    }
+                    unexpected = [expression for expression in expressions
+                                  if expression not in values_by_expression]
+                    if unexpected:
+                        raise AssertionError(f"unexpected test-only expression: {unexpected[0]}")
+                    expression_count = len(expressions)
+                    field_values = [values_by_expression[expression] for expression in expressions]
+                    observed_field_arrays.append(dict(zip(expressions, field_values)))
+                    result = {"layout": "expression,solnum,point", "shape": [expression_count, 1, 2],
+                              "is_complex": False,
+                              "real": [[values] for values in field_values],
+                              "imag": None,
                               "coordinates": [[0.0, 1.0], [0.0, 0.0], [0.0, 0.0]],
-                              "numeric_scalar_count": 8, "json_payload_bytes": 256}
+                              "numeric_scalar_count": expression_count * 2 + 6,
+                              "json_payload_bytes": 256}
                 elif method == "run":
                     result = None
             elif receiver.startswith("selection-"):
@@ -2125,33 +2219,9 @@ def test_stage_output_real_managed_backend_persists_model_snapshot_and_binding_r
         })
         assert defined["success"] is True, defined
 
-        # The stage contract requires an accepted predecessor. Seed one
-        # explicitly as a test-only synthetic source-attempt fixture; this
-        # contains no native result and makes no scientific acceptance claim.
-        source_attempt, reused = daemon.store.begin_stage_attempt(
-            project_id=project_id, model_ref=model_ref, stage_id="preheat", expected_revision=0,
-            request_id="synthetic-source-request", operation_id="synthetic-source-operation",
-            idempotency_key="synthetic-source-idempotency", request_hash="a" * 64,
-        )
-        assert reused is False
-        synthetic_source = dict(source_attempt)
-        synthetic_source.pop("sha256", None)
-        synthetic_source.update({
-            "status": "ACCEPTED", "version": source_attempt["version"] + 1,
-            "engine_dispatched": True, "execution_status": "SOLVE_SUCCEEDED",
-            "acceptance_status": "ACCEPTED",
-            "evidence": [{"kind": "test_only_synthetic_source_attempt",
-                          "synthetic": True, "native_result": False,
-                          "scientific_acceptance_claim": False}],
-            "result": {"fixture_only": True, "native_acceptance_claimed": False},
-        })
-        synthetic_source["sha256"] = sha256_json(synthetic_source)
-        daemon.store.db.execute(
-            "UPDATE stage_attempts SET status=?,version=?,record_json=? WHERE attempt_id=?",
-            (synthetic_source["status"], synthetic_source["version"],
-             canonical_json(synthetic_source), synthetic_source["attempt_id"]),
-        )
-        assert daemon.store.get_stage_attempt(project_id, model_ref, source_attempt["attempt_id"]) == synthetic_source
+        # This is a successor software test with a visibly synthetic source;
+        # the helper makes no native result or scientific acceptance claim.
+        source_attempt = _seed_test_only_accepted_predecessor(daemon, project_id, model_ref)
 
         stage_request = "real-output-worker-binding"
         result = daemon.dispatch({
@@ -2162,9 +2232,27 @@ def test_stage_output_real_managed_backend_persists_model_snapshot_and_binding_r
         attempt = daemon.store.list_stage_attempts(project_id, model_ref, stage_id="cooldown")[-1]
         if fault == "none":
             assert result["success"] is False
-            assert result["error"]["code"] == "STAGE_ACCEPTANCE_UNVERIFIED", result
+            assert result["error"]["code"] == "STAGE_ACCEPTANCE_UNVERIFIED", {
+                "error": result.get("error"), "evidence": attempt.get("evidence"),
+                "result": attempt.get("result"),
+            }
             output = readback_output["value"]
             assert output["status"] == "UNVERIFIED"
+            output_evidence = next(
+                row for row in attempt["evidence"] if row.get("kind") == "stage-output-readback"
+            )
+            assert "verified output readback" in output_evidence["missing"]
+            assert "check:real-managed-output-readback definition/numeric evidence" in output_evidence["missing"]
+            continuity_check = next(
+                row for row in output_evidence["checks"]
+                if row.get("check_id") == "real-managed-output-readback"
+            )
+            assert continuity_check["status"] == "UNVERIFIED"
+            expected_units = {"T": "K", "(T)/1[K]": "1", "1": "1"}
+            expected_fields = {"T": [300.0, 301.0], "(T)/1[K]": [300.0, 301.0], "1": [1.0, 1.0]}
+            assert len(observed_unit_arrays) == len(observed_field_arrays) == 2
+            assert all(row == expected_units for row in observed_unit_arrays)
+            assert all(row == expected_fields for row in observed_field_arrays)
             evaluate_steps = [step for step in output["revision_chain"]
                               if step["operation"] == "result.evaluate"]
             assert len(evaluate_steps) == 2, {

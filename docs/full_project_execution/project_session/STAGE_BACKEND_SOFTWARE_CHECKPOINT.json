@@ -120,7 +120,7 @@
     "No COMSOL solve or native scientific acceptance",
     "T021/T047 and original W21 scope remain open"
   ],
-  "next_action": "Complete the existing initial-stage route: phase-specific pre-dispatch prerequisites, actual mapped target fields and automatic units, native dataset/frame and solved-for field identity, exact solution tuple, owned mesh association/captures and saved artifact. Preserve successor mapping/history and continuity/conservation gates. Then run Windows 6.4 followed by 6.3 native stage execution; continue W23-W26 and final independent review.",
+  "next_action": "Synchronize the accepted scoped software candidate to GitHub, then package and prepare a fresh source-bound Windows 6.4 initial-stage freeze; main-review it before executing within the existing budget. Follow with 6.3 only after the actual successful same-profile 6.4 receipt. Continue W21 successor transfer/history, W23-W26 and final independent review. Preserve all historical failures and UNKNOWN operations; no replay.",
   "current_mesh_snapshot_20260930": {
     "status": "PASS_SCOPED_OFFLINE",
     "native_status": "NOT_RUN",
@@ -399,5 +399,139 @@
     },
     "next_action": "Complete the existing initial-stage route: phase-specific pre-dispatch prerequisites, actual mapped target fields and automatic units, native dataset/frame and solved-for field identity, exact solution tuple, owned mesh association/captures and saved artifact. Preserve successor mapping/history and continuity/conservation gates. Then run Windows 6.4 followed by 6.3 native stage execution; continue W23-W26 and final independent review."
   },
-  "latest_checkpoint": "automatic_unit_controls_producer_20260930"
+  "latest_checkpoint": "initial_stage_integration_20260930",
+  "initial_stage_integration_20260930": {
+    "status": "ACCEPTED_SCOPED_SOFTWARE",
+    "overall_w21": "PARTIAL",
+    "native": "NOT_RUN_FOR_INITIAL_STAGE",
+    "scientific_acceptance": "UNVERIFIED",
+    "base_commit": "6100906b01c32498481ea4ea32cd5045d07add2e",
+    "candidate_fingerprint": "ffdc8c25e4528c2cb42c358a6e1ee4e89898fb172a8891dbee3bcbc86766442a",
+    "candidate_files": [
+      {
+        "path": "comsol_mcp/_control_daemon.py",
+        "sha256": "9e654013c1375ef60dce4099f38ffc616f1b36ca750ab9aa9d4923ee212bbff7"
+      },
+      {
+        "path": "comsol_mcp/_execution_contract.py",
+        "sha256": "0c2b4ae48503a8ef459320228c6eeb287265e33d5f3b9fd5ad12cc3d161e3529"
+      },
+      {
+        "path": "comsol_mcp/_g3_results.py",
+        "sha256": "0ba862600c124b2139a1de41135440c9c3492ad4514817c00d0ece9aeb247785"
+      },
+      {
+        "path": "comsol_mcp/_g3_w16.py",
+        "sha256": "320f13eebd7f84f8435a05f391380696032cdbf5f22088ae0ba7703484a0d6a6"
+      },
+      {
+        "path": "comsol_mcp/_java_worker.py",
+        "sha256": "d1486fd8bcb855df2d22e1940abe4f7cfc2b00b5b7eb7f9e42b385f5d92eb47a"
+      },
+      {
+        "path": "comsol_mcp/_managed_backend.py",
+        "sha256": "205437e7d0343b2fbc9d4190335e3ab330f2dbc8aa89cc126cd448debf7d2d97"
+      },
+      {
+        "path": "comsol_mcp/_operation_store.py",
+        "sha256": "772fd37fd5949bb803397c8d7c603285050c61df1be4307097a2cada641a84ff"
+      },
+      {
+        "path": "comsol_mcp/_w21_native_output.py",
+        "sha256": "33d9c229711335decf01f665ef761a3ded583a1b66972930b54b3c5519f0773d"
+      },
+      {
+        "path": "comsol_mcp/_w21_stage_backend.py",
+        "sha256": "2c570d36b374ad46901457b823ab15736701644b1f03cc9730213c7fb40c7e77"
+      },
+      {
+        "path": "comsol_mcp/_w21_initial_stage.py",
+        "sha256": "9019f0046d25c0287918dac28e3e84ff8de4766e558590e90bd7a675634d0ffe"
+      },
+      {
+        "path": "comsol_mcp/worker_java/PersistentComsolWorker.java",
+        "sha256": "1b0174ae914d65c86684accde41a791bf8a20e0f95eca135d624ff7c64b846f8"
+      },
+      {
+        "path": "tests/test_run_w21_stage_native.py",
+        "sha256": "632c67590c26d2d8391f4870346f495562728f43a9895dd8e2c90ead77cfc66a"
+      },
+      {
+        "path": "tests/test_w21_initial_stage_execution.py",
+        "sha256": "b086aa90eacb975e457c932f46036e9d0739f6be39dd71bc162dc51f10eb4ec6"
+      },
+      {
+        "path": "tests/w21_initial_stage_fixture.py",
+        "sha256": "a3c07a4faa3510e12813d01109c5e1d30d6e545a05b20c0182a44ed162e81b7a"
+      },
+      {
+        "path": "tests/test_stage_definition.py",
+        "sha256": "e8f51fda7507cf4621c7011d1878cefac6366868f2fbc2c63f72d2ca1de0ac0b"
+      },
+      {
+        "path": "tests/test_operation_store.py",
+        "sha256": "ad74d673549ed7085dcbcec916a0c45b5208eecda3bedcab01ec67efd2e935f1"
+      },
+      {
+        "path": "tests/test_java_worker.py",
+        "sha256": "c831028b9f53f21378d8566dd118c074985a9b0bb5fd30846c4daead011799e8"
+      },
+      {
+        "path": "tests/test_w21_stage_backend.py",
+        "sha256": "006d3515bae83c2292ae9596fe20a9f360c499ac03cc2b94471f9ed711695dfd"
+      },
+      {
+        "path": "tests/test_w21_native_output.py",
+        "sha256": "fa8a304f3962b11f60c5dbf8c5dffed733b8d2fa7abad27c07dee0d33dc7d006"
+      },
+      {
+        "path": "tests/test_execution_contract.py",
+        "sha256": "0ef2dd28e0a8d076646dc6ada5a97f67652f65eb76966d9ac84437e17a51752a"
+      },
+      {
+        "path": "tests/test_registration.py",
+        "sha256": "29c0618619cdf33869646b81d3861f7cf14e97a384a0c75d0e9df1f331533f82"
+      },
+      {
+        "path": "tests/test_g3_w16.py",
+        "sha256": "6beeea1fc65d0f1a42b752acb6a53b29ccb81199a64c10384c89dc08b00ba698"
+      },
+      {
+        "path": "tests/test_g3_results.py",
+        "sha256": "8988e19af3e51b8faadad411e0ef4855b4f7bc8209bbc3fb538259efd8b73951"
+      },
+      {
+        "path": "tools/run_w21_stage_native.py",
+        "sha256": "ef2159056de6bab36a32b916653cc459ba0b0a4fa17b9f42d4d53e8714120273"
+      }
+    ],
+    "receipt": {
+      "path": "docs/full_project_execution/project_session/w21_initial_stage_20260930/final-freeze-002.json",
+      "sha256": "e7702eb4390ae6ff203174dabcf88291dfc23268cb2c35ead9f7c58da7332b3b"
+    },
+    "main_review": {
+      "path": "docs/full_project_execution/project_session/w21_initial_stage_20260930/main-review.json",
+      "sha256": "c700f97f456060e7ce234148149d24ff155bbaff9fc8c4980278892ef9ad74b9"
+    },
+    "tests": {
+      "unique_cases": 566,
+      "passed": 565,
+      "skipped": 1,
+      "failed": 0,
+      "errored": 0,
+      "skip_reason": "Windows owner semantics only on the local non-Windows host",
+      "historical_and_focused_counts_not_additive": true
+    },
+    "java_compile": "PASS_OFFLINE:14 real CAFEBABE classes; native NOT_RUN",
+    "behavior": [
+      "Durable initial-state phase separates pre-dispatch prerequisites from solved-output acceptance.",
+      "Every declared target field, automatic three-expression units/controls, exact tuple and owned current-mesh association are required.",
+      "Unique active Variables xmesh allocates/clears under a private server-context EVALUATE ticket; ordinary public solver.inspect remains READ.",
+      "Every required submitted/observed RPC pair is correlated to exact identities, arguments, revisions and known terminal outcomes.",
+      "Normal wait expiry preserves UNKNOWN and checks only the original job without replay or deterministic cleanup.",
+      "Successor mapping/frame/history and continuity/conservation remain required."
+    ],
+    "rebuild_entry": "docs/full_project_execution/project_session/w21_initial_stage_20260930/final-freeze-002.json#rebuild_entry",
+    "next_action": "Synchronize the accepted scoped software candidate to GitHub, then package and prepare a fresh source-bound Windows 6.4 initial-stage freeze; main-review it before executing within the existing budget. Follow with 6.3 only after the actual successful same-profile 6.4 receipt. Continue W21 successor transfer/history, W23-W26 and final independent review. Preserve all historical failures and UNKNOWN operations; no replay."
+  }
 }

@@ -26,6 +26,13 @@ from typing import Any, Callable, Iterator, Mapping
 from ._platform_process import process_identity
 
 
+_UNCORRELATED_PROTOCOL_REJECTIONS = frozenset({
+    "REQUEST_NOT_FOUND",
+    "IDEMPOTENCY_KEY_CONFLICT",
+    "UNKNOWN_COMMAND",
+})
+
+
 def _structured_true(value: Mapping[str, Any], name: str) -> bool:
     """Read one explicit boolean from a decoded worker mapping."""
     return isinstance(value, Mapping) and value.get(name) is True
@@ -471,10 +478,81 @@ class PersistentJavaWorker:
             raise JavaWorkerTimeout("RPC timeout; worker request may still be executing; query the original request_id") from exc
         except OSError as exc:
             raise JavaWorkerError("ENGINE_UNRESPONSIVE: Worker endpoint could not be reached") from exc
+        correlated = self._validate_request_reply(data, reply)
         self._sync_generation(reply)
-        if request_id:
+        if request_id is not None and correlated:
             self._known_requests[str(request_id)] = reply
         return reply
+
+    def _remember_uncorrelated_request(self, request_id: Any, reason: str) -> None:
+        """Retain uncertainty for the caller's id without replacing known evidence."""
+        key = str(request_id)
+        if key not in self._known_requests:
+            self._known_requests[key] = {
+                "request_id": request_id,
+                "status": "UNKNOWN",
+                "reason": reason,
+            }
+
+    def _validate_request_reply(self, data: Mapping[str, Any], reply: Any) -> bool:
+        """Validate the response identity before it can update Worker state.
+
+        A boolean return means the response echoed the request id exactly and
+        is eligible for the per-request cache. The small set of id-less protocol
+        refusals is still returned to callers for its existing diagnostics, but
+        it is not treated as a task response or cached as one.
+        """
+        if not isinstance(reply, Mapping):
+            request_id = data.get("request_id")
+            if request_id is not None:
+                self._remember_uncorrelated_request(request_id, "invalid_worker_reply")
+                raise JavaWorkerError(
+                    "Worker response is not an object; request state is UNKNOWN",
+                    reply={
+                        "code": "WORKER_RESPONSE_UNCORRELATED",
+                        "request_id": request_id,
+                        "status": "UNKNOWN",
+                        "execution_state_unknown": True,
+                    },
+                )
+            raise JavaWorkerError("Worker returned a non-object protocol response")
+
+        if "request_id" not in data or data.get("request_id") is None:
+            return False
+
+        request_id = data["request_id"]
+        if "request_id" in reply:
+            observed_id = reply["request_id"]
+            if observed_id == request_id:
+                return True
+            reason = "worker_response_request_id_mismatch"
+            failure_code = "WORKER_RESPONSE_ID_MISMATCH"
+        else:
+            code = reply.get("code")
+            if (reply.get("ok") is False and not reply.get("status")
+                    and code in _UNCORRELATED_PROTOCOL_REJECTIONS):
+                return False
+            reason = "worker_response_request_id_missing"
+            failure_code = "WORKER_RESPONSE_ID_MISSING"
+
+        self._remember_uncorrelated_request(request_id, reason)
+        diagnostic: dict[str, Any] = {
+            "code": failure_code,
+            "request_id": request_id,
+            "status": "UNKNOWN",
+            "execution_state_unknown": True,
+        }
+        if "request_id" in reply:
+            observed_id = reply["request_id"]
+            diagnostic["observed_request_id_type"] = type(observed_id).__name__
+            if isinstance(observed_id, (str, int, float, bool)) or observed_id is None:
+                diagnostic["observed_request_id"] = observed_id
+        if isinstance(reply.get("code"), str):
+            diagnostic["observed_code"] = reply["code"]
+        raise JavaWorkerError(
+            "Worker response request_id did not match the submitted request; request state is UNKNOWN",
+            reply=diagnostic,
+        )
 
     def _sync_generation(self, reply: Mapping[str, Any]) -> None:
         value = reply.get("generation")

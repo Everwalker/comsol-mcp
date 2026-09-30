@@ -2390,29 +2390,121 @@ class ControlDaemon:
                     # the authoritative result. A cross-record reuse here is
                     # a durable consistency error, never a second attempt.
                     raise StagePlanStoreConflict("STAGE_ATTEMPT_STATE_UNKNOWN", "stage attempt exists without its matching operation result")
-                from ._w21_stage_backend import stage_attempt_binding, validate_native_admission
+                from ._w21_stage_backend import (
+                    stage_attempt_binding, validate_native_admission,
+                    is_registered_initial_state_stage,
+                    initial_stage_managed_action_plan,
+                    is_w21_initial_stage_runner_profile,
+                )
 
                 binding = stage_attempt_binding(attempt)
+                initial_state_route = is_registered_initial_state_stage(plan, stage)
                 admission_provider = getattr(backend, "stage_native_admission", None)
-                admission = (admission_provider(binding=binding, plan=plan, stage=stage)
-                             if callable(admission_provider) else None)
-                native_admitted, admission_missing = validate_native_admission(admission, binding)
+
+                def persist_admission_worker_event(event: Any, **event_context: Any) -> None:
+                    if not isinstance(event, Mapping):
+                        raise ExecutionContractError(
+                            "WORKER_OUTPUT_BINDING_MISMATCH",
+                            "initial-stage preflight emitted a malformed Worker event",
+                        )
+                    safe_event = self._redact_session_worker_event(dict(event))
+                    readphase = event_context.get("readphase")
+                    operation = event_context.get("operation")
+                    child_operation_id = event_context.get("child_operation_id")
+                    expected = event_context.get("expected_revision")
+                    worker = getattr(backend, "worker", None)
+                    worker_generation = getattr(worker, "generation", None)
+                    if callable(worker_generation):
+                        worker_generation = worker_generation()
+                    metadata = safe_event.get("metadata")
+                    sidecar = safe_event.get("w21_stage_output_binding")
+                    request_id = safe_event.get("request_id")
+                    request_hash = safe_event.get("request_hash")
+                    kind = safe_event.get("kind")
+                    if (safe_event.get("operation_id") != child_operation_id
+                            or kind not in {"call", "model", "model_snapshot"}
+                            or safe_event.get("phase") not in {"submitted", "observed", "unknown", "unresponsive"}
+                            or not isinstance(readphase, str) or not readphase
+                            or operation != "study.inspect"
+                            or not isinstance(child_operation_id, str) or not child_operation_id
+                            or type(expected) is not int or expected != state.revision
+                            or not isinstance(metadata, Mapping)
+                            or metadata.get("type") != kind
+                            or metadata.get("request_id") != request_id
+                            or not isinstance(request_id, str) or not request_id
+                            or not isinstance(request_hash, str) or len(request_hash) != 64
+                            or any(char not in "0123456789abcdef" for char in request_hash)
+                            or not isinstance(sidecar, Mapping)
+                            or sidecar.get("model_ref") != model_ref.as_dict()
+                            or sidecar.get("worker_generation") != worker_generation
+                            or sidecar.get("child_operation_id") != child_operation_id
+                            or sidecar.get("operation") != operation
+                            or sidecar.get("readphase") != readphase
+                            or (kind == "call" and (
+                                not isinstance(metadata.get("handle"), str) or not metadata.get("handle")
+                                or metadata.get("generation") != worker_generation
+                                or not isinstance(metadata.get("method"), str)
+                                or not isinstance(metadata.get("args"), list)))
+                            or (kind in {"model", "model_snapshot"}
+                                and metadata.get("tag") != model_ref.model_tag)):
+                        raise ExecutionContractError(
+                            "WORKER_OUTPUT_BINDING_MISMATCH",
+                            "initial-stage preflight Worker event differs from the exact managed Study read",
+                        )
+                    safe_event["w21_stage_preflight"] = {
+                        "attempt_id": binding["attempt_id"], "readphase": readphase,
+                        "operation": operation, "child_operation_id": child_operation_id,
+                        "expected_revision": expected,
+                    }
+                    self.store.add_event(record["job_id"], "worker_request", safe_event)
+
+                if callable(admission_provider) and initial_state_route:
+                    admission = admission_provider(
+                        binding=binding, plan=plan, stage=stage,
+                        event_callback=persist_admission_worker_event,
+                        authorize_callback=self._authorize_project_execution,
+                    )
+                elif callable(admission_provider):
+                    admission = admission_provider(binding=binding, plan=plan, stage=stage)
+                else:
+                    admission = None
+                native_admitted, admission_missing = validate_native_admission(
+                    admission, binding, initial_state=initial_state_route,
+                )
+                internal_action_plan = (initial_stage_managed_action_plan(plan, stage)
+                                        if initial_state_route else None)
+                if initial_state_route and native_admitted:
+                    expected_cap = 12 if is_w21_initial_stage_runner_profile(plan, stage) else None
+                    if (not isinstance(internal_action_plan, list)
+                            or admission.get("managed_internal_action_plan") != internal_action_plan
+                            or admission.get("planned_internal_read_count") != len(internal_action_plan)
+                            or admission.get("internal_read_cap") != expected_cap
+                            or (expected_cap is not None and len(internal_action_plan) > expected_cap)):
+                        native_admitted = False
+                        admission_missing = [*admission_missing,
+                            "exact registered-plan managed observation sequence/budget"]
                 if not native_admitted:
                     admission_summary = {
                         "kind": "native-stage-admission",
-                        "status": "UNVERIFIED",
+                        "status": (admission.get("status") if isinstance(admission, Mapping)
+                                   else "UNVERIFIED"),
                         "producer": admission.get("producer") if isinstance(admission, Mapping) else None,
                         "binding_verified": isinstance(admission, Mapping) and admission.get("binding") == binding,
                         "facts": dict(admission.get("facts", {})) if isinstance(admission, Mapping)
                                  and isinstance(admission.get("facts"), Mapping) else {},
                         "missing": admission_missing,
+                        "initial_state_route": initial_state_route,
+                        "evidence_refs": list(admission.get("evidence_refs", []))
+                            if isinstance(admission, Mapping) else [],
                     }
                     evidence = [{
                         "kind": "pre-solve-admission",
                         "status": "NOT_DISPATCHED_UNVERIFIED",
-                        "worker_rpc_performed": False,
+                        "worker_rpc_performed": bool(initial_state_route and admission is not None),
                         "solve_started": False,
-                        "reason": "managed backend cannot prove the exact target field/unit/mesh/frame profile",
+                        "reason": ("managed backend cannot prove the registered initial-stage preflight"
+                                   if initial_state_route else
+                                   "managed backend cannot prove the exact target field/unit/mesh/frame profile"),
                     }, admission_summary]
                     attempt = self.store.update_stage_attempt(
                         project_id, model_ref.as_dict(), attempt["attempt_id"], expected_version=attempt["version"],
@@ -2424,7 +2516,9 @@ class ControlDaemon:
                     )
                     result = self._error(
                         "STAGE_PROFILE_UNVERIFIED",
-                        "stage execution was refused before Worker dispatch because the managed backend could not produce complete, exact-bound native field/unit/mesh/frame evidence",
+                        ("stage execution was refused before Worker dispatch because the managed backend could not verify the exact registered initial Study"
+                         if initial_state_route else
+                         "stage execution was refused before Worker dispatch because the managed backend could not produce complete, exact-bound native field/unit/mesh/frame evidence"),
                         data={
                             "stage_id": stage_id,
                             "plan_id": plan["plan_id"],
@@ -2432,14 +2526,16 @@ class ControlDaemon:
                             "attempt": attempt,
                             "execution_status": "NOT_DISPATCHED",
                             "acceptance_status": "UNVERIFIED",
-                            "missing_evidence": [
+                            "missing_evidence": ([
+                                "managed study.inspect of the exact registered initial Study"
+                            ] if initial_state_route else [
                                 "target Variables belongs to the uniquely attached SolverSequence for study_target",
                                 "source and target variable identity plus native unit readback",
                                 "exact source/target mesh and declared frame identity",
                                 "saved output SolutionSpec tuple and same-time continuity or conservation readback",
-                            ],
+                            ]),
                             "native_admission_missing": admission_missing,
-                            "worker_rpc_performed": False,
+                            "worker_rpc_performed": bool(initial_state_route and admission is not None),
                             "solve_started": False,
                             "engine_dispatched": False,
                         },
@@ -2457,7 +2553,8 @@ class ControlDaemon:
                     record=record, attempt=attempt, stage=stage, plan=plan, backend=backend,
                     service=service, project_id=project_id, session_id=session_id,
                     model_ref=model_ref.as_dict(), normalized_execution=normalized_execution,
-                    binding=binding,
+                    binding=binding, initial_state_route=initial_state_route,
+                    native_admission=admission,
                 )
             except StagePlanStoreConflict as exc:
                 result = self._error(exc.code, str(exc), data={
@@ -2509,7 +2606,8 @@ class ControlDaemon:
         self, *, record: Mapping[str, Any], attempt: dict[str, Any], stage: Mapping[str, Any],
         plan: Mapping[str, Any], backend: Any, service: Any, project_id: str,
         session_id: str, model_ref: dict[str, Any], normalized_execution: dict[str, Any],
-        binding: Mapping[str, Any],
+        binding: Mapping[str, Any], initial_state_route: bool = False,
+        native_admission: Mapping[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Run one backend-admitted stage through normal COMPUTE and save tickets.
 
@@ -2520,9 +2618,11 @@ class ControlDaemon:
         """
         from ._execution_contract import canonical_project_path
         from ._execution_contract import model_ref_from_mapping
-        from ._stage_contract import sha256_json
+        from ._stage_contract import canonical_json, sha256_json
         from ._w21_stage_backend import (
             StageWorkerDispatchGate, validate_output_readback, hash_saved_artifact,
+            validate_initial_output_readback, validate_initial_output_acceptance,
+            INITIAL_OUTPUT_ACCEPTANCE_SCOPE,
         )
 
         segments = stage.get("study_target", {}).get("segments", [])
@@ -2758,7 +2858,20 @@ class ControlDaemon:
                 project_id, model_ref, attempt["attempt_id"], expected_version=attempt["version"],
                 status="DISPATCH_INTENT", engine_dispatched=False,
                 execution_status="DISPATCH_INTENT", acceptance_status="NOT_EVALUATED",
-                evidence=[*attempt["evidence"], {
+                evidence=[*attempt["evidence"], *([{
+                    "kind": "native-stage-admission",
+                    "status": native_admission.get("status"),
+                    "producer": native_admission.get("producer"),
+                    "binding": dict(native_admission.get("binding", {})),
+                    "initial_state_route": "registered_first_stage",
+                    "facts": dict(native_admission.get("facts", {})),
+                    "study_readback": dict(native_admission.get("study_readback", {})),
+                    "revision_chain": list(native_admission.get("revision_chain", [])),
+                    "managed_internal_action_plan": list(native_admission.get("managed_internal_action_plan", [])),
+                    "planned_internal_read_count": native_admission.get("planned_internal_read_count"),
+                    "internal_read_cap": native_admission.get("internal_read_cap"),
+                    "evidence_refs": list(native_admission.get("evidence_refs", [])),
+                }] if initial_state_route and isinstance(native_admission, Mapping) else []), {
                     "kind": "dispatch-intent", "operation": "run_study",
                     "study_tag": study_tag, "revision": expected_revision,
                     "binding_sha256": sha256_json(dict(binding)),
@@ -2853,6 +2966,12 @@ class ControlDaemon:
                         expected = step.get("expected_revision")
                         revision = step.get("revision")
                         effect = g3_effects.get(operation) if isinstance(operation, str) else None
+                        private_xmesh_ticket = (
+                            initial_state_route and operation == "solver.inspect"
+                            and readphase == "initial-stage-active-variables-xmesh"
+                        )
+                        if private_xmesh_ticket:
+                            effect = "EVALUATE"
                         delta = 0 if effect == "READ" else 1 if effect == "EVALUATE" else None
                         ticket_required = delta == 1
                         if (delta is None or not isinstance(readphase, str) or not readphase
@@ -2931,11 +3050,65 @@ class ControlDaemon:
                     return output_revision
 
                 output_revision = validate_output_revision_chain(output_readback)
-                output_valid, output_missing, checks_passed = validate_output_readback(
-                    output_readback, binding=binding, stage_run_operation_id=solve_operation_id,
-                    model_revision=solve_revision, target_selection=stage["target_selection"],
-                    checks=stage["checks"],
-                )
+                if initial_state_route:
+                    output_valid, output_missing = validate_initial_output_readback(
+                        output_readback, binding=binding, stage=stage,
+                        stage_run_operation_id=solve_operation_id, model_revision=solve_revision,
+                    )
+                    # Initial-state plans intentionally have no successor-only
+                    # continuity/conservation checks; mapped output proof is
+                    # the scoped initial acceptance contract.
+                    checks_passed = output_valid
+                else:
+                    output_valid, output_missing, checks_passed = validate_output_readback(
+                        output_readback, binding=binding, stage_run_operation_id=solve_operation_id,
+                        model_revision=solve_revision, target_selection=stage["target_selection"],
+                        checks=stage["checks"],
+                    )
+
+                mesh_snapshot_readback = None
+                if initial_state_route and output_valid:
+                    action_plan = (native_admission.get("managed_internal_action_plan")
+                                   if isinstance(native_admission, Mapping) else None)
+                    output_chain = output_readback.get("revision_chain") if isinstance(output_readback, Mapping) else None
+                    preflight_row = self.store.get_metadata(
+                        "artifacts", f"w21-initial-stage-preflight:{attempt['attempt_id']}",
+                    )
+                    preflight_chain = preflight_row.get("revision_chain") if isinstance(preflight_row, Mapping) else None
+                    planned_count = len(preflight_chain) + len(output_chain) + 1 \
+                        if isinstance(preflight_chain, list) and isinstance(output_chain, list) else -1
+                    action_cap = preflight_row.get("internal_read_cap") if isinstance(preflight_row, Mapping) else None
+                    if (not isinstance(action_plan, list) or planned_count != len(action_plan)
+                            or action_plan[-1:] != ["mesh.inspect:post-stage"]
+                            or (action_cap is not None and (action_cap != 12 or planned_count > action_cap))):
+                        raise ExecutionContractError(
+                            "STAGE_PROFILE_UNVERIFIED",
+                            "post-solve observations leave no exact mesh-inspect action budget",
+                            stage="pre_dispatch",
+                        )
+                    association = output_readback.get("solution_mesh_association")
+                    dataset_identity = output_readback.get("dataset_identity")
+                    mesh_reader = getattr(backend, "stage_mesh_snapshot_readback", None)
+                    if (not callable(mesh_reader) or not isinstance(association, Mapping)
+                            or not isinstance(dataset_identity, Mapping)):
+                        output_valid = False
+                        output_missing = [*output_missing, "actual associated current mesh snapshot"]
+                        checks_passed = False
+                    else:
+                        mesh_snapshot_readback = mesh_reader(
+                            project_id=project_id, model_ref=model_ref,
+                            attempt_id=attempt["attempt_id"], phase="post-stage",
+                            model_revision=output_revision,
+                            component=dataset_identity["component"],
+                            mesh=association["mesh_tag"], geometry=dataset_identity["geometry"],
+                            event_callback=lambda event, **context: store_worker_event(
+                                event, request_id=str(context.get("child_operation_id") or ""),
+                                phase="output", revision=int(context.get("expected_revision", output_revision)),
+                                readphase=context.get("readphase"), operation=context.get("operation"),
+                                child_operation_id=context.get("child_operation_id"),
+                                expected_revision=context.get("expected_revision"),
+                            ),
+                        )
 
                 save_path = f"stage_outputs/{attempt['attempt_id']}.mph"
                 target_path = canonical_project_path(project["workspace"], save_path)
@@ -3015,6 +3188,172 @@ class ControlDaemon:
                     ] if isinstance(observed_checks, list) else [],
                     "target_selection_sha256": sha256_json(stage["target_selection"]),
                 }
+                initial_native_evidence = None
+                if initial_state_route and output_valid and isinstance(mesh_snapshot_readback, Mapping):
+                    preflight_reference = (native_admission.get("evidence_refs", [])[0]
+                                           if isinstance(native_admission, Mapping)
+                                           and isinstance(native_admission.get("evidence_refs"), list)
+                                           and native_admission.get("evidence_refs") else None)
+                    preflight_artifact_id = (preflight_reference.get("artifact_id")
+                                             if isinstance(preflight_reference, Mapping) else None)
+                    preflight_record = (self.store.get_metadata("artifacts", preflight_artifact_id)
+                                        if isinstance(preflight_artifact_id, str) else None)
+                    job_record = self.store.operation_job(solve_operation_id)
+                    job_id = job_record.get("job_id") if isinstance(job_record, Mapping) else None
+                    worker_event_rows = (self.store.events(job_id, limit=1000)
+                                         if isinstance(job_id, str) else [])
+                    worker_event_rows = [item for item in worker_event_rows
+                                         if isinstance(item, Mapping) and item.get("event") == "worker_request"]
+                    submitted_rpc_ids = {
+                        item.get("metadata", {}).get("request_id")
+                        for item in worker_event_rows
+                        if isinstance(item.get("metadata"), Mapping)
+                        and item["metadata"].get("phase") == "submitted"
+                        and isinstance(item["metadata"].get("request_id"), str)
+                    }
+                    output_chain = output_readback.get("revision_chain", [])
+                    preflight_chain = preflight_record.get("revision_chain", []) \
+                        if isinstance(preflight_record, Mapping) else []
+                    internal_read_count = len(preflight_chain) + len(output_chain) + 1
+                    internal_action_plan = (preflight_record.get("managed_internal_action_plan")
+                                            if isinstance(preflight_record, Mapping) else None)
+                    mesh_artifact_ref = mesh_snapshot_readback.get("artifact_ref")
+                    mesh_artifact_id = (mesh_artifact_ref.get("artifact_id")
+                                        if isinstance(mesh_artifact_ref, Mapping) else None)
+                    mesh_artifact_record = (self.store.get_metadata("artifacts", mesh_artifact_id)
+                                            if isinstance(mesh_artifact_id, str) else None)
+                    solve_save_dispatches = [dict(item) for item in current.get("evidence", [])
+                        if isinstance(item, Mapping) and item.get("kind") == "worker-dispatch"]
+                    expected_worker_ids = {
+                        request.get("worker_request_id")
+                        for step in [*(preflight_chain if isinstance(preflight_chain, list) else []),
+                                     *(output_chain if isinstance(output_chain, list) else [])]
+                        if isinstance(step, Mapping) and isinstance(step.get("worker_requests"), list)
+                        for request in step["worker_requests"] if isinstance(request, Mapping)
+                    }
+                    expected_worker_ids.update(
+                        request.get("request_id") for request in (
+                            mesh_artifact_record.get("worker_requests", [])
+                            if isinstance(mesh_artifact_record, Mapping) else []
+                        ) if isinstance(request, Mapping) and request.get("phase") == "submitted"
+                    )
+                    expected_worker_ids.update(
+                        request.get("worker_request_id") for request in solve_save_dispatches
+                    )
+                    auxiliary_worker_ids = [
+                        item.get("metadata", {}).get("request_id")
+                        for item in worker_event_rows
+                        if isinstance(item.get("metadata"), Mapping)
+                        and item["metadata"].get("phase") == "submitted"
+                        and isinstance(item["metadata"].get("request_id"), str)
+                        and item["metadata"].get("request_id") not in expected_worker_ids
+                    ]
+                    dispatch_epochs = {
+                        item.get("worker_generation") for item in solve_save_dispatches
+                        if type(item.get("worker_generation")) is int
+                    }
+                    worker_epoch = next(iter(dispatch_epochs)) if len(dispatch_epochs) == 1 else None
+                    initial_native_evidence = {
+                        "schema": "w21-initial-output-acceptance/v1",
+                        "scope": INITIAL_OUTPUT_ACCEPTANCE_SCOPE,
+                        "stage_attempt_binding": dict(binding),
+                        "stage_run_operation_id": solve_operation_id,
+                        "solve_revision": solve_revision,
+                        "output_revision": output_revision,
+                        "native_output_readback": dict(output_readback),
+                        "initial_stage_preflight": {
+                            "artifact_id": preflight_artifact_id,
+                            "record": dict(preflight_record) if isinstance(preflight_record, Mapping) else None,
+                        },
+                        "mesh_snapshot_readback": dict(mesh_snapshot_readback),
+                        "mesh_snapshot_artifact_record": (
+                            dict(mesh_artifact_record) if isinstance(mesh_artifact_record, Mapping) else None
+                        ),
+                        "solve_save_dispatches": solve_save_dispatches,
+                        "worker_event_rows": [dict(item) for item in worker_event_rows],
+                        "worker_job_id": job_id,
+                        "worker_epoch": worker_epoch,
+                        "worker_auxiliary_requests": [
+                            {"worker_request_id": request_id} for request_id in auxiliary_worker_ids
+                        ],
+                        "managed_internal_action_plan": list(internal_action_plan)
+                            if isinstance(internal_action_plan, list) else None,
+                        "internal_read_cap": preflight_record.get("internal_read_cap")
+                            if isinstance(preflight_record, Mapping) else None,
+                        "internal_read_count": internal_read_count,
+                        "raw_worker_rpc_count": len(submitted_rpc_ids),
+                        "saved_artifact": dict(artifact),
+                        "saved_artifact_observed_sha256": artifact_sha256,
+                    }
+                    # Make the evidence object match its durable JSON form before
+                    # validating, persisting, and returning it. In particular,
+                    # integer keys in inner_indices_by_outer become JSON strings.
+                    initial_native_evidence = json.loads(canonical_json(initial_native_evidence))
+                    initial_acceptance_valid, initial_acceptance_missing = validate_initial_output_acceptance(
+                        initial_native_evidence, binding=binding, stage=stage,
+                        stage_run_operation_id=solve_operation_id,
+                        solve_revision=solve_revision, output_revision=output_revision,
+                        observed_artifact_sha256=artifact_sha256,
+                    )
+                    if initial_acceptance_valid:
+                        try:
+                            current = self.store.update_stage_attempt(
+                                project_id, model_ref, attempt["attempt_id"],
+                                expected_version=current["version"],
+                                status="RUNNING", engine_dispatched=True,
+                                execution_status="RUNNING", acceptance_status="NOT_EVALUATED",
+                                evidence=[*current["evidence"], output_evidence, {
+                                    "kind": "saved-stage-artifact", **artifact,
+                                    "model_revision": save_revision,
+                                }],
+                                result={"solve": "SUCCEEDED", "output_readback": "VERIFIED",
+                                        "saved_artifact": artifact, "acceptance": "PENDING_INITIAL_OUTPUT_VALIDATION"},
+                            )
+                            accepted_attempt = self.store.finalize_initial_stage_output_acceptance(
+                                project_id, model_ref, attempt["attempt_id"],
+                                expected_version=current["version"],
+                                native_evidence=initial_native_evidence,
+                                result={
+                                    "solve": "SUCCEEDED", "output_readback": "VERIFIED",
+                                    "saved_artifact": artifact,
+                                    "acceptance": "INITIAL_OUTPUT_ACCEPTED",
+                                    "acceptance_scope": INITIAL_OUTPUT_ACCEPTANCE_SCOPE,
+                                },
+                            )
+                        except StagePlanStoreConflict as exc:
+                            raise ExecutionContractError(
+                                exc.code, str(exc), stage="post_dispatch",
+                            ) from exc
+                        accepted_result = {
+                            "success": True,
+                            "data": {
+                                "stage_id": accepted_attempt["stage_id"],
+                                "attempt": accepted_attempt,
+                                "execution_status": "SOLVE_SUCCEEDED",
+                                "acceptance_status": "INITIAL_OUTPUT_ACCEPTED",
+                                "acceptance_scope": INITIAL_OUTPUT_ACCEPTANCE_SCOPE,
+                                "initial_output_acceptance": {
+                                    "status": "PASS",
+                                    "scope": INITIAL_OUTPUT_ACCEPTANCE_SCOPE,
+                                    "attempt_id": accepted_attempt["attempt_id"],
+                                    "output_tuple": output_readback.get("output_tuple"),
+                                    "saved_artifact": artifact,
+                                    "native_evidence": initial_native_evidence,
+                                },
+                                "output_readback_status": "VERIFIED",
+                                "internal_read_count": internal_read_count,
+                                "raw_worker_rpc_count": len(submitted_rpc_ids),
+                                "saved_artifact": artifact,
+                                "engine_dispatched": True,
+                            },
+                            "execution": {
+                                "project_id": project_id, "session_id": session_id,
+                                "model_ref": model_ref, "revision": save_revision,
+                                "engine_dispatched": True,
+                            },
+                        }
+                        return self._finish(record, accepted_result, "SUCCEEDED")
+                    output_missing = [*output_missing, *initial_acceptance_missing]
                 attempt = self.store.update_stage_attempt(
                     project_id, model_ref, attempt["attempt_id"], expected_version=current["version"],
                     status="SUCCEEDED_PARTIAL", engine_dispatched=True,

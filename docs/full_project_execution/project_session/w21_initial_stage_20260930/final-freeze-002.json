@@ -1,0 +1,510 @@
+{
+  "schema": "w21-initial-stage-software-freeze/v2",
+  "created_at_local": "2026-09-30T13:34:23+08:00",
+  "candidate": {
+    "base_commit": "6100906b01c32498481ea4ea32cd5045d07add2e",
+    "state": "working-tree candidate; software regression evidence frozen; root docs/commit and native stage remain pending",
+    "code_test_file_count": 24,
+    "code_test_allowlist": [
+      {
+        "path": "comsol_mcp/_control_daemon.py",
+        "sha256": "9e654013c1375ef60dce4099f38ffc616f1b36ca750ab9aa9d4923ee212bbff7"
+      },
+      {
+        "path": "comsol_mcp/_execution_contract.py",
+        "sha256": "0c2b4ae48503a8ef459320228c6eeb287265e33d5f3b9fd5ad12cc3d161e3529"
+      },
+      {
+        "path": "comsol_mcp/_g3_results.py",
+        "sha256": "0ba862600c124b2139a1de41135440c9c3492ad4514817c00d0ece9aeb247785"
+      },
+      {
+        "path": "comsol_mcp/_g3_w16.py",
+        "sha256": "320f13eebd7f84f8435a05f391380696032cdbf5f22088ae0ba7703484a0d6a6"
+      },
+      {
+        "path": "comsol_mcp/_java_worker.py",
+        "sha256": "d1486fd8bcb855df2d22e1940abe4f7cfc2b00b5b7eb7f9e42b385f5d92eb47a"
+      },
+      {
+        "path": "comsol_mcp/_managed_backend.py",
+        "sha256": "205437e7d0343b2fbc9d4190335e3ab330f2dbc8aa89cc126cd448debf7d2d97"
+      },
+      {
+        "path": "comsol_mcp/_operation_store.py",
+        "sha256": "772fd37fd5949bb803397c8d7c603285050c61df1be4307097a2cada641a84ff"
+      },
+      {
+        "path": "comsol_mcp/_w21_native_output.py",
+        "sha256": "33d9c229711335decf01f665ef761a3ded583a1b66972930b54b3c5519f0773d"
+      },
+      {
+        "path": "comsol_mcp/_w21_stage_backend.py",
+        "sha256": "2c570d36b374ad46901457b823ab15736701644b1f03cc9730213c7fb40c7e77"
+      },
+      {
+        "path": "comsol_mcp/_w21_initial_stage.py",
+        "sha256": "9019f0046d25c0287918dac28e3e84ff8de4766e558590e90bd7a675634d0ffe"
+      },
+      {
+        "path": "comsol_mcp/worker_java/PersistentComsolWorker.java",
+        "sha256": "1b0174ae914d65c86684accde41a791bf8a20e0f95eca135d624ff7c64b846f8"
+      },
+      {
+        "path": "tests/test_run_w21_stage_native.py",
+        "sha256": "632c67590c26d2d8391f4870346f495562728f43a9895dd8e2c90ead77cfc66a"
+      },
+      {
+        "path": "tests/test_w21_initial_stage_execution.py",
+        "sha256": "b086aa90eacb975e457c932f46036e9d0739f6be39dd71bc162dc51f10eb4ec6"
+      },
+      {
+        "path": "tests/w21_initial_stage_fixture.py",
+        "sha256": "a3c07a4faa3510e12813d01109c5e1d30d6e545a05b20c0182a44ed162e81b7a"
+      },
+      {
+        "path": "tests/test_stage_definition.py",
+        "sha256": "e8f51fda7507cf4621c7011d1878cefac6366868f2fbc2c63f72d2ca1de0ac0b"
+      },
+      {
+        "path": "tests/test_operation_store.py",
+        "sha256": "ad74d673549ed7085dcbcec916a0c45b5208eecda3bedcab01ec67efd2e935f1"
+      },
+      {
+        "path": "tests/test_java_worker.py",
+        "sha256": "c831028b9f53f21378d8566dd118c074985a9b0bb5fd30846c4daead011799e8"
+      },
+      {
+        "path": "tests/test_w21_stage_backend.py",
+        "sha256": "006d3515bae83c2292ae9596fe20a9f360c499ac03cc2b94471f9ed711695dfd"
+      },
+      {
+        "path": "tests/test_w21_native_output.py",
+        "sha256": "fa8a304f3962b11f60c5dbf8c5dffed733b8d2fa7abad27c07dee0d33dc7d006"
+      },
+      {
+        "path": "tests/test_execution_contract.py",
+        "sha256": "0ef2dd28e0a8d076646dc6ada5a97f67652f65eb76966d9ac84437e17a51752a"
+      },
+      {
+        "path": "tests/test_registration.py",
+        "sha256": "29c0618619cdf33869646b81d3861f7cf14e97a384a0c75d0e9df1f331533f82"
+      },
+      {
+        "path": "tests/test_g3_w16.py",
+        "sha256": "6beeea1fc65d0f1a42b752acb6a53b29ccb81199a64c10384c89dc08b00ba698"
+      },
+      {
+        "path": "tests/test_g3_results.py",
+        "sha256": "8988e19af3e51b8faadad411e0ef4855b4f7bc8209bbc3fb538259efd8b73951"
+      },
+      {
+        "path": "tools/run_w21_stage_native.py",
+        "sha256": "ef2159056de6bab36a32b916653cc459ba0b0a4fa17b9f42d4d53e8714120273"
+      }
+    ],
+    "source_test_fingerprint_23_entries": {
+      "pre_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-integration-20260930/reports/candidate-source-test-pre-001.sha256",
+      "pre_sha256": "2e3153e0df700c01da9b7981243c88c12b91a630b20b33487459e4e3519f4d2d",
+      "post_core_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-integration-20260930/reports/candidate-source-test-post-core280-001.sha256",
+      "post_core_sha256": "2e3153e0df700c01da9b7981243c88c12b91a630b20b33487459e4e3519f4d2d",
+      "post_final_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-integration-20260930/reports/candidate-source-test-post-final-001.sha256",
+      "post_final_sha256": "2e3153e0df700c01da9b7981243c88c12b91a630b20b33487459e4e3519f4d2d",
+      "all_23_entries_identical_pre_to_post_final": true,
+      "runner_added_as_24th_entry_path": "tools/run_w21_stage_native.py",
+      "runner_sha256": "ef2159056de6bab36a32b916653cc459ba0b0a4fa17b9f42d4d53e8714120273"
+    }
+  },
+  "verification": {
+    "software_test_aggregate": {
+      "unique_cases": 566,
+      "passed": 565,
+      "skipped": 1,
+      "failed": 0,
+      "errored": 0,
+      "three_junit_reports_have_no_overlapping_classname_name_pairs": true,
+      "reports": [
+        {
+          "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-integration-20260930/reports/combined-affected-alpha-001.xml",
+          "sha256": "79ca03c5ea336a8fe22f345e9bdb02b395d8998f427bec58fe36bc87c98d9fbf",
+          "cases": 280,
+          "testsuite_attributes": {
+            "tests": 280,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "result_counts": {
+            "passed": 280,
+            "skipped": 0,
+            "failed": 0,
+            "errored": 0
+          },
+          "modules": {
+            "test_operation_store": 10,
+            "test_run_w21_stage_native": 156,
+            "test_stage_definition": 83,
+            "test_w21_initial_stage_execution": 31
+          },
+          "skipped_cases": [],
+          "timestamp": "2026-09-30T13:15:41.052584+08:00"
+        },
+        {
+          "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-integration-20260930/reports/affected-followup-six-001.xml",
+          "sha256": "572ba5718821f5e32171935694166b22647d66bac8f080cb8f729456ff0a088c",
+          "cases": 245,
+          "testsuite_attributes": {
+            "tests": 245,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "result_counts": {
+            "passed": 245,
+            "skipped": 0,
+            "failed": 0,
+            "errored": 0
+          },
+          "modules": {
+            "test_execution_contract": 10,
+            "test_g3_results": 113,
+            "test_g3_w16": 80,
+            "test_registration": 3,
+            "test_w21_native_output": 32,
+            "test_w21_stage_backend": 7
+          },
+          "skipped_cases": [],
+          "timestamp": "2026-09-30T13:17:01.895300+08:00"
+        },
+        {
+          "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-integration-20260930/reports/java-worker-r17-001.xml",
+          "sha256": "ca37538a796c32cfbd995cdd570c9a12d5a6527afea3994ab5da668904093edd",
+          "cases": 41,
+          "testsuite_attributes": {
+            "tests": 41,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 1
+          },
+          "result_counts": {
+            "passed": 40,
+            "skipped": 1,
+            "failed": 0,
+            "errored": 0
+          },
+          "modules": {
+            "TestWorkerAllowlist": 7,
+            "test_java_worker": 34
+          },
+          "skipped_cases": [
+            {
+              "classname": "tests.test_java_worker",
+              "name": "test_windows_existing_foreign_lock_root_is_rejected_without_takeover",
+              "reason": "Windows owner semantics only"
+            }
+          ],
+          "timestamp": "2026-09-30T12:30:30.099909+08:00"
+        }
+      ]
+    },
+    "run_records": [
+      {
+        "report": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-integration-20260930/reports/combined-affected-alpha-001.xml",
+        "workdir": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository",
+        "captured_pytest_output": "progress output only; JUnit records 280 cases, 0 fail/error/skip",
+        "explicit_child_process_exit_code_retained": false,
+        "executed_command": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-stage-unit-controls-20260930/venv/bin/python -B -m pytest -q --tb=short tests/test_run_w21_stage_native.py tests/test_w21_initial_stage_execution.py tests/test_stage_definition.py tests/test_operation_store.py --basetemp='/Volumes/CTestEff/α' -o junit_family=xunit2 --junitxml=/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-integration-20260930/reports/combined-affected-alpha-001.xml -p no:cacheprovider",
+        "command_role": "historical command captured for audit; do not run it again verbatim"
+      },
+      {
+        "report": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-integration-20260930/reports/affected-followup-six-001.xml",
+        "workdir": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository",
+        "captured_pytest_output": "245 passed in 0.70s",
+        "explicit_child_process_exit_code_retained": false,
+        "executed_command": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-stage-unit-controls-20260930/venv/bin/python -B -m pytest -q --tb=short tests/test_w21_stage_backend.py tests/test_w21_native_output.py tests/test_execution_contract.py tests/test_registration.py tests/test_g3_w16.py tests/test_g3_results.py --basetemp='/Volumes/CTestEff/β' -o junit_family=xunit2 --junitxml=/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-integration-20260930/reports/affected-followup-six-001.xml -p no:cacheprovider",
+        "command_role": "historical command captured for audit; do not run it again verbatim"
+      },
+      {
+        "report": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-integration-20260930/reports/java-worker-r17-001.xml",
+        "captured_result": "40 passed, 1 skipped (Windows owner semantics only), 0 failure/error",
+        "command_and_explicit_child_process_exit_code_retained": false
+      }
+    ],
+    "java_compilation": {
+      "receipt": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-integration-20260930/reports/worker-javac-r18-corrected-001.json",
+      "receipt_sha256": "cb9d8a06c8840f9a2d1c163abe7f86660ac6518987aaf3b3a7688a4ac742dedd",
+      "result": "original successful javac run; corrected enumeration confirms 14 real CAFEBABE classes; exit_code 0; no recompile performed for correction",
+      "rebuild_entry": "runtime compiles on cache miss using [resolved javac, -cp, validated COMSOL classpath, -encoding UTF-8, -d <private cache classes>, comsol_mcp/worker_java/PersistentComsolWorker.java]; implementation: comsol_mcp/_java_worker.py"
+    },
+    "main_review": {
+      "r1_recheck": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-main-review-20260930/main-r1-final-recheck-008.json",
+      "r1_result": "baseline true; all 11 tamper cases false; validator source SHA 2c570d36b374ad46901457b823ab15736701644b1f03cc9730213c7fb40c7e77",
+      "runner_incremental_review": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-main-review-20260930/main-runner-final-incremental-review-003.json"
+    },
+    "repository_state_from_root": {
+      "origin_main_head": "6100906b01c32498481ea4ea32cd5045d07add2e",
+      "candidate_base_head": "6100906b01c32498481ea4ea32cd5045d07add2e",
+      "fresh_fetch_and_full_hash_match": true,
+      "git_diff_check_exit_code": 0,
+      "source_and_root_doc_changes_are_uncommitted": true
+    }
+  },
+  "rebuild_entry": {
+    "editable_dev_install_from_README": {
+      "command": "python -m pip install -e \".[dev]\"",
+      "workdir": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository",
+      "executed_for_this_freeze": false,
+      "purpose": "documented editable development install; test replay commands below use the already-existing pinned venv"
+    },
+    "use_existing_interpreter": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-stage-unit-controls-20260930/venv/bin/python -B",
+    "native_runner_source": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/tools/run_w21_stage_native.py",
+    "test_replay_templates": [
+      {
+        "suite": "core280",
+        "command_template": "cd /Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository\nW21_FRESH_CORE_BASE=/Volumes/CTestEff/<NEW_UNUSED_ONE_CHARACTER_BASENAME>\nW21_FRESH_CORE_XML=/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-integration-20260930/reports/combined-affected-<NEW_RUN_ID>.xml\ntest ! -e \"$W21_FRESH_CORE_BASE\" || exit 2\ntest ! -e \"$W21_FRESH_CORE_XML\" || exit 2\n/Volumes/SSD/Comsol-MCP/execution-scratch/w21-stage-unit-controls-20260930/venv/bin/python -B -m pytest -q --tb=short tests/test_run_w21_stage_native.py tests/test_w21_initial_stage_execution.py tests/test_stage_definition.py tests/test_operation_store.py --basetemp=\"$W21_FRESH_CORE_BASE\" -o junit_family=xunit2 --junitxml=\"$W21_FRESH_CORE_XML\" -p no:cacheprovider",
+        "replace_placeholders_before_execution": true,
+        "basename_utf16_code_units": 1,
+        "must_be_new_and_absent": true
+      },
+      {
+        "suite": "six_followup_modules",
+        "command_template": "cd /Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository\nW21_FRESH_SIX_BASE=/Volumes/CTestEff/<DIFFERENT_NEW_UNUSED_ONE_CHARACTER_BASENAME>\nW21_FRESH_SIX_XML=/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-integration-20260930/reports/affected-followup-six-<NEW_RUN_ID>.xml\ntest ! -e \"$W21_FRESH_SIX_BASE\" || exit 2\ntest ! -e \"$W21_FRESH_SIX_XML\" || exit 2\n/Volumes/SSD/Comsol-MCP/execution-scratch/w21-stage-unit-controls-20260930/venv/bin/python -B -m pytest -q --tb=short tests/test_w21_stage_backend.py tests/test_w21_native_output.py tests/test_execution_contract.py tests/test_registration.py tests/test_g3_w16.py tests/test_g3_results.py --basetemp=\"$W21_FRESH_SIX_BASE\" -o junit_family=xunit2 --junitxml=\"$W21_FRESH_SIX_XML\" -p no:cacheprovider",
+        "replace_placeholders_before_execution": true,
+        "basename_utf16_code_units": 1,
+        "must_be_new_and_absent": true
+      }
+    ],
+    "safety": {
+      "historical_basetemp_paths_are_occupied": [
+        "/Volumes/CTestEff/α",
+        "/Volumes/CTestEff/β"
+      ],
+      "never_reuse_or_overwrite_historical_basetemp_or_junitxml_paths": true,
+      "pytest_removes_the_selected_basetemp_before_running": true,
+      "replay_templates_require_new_basetemp_and_new_junitxml_paths": true,
+      "no_replay_was_run_for_this_freeze": true
+    }
+  },
+  "acceptance_boundary": {
+    "software_regression": "PASS_WITH_ONE_PLATFORM_SKIP",
+    "execution_model": "local software tests use a controlled fake Worker/COMSOL-facing responses while exercising candidate Python daemon, execution/store/backend and Java-worker protocol code",
+    "comsol_native_6_4_or_6_3": "NOT_RUN",
+    "windows_native_6_4_or_6_3": "NOT_RUN",
+    "native_physics_or_scientific_acceptance": "NOT_RUN",
+    "overall_w21_or_project_acceptance": "NOT_ESTABLISHED"
+  },
+  "preserved_failed_paths_and_baselines": [
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-main-review-20260930/event-completion-counterexample-001.json",
+      "sha256": "a93749b64c61df777c3d22bb67817c4b7967fbb610c1536437b1761f695b1271",
+      "disposition": "initial R1 missing/altered terminal-event baseline"
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-main-review-20260930/event-completion-recheck-003-harness-failure.json",
+      "sha256": "35a23594aeb74fcf62a7fa84ab5afce4ecb67ac9d9bc260250b2f120167d1601",
+      "disposition": "preserved harness failure; not treated as product result"
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-main-review-20260930/event-completion-recheck-004.json",
+      "sha256": "4235bbf81e8476602208d03a4e40952a5ab14c480a6c0ae79bb4bb269cd1d4ec",
+      "disposition": "final R1 baseline true with three original tamper mutations rejected"
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-main-review-20260930/event-argument-correlation-counterexample-005.json",
+      "sha256": "44a8013d64df9bc000a945fd860a427808466933478946eaf014fd36fbce0ae6",
+      "disposition": "preserved R1 event argument correlation finding"
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-main-review-20260930/auxiliary-revision-binding-counterexample-006.json",
+      "sha256": "d46a6ad8903d2cfa1b23943307c6df266dbc786b98fdacc80cdb0243b1dc83c5",
+      "disposition": "preserved R1 auxiliary revision finding"
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-main-review-20260930/optional-terminal-status-counterexample-007.json",
+      "sha256": "eff02008fc4b80f21ce966062119c386a970050b9c8f91a7929d92ae3c55d188",
+      "disposition": "preserved R1 terminal-status finding"
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-main-review-20260930/main-runner-review-001.json",
+      "sha256": "be69907321aafe983e596683a274ce32f1c4a5ea691727dcfaf17b19b5e7a1d0",
+      "disposition": "preserved initial runner review findings; superseded by final run/review"
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-main-review-20260930/main-backend-review-002.json",
+      "sha256": "447c2f271085efc0fea96779b9edb4101c124eef586bda30b1e2c24318d75c7d",
+      "disposition": "preserved backend review findings; repaired candidate separately checked"
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-main-review-20260930/main-r1-final-recheck-008.json",
+      "sha256": "f8bc4341aab265978b016e5e73aea1030e70c4c4eac11d0b639bf83646c03e16",
+      "disposition": "current independent R1 baseline and 11 tamper-negative result"
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-main-review-20260930/main-runner-final-incremental-review-003.json",
+      "sha256": "6d24185566b675d78d98b3b5a87d67971f88b48b4f8ca530de9b51c5d4a21a6a",
+      "disposition": "final incremental runner review"
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-integration-20260930/reports/initial-fixture-012.xml",
+      "sha256": "dacf39569176a5c8ad405401f9a6938a2398b258ac71ac0e5e2e1137097b359e",
+      "disposition": "preserved intermediate fixture failure"
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-integration-20260930/reports/initial-fixture-012.log",
+      "sha256": "e3e64e11bc3aa5165330ca260890ffaeeec8482e19c6a78000d33a764c323071",
+      "disposition": "preserved intermediate fixture failure output"
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-integration-20260930/reports/worker-javac-r18-001.json",
+      "sha256": "3fcad605c57646e1483fe94770ad462ad19eb082bb6b8501e1f361faec8b4439",
+      "disposition": "preserved original compile receipt; AppleDouble sidecars were counted"
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-integration-20260930/reports/worker-javac-r18-corrected-001.json",
+      "sha256": "cb9d8a06c8840f9a2d1c163abe7f86660ac6518987aaf3b3a7688a4ac742dedd",
+      "disposition": "corrected receipt: 14 real CAFEBABE class files, original compile exit_code 0 retained"
+    }
+  ],
+  "evidence_hashes_in_sidecar": [
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-integration-20260930/reports/combined-affected-alpha-001.xml",
+      "sha256": "79ca03c5ea336a8fe22f345e9bdb02b395d8998f427bec58fe36bc87c98d9fbf"
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-integration-20260930/reports/affected-followup-six-001.xml",
+      "sha256": "572ba5718821f5e32171935694166b22647d66bac8f080cb8f729456ff0a088c"
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-integration-20260930/reports/java-worker-r17-001.xml",
+      "sha256": "ca37538a796c32cfbd995cdd570c9a12d5a6527afea3994ab5da668904093edd"
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-integration-20260930/reports/candidate-source-test-pre-001.sha256",
+      "sha256": "2e3153e0df700c01da9b7981243c88c12b91a630b20b33487459e4e3519f4d2d"
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-integration-20260930/reports/candidate-source-test-post-core280-001.sha256",
+      "sha256": "2e3153e0df700c01da9b7981243c88c12b91a630b20b33487459e4e3519f4d2d"
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-integration-20260930/reports/candidate-source-test-post-final-001.sha256",
+      "sha256": "2e3153e0df700c01da9b7981243c88c12b91a630b20b33487459e4e3519f4d2d"
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-integration-20260930/reports/worker-javac-r18-001.json",
+      "sha256": "3fcad605c57646e1483fe94770ad462ad19eb082bb6b8501e1f361faec8b4439"
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-integration-20260930/reports/worker-javac-r18-corrected-001.json",
+      "sha256": "cb9d8a06c8840f9a2d1c163abe7f86660ac6518987aaf3b3a7688a4ac742dedd"
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-integration-20260930/producer-positive-raw-001.json",
+      "sha256": "70d3f363f2712b90a283af41a2d204331d57506d29e85f287721dd0717b2ee2d"
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-integration-20260930/producer-positive-full-001.json",
+      "sha256": "f435434907fb055bbf9853f45d322390588f0cc26692eb846b198e751b29462b"
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-main-review-20260930/main-r1-final-recheck-008.json",
+      "sha256": "f8bc4341aab265978b016e5e73aea1030e70c4c4eac11d0b639bf83646c03e16"
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-main-review-20260930/main-runner-final-incremental-review-003.json",
+      "sha256": "6d24185566b675d78d98b3b5a87d67971f88b48b4f8ca530de9b51c5d4a21a6a"
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-main-review-20260930/runner-final-full-01-independent-junit.json",
+      "sha256": "f293280cdade6c1aa118a41e63152a195e68d49d9162a11f4fb9bdbc92b8c586"
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-runner-20260930/runner-final-full-01.xml",
+      "sha256": "999a4a6345a33c365272c6957a848b34e4eab81f17562df1aa97d8cd281a4e4f"
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-runner-20260930/runner-final-full-01.log",
+      "sha256": "46435883a8807e9d02a13dfa6fd769e566811f273ee19613581eaaf11cb9b734"
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-main-review-20260930/event-completion-counterexample-001.json",
+      "sha256": "a93749b64c61df777c3d22bb67817c4b7967fbb610c1536437b1761f695b1271"
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-main-review-20260930/event-completion-recheck-003-harness-failure.json",
+      "sha256": "35a23594aeb74fcf62a7fa84ab5afce4ecb67ac9d9bc260250b2f120167d1601"
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-main-review-20260930/event-completion-recheck-004.json",
+      "sha256": "4235bbf81e8476602208d03a4e40952a5ab14c480a6c0ae79bb4bb269cd1d4ec"
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-main-review-20260930/event-argument-correlation-counterexample-005.json",
+      "sha256": "44a8013d64df9bc000a945fd860a427808466933478946eaf014fd36fbce0ae6"
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-main-review-20260930/auxiliary-revision-binding-counterexample-006.json",
+      "sha256": "d46a6ad8903d2cfa1b23943307c6df266dbc786b98fdacc80cdb0243b1dc83c5"
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-main-review-20260930/optional-terminal-status-counterexample-007.json",
+      "sha256": "eff02008fc4b80f21ce966062119c386a970050b9c8f91a7929d92ae3c55d188"
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-main-review-20260930/main-runner-review-001.json",
+      "sha256": "be69907321aafe983e596683a274ce32f1c4a5ea691727dcfaf17b19b5e7a1d0"
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-main-review-20260930/main-backend-review-002.json",
+      "sha256": "447c2f271085efc0fea96779b9edb4101c124eef586bda30b1e2c24318d75c7d"
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-integration-20260930/reports/initial-fixture-012.xml",
+      "sha256": "dacf39569176a5c8ad405401f9a6938a2398b258ac71ac0e5e2e1137097b359e"
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-integration-20260930/reports/initial-fixture-012.log",
+      "sha256": "e3e64e11bc3aa5165330ca260890ffaeeec8482e19c6a78000d33a764c323071"
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-stage-integration-20260930/final-freeze-001.json",
+      "sha256": "60a0c6f89a468cd1fcd86a5d4249d91a8a6b4452149a8a56000ac3d8139eebf3",
+      "disposition": "preserved predecessor receipt; replay-safety correction is in v2"
+    }
+  ],
+  "commit_allowlist": {
+    "code_and_tests": [
+      "comsol_mcp/_control_daemon.py",
+      "comsol_mcp/_execution_contract.py",
+      "comsol_mcp/_g3_results.py",
+      "comsol_mcp/_g3_w16.py",
+      "comsol_mcp/_java_worker.py",
+      "comsol_mcp/_managed_backend.py",
+      "comsol_mcp/_operation_store.py",
+      "comsol_mcp/_w21_native_output.py",
+      "comsol_mcp/_w21_stage_backend.py",
+      "comsol_mcp/_w21_initial_stage.py",
+      "comsol_mcp/worker_java/PersistentComsolWorker.java",
+      "tests/test_run_w21_stage_native.py",
+      "tests/test_w21_initial_stage_execution.py",
+      "tests/w21_initial_stage_fixture.py",
+      "tests/test_stage_definition.py",
+      "tests/test_operation_store.py",
+      "tests/test_java_worker.py",
+      "tests/test_w21_stage_backend.py",
+      "tests/test_w21_native_output.py",
+      "tests/test_execution_contract.py",
+      "tests/test_registration.py",
+      "tests/test_g3_w16.py",
+      "tests/test_g3_results.py",
+      "tools/run_w21_stage_native.py"
+    ],
+    "root_owned_documents_to_be_selected_by_root": [
+      "PROGRESS.md",
+      "docs/full_project_execution/state/RESUME.json",
+      "docs/full_project_execution/state/TASKS.json"
+    ],
+    "everything_else": "excluded; no wildcard staging"
+  },
+  "supersedes": "final-freeze-001.json; source/test/evidence facts unchanged; only replay path safety is clarified"
+}

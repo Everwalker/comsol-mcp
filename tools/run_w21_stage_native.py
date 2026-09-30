@@ -31,11 +31,15 @@ from uuid import uuid4
 
 SCHEMA = "W21_FIELD_IDENTITY_MCP_RUN_V2"
 SOLVE_READBACK_SCHEMA = "W21_SOLVE_READBACK_MCP_RUN_V1"
+INITIAL_STAGE_SCHEMA = "W21_INITIAL_STAGE_MCP_RUN_V1"
 METADATA_MODE = "metadata-only"
 SOLVE_READBACK_MODE = "solve-readback"
+INITIAL_STAGE_MODE = "initial-stage"
 SOLVE_READBACK_KIND = "W21_PUBLIC_SOLVE_READBACK_CAPTURE_ONLY"
+INITIAL_STAGE_KIND = "W21_PUBLIC_INITIAL_STAGE_EXECUTION"
 SINGLE_FIELD_PROFILE = "single-field"
 AUTO_UNIT_CONTROLS_PROFILE = "auto-unit-controls"
+INITIAL_STAGE_PROFILE = "thermal-initial-v2"
 FIELD_READBACK_PROFILES = (SINGLE_FIELD_PROFILE, AUTO_UNIT_CONTROLS_PROFILE)
 AUTO_UNIT_CONTROL_EXPRESSIONS = ("T", "T/1[K]", "1")
 AUTO_UNIT_CONTROL_EXPECTED_UNITS = {"T": "K", "T/1[K]": "1", "1": "1"}
@@ -63,9 +67,23 @@ STAGE_READ_ACTION_COUNTERS = {
     "solution_indices": ("solution_tuple_reads",),
     "result.evaluate": ("field_reads",),
 }
+INITIAL_STAGE_ACTION_COUNTERS = {
+    "stage_define": ("stage_define_dispatch",),
+    "stage_run": ("stage_run_dispatch", "underlying_solve_dispatch", "study_dispatch", "solver_dispatch"),
+    "stage_run_wait": ("stage_run_wait_calls",),
+}
 W21_FIELD_READBACK_MAX_NUMERIC_SCALARS = 65_536
 W21_FIELD_READBACK_MAX_JSON_BYTES = 8 * 1024 * 1024
 W21_FIELD_IDENTITY_PROBE_MAX_JSON_UTF8_BYTES = 65_536
+INITIAL_STAGE_OUTPUT_INTERNAL_READ_ACTIONS_MAX = 12
+INITIAL_STAGE_ARTIFACT_ID_LENGTH = 36
+WINDOWS_MAX_PATH_UNITS_WITH_NUL = 260
+INITIAL_STAGE_ACCEPTANCE_SCOPE = "INITIAL_OUTPUT_AND_SOURCE_ARTIFACT_ONLY"
+INITIAL_STAGE_ID = "thermal_initial"
+INITIAL_STAGE_PLAN_ID = "w21_initial_stage"
+INITIAL_STAGE_LOGICAL_OPERATIONS = (
+    "experiment.stage_define", "experiment.stage_run",
+)
 
 
 class RunnerError(RuntimeError):
@@ -242,12 +260,15 @@ def _mode_schema(mode: str) -> str:
         return SCHEMA
     if mode == SOLVE_READBACK_MODE:
         return SOLVE_READBACK_SCHEMA
-    raise RunnerError("mode must be exactly metadata-only or solve-readback")
+    if mode == INITIAL_STAGE_MODE:
+        return INITIAL_STAGE_SCHEMA
+    raise RunnerError("mode must be exactly metadata-only, solve-readback, or initial-stage")
 
 
 def _mode_kind(mode: str) -> str:
     return ("W21_FIELD_IDENTITY_METADATA_PROBE" if mode == METADATA_MODE
             else SOLVE_READBACK_KIND if mode == SOLVE_READBACK_MODE
+            else INITIAL_STAGE_KIND if mode == INITIAL_STAGE_MODE
             else _mode_schema(mode))
 
 
@@ -262,12 +283,17 @@ def _project_policy_permissions(mode: str) -> list[str]:
         return permissions
     if mode == SOLVE_READBACK_MODE:
         return [*permissions, "compute"]
-    raise RunnerError("mode must be exactly metadata-only or solve-readback")
+    if mode == INITIAL_STAGE_MODE:
+        return [*permissions, "compute"]
+    raise RunnerError("mode must be exactly metadata-only, solve-readback, or initial-stage")
 
 
 def _mode_operations(mode: str) -> tuple[str, ...]:
-    return (LOGICAL_OPERATIONS + SOLVE_READBACK_LOGICAL_OPERATIONS
-            if mode == SOLVE_READBACK_MODE else LOGICAL_OPERATIONS)
+    if mode == SOLVE_READBACK_MODE:
+        return LOGICAL_OPERATIONS + SOLVE_READBACK_LOGICAL_OPERATIONS
+    if mode == INITIAL_STAGE_MODE:
+        return LOGICAL_OPERATIONS + INITIAL_STAGE_LOGICAL_OPERATIONS
+    return LOGICAL_OPERATIONS
 
 
 def _mode_budgets(mode: str) -> dict[str, Any]:
@@ -288,12 +314,28 @@ def _mode_budgets(mode: str) -> dict[str, Any]:
             "queue_timeout_seconds": 30, "execution_timeout_seconds": 240,
             "cleanup_reserve_seconds": CLEANUP_RESERVE_S,
         }
+    if mode == INITIAL_STAGE_MODE:
+        return {
+            **common, "study_dispatch": 1, "solver_dispatch": 1,
+            "stage_define_dispatch": 1, "stage_run_dispatch": 1,
+            "stage_run_wait_calls_max": 1,
+            "stage_run_queue_timeout_seconds": 30,
+            "stage_run_execution_timeout_seconds": 240,
+            "stage_run_rpc_wait_seconds": RPC_WAIT_S,
+            "stage_run_result_wait_seconds": 240,
+            "stage_output_internal_read_actions_max": INITIAL_STAGE_OUTPUT_INTERNAL_READ_ACTIONS_MAX,
+            "cleanup_reserve_seconds": CLEANUP_RESERVE_S,
+        }
     _mode_schema(mode)
     raise AssertionError("unreachable")
 
 
 def _normalize_field_readback_profile(mode: str, profile: str | None) -> str | None:
     if mode == METADATA_MODE:
+        if profile is not None:
+            raise RunnerError("field-readback profiles are available only in solve-readback mode")
+        return None
+    if mode == INITIAL_STAGE_MODE:
         if profile is not None:
             raise RunnerError("field-readback profiles are available only in solve-readback mode")
         return None
@@ -319,6 +361,83 @@ def _field_readback_expressions(profile: str) -> tuple[str, ...]:
     if profile == SINGLE_FIELD_PROFILE:
         return ("T",)
     raise RunnerError("field-readback profile is not supported")
+
+
+def _initial_stage_definition() -> dict[str, Any]:
+    """Return the one frozen v2 declaration used by initial-stage mode."""
+    return {
+        "version": 2,
+        "plan_id": INITIAL_STAGE_PLAN_ID,
+        "stages": [{
+            "stage_id": INITIAL_STAGE_ID,
+            "ordinal": 1,
+            "depends_on": [],
+            "study_target": {"segments": [{"collection": "study", "tag": "std1"}]},
+            "source_selection": {"kind": "initial_state", "strategy": "declared_initial"},
+            "target_selection": {
+                "dataset": "dset1", "outer": "last", "inner": "last",
+            },
+            "mapping_profile": "same_name_same_mesh_initialization",
+            "variable_mappings": [{
+                "source_variable": "T", "target_variable": "T",
+                "source_unit": "K", "target_unit": "K", "mapping_method": "identity",
+            }],
+            "reference_state": {"strategy": "initial_state"},
+            "checks": [],
+        }],
+    }
+
+
+def _initial_stage_operations() -> list[dict[str, Any]]:
+    definition = _initial_stage_definition()
+    rows = [
+        ("experiment.stage_define", {"definition": definition}),
+        ("experiment.stage_run", {"stage_id": INITIAL_STAGE_ID}),
+    ]
+    return [{
+        "tool": "operation_call", "operation_id": operation,
+        "arguments": arguments,
+        "arguments_sha256": sha256_value({"operation_id": operation, "arguments": arguments}),
+    } for operation, arguments in rows]
+
+
+def _stage_output_windows_path_budget(project_workspace: Path) -> dict[str, Any]:
+    """Freeze a conservative UTF-16 MAX_PATH check for output and AtomicSave temp names."""
+    placeholder = "0" * INITIAL_STAGE_ARTIFACT_ID_LENGTH
+    target = project_workspace / "stage_outputs" / f"{placeholder}.mph"
+    temporary = target.parent / f".{target.name}.{'0' * 32}.tmp.mph"
+    target_units = len(str(target).encode("utf-16-le")) // 2 + 1
+    temporary_units = len(str(temporary).encode("utf-16-le")) // 2 + 1
+    if max(target_units, temporary_units) > WINDOWS_MAX_PATH_UNITS_WITH_NUL:
+        raise RunnerError("frozen stage artifact or AtomicSave temporary path exceeds Windows MAX_PATH")
+    return {
+        "relative_target_template": "stage_outputs/<36-character-attempt-id>.mph",
+        "relative_atomic_save_temporary_template": "stage_outputs/.<36-character-attempt-id>.mph.<32-hex>.tmp.mph",
+        "target_utf16_units_including_nul": target_units,
+        "atomic_save_temporary_utf16_units_including_nul": temporary_units,
+        "max_utf16_units_including_nul": WINDOWS_MAX_PATH_UNITS_WITH_NUL,
+    }
+
+
+def _validate_frozen_initial_stage(plan: Mapping[str, Any]) -> None:
+    if plan.get("mode") != INITIAL_STAGE_MODE:
+        return
+    expected_definition = _initial_stage_definition()
+    expected_operations = _initial_stage_operations()
+    if (plan.get("initial_stage_profile") != INITIAL_STAGE_PROFILE
+            or plan.get("initial_stage_definition") != expected_definition
+            or plan.get("initial_stage_definition_sha256") != sha256_value(expected_definition)
+            or plan.get("initial_stage_operations") != expected_operations
+            or plan.get("acceptance_scope") != INITIAL_STAGE_ACCEPTANCE_SCOPE
+            or plan.get("budgets", {}).get("study_dispatch") != 1
+            or plan.get("budgets", {}).get("solver_dispatch") != 1
+            or plan.get("budgets", {}).get("stage_define_dispatch") != 1
+            or plan.get("budgets", {}).get("stage_run_dispatch") != 1
+            or plan.get("budgets", {}).get("stage_run_wait_calls_max") != 1):
+        raise RunnerError("frozen initial-stage plan differs from the exact one-stage contract")
+    expected_path_budget = _stage_output_windows_path_budget(Path(plan["project_workspace"]))
+    if plan.get("stage_output_windows_path_budget") != expected_path_budget:
+        raise RunnerError("frozen initial-stage artifact/temporary path budget differs from current paths")
 
 
 def _auto_unit_control_evidence(field_readbacks: Mapping[str, Any], *,
@@ -641,13 +760,16 @@ def _resolve_remote_comsol_identity(
 
 
 def _check_64_receipt(path: Path, *, mode: str = METADATA_MODE,
-                      field_readback_profile: str | None = None) -> dict[str, Any]:
+                      field_readback_profile: str | None = None,
+                      expected_source_manifest_sha256: str | None = None) -> dict[str, Any]:
     if path.is_symlink() or not path.is_file():
-        label = "solve-readback" if mode == SOLVE_READBACK_MODE else "metadata-only probe"
+        label = ("solve-readback" if mode == SOLVE_READBACK_MODE else
+                 "initial-stage" if mode == INITIAL_STAGE_MODE else "metadata-only probe")
         raise RunnerError(f"6.3 preparation requires a real 6.4 {label} receipt")
     value = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(value, Mapping):
-        label = "solve-readback" if mode == SOLVE_READBACK_MODE else "metadata-only probe"
+        label = ("solve-readback" if mode == SOLVE_READBACK_MODE else
+                 "initial-stage" if mode == INITIAL_STAGE_MODE else "metadata-only probe")
         raise RunnerError(f"6.3 preparation requires a complete actual 6.4 {label} receipt")
     if mode == METADATA_MODE:
         selected_comsol = value.get("selected_comsol")
@@ -660,6 +782,86 @@ def _check_64_receipt(path: Path, *, mode: str = METADATA_MODE,
                 or cleanup.get("status") != "CLEANUP_COMPLETE"):
             raise RunnerError("6.3 preparation requires a cleaned-up 6.4 metadata-only probe receipt")
         return {"path": str(path.resolve()), "sha256": sha256_file(path)}
+    if mode == INITIAL_STAGE_MODE:
+        selected_comsol = value.get("selected_comsol")
+        acceptance = value.get("initial_stage_acceptance")
+        cleanup = value.get("cleanup")
+        if (value.get("schema") != INITIAL_STAGE_SCHEMA
+                or value.get("kind") != INITIAL_STAGE_KIND
+                or value.get("mode") != INITIAL_STAGE_MODE
+                or value.get("status") != "INITIAL_STAGE_OUTPUT_ACCEPTED_WITHIN_SCOPE"
+                or value.get("acceptance_scope") != INITIAL_STAGE_ACCEPTANCE_SCOPE
+                or value.get("initial_stage_profile") != INITIAL_STAGE_PROFILE
+                or not isinstance(selected_comsol, Mapping)
+                or not str(selected_comsol.get("version", "")).startswith("6.4")
+                or str(selected_comsol.get("build", selected_comsol.get("build_number", ""))) != "293"
+                or value.get("source_manifest_sha256") != expected_source_manifest_sha256
+                or not isinstance(acceptance, Mapping)
+                or acceptance.get("status") != "PASS"
+                or acceptance.get("scope") != INITIAL_STAGE_ACCEPTANCE_SCOPE
+                or not isinstance(cleanup, Mapping)
+                or cleanup.get("status") != "CLEANUP_COMPLETE"
+                or cleanup.get("worker_retired") is not True
+                or cleanup.get("owned_server_stopped") is not True):
+            raise RunnerError("6.3 initial-stage requires a successful same-profile 6.4 source-bound receipt")
+        receipt_hash = sha256_file(path)
+        state_path = path.parent / "state.json"
+        if state_path.is_symlink() or not state_path.is_file():
+            raise RunnerError("6.4 initial-stage receipt lacks its durable matching state")
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+        if (not isinstance(state, Mapping)
+                or state.get("schema") != INITIAL_STAGE_SCHEMA
+                or state.get("status") != value.get("status")
+                or state.get("receipt_path") != str(path.resolve())
+                or state.get("receipt_sha256") != receipt_hash
+                or state.get("source_manifest_sha256") != expected_source_manifest_sha256
+                or state.get("initial_stage_acceptance_sha256") != sha256_value(acceptance)):
+            raise RunnerError("6.4 initial-stage receipt does not match its durable completion state")
+        revalidated_acceptance = _revalidate_initial_stage_receipt(
+            path, value, state,
+            expected_source_manifest_sha256=expected_source_manifest_sha256,
+        )
+        if revalidated_acceptance != acceptance:
+            raise RunnerError("6.4 initial-stage acceptance changed during strict evidence revalidation")
+        expected_counters = {
+            "stage_define_dispatch": 1, "stage_define_dispatch_possible": 1,
+            "stage_define_dispatch_status": "CONFIRMED",
+            "stage_run_dispatch": 1, "stage_run_dispatch_possible": 1,
+            "stage_run_dispatch_status": "CONFIRMED",
+            "underlying_solve_dispatch": 1, "underlying_solve_dispatch_possible": 1,
+            "underlying_solve_dispatch_status": "CONFIRMED",
+            "study_dispatch": 1, "study_dispatch_possible": 1,
+            "study_dispatch_status": "CONFIRMED",
+            "solver_dispatch": 1, "solver_dispatch_possible": 1,
+            "solver_dispatch_status": "CONFIRMED",
+        }
+        if any(state.get(key) != expected for key, expected in expected_counters.items()):
+            raise RunnerError("6.4 initial-stage state lacks exact one-stage/one-solve dispatch accounting")
+        if (value.get("study_dispatch") != 1 or value.get("solver_dispatch") != 1
+                or value.get("stage_define_dispatch") != 1
+                or value.get("stage_run_dispatch") != 1
+                or value.get("underlying_solve_dispatch") != 1
+                or value.get("native_admission") != "UNVERIFIED"
+                or value.get("physical_validation") != "NOT_RUN"
+                or value.get("state_transfer") != "NOT_RUN"
+                or value.get("continuity") != "NOT_RUN"
+                or value.get("conservation") != "NOT_RUN"
+                or value.get("scientific_validation") != "NOT_RUN"):
+            raise RunnerError("6.4 initial-stage receipt claims an unsupported scientific or transfer scope")
+        isolation_path = path.parent / "owned_server_isolation.json"
+        if isolation_path.is_symlink() or not isolation_path.is_file():
+            raise RunnerError("6.4 initial-stage receipt lacks the owned-server cleanup record")
+        isolation = json.loads(isolation_path.read_text(encoding="utf-8"))
+        if not isinstance(isolation, Mapping) or isolation.get("status") != "STOPPED":
+            raise RunnerError("6.4 initial-stage owned-server record is not safely stopped")
+        return {"path": str(path.resolve()), "sha256": receipt_hash,
+                "mode": INITIAL_STAGE_MODE, "kind": INITIAL_STAGE_KIND,
+                "initial_stage_profile": INITIAL_STAGE_PROFILE,
+                "source_manifest_sha256": expected_source_manifest_sha256,
+                "freeze_sha256": value.get("freeze_sha256"),
+                "acceptance_sha256": sha256_value(revalidated_acceptance),
+                "saved_artifact_sha256": revalidated_acceptance["saved_artifact"]["sha256"],
+                "cleanup_status": "CLEANUP_COMPLETE"}
     if mode != SOLVE_READBACK_MODE:
         raise RunnerError("6.3 receipt mode is unsupported")
     requested_profile = _normalize_field_readback_profile(mode, field_readback_profile)
@@ -915,6 +1117,7 @@ def prepare(*, version: str, comsol_root: Path, jdk_home: Path,
         raise RunnerError("prepare is metadata-only but must run on the target Windows host")
     source_root = source_root.resolve(strict=True)
     _bind_candidate_source(source_root)
+    manifest = source_manifest(source_root)
     if os.environ.get("COMSOL_MCP_TOOL_PROFILE", "full").casefold() != "full":
         raise RunnerError("COMSOL_MCP_TOOL_PROFILE must be full to freeze the published W21 routes")
     if Path(evidence_root).is_symlink():
@@ -932,13 +1135,13 @@ def prepare(*, version: str, comsol_root: Path, jdk_home: Path,
         prerequisite = _check_64_receipt(
             prerequisite_64_receipt, mode=mode,
             field_readback_profile=selected_field_profile,
+            expected_source_manifest_sha256=sha256_value(manifest),
         )
     elif prerequisite_64_receipt is not None:
         raise RunnerError("6.4 is the first-version step and accepts no earlier receipt")
 
     comsol = _comsol_identity(comsol_root, version)
     jdk = _jdk_identity(jdk_home)
-    manifest = source_manifest(source_root)
     tool_schemas = _published_tool_schemas(source_root, _mode_tools(mode))
     operation_schemas = _logical_schemas(source_root, _mode_operations(mode))
     python_identity = _python_identity()
@@ -972,6 +1175,11 @@ def prepare(*, version: str, comsol_root: Path, jdk_home: Path,
     workspace_root = run_root / "workspaces"
     workspace_root.mkdir(mode=0o700)
     project_workspace = workspace_root / "field-identity-probe"
+    initial_stage_definition = _initial_stage_definition() if mode == INITIAL_STAGE_MODE else None
+    initial_stage_operations = _initial_stage_operations() if mode == INITIAL_STAGE_MODE else None
+    stage_output_windows_path_budget = (
+        _stage_output_windows_path_budget(project_workspace) if mode == INITIAL_STAGE_MODE else None
+    )
 
     request_names = (
         "project_create", "project_create_wait", "session_start", "session_connect", "model_create",
@@ -988,6 +1196,9 @@ def prepare(*, version: str, comsol_root: Path, jdk_home: Path,
     if mode == SOLVE_READBACK_MODE:
         request_names += ("study_solve", "solution_indices", "result_evaluate")
         idempotency_names += ("study_solve", "solution_indices", "result_evaluate")
+    elif mode == INITIAL_STAGE_MODE:
+        request_names += ("stage_define", "stage_run", "stage_run_wait")
+        idempotency_names += ("stage_define", "stage_run")
     request_ids = {name: str(uuid4()) for name in request_names}
     idempotency = {name: str(uuid4()) for name in idempotency_names}
     plan: dict[str, Any] = {
@@ -1018,11 +1229,19 @@ def prepare(*, version: str, comsol_root: Path, jdk_home: Path,
         "probe_request": probe_request,
         "field_readback_profile": selected_field_profile,
         "budgets": _mode_budgets(mode),
+        **({
+            "initial_stage_profile": INITIAL_STAGE_PROFILE,
+            "initial_stage_definition": initial_stage_definition,
+            "initial_stage_definition_sha256": sha256_value(initial_stage_definition),
+            "initial_stage_operations": initial_stage_operations,
+            "stage_output_windows_path_budget": stage_output_windows_path_budget,
+        } if mode == INITIAL_STAGE_MODE else {}),
         "route": "public stdio MCP; ControlDaemon; OwnedServerLauncher; one registered session",
         "prepare_side_effects": "filesystem receipts/directories only; no MCP call or COMSOL process",
         "acceptance_scope": ("field identity metadata capture only; native admission remains UNVERIFIED"
                              if mode == METADATA_MODE else
-                             "one public Study solve and actual dataset/FieldArray capture; native admission and physical validation remain UNVERIFIED"),
+                             "one public Study solve and actual dataset/FieldArray capture; native admission and physical validation remain UNVERIFIED"
+                             if mode == SOLVE_READBACK_MODE else INITIAL_STAGE_ACCEPTANCE_SCOPE),
     }
     plan["freeze_sha256"] = sha256_value(plan)
     write_json_atomic(run_root / "freeze.json", plan)
@@ -1035,6 +1254,13 @@ def prepare(*, version: str, comsol_root: Path, jdk_home: Path,
         "solution_tuple_reads": 0, "solution_tuple_reads_possible": 0,
         "solution_tuple_reads_status": "NOT_DISPATCHED",
         "field_reads": 0, "field_reads_possible": 0, "field_reads_status": "NOT_DISPATCHED",
+        "stage_define_dispatch": 0, "stage_define_dispatch_possible": 0,
+        "stage_define_dispatch_status": "NOT_DISPATCHED",
+        "stage_run_dispatch": 0, "stage_run_dispatch_possible": 0,
+        "stage_run_dispatch_status": "NOT_DISPATCHED",
+        "stage_run_wait_calls": 0, "stage_run_wait_calls_possible": 0,
+        "underlying_solve_dispatch": 0, "underlying_solve_dispatch_possible": 0,
+        "underlying_solve_dispatch_status": "NOT_DISPATCHED",
         "job_ids": [], "unknown_action": None,
     }
     write_json_atomic(run_root / "state.json", state)
@@ -1047,6 +1273,7 @@ def verify_plan(plan: Mapping[str, Any], *, expected_sha256: str,
                 source_root: Path = REPOSITORY) -> None:
     mode = plan.get("mode", METADATA_MODE)
     _frozen_field_readback_profile(plan)
+    _validate_frozen_initial_stage(plan)
     if plan.get("schema") != _mode_schema(mode) or plan.get("kind") not in (None, _mode_kind(mode)):
         raise RunnerError("frozen mode/schema/kind identity is inconsistent")
     if plan.get("budgets") != _mode_budgets(mode):
@@ -1366,12 +1593,136 @@ def _extract_solve_field(solution_data: Mapping[str, Any], field_data: Mapping[s
     return selected_output, binding
 
 
+def _initial_stage_worker_outcome_unknown(response: Mapping[str, Any]) -> bool:
+    """Keep an ostensibly successful stage ticket UNKNOWN on uncertain Worker evidence.
+
+    This is deliberately scoped to the initial-stage acceptance envelope.  It
+    protects the original solve/save job from cleanup when its own Worker log
+    records an unknown/unresponsive reply or an inconsistent response binding.
+    """
+    data = response.get("data")
+    acceptance = data.get("initial_output_acceptance") if isinstance(data, Mapping) else None
+    if not isinstance(acceptance, Mapping):
+        return False
+    evidence = acceptance.get("native_evidence")
+    rows = evidence.get("worker_event_rows") if isinstance(evidence, Mapping) else None
+    if not isinstance(rows, list) or (not rows and acceptance.get("status") == "PASS"):
+        # A positive initial-output claim without its durable Worker ledger is
+        # ambiguous about whether solve/save reached the engine.  Preserve the
+        # original stage_run ticket for read-only reconciliation.
+        return acceptance.get("status") == "PASS"
+    execution = response.get("execution")
+    job_id = execution.get("job_id") if isinstance(execution, Mapping) else None
+    dispatches = evidence.get("solve_save_dispatches") if isinstance(evidence, Mapping) else None
+    if acceptance.get("status") == "PASS" and (
+            not isinstance(job_id, str) or not job_id
+            or not isinstance(dispatches, list) or len(dispatches) != 2
+            or any(not isinstance(dispatch, Mapping) for dispatch in dispatches)
+            or any(not isinstance(dispatch.get("operation"), str)
+                   for dispatch in dispatches if isinstance(dispatch, Mapping))
+            or sorted(dispatch.get("operation") for dispatch in dispatches
+                      if isinstance(dispatch, Mapping)) != ["run_study", "save_model"]):
+        return True
+    by_request: dict[str, dict[str, Mapping[str, Any]]] = {}
+    for row in rows:
+        if not isinstance(row, Mapping) or row.get("event") != "worker_request":
+            continue
+        metadata = row.get("metadata")
+        if not isinstance(metadata, Mapping):
+            return True
+        phase = metadata.get("phase")
+        kind = metadata.get("kind")
+        if isinstance(phase, str) and phase.lower() in {"unknown", "unresponsive"}:
+            return True
+        if phase not in {"submitted", "observed"} or not isinstance(kind, str) or not kind:
+            return True
+        request_id = metadata.get("request_id")
+        request_hash = metadata.get("request_hash")
+        if (not isinstance(request_id, str) or not request_id
+                or not _valid_sha256(request_hash)
+                or (isinstance(job_id, str) and row.get("job_id") != job_id)):
+            return True
+        phases = by_request.setdefault(request_id, {})
+        if phase in phases:
+            return True
+        phases[phase] = metadata
+        if (not isinstance(metadata.get("metadata"), Mapping)
+                or metadata["metadata"].get("request_id") != request_id):
+            return True
+        if phase == "observed":
+            reply = metadata.get("reply")
+            reply_status = reply.get("status") if isinstance(reply, Mapping) else None
+            well_formed_success = (reply_status == "SUCCEEDED"
+                                   and reply.get("ok") is True
+                                   and metadata.get("status") == "SUCCEEDED")
+            well_formed_failure = (reply_status == "FAILED"
+                                   and reply.get("ok") is False
+                                   and isinstance(reply.get("failure"), Mapping)
+                                   and metadata.get("status") == "FAILED")
+            if (not isinstance(reply, Mapping)
+                    or reply.get("request_id") != request_id
+                    or not (well_formed_success or well_formed_failure)):
+                return True
+    for request_id, phases in by_request.items():
+        submitted = phases.get("submitted")
+        observed = phases.get("observed")
+        if set(phases) != {"submitted", "observed"}:
+            return True
+        if submitted is not None and observed is not None:
+            submitted_call = submitted.get("metadata")
+            observed_call = observed.get("metadata")
+            reply = observed.get("reply")
+            if (submitted.get("request_hash") != observed.get("request_hash")
+                    or submitted.get("operation_id") != observed.get("operation_id")
+                    or submitted.get("kind") != observed.get("kind")
+                    or submitted.get("metadata") != observed.get("metadata")
+                    or not isinstance(submitted_call, Mapping)
+                    or not isinstance(reply, Mapping)
+                    or (type(submitted_call.get("generation")) is int
+                        and reply.get("generation") != submitted_call.get("generation"))):
+                return True
+    if isinstance(dispatches, list):
+        for dispatch in dispatches:
+            if not isinstance(dispatch, Mapping) or dispatch.get("operation") not in {"run_study", "save_model"}:
+                continue
+            request_id = dispatch.get("worker_request_id")
+            phases = by_request.get(request_id) if isinstance(request_id, str) else None
+            if (not isinstance(phases, Mapping)
+                    or not isinstance(phases.get("submitted"), Mapping)
+                    or not isinstance(phases.get("observed"), Mapping)
+                    or phases["submitted"].get("request_hash") != dispatch.get("worker_request_hash")
+                    or phases["observed"].get("request_hash") != dispatch.get("worker_request_hash")):
+                return True
+            submitted_call = phases["submitted"].get("metadata")
+            reply = phases["observed"].get("reply")
+            method = "run" if dispatch.get("operation") == "run_study" else "save"
+            if (not isinstance(submitted_call, Mapping)
+                    or phases["submitted"].get("kind") != "call"
+                    or phases["submitted"].get("operation_id") != execution.get("operation_id")
+                    or submitted_call.get("method") != method
+                    or submitted_call.get("handle") != dispatch.get("worker_receiver")
+                    or submitted_call.get("generation") != dispatch.get("worker_generation")
+                    or submitted_call.get("args") != dispatch.get("worker_args")
+                    or not isinstance(reply, Mapping)
+                    or reply.get("generation") != dispatch.get("worker_generation")):
+                return True
+    return False
+
+
+def _initial_stage_wait_expired(response: Mapping[str, Any]) -> bool:
+    """Recognize ControlDaemon's successful-but-still-pending job.wait result."""
+    data = response.get("data")
+    return bool(response.get("success") is True and isinstance(data, Mapping)
+                and data.get("wait_expired") is True)
+
+
 def _is_unknown(response: Mapping[str, Any]) -> bool:
     data = response.get("data")
     error = response.get("error")
     status = data.get("status") if isinstance(data, Mapping) else None
     cleanup = data.get("cleanup") if isinstance(data, Mapping) else None
-    return bool(response.get("execution_state_unknown") is True
+    return bool(_initial_stage_worker_outcome_unknown(response)
+                or response.get("execution_state_unknown") is True
                 or (isinstance(data, Mapping) and (
                     data.get("execution_state_unknown") is True
                     or data.get("cleanup_failed") is True
@@ -1426,6 +1777,66 @@ def _response_summary(payload: Mapping[str, Any]) -> dict[str, Any]:
         "session_id": data.get("session_id") or execution.get("session_id"),
         "job_id": data.get("job_id") or execution.get("job_id") or payload.get("job_id"),
         "status": data.get("status") or data.get("state"),
+    }
+
+
+def _initial_stage_job_identity(job: Mapping[str, Any]) -> dict[str, Any] | None:
+    """Extract the durable stage_run identity from ControlDaemon job rows.
+
+    The daemon's public ``_pending`` envelope omits project_id from ``data``;
+    the durable job row carries project/request identity under its operation
+    metadata and a job.status response may carry that same row one level down.
+    This parser accepts those documented shapes without treating a job id or
+    status flag alone as proof of attribution.
+    """
+    operation_record = job.get("operation")
+    job_metadata = job.get("metadata")
+    if not isinstance(operation_record, Mapping):
+        return None
+    operation_metadata = operation_record.get("metadata")
+    operation_metadata = operation_metadata if isinstance(operation_metadata, Mapping) else {}
+    job_metadata = job_metadata if isinstance(job_metadata, Mapping) else {}
+    execution = operation_metadata.get("execution")
+    execution = execution if isinstance(execution, Mapping) else {}
+    job_execution = job_metadata.get("execution")
+    job_execution = job_execution if isinstance(job_execution, Mapping) else {}
+    arguments = operation_metadata.get("arguments")
+    arguments = arguments if isinstance(arguments, Mapping) else {}
+    outer_operation = operation_record.get("operation")
+    if outer_operation in {"operation_call", "registry_call"}:
+        nested_operation = arguments.get("operation_id")
+        nested_arguments = arguments.get("arguments")
+        business_operation = nested_operation if isinstance(nested_operation, str) else None
+        arguments = nested_arguments if isinstance(nested_arguments, Mapping) else {}
+    else:
+        business_operation = operation_metadata.get("operation", outer_operation)
+
+    def consistent_text(field: str, containers: tuple[Mapping[str, Any], ...]) -> str | None:
+        values = [container[field] for container in containers if field in container]
+        if not values or any(not isinstance(value, str) or not value for value in values):
+            return None
+        return values[0] if all(value == values[0] for value in values) else None
+
+    request_id = consistent_text("request_id", (job, job_metadata, job_execution,
+                                                   operation_record, operation_metadata, execution))
+    idempotency_key = consistent_text("idempotency_key", (job, job_metadata, job_execution,
+                                                            operation_record, operation_metadata, execution))
+    project_values = [container["project_id"] for container in (
+        job, job_metadata, job_execution, operation_record, operation_metadata, execution, arguments,
+    ) if "project_id" in container]
+    if (not isinstance(business_operation, str) or not isinstance(request_id, str)
+            or not isinstance(idempotency_key, str) or not project_values
+            or any(not isinstance(value, str) or not value for value in project_values)
+            or len(set(project_values)) != 1):
+        return None
+    job_id = job.get("job_id")
+    if not isinstance(job_id, str) or not job_id:
+        return None
+    return {
+        "job_id": job_id, "status": job.get("status"),
+        "request_id": request_id, "idempotency_key": idempotency_key,
+        "project_id": project_values[0], "operation": business_operation,
+        "operation_id": operation_record.get("operation_id"),
     }
 
 
@@ -1839,6 +2250,673 @@ async def _resolve_project_create_response(
     return dict(project)
 
 
+async def _resolve_initial_stage_run_response(
+        response: Mapping[str, Any], *, request_id: str, idempotency_key: str,
+        wait_for_job) -> tuple[dict[str, Any], dict[str, Any] | None]:
+    """Resolve one exact stage_run ticket, waiting at most once on its job."""
+    data = _assert_success(response, "experiment.stage_run")
+    if isinstance(data.get("attempt"), Mapping):
+        return dict(response), None
+    job_id = data.get("job_id")
+    if (not isinstance(job_id, str) or not job_id
+            or data.get("status") not in {"QUEUED", "RUNNING"}):
+        raise RunnerError("experiment.stage_run returned neither a terminal attempt nor its pending job")
+    pending_execution = _require_execution_binding(
+        response, label="experiment.stage_run pending response",
+        request_id=request_id, idempotency_key=idempotency_key, job_id=job_id,
+    )
+    operation_id = pending_execution.get("operation_id")
+    if not isinstance(operation_id, str) or not operation_id:
+        raise RunnerError("experiment.stage_run pending response omitted its operation identity")
+    wait_response = await wait_for_job(job_id)
+    terminal = _validate_initial_stage_wait_response(
+        wait_response, job_id=job_id, operation_id=operation_id,
+        request_id=request_id, idempotency_key=idempotency_key,
+    )
+    return terminal, dict(wait_response)
+
+
+def _validate_initial_stage_wait_response(
+        wait_response: Mapping[str, Any], *, job_id: str, operation_id: str,
+        request_id: str, idempotency_key: str,
+        wait_request_id: str | None = None) -> dict[str, Any]:
+    """Validate a captured job.wait result against the original stage_run ticket."""
+    wait_data = _assert_success(wait_response, "experiment.stage_run job.wait")
+    if (wait_data.get("job_id") != job_id
+            or wait_data.get("operation_id") != operation_id
+            or wait_data.get("status") != "SUCCEEDED"):
+        raise RunnerError("experiment.stage_run job.wait did not return the exact succeeded job")
+    operation = wait_data.get("operation")
+    if (not isinstance(operation, Mapping)
+            or operation.get("operation") != "experiment.stage_run"
+            or operation.get("operation_id") != operation_id
+            or operation.get("status") != "SUCCEEDED"
+            or operation.get("request_id") != request_id
+            or operation.get("idempotency_key") != idempotency_key):
+        raise RunnerError("experiment.stage_run job.wait operation binding differs from the frozen request")
+    terminal = wait_data.get("result")
+    if not isinstance(terminal, Mapping) or terminal.get("success") is not True:
+        raise RunnerError("experiment.stage_run job.wait omitted a successful terminal result")
+    terminal_execution = _require_execution_binding(
+        terminal, label="experiment.stage_run terminal result",
+        request_id=request_id, idempotency_key=idempotency_key, job_id=job_id,
+    )
+    if terminal_execution.get("operation_id") != operation_id:
+        raise RunnerError("experiment.stage_run job and terminal result operation identities differ")
+    wait_execution = wait_response.get("execution")
+    if wait_execution is not None:
+        if (not isinstance(wait_execution, Mapping)
+                or (wait_request_id is not None
+                    and wait_execution.get("request_id") != wait_request_id)):
+            raise RunnerError("experiment.stage_run job.wait response differs from its frozen wait request")
+    terminal_data = terminal.get("data")
+    if not isinstance(terminal_data, Mapping) or not isinstance(terminal_data.get("attempt"), Mapping):
+        raise RunnerError("experiment.stage_run terminal result omitted its durable attempt")
+    return dict(terminal)
+
+
+def _runner_stage_attempt_binding(attempt: Mapping[str, Any]) -> dict[str, Any]:
+    fields = (
+        "project_id", "model_ref", "expected_revision", "plan_id", "plan_sha256",
+        "definition_sha256", "stage_id", "ordinal", "attempt_id", "operation_id",
+        "request_hash", "source_attempt_id",
+    )
+    return {key: attempt.get(key) for key in fields}
+
+
+def _validate_initial_stage_worker_dispatches(
+        attempt: Mapping[str, Any], rows: Any, *, saved_artifact_path: Path,
+        solve_revision: int, output_revision: int) -> list[dict[str, Any]]:
+    """Require the two actual submitted Worker mutations bound to this attempt."""
+    if not isinstance(rows, list) or len(rows) != 2 or any(not isinstance(row, Mapping) for row in rows):
+        raise RunnerError("initial stage lacks exactly one durable solve and save Worker dispatch")
+    attempt_rows = [row for row in attempt.get("evidence", [])
+                    if isinstance(row, Mapping) and row.get("kind") == "worker-dispatch"]
+    normalized = [dict(row) for row in rows]
+    if len(attempt_rows) != 2 or normalized != [dict(row) for row in attempt_rows]:
+        raise RunnerError("native evidence Worker dispatch rows differ from the durable stage attempt")
+
+    by_operation = {row.get("operation"): row for row in normalized}
+    if set(by_operation) != {"run_study", "save_model"}:
+        raise RunnerError("initial stage Worker dispatches are not one solve and one save")
+    attempt_id = attempt.get("attempt_id")
+    solve = by_operation["run_study"]
+    save = by_operation["save_model"]
+    expected_solve_dispatch_revision = attempt.get("expected_revision")
+    if type(expected_solve_dispatch_revision) is not int or solve_revision <= expected_solve_dispatch_revision:
+        raise RunnerError("underlying Study.run revision does not advance its exact stage-attempt revision")
+    for row, operation, phase, method, target_revision in (
+            (solve, "run_study", "solve", "run", expected_solve_dispatch_revision),
+            (save, "save_model", "save", "save", output_revision)):
+        worker_request_id = row.get("worker_request_id")
+        if (row.get("kind") != "worker-dispatch"
+                or row.get("phase") != "submitted"
+                or row.get("stage_request_id") != f"{attempt_id}:{phase}"
+                or row.get("worker_method") != method
+                or not isinstance(worker_request_id, str)
+                or re.fullmatch(r"wrk-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
+                                worker_request_id) is None
+                or not _valid_sha256(row.get("worker_request_hash"))
+                or not isinstance(row.get("worker_receiver"), str) or not row.get("worker_receiver")
+                or type(row.get("worker_generation")) is not int or row.get("worker_generation") < 1
+                or type(row.get("revision")) is not int or row.get("revision") != target_revision):
+            raise RunnerError(f"durable {operation} Worker dispatch identity or revision is malformed")
+    if (solve.get("worker_request_id") == save.get("worker_request_id")
+            or solve.get("worker_generation") != save.get("worker_generation")
+            or solve.get("worker_args") != []):
+        raise RunnerError("initial solve/save Worker dispatches were reused or do not match the bound study")
+    save_args = save.get("worker_args")
+    if (not isinstance(save_args, list) or len(save_args) != 2 or save_args[1] is not True
+            or not isinstance(save_args[0], str)):
+        raise RunnerError("initial save Worker dispatch omitted its atomic temporary path")
+    save_temp = Path(save_args[0])
+    expected_name = re.compile(rf"\.{re.escape(saved_artifact_path.name)}\.[0-9a-f]{{32}}\.tmp\.mph")
+    if (save_temp.parent != saved_artifact_path.parent
+            or expected_name.fullmatch(save_temp.name) is None):
+        raise RunnerError("initial save Worker dispatch does not target the bound AtomicSave sibling path")
+    return normalized
+
+
+def _count_initial_stage_worker_events(rows: Any, *, job_id: str,
+                                       stage_run_operation_id: str,
+                                       dispatches: Sequence[Mapping[str, Any]]) -> tuple[int, int]:
+    """Count Worker RPCs and require successful observed pairs for solve/save."""
+    if not isinstance(rows, list) or not rows or any(not isinstance(row, Mapping) for row in rows):
+        raise RunnerError("initial stage omitted the durable OperationStore Worker event rows")
+    request_ids: dict[str, str] = {}
+    events_by_request: dict[str, dict[str, tuple[int, Mapping[str, Any]]]] = {}
+    for row_index, row in enumerate(rows):
+        metadata = row.get("metadata")
+        if (row.get("job_id") != job_id or row.get("event") != "worker_request"
+                or not isinstance(metadata, Mapping)):
+            raise RunnerError("initial stage Worker event row is not from its exact durable job")
+        request_id = metadata.get("request_id")
+        request_hash = metadata.get("request_hash")
+        phase = metadata.get("phase")
+        if (not isinstance(request_id, str) or not request_id
+                or re.fullmatch(r"wrk-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
+                                request_id) is None
+                or not _valid_sha256(request_hash)
+                or phase not in {"submitted", "observed"}):
+            raise RunnerError("initial stage Worker event id, hash, or phase is malformed or duplicated")
+        prior_hash = request_ids.setdefault(request_id, request_hash)
+        if prior_hash != request_hash:
+            raise RunnerError("initial stage Worker event reused one request id with different request hashes")
+        phases = events_by_request.setdefault(request_id, {})
+        if phase in phases:
+            raise RunnerError("initial stage Worker event phase is duplicated")
+        phases[phase] = (row_index, metadata)
+        if phase == "observed":
+            reply = metadata.get("reply")
+            reply_status = reply.get("status") if isinstance(reply, Mapping) else None
+            valid_success = (reply_status == "SUCCEEDED" and reply.get("ok") is True
+                             and metadata.get("status") == "SUCCEEDED")
+            valid_failure = (reply_status == "FAILED" and reply.get("ok") is False
+                             and isinstance(reply.get("failure"), Mapping)
+                             and metadata.get("status") == "FAILED")
+            if (not isinstance(reply, Mapping) or reply.get("request_id") != request_id
+                    or not (valid_success or valid_failure)):
+                raise RunnerError("initial stage Worker observed reply is missing, uncorrelated, or not terminal")
+    submitted = {request_id for request_id, phases in events_by_request.items()
+                 if "submitted" in phases}
+    if set(request_ids) != submitted:
+        raise RunnerError("initial stage Worker event row has no unique submitted RPC")
+    for request_id, phases in events_by_request.items():
+        if set(phases) != {"submitted", "observed"}:
+            raise RunnerError("initial stage Worker submitted request lacks exactly one terminal observed event")
+        submit_index, submitted_event = phases["submitted"]
+        observe_index, observed_event = phases["observed"]
+        if (submit_index >= observe_index
+                or submitted_event.get("request_hash") != observed_event.get("request_hash")
+                or submitted_event.get("kind") != observed_event.get("kind")
+                or submitted_event.get("operation_id") != observed_event.get("operation_id")
+                or submitted_event.get("metadata") != observed_event.get("metadata")):
+            raise RunnerError("initial stage Worker submit/observe evidence is duplicated, reordered, or conflicting")
+    for dispatch in dispatches:
+        worker_id = dispatch.get("worker_request_id")
+        phases = events_by_request.get(worker_id) if isinstance(worker_id, str) else None
+        if (not isinstance(worker_id, str) or worker_id not in submitted
+                or request_ids.get(worker_id) != dispatch.get("worker_request_hash")
+                or not isinstance(phases, Mapping)
+                or set(phases) != {"submitted", "observed"}
+                or phases["observed"][1].get("request_hash") != dispatch.get("worker_request_hash")):
+            raise RunnerError("durable solve/save dispatch lacks one exact successful Worker submit/observe pair")
+        submit_index, submitted_event = phases["submitted"]
+        observe_index, observed_event = phases["observed"]
+        worker_args = submitted_event.get("metadata")
+        observed_args = observed_event.get("metadata")
+        reply = observed_event.get("reply")
+        method = "run" if dispatch.get("operation") == "run_study" else "save"
+        generation = dispatch.get("worker_generation")
+        if (submit_index >= observe_index
+                or submitted_event.get("kind") != "call"
+                or observed_event.get("kind") != "call"
+                or submitted_event.get("operation_id") != stage_run_operation_id
+                or observed_event.get("operation_id") != stage_run_operation_id
+                or observed_event.get("status") != "SUCCEEDED"
+                or submitted_event.get("request_hash") != observed_event.get("request_hash")
+                or submitted_event.get("metadata") != observed_event.get("metadata")
+                or not isinstance(worker_args, Mapping)
+                or worker_args.get("request_id") != worker_id
+                or worker_args.get("method") != method
+                or worker_args.get("handle") != dispatch.get("worker_receiver")
+                or worker_args.get("generation") != generation
+                or worker_args.get("args") != dispatch.get("worker_args")
+                or not isinstance(reply, Mapping)
+                or reply.get("ok") is not True
+                or reply.get("status") != "SUCCEEDED"
+                or reply.get("request_id") != worker_id
+                or reply.get("generation") != generation):
+            raise RunnerError("solve/save Worker event pair differs from the exact submitted RPC or successful correlated reply")
+    return len(submitted), len(rows)
+
+
+def _validate_initial_stage_acceptance(
+        response: Mapping[str, Any], *, plan: Mapping[str, Any],
+        project_id: str, session_id: str, model_ref: Mapping[str, Any],
+        stage_plan_sha256: str, declaration_revision: int,
+        request_id: str, idempotency_key: str,
+        operation_id: str, request_hash: str) -> dict[str, Any]:
+    """Verify one successful stage-run terminal result and its exact saved bytes."""
+    data = _assert_success(response, "experiment.stage_run terminal result")
+    attempt = data.get("attempt")
+    acceptance = data.get("initial_output_acceptance")
+    if not isinstance(attempt, Mapping) or not isinstance(acceptance, Mapping):
+        raise RunnerError("experiment.stage_run omitted its durable attempt or initial-output acceptance")
+    attempt_id = attempt.get("attempt_id")
+    if (not isinstance(attempt_id, str)
+            or re.fullmatch(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", attempt_id) is None
+            or attempt.get("kind") != "w21_stage_attempt"
+            or attempt.get("project_id") != project_id
+            or attempt.get("model_ref") != dict(model_ref)
+            or attempt.get("expected_revision") != declaration_revision
+            or attempt.get("plan_id") != INITIAL_STAGE_PLAN_ID
+            or attempt.get("plan_sha256") != stage_plan_sha256
+            or attempt.get("definition_sha256") != plan.get("initial_stage_definition_sha256")
+            or attempt.get("stage_id") != INITIAL_STAGE_ID
+            or attempt.get("ordinal") != 1
+            or attempt.get("operation_id") != operation_id
+            or attempt.get("request_hash") != request_hash
+            or attempt.get("request_id") != request_id
+            or attempt.get("idempotency_key") != idempotency_key
+            or attempt.get("source_attempt_id") is not None
+            or attempt.get("status") != "ACCEPTED"
+            or attempt.get("acceptance_status") != "INITIAL_OUTPUT_ACCEPTED"):
+        raise RunnerError("stage attempt identity, revision, plan, or acceptance differs from this frozen run")
+    result = attempt.get("result")
+    if (not isinstance(result, Mapping)
+            or result.get("acceptance_scope") != INITIAL_STAGE_ACCEPTANCE_SCOPE
+            or data.get("acceptance_status") != "INITIAL_OUTPUT_ACCEPTED"
+            or acceptance.get("status") != "PASS"
+            or acceptance.get("scope") != INITIAL_STAGE_ACCEPTANCE_SCOPE
+            or acceptance.get("attempt_id") != attempt_id):
+        raise RunnerError("stage-run terminal result does not state the exact initial-output-only scope")
+    evidence = attempt.get("evidence")
+    if not isinstance(evidence, list):
+        raise RunnerError("accepted stage attempt omitted its durable evidence rows")
+    output_rows = [row for row in evidence if isinstance(row, Mapping)
+                   and row.get("kind") == "stage-output-readback"]
+    artifact_rows = [row for row in evidence if isinstance(row, Mapping)
+                     and row.get("kind") == "saved-stage-artifact"]
+    native_rows = [row for row in evidence if isinstance(row, Mapping)
+                   and row.get("kind") == "initial-output-native-evidence"]
+    if len(output_rows) != 1 or len(artifact_rows) != 1 or len(native_rows) != 1:
+        raise RunnerError("accepted stage attempt lacks unique durable output, artifact, and native evidence rows")
+    output_row = output_rows[0]
+    artifact_row = artifact_rows[0]
+    native_row = native_rows[0]
+    output_tuple = acceptance.get("output_tuple")
+    if (output_row.get("status") != "VERIFIED"
+            or not isinstance(output_row.get("output_tuple"), Mapping)
+            or dict(output_tuple) != dict(output_row["output_tuple"])):
+        raise RunnerError("initial-output acceptance tuple differs from durable stage output readback")
+    tuple_value = dict(output_tuple)
+    if (tuple_value.get("dataset") != "dset1"
+            or not isinstance(tuple_value.get("solution"), str) or not tuple_value.get("solution")
+            or type(tuple_value.get("outer")) is not int or tuple_value["outer"] < 1
+            or type(tuple_value.get("inner")) is not int or tuple_value["inner"] < 1):
+        raise RunnerError("initial-output tuple is incomplete or outside the frozen dset1 target")
+    stage = plan["initial_stage_definition"]["stages"][0]
+    target_selection = stage["target_selection"]
+    for key in ("dataset", "solution"):
+        if key in target_selection and tuple_value.get(key) != target_selection[key]:
+            raise RunnerError("initial-output tuple differs from the frozen stage target selection")
+    for axis in ("outer", "inner"):
+        selected = target_selection.get(axis)
+        if isinstance(selected, list) and len(selected) == 1 and tuple_value.get(axis) != selected[0]:
+            raise RunnerError("initial-output tuple differs from the frozen explicit solution index")
+
+    saved = acceptance.get("saved_artifact")
+    data_saved = data.get("saved_artifact")
+    result_saved = result.get("saved_artifact")
+    if (not isinstance(saved, Mapping) or dict(saved) != dict(data_saved or {})
+            or dict(saved) != dict(result_saved or {})
+            or artifact_row.get("path") != saved.get("path")
+            or artifact_row.get("sha256") != saved.get("sha256")
+            or artifact_row.get("size") != saved.get("size")):
+        raise RunnerError("accepted stage artifact references disagree across the durable attempt and response")
+    artifact_path = saved.get("path")
+    artifact_hash = saved.get("sha256")
+    artifact_size = saved.get("size")
+    if (not isinstance(artifact_path, str) or not _valid_sha256(artifact_hash)
+            or type(artifact_size) is not int or artifact_size <= 0):
+        raise RunnerError("accepted stage artifact path/hash/size receipt is malformed")
+    expected_artifact = Path(plan["project_workspace"]) / "stage_outputs" / f"{attempt_id}.mph"
+    actual_artifact = Path(artifact_path)
+    if (actual_artifact.is_symlink() or not actual_artifact.is_file()
+            or actual_artifact.resolve(strict=True) != expected_artifact.resolve()
+            or actual_artifact.stat().st_size != artifact_size):
+        raise RunnerError("saved stage artifact path or bytes do not match the current run")
+    observed_artifact_hash = sha256_file(actual_artifact)
+    if observed_artifact_hash != artifact_hash:
+        raise RunnerError("saved stage artifact hash differs from the bytes currently on disk")
+    actual_budget = _stage_output_windows_path_budget(Path(plan["project_workspace"]))
+    if actual_budget != plan.get("stage_output_windows_path_budget"):
+        raise RunnerError("saved stage output exceeds or differs from the frozen Windows path budget")
+
+    native_evidence = acceptance.get("native_evidence")
+    native_row_payload = native_row.get("native_evidence", native_row.get("evidence"))
+    expected_attempt_binding = _runner_stage_attempt_binding(attempt)
+    if not isinstance(native_evidence, Mapping) or native_row_payload != dict(native_evidence):
+        raise RunnerError("native output evidence differs from its durable stage-attempt evidence row")
+    native_output = native_evidence.get("native_output_readback")
+    if not isinstance(native_output, Mapping):
+        raise RunnerError("native output evidence omitted the full managed initial-output readback")
+    revision_chain = output_row.get("revision_chain")
+    if (native_evidence.get("stage_attempt_binding") != expected_attempt_binding
+            or native_evidence.get("saved_artifact") != dict(saved)
+            or native_evidence.get("saved_artifact_observed_sha256") != observed_artifact_hash):
+        raise RunnerError("native evidence is not exact-bound to the stage attempt and saved artifact")
+    if (not isinstance(revision_chain, list) or not revision_chain
+            or native_output.get("revision_chain") != revision_chain
+            or native_output.get("output_tuple") != tuple_value):
+        raise RunnerError("initial stage output is missing its same-run revision chain")
+    output_revision = output_row.get("output_revision")
+    artifact_revision = artifact_row.get("model_revision")
+    if (type(output_revision) is not int or output_revision < declaration_revision
+            or type(artifact_revision) is not int or artifact_revision < output_revision):
+        raise RunnerError("initial stage output/artifact revisions do not form a monotonic run chain")
+    solve_revision = native_output.get("solve_revision")
+    native_output_revision = native_output.get("output_revision")
+    if (type(solve_revision) is not int or solve_revision <= declaration_revision
+            or type(native_output_revision) is not int or native_output_revision != output_revision):
+        raise RunnerError("managed initial output solve/output revisions differ from durable stage evidence")
+
+    dispatches = _validate_initial_stage_worker_dispatches(
+        attempt, native_evidence.get("solve_save_dispatches"),
+        saved_artifact_path=actual_artifact,
+        solve_revision=solve_revision, output_revision=output_revision,
+    )
+    preflight = native_evidence.get("initial_stage_preflight")
+    preflight_record = preflight.get("record") if isinstance(preflight, Mapping) else None
+    preflight_chain = preflight_record.get("revision_chain") if isinstance(preflight_record, Mapping) else None
+    output_chain = native_output.get("revision_chain")
+    if (not isinstance(preflight_chain, list) or not preflight_chain
+            or not isinstance(output_chain, list) or not output_chain
+            or any(not isinstance(row, Mapping) for row in preflight_chain + output_chain)):
+        raise RunnerError("initial-stage internal action accounting lacks its preflight/output chains")
+    try:
+        from comsol_mcp._w21_stage_backend import initial_stage_managed_action_plan
+    except ImportError as exc:
+        raise RunnerError("formal W21 initial-stage action planner is unavailable") from exc
+    expected_action_plan = initial_stage_managed_action_plan(
+        {"definition": plan["initial_stage_definition"]}, stage,
+    )
+    if (not isinstance(expected_action_plan, list)
+            or native_evidence.get("managed_internal_action_plan") != expected_action_plan
+            or preflight_record.get("managed_internal_action_plan") != expected_action_plan
+            or native_output.get("managed_internal_action_plan") != expected_action_plan):
+        raise RunnerError("native evidence managed-observation action plan differs from the frozen stage")
+    # Count every managed observation action, including the separately ticketed
+    # Variables.xmeshInfo readback already present in the output revision chain.
+    # The single mesh.inspect snapshot follows that chain; Study.run and AtomicSave
+    # are checked separately as the two mutations.
+    internal_read_count = len(preflight_chain) + len(output_chain) + 1
+    internal_read_budget = plan.get("budgets", {}).get("stage_output_internal_read_actions_max")
+    if (type(internal_read_budget) is not int
+            or internal_read_budget != INITIAL_STAGE_OUTPUT_INTERNAL_READ_ACTIONS_MAX
+            or internal_read_count > internal_read_budget
+            or type(native_evidence.get("internal_read_cap")) is not int
+            or native_evidence.get("internal_read_cap") != internal_read_budget
+            or type(native_evidence.get("internal_read_count")) is not int
+            or native_evidence.get("internal_read_count") != internal_read_count):
+        raise RunnerError("initial-stage managed observation action count exceeds or differs from its frozen 12-action budget")
+    run_execution = response.get("execution")
+    run_job_id = run_execution.get("job_id") if isinstance(run_execution, Mapping) else None
+    if not isinstance(run_job_id, str) or not run_job_id:
+        raise RunnerError("initial stage Worker event evidence has no exact stage_run job identity")
+    worker_rpc_count, worker_event_row_count = _count_initial_stage_worker_events(
+        native_evidence.get("worker_event_rows"), job_id=run_job_id,
+        stage_run_operation_id=operation_id,
+        dispatches=dispatches,
+    )
+    if (type(native_evidence.get("raw_worker_rpc_count")) is not int
+            or native_evidence.get("raw_worker_rpc_count") != worker_rpc_count):
+        raise RunnerError("raw Worker RPC count differs from the durable submitted Worker events")
+    try:
+        from comsol_mcp._w21_stage_backend import (
+            validate_initial_output_readback,
+            validate_initial_output_acceptance,
+        )
+    except ImportError as exc:
+        raise RunnerError("formal W21 initial-output validators are unavailable") from exc
+    readback_valid, readback_errors = validate_initial_output_readback(
+        native_output, binding=expected_attempt_binding, stage=stage,
+        stage_run_operation_id=operation_id, model_revision=solve_revision,
+    )
+    if not readback_valid:
+        reasons = "; ".join(str(item) for item in readback_errors[:8])
+        raise RunnerError(f"managed initial output readback failed formal validation: {reasons}")
+    acceptance_valid, acceptance_errors = validate_initial_output_acceptance(
+        native_evidence, binding=expected_attempt_binding, stage=stage,
+        stage_run_operation_id=operation_id, solve_revision=solve_revision,
+        output_revision=output_revision,
+        observed_artifact_sha256=observed_artifact_hash,
+    )
+    if not acceptance_valid:
+        reasons = "; ".join(str(item) for item in acceptance_errors[:8])
+        raise RunnerError(f"complete initial-output acceptance failed formal validation: {reasons}")
+    return {
+        "status": "PASS", "scope": INITIAL_STAGE_ACCEPTANCE_SCOPE,
+        "attempt_id": attempt_id, "output_tuple": tuple_value,
+        "native_evidence": dict(native_evidence), "saved_artifact": dict(saved),
+        "stage_plan_sha256": stage_plan_sha256,
+        "revision_chain": revision_chain,
+        "managed_internal_action_plan": expected_action_plan,
+        "solve_revision": solve_revision,
+        "output_revision": output_revision,
+        "artifact_model_revision": artifact_revision,
+        "solve_save_dispatches": dispatches,
+        "internal_read_actions": internal_read_count,
+        "raw_worker_rpc_count": worker_rpc_count,
+        "worker_event_row_count": worker_event_row_count,
+        "attempt_sha256": attempt.get("sha256"),
+    }
+
+
+def _revalidate_initial_stage_receipt(path: Path, value: Mapping[str, Any],
+                                      state: Mapping[str, Any], *,
+                                      expected_source_manifest_sha256: str) -> dict[str, Any]:
+    """Rebuild 6.4 initial acceptance from its frozen plan and terminal evidence."""
+    freeze_path = path.parent / "freeze.json"
+    if freeze_path.is_symlink() or not freeze_path.is_file():
+        raise RunnerError("6.4 initial-stage receipt lacks its original frozen plan")
+    try:
+        frozen_raw = json.loads(freeze_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise RunnerError("6.4 initial-stage frozen plan is unreadable") from exc
+    if not isinstance(frozen_raw, Mapping):
+        raise RunnerError("6.4 initial-stage frozen plan is not an object")
+    frozen = dict(frozen_raw)
+    frozen_hash = frozen.pop("freeze_sha256", None)
+    source_manifest = frozen.get("source_manifest")
+    if (frozen_hash != value.get("freeze_sha256")
+            or state.get("freeze_sha256") != frozen_hash
+            or sha256_value(frozen) != frozen_hash
+            or frozen.get("mode") != INITIAL_STAGE_MODE
+            or frozen.get("kind") != INITIAL_STAGE_KIND
+            or frozen.get("schema") != INITIAL_STAGE_SCHEMA
+            or frozen.get("requested_version") != "6.4"
+            or frozen.get("run_id") != value.get("run_id")
+            or Path(frozen.get("run_root", "")).resolve() != path.parent.resolve()
+            or frozen.get("source_manifest_sha256") != expected_source_manifest_sha256
+            or not isinstance(source_manifest, Mapping)
+            or sha256_value(source_manifest) != expected_source_manifest_sha256
+            or state.get("run_id") != frozen.get("run_id")
+            or value.get("source_manifest_sha256") != expected_source_manifest_sha256):
+        raise RunnerError("6.4 receipt, durable state, and original frozen plan/source do not match")
+    _validate_frozen_initial_stage(frozen)
+    if value.get("freeze_sha256") != frozen_hash:
+        raise RunnerError("6.4 initial-stage receipt is not bound to the frozen plan hash")
+    selected_comsol = frozen.get("selected_comsol")
+    if (not isinstance(selected_comsol, Mapping)
+            or not str(selected_comsol.get("version", "")).startswith("6.4")
+            or str(selected_comsol.get("build", selected_comsol.get("build_number", ""))) != "293"
+            or value.get("selected_comsol") != dict(selected_comsol)):
+        raise RunnerError("6.4 initial-stage receipt does not match its frozen COMSOL 6.4.293 runtime")
+
+    initial_stage = value.get("initial_stage")
+    if not isinstance(initial_stage, Mapping):
+        raise RunnerError("6.4 receipt omits its durable initial-stage record")
+    if (initial_stage.get("profile") != INITIAL_STAGE_PROFILE
+            or initial_stage.get("definition") != frozen.get("initial_stage_definition")
+            or initial_stage.get("definition_sha256") != frozen.get("initial_stage_definition_sha256")
+            or initial_stage.get("operations") != frozen.get("initial_stage_operations")):
+        raise RunnerError("6.4 receipt stage definition/operations differ from its frozen initial-stage plan")
+    stage_define = initial_stage.get("stage_define")
+    stage_run = initial_stage.get("stage_run")
+    if not isinstance(stage_define, Mapping) or not isinstance(stage_run, Mapping):
+        raise RunnerError("6.4 receipt omits stage declaration or terminal run evidence")
+    define_data = stage_define.get("data")
+    if not isinstance(define_data, Mapping):
+        raise RunnerError("6.4 receipt stage declaration response is malformed")
+    binding = value.get("model_binding")
+    model_ref = binding.get("model_ref") if isinstance(binding, Mapping) else None
+    project_id, session_id = value.get("project_id"), value.get("session_id")
+    declaration_revision = define_data.get("declaration_revision")
+    stage_plan_sha256 = define_data.get("sha256")
+    if (not isinstance(model_ref, Mapping) or not isinstance(project_id, str) or not project_id
+            or not isinstance(session_id, str) or not session_id
+            or define_data.get("plan_id") != INITIAL_STAGE_PLAN_ID
+            or define_data.get("project_id") != project_id
+            or define_data.get("model_ref") != dict(model_ref)
+            or type(declaration_revision) is not int or declaration_revision < 0
+            or define_data.get("definition_sha256") != frozen.get("initial_stage_definition_sha256")
+            or define_data.get("stage_ids") != [INITIAL_STAGE_ID]
+            or define_data.get("registration") not in {"CREATED", "IDEMPOTENT_EXISTING"}
+            or define_data.get("declaration_status") != "DECLARED_UNVERIFIED"
+            or define_data.get("worker_rpc_performed") is not False
+            or define_data.get("solve_started") is not False
+            or not _valid_sha256(stage_plan_sha256)):
+        raise RunnerError("6.4 stage declaration does not match its original project/model/plan binding")
+    define_request = frozen.get("request_ids", {}).get("stage_define")
+    define_key = frozen.get("idempotency_keys", {}).get("stage_define")
+    define_progress = state.get("stage_define_progress")
+    define_action = state.get("actions", {}).get("stage_define")
+    if (stage_define.get("request_id") != define_request
+            or stage_define.get("idempotency_key") != define_key
+            or not isinstance(stage_define.get("operation_id"), str) or not stage_define["operation_id"]
+            or not _valid_sha256(stage_define.get("request_hash"))
+            or not isinstance(stage_define.get("job_id"), str) or not stage_define["job_id"]
+            or not isinstance(define_progress, Mapping)
+            or define_progress.get("status") != "CONFIRMED"
+            or define_progress.get("request_id") != define_request
+            or define_progress.get("idempotency_key") != define_key
+            or define_progress.get("operation_id") != stage_define.get("operation_id")
+            or define_progress.get("request_hash") != stage_define.get("request_hash")
+            or define_progress.get("job_id") != stage_define.get("job_id")
+            or define_progress.get("plan_id") != INITIAL_STAGE_PLAN_ID
+            or define_progress.get("plan_sha256") != stage_plan_sha256
+            or define_progress.get("definition_sha256") != frozen.get("initial_stage_definition_sha256")
+            or define_progress.get("declaration_revision") != declaration_revision
+            or not isinstance(define_action, Mapping)
+            or define_action.get("status") != "RESPONSE_RECORDED"
+            or define_action.get("params_sha256") != sha256_value(_operation_params(
+                "experiment.stage_define", frozen["initial_stage_operations"][0]["arguments"], {
+                    "project_id": project_id, "session_id": session_id,
+                    "model_ref": dict(model_ref), "expected_revision": declaration_revision,
+                    "request_id": define_request, "idempotency_key": define_key,
+                    "rpc_timeout_s": frozen["budgets"]["ordinary_rpc_wait_seconds"],
+                }))):
+        raise RunnerError("6.4 stage_define report/state does not bind the frozen public request")
+
+    request_id = frozen.get("request_ids", {}).get("stage_run")
+    idempotency_key = frozen.get("idempotency_keys", {}).get("stage_run")
+    terminal_response = stage_run.get("terminal_response")
+    if not isinstance(terminal_response, Mapping):
+        raise RunnerError("6.4 receipt omits the original terminal stage_run response")
+    terminal_data = terminal_response.get("data")
+    attempt = terminal_data.get("attempt") if isinstance(terminal_data, Mapping) else None
+    run_execution = terminal_response.get("execution")
+    if (not isinstance(attempt, Mapping) or not isinstance(run_execution, Mapping)
+            or stage_run.get("request_id") != request_id
+            or stage_run.get("idempotency_key") != idempotency_key
+            or stage_run.get("operation_id") != run_execution.get("operation_id")
+            or stage_run.get("request_hash") != run_execution.get("request_hash")
+            or stage_run.get("job_id") != run_execution.get("job_id")
+            or run_execution.get("project_id") != project_id
+            or run_execution.get("session_id") != session_id
+            or run_execution.get("model_ref") != dict(model_ref)
+            or run_execution.get("request_id") != request_id
+            or run_execution.get("idempotency_key") != idempotency_key
+            or run_execution.get("operation_id") != attempt.get("operation_id")
+            or run_execution.get("request_hash") != attempt.get("request_hash")
+            or type(run_execution.get("revision")) is not int):
+        raise RunnerError("6.4 terminal stage_run ticket is not bound to its frozen request and attempt")
+    run_progress = state.get("stage_run_progress")
+    run_action = state.get("actions", {}).get("stage_run")
+    expected_run_params = _operation_params(
+        "experiment.stage_run", frozen["initial_stage_operations"][1]["arguments"], {
+            "project_id": project_id, "session_id": session_id,
+            "model_ref": dict(model_ref), "expected_revision": declaration_revision,
+            "request_id": request_id, "idempotency_key": idempotency_key,
+            "queue_timeout_s": frozen["budgets"]["stage_run_queue_timeout_seconds"],
+            "execution_timeout_s": frozen["budgets"]["stage_run_execution_timeout_seconds"],
+            "rpc_timeout_s": frozen["budgets"]["stage_run_rpc_wait_seconds"],
+        })
+    if (not isinstance(run_progress, Mapping)
+            or run_progress.get("status") != "CONFIRMED"
+            or run_progress.get("request_id") != request_id
+            or run_progress.get("idempotency_key") != idempotency_key
+            or run_progress.get("operation_id") != stage_run.get("operation_id")
+            or run_progress.get("request_hash") != stage_run.get("request_hash")
+            or run_progress.get("job_id") != stage_run.get("job_id")
+            or run_progress.get("revision_before") != declaration_revision
+            or run_progress.get("revision_after") != run_execution.get("revision")
+            or run_progress.get("attempt_id") != attempt.get("attempt_id")
+            or not isinstance(run_action, Mapping)
+            or run_action.get("status") != "RESPONSE_RECORDED"
+            or run_action.get("request_id") != request_id
+            or run_action.get("idempotency_key") != idempotency_key
+            or run_action.get("params_sha256") != sha256_value(expected_run_params)):
+        raise RunnerError("6.4 stage_run receipt/state does not bind the frozen public request")
+
+    acceptance = _validate_initial_stage_acceptance(
+        terminal_response, plan=frozen, project_id=project_id,
+        session_id=session_id, model_ref=model_ref,
+        stage_plan_sha256=stage_plan_sha256,
+        declaration_revision=declaration_revision,
+        request_id=request_id, idempotency_key=idempotency_key,
+        operation_id=run_execution["operation_id"],
+        request_hash=run_execution["request_hash"],
+    )
+    recorded = value.get("initial_stage_acceptance")
+    if (acceptance != recorded or initial_stage.get("acceptance") != recorded
+            or state.get("initial_stage_acceptance") != recorded
+            or state.get("initial_stage_acceptance_sha256") != sha256_value(recorded)):
+        raise RunnerError("6.4 receipt/state initial-stage acceptance differs from revalidated native evidence")
+
+    wait_response = stage_run.get("wait_response")
+    wait_calls = 1 if wait_response is not None else 0
+    wait_status = "CONFIRMED" if wait_calls else "NOT_REQUIRED"
+    wait_action = state.get("actions", {}).get("stage_run_wait")
+    wait_binding = {
+        "calls": wait_calls, "status": wait_status,
+        "job_id": run_execution.get("job_id"),
+        "stage_run_operation_id": run_execution.get("operation_id"),
+        "stage_run_request_id": request_id,
+        "stage_run_idempotency_key": idempotency_key,
+        "wait_request_id": frozen.get("request_ids", {}).get("stage_run_wait") if wait_calls else None,
+        "wait_response_sha256": sha256_value(wait_response) if wait_response is not None else None,
+    }
+    if wait_calls:
+        terminal_from_wait = _validate_initial_stage_wait_response(
+            wait_response, job_id=run_execution["job_id"],
+            operation_id=run_execution["operation_id"],
+            request_id=request_id, idempotency_key=idempotency_key,
+            wait_request_id=frozen.get("request_ids", {}).get("stage_run_wait"),
+        )
+        if terminal_from_wait != dict(terminal_response):
+            raise RunnerError("6.4 wait result differs from the preserved terminal stage_run response")
+        wait_args = {
+            "job_id": run_execution["job_id"],
+            "timeout_s": frozen["budgets"]["stage_run_result_wait_seconds"],
+            "poll_interval_s": 0.25,
+        }
+        wait_execution = {
+            "request_id": frozen["request_ids"]["stage_run_wait"],
+            "rpc_timeout_s": frozen["budgets"]["stage_run_result_wait_seconds"],
+        }
+        expected_wait_params = _operation_params("job.wait", wait_args, wait_execution)
+        if (not isinstance(wait_action, Mapping)
+                or wait_action.get("status") != "RESPONSE_RECORDED"
+                or wait_action.get("request_id") != frozen["request_ids"]["stage_run_wait"]
+                or wait_action.get("target_job_id") != run_execution["job_id"]
+                or wait_action.get("params_sha256") != sha256_value(expected_wait_params)
+                or wait_action.get("response") != _response_summary(wait_response)):
+            raise RunnerError("6.4 wait response is not bound to one exact original stage_run job.wait")
+    elif wait_action is not None:
+        raise RunnerError("6.4 receipt records a wait action although no wait response was required")
+    if (state.get("stage_run_wait_calls") != wait_calls
+            or state.get("stage_run_wait_calls_possible") != wait_calls
+            or state.get("stage_run_wait_calls_status", "NOT_DISPATCHED") != (
+                "CONFIRMED" if wait_calls else "NOT_DISPATCHED")
+            or state.get("stage_run_wait_binding") != wait_binding
+            or value.get("stage_run_wait_calls") != wait_calls):
+        raise RunnerError("6.4 durable wait accounting differs from the preserved original-job wait response")
+    return acceptance
+
+
 async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
                                 state: _RunState, *, clock=time.monotonic,
                                 preflight=None) -> dict[str, Any]:
@@ -1847,6 +2925,7 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
         raise RunnerError("state is not pristine PREPARED; replay is forbidden")
     mode = plan.get("mode", METADATA_MODE)
     field_profile = _frozen_field_readback_profile(plan)
+    _validate_frozen_initial_stage(plan)
     if (plan.get("schema") != _mode_schema(mode)
             or plan.get("kind") not in (None, _mode_kind(mode))
             or plan.get("budgets") != _mode_budgets(mode)):
@@ -1864,10 +2943,14 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
     deadline: float | None = None
     any_unknown = False
     owned_session_verified = False
+    initial_stage_record: dict[str, Any] | None = None
 
     def record_stage_dispatch(name: str, status: str, *, possible: bool = False,
                               confirmed: bool = False) -> None:
-        for counter in STAGE_READ_ACTION_COUNTERS.get(name, ()):
+        counters = STAGE_READ_ACTION_COUNTERS.get(name, ())
+        if mode == INITIAL_STAGE_MODE:
+            counters = INITIAL_STAGE_ACTION_COUNTERS.get(name, counters)
+        for counter in counters:
             state.value.setdefault(counter, 0)
             state.value.setdefault(f"{counter}_possible", 0)
             if possible:
@@ -1958,6 +3041,50 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
                 }
                 state.save()
                 return
+        elif name in {"stage_run", "stage_run_wait"}:
+            # A pending experiment.stage_run is an _pending envelope: data has
+            # job_id/status while the original request/key/operation live in
+            # execution; project_id is intentionally absent. A transport loss
+            # before that envelope arrives is reconciled once through a
+            # project-scoped job.list query. A job.wait timeout targets the
+            # original stage_run job, never the read-only wait request.
+            run_action = state.value.get("actions", {}).get("stage_run", {})
+            if not isinstance(run_action, Mapping):
+                run_action = {}
+            original_request = run_action.get("request_id")
+            original_key = run_action.get("idempotency_key")
+            if (not isinstance(original_request, str) or not original_request
+                    or not isinstance(original_key, str) or not original_key
+                    or not isinstance(project_id, str) or not project_id):
+                state.value["recovery"]["read_only_query"] = {
+                    "status": "NOT_AVAILABLE_FOR_ACTION", "action": name,
+                    "original_operation": "experiment.stage_run",
+                }
+                state.save()
+                return
+            query_target_request_id = original_request
+            query_target_idempotency_key = original_key
+            query_target_project_id = project_id
+            if name == "stage_run_wait":
+                wait_action = action_record if isinstance(action_record, Mapping) else {}
+                original_job_id = wait_action.get("target_job_id")
+                if (not isinstance(original_job_id, str) or not original_job_id
+                        or (isinstance(reported_job_id, str) and reported_job_id
+                            and reported_job_id != original_job_id)):
+                    state.value["recovery"]["read_only_query"] = {
+                        "status": "WAIT_TARGET_JOB_ID_MISSING_OR_MISMATCHED", "action": name,
+                        "reported_job_id": reported_job_id,
+                        "original_job_id": original_job_id,
+                    }
+                    state.save()
+                    return
+                reported_job_id = original_job_id
+            if isinstance(reported_job_id, str) and reported_job_id:
+                operation = "job.status"
+                arguments = {"job_id": reported_job_id}
+            else:
+                operation = "job.list"
+                arguments = {"limit": 1000, "project_id": project_id}
         elif (isinstance(reported_job_id, str) and reported_job_id
                 and isinstance(project_id, str) and project_id
                 and reported_project_id == project_id):
@@ -1987,7 +3114,8 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
             "params_sha256": sha256_value(params), "request_id": query_id,
             "original_request_id": query_target_request_id,
             "original_idempotency_key": query_target_idempotency_key,
-            "original_operation": name,
+            "original_operation": ("experiment.stage_run" if name in {"stage_run", "stage_run_wait"}
+                                    else name),
             "original_project_id": query_target_project_id,
             "job_id": (reported_job_id if isinstance(reported_job_id, str)
                        and name != "session.start" else None),
@@ -2022,70 +3150,137 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
         if operation == "job.status":
             observed_job_id = (query_data.get("job_id")
                                if isinstance(query_data, Mapping) else None)
-            observed_operation_record = (query_data.get("operation")
-                                         if isinstance(query_data, Mapping) else None)
-            observed_operation = (observed_operation_record.get("operation")
-                                  if isinstance(observed_operation_record, Mapping)
-                                  else observed_operation_record)
-            observed_request_id = (observed_operation_record.get("request_id")
-                                   if isinstance(observed_operation_record, Mapping) else None)
-            observed_idempotency_key = (observed_operation_record.get("idempotency_key")
-                                        if isinstance(observed_operation_record, Mapping) else None)
-            observed_project_id = (query_data.get("project_id")
-                                   if isinstance(query_data, Mapping) else None)
-            if name == "session.start":
-                metadata = query_data.get("metadata") if isinstance(query_data, Mapping) else None
-                metadata = metadata if isinstance(metadata, Mapping) else {}
-                operation_metadata = (observed_operation_record.get("metadata")
-                                      if isinstance(observed_operation_record, Mapping) else None)
-                operation_metadata = operation_metadata if isinstance(operation_metadata, Mapping) else {}
-                observed_project_candidates = [value for value in (
-                    observed_project_id, metadata.get("project_id"),
-                    (metadata.get("execution") or {}).get("project_id")
-                    if isinstance(metadata.get("execution"), Mapping) else None,
-                    operation_metadata.get("project_id"),
-                    (operation_metadata.get("execution") or {}).get("project_id")
-                    if isinstance(operation_metadata.get("execution"), Mapping) else None,
-                ) if isinstance(value, str) and value]
-                observed_project_id = (
-                    observed_project_candidates[0]
-                    if observed_project_candidates
-                    and len(set(observed_project_candidates)) == 1 else None
-                )
+            if name in {"stage_run", "stage_run_wait"}:
+                identity = (_initial_stage_job_identity(query_data)
+                            if isinstance(query_data, Mapping) else None)
                 exact = bool(
                     query_response.get("success") is True
-                    and isinstance(query_target_request_id, str) and query_target_request_id
-                    and isinstance(query_target_idempotency_key, str) and query_target_idempotency_key
-                    and isinstance(query_target_project_id, str) and query_target_project_id
-                    and observed_job_id == reported_job_id
-                    and observed_request_id == query_target_request_id
-                    and observed_idempotency_key == query_target_idempotency_key
-                    and observed_operation == "session.start"
-                    and observed_project_id == query_target_project_id
+                    and isinstance(identity, Mapping)
+                    and identity.get("job_id") == reported_job_id
+                    and identity.get("request_id") == query_target_request_id
+                    and identity.get("idempotency_key") == query_target_idempotency_key
+                    and identity.get("project_id") == query_target_project_id
+                    and identity.get("operation") == "experiment.stage_run"
                 )
-                query_record["observed_operation"] = observed_operation
+                query_record["observed_operation"] = (
+                    identity.get("operation") if isinstance(identity, Mapping) else None
+                )
                 query_record["exact_job_identity_confirmed"] = exact
+                query_record["match_resolution"] = (
+                    "UNIQUE_EXACT_MATCH" if exact else "JOB_STATUS_IDENTITY_MISMATCH"
+                )
+                if isinstance(identity, Mapping):
+                    query_record["observed_job"] = identity
                 if exact:
                     query_record["job_id"] = reported_job_id
                     if reported_job_id not in state.value.setdefault("job_ids", []):
                         state.value["job_ids"].append(reported_job_id)
             else:
-                project_matches = (
-                    query_target_project_id is None
-                    or (isinstance(query_target_project_id, str) and query_target_project_id
-                        and observed_project_id == query_target_project_id)
-                )
-                query_record["exact_job_identity_confirmed"] = bool(
-                    isinstance(query_target_request_id, str) and query_target_request_id
-                    and isinstance(query_target_idempotency_key, str) and query_target_idempotency_key
-                    and observed_job_id == reported_job_id
-                    and observed_request_id == query_target_request_id
-                    and observed_idempotency_key == query_target_idempotency_key
-                    and project_matches)
-            query_record["observed_request_id"] = observed_request_id
-            query_record["observed_idempotency_key"] = observed_idempotency_key
-            query_record["observed_project_id"] = observed_project_id
-        if operation == "job.list" and name == "session.start":
+                observed_operation_record = (query_data.get("operation")
+                                             if isinstance(query_data, Mapping) else None)
+                observed_operation = (observed_operation_record.get("operation")
+                                      if isinstance(observed_operation_record, Mapping)
+                                      else observed_operation_record)
+                observed_request_id = (observed_operation_record.get("request_id")
+                                       if isinstance(observed_operation_record, Mapping) else None)
+                observed_idempotency_key = (observed_operation_record.get("idempotency_key")
+                                            if isinstance(observed_operation_record, Mapping) else None)
+                observed_project_id = (query_data.get("project_id")
+                                       if isinstance(query_data, Mapping) else None)
+                if name == "session.start":
+                    metadata = query_data.get("metadata") if isinstance(query_data, Mapping) else None
+                    metadata = metadata if isinstance(metadata, Mapping) else {}
+                    operation_metadata = (observed_operation_record.get("metadata")
+                                          if isinstance(observed_operation_record, Mapping) else None)
+                    operation_metadata = operation_metadata if isinstance(operation_metadata, Mapping) else {}
+                    observed_project_candidates = [value for value in (
+                        observed_project_id, metadata.get("project_id"),
+                        (metadata.get("execution") or {}).get("project_id")
+                        if isinstance(metadata.get("execution"), Mapping) else None,
+                        operation_metadata.get("project_id"),
+                        (operation_metadata.get("execution") or {}).get("project_id")
+                        if isinstance(operation_metadata.get("execution"), Mapping) else None,
+                    ) if isinstance(value, str) and value]
+                    observed_project_id = (
+                        observed_project_candidates[0]
+                        if observed_project_candidates
+                        and len(set(observed_project_candidates)) == 1 else None
+                    )
+                    exact = bool(
+                        query_response.get("success") is True
+                        and isinstance(query_target_request_id, str) and query_target_request_id
+                        and isinstance(query_target_idempotency_key, str) and query_target_idempotency_key
+                        and isinstance(query_target_project_id, str) and query_target_project_id
+                        and observed_job_id == reported_job_id
+                        and observed_request_id == query_target_request_id
+                        and observed_idempotency_key == query_target_idempotency_key
+                        and observed_operation == "session.start"
+                        and observed_project_id == query_target_project_id
+                    )
+                    query_record["observed_operation"] = observed_operation
+                    query_record["exact_job_identity_confirmed"] = exact
+                    if exact:
+                        query_record["job_id"] = reported_job_id
+                        if reported_job_id not in state.value.setdefault("job_ids", []):
+                            state.value["job_ids"].append(reported_job_id)
+                else:
+                    project_matches = (
+                        query_target_project_id is None
+                        or (isinstance(query_target_project_id, str) and query_target_project_id
+                            and observed_project_id == query_target_project_id)
+                    )
+                    query_record["exact_job_identity_confirmed"] = bool(
+                        isinstance(query_target_request_id, str) and query_target_request_id
+                        and isinstance(query_target_idempotency_key, str) and query_target_idempotency_key
+                        and observed_job_id == reported_job_id
+                        and observed_request_id == query_target_request_id
+                        and observed_idempotency_key == query_target_idempotency_key
+                        and project_matches)
+                query_record["observed_request_id"] = observed_request_id
+                query_record["observed_idempotency_key"] = observed_idempotency_key
+                query_record["observed_project_id"] = observed_project_id
+        if operation == "job.list" and name in {"stage_run", "stage_run_wait"}:
+            rows = query_data.get("jobs") if isinstance(query_data, Mapping) else None
+            rows = rows if isinstance(rows, list) else []
+            total = query_data.get("total") if isinstance(query_data, Mapping) else None
+            has_more = query_data.get("has_more") if isinstance(query_data, Mapping) else None
+            next_cursor = query_data.get("next_cursor") if isinstance(query_data, Mapping) else None
+            query_complete = bool(
+                query_response.get("success") is True
+                and isinstance(query_data, Mapping)
+                and isinstance(query_data.get("jobs"), list)
+                and type(total) is int and total == len(rows)
+                and has_more is False and next_cursor in (None, "")
+            )
+            exact_rows = []
+            for row in rows:
+                if not isinstance(row, Mapping):
+                    continue
+                identity = _initial_stage_job_identity(row)
+                if (isinstance(identity, Mapping)
+                        and identity.get("request_id") == query_target_request_id
+                        and identity.get("idempotency_key") == query_target_idempotency_key
+                        and identity.get("project_id") == query_target_project_id
+                        and identity.get("operation") == "experiment.stage_run"):
+                    exact_rows.append(identity)
+            query_record.update({
+                "query_complete": query_complete,
+                "matching_job_rows": exact_rows,
+                "exact_job_identity_confirmed": False,
+                "match_resolution": "INCOMPLETE_QUERY" if not query_complete else "NO_EXACT_MATCH",
+            })
+            if query_complete and len(exact_rows) == 1:
+                matched_job_id = exact_rows[0].get("job_id")
+                query_record.update({
+                    "job_id": matched_job_id,
+                    "exact_job_identity_confirmed": True,
+                    "match_resolution": "UNIQUE_EXACT_MATCH",
+                })
+                if matched_job_id not in state.value.setdefault("job_ids", []):
+                    state.value["job_ids"].append(matched_job_id)
+            elif query_complete and len(exact_rows) > 1:
+                query_record["match_resolution"] = "AMBIGUOUS_EXACT_MATCH"
+        elif operation == "job.list" and name == "session.start":
             rows = query_data.get("jobs") if isinstance(query_data, Mapping) else None
             rows = rows if isinstance(rows, list) else []
             has_more = query_data.get("has_more") if isinstance(query_data, Mapping) else None
@@ -2224,27 +3419,66 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
                     idempotency_key = fields["idempotency_key"]
         intent = {"tool": tool, "params_sha256": sha256_value(params),
                   "request_id": request_id, "idempotency_key": idempotency_key}
+        if name == "stage_run_wait":
+            intent["target_job_id"] = (
+                operation_arguments.get("job_id")
+                if isinstance(operation_arguments, Mapping) else None
+            )
         state.value["actions"] = state.value.get("actions", {})
         if name in state.value["actions"]:
             raise RunnerError(f"action already has a durable intent: {name}")
-        stage_action = name in STAGE_READ_ACTION_COUNTERS
+        initial_stage_action = (mode == INITIAL_STAGE_MODE
+                                and name in INITIAL_STAGE_ACTION_COUNTERS)
+        stage_action = name in STAGE_READ_ACTION_COUNTERS or initial_stage_action
+        if initial_stage_action:
+            frozen_operation = next((row for row in plan.get("initial_stage_operations", [])
+                                     if isinstance(row, Mapping)
+                                     and row.get("operation_id") == params.get("operation_id")), None)
+            expected_operation = ("experiment.stage_define" if name == "stage_define"
+                                  else "experiment.stage_run" if name == "stage_run" else None)
+            if (expected_operation is not None
+                    and (tool != "operation_call" or not isinstance(frozen_operation, Mapping)
+                         or params.get("operation_id") != expected_operation
+                         or params.get("arguments") != frozen_operation.get("arguments")
+                         or frozen_operation.get("arguments_sha256") != sha256_value({
+                             "operation_id": expected_operation,
+                             "arguments": frozen_operation.get("arguments"),
+                         }))):
+                raise RunnerError(f"{name} differs from its exact frozen public operation and arguments")
+            if deadline is None:
+                raise RunnerError(f"{name} cannot dispatch before the owned Server birth starts the run budget")
         if stage_action:
             execution = params.get("execution")
             budgets = plan.get("budgets", {})
             queue_timeout = execution.get("queue_timeout_s") if isinstance(execution, Mapping) else None
             execution_timeout = execution.get("execution_timeout_s") if isinstance(execution, Mapping) else None
-            if (mode != SOLVE_READBACK_MODE or deadline is None
-                    or type(queue_timeout) is not int or type(execution_timeout) is not int
-                    or queue_timeout != budgets.get("queue_timeout_seconds")
-                    or execution_timeout != budgets.get("execution_timeout_seconds")):
+            if name == "stage_run":
+                expected_queue = budgets.get("stage_run_queue_timeout_seconds")
+                expected_execution = budgets.get("stage_run_execution_timeout_seconds")
+            else:
+                expected_queue = budgets.get("queue_timeout_seconds")
+                expected_execution = budgets.get("execution_timeout_seconds")
+            if (not stage_action or (mode == SOLVE_READBACK_MODE and deadline is None)
+                    or (mode == INITIAL_STAGE_MODE and name == "stage_run"
+                        and (deadline is None or type(queue_timeout) is not int
+                             or type(execution_timeout) is not int
+                             or queue_timeout != expected_queue
+                             or execution_timeout != expected_execution))
+                    or (mode == SOLVE_READBACK_MODE
+                        and (type(queue_timeout) is not int or type(execution_timeout) is not int
+                             or queue_timeout != expected_queue or execution_timeout != expected_execution))):
                 state.value["actions"][name] = {
                     "status": "NOT_DISPATCHED_SERVER_BUDGET", **intent,
                 }
                 record_stage_dispatch(name, "NOT_DISPATCHED_BUDGET")
                 state.save()
                 raise RunnerError(f"{name} lacks its exact frozen server execution budget")
-            remaining_server_window = deadline - CLEANUP_RESERVE_S - clock()
-            if queue_timeout + execution_timeout > remaining_server_window:
+            if name in {"stage.solve", "study.solve", "solution_indices", "result.evaluate", "stage_run"}:
+                remaining_server_window = deadline - CLEANUP_RESERVE_S - clock()
+            else:
+                remaining_server_window = float("inf")
+            if ((mode == SOLVE_READBACK_MODE or name == "stage_run")
+                    and queue_timeout + execution_timeout > remaining_server_window):
                 state.value["actions"][name] = {
                     "status": "NOT_DISPATCHED_SERVER_BUDGET", **intent,
                     "server_queue_timeout_s": queue_timeout,
@@ -2264,6 +3498,8 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
             state.value["worker_births_possible"] = 1
         state.save()
         rpc_timeout = float(plan.get("budgets", {}).get("ordinary_rpc_wait_seconds", RPC_WAIT_S))
+        if mode == INITIAL_STAGE_MODE and name == "stage_run_wait":
+            rpc_timeout = float(plan["budgets"]["stage_run_result_wait_seconds"])
         if deadline is not None:
             limit = deadline if cleanup_action else deadline - CLEANUP_RESERVE_S
             rpc_timeout = min(rpc_timeout, limit - clock())
@@ -2271,7 +3507,8 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
             state.value["actions"][name]["status"] = "NOT_DISPATCHED_BUDGET"
             record_stage_dispatch(name, "NOT_DISPATCHED_BUDGET")
             if stage_action:
-                for counter in STAGE_READ_ACTION_COUNTERS[name]:
+                for counter in (STAGE_READ_ACTION_COUNTERS.get(name, ())
+                                + INITIAL_STAGE_ACTION_COUNTERS.get(name, ())):
                     state.value[f"{counter}_possible"] = 0
             state.save()
             raise RunnerError("remaining W21 birth window cannot cover another bounded RPC")
@@ -2292,7 +3529,9 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
         summary = _response_summary(response)
         state.value["actions"][name]["response"] = summary
         job_id = summary.get("job_id")
-        unknown_response = _is_unknown(response)
+        unknown_response = (_is_unknown(response)
+                            or (mode == INITIAL_STAGE_MODE and name == "stage_run_wait"
+                                and _initial_stage_wait_expired(response)))
         if (isinstance(job_id, str) and job_id
                 and not (name == "session.start" and unknown_response)
                 and job_id not in state.value.setdefault("job_ids", [])):
@@ -2831,6 +4070,209 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
                 "operation_id": result_ticket["operation_id"],
             }
             state.save()
+        elif mode == INITIAL_STAGE_MODE:
+            budgets = plan["budgets"]
+            if (budgets.get("study_dispatch") != 1 or budgets.get("solver_dispatch") != 1
+                    or budgets.get("stage_define_dispatch") != 1
+                    or budgets.get("stage_run_dispatch") != 1
+                    or budgets.get("stage_run_wait_calls_max") != 1
+                    or budgets.get("stage_run_queue_timeout_seconds") != 30
+                    or budgets.get("stage_run_execution_timeout_seconds") != 240
+                    or budgets.get("stage_run_rpc_wait_seconds") != RPC_WAIT_S
+                    or budgets.get("stage_run_result_wait_seconds") != 240
+                    or budgets.get("cleanup_reserve_seconds") != CLEANUP_RESERVE_S):
+                raise RunnerError("frozen initial-stage action budgets differ from the bounded runner contract")
+            _validate_frozen_initial_stage(plan)
+            stage_define_spec, stage_run_spec = plan["initial_stage_operations"]
+            if (stage_define_spec.get("operation_id") != "experiment.stage_define"
+                    or stage_run_spec.get("operation_id") != "experiment.stage_run"):
+                raise RunnerError("frozen initial-stage operation order is invalid")
+            declaration_revision = binding["revision"]
+            define_request = request_ids["stage_define"]
+            define_key = keys["stage_define"]
+            define_params = _operation_params(
+                "experiment.stage_define", stage_define_spec["arguments"], {
+                    "project_id": project_id, "session_id": session_id,
+                    "model_ref": binding["model_ref"], "expected_revision": declaration_revision,
+                    "request_id": define_request, "idempotency_key": define_key,
+                    "rpc_timeout_s": RPC_WAIT_S,
+                })
+            define_response = await dispatch("stage_define", "operation_call", define_params)
+            define_data = _assert_success(define_response, "experiment.stage_define")
+            define_ticket = _validate_managed_result_ticket(
+                define_response, binding, request_id=define_request,
+                idempotency_key=define_key, expected_revision=declaration_revision,
+                label="experiment.stage_define",
+            )
+            if (define_data.get("plan_id") != INITIAL_STAGE_PLAN_ID
+                    or define_data.get("project_id") != project_id
+                    or define_data.get("model_ref") != binding["model_ref"]
+                    or define_data.get("declaration_revision") != declaration_revision
+                    or define_data.get("definition_sha256") != plan["initial_stage_definition_sha256"]
+                    or not _valid_sha256(define_data.get("sha256"))
+                    or define_data.get("stage_ids") != [INITIAL_STAGE_ID]
+                    or define_data.get("registration") not in {"CREATED", "IDEMPOTENT_EXISTING"}
+                    or define_data.get("declaration_status") != "DECLARED_UNVERIFIED"
+                    or define_data.get("worker_rpc_performed") is not False
+                    or define_data.get("solve_started") is not False):
+                raise RunnerError("experiment.stage_define did not confirm the exact frozen declaration")
+            stage_plan_sha256 = define_data["sha256"]
+            record_stage_dispatch("stage_define", "CONFIRMED", confirmed=True)
+            state.value["stage_define_progress"] = {
+                "status": "CONFIRMED", "request_id": define_request,
+                "idempotency_key": define_key,
+                "operation_id": define_ticket["operation_id"],
+                "request_hash": define_ticket["request_hash"], "job_id": define_ticket["job_id"],
+                "plan_id": INITIAL_STAGE_PLAN_ID,
+                "plan_sha256": stage_plan_sha256,
+                "definition_sha256": plan["initial_stage_definition_sha256"],
+                "declaration_revision": declaration_revision,
+            }
+            state.save()
+
+            run_request = request_ids["stage_run"]
+            run_key = keys["stage_run"]
+            run_params = _operation_params(
+                "experiment.stage_run", stage_run_spec["arguments"], {
+                    "project_id": project_id, "session_id": session_id,
+                    "model_ref": binding["model_ref"], "expected_revision": declaration_revision,
+                    "request_id": run_request, "idempotency_key": run_key,
+                    "queue_timeout_s": budgets["stage_run_queue_timeout_seconds"],
+                    "execution_timeout_s": budgets["stage_run_execution_timeout_seconds"],
+                    "rpc_timeout_s": budgets["stage_run_rpc_wait_seconds"],
+                })
+            run_response = await dispatch("stage_run", "operation_call", run_params)
+            async def wait_for_stage_run(job_id: str) -> Mapping[str, Any]:
+                if (budgets.get("stage_run_wait_calls_max") != 1
+                        or budgets.get("stage_run_result_wait_seconds") != 240):
+                    raise RunnerError("frozen stage-run wait budget is invalid")
+                arguments = {
+                    "job_id": job_id,
+                    "timeout_s": budgets["stage_run_result_wait_seconds"],
+                    "poll_interval_s": 0.25,
+                }
+                execution = {
+                    "request_id": request_ids["stage_run_wait"],
+                    "rpc_timeout_s": budgets["stage_run_result_wait_seconds"],
+                }
+                wait_response = await dispatch(
+                    "stage_run_wait", "operation_call",
+                    _operation_params("job.wait", arguments, execution),
+                )
+                return wait_response
+
+            terminal_response, wait_response = await _resolve_initial_stage_run_response(
+                run_response, request_id=run_request, idempotency_key=run_key,
+                wait_for_job=wait_for_stage_run,
+            )
+            terminal_data = _assert_success(terminal_response, "experiment.stage_run terminal result")
+            attempt = terminal_data.get("attempt")
+            run_execution = terminal_response.get("execution")
+            if (not isinstance(attempt, Mapping) or not isinstance(run_execution, Mapping)
+                    or run_execution.get("project_id") != project_id
+                    or run_execution.get("session_id") != session_id
+                    or run_execution.get("model_ref") != binding["model_ref"]
+                    or run_execution.get("request_id") != run_request
+                    or run_execution.get("idempotency_key") != run_key
+                    or run_execution.get("operation_id") != attempt.get("operation_id")
+                    or run_execution.get("request_hash") != attempt.get("request_hash")
+                    or not _valid_sha256(run_execution.get("request_hash"))
+                    or not isinstance(run_execution.get("job_id"), str)
+                    or not run_execution.get("job_id")
+                    or type(run_execution.get("revision")) is not int):
+                raise RunnerError("experiment.stage_run terminal ticket differs from its durable attempt")
+            acceptance = _validate_initial_stage_acceptance(
+                terminal_response, plan=plan, project_id=project_id,
+                session_id=session_id, model_ref=binding["model_ref"],
+                stage_plan_sha256=stage_plan_sha256,
+                declaration_revision=declaration_revision,
+                request_id=run_request, idempotency_key=run_key,
+                operation_id=run_execution["operation_id"],
+                request_hash=run_execution["request_hash"],
+            )
+            if run_execution["revision"] != acceptance["artifact_model_revision"]:
+                raise RunnerError("stage-run terminal revision differs from the saved artifact revision")
+            binding["revision"] = run_execution["revision"]
+            record_stage_dispatch("stage_run", "CONFIRMED", confirmed=True)
+            if wait_response is not None:
+                record_stage_dispatch("stage_run_wait", "CONFIRMED", confirmed=True)
+            wait_call_count = 1 if wait_response is not None else 0
+            wait_action = state.value.get("actions", {}).get("stage_run_wait")
+            if wait_call_count:
+                wait_args = {
+                    "job_id": run_execution["job_id"],
+                    "timeout_s": budgets["stage_run_result_wait_seconds"],
+                    "poll_interval_s": 0.25,
+                }
+                wait_execution = {
+                    "request_id": request_ids["stage_run_wait"],
+                    "rpc_timeout_s": budgets["stage_run_result_wait_seconds"],
+                }
+                expected_wait_params = _operation_params("job.wait", wait_args, wait_execution)
+                if (not isinstance(wait_action, Mapping)
+                        or wait_action.get("status") != "RESPONSE_RECORDED"
+                        or wait_action.get("request_id") != request_ids["stage_run_wait"]
+                        or wait_action.get("target_job_id") != run_execution["job_id"]
+                        or wait_action.get("params_sha256") != sha256_value(expected_wait_params)
+                        or wait_action.get("response") != _response_summary(wait_response)):
+                    raise RunnerError("captured stage_run wait differs from its durable exact-job dispatch intent")
+            elif wait_action is not None:
+                raise RunnerError("terminal stage_run unexpectedly has a durable stage_run wait action")
+            stage_run_wait_binding = {
+                "calls": wait_call_count,
+                "status": "CONFIRMED" if wait_call_count else "NOT_REQUIRED",
+                "job_id": run_execution["job_id"],
+                "stage_run_operation_id": run_execution["operation_id"],
+                "stage_run_request_id": run_request,
+                "stage_run_idempotency_key": run_key,
+                "wait_request_id": request_ids["stage_run_wait"] if wait_call_count else None,
+                "wait_response_sha256": sha256_value(wait_response) if wait_response is not None else None,
+            }
+            state.value.update({
+                "status": "RUNNING",
+                "source_manifest_sha256": plan["source_manifest_sha256"],
+                "stage_run_progress": {
+                    "status": "CONFIRMED", "request_id": run_request,
+                    "idempotency_key": run_key,
+                    "operation_id": run_execution["operation_id"],
+                    "request_hash": run_execution["request_hash"],
+                    "job_id": run_execution["job_id"],
+                    "revision_before": declaration_revision,
+                    "revision_after": run_execution["revision"],
+                    "attempt_id": acceptance["attempt_id"],
+                    "attempt_sha256": acceptance["attempt_sha256"],
+                    "saved_artifact": acceptance["saved_artifact"],
+                    "output_tuple": acceptance["output_tuple"],
+                },
+                "stage_run_wait_binding": stage_run_wait_binding,
+                "initial_stage_acceptance": acceptance,
+                "initial_stage_acceptance_sha256": sha256_value(acceptance),
+            })
+            state.save()
+            status = "INITIAL_STAGE_OUTPUT_ACCEPTED_WITHIN_SCOPE"
+            initial_stage_record = {
+                "profile": INITIAL_STAGE_PROFILE,
+                "definition": plan["initial_stage_definition"],
+                "definition_sha256": plan["initial_stage_definition_sha256"],
+                "operations": plan["initial_stage_operations"],
+                "stage_define": {
+                    "request_id": define_request, "idempotency_key": define_key,
+                    "operation_id": define_ticket["operation_id"],
+                    "request_hash": define_ticket["request_hash"],
+                    "job_id": define_ticket["job_id"], "data": dict(define_data),
+                },
+                "stage_run": {
+                    "request_id": run_request, "idempotency_key": run_key,
+                    "operation_id": run_execution["operation_id"],
+                    "request_hash": run_execution["request_hash"],
+                    "job_id": run_execution["job_id"],
+                    "terminal_response": dict(terminal_response),
+                    "wait_response": wait_response,
+                },
+                "acceptance": acceptance,
+            }
+            if len(canonical_bytes(initial_stage_record)) > W21_FIELD_READBACK_MAX_JSON_BYTES:
+                raise RunnerError("initial-stage receipt evidence exceeds its frozen JSON byte limit")
         else:
             raise RunnerError("prepared mode is unsupported")
 
@@ -2857,8 +4299,22 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
             "physical_validation": "UNVERIFIED",
             "study_dispatch": state.value.get("study_dispatch", 0),
             "solver_dispatch": state.value.get("solver_dispatch", 0),
+            "stage_define_dispatch": state.value.get("stage_define_dispatch", 0),
+            "stage_run_dispatch": state.value.get("stage_run_dispatch", 0),
+            "underlying_solve_dispatch": state.value.get("underlying_solve_dispatch", 0),
+            "stage_run_wait_calls": state.value.get("stage_run_wait_calls", 0),
             "cleanup": {"status": "PENDING"},
         }
+        if mode == INITIAL_STAGE_MODE:
+            report.update({
+                "initial_stage_profile": INITIAL_STAGE_PROFILE,
+                "acceptance_scope": INITIAL_STAGE_ACCEPTANCE_SCOPE,
+                "source_manifest_sha256": plan["source_manifest_sha256"],
+                "initial_stage_acceptance": state.value["initial_stage_acceptance"],
+                "state_transfer": "NOT_RUN", "continuity": "NOT_RUN",
+                "conservation": "NOT_RUN", "scientific_validation": "NOT_RUN",
+                "physical_validation": "NOT_RUN",
+            })
         if mode == METADATA_MODE:
             report.update({
                 "probe_sha256": plan["probe_sha256"], "probe_readback": probe,
@@ -2872,10 +4328,13 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
                     "raw_payload_bytes": parsed_probe["raw_payload_bytes"],
                 },
             })
-        else:
+        elif mode == SOLVE_READBACK_MODE:
             report.update({"probe_observation": probe_observation,
                            "solution_tuple_readback": tuple_readback,
                            "solve_readback": solve_readback})
+        elif mode == INITIAL_STAGE_MODE:
+            report.update({"probe_observation": probe_observation,
+                           "initial_stage": initial_stage_record})
         state.save()
 
         # Do not issue lifecycle cleanup after any ambiguous operation. The
@@ -2912,7 +4371,9 @@ async def run_metadata_protocol(client: _MCPCalls, plan: Mapping[str, Any],
         report["cleanup"] = {"status": "CLEANUP_COMPLETE", "worker_retired": True,
                              "owned_server_stopped": True, "server_stop_evidence": stopped_data.get("stop_evidence")}
         report_path = Path(plan["run_root"]) / (
-            "field_probe_receipt.json" if mode == METADATA_MODE else "solve_readback_receipt.json"
+            "field_probe_receipt.json" if mode == METADATA_MODE else
+            "solve_readback_receipt.json" if mode == SOLVE_READBACK_MODE else
+            "initial_stage_receipt.json"
         )
         # run_root is derived from the frozen evidence paths, not a caller path.
         write_json_atomic(report_path, report)
@@ -3116,7 +4577,7 @@ def _parser() -> argparse.ArgumentParser:
     commands = parser.add_subparsers(dest="command", required=True)
     prep = commands.add_parser("prepare", help="freeze source/runtime identity; never launches MCP or COMSOL")
     prep.add_argument("--version", choices=("6.4", "6.3"), required=True)
-    prep.add_argument("--mode", choices=(METADATA_MODE, SOLVE_READBACK_MODE), default=METADATA_MODE)
+    prep.add_argument("--mode", choices=(METADATA_MODE, SOLVE_READBACK_MODE, INITIAL_STAGE_MODE), default=METADATA_MODE)
     prep.add_argument("--field-readback-profile", choices=FIELD_READBACK_PROFILES,
                       help="solve-readback expression profile; default is the legacy T-only capture")
     prep.add_argument("--comsol-root", type=Path, required=True)

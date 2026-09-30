@@ -6,9 +6,11 @@ import os
 import socket
 import subprocess
 import sys
+import threading
 import time
 import zipfile
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from types import SimpleNamespace
 from pathlib import Path
 
@@ -33,6 +35,57 @@ JAVAC_NAME = "javac.exe" if sys.platform == "win32" else "javac"
 
 def _worker_build_environment_available() -> bool:
     return (COMSOL_ROOT / "bin" / "comsolclientpath.txt").is_file() and (JDK11 / "bin" / JAVAC_NAME).is_file()
+
+
+def _single_reply_socket(reply_factory):
+    """Start a tiny token-authenticated endpoint for real Worker socket tests."""
+    listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    listener.bind(("127.0.0.1", 0))
+    listener.listen(1)
+    requests = []
+    errors = []
+
+    def serve_once():
+        try:
+            conn, _ = listener.accept()
+            with conn, conn.makefile("rwb") as stream:
+                auth = json.loads(stream.readline())
+                if not auth.get("token"):
+                    raise AssertionError("Worker did not authenticate the socket request")
+                stream.write(b'{"ok":true,"generation":5}\n')
+                stream.flush()
+                body = json.loads(stream.readline())
+                requests.append(body)
+                response = reply_factory(body)
+                stream.write((json.dumps(response, separators=(",", ":")) + "\n").encode())
+                stream.flush()
+        except BaseException as exc:  # surfaced in the owning test thread below
+            errors.append(exc)
+
+    thread = threading.Thread(target=serve_once, daemon=True)
+    thread.start()
+    return listener, thread, listener.getsockname()[1], requests, errors
+
+
+@contextmanager
+def _socket_backed_worker(tmp_path, reply_factory):
+    listener, thread, port, requests, errors = _single_reply_socket(reply_factory)
+    worker = PersistentJavaWorker(
+        JavaWorkerPaths(COMSOL_ROOT, JDK11, project_root=tmp_path),
+        state_dir=tmp_path / "socket-worker-state",
+    )
+    worker._token = "socket-test-token"
+    worker._port = port
+    worker._generation = 5
+    try:
+        yield worker, requests
+    finally:
+        worker.close()
+        listener.close()
+        thread.join(timeout=2)
+        if errors:
+            raise AssertionError(f"fake Worker socket failed: {errors[0]}") from errors[0]
 
 
 _WINDOWS_ACL_SCRIPT = r"""
@@ -178,6 +231,105 @@ def test_java_worker_keeps_original_request_queryable_after_nonblocking_submit(w
     assert status["status"] == "FAILED"
     assert status["failure"]["code"] == "ENGINE_CALL_FAILED"
     assert worker.health(timeout_s=1)["status"] == "HEALTHY"
+
+
+@pytest.mark.parametrize(
+    ("reply_kind", "known_before"),
+    [("wrong_id", False), ("missing_id", False), ("wrong_id", True)],
+)
+def test_socket_worker_rejects_uncorrelated_task_replies_without_replay(
+    tmp_path, reply_kind, known_before,
+):
+    request_id = "socket-correlation-control"
+    events = []
+
+    def response(body):
+        reply = {"ok": True, "status": "SUCCEEDED", "generation": 99}
+        if reply_kind == "wrong_id":
+            reply["request_id"] = f"foreign-{body['request_id']}"
+        return reply
+
+    with _socket_backed_worker(tmp_path, response) as (worker, received):
+        known_reply = {"request_id": request_id, "status": "SUCCEEDED", "result": {"kept": True}}
+        if known_before:
+            worker._known_requests[request_id] = known_reply
+        with worker.operation_context("socket-correlation-operation", on_request_event=events.append):
+            with pytest.raises(JavaWorkerError, match="request_id") as raised:
+                worker.submit(
+                    "model", {"tag": "no-engine"}, request_id=request_id,
+                    queue_timeout_s=0, rpc_timeout_s=1,
+                )
+
+        assert raised.value.reply["execution_state_unknown"] is True
+        assert received == [{
+            "type": "model", "request_id": request_id, "tag": "no-engine",
+            "queue_timeout_ms": 0,
+        }]
+        assert worker.generation == 5  # the uncorrelated generation 99 was ignored
+        assert [event["phase"] for event in events] == ["submitted", "unresponsive"]
+        assert not any(event["phase"] == "observed" for event in events)
+        if known_before:
+            assert worker._known_requests[request_id] is known_reply
+        else:
+            assert worker._known_requests[request_id] == {
+                "request_id": request_id,
+                "status": "UNKNOWN",
+                "reason": (
+                    "worker_response_request_id_mismatch" if reply_kind == "wrong_id"
+                    else "worker_response_request_id_missing"
+                ),
+            }
+
+
+def test_socket_worker_accepts_exact_request_id_and_caches_task_reply(tmp_path):
+    request_id = "socket-correlation-exact"
+
+    def response(body):
+        return {
+            "ok": True, "request_id": body["request_id"], "status": "RUNNING",
+            "generation": 8,
+        }
+
+    with _socket_backed_worker(tmp_path, response) as (worker, received):
+        reply = worker.submit(
+            "model", {"tag": "no-engine"}, request_id=request_id,
+            queue_timeout_s=0, rpc_timeout_s=1,
+        )
+        assert reply["request_id"] == request_id
+        assert worker._known_requests[request_id] == reply
+        assert worker.generation == 8
+        assert len(received) == 1
+
+
+@pytest.mark.parametrize(
+    ("request_kind", "request_id", "code"),
+    [
+        ("status", "missing-status-control", "REQUEST_NOT_FOUND"),
+        ("submit", "conflict-control", "IDEMPOTENCY_KEY_CONFLICT"),
+        ("unknown", "unknown-command-control", "UNKNOWN_COMMAND"),
+    ],
+)
+def test_socket_worker_preserves_idless_protocol_rejection_diagnostics(
+    tmp_path, request_kind, request_id, code,
+):
+    with _socket_backed_worker(
+        tmp_path, lambda _body: {"ok": False, "code": code, "message": "protocol refusal"},
+    ) as (worker, received):
+        if request_kind == "status":
+            reply = worker.status(request_id)
+        elif request_kind == "submit":
+            reply = worker.submit(
+                "model", {"tag": "different-body"}, request_id=request_id,
+                queue_timeout_s=0, rpc_timeout_s=1,
+            )
+        else:
+            reply = worker._request(
+                {"type": "not_a_worker_command", "request_id": request_id},
+                timeout_s=1,
+            )
+        assert reply["code"] == code
+        assert request_id not in worker._known_requests
+        assert len(received) == 1
 
 
 def test_java_worker_persists_private_endpoint_metadata(worker, tmp_path_factory):

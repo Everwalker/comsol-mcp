@@ -242,9 +242,6 @@ ALLOWLIST_ADDITIONS: tuple[str, ...] = (
     # level-name route; needs the accessor plus its methods.
     "getLevels",
     "getVals",
-    # Study.getSolverSequences(String) would attribute a solver sequence to a
-    # study *step* exactly, instead of the study-level association used here.
-    "getSolverSequences",
     # EvaluationGroup (Application Programming Guide p.280): the documented
     # "looplevelinput first/last + getReal()" route for output times.
     "evaluationGroup",
@@ -262,6 +259,10 @@ ALLOWLIST_ADDITIONS: tuple[str, ...] = (
 #:   SolutionInfo.getMaxInner(int[]) -> int
 #:   SolutionInfo.getLevelNames() -> String[]
 ALLOWLIST_ADDITIONS_PUBLISHED: tuple[str, ...] = (
+    # COMSOL 6.4 Study.getSolverSequences(String) is used only by the private
+    # initial-stage admission context to bind one solver sequence to its
+    # registered study target.
+    "getSolverSequences",
     "getSolutioninfo",
     "getOuterSolnum",
     "getMaxInner",
@@ -2402,7 +2403,8 @@ def dataset_remove(worker: Any, model_tag: str, arguments: Mapping[str, Any]) ->
             **_probe_completion(applied=[{"step": "remove", "tag": tag}], failed=[], not_executed=[], readback={"readable": True, "tags": remaining_tags, "match": True})}
 
 
-def dataset_solution_indices(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+def dataset_solution_indices(worker: Any, model_tag: str, arguments: Mapping[str, Any], *,
+                            _w21_initial_stage_context: Any = None) -> dict[str, Any]:
     """List available inner/outer solution indices, time steps and parameter combinations."""
     path = arguments.get("path")
     # Solution-axis inspection belongs to the existing numeric adapter.  Keep
@@ -2417,12 +2419,66 @@ def dataset_solution_indices(worker: Any, model_tag: str, arguments: Mapping[str
 
     dset = _call(container, "get", tag)
     dataset_binding = _resolve_dataset_binding(model, str(tag))
+    initial_stage_context = (
+        isinstance(_w21_initial_stage_context, Mapping)
+        and _w21_initial_stage_context.get("purpose") == "initial_stage_output"
+    )
+
+    def initial_dataset_metadata(solution: Any = None) -> dict[str, Any]:
+        type_probe = call_probe(dset, "getType")
+        frame_probe = call_probe(dset, "getString", "frametype")
+        if any(isinstance(probe.get("error"), Mapping)
+               and probe["error"].get("execution_state_unknown") is True
+               for probe in (type_probe, frame_probe)):
+            raise ExecutionContractError("EXECUTION_STATE_UNKNOWN",
+                                         "initial Solution dataset identity read is unresolved",
+                                         stage="post_dispatch")
+        dataset_type = type_probe.get("value") if type_probe.get("ok") else None
+        frame = frame_probe.get("value") if frame_probe.get("ok") else None
+        geometry_tag = dataset_binding.get("geometry") if isinstance(dataset_binding, Mapping) else None
+        geometry_probe = call_probe(_call(model, "geom", geometry_tag), "getSDim") \
+            if isinstance(geometry_tag, str) and geometry_tag else {"ok": False, "value": None, "error": None}
+        if isinstance(geometry_probe.get("error"), Mapping) \
+                and geometry_probe["error"].get("execution_state_unknown") is True:
+            raise ExecutionContractError("EXECUTION_STATE_UNKNOWN",
+                                         "initial geometry dimension read is unresolved",
+                                         stage="post_dispatch")
+        spatial_dimension = geometry_probe.get("value") if geometry_probe.get("ok") else None
+        valid = (
+            isinstance(dataset_binding, Mapping)
+            and dataset_binding.get("binding_complete") is True
+            and dataset_binding.get("dataset_type") == "Solution"
+            and dataset_type == "Solution"
+            and isinstance(dataset_binding.get("component"), str)
+            and bool(dataset_binding.get("component"))
+            and isinstance(dataset_binding.get("geometry"), str)
+            and bool(dataset_binding.get("geometry"))
+            and isinstance(solution, str) and bool(solution)
+            and frame in {"mesh", "material", "spatial", "geometry"}
+            and type(spatial_dimension) is int and 0 <= spatial_dimension <= 3
+        )
+        return {
+            "status": "VERIFIED" if valid else "UNVERIFIED",
+            "dataset": tag, "dataset_type": dataset_type,
+            "solution": solution,
+            "component": dataset_binding.get("component") if isinstance(dataset_binding, Mapping) else None,
+            "geometry": dataset_binding.get("geometry") if isinstance(dataset_binding, Mapping) else None,
+            "binding_complete": dataset_binding.get("binding_complete") is True
+                if isinstance(dataset_binding, Mapping) else False,
+            "frametype": frame if isinstance(frame, str) else None,
+            "spatial_dimension": spatial_dimension if type(spatial_dimension) is int else None,
+            "spatial_dimension_source": "GeometrySequence.getSDim()" if geometry_probe.get("ok") else None,
+            "frametype_source": "Solution dataset getString('frametype')" if frame_probe.get("ok") else None,
+            "frametype_error": None if frame_probe.get("ok") else frame_probe.get("error"),
+            "dataset_type_source": "dataset.getType()" if type_probe.get("ok") else None,
+        }
+
     if not isinstance(dataset_binding, Mapping) or dataset_binding.get("binding_complete") is not True:
         binding_errors = list(dataset_binding.get("read_errors") or []) if isinstance(dataset_binding, Mapping) else []
         binding_error = dataset_binding.get("error") if isinstance(dataset_binding, Mapping) else None
         if isinstance(binding_error, Mapping) and binding_error not in binding_errors:
             binding_errors.insert(0, dict(binding_error))
-        return {
+        failed_result = {
             "dataset": tag,
             "solution": dataset_binding.get("solution") if isinstance(dataset_binding, Mapping) else None,
             "binding_complete": False,
@@ -2440,6 +2496,10 @@ def dataset_solution_indices(worker: Any, model_tag: str, arguments: Mapping[str
             },
             "note": "dataset binding is incomplete; solution axes were not guessed from dataset.data or dataset.solution",
         }
+        if initial_stage_context:
+            failed_result["w21_initial_stage_dataset"] = initial_dataset_metadata(
+                dataset_binding.get("solution") if isinstance(dataset_binding, Mapping) else None)
+        return failed_result
     solution_tag = (
         dataset_binding.get("solution")
         if isinstance(dataset_binding, Mapping) and dataset_binding.get("solution")
@@ -2453,7 +2513,7 @@ def dataset_solution_indices(worker: Any, model_tag: str, arguments: Mapping[str
         solution_tag = all_sols[0]
 
     if not solution_tag or solution_tag not in all_sols:
-        return {
+        failed_result = {
             "dataset": tag,
             "solution": solution_tag,
             "binding_complete": False,
@@ -2464,6 +2524,9 @@ def dataset_solution_indices(worker: Any, model_tag: str, arguments: Mapping[str
             "solution_count": 0,
             "note": "no bound solution found for dataset",
         }
+        if initial_stage_context:
+            failed_result["w21_initial_stage_dataset"] = initial_dataset_metadata(solution_tag)
+        return failed_result
 
     sol_node = _call(sol_list, "get", solution_tag) if hasattr(sol_list, "get") else _call(model, "sol", solution_tag)
 
@@ -2576,7 +2639,7 @@ def dataset_solution_indices(worker: Any, model_tag: str, arguments: Mapping[str
             for n, v in zip(pnames, param_vals):
                 parameters[str(n)] = list(v) if isinstance(v, (list, tuple)) else v
 
-    return {
+    result = {
         "dataset": tag,
         "solution": solution_tag,
         "study": study_tag,
@@ -2620,6 +2683,58 @@ def dataset_solution_indices(worker: Any, model_tag: str, arguments: Mapping[str
         "read_errors": read_errors,
         "dataset_binding": dict(dataset_binding) if isinstance(dataset_binding, Mapping) else None,
     }
+    if initial_stage_context:
+        result["w21_initial_stage_dataset"] = initial_dataset_metadata(solution_tag)
+        selected_tuple = _w21_initial_stage_context.get("selected_tuple")
+        if isinstance(selected_tuple, Mapping):
+            geometry_tag = dataset_binding.get("geometry") if isinstance(dataset_binding, Mapping) else None
+            expected_solution = dataset_binding.get("solution") if isinstance(dataset_binding, Mapping) else None
+            pairs = typed_binding.get("solnum_pairs", []) if isinstance(typed_binding, Mapping) else []
+            exact_pair = [row for row in pairs if isinstance(row, Mapping)
+                          and row.get("outer") == selected_tuple.get("outer")
+                          and row.get("inner") == selected_tuple.get("inner")
+                          and row.get("solnum") == selected_tuple.get("solnum")]
+            association: dict[str, Any] = {
+                "status": "UNVERIFIED", "source": "SolutionInfo.getISol(outer,inner) + SolverSequence.getMesh(geometry,iMulti)",
+                "dataset": tag, "solution": expected_solution,
+                "selected_tuple": dict(selected_tuple), "geometry": geometry_tag,
+                "mesh_tag": None,
+            }
+            if (selected_tuple.get("dataset") == tag
+                    and selected_tuple.get("solution") == expected_solution
+                    and len(exact_pair) == 1 and isinstance(geometry_tag, str) and geometry_tag):
+                index_probe = call_probe(sol_info, "getISol", int(selected_tuple["outer"]),
+                                         int(selected_tuple["inner"]),
+                                         include_engine_failure_details=True)
+                index_error = index_probe.get("error")
+                if isinstance(index_error, Mapping) and index_error.get("execution_state_unknown") is True:
+                    raise ExecutionContractError("EXECUTION_STATE_UNKNOWN",
+                                                 "SolutionInfo.getISol outcome is unresolved",
+                                                 stage="post_dispatch")
+                raw_indices = index_probe.get("value") if index_probe.get("ok") else None
+                if (isinstance(raw_indices, (list, tuple)) and len(raw_indices) == 2
+                        and all(type(item) is int and item >= 0 for item in raw_indices)):
+                    mesh_probe = call_probe(sol_node, "getMesh", geometry_tag, raw_indices[0],
+                                            include_engine_failure_details=True)
+                    mesh_error = mesh_probe.get("error")
+                    if isinstance(mesh_error, Mapping) and mesh_error.get("execution_state_unknown") is True:
+                        raise ExecutionContractError("EXECUTION_STATE_UNKNOWN",
+                                                     "SolverSequence.getMesh outcome is unresolved",
+                                                     stage="post_dispatch")
+                    mesh_tag = mesh_probe.get("value") if mesh_probe.get("ok") else None
+                    if isinstance(mesh_tag, str) and mesh_tag:
+                        association.update({
+                            "status": "VERIFIED", "solution_object_index_zero_based": raw_indices[0],
+                            "solution_index_within_object_zero_based": raw_indices[1],
+                            "mesh_tag": mesh_tag, "index_basis": "zero_based as returned by COMSOL public API",
+                            "topology": "UNVERIFIED", "dof_equivalence": "UNVERIFIED",
+                        })
+                    else:
+                        association["error"] = mesh_error
+                else:
+                    association["error"] = index_error
+            result["w21_initial_stage_mesh_association"] = association
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -4262,6 +4377,7 @@ def result_evaluate(
     *,
     strict_metric_evidence: bool = False,
     strict_field_readback: bool = False,
+    _w21_initial_output_context: Any = None,
 ) -> dict[str, Any]:
     """Global, point, line, surface, and volume evaluation with complex modes and statistics."""
     spec = require_mapping(arguments.get("spec", {}), "spec")
@@ -4386,6 +4502,45 @@ def result_evaluate(
         str(dataset_tag),
         requested_solution=requested_solution,
     )
+    initial_dataset_evidence: dict[str, Any] | None = None
+    if (isinstance(_w21_initial_output_context, Mapping)
+            and _w21_initial_output_context.get("purpose") == "initial_stage_output"):
+        from ._g3_common import call_probe
+        type_probe = call_probe(dset_node, "getType", include_engine_failure_details=True)
+        frame_probe = call_probe(dset_node, "getString", "frametype",
+                                 include_engine_failure_details=True)
+        if any(isinstance(probe.get("error"), Mapping)
+               and probe["error"].get("execution_state_unknown") is True
+               for probe in (type_probe, frame_probe)):
+            raise ExecutionContractError("EXECUTION_STATE_UNKNOWN",
+                                         "initial output Solution dataset frame read is unresolved",
+                                         stage="post_dispatch")
+        actual_type = type_probe.get("value") if type_probe.get("ok") else None
+        actual_frame = frame_probe.get("value") if frame_probe.get("ok") else None
+        expected_identity = _w21_initial_output_context.get("dataset_identity")
+        expected_identity = expected_identity if isinstance(expected_identity, Mapping) else {}
+        actual_component = dataset_binding.get("component") if isinstance(dataset_binding, Mapping) else None
+        actual_geometry = dataset_binding.get("geometry") if isinstance(dataset_binding, Mapping) else None
+        valid_frame = (
+            actual_type == "Solution"
+            and isinstance(dataset_binding, Mapping)
+            and dataset_binding.get("binding_complete") is True
+            and actual_component == expected_identity.get("component")
+            and actual_geometry == expected_identity.get("geometry")
+            and dataset_tag == expected_identity.get("dataset")
+            and actual_frame in {"mesh", "material", "spatial", "geometry"}
+        )
+        initial_dataset_evidence = {
+            "status": "VERIFIED" if valid_frame else "UNVERIFIED",
+            "dataset": dataset_tag, "dataset_type": actual_type,
+            "solution": dataset_binding.get("solution") if isinstance(dataset_binding, Mapping) else None,
+            "component": actual_component, "geometry": actual_geometry,
+            "frametype": actual_frame if isinstance(actual_frame, str) else None,
+            "source": "Solution dataset getType() + getString('frametype') + native dataset binding",
+            "binding_complete": dataset_binding.get("binding_complete") is True
+                if isinstance(dataset_binding, Mapping) else False,
+            "expected_identity": dict(expected_identity),
+        }
     if (
         isinstance(dataset_binding, Mapping)
         and isinstance(dataset_binding.get("error"), Mapping)
@@ -6009,7 +6164,17 @@ def result_evaluate(
                 "values": strict_native_coordinates,
                 "shape": list(strict_shape_witness["shape"]),
                 "source": "PersistentComsolWorker.getStrictFieldReadback -> NumericalFeature.getCoordinates()",
-                "coordinate_frame": "UNVERIFIED",
+                "coordinate_frame": (initial_dataset_evidence.get("frametype")
+                                      if isinstance(initial_dataset_evidence, Mapping)
+                                      and initial_dataset_evidence.get("status") == "VERIFIED"
+                                      else "UNVERIFIED"),
+                "coordinate_frame_status": ("VERIFIED" if isinstance(initial_dataset_evidence, Mapping)
+                                             and initial_dataset_evidence.get("status") == "VERIFIED"
+                                             else "UNVERIFIED"),
+                "coordinate_frame_source": (initial_dataset_evidence.get("source")
+                                             if isinstance(initial_dataset_evidence, Mapping) else None),
+                "dataset_identity": dict(initial_dataset_evidence)
+                    if isinstance(initial_dataset_evidence, Mapping) else None,
             },
             "field_array": field_payload,
             "worker_payload_limits": dict(strict_worker_payload_info),
@@ -6019,6 +6184,8 @@ def result_evaluate(
                 "engine_internal_memory": "UNMEASURED",
             },
         }
+        if initial_dataset_evidence is not None:
+            field_evidence["initial_stage_dataset_identity"] = dict(initial_dataset_evidence)
         response["strict_field_readback"] = field_evidence
         response["values"] = None
         response["field_array"] = None

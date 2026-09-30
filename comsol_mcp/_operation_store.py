@@ -61,7 +61,7 @@ STAGE_EXECUTION_STATUSES = frozenset({
     "SOLVE_SUCCEEDED", "FAILED", "UNKNOWN", "CANCELLED",
 })
 STAGE_ACCEPTANCE_STATUSES = frozenset({
-    "NOT_EVALUATED", "UNVERIFIED", "PARTIAL", "ACCEPTED", "REJECTED", "UNKNOWN",
+    "NOT_EVALUATED", "UNVERIFIED", "PARTIAL", "ACCEPTED", "INITIAL_OUTPUT_ACCEPTED", "REJECTED", "UNKNOWN",
 })
 
 
@@ -3021,7 +3021,7 @@ class OperationStore:
                 current = self._stage_attempt_from_row(row, project_id=project_id, model_ref=model_ref)
                 if current["version"] != expected_version:
                     raise StagePlanStoreConflict("STAGE_ATTEMPT_CAS_CONFLICT", "stage attempt changed before the requested update")
-                if status == "ACCEPTED" or acceptance_status == "ACCEPTED":
+                if (status == "ACCEPTED" or acceptance_status in {"ACCEPTED", "INITIAL_OUTPUT_ACCEPTED"}):
                     raise StagePlanStoreConflict("STAGE_ACCEPTANCE_UNVERIFIED", "generic attempt CAS cannot certify scientific acceptance")
                 if status not in STAGE_ATTEMPT_TRANSITIONS.get(current["status"], frozenset()):
                     raise StagePlanStoreConflict("STAGE_ATTEMPT_TRANSITION_INVALID", "stage attempt status transition is not permitted")
@@ -3067,6 +3067,178 @@ class OperationStore:
                 )
                 if updated_cursor.rowcount != 1:
                     raise StagePlanStoreConflict("STAGE_ATTEMPT_CAS_CONFLICT", "stage attempt changed during the requested update")
+                self.db.execute("COMMIT")
+                return updated
+            except Exception:
+                if self.db.in_transaction:
+                    self.db.execute("ROLLBACK")
+                raise
+
+    def finalize_initial_stage_output_acceptance(
+        self, project_id: str, model_ref: dict[str, Any], attempt_id: str, *,
+        expected_version: int, native_evidence: dict[str, Any], result: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Commit only the bounded initial-output acceptance through its dedicated path."""
+        from ._stage_contract import canonical_json, sha256_json
+        from ._w21_stage_backend import (
+            is_registered_initial_state_stage, stage_attempt_binding,
+            validate_initial_output_acceptance,
+        )
+
+        if (type(expected_version) is not int or expected_version < 1
+                or not isinstance(native_evidence, dict) or not isinstance(result, dict)):
+            raise StagePlanStoreConflict("INVALID_REQUEST", "initial-output finalizer fields are malformed")
+        digest = self._stage_scope_digest(project_id, model_ref)
+        with self.lock:
+            self.db.execute("BEGIN IMMEDIATE")
+            try:
+                row = self.db.execute(
+                    "SELECT * FROM stage_attempts WHERE scope_digest=? AND attempt_id=?",
+                    (digest, attempt_id),
+                ).fetchone()
+                if row is None:
+                    raise StagePlanStoreConflict("STAGE_ATTEMPT_NOT_FOUND", "stage attempt is not registered in this scope")
+                current = self._stage_attempt_from_row(row, project_id=project_id, model_ref=model_ref)
+                if current.get("version") != expected_version:
+                    raise StagePlanStoreConflict("STAGE_ATTEMPT_CAS_CONFLICT", "initial-output attempt changed before acceptance")
+                if (current.get("status") != "RUNNING" or current.get("engine_dispatched") is not True
+                        or current.get("execution_status") != "RUNNING"):
+                    raise StagePlanStoreConflict("STAGE_ATTEMPT_STATE_UNKNOWN", "initial-output acceptance requires the exact dispatched running attempt")
+                resolved = self._load_validated_stage_scope_locked(project_id, model_ref)
+                plan = resolved[0].get(current.get("plan_id"))
+                index = resolved[1].get(current.get("stage_id"))
+                stage = None
+                if plan is not None and index is not None:
+                    stage_rows = [item for item in plan.get("definition", {}).get("stages", [])
+                                  if isinstance(item, dict) and item.get("stage_id") == current.get("stage_id")]
+                    stage = stage_rows[0] if len(stage_rows) == 1 else None
+                if (plan is None or index is None or stage is None
+                        or not is_registered_initial_state_stage(plan, stage)):
+                    raise StagePlanStoreConflict("STAGE_ACCEPTANCE_UNVERIFIED", "stored plan is not the registered first initial-state stage")
+
+                binding = stage_attempt_binding(current)
+                saved = native_evidence.get("saved_artifact")
+                observed_hash = native_evidence.get("saved_artifact_observed_sha256")
+                try:
+                    artifact_path = Path(saved.get("path")) if isinstance(saved, dict) else None
+                    hasher = hashlib.sha256()
+                    size = 0
+                    if artifact_path is not None:
+                        with artifact_path.open("rb") as stream:
+                            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                                hasher.update(chunk)
+                                size += len(chunk)
+                    disk_hash = hasher.hexdigest()
+                except (OSError, TypeError, ValueError) as exc:
+                    raise StagePlanStoreConflict("STAGE_ACCEPTANCE_UNVERIFIED", "saved initial artifact bytes are unavailable") from exc
+                if (artifact_path is None or not artifact_path.is_file()
+                        or not isinstance(saved, dict) or saved.get("sha256") != disk_hash
+                        or observed_hash != disk_hash or saved.get("size") != size):
+                    raise StagePlanStoreConflict("STAGE_ACCEPTANCE_UNVERIFIED", "saved initial artifact bytes/hash/size differ")
+
+                preflight = native_evidence.get("initial_stage_preflight")
+                preflight_id = preflight.get("artifact_id") if isinstance(preflight, dict) else None
+                preflight_record = preflight.get("record") if isinstance(preflight, dict) else None
+                if (not isinstance(preflight_id, str) or not isinstance(preflight_record, dict)
+                        or self.get_metadata("artifacts", preflight_id) != preflight_record):
+                    raise StagePlanStoreConflict("STAGE_ACCEPTANCE_UNVERIFIED", "initial Study preflight is not the exact persisted artifact")
+
+                output = native_evidence.get("native_output_readback")
+                output_refs = output.get("evidence_refs") if isinstance(output, dict) else None
+                if not isinstance(output_refs, list) or not output_refs:
+                    raise StagePlanStoreConflict("STAGE_ACCEPTANCE_UNVERIFIED", "mapped initial field artifacts are absent")
+                for ref in output_refs:
+                    if not isinstance(ref, dict) or not isinstance(ref.get("artifact_id"), str):
+                        raise StagePlanStoreConflict("STAGE_ACCEPTANCE_UNVERIFIED", "mapped field artifact reference is malformed")
+                    artifact_record = self.get_metadata("artifacts", ref["artifact_id"])
+                    if not isinstance(artifact_record, dict) or artifact_record.get("sha256") != ref.get("sha256"):
+                        raise StagePlanStoreConflict("STAGE_ACCEPTANCE_UNVERIFIED", "mapped field artifact is not the exact persisted record")
+                    artifact_file = ref.get("file_path")
+                    if not isinstance(artifact_file, str):
+                        raise StagePlanStoreConflict("STAGE_ACCEPTANCE_UNVERIFIED", "mapped field artifact has no saved file")
+                    field_hasher = hashlib.sha256()
+                    field_size = 0
+                    try:
+                        with Path(artifact_file).open("rb") as stream:
+                            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                                field_hasher.update(chunk)
+                                field_size += len(chunk)
+                    except OSError as exc:
+                        raise StagePlanStoreConflict("STAGE_ACCEPTANCE_UNVERIFIED", "mapped field artifact bytes are unavailable") from exc
+                    if field_hasher.hexdigest() != ref.get("sha256") or field_size != ref.get("byte_size"):
+                        raise StagePlanStoreConflict("STAGE_ACCEPTANCE_UNVERIFIED", "mapped field artifact bytes/hash/size differ")
+
+                mesh = native_evidence.get("mesh_snapshot_readback")
+                mesh_ref = mesh.get("artifact_ref") if isinstance(mesh, dict) else None
+                mesh_record = self.get_metadata("artifacts", mesh_ref.get("artifact_id")) if isinstance(mesh_ref, dict) else None
+                mesh_payload = dict(mesh_record) if isinstance(mesh_record, dict) else {}
+                mesh_sha = mesh_payload.pop("sha256", None)
+                if (not isinstance(mesh_ref, dict) or not isinstance(mesh_record, dict)
+                        or native_evidence.get("mesh_snapshot_artifact_record") != mesh_record
+                        or mesh_record.get("sha256") != mesh_ref.get("sha256")
+                        or mesh_sha != sha256_json(mesh_payload)
+                        or mesh_sha != mesh_ref.get("sha256")):
+                    raise StagePlanStoreConflict("STAGE_ACCEPTANCE_UNVERIFIED", "current mesh snapshot is not durably recorded")
+
+                native_output = native_evidence.get("native_output_readback")
+                current_output_rows = [item for item in current.get("evidence", [])
+                                       if isinstance(item, dict) and item.get("kind") == "stage-output-readback"]
+                current_artifact_rows = [item for item in current.get("evidence", [])
+                                          if isinstance(item, dict) and item.get("kind") == "saved-stage-artifact"]
+                if (len(current_output_rows) != 1 or current_output_rows[0].get("status") != "VERIFIED"
+                        or current_output_rows[0].get("revision_chain") != native_output.get("revision_chain")
+                        or current_output_rows[0].get("output_tuple") != native_output.get("output_tuple")
+                        or len(current_artifact_rows) != 1
+                        or current_artifact_rows[0].get("path") != saved.get("path")
+                        or current_artifact_rows[0].get("sha256") != disk_hash
+                        or current_artifact_rows[0].get("size") != size):
+                    raise StagePlanStoreConflict("STAGE_ACCEPTANCE_UNVERIFIED", "durable stage-output/artifact rows differ from the accepted evidence")
+
+                actual_dispatches = [item for item in current.get("evidence", [])
+                                     if isinstance(item, dict) and item.get("kind") == "worker-dispatch"]
+                if native_evidence.get("solve_save_dispatches") != actual_dispatches:
+                    raise StagePlanStoreConflict("STAGE_ACCEPTANCE_UNVERIFIED", "solve/save dispatch rows differ from the attempt ledger")
+                job = self.operation_job(current.get("operation_id"))
+                job_id = job.get("job_id") if isinstance(job, dict) else None
+                durable_events = self.events(job_id, limit=1000) if isinstance(job_id, str) else []
+                actual_worker_rows = [item for item in durable_events if item.get("event") == "worker_request"]
+                if native_evidence.get("worker_event_rows") != actual_worker_rows:
+                    raise StagePlanStoreConflict("STAGE_ACCEPTANCE_UNVERIFIED", "Worker evidence differs from the durable job event ledger")
+
+                output = native_evidence.get("native_output_readback")
+                solve_revision = output.get("solve_revision") if isinstance(output, dict) else None
+                output_revision = output.get("output_revision") if isinstance(output, dict) else None
+                valid, missing = validate_initial_output_acceptance(
+                    native_evidence, binding=binding, stage=stage,
+                    stage_run_operation_id=current["operation_id"],
+                    solve_revision=solve_revision, output_revision=output_revision,
+                    observed_artifact_sha256=disk_hash,
+                )
+                if not valid:
+                    raise StagePlanStoreConflict("STAGE_ACCEPTANCE_UNVERIFIED", "initial output evidence is incomplete: " + "; ".join(missing[:8]))
+
+                evidence_rows = [*current["evidence"], {
+                    "kind": "initial-output-native-evidence",
+                    "status": "INITIAL_OUTPUT_ACCEPTED",
+                    "native_evidence": native_evidence,
+                }]
+                updated = dict(current)
+                updated.update({
+                    "status": "ACCEPTED", "version": expected_version + 1,
+                    "engine_dispatched": True, "execution_status": "SOLVE_SUCCEEDED",
+                    "acceptance_status": "INITIAL_OUTPUT_ACCEPTED",
+                    "evidence": evidence_rows, "result": result,
+                })
+                updated.pop("sha256", None)
+                updated["sha256"] = sha256_json(updated)
+                self._validate_stage_attempt_record(updated, project_id=project_id, model_ref=model_ref)
+                cursor = self.db.execute(
+                    "UPDATE stage_attempts SET status=?,version=?,record_json=?,updated_at=? WHERE attempt_id=? AND version=?",
+                    ("ACCEPTED", expected_version + 1, canonical_json(updated),
+                     time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), attempt_id, expected_version),
+                )
+                if cursor.rowcount != 1:
+                    raise StagePlanStoreConflict("STAGE_ATTEMPT_CAS_CONFLICT", "initial-output attempt changed during acceptance")
                 self.db.execute("COMMIT")
                 return updated
             except Exception:

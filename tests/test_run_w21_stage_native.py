@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 from contextlib import asynccontextmanager
 from concurrent.futures import ThreadPoolExecutor
+import copy
 import hashlib
 import importlib.util
 import json
@@ -114,6 +115,25 @@ def _plan(tmp_path: Path, *, worker_epoch: int = 7,
         plan["idempotency_keys"].update({
             name: f"idem-{name}" for name in ("study_solve", "solution_indices", "result_evaluate")
         })
+    elif mode == runner.INITIAL_STAGE_MODE:
+        plan["initial_stage_profile"] = runner.INITIAL_STAGE_PROFILE
+        plan["initial_stage_definition"] = runner._initial_stage_definition()
+        plan["initial_stage_definition_sha256"] = runner.sha256_value(plan["initial_stage_definition"])
+        plan["initial_stage_operations"] = runner._initial_stage_operations()
+        plan["stage_output_windows_path_budget"] = runner._stage_output_windows_path_budget(
+            Path(plan["project_workspace"]),
+        )
+        plan["acceptance_scope"] = runner.INITIAL_STAGE_ACCEPTANCE_SCOPE
+        plan["source_manifest_sha256"] = runner.sha256_value(plan["source_manifest"])
+        plan["logical_operation_schemas"].update({
+            name: {"type": "object"} for name in runner.INITIAL_STAGE_LOGICAL_OPERATIONS
+        })
+        plan["request_ids"].update({
+            name: f"req-{name}" for name in ("stage_define", "stage_run", "stage_run_wait")
+        })
+        plan["idempotency_keys"].update({
+            name: f"idem-{name}" for name in ("stage_define", "stage_run")
+        })
     plan["freeze_sha256"] = runner.sha256_value(plan)
     return plan
 
@@ -133,6 +153,13 @@ def _state(tmp_path: Path, *, schema: str = runner.SCHEMA) -> runner._RunState:
         "solution_tuple_reads_status": "NOT_DISPATCHED",
         "field_reads": 0, "field_reads_possible": 0,
         "field_reads_status": "NOT_DISPATCHED",
+        "stage_define_dispatch": 0, "stage_define_dispatch_possible": 0,
+        "stage_define_dispatch_status": "NOT_DISPATCHED",
+        "stage_run_dispatch": 0, "stage_run_dispatch_possible": 0,
+        "stage_run_dispatch_status": "NOT_DISPATCHED",
+        "stage_run_wait_calls": 0, "stage_run_wait_calls_possible": 0,
+        "underlying_solve_dispatch": 0, "underlying_solve_dispatch_possible": 0,
+        "underlying_solve_dispatch_status": "NOT_DISPATCHED",
     }
     path.write_text(json.dumps(value), encoding="utf-8")
     return runner._RunState(path, value)
@@ -179,6 +206,8 @@ class _FakeStdioSession:
                  session_start_unknown_job_id: str | None = None,
                  job_status_fault: str | None = None,
                  solve_fault: str | None = None,
+                 stage_fault: str | None = None,
+                 initial_stage_fixture: dict[str, Any] | None = None,
                  probe_payload_override: Any | None = None,
                  connect_identity: dict[str, Any] | None = None,
                  model_create_unknown_code_only: bool = False):
@@ -198,6 +227,8 @@ class _FakeStdioSession:
         self.session_start_unknown_job_id = session_start_unknown_job_id
         self.job_status_fault = job_status_fault
         self.solve_fault = solve_fault
+        self.stage_fault = stage_fault
+        self.initial_stage_fixture = initial_stage_fixture
         self.probe_payload_override = probe_payload_override
         self.model_create_unknown_code_only = model_create_unknown_code_only
         self.connect_identity = {
@@ -216,6 +247,12 @@ class _FakeStdioSession:
             "model_tag": "w21model", "session_id": self.session_id,
             "server_instance_id": self.server_id, "generation": 1,
         }
+        if initial_stage_fixture is not None:
+            self.project_id = initial_stage_fixture["project_id"]
+            self.model_ref = dict(initial_stage_fixture["model_ref"])
+            self.session_id = initial_stage_fixture["execution"]["session_id"]
+            self.server_id = self.model_ref["server_instance_id"]
+            self.worker_epoch = self.model_ref["generation"]
 
     async def list_tools(self):
         return SimpleNamespace(tools=[
@@ -274,7 +311,7 @@ class _FakeStdioSession:
         )
         worker_result = {
             "executed": True,
-            "model_tag": "w21model",
+            "model_tag": self.model_ref["model_tag"],
             "source_sha256": description["source_sha256"],
             "entrypoint": description["entrypoint"],
             "readback": payload,
@@ -282,8 +319,8 @@ class _FakeStdioSession:
         produced = execution_result(
             description=description,
             worker_reply={"ok": True, "result": worker_result},
-            before={"model_tag": "w21model", "revision": params["execution"]["expected_revision"]},
-            after={"model_tag": "w21model", "revision": params["execution"]["expected_revision"]},
+            before={"model_tag": self.model_ref["model_tag"], "revision": params["execution"]["expected_revision"]},
+            after={"model_tag": self.model_ref["model_tag"], "revision": params["execution"]["expected_revision"]},
         )
         # ExecutionService preserves this non-business success marker inside
         # the public ActionResult data mapping.
@@ -312,7 +349,10 @@ class _FakeStdioSession:
             assert ".." not in Path(inner["source_artifact"]).parts
             action = "fixture.execute" if inner.get("entrypoint") == "W21Fixture" else "probe.execute"
         elif operation == "job.wait":
-            action = "project.create.wait"
+            action = ("stage_run.wait" if execution.get("request_id") == self.plan.get("request_ids", {}).get("stage_run_wait")
+                      else "project.create.wait")
+        elif operation in runner.INITIAL_STAGE_LOGICAL_OPERATIONS:
+            action = operation
         elif name == "run_study":
             action = "study.solve"
         else:
@@ -361,6 +401,14 @@ class _FakeStdioSession:
                 return {"success": False, "execution_state_unknown": True,
                         "data": {"job_id": "job-test", "status": "UNKNOWN",
                                  "project_id": self.project_id}}
+            if action == "experiment.stage_run":
+                return {"success": False, "execution_state_unknown": True,
+                        "data": {"job_id": "job-stage-run", "status": "UNKNOWN"},
+                        "execution": {
+                            "request_id": self.plan["request_ids"]["stage_run"],
+                            "idempotency_key": self.plan["idempotency_keys"]["stage_run"],
+                            "operation_id": "op-initial-stage-run", "job_id": "job-stage-run",
+                        }}
             if action == "session.start":
                 data = {"status": "UNKNOWN"}
                 if self.session_start_unknown_job_id is not None:
@@ -371,7 +419,7 @@ class _FakeStdioSession:
                     "data": {"status": "UNKNOWN"}}
 
         if action == "project.create":
-            Path(self.plan["project_workspace"]).mkdir(parents=True)
+            Path(self.plan["project_workspace"]).mkdir(parents=True, exist_ok=True)
             project = {"project_id": self.project_id,
                        "workspace": str(Path(self.plan["project_workspace"]).resolve()),
                        "revision": 1}
@@ -405,6 +453,65 @@ class _FakeStdioSession:
                     "execution": {"request_id": request_id,
                                   "idempotency_key": idempotency_key,
                                   "operation_id": "op-project-create"}}
+        if action == "experiment.stage_define":
+            if self.initial_stage_fixture is not None:
+                actual = self.initial_stage_fixture["public_dispatches"][0]
+                observed = {
+                    "operation": params["operation_id"],
+                    "arguments": params["arguments"],
+                    "execution": params["execution"],
+                }
+                if observed != actual:
+                    raise AssertionError(
+                        "runner stage_define request differs from the producer fixture request body"
+                    )
+                return self.initial_stage_fixture["defined"]
+            execution = self._ticket_reply(
+                params, revision=params["execution"]["expected_revision"],
+                operation_id="op-stage-define", job_id="job-stage-define",
+            )
+            definition = params["arguments"]["definition"]
+            return {"success": True, "execution": execution, "data": {
+                "plan_id": definition["plan_id"], "project_id": self.project_id,
+                "model_ref": dict(self.model_ref),
+                "declaration_revision": params["execution"]["expected_revision"],
+                "definition_sha256": runner.sha256_value(definition),
+                "sha256": "c" * 64, "stage_ids": [runner.INITIAL_STAGE_ID],
+                "registration": "CREATED", "declaration_status": "DECLARED_UNVERIFIED",
+                "worker_rpc_performed": False, "solve_started": False,
+            }}
+        if action == "experiment.stage_run":
+            if self.stage_fault in {"pending", "wait_expired"} and self.initial_stage_fixture is None:
+                execution = self._ticket_reply(
+                    params, revision=params["execution"]["expected_revision"],
+                    operation_id="op-initial-stage-run", job_id="job-stage-run",
+                )
+                return {"success": True, "execution": execution,
+                        "data": {"job_id": execution["job_id"], "status": "RUNNING"}}
+            terminal = self._initial_stage_response(params)
+            if self.stage_fault in {"pending", "wait_expired"}:
+                execution = dict(terminal["execution"])
+                execution["revision"] = params["execution"]["expected_revision"]
+                return {"success": True, "execution": execution,
+                        "data": {"job_id": execution["job_id"], "status": "RUNNING"}}
+            return terminal
+        if action == "stage_run.wait":
+            if self.stage_fault == "wait_expired":
+                return {"success": True, "data": {
+                    "job_id": inner.get("job_id"), "status": "RUNNING",
+                    "wait_expired": True,
+                }}
+            terminal = self.pending_terminal
+            execution = terminal["execution"]
+            operation = {
+                "operation": "experiment.stage_run", "operation_id": execution["operation_id"],
+                "status": "SUCCEEDED", "request_id": execution["request_id"],
+                "idempotency_key": execution["idempotency_key"],
+            }
+            return {"success": True, "data": {
+                "job_id": execution["job_id"], "operation_id": execution["operation_id"],
+                "status": "SUCCEEDED", "operation": operation, "result": terminal,
+            }}
         if action == "project.create.wait":
             original_request = self.plan["request_ids"]["project_create"]
             original_key = self.plan["idempotency_keys"]["project_create"]
@@ -457,12 +564,12 @@ class _FakeStdioSession:
                 "project_id": "foreign-project" if self.wrong_model_field == "project" else self.project_id,
                 "session_id": self.session_id, "model_ref": ref, "revision": 0,
             }
-            return {"success": True, "data": {"model_tag": "w21model"}, "execution": execution}
+            return {"success": True, "data": {"model_tag": self.model_ref["model_tag"]}, "execution": execution}
         if action in {"model.inspect", "model.inspect.after_fixture"}:
             execution = self._execution_reply(params)
             if self.inspect_drift:
                 execution["revision"] += 1
-            return {"success": True, "execution": execution, "data": {"model_tag": "w21model"}}
+            return {"success": True, "execution": execution, "data": {"model_tag": self.model_ref["model_tag"]}}
         if action in {"fixture.register", "probe.register"}:
             path = Path(self.plan["project_workspace"]) / inner["path"]
             return {"success": True, "data": {"sha256": runner.sha256_file(path)}}
@@ -476,7 +583,7 @@ class _FakeStdioSession:
                 payload = json.dumps({
                     "probe": "W21FieldIdentityProbe", "status": "STRUCTURE_CAPTURED_ONLY",
                     "native_admission": "UNVERIFIED",
-                    "identity": {"model_tag": "w21model"},
+                    "identity": {"model_tag": self.model_ref["model_tag"]},
                 }, ensure_ascii=False, separators=(",", ":"))
             response = self._java_execution_response(params, payload)
             if self.probe_revision_drift:
@@ -665,6 +772,34 @@ class _FakeStdioSession:
             return {"success": True, "data": data, "execution": execution}
         if action == "job.status":
             query = self.state.value["recovery"]["read_only_query"]
+            if query.get("action") in {"stage_run", "stage_run_wait"}:
+                original_request = self.plan["request_ids"]["stage_run"]
+                original_key = self.plan["idempotency_keys"]["stage_run"]
+                job_id, project_id = query.get("job_id"), self.project_id
+                operation_name = "experiment.stage_run"
+                if self.job_status_fault == "wrong_request":
+                    original_request = "foreign-request"
+                elif self.job_status_fault == "wrong_idempotency":
+                    original_key = "foreign-idempotency"
+                elif self.job_status_fault == "wrong_project":
+                    project_id = "foreign-project"
+                elif self.job_status_fault == "wrong_operation":
+                    operation_name = "experiment.stage_define"
+                operation_record = {
+                    "operation": operation_name,
+                    "operation_id": "op-initial-stage-run",
+                    "request_id": original_request,
+                    "idempotency_key": original_key,
+                    "metadata": {
+                        "operation": operation_name,
+                        "arguments": {"stage_id": runner.INITIAL_STAGE_ID},
+                        "execution": {"project_id": project_id},
+                    },
+                }
+                return {"success": True, "data": {
+                    "job_id": job_id, "status": "RUNNING",
+                    "operation": operation_record,
+                }}
             if query.get("action") == "project.create.wait":
                 original_request = self.plan["request_ids"]["project_create"]
                 original_key = self.plan["idempotency_keys"]["project_create"]
@@ -730,6 +865,25 @@ class _FakeStdioSession:
                 return {"success": True, "data": {
                     "jobs": jobs, "total": len(jobs), "has_more": self.job_list_has_more,
                 }}
+            elif original_id == self.plan["request_ids"].get("stage_run"):
+                job = {
+                    "job_id": "job-stage-run", "status": "RUNNING",
+                    "operation": {
+                        "operation": "experiment.stage_run",
+                        "operation_id": "op-initial-stage-run",
+                        "request_id": original_id,
+                        "idempotency_key": self.plan["idempotency_keys"]["stage_run"],
+                        "metadata": {
+                            "operation": "experiment.stage_run",
+                            "arguments": {"stage_id": runner.INITIAL_STAGE_ID},
+                            "execution": {"project_id": self.project_id},
+                        },
+                    },
+                }
+                return {"success": True, "data": {
+                    "jobs": [job], "total": 1, "has_more": False,
+                    "offset": 0, "limit": 1000, "next_cursor": None,
+                }}
             else:
                 job = {"job_id": "job-test", "status": "RUNNING", "request_id": original_id,
                        "idempotency_key": self.plan["idempotency_keys"]["fixture_execute"],
@@ -744,6 +898,60 @@ class _FakeStdioSession:
                 "stop_evidence": {"owned_process": True}}}
         raise AssertionError(f"unhandled fake public operation: {action or name}; params={params}")
 
+    def _initial_stage_response(self, params: dict) -> dict:
+        fixture = self.initial_stage_fixture
+        if fixture is None:
+            raise AssertionError("a successful initial-stage test requires the producer-generated fixture")
+        actual = fixture["public_dispatches"][1]
+        observed = {
+            "operation": params["operation_id"],
+            "arguments": params["arguments"],
+            "execution": params["execution"],
+        }
+        if observed != actual:
+            raise AssertionError(
+                "runner stage_run request differs from the producer fixture request body"
+            )
+        terminal = fixture["result"]
+        if not isinstance(terminal, dict) or terminal.get("success") is not True:
+            raise AssertionError("producer fixture did not return a successful public stage_run response")
+        if self.stage_fault in {None, "pending", "wait_expired"}:
+            self.pending_terminal = terminal
+            return terminal
+
+        # These are explicit negative cases: corrupt one response field after
+        # the real producer has created its internally consistent attempt. The
+        # positive path above always returns the producer response unchanged.
+        terminal = copy.deepcopy(terminal)
+        self.pending_terminal = terminal
+        if self.stage_fault == "bare_success":
+            terminal["data"].pop("initial_output_acceptance")
+        elif self.stage_fault == "attempt_mismatch":
+            terminal["data"]["initial_output_acceptance"]["attempt_id"] = (
+                "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+            )
+        elif self.stage_fault == "native_binding_mismatch":
+            terminal["data"]["initial_output_acceptance"]["native_evidence"]\
+                ["stage_attempt_binding"]["project_id"] = "foreign-project"
+        elif self.stage_fault == "artifact_hash_mismatch":
+            terminal["data"]["saved_artifact"]["sha256"] = "0" * 64
+        elif self.stage_fault in {"worker_unknown", "worker_unresponsive", "worker_reply_mismatch"}:
+            evidence = terminal["data"]["initial_output_acceptance"]["native_evidence"]
+            solve = next(row for row in evidence["solve_save_dispatches"]
+                         if row["operation"] == "run_study")
+            worker_id = solve["worker_request_id"]
+            observed = next(row for row in evidence["worker_event_rows"]
+                            if row.get("metadata", {}).get("request_id") == worker_id
+                            and row.get("metadata", {}).get("phase") == "observed")
+            metadata = observed["metadata"]
+            if self.stage_fault in {"worker_unknown", "worker_unresponsive"}:
+                metadata["phase"] = "unknown" if self.stage_fault == "worker_unknown" else "unresponsive"
+                metadata["status"] = "UNKNOWN"
+            else:
+                metadata["reply"]["request_id"] = "wrk-ffffffff-ffff-4fff-8fff-ffffffffffff"
+        else:
+            raise AssertionError(f"unsupported initial-stage fixture fault: {self.stage_fault}")
+        return terminal
 
 def _patch_isolation(monkeypatch):
     monkeypatch.setattr(runner, "_write_isolation_receipt", lambda *_args: None)
@@ -761,6 +969,613 @@ def _run_solve_readback(tmp_path, monkeypatch, *, solve_fault=None, unknown_on=N
         runner._MCPCalls(fake), plan, state, clock=lambda: 100.0, preflight=lambda: [],
     ))
     return plan, state, fake, report
+
+
+def _prepare_initial_stage(tmp_path, monkeypatch, *, stage_fault=None, unknown_on=None):
+    _patch_isolation(monkeypatch)
+    plan = _plan(tmp_path, mode=runner.INITIAL_STAGE_MODE)
+    fixture = None
+    if unknown_on is None:
+        from tests.w21_initial_stage_fixture import build_initial_stage_fixture
+
+        producer_root = tmp_path / "producer"
+        producer_root.mkdir()
+        define_request_id = "stage-request-1"
+        define_idempotency_key = "stage-key-1"
+        run_request_id = "real-initial-stage-request"
+        run_idempotency_key = run_request_id
+        fixture = build_initial_stage_fixture(
+            producer_root, runner_profile=True, expected_revision=2,
+            stage_define_request_id=define_request_id,
+            stage_define_idempotency_key=define_idempotency_key,
+            stage_run_request_id=run_request_id,
+            stage_run_idempotency_key=run_idempotency_key,
+            stage_define_execution_options={"rpc_timeout_s": runner.RPC_WAIT_S},
+            stage_run_execution_options={
+                "queue_timeout_s": 30, "execution_timeout_s": 240,
+                "rpc_timeout_s": runner.RPC_WAIT_S,
+            },
+        )
+        if fixture.get("defined", {}).get("success") is not True:
+            raise AssertionError(f"initial-stage producer fixture definition failed: {fixture.get('defined')}")
+        if fixture.get("result", {}).get("success") is not True:
+            raise AssertionError(f"initial-stage producer fixture execution failed: {fixture.get('result')}")
+        if fixture.get("definition") != plan["initial_stage_definition"]:
+            raise AssertionError("producer fixture definition differs from the runner freeze")
+        if len(fixture.get("public_dispatches", [])) != 2:
+            raise AssertionError("producer fixture did not record both public initial-stage dispatches")
+        if (fixture.get("stage_define_execution", {}).get("request_id") != define_request_id
+                or fixture.get("stage_run_execution", {}).get("request_id") != run_request_id):
+            raise AssertionError("producer fixture did not retain the frozen stage operation request IDs")
+        plan["project_workspace"] = str(
+            fixture["daemon"].project_authority.get_project(fixture["project_id"])["workspace"]
+        )
+        plan["stage_output_windows_path_budget"] = runner._stage_output_windows_path_budget(
+            Path(plan["project_workspace"]),
+        )
+        plan["request_ids"].update({
+            "stage_define": define_request_id,
+            "stage_run": run_request_id,
+        })
+        plan["idempotency_keys"].update({
+            "stage_define": define_idempotency_key,
+            "stage_run": run_idempotency_key,
+        })
+        plan["_worker_epoch"] = fixture["model_ref"]["generation"]
+        plan.pop("freeze_sha256")
+        plan["freeze_sha256"] = runner.sha256_value(plan)
+    state = _state(tmp_path, schema=runner.INITIAL_STAGE_SCHEMA)
+    state.value["run_id"] = plan["run_id"]
+    state.value["freeze_sha256"] = plan["freeze_sha256"]
+    state.save()
+    fake = _FakeStdioSession(
+        plan, state, stage_fault=stage_fault, unknown_on=unknown_on,
+        initial_stage_fixture=fixture,
+    )
+    return plan, state, fake
+
+
+def _run_initial_stage(tmp_path, monkeypatch, *, stage_fault=None, unknown_on=None):
+    plan, state, fake = _prepare_initial_stage(
+        tmp_path, monkeypatch, stage_fault=stage_fault, unknown_on=unknown_on,
+    )
+    report = asyncio.run(runner.run_metadata_protocol(
+        runner._MCPCalls(fake), plan, state, clock=lambda: 100.0, preflight=lambda: [],
+    ))
+    return plan, state, fake, report
+
+
+def _write_frozen_plan(plan: dict) -> Path:
+    path = Path(plan["run_root"]) / "freeze.json"
+    path.write_text(json.dumps(plan, sort_keys=True), encoding="utf-8")
+    return path
+
+
+def test_initial_stage_freeze_binds_exact_public_route_and_short_paths(tmp_path, monkeypatch):
+    _patch_prepare_environment(monkeypatch)
+    evidence = tmp_path.parent
+    prepared = runner.prepare(
+        version="6.4", mode=runner.INITIAL_STAGE_MODE,
+        comsol_root=tmp_path / "COMSOL64", jdk_home=tmp_path / "JDK11",
+        evidence_root=evidence, server_home_root=evidence / "h",
+    )
+    plan = prepared["plan"]
+    assert plan["schema"] == runner.INITIAL_STAGE_SCHEMA
+    assert plan["kind"] == runner.INITIAL_STAGE_KIND
+    assert plan["initial_stage_profile"] == runner.INITIAL_STAGE_PROFILE
+    assert plan["initial_stage_definition"] == runner._initial_stage_definition()
+    assert plan["initial_stage_definition"]["stages"] == [{
+        "stage_id": "thermal_initial", "ordinal": 1, "depends_on": [],
+        "study_target": {"segments": [{"collection": "study", "tag": "std1"}]},
+        "source_selection": {"kind": "initial_state", "strategy": "declared_initial"},
+        "target_selection": {"dataset": "dset1", "outer": "last", "inner": "last"},
+        "mapping_profile": "same_name_same_mesh_initialization",
+        "variable_mappings": [{"source_variable": "T", "target_variable": "T",
+                                "source_unit": "K", "target_unit": "K", "mapping_method": "identity"}],
+        "reference_state": {"strategy": "initial_state"}, "checks": [],
+    }]
+    assert [row["operation_id"] for row in plan["initial_stage_operations"]] == [
+        "experiment.stage_define", "experiment.stage_run",
+    ]
+    assert all(row["tool"] == "operation_call"
+               and row["arguments_sha256"] == runner.sha256_value({
+                   "operation_id": row["operation_id"], "arguments": row["arguments"],
+               }) for row in plan["initial_stage_operations"])
+    assert "run_study" not in plan["published_tool_schemas"]
+    budget = plan["stage_output_windows_path_budget"]
+    assert budget["atomic_save_temporary_utf16_units_including_nul"] > budget["target_utf16_units_including_nul"]
+    assert budget["atomic_save_temporary_utf16_units_including_nul"] <= 260
+    runner.verify_plan(plan, expected_sha256=prepared["freeze_sha256"])
+
+
+def test_initial_stage_public_route_accepts_only_scoped_saved_output(tmp_path, monkeypatch):
+    plan, state, fake, report = _run_initial_stage(tmp_path, monkeypatch)
+    fixture = fake.initial_stage_fixture
+    assert fixture is not None
+    assert fixture["defined"]["data"]["definition_sha256"] == plan["initial_stage_definition_sha256"]
+    assert fixture["attempt"]["request_hash"] == fixture["result"]["execution"]["request_hash"]
+    assert fixture["attempt"]["operation_id"] == fixture["result"]["execution"]["operation_id"]
+    assert fixture["public_dispatches"][0]["arguments"] == plan["initial_stage_operations"][0]["arguments"]
+    assert fixture["public_dispatches"][1]["arguments"] == plan["initial_stage_operations"][1]["arguments"]
+    actions = [action for action, _ in fake.calls]
+    assert actions.count("experiment.stage_define") == 1
+    assert actions.count("experiment.stage_run") == 1
+    assert actions.count("study.solve") == 0
+    assert actions.count("run_study") == 0
+    assert actions.index("probe.execute") < actions.index("experiment.stage_define")
+    assert actions.index("experiment.stage_define") < actions.index("experiment.stage_run")
+    assert report["status"] == "INITIAL_STAGE_OUTPUT_ACCEPTED_WITHIN_SCOPE"
+    assert report["acceptance_scope"] == runner.INITIAL_STAGE_ACCEPTANCE_SCOPE
+    assert report["initial_stage_profile"] == runner.INITIAL_STAGE_PROFILE
+    assert report["native_admission"] == "UNVERIFIED"
+    assert report["physical_validation"] == report["state_transfer"] == "NOT_RUN"
+    assert report["continuity"] == report["conservation"] == report["scientific_validation"] == "NOT_RUN"
+    assert report["study_dispatch"] == report["solver_dispatch"] == 1
+    assert state.value["stage_define_dispatch"] == state.value["stage_run_dispatch"] == 1
+    assert state.value["underlying_solve_dispatch"] == 1
+    assert report["initial_stage_acceptance"]["saved_artifact"]["sha256"] == runner.sha256_file(
+        Path(report["initial_stage_acceptance"]["saved_artifact"]["path"]),
+    )
+
+
+def test_initial_stage_dispatch_and_worker_event_evidence_is_exactly_bound():
+    attempt_id = "11111111-2222-4333-8444-555555555555"
+    artifact_path = Path("/project/stage_outputs") / f"{attempt_id}.mph"
+    solve = {
+        "kind": "worker-dispatch", "operation": "run_study", "phase": "submitted",
+        "stage_request_id": f"{attempt_id}:solve",
+        "worker_request_id": "wrk-aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "worker_request_hash": "1" * 64, "worker_receiver": "study-handle",
+        "worker_generation": 3, "worker_method": "run", "worker_args": [], "revision": 5,
+    }
+    save = {
+        "kind": "worker-dispatch", "operation": "save_model", "phase": "submitted",
+        "stage_request_id": f"{attempt_id}:save",
+        "worker_request_id": "wrk-bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "worker_request_hash": "2" * 64, "worker_receiver": "model-handle",
+        "worker_generation": 3, "worker_method": "save",
+        "worker_args": [str(artifact_path.parent / f".{artifact_path.name}.{'c' * 32}.tmp.mph"), True],
+        "revision": 8,
+    }
+    attempt = {"attempt_id": attempt_id, "expected_revision": 5,
+               "evidence": [solve, save]}
+    dispatches = runner._validate_initial_stage_worker_dispatches(
+        attempt, [solve, save], saved_artifact_path=artifact_path,
+        solve_revision=6, output_revision=8,
+    )
+    assert dispatches == [solve, save]
+
+    event_rows = []
+    for row in dispatches:
+        worker_metadata = {
+            "request_id": row["worker_request_id"],
+            "method": row["worker_method"],
+            "handle": row["worker_receiver"],
+            "generation": row["worker_generation"],
+            "args": row["worker_args"],
+        }
+        for phase in ("submitted", "observed"):
+            metadata = {
+                "request_id": row["worker_request_id"],
+                "request_hash": row["worker_request_hash"],
+                "kind": "call", "operation_id": "op-initial-stage-run",
+                "phase": phase, "metadata": worker_metadata,
+            }
+            if phase == "observed":
+                metadata.update({
+                    "status": "SUCCEEDED",
+                    "reply": {"ok": True, "request_id": row["worker_request_id"],
+                              "status": "SUCCEEDED", "generation": row["worker_generation"]},
+                })
+            event_rows.append({
+                "job_id": "job-initial-stage", "event": "worker_request",
+                "metadata": metadata,
+            })
+    assert runner._count_initial_stage_worker_events(
+        event_rows, job_id="job-initial-stage", stage_run_operation_id="op-initial-stage-run",
+        dispatches=dispatches,
+    ) == (2, 4)
+
+    bad_save = {**save, "stage_request_id": f"{attempt_id}:other"}
+    with pytest.raises(runner.RunnerError, match="dispatch identity or revision"):
+        runner._validate_initial_stage_worker_dispatches(
+            {"attempt_id": attempt_id, "expected_revision": 5,
+             "evidence": [solve, bad_save]},
+            [solve, bad_save], saved_artifact_path=artifact_path,
+            solve_revision=6, output_revision=8,
+        )
+    with pytest.raises(runner.RunnerError, match="exact durable job"):
+        runner._count_initial_stage_worker_events(
+            event_rows, job_id="foreign-job", stage_run_operation_id="op-initial-stage-run",
+            dispatches=dispatches,
+        )
+
+    successful_ticket = {
+        "success": True,
+        "execution": {"job_id": "job-initial-stage", "operation_id": "op-initial-stage-run"},
+        "data": {"initial_output_acceptance": {"status": "PASS", "native_evidence": {
+            "worker_event_rows": event_rows, "solve_save_dispatches": dispatches,
+        }}},
+    }
+    assert runner._is_unknown(successful_ticket) is False
+    missing_job = copy.deepcopy(successful_ticket)
+    missing_job["execution"].pop("job_id")
+    assert runner._is_unknown(missing_job) is True
+    missing_dispatch = copy.deepcopy(successful_ticket)
+    missing_dispatch["data"]["initial_output_acceptance"]["native_evidence"]\
+        ["solve_save_dispatches"].pop()
+    assert runner._is_unknown(missing_dispatch) is True
+    for remove_rows in (True, False):
+        ticket = copy.deepcopy(successful_ticket)
+        evidence = ticket["data"]["initial_output_acceptance"]["native_evidence"]
+        if remove_rows:
+            evidence.pop("worker_event_rows")
+        else:
+            evidence["worker_event_rows"] = []
+        assert runner._is_unknown(ticket) is True
+    snapshot_id = "wrk-dddddddd-dddd-4ddd-8ddd-dddddddddddd"
+    snapshot_metadata = {"request_id": snapshot_id, "model_tag": "Model1"}
+    successful_ticket["data"]["initial_output_acceptance"]["native_evidence"]\
+        ["worker_event_rows"].extend([
+            {"job_id": "job-initial-stage", "event": "worker_request", "metadata": {
+                "request_id": snapshot_id, "request_hash": "4" * 64,
+                "kind": "model_snapshot", "operation_id": "op-model-snapshot",
+                "phase": "submitted", "metadata": snapshot_metadata,
+            }},
+            {"job_id": "job-initial-stage", "event": "worker_request", "metadata": {
+                "request_id": snapshot_id, "request_hash": "4" * 64,
+                "kind": "model_snapshot", "operation_id": "op-model-snapshot",
+                "phase": "observed", "status": "SUCCEEDED", "metadata": snapshot_metadata,
+                "reply": {"ok": True, "request_id": snapshot_id, "status": "SUCCEEDED"},
+            }},
+        ])
+    assert runner._is_unknown(successful_ticket) is False
+    for corrupt in ("unknown", "unresponsive", "reply_mismatch", "reply_unknown", "drop_observed"):
+        ticket = copy.deepcopy(successful_ticket)
+        rows = ticket["data"]["initial_output_acceptance"]["native_evidence"]["worker_event_rows"]
+        observed = next(row for row in rows
+                        if row["metadata"]["request_id"] == solve["worker_request_id"]
+                        and row["metadata"]["phase"] == "observed")
+        metadata = observed["metadata"]
+        if corrupt in {"unknown", "unresponsive"}:
+            metadata["phase"] = corrupt
+        elif corrupt == "reply_mismatch":
+            metadata["reply"]["request_id"] = "wrk-ffffffff-ffff-4fff-8fff-ffffffffffff"
+        elif corrupt == "reply_unknown":
+            metadata["reply"]["status"] = "UNKNOWN"
+        else:
+            rows.remove(observed)
+        assert runner._is_unknown(ticket) is True
+
+    for corrupt in ("drop_snapshot_observed", "snapshot_reply_mismatch", "conflicting_kind"):
+        ticket = copy.deepcopy(successful_ticket)
+        rows = ticket["data"]["initial_output_acceptance"]["native_evidence"]["worker_event_rows"]
+        observed = next(row for row in rows
+                        if row["metadata"]["request_id"] == snapshot_id
+                        and row["metadata"]["phase"] == "observed")
+        if corrupt == "drop_snapshot_observed":
+            rows.remove(observed)
+        elif corrupt == "snapshot_reply_mismatch":
+            observed["metadata"]["reply"]["request_id"] = "wrk-ffffffff-ffff-4fff-8fff-ffffffffffff"
+        else:
+            observed["metadata"]["kind"] = "model"
+        assert runner._is_unknown(ticket) is True
+
+    deterministic_failure = copy.deepcopy(successful_ticket)
+    failed_id = "wrk-cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+    failed_call = {"request_id": failed_id, "method": "optionalProbe", "handle": "model-handle",
+                   "generation": 4, "args": []}
+    failure_rows = deterministic_failure["data"]["initial_output_acceptance"]\
+        ["native_evidence"]["worker_event_rows"]
+    failure_rows.extend([
+        {"job_id": "job-initial-stage", "event": "worker_request", "metadata": {
+            "request_id": failed_id, "request_hash": "3" * 64, "kind": "call",
+            "operation_id": "optional-child-op", "phase": "submitted", "metadata": failed_call,
+        }},
+        {"job_id": "job-initial-stage", "event": "worker_request", "metadata": {
+            "request_id": failed_id, "request_hash": "3" * 64, "kind": "call",
+            "operation_id": "optional-child-op", "phase": "observed", "status": "FAILED",
+            "metadata": failed_call,
+            "reply": {"ok": False, "request_id": failed_id, "status": "FAILED",
+                      "generation": 4, "failure": {"code": "OPTIONAL_PROBE_FAILED"}},
+        }},
+    ])
+    assert runner._is_unknown(deterministic_failure) is False
+    assert runner._count_initial_stage_worker_events(
+        failure_rows, job_id="job-initial-stage", stage_run_operation_id="op-initial-stage-run",
+        dispatches=dispatches,
+    ) == (4, 8)
+
+
+def test_initial_stage_pending_result_waits_once_without_replay(tmp_path, monkeypatch):
+    plan, state, fake, report = _run_initial_stage(tmp_path, monkeypatch, stage_fault="pending")
+    actions = [action for action, _ in fake.calls]
+    assert actions.count("experiment.stage_run") == 1
+    assert actions.count("stage_run.wait") == 1
+    assert state.value["stage_run_wait_calls"] == 1
+    assert report["initial_stage_acceptance"]["status"] == "PASS"
+
+
+@pytest.mark.parametrize(("stage_fault", "message"), [
+    ("bare_success", "omitted its durable attempt or initial-output acceptance"),
+    ("attempt_mismatch", "exact initial-output-only scope"),
+    ("native_binding_mismatch", "not exact-bound"),
+    ("artifact_hash_mismatch", "artifact references disagree"),
+])
+def test_initial_stage_rejects_bare_partial_or_mismatched_success(tmp_path, monkeypatch,
+                                                                 stage_fault, message):
+    plan, state, fake = _prepare_initial_stage(
+        tmp_path, monkeypatch, stage_fault=stage_fault,
+    )
+    with pytest.raises(runner.RunnerError, match=message):
+        asyncio.run(runner.run_metadata_protocol(
+            runner._MCPCalls(fake), plan, state, clock=lambda: 100.0, preflight=lambda: [],
+        ))
+    actions = [action for action, _ in fake.calls]
+    assert actions.count("experiment.stage_run") == 1
+    assert "run_study" not in actions
+    assert state.value["status"] == "FAILED"
+
+
+def test_initial_stage_unknown_is_terminal_and_never_replayed(tmp_path, monkeypatch):
+    _patch_isolation(monkeypatch)
+    plan = _plan(tmp_path, mode=runner.INITIAL_STAGE_MODE)
+    state = _state(tmp_path, schema=runner.INITIAL_STAGE_SCHEMA)
+    fake = _FakeStdioSession(plan, state, unknown_on="experiment.stage_run")
+    with pytest.raises(runner.RunnerError, match="UNKNOWN"):
+        asyncio.run(runner.run_metadata_protocol(
+            runner._MCPCalls(fake), plan, state, clock=lambda: 100.0, preflight=lambda: [],
+        ))
+    actions = [action for action, _ in fake.calls]
+    assert actions.count("experiment.stage_run") == 1
+    assert "stage_run.wait" not in actions
+    assert "session.disconnect" not in actions and "session.stop" not in actions
+    assert state.value["status"] == "UNKNOWN"
+    assert state.value["recovery"]["replay_permitted"] is False
+
+
+def test_initial_stage_unknown_pending_ticket_queries_original_job_without_project_in_pending_data(tmp_path, monkeypatch):
+    _patch_isolation(monkeypatch)
+    plan = _plan(tmp_path, mode=runner.INITIAL_STAGE_MODE)
+    state = _state(tmp_path, schema=runner.INITIAL_STAGE_SCHEMA)
+    state.value["run_id"] = plan["run_id"]
+    state.value["freeze_sha256"] = plan["freeze_sha256"]
+    state.save()
+    fake = _FakeStdioSession(plan, state, unknown_on="experiment.stage_run")
+    with pytest.raises(runner.RunnerError, match="stage_run returned UNKNOWN"):
+        asyncio.run(runner.run_metadata_protocol(
+            runner._MCPCalls(fake), plan, state, clock=lambda: 100.0, preflight=lambda: [],
+        ))
+    actions = [action for action, _ in fake.calls]
+    assert actions.count("experiment.stage_run") == 1
+    assert actions.count("job.status") == 1
+    assert "job.list" not in actions
+    assert "stage_run.wait" not in actions
+    assert "session.disconnect" not in actions and "session.stop" not in actions
+    query = state.value["recovery"]["read_only_query"]
+    assert query["action"] == "stage_run"
+    assert query["original_operation"] == "experiment.stage_run"
+    assert query["original_request_id"] == plan["request_ids"]["stage_run"]
+    assert query["original_idempotency_key"] == plan["idempotency_keys"]["stage_run"]
+    assert query["job_id"] == "job-stage-run"
+    assert query["exact_job_identity_confirmed"] is True
+
+
+@pytest.mark.parametrize("stage_fault", [
+    "worker_unknown", "worker_unresponsive", "worker_reply_mismatch",
+])
+def test_initial_stage_worker_uncertainty_stays_unknown_and_never_cleans_up(
+        tmp_path, monkeypatch, stage_fault):
+    plan, state, fake = _prepare_initial_stage(
+        tmp_path, monkeypatch, stage_fault=stage_fault,
+    )
+    with pytest.raises(runner.RunnerError, match="stage_run returned UNKNOWN"):
+        asyncio.run(runner.run_metadata_protocol(
+            runner._MCPCalls(fake), plan, state, clock=lambda: 100.0, preflight=lambda: [],
+        ))
+    actions = [action for action, _ in fake.calls]
+    assert actions.count("experiment.stage_run") == 1
+    assert actions.count("job.status") == 1
+    assert "stage_run.wait" not in actions
+    assert "session.disconnect" not in actions and "session.stop" not in actions
+    query = state.value["recovery"]["read_only_query"]
+    assert query["action"] == "stage_run"
+    assert query["original_operation"] == "experiment.stage_run"
+    assert query["original_request_id"] == plan["request_ids"]["stage_run"]
+    assert query["original_idempotency_key"] == plan["idempotency_keys"]["stage_run"]
+    assert query["exact_job_identity_confirmed"] is True
+    assert state.value["status"] == "UNKNOWN"
+    assert state.value["recovery"]["replay_permitted"] is False
+
+
+def test_initial_stage_success_shaped_wait_expiry_is_unknown_and_never_cleans_up(tmp_path, monkeypatch):
+    # Mirror ControlDaemon.job.wait: success=True with the original job row
+    # plus wait_expired=True when the one frozen wait window elapses.
+    plan, state, fake = _prepare_initial_stage(
+        tmp_path, monkeypatch, stage_fault="wait_expired", unknown_on="skip-producer-fixture",
+    )
+    with pytest.raises(runner.RunnerError, match="stage_run_wait returned UNKNOWN"):
+        asyncio.run(runner.run_metadata_protocol(
+            runner._MCPCalls(fake), plan, state, clock=lambda: 100.0, preflight=lambda: [],
+        ))
+    actions = [action for action, _ in fake.calls]
+    assert actions.count("experiment.stage_run") == 1
+    assert actions.count("stage_run.wait") == 1
+    assert actions.count("job.status") == 1
+    assert "job.list" not in actions
+    assert "session.disconnect" not in actions and "session.stop" not in actions
+    query = state.value["recovery"]["read_only_query"]
+    assert query["action"] == "stage_run_wait"
+    assert query["original_operation"] == "experiment.stage_run"
+    assert query["original_request_id"] == plan["request_ids"]["stage_run"]
+    assert query["original_idempotency_key"] == plan["idempotency_keys"]["stage_run"]
+    assert query["job_id"] == "job-stage-run"
+    assert query["exact_job_identity_confirmed"] is True
+    assert state.value["unknown_action"] == "stage_run_wait"
+    assert state.value["status"] == "UNKNOWN"
+    assert state.value["recovery"]["replay_permitted"] is False
+    assert state.value["status"] == "UNKNOWN"
+    assert state.value["recovery"]["replay_permitted"] is False
+
+
+def test_initial_stage_rpc_loss_uses_one_project_scoped_unique_job_list_query(tmp_path, monkeypatch):
+    _patch_isolation(monkeypatch)
+    plan = _plan(tmp_path, mode=runner.INITIAL_STAGE_MODE)
+    state = _state(tmp_path, schema=runner.INITIAL_STAGE_SCHEMA)
+    state.value["run_id"] = plan["run_id"]
+    state.value["freeze_sha256"] = plan["freeze_sha256"]
+    state.save()
+    fake = _FakeStdioSession(plan, state, timeout_on="experiment.stage_run")
+    with pytest.raises(runner.RunnerError, match="stage_run transport outcome is UNKNOWN"):
+        asyncio.run(runner.run_metadata_protocol(
+            runner._MCPCalls(fake), plan, state, clock=lambda: 100.0, preflight=lambda: [],
+        ))
+    actions = [action for action, _ in fake.calls]
+    assert actions.count("experiment.stage_run") == 1
+    assert actions.count("job.list") == 1
+    assert actions.count("job.status") == 0
+    assert "session.disconnect" not in actions and "session.stop" not in actions
+    query_params = next(params for action, params in fake.calls if action == "job.list")
+    assert query_params["arguments"] == {"limit": 1000, "project_id": fake.project_id}
+    query = state.value["recovery"]["read_only_query"]
+    assert query["original_operation"] == "experiment.stage_run"
+    assert query["query_complete"] is True
+    assert query["match_resolution"] == "UNIQUE_EXACT_MATCH"
+    assert query["exact_job_identity_confirmed"] is True
+    assert query["job_id"] == "job-stage-run"
+    assert state.value["status"] == "UNKNOWN"
+    assert state.value["recovery"]["replay_permitted"] is False
+
+
+def test_initial_stage_wait_rpc_loss_queries_same_run_job_once_without_cleanup(tmp_path, monkeypatch):
+    _patch_isolation(monkeypatch)
+    plan = _plan(tmp_path, mode=runner.INITIAL_STAGE_MODE)
+    state = _state(tmp_path, schema=runner.INITIAL_STAGE_SCHEMA)
+    state.value["run_id"] = plan["run_id"]
+    state.value["freeze_sha256"] = plan["freeze_sha256"]
+    state.save()
+    fake = _FakeStdioSession(plan, state, stage_fault="pending", timeout_on="stage_run.wait")
+    with pytest.raises(runner.RunnerError, match="stage_run_wait transport outcome is UNKNOWN"):
+        asyncio.run(runner.run_metadata_protocol(
+            runner._MCPCalls(fake), plan, state, clock=lambda: 100.0, preflight=lambda: [],
+        ))
+    actions = [action for action, _ in fake.calls]
+    assert actions.count("experiment.stage_run") == 1
+    assert actions.count("stage_run.wait") == 1
+    assert actions.count("job.status") == 1
+    assert "job.list" not in actions
+    assert "session.disconnect" not in actions and "session.stop" not in actions
+    query = state.value["recovery"]["read_only_query"]
+    assert query["action"] == "stage_run_wait"
+    assert query["original_operation"] == "experiment.stage_run"
+    assert query["original_request_id"] == plan["request_ids"]["stage_run"]
+    assert query["original_idempotency_key"] == plan["idempotency_keys"]["stage_run"]
+    assert query["job_id"] == "job-stage-run"
+    assert query["exact_job_identity_confirmed"] is True
+    assert state.value["status"] == "UNKNOWN"
+    assert state.value["recovery"]["replay_permitted"] is False
+
+
+def test_initial_stage_receipt_is_same_source_6_4_prerequisite_for_6_3(tmp_path, monkeypatch):
+    _patch_prepare_environment(monkeypatch)
+    plan, state, _fake, report = _run_initial_stage(tmp_path, monkeypatch)
+    _write_frozen_plan(plan)
+    receipt_path = Path(plan["run_root"]) / "initial_stage_receipt.json"
+    isolation = Path(plan["isolation_receipt"])
+    isolation.write_text(json.dumps({"status": "STOPPED"}), encoding="utf-8")
+    checked = runner._check_64_receipt(
+        receipt_path, mode=runner.INITIAL_STAGE_MODE,
+        expected_source_manifest_sha256=plan["source_manifest_sha256"],
+    )
+    assert checked["initial_stage_profile"] == runner.INITIAL_STAGE_PROFILE
+    assert checked["source_manifest_sha256"] == plan["source_manifest_sha256"]
+    step63 = runner.prepare(
+        version="6.3", mode=runner.INITIAL_STAGE_MODE,
+        comsol_root=tmp_path / "COMSOL63", jdk_home=tmp_path / "JDK11",
+        evidence_root=tmp_path.parent, server_home_root=tmp_path.parent / "h",
+        prerequisite_64_receipt=receipt_path,
+    )
+    assert step63["plan"]["prerequisite_64_receipt"] == checked
+
+    original = json.loads(receipt_path.read_text(encoding="utf-8"))
+    initial_native = original["initial_stage"]["stage_run"]["terminal_response"]\
+        ["data"]["initial_output_acceptance"]["native_evidence"]
+    worker_dispatches = {row["operation"]: row for row in initial_native["solve_save_dispatches"]}
+    tamper_cases = (
+        ("drop-solve-observed", "run_study"),
+        ("drop-save-observed", "save_model"),
+        ("unknown-phase", "run_study"),
+        ("uppercase-unknown-phase", "save_model"),
+        ("unknown-reply-status", "run_study"),
+        ("reply-request-id-conflict", "save_model"),
+    )
+    for tamper, operation in tamper_cases:
+        candidate = copy.deepcopy(original)
+        evidence = candidate["initial_stage"]["stage_run"]["terminal_response"]\
+            ["data"]["initial_output_acceptance"]["native_evidence"]
+        worker_id = worker_dispatches[operation]["worker_request_id"]
+        observed = next(row for row in evidence["worker_event_rows"]
+                        if row.get("metadata", {}).get("request_id") == worker_id
+                        and row.get("metadata", {}).get("phase") == "observed")
+        if tamper.startswith("drop-"):
+            evidence["worker_event_rows"].remove(observed)
+        elif tamper == "unknown-phase":
+            observed["metadata"]["phase"] = "unknown"
+            observed["metadata"]["status"] = "UNKNOWN"
+        elif tamper == "uppercase-unknown-phase":
+            observed["metadata"]["phase"] = "UNKNOWN"
+        elif tamper == "unknown-reply-status":
+            observed["metadata"]["reply"]["status"] = "UNKNOWN"
+        else:
+            observed["metadata"]["reply"]["request_id"] = "wrk-ffffffff-ffff-4fff-8fff-ffffffffffff"
+        receipt_path.write_text(json.dumps(candidate, sort_keys=True), encoding="utf-8")
+        state.value["receipt_sha256"] = runner.sha256_file(receipt_path)
+        state.save()
+        with pytest.raises(runner.RunnerError):
+            runner._check_64_receipt(
+                receipt_path, mode=runner.INITIAL_STAGE_MODE,
+                expected_source_manifest_sha256=plan["source_manifest_sha256"],
+            )
+
+    receipt_path.write_text(json.dumps(original, sort_keys=True), encoding="utf-8")
+    state.value["receipt_sha256"] = runner.sha256_file(receipt_path)
+    state.save()
+
+
+def test_initial_stage_waited_64_receipt_is_bound_to_the_original_run_job(tmp_path, monkeypatch):
+    _patch_prepare_environment(monkeypatch)
+    plan, state, _fake, report = _run_initial_stage(tmp_path, monkeypatch, stage_fault="pending")
+    _write_frozen_plan(plan)
+    receipt_path = Path(plan["run_root"]) / "initial_stage_receipt.json"
+    isolation = Path(plan["isolation_receipt"])
+    isolation.write_text(json.dumps({"status": "STOPPED"}), encoding="utf-8")
+    checked = runner._check_64_receipt(
+        receipt_path, mode=runner.INITIAL_STAGE_MODE,
+        expected_source_manifest_sha256=plan["source_manifest_sha256"],
+    )
+    assert checked["source_manifest_sha256"] == plan["source_manifest_sha256"]
+    assert state.value["stage_run_wait_calls"] == 1
+    assert report["stage_run_wait_calls"] == 1
+    step63 = runner.prepare(
+        version="6.3", mode=runner.INITIAL_STAGE_MODE,
+        comsol_root=tmp_path / "COMSOL63", jdk_home=tmp_path / "JDK11",
+        evidence_root=tmp_path.parent, server_home_root=tmp_path.parent / "h",
+        prerequisite_64_receipt=receipt_path,
+    )
+    assert step63["plan"]["prerequisite_64_receipt"] == checked
+
+    tampered = json.loads(receipt_path.read_text(encoding="utf-8"))
+    tampered["initial_stage"]["stage_run"]["wait_response"]["data"]["job_id"] = "foreign-job"
+    receipt_path.write_text(json.dumps(tampered, sort_keys=True), encoding="utf-8")
+    state.value["receipt_sha256"] = runner.sha256_file(receipt_path)
+    state.save()
+    with pytest.raises(runner.RunnerError, match="job.wait did not return the exact succeeded job"):
+        runner._check_64_receipt(
+            receipt_path, mode=runner.INITIAL_STAGE_MODE,
+            expected_source_manifest_sha256=plan["source_manifest_sha256"],
+        )
+    assert step63["plan"]["mode"] == runner.INITIAL_STAGE_MODE
+    assert step63["plan"]["source_manifest_sha256"] == plan["source_manifest_sha256"]
 
 
 def test_srb_ok(tmp_path, monkeypatch):
