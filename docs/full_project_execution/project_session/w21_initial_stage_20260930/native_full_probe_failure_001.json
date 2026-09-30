@@ -1,0 +1,41 @@
+{
+  "schema": "W21_INITIAL_STAGE_FULL_PROBE_FAILURE_V1",
+  "status": "FAIL_TABLE_ROW_LIMIT_BEFORE_STAGE_SOLVE; CLEANUP_MAIN_VERIFIED",
+  "source_commit": "0b5d9efbb517cb4365227ef82bd932b97a4b0b1e",
+  "run_id": "w21-64-20260930T090420Z-8a05279f",
+  "freeze_sha256": "9e8c580c69c9a2efb45711ce9f9740f7c5c9c34943f6ddc4035df7c188a0265c",
+  "failure_cause": {
+    "code": "TABLE_ROW_LIMIT_EXCEEDED",
+    "physics_tag": "ht",
+    "feature_info_tag": "info",
+    "table_id": "Expression",
+    "actual_rows": 166,
+    "hard_limit": 128,
+    "stage_or_solve_dispatched": false
+  },
+  "cleanup": {
+    "server_pid": 27248,
+    "server_birth_epoch_ms": 1790760476824,
+    "worker_pid": 9860,
+    "owned_loopback_port": 34315,
+    "returncode": 1,
+    "exit_confirmed": true,
+    "child_reaped": true,
+    "listener_absent": true,
+    "worker_retired": true,
+    "fresh_engine_absence": true
+  },
+  "evidence_sha256": {
+    "postexecute-remote-state.json": "323fba105fafe99b6bf866737fb4b3897159c85e298eace2a36efbc2d00e16d9",
+    "probe-execute-operation-result.raw.json": "962e8330f09290d577d9c397833d4b31a0f57ad57c913a3bd83886f374e50236",
+    "session-stop-operation-result.raw.json": "103dc4d3283688a18533e72173cf1e972fcba9e2f43db9fe2c9cab4eeb2834f8",
+    "execute-ssh-attempt3.stdout.bin": "6d2e5e8724b744303f95499a08c27e914b46e76c7f4a319815f4c7b93bfec303",
+    "execute-ssh-attempt3.stderr.bin": "60d7974f3e62c7a11111edf2a249386ad4382b4206eaefc323a12bac2f9a1711",
+    "postexecute-readonly-receipt.json": "5f4d6b2a226ae1bedd913c36e3607380a5c80cb0c59d5416f5bc5e44e14c60ef"
+  },
+  "local_evidence_relative_root": "execution-scratch/w21-initial-native-w21r15",
+  "failure_not_promoted": true,
+  "next_profile": "Existing discovery-only pre-probe on distinct freeze; actual initial-output validation unchanged",
+  "native_acceptance": "NOT_REACHED",
+  "scientific_acceptance": "NOT_RUN"
+}

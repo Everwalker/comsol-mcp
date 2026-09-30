@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "phase": "W21_INITIAL_STAGE_SOFTWARE_SYNCED_EXACT_UPLOAD_APPROVAL_PENDING",
+  "phase": "W21_INITIAL_NATIVE_DISCOVERY64_PREPARE_ONLY",
   "task": "W01_W26_CONTINUOUS_IMPLEMENTATION",
   "status": "INITIAL_STAGE_SOFTWARE_PARTIAL; NEW_NATIVE_NOT_RUN; OVERALL_PARTIAL",
   "candidate_source": "0b5d9efbb517cb4365227ef82bd932b97a4b0b1e",
@@ -161,7 +161,7 @@
       "checkpoint": "docs/full_project_execution/project_session/STAGE_BACKEND_SOFTWARE_CHECKPOINT.json#managed_current_mesh_bridge_20260930"
     }
   ],
-  "next_action": "Await the direct exact-payload SCP approval requested after auto-review rejection; upload/prepare/remotecompile/execute remain NOT_RUN. Local successor API planning, W22 requirement mapping, W24 index correction and W26 readiness review are recorded; do not repeat these audits. Fixed native software candidate remains 0b5d9efbb517cb4365227ef82bd932b97a4b0b1e with unchanged 107-source closure and six-file payload. After approval, recheck payload hashes and remote task root, SCP upload, verify/extract/compile/prepare Windows6.4 only, then main-review the exact freeze before bounded execution. Windows6.3 requires the actual successful same-profile6.4 receipt. Continue original W21-W26 and final independent review, preserving Mac6.3 user skips and historical failures.",
+  "next_action": "Same Luna prepare distinct discovery-only initial-stage6.4 freeze with unchanged source/budgets; read raw UTF8 and fresh inventory. Main review before execute. Keep full-probe failure and exactcleanup evidence;6.3 requires actual same-profile6.4 success. Continue original W21-W26/finalReviewer.",
   "active_jobs": [],
   "blockers": [
     "W23 failed setup owned Server 75272 and daemon 75260 remain preserved: cleanup SIGTERM was rejected by automatic approval and explicit authorization is pending; no cleanup or relaunch authorized by elapsed time.",
@@ -190,7 +190,7 @@
     "native_solve_budget_remaining": 0,
     "evidence": "docs/full_project_execution/evidence/luna_process_reconciliation/mac_readonly_snapshot_20260926T2152Z.json"
   },
-  "updated_at": "2026-09-30T07:29:41.868028+00:00",
+  "updated_at": "2026-09-30T08:42:33.306662+00:00",
   "note": "Original scope remains through W26. User explicitly resumed after the test-efficiency analysis; implement efficiency improvements first. OpenViking task-detail retrieval was denied by auto-review because it would disclose internal roadmap identifiers externally; no workaround. Use current frozen workpack and read-only local memory only. Do not rerun bootstrap/init on resume. Source files now contain executor edits; do not rerun bootstrap/init. Git metadata is an APFS pointer managed by main agent; migration requires bundle/source transfer, not copying only the repository pointer. Git metadata migration is documented by evidence/git_metadata_relocation.json and owned by the main agent; do not copy the APFS git pointer to another machine without source bundle/archive. GUI permission boundary and checkpoint solution-scope caveat recorded. This executor has one W24 native setup-only failure with exact cleanup verified; the durable operation/job UNKNOWN records remain unchanged. No W24 solver submission occurred. Saved-MPH readback supplement uses separate time/evidence and zero study/solver calls; run08 remains FAIL_OR_INCOMPLETE. Root raw SQLite recomputation is linked under native_resume_saved_artifact_supplement.raw_recomputation_evidence; original run08 remains FAIL_OR_INCOMPLETE and no solve budget is restored. Latest checkpoint 2026-09-27T03:50:43Z: W24 0334Z setup run failed pre-model due Python 3.14 missing mcp, with exact cleanup; 0346Z candidate pins the validated 3.12.13 environment and passes a production no-engine registry/daemon preflight. Native setup remains pending root review; science implementation continues offline. Latest checkpoint 2026-09-27T09:09:28Z: W24 0841Z candidate was invoked once at 0857Z and failed before any engine/Worker birth because project.inspect received an injected idempotency_key; project.create persisted successfully. Exact read-only SQLite hash and operation result are in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_contract_diagnostic.json. The runner now omits the unnecessary inspect key; actual ControlDaemon focused regression is 2/2 PASS in docs/full_project_execution/w24/evidence/setup_candidate_20260927T0841Z/native_run_20260927T0857Z/project_inspect_runner_regression_receipt.json. No native retry or acceptance is claimed; release F04 runtime integration is active, so refresh closure and root review are required before another launch. Windows COMSOL 6.3 remains required/unassessed; only macOS 6.3 is USER_REQUESTED_SKIP.",
   "native_resume_smoke": {
     "status": "FAIL_OR_INCOMPLETE_POINT_SCHEMA_FAILURE; SOLVED_CHILD_ARTIFACT_DURABLE; SOLVE_BUDGET_EXHAUSTED; SEPARATE_SAVED_MPH_READBACK_PASS",
@@ -3469,7 +3469,7 @@
   },
   "candidate_source_note": "Initial-stage code/test fingerprint ffdc8c25e4528c2cb42c358a6e1ee4e89898fb172a8891dbee3bcbc86766442a was reviewed/tested against base6100906 and committed/synchronized as0b5d9ef. Later document-only checkpoints do not change that frozen native source closure. Scoped software565PASS/1platformSKIP/0failures/errors; native and overall acceptance remain pending.",
   "initial_stage_native_preparation_20260930": {
-    "status": "LOCAL_PACKAGE_VERIFIED_UPLOAD_BLOCKED_BY_AUTO_REVIEW",
+    "status": "INITIAL_FULL_PROBE_FAILED_CLEANUP_MAIN_VERIFIED",
     "software_commit": "0b5d9efbb517cb4365227ef82bd932b97a4b0b1e",
     "github_full_sha_verified": true,
     "source_file_count": 107,
@@ -3479,23 +3479,49 @@
     "runner_source_manifest_sha256": "bad96c6c33b3e53428599beca3008520ccbb191cccc79b73eab8738149b3b5be",
     "scratch": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-native-w21r15",
     "remote_root": "C:\\Temp\\w21r15",
-    "remote_root_state": "Created as ordinary empty directory after fresh non-reparse parents and absent-root check; uploads did not start. Recheck before continuation.",
-    "inventory_time": "2026-09-30T05:54:36.7080004Z",
+    "remote_root_state": "Approved six-file upload verified;107 sources extracted; existing single 6.4 prepare retained without replay",
+    "inventory_time": "2026-09-30T09:15:11.0805198Z",
     "unrelated_listener_preserved": "PID15240 127.0.0.1:14718",
-    "upload": "NOT_STARTED_AUTO_REVIEW_REJECTED",
-    "prepare": "NOT_RUN",
-    "offline_remote_compile": "NOT_RUN",
-    "execute": "NOT_RUN",
-    "comsol_native": "NOT_RUN",
+    "upload": "SUCCEEDED_EXIT0",
+    "prepare": "PREPARED_ONLY_EXISTING_FREEZE_MAIN_REVIEW_PASS",
+    "offline_remote_compile": "PASS_22_REAL_CLASSES_AFTER_GENERATED_ARGFILE_REPAIRS",
+    "execute": "FAILED_EXIT2_PROBE_OUTPUT_INCOMPLETE_OR_SCOPE",
+    "comsol_native": "FAILED_PRIOR_TO_STAGE_ACCEPTANCE",
     "exact_upload_request": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-native-w21r15/exact-upload-request-001.json",
     "exact_upload_request_sha256": "d3a8e62fa120352b8b74bea8ad2d9c1d4bf595febd69f13051c4b98272bd8f9b",
     "prior_general_upload_authorization": "Verified original user message on2026-09-29 approves this and future project source uploads; auto-review still requires direct approval of this exact payload/destination.",
-    "exact_approval_request": "PENDING_USER_RESPONSE",
+    "exact_approval_request": "APPROVED_DIRECT_HUMAN_REPLY",
     "rejections_preserved": [
       "upload-auto-review-rejection.json",
       "upload-main-auto-review-rejection-002.json"
     ],
-    "no_workaround_or_retry_until_exact_approval": true
+    "no_workaround_or_retry_until_exact_approval": true,
+    "remote_verification": "PASS_6_FILES_110_MEMBERS_107_SOURCES_IMPORT_IDENTITY",
+    "run_root": "C:\\Temp\\w21r15\\s64\\6.4\\w21-64-20260930T090420Z-8a05279f",
+    "freeze_sha256": "9e8c580c69c9a2efb45711ce9f9740f7c5c9c34943f6ddc4035df7c188a0265c",
+    "freeze_file_sha256": "c83cfbbeb8a360ee0088996f4c4080fe08eb12166e11d4fd89ded5f479d66b7c",
+    "prepare_wrapper": "EXIT1_POSTPROCESS_JSON_PARSE; underlying Python UTF8 freeze valid; immutable failure retained",
+    "main_prepare_review": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-native-w21r15/main-prepare-review-002.json",
+      "sha256": "111aebd514c446adf731cd16d756e666c569d0d21ad306cb023a87ae830b56bb"
+    },
+    "compile_failure_history": "Original backslash argfile and wildcard classpath failures retained; generated args only repaired; source/upload unchanged",
+    "prelaunch_failures": "sandbox connect refused exit255; runner parent-environment grant refused exit2 before MCP; read-only state hash confirmed PREPARED/zero dispatch; original failures retained",
+    "execution_grants": "HOST_CONTROL=1/TRUSTED_CODE=1 only this authorized process; no global settings",
+    "cleanup_reported": "MAIN_VERIFIED_EXACT_OWNED_EXIT_REAP_LISTENER_ABSENCE_WORKER_RETIREMENT",
+    "failure_cause": {
+      "code": "TABLE_ROW_LIMIT_EXCEEDED",
+      "physics_tag": "ht",
+      "feature_info_tag": "info",
+      "table_id": "Expression",
+      "actual_rows": 166,
+      "hard_limit": 128,
+      "stage_or_solve_dispatched": false
+    },
+    "failed_run_main_review": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w21-initial-native-w21r15/main-failed-run-cleanup-review-001.json",
+      "sha256": "8f2516b5b4e374d68b4e79b8102ee91fdc800b6d8bf237b15ad30a16df7bf6cb"
+    }
   },
   "successor_scoped_design_20260930": {
     "status": "PLANNING_ONLY_NOT_DISPATCH_READY",
@@ -3532,5 +3558,50 @@
     "original_T016_T045": "PARTIAL",
     "native_new_run": "NOT_RUN",
     "mac63": "USER_REQUESTED_SKIP"
+  },
+  "goal_status": "ACTIVE",
+  "external_write_blocked_audit_20260930": {
+    "consecutive_primary_goal_turns": 3,
+    "audit": "/Volumes/SSD/Comsol-MCP/execution-scratch/w22-mapping-publication/goal-blocked-audit-003.json",
+    "local_document_commit": "4a37191349674badf305dccddeec0f3008522eeb",
+    "document_publication": "AUTO_REVIEW_REJECTED_EXACT_PUBLIC_GITHUB_APPROVAL_PENDING",
+    "native_upload": "AUTO_REVIEW_REJECTED_EXACT_WINDOWS_SCP_APPROVAL_PENDING",
+    "objective": "INCOMPLETE_W01_W26_FINAL_REVIEW_REQUIRED",
+    "scope": "Only external-write approval is blocking current next action; existing scientific/native UNKNOWN and NOT_RUN remain unchanged.",
+    "resolution": "Direct human approval received; Windows SCP succeeded and public doc push succeeded after added exact-payload checks. Prior blocked audit is historical."
+  },
+  "external_write_approval_20260930": {
+    "status": "APPROVED_DIRECT_HUMAN_REPLY",
+    "reply": "批准",
+    "scope": [
+      "exact six-file Windows SCP to everwalker@192.168.100.2:C:/Temp/w21r15/",
+      "exact document commit4a37191349674badf305dccddeec0f3008522eeb ordinary push to public Everwalker/comsol-mcp main"
+    ],
+    "fresh_blocked_audit": "Reset after blocked goal resumed; prior refusals preserved."
+  },
+  "github_document_publication_20260930": {
+    "status": "PUSH_SUCCEEDED_FULL_SHA_VERIFIED",
+    "commit": "4a37191349674badf305dccddeec0f3008522eeb",
+    "destination": "https://github.com/Everwalker/comsol-mcp main",
+    "public": true,
+    "includes": "approved7documentation/state/mapping files only; later working checkpoint not pushed",
+    "prior_rejection": "Preserved; exact informed-approval and metadata scope checks allowed same-command retry."
+  },
+  "initial_stage_discovery64_preparation_20260930": {
+    "status": "PREPARE_ONLY_AUTHORIZED_PENDING",
+    "source_commit": "0b5d9efbb517cb4365227ef82bd932b97a4b0b1e",
+    "remote_source_root": "C:\\Temp\\w21r15\\source",
+    "proposed_evidence_root": "C:\\Temp\\w21r15\\s65",
+    "probe_request": {
+      "mode": "discovery"
+    },
+    "initial_stage_profile": "thermal-initial-v2",
+    "acceptance_scope": "INITIAL_OUTPUT_AND_SOURCE_ARTIFACT_ONLY",
+    "scope": "Pre-probe field/tag metadata only remains UNVERIFIED; complete post-solve validators unchanged; original failed run retained",
+    "source_changes": false,
+    "budget_changes": false,
+    "scp_upload": false,
+    "execute": "NOT_AUTHORIZED_PENDING_MAIN_FREEZE_REVIEW",
+    "comsol_native": "NOT_RUN"
   }
 }
