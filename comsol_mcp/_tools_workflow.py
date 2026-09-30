@@ -259,6 +259,20 @@ def _run_study_on_model(model, study_tag: str = "") -> None:
     if not study:
         model.solve()
         return
+    # A managed Java Worker resolves the Model by its exact ModelRef. Keep the
+    # study target as a tag all the way through dispatch: RemoteModel.solve()
+    # also accepts display labels and therefore enumerates every Study first.
+    # The local MPh model path retains its existing label-resolution behavior.
+    from ._java_worker import RemoteModel
+    if isinstance(model, RemoteModel):
+        try:
+            target = model.java.study(study)
+        except Exception as exc:
+            raise LookupError(f'Unable to resolve study tag "{study}" before solve: {exc}') from exc
+        if target is None:
+            raise LookupError(f'Unable to resolve study tag "{study}" before solve: empty study handle.')
+        target.run()
+        return
     try:
         target = str(model.java.study().get(study).label())
     except Exception as exc:

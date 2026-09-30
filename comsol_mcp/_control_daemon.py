@@ -3200,10 +3200,25 @@ class ControlDaemon:
                                         if isinstance(preflight_artifact_id, str) else None)
                     job_record = self.store.operation_job(solve_operation_id)
                     job_id = job_record.get("job_id") if isinstance(job_record, Mapping) else None
-                    worker_event_rows = (self.store.events(job_id, limit=1000)
-                                         if isinstance(job_id, str) else [])
+                    fetched_job_event_rows = (self.store.events(job_id, limit=1000)
+                                              if isinstance(job_id, str) else [])
+                    overflow_sentinel_rows = (self.store.events(
+                        job_id, offset=len(fetched_job_event_rows), limit=1,
+                    ) if isinstance(job_id, str) else [])
+                    worker_event_rows = fetched_job_event_rows
                     worker_event_rows = [item for item in worker_event_rows
                                          if isinstance(item, Mapping) and item.get("event") == "worker_request"]
+                    worker_event_collection = {
+                        "status": "COMPLETE" if isinstance(job_id, str) and not overflow_sentinel_rows
+                                 else "INCOMPLETE",
+                        "complete": bool(isinstance(job_id, str) and not overflow_sentinel_rows),
+                        "limit": 1000,
+                        "sentinel_checked": isinstance(job_id, str),
+                        "fetched_job_event_count": len(fetched_job_event_rows),
+                        "worker_request_event_count": len(worker_event_rows),
+                        "overflow_sentinel_count": len(overflow_sentinel_rows),
+                    }
+                    output_evidence["worker_event_collection"] = dict(worker_event_collection)
                     submitted_rpc_ids = {
                         item.get("metadata", {}).get("request_id")
                         for item in worker_event_rows
@@ -3273,6 +3288,7 @@ class ControlDaemon:
                         "worker_event_rows": [dict(item) for item in worker_event_rows],
                         "worker_job_id": job_id,
                         "worker_epoch": worker_epoch,
+                        "worker_event_collection": dict(worker_event_collection),
                         "worker_auxiliary_requests": [
                             {"worker_request_id": request_id} for request_id in auxiliary_worker_ids
                         ],
@@ -3353,7 +3369,14 @@ class ControlDaemon:
                             },
                         }
                         return self._finish(record, accepted_result, "SUCCEEDED")
-                    output_missing = [*output_missing, *initial_acceptance_missing]
+                    # Preserve the final rejection reasons on the same durable
+                    # evidence row returned with the partial attempt. The
+                    # initial readback list above predates this native
+                    # acceptance decision, so merge without duplicate reasons.
+                    output_missing = list(dict.fromkeys(
+                        [*output_missing, *initial_acceptance_missing]
+                    ))
+                    output_evidence["missing"] = list(output_missing)
                 attempt = self.store.update_stage_attempt(
                     project_id, model_ref, attempt["attempt_id"], expected_version=current["version"],
                     status="SUCCEEDED_PARTIAL", engine_dispatched=True,

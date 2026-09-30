@@ -40,7 +40,6 @@ class StageWorkerDispatchGate:
         self.save_target_path = save_target_path
         self.model_handle: str | None = None
         self.worker_generation: int | None = None
-        self.study_collections: set[str] = set()
         self.study_handles: set[str] = set()
         self.submitted_ids: set[str] = set()
         self.run_submitted = False
@@ -164,11 +163,7 @@ class StageWorkerDispatchGate:
                 handle, returned_generation = returned
                 if returned_generation != generation:
                     raise ValueError("Worker returned a handle from a different generation")
-                if receiver == model_handle and method == "study" and args == []:
-                    self.study_collections.add(handle)
-                elif (receiver == model_handle and method == "study" and args == [self.study_tag]) or (
-                    receiver in self.study_collections and method == "get" and args == [self.study_tag]
-                ):
+                if receiver == model_handle and method == "study" and args == [self.study_tag]:
                     self.study_handles.add(handle)
             return None
         if event_phase in {"unknown", "unresponsive"}:
@@ -180,15 +175,10 @@ class StageWorkerDispatchGate:
         if receiver == model_handle:
             # The managed wrapper sets the current bound model before the
             # legacy callback enters ExecutionService. That state attribution
-            # may read the unsaved model's path; accept only this exact
-            # zero-argument getter on the stage-bound Model receiver.
-            return ((method == "study" and (args == [] or args == [self.study_tag]))
-                    or (method == "getFilePath" and args == []))
-        if receiver in self.study_collections:
-            return ((method == "tags" and args == [])
-                    or (method == "get" and args == [self.study_tag]))
-        if receiver in self.study_handles:
-            return method == "label" and args == []
+            # may read the unsaved model's path/label; accept only these exact
+            # zero-argument getters on the phase-bound Model receiver.
+            return (method == "study" and args == [self.study_tag]
+                    or (method in {"getFilePath", "label"} and args == []))
         return False
 
     def _is_atomic_temp_save(self, value: Any) -> bool:
@@ -1572,6 +1562,23 @@ def validate_initial_output_acceptance(
     event_index, malformed_events = _initial_event_index(event_rows)
     worker_job_id = evidence.get("worker_job_id")
     worker_epoch = evidence.get("worker_epoch")
+    collection = evidence.get("worker_event_collection")
+    collection_valid = (
+        isinstance(collection, Mapping)
+        and collection.get("status") == "COMPLETE"
+        and collection.get("complete") is True
+        and collection.get("limit") == 1000
+        and collection.get("sentinel_checked") is True
+        and type(collection.get("fetched_job_event_count")) is int
+        and 0 <= collection["fetched_job_event_count"] <= 1000
+        and type(collection.get("worker_request_event_count")) is int
+        and collection.get("worker_request_event_count") == (len(event_rows) if isinstance(event_rows, list) else -1)
+        and collection["fetched_job_event_count"] >= collection["worker_request_event_count"]
+        and type(collection.get("overflow_sentinel_count")) is int
+        and collection.get("overflow_sentinel_count") == 0
+    )
+    if not collection_valid:
+        missing.append("complete bounded Worker job-event collection with empty overflow sentinel")
     if (not isinstance(event_rows, list) or not event_rows or malformed_events
             or not isinstance(worker_job_id, str) or not worker_job_id
             or type(worker_epoch) is not int or worker_epoch < 1):
@@ -1724,6 +1731,55 @@ def validate_initial_output_acceptance(
             if not pair_matches:
                 missing.append("unique correlated successful Worker submit/observe pair for every required action")
 
+        # Resolve the root Model receiver separately for each managed phase.
+        # The required Study.run/Model.save dispatch ids identify the exact
+        # event pair whose backend binding owns the phase's Model handle.
+        # Auxiliary calls cannot establish their own receiver identity.
+        phase_model_handles: dict[str, str] = {}
+        if isinstance(dispatches, list):
+            for phase, operation in (("solve", "run_study"), ("save", "save_model")):
+                matching = [row for row in dispatches
+                            if isinstance(row, Mapping) and row.get("operation") == operation]
+                if len(matching) != 1:
+                    continue
+                dispatch = matching[0]
+                request_id = dispatch.get("worker_request_id")
+                phases = event_index.get(request_id) if isinstance(request_id, str) else None
+                expected_revision = root_binding_revisions.get(phase)
+                saved_artifact = evidence.get("saved_artifact")
+                save_target_path = (saved_artifact.get("path")
+                                    if phase == "save" and isinstance(saved_artifact, Mapping) else None)
+                if (not isinstance(phases, Mapping) or set(phases) != {"submitted", "observed"}
+                        or len(phases.get("submitted", [])) != 1 or len(phases.get("observed", [])) != 1
+                        or type(expected_revision) is not int):
+                    continue
+                handles: list[str] = []
+                binding_valid = True
+                for _row, event in phases["submitted"] + phases["observed"]:
+                    context = event.get("w21_backend_binding")
+                    if (not isinstance(context, Mapping)
+                            or not _initial_stage_backend_binding_matches(
+                                event, binding=binding, operation_id=stage_run_operation_id,
+                                stage_request_id=dispatch.get("stage_request_id"), phase=phase,
+                                worker_epoch=worker_epoch, model_tag=model_tag,
+                                expected_revision=expected_revision, save_target_path=save_target_path,
+                            )):
+                        binding_valid = False
+                        break
+                    model_handle = context.get("model_handle")
+                    if not isinstance(model_handle, str) or not model_handle:
+                        binding_valid = False
+                        break
+                    if phase == "save" and event.get("metadata", {}).get("handle") != model_handle:
+                        binding_valid = False
+                        break
+                    handles.append(model_handle)
+                if (binding_valid and len(handles) == 2 and len(set(handles)) == 1
+                        and (phase != "save" or dispatch.get("worker_receiver") == handles[0])):
+                    phase_model_handles[phase] = handles[0]
+        if set(phase_model_handles) != {"solve", "save"}:
+            missing.append("correlated solve/save Worker dispatches resolve exact phase Model handles")
+
         required_ids = set(specs)
         actual_ids = set(event_index)
         auxiliary_rows = evidence.get("worker_auxiliary_requests")
@@ -1735,14 +1791,6 @@ def validate_initial_output_acceptance(
                 or set(declared_aux_ids) != extra_ids):
             missing.append("explicit classification of every auxiliary Worker request")
         else:
-            worker_handle = None
-            solve_phases = event_index.get(solve_id, {}) if isinstance(solve_id, str) else {}
-            solve_observed = (solve_phases.get("observed", [])
-                              if isinstance(solve_phases, Mapping) else [])
-            if len(solve_observed) == 1:
-                solve_binding = solve_observed[0][1].get("w21_backend_binding")
-                if isinstance(solve_binding, Mapping):
-                    worker_handle = solve_binding.get("model_handle")
             for request_id in declared_aux_ids:
                 phases = event_index.get(request_id)
                 if not isinstance(phases, Mapping) or set(phases) != {"submitted", "observed"}:
@@ -1763,11 +1811,15 @@ def validate_initial_output_acceptance(
                     method_name = payload.get("method")
                     handle = payload.get("handle")
                     method_args = payload.get("args")
-                    expected_args = [] if method_name == "getFilePath" else [study_tag]
-                    safe = (safe and method_name in {"getFilePath", "study"}
+                    expected_args = [] if method_name in {"getFilePath", "label"} else [study_tag]
+                    context = event.get("w21_backend_binding")
+                    phase = context.get("phase") if isinstance(context, Mapping) else None
+                    expected_model_handle = phase_model_handles.get(phase)
+                    safe = (safe and method_name in {"getFilePath", "label", "study"}
                             and method_args == expected_args
                             and isinstance(handle, str) and bool(handle)
-                            and handle == worker_handle
+                            and isinstance(expected_model_handle, str)
+                            and handle == expected_model_handle
                             and payload.get("generation") == worker_epoch)
                 else:
                     safe = False
@@ -1782,6 +1834,12 @@ def validate_initial_output_acceptance(
                     backend_binding = terminal.get("w21_backend_binding")
                     phase = backend_binding.get("phase") if isinstance(backend_binding, Mapping) else None
                     expected_revision = root_binding_revisions.get(phase)
+                    if (terminal.get("kind") == "call"
+                            and (not isinstance(backend_binding, Mapping)
+                                 or backend_binding.get("model_handle") != phase_model_handles.get(phase)
+                                 or terminal.get("metadata", {}).get("handle") != phase_model_handles.get(phase))):
+                        missing.append("auxiliary Worker receiver matches the correlated Model handle for its phase")
+                        break
                     stage_request_id = (f"{binding.get('attempt_id')}:{phase}"
                                         if phase in {"solve", "save"} else None)
                     saved_artifact_record = evidence.get("saved_artifact")

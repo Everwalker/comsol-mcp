@@ -145,7 +145,7 @@ from __future__ import annotations
 import time
 from typing import Any, Callable, Mapping, Sequence
 
-from ._g2_contract import ExecutionContractError, NodePath
+from ._g2_contract import ExecutionContractError, NodePath, engine_value_spec
 from ._g2_engine import _call, property_set
 from ._g3_common import (
     ENVELOPE_FIELDS,
@@ -528,13 +528,10 @@ SOLVER_DOCUMENTED_PROPERTIES: dict[str, frozenset[str]] = {
                        "algebrdaescaling", "equilibrate", "estrat", "eventtol", "odesolvertype"}),
 }
 
-#: ``StudyFeature.setSolveFor(<entityPath>,boolean)`` / ``solveFor(<entityPath>)``
-#: is the documented physics-activation accessor (``comsol_api_general.47.60``:
-#: ``step.setSolveFor(<entityPath>,boolean)`` and
-#: ``step.solveFor(<entityPath>)``; Table 6-87 lists the ``activate`` String Map
-#: for the same decision).  This layer drives the physics map through
-#: ``setSolveFor``/``solveFor`` and the coupling map through the R03 keyed-entry
-#: path on ``activateCoupling``.
+#: Physics activation mutations use the documented entity-specific
+#: ``setSolveFor(<entityPath>,boolean)`` API. Readback is performed from the
+#: documented keyed ``activate`` String Map; never probe ``solveFor()`` with
+#: zero arguments. Coupling activation uses its ``activateCoupling`` keyed map.
 PHYSICS_ACTIVATION_KEYS = ("physics", "coupling")
 
 _SOLVE_FOR_PROPERTY = {"coupling": "activateCoupling"}
@@ -1243,15 +1240,43 @@ def _probe_property_table(node: Any, limit: int = 64) -> dict[str, Any]:
     names = [str(name) for name in probe["value"]] if isinstance(probe["value"], (list, tuple)) else []
     names = names[:limit]
     metadata: dict[str, Any] = {}
+    schemas: dict[str, dict[str, Any]] = {}
     for name in names:
         row = property_rows(node, [name]).get(name, {})
+        spec = engine_value_spec(row.get("value_type"))
+        known = (row.get("metadata_status") == "KNOWN" and spec is not None
+                 and row.get("shape_rank") == spec.get("rank")
+                 and row.get("getter") == spec.get("getter"))
+        schemas[name] = {**row, "_validated_spec": spec if known else None}
         metadata[name] = {"value_type": row.get("value_type"), "kind": row.get("kind"),
                           "shape_rank": row.get("shape_rank"),
+                          "getter": row.get("getter"),
+                          "java_signature": row.get("java_signature"),
                           "allowed_values": _jsonable(row.get("allowed_values")),
                           "metadata_status": row.get("metadata_status")}
     values: dict[str, Any] = {}
     errors: dict[str, Any] = {}
     for name in names:
+        schema = schemas[name]
+        spec = schema.get("_validated_spec")
+        if not isinstance(spec, Mapping):
+            errors[name] = {
+                "code": "UNKNOWN_VALUE_TYPE",
+                "message": "property getter was not selected because authoritative metadata is unknown",
+            }
+            continue
+        if spec.get("rank") in {1, 2}:
+            # Array and matrix properties must use the exact getter advertised
+            # by the verified PropFeature value-type contract. Scalar trial
+            # getters fail on valid string-array metadata and are not evidence.
+            typed = call_probe(node, str(spec["getter"]), name)
+            if typed["ok"]:
+                values[name] = typed["value"]
+            else:
+                errors[name] = typed["error"]
+            continue
+        # Retain the established scalar read behavior while refusing to guess
+        # a getter for unknown metadata or for a malformed schema row.
         probe = call_probe(node, "getString", name)
         if probe["ok"]:
             values[name] = probe["value"]
@@ -2079,7 +2104,7 @@ def study_inspect(worker: Any, model_tag: str, arguments: Mapping[str, Any], *,
             "getLastComputationVersion": snapshot["values"].get("getLastComputationVersion"),
         },
         "notes": [
-            "physics activation is read per step with solveFor() and reported inside each step row",
+            "physics activation is read from the per-step activate String Map and reported inside each step row",
         ],
     }
     if _w21_initial_stage_context:
@@ -2126,9 +2151,6 @@ def _study_step_rows(study: Any, study_path: Mapping[str, Any]) -> list[dict[str
 def _activation_state(step: Any) -> dict[str, Any]:
     """Read the documented physics/variables activation decisions of one step."""
     out: dict[str, Any] = {}
-    solve_for = call_probe(step, "solveFor")
-    if solve_for["ok"]:
-        out["solveFor_probe"] = _jsonable(solve_for["value"])
     entry = call_probe(step, "getEntryKeys", "activate")
     if entry["ok"]:
         keys = [str(item) for item in entry["value"]] if isinstance(entry["value"], (list, tuple)) else []
@@ -2138,8 +2160,8 @@ def _activation_state(step: Any) -> dict[str, Any]:
             values[key] = read["value"] if read["ok"] else None
         out["activate"] = values
     out["allowlist_entry_required"] = sorted(
-        {str(error.get("allowlist_entry_required")) for error in
-         (solve_for["error"], entry["error"]) if isinstance(error, Mapping)
+        {str(entry["error"].get("allowlist_entry_required")) for error in
+         (entry["error"],) if isinstance(error, Mapping)
          and error.get("allowlist_entry_required")}
     )
     return out

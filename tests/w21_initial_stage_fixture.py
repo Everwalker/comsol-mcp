@@ -55,7 +55,12 @@ def build_initial_stage_fixture(
     workspace = Path(daemon.project_authority.get_project(project_id)["workspace"])
     workspace.joinpath("stage_outputs").mkdir(parents=True, exist_ok=True)
     worker_generation = model_ref["generation"] + 70
-    state: dict[str, Any] = {"solved": False, "numerical": {}, "selection": {}, "submitted": []}
+    typed_array_properties = {
+        "probes", "disabledvariables", "disabledcoordinatesystems", "disabledpair",
+    }
+    state: dict[str, Any] = {
+        "solved": False, "numerical": {}, "selection": {}, "submitted": [], "model_handles": [],
+    }
     transport_requests: list[dict[str, Any]] = []
 
     def handle(name: str, java_type: str = "Object") -> dict[str, Any]:
@@ -79,13 +84,15 @@ def build_initial_stage_fixture(
                       "instance_id": "initial-worker-fixture", "generation": worker_generation,
                       "external_event_counter": 0, "fingerprint": "stage-model-fingerprint"}
         elif kind == "model":
-            result = handle("model-main", "Model")
+            model_handle = f"model-main-{len(state['model_handles']) + 1}"
+            state["model_handles"].append(model_handle)
+            result = handle(model_handle, "Model")
         elif kind != "call":
             raise AssertionError(f"unexpected Worker command: {body}")
         else:
             receiver, method, args = body["handle"], body["method"], body.get("args", [])
             # Model collections and owned output persistence.
-            if receiver == "model-main":
+            if receiver in state["model_handles"]:
                 if method == "study":
                     result = handle("study-list" if not args else "study-std1", "StudyList" if not args else "Study")
                 elif method == "sol":
@@ -99,6 +106,8 @@ def build_initial_stage_fixture(
                     target = Path(args[0]); target.parent.mkdir(parents=True, exist_ok=True)
                     with zipfile.ZipFile(target, "w") as archive:
                         archive.writestr("fixture.txt", "offline fake Worker output")
+                elif method == "label": result = "Initial stage fixture model"
+                elif method == "getFilePath": result = ""
                 else: result = None
             elif receiver == "study-list":
                 if method == "tags": result = ["std1"]
@@ -116,7 +125,26 @@ def build_initial_stage_fixture(
             elif receiver == "study-time":
                 if method in {"type", "getType"}: result = "Transient"
                 elif method == "label": result = "Time Dependent"
-                elif method in {"properties", "getEntryKeys"}: result = []
+                elif method == "properties": result = sorted(typed_array_properties)
+                elif method == "getEntryKeys": result = []
+                elif method == "getValueType" and args and args[0] in typed_array_properties:
+                    result = "StringArray"
+                elif method == "getAllowedPropertyValues" and args and args[0] in typed_array_properties:
+                    result = None
+                elif method == "getStringArray" and args and args[0] in typed_array_properties:
+                    result = [f"fixture-{args[0]}"]
+                elif method == "getString" and args and args[0] in typed_array_properties:
+                    failure_reply = {
+                        "code": "ENGINE_CALL_FAILED",
+                        "message": "scalar getter cannot read a StringArray property",
+                        "execution_state_unknown": False,
+                    }
+                elif method == "getDouble" and args and args[0] in typed_array_properties:
+                    failure_reply = {
+                        "code": "ENGINE_CALL_FAILED",
+                        "message": "numeric getter cannot read a StringArray property",
+                        "execution_state_unknown": False,
+                    }
                 elif method == "solveFor": result = True
                 elif method == "getDoubleArray" and args == ["tlist"]:
                     if fault in {"tlist_timeout", "tlist_unknown"}:
@@ -297,9 +325,6 @@ def build_initial_stage_fixture(
                 elif method == "label": result = "Mesh 1"
             elif receiver == "mesh-feature-list":
                 if method == "tags": result = []
-            elif receiver == "model-main" and method == "save":
-                target = Path(args[0]); target.parent.mkdir(parents=True, exist_ok=True)
-                with zipfile.ZipFile(target, "w") as archive: archive.writestr("fixture.txt", "offline fake Worker output")
             if result is None and failure_reply is None and method not in {
                 "set", "remove", "run", "save", "geom", "all", "named", "label",
                 "create", "getEntryKeys", "solveFor", "clearXmesh",
@@ -313,6 +338,7 @@ def build_initial_stage_fixture(
                                   "isPlotUndefVals", "isStoreCompleteHistory", "problem", "getM", "getN", "getNnz",
                                   "hasProblemOrInformation", "getDefaultSolnum", "getSequenceType", "hasProblems",
                                   "getErrorMessage", "getInformationMessage", "getWarningMessage",
+                                  "getAllowedPropertyValues",
                                   "getPNames", "getPVals", "getParamVals", "getParamNames", "getNStepsBack",
                                   "isEmpty", "isInitialized", "getCoordinatesShape", "isComplex", "tag",
                                   "properties", "getISol", "getMesh", "getNumElem", "getElemEntity", "getVertex",
@@ -362,18 +388,15 @@ def build_initial_stage_fixture(
 
     service.adapter = WorkerSnapshotAdapter()
 
-    def run_study(arguments: dict[str, Any]) -> str:
-        model = worker.client().model(model_ref["model_tag"])
-        model._call("study", arguments["study_tag"])._call("run")
-        return json.dumps({"success": True, "data": {"study_tag": arguments["study_tag"]}})
+    # Keep the actual public wrappers in the managed route; only the Java
+    # transport is synthetic. The managed backend binds a distinct RemoteModel
+    # for solve and save, which lets this fixture exercise phase-handle checks.
+    from comsol_mcp import _tools_snapshot, _tools_workflow
 
-    def save_model(arguments: dict[str, Any]) -> str:
-        model = worker.client().model(model_ref["model_tag"])
-        target = Path(arguments["path"])
-        model.save(str(target))
-        return json.dumps({"success": True, "data": {"saved_path": str(target)}})
-
-    daemon.backend.registry.update({"run_study": run_study, "save_model": save_model})
+    daemon.backend.registry.update({
+        "run_study": lambda arguments: _tools_workflow.run_study(arguments["study_tag"]),
+        "save_model": lambda arguments: _tools_snapshot.save_model(arguments["path"]),
+    })
     definition = _plan_v2()
     stage_id = "preheat"
     if runner_profile:
@@ -430,9 +453,32 @@ def build_initial_stage_fixture(
             return digest, size
 
         stage_backend.hash_saved_artifact = hash_then_corrupt
+    if fault == "event_overflow":
+        original_events = daemon.store.events
+        original_add_event = daemon.store.add_event
+        injected_overflow = False
+
+        def events_with_overflow_sentinel(job_id: str, offset: int = 0, limit: int = 100):
+            nonlocal injected_overflow
+            if not injected_overflow and offset == 0 and limit == 1000:
+                for index in range(1000):
+                    original_add_event(job_id, "fixture-overflow-padding", {"index": index})
+                injected_overflow = True
+            return original_events(job_id, offset=offset, limit=limit)
+
+        daemon.store.events = events_with_overflow_sentinel
+    # This direct ControlDaemon fixture bypasses connect_session(), so supply
+    # the same Worker-owned compatibility client/connected state that a real
+    # managed session installs before the registered legacy wrappers run.
+    from comsol_mcp._server import session_server as srv
+    previous_client, previous_connected = srv._client, srv._client_connected
+    srv._client = worker.client()
+    srv._client_connected = True
     try:
         result = daemon.dispatch(run_dispatch)
     finally:
+        srv._client = previous_client
+        srv._client_connected = previous_connected
         if hash_restore is not None:
             stage_backend.hash_saved_artifact = hash_restore
     attempts = daemon.store.list_stage_attempts(project_id, model_ref, stage_id=stage_id)

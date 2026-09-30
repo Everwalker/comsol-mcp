@@ -1312,7 +1312,10 @@ def test_stage_uses_real_worker_rpc_identity_and_persists_before_send(
             assert result["error"]["code"] == "STAGE_ACCEPTANCE_UNVERIFIED"
             assert attempt["status"] == "SUCCEEDED_PARTIAL"
             assert attempt["acceptance_status"] == "PARTIAL"
-            assert len([item for item in sent if item.get("method") in {"study", "get", "tags", "label"}]) >= 5
+            study_reads = [item for item in sent if item.get("method") == "study"]
+            assert len(study_reads) == 1 and study_reads[0].get("args") == ["std2"]
+            assert not [item for item in sent if item.get("method") in {"get", "tags"}]
+            assert not [item for item in sent if item.get("method") == "label"]
             assert (Path(project["workspace"]) / "stage_outputs" / f"{attempt['attempt_id']}.mph").is_file()
             dispatch_evidence = [item for item in attempt["evidence"] if item.get("kind") == "worker-dispatch"]
             assert [item["operation"] for item in dispatch_evidence] == ["run_study", "save_model"]
@@ -1335,6 +1338,182 @@ def test_stage_uses_real_worker_rpc_identity_and_persists_before_send(
         daemon.close()
         if "worker" in locals():
             worker.close()
+
+
+@pytest.mark.parametrize(
+    "case,requested_tag,labels,expected_runs",
+    [
+        ("distinct_labels", "std2", {"std1": "Warm-up", "std2": "Cooldown"}, 1),
+        ("ambiguous_labels", "std2", {"std1": "Shared name", "std2": "Shared name"}, 1),
+        ("missing_tag", "std-missing", {"std1": "Warm-up", "std2": "Cooldown"}, 0),
+    ],
+)
+def test_production_run_study_wrapper_dispatches_stage_by_exact_tag(
+    tmp_path, case, requested_tag, labels, expected_runs,
+):
+    """Exercise the registered production wrapper, RemoteModel, and strict stage gate.
+
+    Two real tags deliberately have different display labels, and one case makes
+    those labels ambiguous. A stage target is a tag, so its dispatch must never
+    depend on searching display labels or inspecting a non-target Study.
+    """
+    from comsol_mcp import _tools_snapshot, _tools_workflow
+    from comsol_mcp._server import session_server as srv
+
+    daemon, service, _old_worker, project_id, model_ref, execution, _host = _setup(tmp_path)
+    previous_client, previous_connected = srv._client, srv._client_connected
+    sent = []
+    stage_request = f"production-wrapper-{case}"
+    study_handle_for = {"std1": "study-std1-handle", "std2": "study-std2-handle"}
+    model_handles: list[str] = []
+    try:
+        plan = _plan_v2()
+        plan["stages"][1]["study_target"]["segments"][0]["tag"] = requested_tag
+        defined = daemon.dispatch({
+            "operation": "experiment.stage_define", "arguments": {"definition": plan},
+            "execution": execution,
+        })
+        assert defined["success"] is True, defined
+        source_attempt = _seed_test_only_accepted_predecessor(daemon, project_id, model_ref)
+        def transport(body, *, timeout_s=None):
+            del timeout_s
+            sent.append(dict(body))
+            if body["type"] == "model":
+                model_handle = f"bound-model-phase-{len(model_handles) + 1}"
+                model_handles.append(model_handle)
+                return {"ok": True, "status": "OK", "generation": 71,
+                        "result": {"$worker_handle": model_handle, "generation": 71,
+                                   "java_type": "Model"}}
+            assert body["type"] == "call", body
+            method = body["method"]
+            args = body.get("args", [])
+            if method == "study" and not args:
+                result = {"$worker_handle": "study-collection", "generation": 71,
+                          "java_type": "StudyList"}
+            elif method == "study" and len(args) == 1:
+                tag = args[0]
+                assert tag == requested_tag, f"non-target Study lookup reached transport: {tag!r}"
+                if tag not in study_handle_for:
+                    return {"ok": False, "status": "FAILED", "generation": 71,
+                            "failure": {"code": "NODE_NOT_FOUND", "message": "study tag not found"}}
+                result = {"$worker_handle": study_handle_for.get(tag, "study-missing-handle"),
+                          "generation": 71, "java_type": "Study"}
+            elif method == "get" and len(args) == 1:
+                tag = args[0]
+                assert tag == requested_tag, f"non-target Study collection lookup reached transport: {tag!r}"
+                if tag not in study_handle_for:
+                    return {"ok": False, "status": "FAILED", "generation": 71,
+                            "failure": {"code": "NODE_NOT_FOUND", "message": "study tag not found"}}
+                result = {"$worker_handle": study_handle_for[tag], "generation": 71, "java_type": "Study"}
+            elif method == "tags":
+                result = ["std1", "std2"]
+            elif method == "label":
+                assert body["handle"] in model_handles and not args, (
+                    f"Study label or setter call reached transport: {body!r}"
+                )
+                result = "production wrapper model"
+            elif method == "run":
+                assert body["handle"] == study_handle_for.get(requested_tag)
+                service.adapter.fingerprint = f"stage-solve-completed-{case}"
+                result = None
+            elif method == "save":
+                assert len(args) == 2 and args[1] is True
+                with zipfile.ZipFile(args[0], "w") as archive:
+                    archive.writestr("synthetic/fixture.txt", "explicit test fixture only")
+                result = None
+            elif method == "getFilePath":
+                result = ""
+            else:
+                raise AssertionError(f"unexpected Worker call: {body}")
+            return {"ok": True, "status": "OK", "generation": 71, "result": result}
+
+        worker = _persistent_worker_with_stub(daemon.backend.project_root, transport)
+        daemon.backend.worker = worker
+        # _setup injects a connected service/Worker directly instead of going
+        # through connect_session(); mirror the Worker-owned client state that
+        # the production legacy wrappers require in a live managed session.
+        srv._client = worker.client()
+        srv._client_connected = True
+        daemon.backend.stage_native_admission = lambda *, binding, **_kwargs: _fake_stage_admission(binding)
+        daemon.backend.stage_output_readback = lambda **_kwargs: None
+
+        # Both public production wrappers run; this adapter translates the
+        # managed argument mapping to their existing public signatures.
+        daemon.backend.registry.update({
+            "run_study": lambda arguments: _tools_workflow.run_study(arguments["study_tag"]),
+            "save_model": lambda arguments: _tools_snapshot.save_model(arguments["path"]),
+        })
+        result = daemon.dispatch({
+            "operation": "experiment.stage_run", "arguments": {
+                "stage_id": "cooldown", "source_attempt_id": source_attempt["attempt_id"],
+            },
+            "execution": {**execution, "request_id": stage_request, "idempotency_key": stage_request},
+        })
+        attempt = daemon.store.list_stage_attempts(project_id, model_ref, stage_id="cooldown")[-1]
+        calls = [item for item in sent if item.get("type") == "call"]
+        runs = [item for item in calls if item.get("method") == "run"]
+        saves = [item for item in calls if item.get("method") == "save"]
+        model_labels = [item for item in calls if item.get("method") == "label"]
+        assert len(runs) == expected_runs
+        assert all(item["handle"] == study_handle_for[requested_tag] for item in runs)
+        assert len(saves) == expected_runs
+        assert len(set(model_handles)) == len(model_handles)
+        assert len(model_handles) == (2 if expected_runs else 1)
+        assert all(item["handle"] in model_handles and item.get("args") == [] for item in model_labels)
+        assert not [item for item in calls if item.get("method") == "study"
+                    and item.get("args") and item["args"] != [requested_tag]]
+        assert not [item for item in calls if item.get("method") in {"get", "tags"}]
+        if expected_runs:
+            assert result["success"] is False
+            assert result["error"]["code"] == "STAGE_ACCEPTANCE_UNVERIFIED"
+            assert attempt["status"] == "SUCCEEDED_PARTIAL"
+            assert attempt["engine_dispatched"] is True
+        else:
+            assert result["success"] is False
+            assert attempt["engine_dispatched"] is False
+            assert attempt["status"] != "ACCEPTED"
+    finally:
+        srv._client = previous_client
+        srv._client_connected = previous_connected
+        daemon.close()
+        if "worker" in locals():
+            worker.close()
+
+
+@pytest.mark.parametrize(
+    "case,receiver,generation,args,event_operation",
+    [
+        ("label_setter", "model-exact", 71, ["renamed"], "stage-operation"),
+        ("wrong_model_handle", "model-other", 71, [], "stage-operation"),
+        ("wrong_generation", "model-exact", 72, [], "stage-operation"),
+        ("uncorrelated_operation", "model-exact", 71, [], "other-operation"),
+    ],
+)
+def test_stage_gate_rejects_unbound_model_label_calls(
+    case, receiver, generation, args, event_operation,
+):
+    """Only a zero-argument label read on the exact phase-bound Model is safe."""
+    from comsol_mcp._java_worker import _request_hash
+    from comsol_mcp._w21_stage_backend import StageWorkerDispatchGate
+
+    operation_id = "stage-operation"
+    gate = StageWorkerDispatchGate(operation_id=operation_id, model_tag="model1", study_tag="std1")
+    request_id = f"wrk-{uuid4()}"
+    payload = {
+        "type": "call", "request_id": request_id, "handle": receiver,
+        "generation": generation, "method": "label", "args": args,
+    }
+    event = {
+        "phase": "submitted", "request_id": request_id, "kind": "call",
+        "operation_id": event_operation, "request_hash": _request_hash(payload),
+        "metadata": payload,
+    }
+    binding = {
+        "phase": "solve", "model_tag": "model1", "model_handle": "model-exact",
+        "worker_generation": 71, "save_target_path": None,
+    }
+    with pytest.raises(ValueError):
+        gate.observe(event, phase="solve", stage_request_id="stage-request", backend_binding=binding)
 
 
 @pytest.mark.parametrize("output_mode", ["valid", "wrong_revision", "missing_ticket",

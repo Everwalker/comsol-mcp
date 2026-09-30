@@ -1358,6 +1358,38 @@ def test_study_inspect_reports_steps_and_activation() -> None:
     assert result["attached_solver_count"] == 1
 
 
+def test_activation_state_uses_only_the_documented_activate_map_transport() -> None:
+    """The native Field/State activation is a keyed string map, not solveFor()."""
+    from comsol_mcp._java_worker import RemoteJava
+
+    calls: list[tuple[str, list[Any]]] = []
+
+    class Worker:
+        generation = 19
+
+        def submit(self, command, payload, **_kwargs):
+            assert command == "call"
+            method = payload["method"]
+            args = payload.get("args", [])
+            calls.append((method, list(args)))
+            if method == "solveFor":
+                return {
+                    "ok": False, "status": "FAILED", "generation": self.generation,
+                    "failure": {"code": "METHOD_NOT_FOUND", "message": "solveFor requires a physics tag"},
+                }
+            if method == "getEntryKeys" and args == ["activate"]:
+                result = ["ht"]
+            elif method == "getString" and args == ["activate", "ht"]:
+                result = "on"
+            else:
+                raise AssertionError(f"unexpected activation read: {method}{args!r}")
+            return {"ok": True, "status": "OK", "generation": self.generation, "result": result}
+
+    state = w16._activation_state(RemoteJava(Worker(), "study-step-handle", 19, "StudyFeature"))
+    assert state["activate"] == {"ht": "on"}
+    assert [method for method, _args in calls] == ["getEntryKeys", "getString"]
+
+
 def test_study_inspect_rejects_a_non_study_path() -> None:
     model = build_model()
     expect_error("INVALID_NODE_PATH", call, "study.inspect", model, {"path": MESH_PATH})
