@@ -206,7 +206,7 @@ public final class W24CureCouponFixture {
         dose.prop("Units").set("CustomDependentVariableUnit", "s");
         dose.prop("Units").set("SourceTermQuantity", "dimensionless");
         dose.prop("Units").set("CustomSourceTermUnit", "1");
-        PhysicsFeature equation = dose.feature("dodeq1");
+        PhysicsFeature equation = distributedOdeFeature(dose);
         equation.set("ea", "0");
         equation.set("da", "1");
         equation.set("f", "Irel");
@@ -273,7 +273,7 @@ public final class W24CureCouponFixture {
         }
 
         Physics dose = model.physics("odeDose");
-        PhysicsFeature doseEquation = dose.feature("dodeq1");
+        PhysicsFeature doseEquation = distributedOdeFeature(dose);
         PhysicsFeature doseInitial = dose.feature("init1");
         if (!sameEntitySet(adhesive, dose.selection().entities()) ||
             !"time".equals(dose.prop("Units").getString("DependentVariableQuantity")) ||
@@ -326,7 +326,8 @@ public final class W24CureCouponFixture {
         result.put("relative_exposure_dose", Map.of(
             "field", "Duv_rel", "unit", "s", "dependent_variable_quantity", "time",
             "source", "Irel", "source_term_quantity", "dimensionless", "initial", "0[s]",
-            "selection", boxed(adhesive), "source_scope", "adhesive_only"));
+            "selection", boxed(adhesive), "source_scope", "adhesive_only",
+            "equation_feature_tag", doseEquation.tag(), "equation_feature_type", doseEquation.getType()));
         result.put("spatial_uv_readback", Map.of(
             "synthetic_estimated", true, "absolute_irradiance", false,
             "z_surface_m", ADHESIVE_Z_SURFACE_M, "adhesive_bounds_m", boxed(adhesiveBounds),
@@ -1113,12 +1114,32 @@ public final class W24CureCouponFixture {
         model.component(COMPONENT).physics().create(tag, "DomainODE", GEOMETRY,
             new String[]{dependent});
         model.physics(tag).selection().named(selection);
-        PhysicsFeature ode = model.physics(tag).feature("dodeq1");
+        PhysicsFeature ode = distributedOdeFeature(model.physics(tag));
         ode.set("ea", "0");
         ode.set("da", "1");
         ode.set("f", source);
         PhysicsFeature init = model.physics(tag).feature("init1");
         init.set(dependent, initial);
+    }
+
+    private static PhysicsFeature distributedOdeFeature(Physics physics) {
+        PhysicsFeature match = null;
+        int matchCount = 0;
+        List<String> observed = new ArrayList<>();
+        for (String featureTag : physics.feature().tags()) {
+            PhysicsFeature feature = physics.feature(featureTag);
+            String featureType = feature.getType();
+            observed.add(featureTag + "=" + featureType);
+            if ("DistributedODE".equals(featureType)) {
+                match = feature;
+                matchCount++;
+            }
+        }
+        if (matchCount != 1) {
+            throw new IllegalStateException("expected exactly one direct DistributedODE feature; found " +
+                matchCount + "; observed direct feature tags/types=" + observed);
+        }
+        return match;
     }
 
     private static void addMesh(Model model) {
@@ -1385,10 +1406,12 @@ public final class W24CureCouponFixture {
     }
 
     private static void odeReadback(Model model, Map<String, Object> out, String tag, String field) {
-        PhysicsFeature equation = model.physics(tag).feature("dodeq1");
+        PhysicsFeature equation = distributedOdeFeature(model.physics(tag));
         PhysicsFeature initial = model.physics(tag).feature("init1");
         out.put(tag, Map.of("selection", model.physics(tag).selection().entities(),
-            "field", field, "ea", equation.getString("ea"), "da", equation.getString("da"),
+            "field", field, "equation_feature_tag", equation.tag(),
+            "equation_feature_type", equation.getType(),
+            "ea", equation.getString("ea"), "da", equation.getString("da"),
             "f", equation.getString("f"), "initial", initial.getString(field)));
     }
 

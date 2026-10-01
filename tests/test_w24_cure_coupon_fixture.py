@@ -1,8 +1,15 @@
+import os
 from pathlib import Path
+import subprocess
+
+import pytest
 
 
 REPO = Path(__file__).resolve().parents[1]
 FIXTURE = REPO / "tools/java/W24CureCouponFixture.java"
+HARNESS = REPO / "tests/java/W24DistributedODEResolverHarness.java"
+JAVA_HOME = Path("/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home")
+COMSOL_API_JAR = Path("/Applications/COMSOL64/Multiphysics/plugins/com.comsol.api_1.0.0.jar")
 
 
 def test_w24_fixture_is_build_only_and_uses_correct_cure_rates():
@@ -67,3 +74,33 @@ def test_external_strain_is_a_verified_linear_elastic_material_child_in_both_fix
     assert '"parent_feature_tag", "lemm1"' in coupon
     assert '"external_strain_parent_tag", "lemm1"' in science
     assert 'sameEntitySet(domainIds, selectedEigenstrainDomains)' in science
+
+
+def test_w24_ode_equations_are_resolved_by_unique_feature_type_and_reported_tag(tmp_path):
+    javac = JAVA_HOME / "bin/javac"
+    java = JAVA_HOME / "bin/java"
+    if not javac.is_file() or not java.is_file() or not COMSOL_API_JAR.is_file():
+        pytest.skip("local resolver proxy requires COMSOL 6.4 public API and Amazon Corretto 11")
+
+    classes = tmp_path / "classes"
+    classes.mkdir()
+    compile_result = subprocess.run(
+        [str(javac), "-proc:none", "-classpath", str(COMSOL_API_JAR), "-d", str(classes),
+         str(FIXTURE), str(HARNESS)],
+        cwd=REPO, capture_output=True, text=True, timeout=120, check=False,
+    )
+    assert compile_result.returncode == 0, (
+        "Corretto 11 failed to compile the production fixture and proxy harness:\n"
+        + compile_result.stdout + compile_result.stderr
+    )
+
+    classpath = os.pathsep.join((str(classes), str(COMSOL_API_JAR)))
+    run_result = subprocess.run(
+        [str(java), "-Djava.awt.headless=true", "-classpath", classpath,
+         "W24DistributedODEResolverHarness"],
+        cwd=REPO, capture_output=True, text=True, timeout=30, check=False,
+    )
+    assert run_result.returncode == 0, (
+        "offline DistributedODE proxy checks failed:\n" + run_result.stdout + run_result.stderr
+    )
+    assert run_result.stdout.strip() == "W24 DistributedODE resolver proxy checks: PASS (3 cases)"
