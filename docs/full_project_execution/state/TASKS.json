@@ -2631,7 +2631,8 @@
         "docs/full_project_execution/w24/EQUATION_VIEW_SOFTWARE_CHECKPOINT.json",
         "docs/full_project_execution/w24/SENSITIVITY_SOFTWARE_CHECKPOINT.json",
         "docs/full_project_execution/w24/PHYSICAL_CONTROLS_SOFTWARE_CHECKPOINT.json",
-        "docs/full_project_execution/w24/T058_ASSUMPTION_REPORT_CHECKPOINT.json"
+        "docs/full_project_execution/w24/T058_ASSUMPTION_REPORT_CHECKPOINT.json",
+        "docs/full_project_execution/w24/PROCESS_INVENTORY_PRIVACY_SOFTWARE_CHECKPOINT.json"
       ],
       "blockers": [
         "The W24 0841Z setup-only attempt failed before engine/Worker birth at project.inspect; preserve its FAIL_OR_INCOMPLETE result and do not replay the stale candidate.",
@@ -2641,7 +2642,7 @@
         "Windows COMSOL 6.3 remains required and unassessed; only macOS COMSOL 6.3 arm64/x86_64 are USER_REQUESTED_SKIP.",
         "Stress component identity still requires complete native Equation View descriptions/units and both mechanics benchmarks; values or names alone are insufficient."
       ],
-      "note": "W24 PARTIAL. Accepted historical software checkpoints include 14-slot sensitivity, two-control physical campaign (271 regression PASS at its frozen candidate), and T058 assumption/provenance report (323 regression PASS at its frozen candidate). These overlapping counts are not additive and are not a fresh current-HEAD regression. T058 report presentation is implemented; original T047 full lifecycle/history and T058 sensitivity/calibration/physical validation remain incomplete. Native controls and full gel/UV/reference-state/viscoelastic/static-shape acceptance remain NOT_RUN/UNVERIFIED.",
+      "note": "W24 PARTIAL. Accepted historical software checkpoints include 14-slot sensitivity, two-control physical campaign (271 regression PASS at its frozen candidate), and T058 assumption/provenance report (323 regression PASS at its frozen candidate). These overlapping counts are not additive and are not a fresh current-HEAD regression. T058 report presentation is implemented; original T047 full lifecycle/history and T058 sensitivity/calibration/physical validation remain incomplete. Native controls and full gel/UV/reference-state/viscoelastic/static-shape acceptance remain NOT_RUN/UNVERIFIED. Latest local W24 admission: root accepted the offline runtime install, bounded six-test environment, wrapper restoration metadata, and current02 candidate freeze; one setup-only launch remains pending fresh quiescence, while native/scientific acceptance remain NOT_RUN.",
       "execution_notes": [
         "0330Z native attempt: COMSOL 6.4.0.293 server PID 90771/port 63979 and one Worker PID 90848/port 63988; Python 3.14 lacked mcp during production ControlDaemon registry construction, before model setup. 0 solve submissions; exact cleanup and global quiescence verified.",
         "0346Z offline candidate adds exact Python interpreter/distribution inventory and a pre-birth production no-engine gate. Actual pip check passed; collect_legacy_registry and ControlDaemon construction/close passed; JDK11 compile and 37 focused tests passed. Software-only; no native result.",
@@ -2660,27 +2661,67 @@
       ],
       "current_checkpoint": "docs/full_project_execution/w24/T058_ASSUMPTION_REPORT_CHECKPOINT.json",
       "current_native_controls_checkpoint": "docs/full_project_execution/w24/PHYSICAL_CONTROLS_SOFTWARE_CHECKPOINT.json",
-      "next_action": "The process-inventory privacy candidate remains root-accepted PASS_SCOPED_SOFTWARE_ONLY (13 focused + 1 required regression); the current W24 fixtures remain root-reviewed PASS_COMPILE_ONLY under JDK 11.0.31. The 8-GiB SSD-backed APFS image is storage-only, and environment preparation remains NOT_RUN. Acquisition of 32 official downloads plus one local wheel copy is root-reviewed; the historical native-app wheel is excluded. The runtime build plan remains a historical PASS_PLAN_ONLY snapshot. Attempt001 stopped before any build command after copying 108 source files and one builder wheel; command_count=0 and the partial capsule remains. Root confirmed the archive validator miscounted 16 nested setuptools vendor metadata pairs. Corrected attempt002 is root-authorized but has no reported result at this checkpoint; build, venv, install, pip check, import, native and science remain NOT_RUN. Preserve W24 requirements; overall W24 remains PARTIAL and the MASTER continues through W26.",
+      "next_action": "Current02 offline freeze and actual verifier passed root admission review. Next is one setup-only native launch, ROOT_GO_PENDING_FRESH_LAUNCH after fresh process/listener quiescence, with 900 seconds from exact birth including cleanup, 45-second reserve, one sequential Worker, zero solves, and no replay on UNKNOWN. This is not native/scientific acceptance; W24 remains PARTIAL and the MASTER remains ACTIVE through W26.",
       "historical_execution_notes_qualification": "Execution notes preserve observations from earlier candidates. Later canonical checkpoints supersede implementation TODOs only; failed/UNKNOWN native observations remain preserved and do not become PASS.",
       "current_local_preparation_20261001": {
         "path": "docs/full_project_execution/w24/PROCESS_INVENTORY_PRIVACY_SOFTWARE_CHECKPOINT.json",
-        "sha256": "650ea6f0ca1a60fb2bb6eb9c42a82a25b553dadc3b516db1edcb930eabea16af",
-        "status": "SCOPED_LOCAL_SOFTWARE_MILESTONES_ACCEPTED; ENVIRONMENT_AND_NATIVE_NOT_RUN",
+        "sha256": "5eeb62b8296f9e0be96dfc29d9244765305601718ca63527c8cea9ad0dff51ad",
+        "status": "ROOT_ACCEPTED_SCOPED_SOFTWARE_AND_OFFLINE_RUNTIME; CURRENT02_ROOT_ADMISSION_PASS; ROOT_GO_PENDING_FRESH_LAUNCH; NATIVE_AND_SCIENTIFIC_ACCEPTANCE_NOT_RUN",
         "process_inventory_privacy": {
-          "candidate_fingerprint": "7f1939af87f3ccb1132f2b540f37eb7a5225b72cd2867d85ebce46959752d33e",
+          "candidate_id": "w24-local-native-admission-privacy-20261001-luna03",
+          "fingerprint": "7f1939af87f3ccb1132f2b540f37eb7a5225b72cd2867d85ebce46959752d33e",
+          "base_commit": "e0f9ab953b4284bfe21f3a1a39d632c7fe964e56",
+          "source_scope": {
+            "tools/run_native_w24_cure_preflight.py": "78690f5a0e6465e5f35205a81cdf02fbae940d06fb74558e5ecdc3444e4ab8a4",
+            "tests/test_w24_cure_preflight_runner.py": "3b7127c3d0afd159744b06da4966c6d10641bb82395fce5ce4543a6d25e46bbb"
+          },
+          "change_summary": "Process/listener output is used transiently and not serialized raw; retained evidence is sanitized structured metadata. Empty, malformed, observer-missing, ambiguous Java/COMSOL, and incomplete listener inventories fail closed; valid kernel rows and complete unrelated listeners remain admissible. Existing path, freeze, budget, ownership, cleanup, and native behavior contracts are unchanged.",
           "root_review_sha256": "f2bd3bf38eee61bde820fb7f200dcf671b6bb408575752c96a7f033c28f56539",
           "tests": "13 focused + 1 required regression PASS"
         },
         "fixture_java_compile": {
           "status": "PASS_COMPILE_ONLY",
-          "receipt_sha256": "1cc42cb7bb86a01b42290663529fff4822a72fa564267b0b80aa23262761d990",
-          "root_review_sha256": "19aad6b321ecdca53dd24b1e723227bbc513c7255d8a9a107aa2414a9b3f6cd3",
-          "output": "3 Java 11 class files; major version 55"
+          "runtime": "JDK 11.0.31",
+          "attempts": "Each current W24 coupon/science fixture compiled once; exit code 0.",
+          "output": "3 Java class files, class-file major version 55",
+          "receipt": {
+            "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-local-runtime-20261001-001/offline-java-compile-001.json",
+            "sha256": "1cc42cb7bb86a01b42290663529fff4822a72fa564267b0b80aa23262761d990"
+          },
+          "root_review": {
+            "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-local-runtime-20261001-001/root-offline-java-review-001.json",
+            "sha256": "19aad6b321ecdca53dd24b1e723227bbc513c7255d8a9a107aa2414a9b3f6cd3",
+            "status": "PASS_COMPILE_ONLY"
+          },
+          "native_acceptance": "NOT_RUN",
+          "scientific_acceptance": "NOT_RUN"
         },
         "storage": {
           "status": "PASS_LOCAL_STORAGE_ONLY",
-          "mountpoint": "/private/tmp/comsol-mcp-w24-cure-store-20261001-02",
-          "image": "8-GiB SSD-backed APFS"
+          "review": {
+            "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-local-runtime-20261001-001/root-storage-review-02.json",
+            "sha256": "1cb2eeb98e36db3b86d3fd5cedcab131598f6d7957ddb6b49480dd821c7a900c"
+          },
+          "receipt": {
+            "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-local-runtime-20261001-001/storage-correction-receipt.json",
+            "sha256": "5bcd5afa0b6f91e582f7addc41b74847425098fa93a845dbd86d93dd9c62026e"
+          },
+          "image": {
+            "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-local-runtime-20261001-001/w24-cure-store-20261001-02.sparseimage",
+            "backing_volume": "SSD",
+            "filesystem": "APFS",
+            "whole_image_bytes": 8589934592,
+            "volume_uuid": "23FB2746-3E07-42E1-A70B-26489049F011",
+            "mountpoint": "/private/tmp/comsol-mcp-w24-cure-store-20261001-02"
+          },
+          "environment_preparation": "NOT_RUN",
+          "prior_failed_attempt": {
+            "root_review_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-local-runtime-20261001-001/root-storage-review-01.json",
+            "root_review_sha256": "ac42d9f60e66cea3687d6046a3965778108c18b7e5a2a273e16fcbfd4ecb9311",
+            "receipt_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-local-runtime-20261001-001/storage-receipt.json",
+            "receipt_sha256": "c91e37122c95c89217885074e2a9011416bf270d18253a70f3bec8213ebb58de",
+            "status": "REJECTED_STORAGE_CANDIDATE_CAPACITY_MISMATCH; PRESERVED"
+          }
         },
         "dependency_artifacts": {
           "status": "PASS_ROOT_REVIEWED_COMPLETE",
@@ -2688,29 +2729,211 @@
           "local_copy": 1,
           "artifact_count_total": 33,
           "total_bytes": 21265363,
-          "receipt_sha256": "d6ef327bcb54d34405ddfd3ac5a1278955f04143c4958f366a621c92f484af3c",
-          "root_review_sha256": "e54e58f6800a058efa0c6ef9c0d9099c239dde940aea7b70b9b34dd6f70fff79",
-          "native_app_historical_wheel": "EXCLUDED"
+          "verification": "SHA-256, wheel metadata, and compatibility tags verified for CPython 3.12.13 ARM64 under default requirements.",
+          "receipt": {
+            "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-local-runtime-20261001-001/w24-acquisition-receipt.json",
+            "sha256": "d6ef327bcb54d34405ddfd3ac5a1278955f04143c4958f366a621c92f484af3c"
+          },
+          "root_review": {
+            "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-local-runtime-20261001-001/root-dependency-acquisition-review-001.json",
+            "sha256": "e54e58f6800a058efa0c6ef9c0d9099c239dde940aea7b70b9b34dd6f70fff79",
+            "status": "PASS_ACQUISITION_ONLY"
+          },
+          "native_app_historical_wheel": "EXCLUDED",
+          "installation_and_environment_preparation": "NOT_RUN"
         },
-        "next_action": "Attempt001 stopped at first capsule-validation failure after copying 108 current-source files and one builder wheel (command_count=0); its partial capsule is retained. The root-confirmed issue is the archive validator counting 16 nested setuptools vendor metadata pairs as outer wheel metadata. Corrected attempt002 is root-authorized but its result is not yet available. Wheel build, venv, installation, pip check, app import, native, science, and network remain NOT_RUN.",
-        "environment_preparation": "NOT_RUN",
-        "native_acceptance": "NOT_RUN",
+        "environment_preparation": "PASS_ROOT_ACCEPTED_OFFLINE_BUILD_INSTALL_PIPCHECK_ONLY",
+        "runtime_build_attempt_002": {
+          "status": "OFFLINE_BUILD_INSTALL_PIPCHECK_PASS; ROOT_ACCEPTED_SCOPED_ONLY",
+          "receipt": {
+            "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-local-runtime-20261001-001/native-runtime-install-002.json",
+            "sha256": "edfa152f9788ed9f2cc46c94133884cbaea40c53f3c5015c9f947a6804bc9646"
+          },
+          "root_review": {
+            "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-local-runtime-20261001-001/root-native-runtime-install002-review.json",
+            "sha256": "d7f0a5f2cc69213fe595ffdc3568772c9b0cb1cab11e44f97b68a41eeee7f697",
+            "status": "PASS_OFFLINE_BUILD_INSTALL_ONLY"
+          },
+          "fresh_app_wheel_sha256": "c212d16bf659a9ce0f153f8613e96da5e23859196f17d5391cb6a1107b99d70d",
+          "installed_app_payload_files": 105,
+          "installed_distributions": 34,
+          "pip_check": "PASS",
+          "scope": "Offline build/install only; no application import, tests, network, JVM/COMSOL launch, repository write, or Git write."
+        },
+        "noengine_preflight_001": {
+          "status": "ROOT_ACCEPTED_NOENGINE_PREFLIGHT_ONLY",
+          "root_review": {
+            "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-local-runtime-20261001-001/root-noengine-preflight-review001.json",
+            "sha256": "ffa126e2263b3f55f57e32631668c34bc5e9b9624336c8c64049924238abb524"
+          },
+          "installed_app_modules_origin_verified": 44,
+          "local_registry_entries": 58,
+          "daemon": "CONSTRUCTED_AND_CLOSED; NO_WORKER_OR_SERVICE",
+          "jvm_started": false,
+          "engine_births": 0,
+          "solver_submissions": 0,
+          "wrapper_provenance_correction": {
+            "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-local-runtime-20261001-001/runtime-noengine-preflight-001-provenance-correction.json",
+            "sha256": "d036a1100d30fb240283fa3bea907a90d1a5f6615113918644584558ccc0fbb0"
+          },
+          "original_provenance_sha256": "2f7cf4095a8fd0795e8fb9147717bafad50dff0683f292f10d094307c4474479"
+        },
+        "bounded_test_environment_001": {
+          "status": "PASS_ROOT_REVIEWED_BOUNDED_TEST_ENVIRONMENT_ONLY",
+          "root_review": {
+            "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-testenv-repair-20261001-001/root-six-test-env-review001.json",
+            "sha256": "9064096f4039d2951ebb4c363efbe7d0cbc658e7a81fd52a171d49a47c31324f"
+          },
+          "postrun_receipt": {
+            "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-testenv-repair-20261001-001/execution-001/postrun-final-001/postrun-final-receipt.json",
+            "sha256": "7ead00578dec0a54a9795886ca56e00febe9e0cef1b3fcc259edbb780c874ba5"
+          },
+          "summary": {
+            "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-testenv-repair-20261001-001/execution-001/bounded-test-run-001/archived-evidence/summary.json",
+            "sha256": "f661eb904ee5d704895177241789f6615e6ddd5c935baa02a3160f001bf23e85"
+          },
+          "manager_run_id": "20261001T085153Z-94c285b0",
+          "tests": {
+            "focused": 5,
+            "required_regression": 1,
+            "passed": 6,
+            "failed": 0,
+            "skipped": 0
+          },
+          "test_python": "3.12.13",
+          "test_distributions": 38,
+          "native_runtime_distribution_identities": 34,
+          "installed_app_payload_files_verified": 105,
+          "pip_check": "PASS",
+          "native_acceptance": "NOT_RUN",
+          "scientific_acceptance": "NOT_RUN",
+          "baseline_qualification": "Baseline v5 anchors historical ancestor e0f9ab9 plus explicit overlay; actual candidate source commit is 8e5855c. All 132 current source hashes were checked and the 129-file native source closure SHA-256 is 35f9c3586c687248cc2199ea688d1a1492e47374a94f3c850d2e310943aebfcd. Prior Python/Java compile evidence was reused unchanged, not rerun.",
+          "preserved_first_attempt_failure": {
+            "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-local-native-admission-20261001/newcandidate-setup-software-001/root-bounded-tests001-failure-review.json",
+            "sha256": "9f1da4395e676e37e537e77aa0770d541ebd00cd8493d49a3f44febc5e4d336e",
+            "qualification": "Earlier attempt retained: four focused tests passed and one failed; required regression was NOT_RUN because MPh/JPype were missing."
+          }
+        },
+        "offline_candidate_freeze_current01": {
+          "status": "ROOT_REJECTED_METADATA_SCHEMA_ONLY; RETAINED",
+          "path": "docs/full_project_execution/w24/evidence/setup_candidate_20261001_current01/offline_candidate_freeze.json",
+          "sha256": "87801036810c84ec962c3afb9c9c62cd2dd8dc30c59eca97d08fc74230bce4c9",
+          "root_failure_review": {
+            "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-local-native-admission-20261001/root-freeze001-schema-failure-review.json",
+            "sha256": "68ff4b0773be91b706fa685f164a716421bb5cebc9870aec8d4f52b546ed8a55"
+          },
+          "qualification": "Metadata schema defect only; this is not a native or whole-candidate failure and is not treated as ready."
+        },
+        "offline_candidate_freeze_current02": {
+          "status": "PASS_CURRENT_OFFLINE_CANDIDATE_NATIVE_ADMISSION_ONLY",
+          "path": "docs/full_project_execution/w24/evidence/setup_candidate_20261001_current02/offline_candidate_freeze.json",
+          "sha256": "b251317304ce156751d329c4a2a5286be4972f5c4890ba222e1b60f65c5d6305",
+          "root_review": {
+            "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-local-native-admission-20261001/root-current02-freeze-review001.json",
+            "sha256": "24b45daf928154325eebdd0752f57b6f07ef36a8e9216cf1339897810af3080b"
+          },
+          "actual_native_verifier": {
+            "status": "PASS",
+            "source_files": 129,
+            "runtime_distributions": 34,
+            "runner_sha256": "78690f5a0e6465e5f35205a81cdf02fbae940d06fb74558e5ecdc3444e4ab8a4"
+          },
+          "application_imports": 0,
+          "engine_births": 0,
+          "solver_submissions": 0,
+          "native_acceptance": "NOT_RUN",
+          "scientific_acceptance": "NOT_RUN",
+          "root_authorized_next_action": "One setup-only native launch after fresh process/listener quiescence; 900 seconds from exact birth including cleanup, 45-second reserve, one sequential Worker, zero solves; no replay if outcome is UNKNOWN."
+        },
+        "wrapper_restoration_001": {
+          "status": "PASS_EXACT_RESTORATION_METADATA_ONLY",
+          "root_review": {
+            "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-local-native-admission-20261001/root-wrapper-restoration-review001.json",
+            "sha256": "77c418e6a4f46a2ce56a10b4882852f95d68fc352ec079aab4e49c20308d9225"
+          },
+          "incident": {
+            "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-local-native-admission-20261001/incident-001/wrapper-alteration-incident-001.json",
+            "sha256": "ec208223343217179d408a53191adad763a06e3075e96b82f58d4af4317f42f5"
+          },
+          "original_wrapper": {
+            "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-local-runtime-20261001-001/runtime-noengine-preflight-001-wrapper.py",
+            "sha256": "efa0901e1f10558bb44a459bd6793b8b74cd17d67fae69caa2865f8638b7b7ba"
+          },
+          "original_provenance_sha256": "2f7cf4095a8fd0795e8fb9147717bafad50dff0683f292f10d094307c4474479",
+          "accepted_correction_sha256": "d036a1100d30fb240283fa3bea907a90d1a5f6615113918644584558ccc0fbb0",
+          "retained_altered_wrapper": {
+            "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-local-native-admission-20261001/incident-001/runtime-noengine-preflight-001-wrapper-altered-b575989e.py",
+            "sha256": "b575989e354b03b99b41ed56af2ebd8609c47200b5bacd5f314e78fe4fc000b7"
+          },
+          "preflight_rerun": false,
+          "qualification": "Root accepted exact restoration metadata only; the historical gate was not rerun. The original provenance and the reconstructed altered copy remain preserved as separate artifacts."
+        },
+        "native_setup_launch_authorization": {
+          "status": "ROOT_GO_PENDING_FRESH_LAUNCH",
+          "scope": "One setup-only launch after fresh process/listener quiescence; the candidate has passed admission review, but native acceptance remains NOT_RUN until an actual birth/result is reviewed.",
+          "limits": {
+            "owned_servers": 1,
+            "seconds_from_exact_birth_including_cleanup": 900,
+            "cleanup_reserve_seconds": 45,
+            "sequential_workers": 1,
+            "solver_submissions": 0
+          },
+          "unknown_outcome_policy": "Do not replay on UNKNOWN."
+        },
+        "native_acceptance": "NOT_RUN; ROOT_GO_PENDING_FRESH_LAUNCH",
         "scientific_acceptance": "NOT_RUN",
+        "documentation_checkpoint": {
+          "pre_checkpoint_parent_head": "e0f9ab953b4284bfe21f3a1a39d632c7fe964e56",
+          "prior_local_checkpoint": {
+            "commit": "8e5855c102dc6d5d09745fb9bf15470b04164bf0",
+            "blob_count": 8,
+            "status": "ROOT_ACCEPTED_LOCAL_ONLY",
+            "public_push": "NOT_RUN"
+          },
+          "this_six_document_sync": {
+            "status": "LOCAL_WORKTREE_UPDATE_AFTER_C1; NO_GIT_ACTION_IN_THIS_TASK",
+            "files": 6
+          },
+          "public_main_last_observed": {
+            "head": "fbf672f140a78bac3a8652832623c28435f855e3",
+            "observed_before_utc": "2026-10-01T09:06:46Z"
+          },
+          "public_exact_three_commit_scope_head": "e0f9ab953b4284bfe21f3a1a39d632c7fe964e56",
+          "c1_and_c2_in_exact_three_commit_scope": false,
+          "exact_payload_destination_question": "PENDING_NO_HUMAN_REPLY; preserve prior auto-review rejections and do not retry."
+        },
+        "next_action": "The current02 offline freeze and actual verifier passed root admission review; a single setup-only native launch is ROOT_GO_PENDING_FRESH_LAUNCH after fresh process/listener quiescence. Keep the 900-second exact-birth budget including cleanup, 45-second reserve, one sequential Worker, zero solves, and no replay on UNKNOWN. W24 remains PARTIAL; native/scientific acceptance remain NOT_RUN.",
         "runtime_build_attempt_001": {
           "status": "STOPPED_FIRST_FAILURE",
-          "receipt_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-local-runtime-20261001-001/native-runtime-install-001.json",
-          "receipt_sha256": "72c1077a506eb4d8b63318f752cf686176042aabe4863140fdfd28d292b65dc6",
-          "root_failure_review_sha256": "09aa5c27c98f7c9c8b3e3f2abef785b7332e324b3e9594b6f243f6b13c98c507",
+          "started_at_utc": "2026-10-01T07:18:30.553353Z",
+          "completed_at_utc": "2026-10-01T07:18:30.940185Z",
+          "receipt": {
+            "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-local-runtime-20261001-001/native-runtime-install-001.json",
+            "sha256": "72c1077a506eb4d8b63318f752cf686176042aabe4863140fdfd28d292b65dc6"
+          },
+          "root_failure_review": {
+            "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-local-runtime-20261001-001/root-runtime-install001-failure-review.json",
+            "sha256": "09aa5c27c98f7c9c8b3e3f2abef785b7332e324b3e9594b6f243f6b13c98c507",
+            "status": "CONFIRMED_VALIDATOR_SCOPE_DEFECT_NO_BUILD_COMMAND"
+          },
+          "failed_stage": "source_and_builder_capsule",
+          "failure": "The validator counted 16 nested setuptools vendor metadata pairs as outer wheel metadata instead of the single root pair; the wheel checksum and whole ZIP CRC passed.",
           "command_count": 0,
-          "current_source_files_copied": 108,
-          "builder_artifacts_copied": 1,
-          "partial_capsule": "RETAINED",
+          "partial_capsule": {
+            "status": "RETAINED",
+            "path": "/private/tmp/comsol-mcp-w24-cure-store-20261001-02/runtime-app-capsule-001",
+            "current_source_files_copied": 108,
+            "builder_artifacts_copied": 1
+          },
           "wheel_build": "NOT_RUN",
-          "venv_install_import_native_science_network": "NOT_RUN"
-        },
-        "runtime_build_attempt_002": {
-          "status": "ROOT_AUTHORIZED_PENDING_RESULT",
-          "root_authorization_review_sha256": "09aa5c27c98f7c9c8b3e3f2abef785b7332e324b3e9594b6f243f6b13c98c507"
+          "venv_creation": "NOT_RUN",
+          "installation": "NOT_RUN",
+          "pip_check": "NOT_RUN",
+          "application_import": "NOT_RUN",
+          "native_acceptance": "NOT_RUN",
+          "scientific_acceptance": "NOT_RUN",
+          "network": "NOT_USED",
+          "repository_write": "NOT_USED"
         }
       }
     },
