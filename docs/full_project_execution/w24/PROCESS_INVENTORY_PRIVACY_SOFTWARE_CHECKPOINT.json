@@ -1,0 +1,235 @@
+{
+  "schema": "W24_PROCESS_INVENTORY_PRIVACY_SOFTWARE_CHECKPOINT_V1",
+  "recorded_at_utc": "2026-10-01T06:56:23Z",
+  "status": "PASS_ROOT_ACCEPTED_SCOPED_SOFTWARE_ONLY",
+  "candidate": {
+    "candidate_id": "w24-local-native-admission-privacy-20261001-luna03",
+    "fingerprint": "7f1939af87f3ccb1132f2b540f37eb7a5225b72cd2867d85ebce46959752d33e",
+    "base_commit": "e0f9ab953b4284bfe21f3a1a39d632c7fe964e56",
+    "source_scope": {
+      "tools/run_native_w24_cure_preflight.py": "78690f5a0e6465e5f35205a81cdf02fbae940d06fb74558e5ecdc3444e4ab8a4",
+      "tests/test_w24_cure_preflight_runner.py": "3b7127c3d0afd159744b06da4966c6d10641bb82395fce5ce4543a6d25e46bbb"
+    },
+    "change_summary": "Process/listener output is used transiently and not serialized raw; retained evidence is sanitized structured metadata. Empty, malformed, observer-missing, ambiguous Java/COMSOL, and incomplete listener inventories fail closed; valid kernel rows and complete unrelated listeners remain admissible. Existing path, freeze, budget, ownership, cleanup, and native behavior contracts are unchanged."
+  },
+  "root_review": {
+    "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-local-native-admission-20261001/root-privacy-software-review-v3.json",
+    "sha256": "f2bd3bf38eee61bde820fb7f200dcf671b6bb408575752c96a7f033c28f56539",
+    "status": "PASS_SCOPED_SOFTWARE_ONLY",
+    "source_hashes_verified": 106
+  },
+  "bounded_software_verification": {
+    "baseline": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-local-native-admission-20261001/bounded-test-baseline-v3.json",
+      "sha256": "9cb9368a0aeea340db29a05a735d27f7841bc862c9bab6c8fde55c1cb59295e4"
+    },
+    "receipt": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-local-native-admission-20261001/software-test-receipt.json",
+      "sha256": "76fe74bc177f710516e979a597d13019be877383636644d1ad31bb63a3e8dd0d"
+    },
+    "summary": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/20261001T062259Z-5ff3effc.summary.json",
+      "sha256": "81e02ee85fc21439a2bb7729808c2cd0e3a43dece3335fe066f3b0d9eb503e3a",
+      "status": "PASS",
+      "candidate_fingerprint": "7f1939af87f3ccb1132f2b540f37eb7a5225b72cd2867d85ebce46959752d33e"
+    },
+    "tests": {
+      "focused": {
+        "declared": 13,
+        "executed": 13,
+        "passed": 13,
+        "failed": 0,
+        "errors": 0,
+        "status": "PASS"
+      },
+      "required_regression": {
+        "declared": 1,
+        "executed": 1,
+        "passed": 1,
+        "failed": 0,
+        "errors": 0,
+        "status": "PASS"
+      },
+      "unique_total": 14,
+      "scope_limit": "Synthetic inventory coverage plus one no-MCP prebirth regression; not the full W24 suite or native acceptance."
+    },
+    "artifacts": [
+      {
+        "path": "/Volumes/CTestEff/test-efficiency/runs/20261001T062259Z-5ff3effc/focus.junit.xml",
+        "sha256": "38d0eebee3e8c52459421d5455362c1e698c69411ac75b569686d97780ac3776"
+      },
+      {
+        "path": "/Volumes/CTestEff/test-efficiency/runs/20261001T062259Z-5ff3effc/focus.log",
+        "sha256": "ce38308b4aa38337d86e14f07cd664f694a391be92bce09871a394a6a83fc816"
+      },
+      {
+        "path": "/Volumes/CTestEff/test-efficiency/runs/20261001T062259Z-5ff3effc/required_regression.junit.xml",
+        "sha256": "f4d759ef531b64fa15ab98865609329e21a0de58a7581e9db7014e0392e94e4e"
+      },
+      {
+        "path": "/Volumes/CTestEff/test-efficiency/runs/20261001T062259Z-5ff3effc/required_regression.log",
+        "sha256": "d22869212c01e8965b9ec9e5c34ef137e16f0653485a0c329b5e85bd4bb42a4d"
+      }
+    ],
+    "prior_blocked_attempt": {
+      "run_id": "20261001T062223Z-420a5ab7",
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/test-efficiency/20261001T062223Z-420a5ab7.summary.json",
+      "sha256": "a04001481ac41139ae7cdece39deddb1104f9b467b728ec6f091de010b1a8101",
+      "status": "BLOCKED_BEFORE_TEST_EXECUTION; PRESERVED",
+      "qualification": "The bounded runner scratch write probe was denied before any tests; it is not a test failure or a pass."
+    }
+  },
+  "related_parser_candidate": {
+    "candidate_id": "w21-getisol-parser-integer-preservation-20261001-03",
+    "fingerprint": "7e5cd214058f8c294b69e7ebafa6e21e18e0c07caadfb7ee69127e84f66b7928",
+    "manifest_source_hashes": 114,
+    "current_mismatches": 0,
+    "qualification": "This W24 two-file candidate does not stale or replace the separately accepted C0 parser candidate."
+  },
+  "local_storage": {
+    "status": "PASS_LOCAL_STORAGE_ONLY",
+    "review": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-local-runtime-20261001-001/root-storage-review-02.json",
+      "sha256": "1cb2eeb98e36db3b86d3fd5cedcab131598f6d7957ddb6b49480dd821c7a900c"
+    },
+    "receipt": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-local-runtime-20261001-001/storage-correction-receipt.json",
+      "sha256": "5bcd5afa0b6f91e582f7addc41b74847425098fa93a845dbd86d93dd9c62026e"
+    },
+    "image": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-local-runtime-20261001-001/w24-cure-store-20261001-02.sparseimage",
+      "backing_volume": "SSD",
+      "filesystem": "APFS",
+      "whole_image_bytes": 8589934592,
+      "volume_uuid": "23FB2746-3E07-42E1-A70B-26489049F011",
+      "mountpoint": "/private/tmp/comsol-mcp-w24-cure-store-20261001-02"
+    },
+    "environment_preparation": "NOT_RUN",
+    "prior_failed_attempt": {
+      "root_review_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-local-runtime-20261001-001/root-storage-review-01.json",
+      "root_review_sha256": "ac42d9f60e66cea3687d6046a3965778108c18b7e5a2a273e16fcbfd4ecb9311",
+      "receipt_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-local-runtime-20261001-001/storage-receipt.json",
+      "receipt_sha256": "c91e37122c95c89217885074e2a9011416bf270d18253a70f3bec8213ebb58de",
+      "status": "REJECTED_STORAGE_CANDIDATE_CAPACITY_MISMATCH; PRESERVED"
+    }
+  },
+  "local_fixture_java_compile": {
+    "status": "PASS_COMPILE_ONLY",
+    "runtime": "JDK 11.0.31",
+    "attempts": "Each current W24 coupon/science fixture compiled once; exit code 0.",
+    "output": "3 Java class files, class-file major version 55",
+    "receipt": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-local-runtime-20261001-001/offline-java-compile-001.json",
+      "sha256": "1cc42cb7bb86a01b42290663529fff4822a72fa564267b0b80aa23262761d990"
+    },
+    "root_review": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-local-runtime-20261001-001/root-offline-java-review-001.json",
+      "sha256": "19aad6b321ecdca53dd24b1e723227bbc513c7255d8a9a107aa2414a9b3f6cd3",
+      "status": "PASS_COMPILE_ONLY"
+    },
+    "native_acceptance": "NOT_RUN",
+    "scientific_acceptance": "NOT_RUN"
+  },
+  "dependency_artifacts": {
+    "status": "PASS_ROOT_REVIEWED_COMPLETE",
+    "official_downloads": 32,
+    "local_copy": 1,
+    "artifact_count_total": 33,
+    "total_bytes": 21265363,
+    "verification": "SHA-256, wheel metadata, and compatibility tags verified for CPython 3.12.13 ARM64 under default requirements.",
+    "receipt": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-local-runtime-20261001-001/w24-acquisition-receipt.json",
+      "sha256": "d6ef327bcb54d34405ddfd3ac5a1278955f04143c4958f366a621c92f484af3c"
+    },
+    "root_review": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-local-runtime-20261001-001/root-dependency-acquisition-review-001.json",
+      "sha256": "e54e58f6800a058efa0c6ef9c0d9099c239dde940aea7b70b9b34dd6f70fff79",
+      "status": "PASS_ACQUISITION_ONLY"
+    },
+    "native_app_historical_wheel": "EXCLUDED",
+    "installation_and_environment_preparation": "NOT_RUN"
+  },
+  "acceptance_boundaries": {
+    "software": "PASS_ROOT_ACCEPTED_SCOPED_SOFTWARE_ONLY",
+    "native_environment": "NOT_RUN",
+    "native_acceptance": "NOT_RUN",
+    "scientific_acceptance": "NOT_RUN",
+    "engine_or_worker_births": 0,
+    "source_or_archive_uploads": 0,
+    "git_publication": "NOT_RUN"
+  },
+  "next_action": "Runtime attempt001 stopped at the first capsule-validation failure after copying 108 source files and one builder wheel; command_count=0 and the partial capsule is retained. The exact receipt and root diagnosis review are linked above. Corrected attempt002 is root-authorized but has no reported result at this checkpoint. Wheel build, venv, install, pip check, app import, native, science, and network actions remain NOT_RUN.",
+  "runtime_build_plan": {
+    "status": "PASS_PLAN_ONLY",
+    "plan": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-local-runtime-20261001-001/runtime-build-plan-001.json",
+      "sha256": "2803d9ee6ba2fd69d3557cb0e1d1da0466d00ca2921bbbd4b4ebd2cacf915b99"
+    },
+    "root_review": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-local-runtime-20261001-001/root-runtime-build-plan-review-001.json",
+      "sha256": "e5ae6778b679bea9dd3b3e6705aee18791afb893911d4f359e4a71cc0b029cce",
+      "status": "PASS_PLAN_ONLY"
+    },
+    "source_inputs_verified": 108,
+    "source_bytes_verified": 5255235,
+    "builder_artifacts_verified": 3,
+    "execution": "NOT_RUN_AT_PREBUILD_PLAN_SNAPSHOT",
+    "next_action": "This PASS_PLAN_ONLY snapshot predates runtime attempt001. Current attempt status and the corrected, root-authorized attempt002 are recorded separately below.",
+    "snapshot_type": "HISTORICAL_PREBUILD_PLAN_SNAPSHOT",
+    "snapshot_created_at_utc": "2026-10-01T06:57:29.284856Z"
+  },
+  "documentation_checkpoint": {
+    "parent_head": "e0f9ab953b4284bfe21f3a1a39d632c7fe964e56",
+    "parent_head_role": "PRE_CHECKPOINT_PARENT_DOCUMENTATION_HEAD",
+    "s19_documentation_update": "INCLUDED_IN_THIS_SIX_DOCUMENT_STATUS_CHECKPOINT",
+    "planned_local_commit": {
+      "scope": "Two W24 process-inventory privacy candidate source files plus these six status/documentation files",
+      "file_count": 8,
+      "status": "NOT_CREATED_AT_CHECKPOINT_CAPTURE"
+    },
+    "public_exact_three_commit_scope_head": "e0f9ab953b4284bfe21f3a1a39d632c7fe964e56",
+    "public_push": "NOT_RUN"
+  },
+  "runtime_build_attempt_001": {
+    "status": "STOPPED_FIRST_FAILURE",
+    "started_at_utc": "2026-10-01T07:18:30.553353Z",
+    "completed_at_utc": "2026-10-01T07:18:30.940185Z",
+    "receipt": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-local-runtime-20261001-001/native-runtime-install-001.json",
+      "sha256": "72c1077a506eb4d8b63318f752cf686176042aabe4863140fdfd28d292b65dc6"
+    },
+    "root_failure_review": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-local-runtime-20261001-001/root-runtime-install001-failure-review.json",
+      "sha256": "09aa5c27c98f7c9c8b3e3f2abef785b7332e324b3e9594b6f243f6b13c98c507",
+      "status": "CONFIRMED_VALIDATOR_SCOPE_DEFECT_NO_BUILD_COMMAND"
+    },
+    "failed_stage": "source_and_builder_capsule",
+    "failure": "The validator counted 16 nested setuptools vendor metadata pairs as outer wheel metadata instead of the single root pair; the wheel checksum and whole ZIP CRC passed.",
+    "command_count": 0,
+    "partial_capsule": {
+      "status": "RETAINED",
+      "path": "/private/tmp/comsol-mcp-w24-cure-store-20261001-02/runtime-app-capsule-001",
+      "current_source_files_copied": 108,
+      "builder_artifacts_copied": 1
+    },
+    "wheel_build": "NOT_RUN",
+    "venv_creation": "NOT_RUN",
+    "installation": "NOT_RUN",
+    "pip_check": "NOT_RUN",
+    "application_import": "NOT_RUN",
+    "native_acceptance": "NOT_RUN",
+    "scientific_acceptance": "NOT_RUN",
+    "network": "NOT_USED",
+    "repository_write": "NOT_USED"
+  },
+  "runtime_build_attempt_002": {
+    "status": "ROOT_AUTHORIZED_PENDING_RESULT",
+    "authorization_review": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-local-runtime-20261001-001/root-runtime-install001-failure-review.json",
+      "sha256": "09aa5c27c98f7c9c8b3e3f2abef785b7332e324b3e9594b6f243f6b13c98c507"
+    },
+    "authorized_next_action": "Preserve 001 script/receipt/capsule; new002 validates exact partial inventory and 108 current source hashes, reuses verified files, and continues the same offline build/install/pip check. No engine/import/network/Git.",
+    "result": "NOT_YET_AVAILABLE_AT_THIS_CHECKPOINT"
+  },
+  "updated_at_utc": "2026-10-01T07:28:17Z"
+}

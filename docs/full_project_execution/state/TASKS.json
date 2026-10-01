@@ -591,8 +591,8 @@
         "Initial-stage integration scoped software accepted on 24-file fingerprint ffdc8c25e4528c2cb42c358a6e1ee4e89898fb172a8891dbee3bcbc86766442a: 566 unique cases = 565 PASS + one Windows owner-semantics SKIP, 0 failures/errors. Main R1/R2/R3/R4 findings repaired, producer positive and 11 tamper cases verified. Fresh Windows initial-stage native NOT_RUN; successor mapping/history and T021/T047 remain open.",
         "Candidate06 local stage-route software repair accepted on source HEAD 4760b4a223017a38ef1c4a52f130433fd77c3c14: fresh independent scoped review PASS; 17 focus + 25 required-regression cases, each zero fail/error/skip. Native candidate06, physical acceptance and before-fix offline reproduction NOT_RUN. Original 0b5 discovery64 stage_run remains UNKNOWN/non-replayable with no cleanup PASS; see compact repair summary."
       ],
-      "current_stage": "Current software candidate03 is ROOT_ACCEPTED_PASS_SOFTWARE_ONLY; source commit c6815b3fd6b17ddc53342064059cc7c95015db77; fixed native candidate NOT_PREPARED/NOT_RUN. Historical BBC/7b1 checkpoint and failed manifests01/02 are preserved under explicit history. S18 remains PARTIAL_NOT_ACCEPTED on the old Java candidate. Full MASTER continues through W26.",
-      "next_action": "Next authorized scope: prepare a proposal only for a NEW Windows 6.4 source-bound initial-stage candidate under fresh `w21r19` paths and IDs, using fixed source C0 at `c6815b3fd6b17ddc53342064059cc7c95015db77`, the same profile and probe-discovery setting, budgets, and thresholds. Root reviews the proposal before any remote PREPARE; after review, fresh actual guards and a separate GO are required before native execution. No S18/R17 replay, old cached Worker reuse, or COMSOL 6.3 in this bounded unit. The full MASTER continues through W26; no phase stop.",
+      "current_stage": "Candidate03 remains root-accepted software only. S19-007 static proposal review passed; the fresh r19 root was then created. The six-file SCP was rejected before CreateProcess, so no transfer occurred. Exact-three Git publication and independent LAN six-file approval are pending; Windows compile/PREPARE/readback/native remain NOT_RUN.",
+      "next_action": "Broad human authorization for future project-related uploads was received at 2026-10-01T05:41:47.839315Z. Automatic review then rejected the exact six-file SCP and exact three-commit public push before CreateProcess because each sensitive payload and destination still required specificity; neither action ran. Wait for the direct reply to the one composite exact payload-and-destination question sent at 2026-10-01T05:50:14.675593Z (pending, no human reply). If the reply specifically approves the six-file Windows transfer, resume only that transfer and its already-approved private compile/metadata PREPARE; do not issue an engine GO or publish Git. If it specifically approves the exact three-commit public push, push only those three commits after the existing fresh source/ref checks; do not transfer the Windows files. If it selects both, keep each action within its exact scope. No workaround. The full MASTER remains ACTIVE through W26.",
       "automatic_unit_controls_checkpoint": "docs/full_project_execution/project_session/STAGE_BACKEND_SOFTWARE_CHECKPOINT.json#automatic_unit_controls_producer_20260930",
       "initial_stage_integration_checkpoint": "docs/full_project_execution/project_session/STAGE_BACKEND_SOFTWARE_CHECKPOINT.json#initial_stage_integration_20260930",
       "current_initial_stage_native_preparation": {
@@ -1371,7 +1371,7 @@
           "source_commit": "bbc4a6f68b5a8fe9ce33c733eaa744a12f7fe72f"
         }
       },
-      "current_native_preparation_pointer": "current_native_preparation_20261001_s18",
+      "current_native_preparation_pointer": "current_native_preparation_20261001_s19",
       "current_native_preparation_20261001_s18": {
         "status": "S18_SOLVE_SUCCEEDED_PARTIAL_NOT_ACCEPTED; JOB_AND_LINKED_OPERATION_FAILED_STAGE_ACCEPTANCE_UNVERIFIED; GETISOL_READONLY_EVENT_PASS_SCALAR_0_DEFECT_CORROBORATED; SAVED_MODEL_STREAM_HASH_VERIFIED_BYTES_ONLY; OUTPUT_AND_FIELD_CHECKS_UNVERIFIED; SCIENTIFIC_ACCEPTANCE_NOT_RUN",
         "run_id": "w21-64-20260930T221921Z-48908cfd",
@@ -2346,6 +2346,88 @@
             }
           }
         }
+      },
+      "current_native_preparation_20261001_s19": {
+        "status": "PASS_STATIC_PREPARATION_ONLY; ROOT_CREATED; SCP_REJECTED_BEFORE_CREATEPROCESS; NO_TRANSFER",
+        "proposal_review": {
+          "path": "execution-scratch/w21-initial-native-w21r19-plan-20261001/root-static-review-s19-007.json",
+          "sha256": "788b0060298ca8cf40490ab9a5c83c4b8f26e9f4929c67695d0467439cf93392"
+        },
+        "proposal_sha256": "57b13cd5b678ddc5ca16f1421225a90f9167c1e72366c132428cb45999216ac7",
+        "software_candidate": {
+          "id": "w21-getisol-parser-integer-preservation-20261001-03",
+          "fingerprint": "7e5cd214058f8c294b69e7ebafa6e21e18e0c07caadfb7ee69127e84f66b7928",
+          "source_commit": "c6815b3fd6b17ddc53342064059cc7c95015db77"
+        },
+        "root_inventory": {
+          "status": "PASS_ROOT_ABSENT_BEFORE_CREATE",
+          "path": "execution-scratch/w21-initial-native-w21r19-plan-20261001/root-readonly-inventory-s19-002/receipt.json",
+          "sha256": "d528c88e2f0b93c69ed5bd635cd4d52cd25047b3b1ef5c6f4e1bad61f17cdffa",
+          "exit_code": 0
+        },
+        "root_create": {
+          "status": "CREATED_FRESH_R19_ROOT",
+          "path": "execution-scratch/w21-initial-native-w21r19-plan-20261001/prepare-proposal-s19-007/authorized-execution-001/root-create-attempt001/receipt.json",
+          "sha256": "13669ef24a240e9cbc00e3faf7f7bbe3d3f4225e050ec48c41cd1146236815ad",
+          "ssh_exit": 0,
+          "stdout_sha256": "e100fd3ee9e2ca6eb46f976d3e25b2a81de5fc796b6cbdf70a566c8687bf56cb"
+        },
+        "scp_attempt": {
+          "status": "AUTO_REVIEW_REJECTED_BEFORE_CREATEPROCESS; NO_PROCESS_OR_TRANSFER",
+          "file_count": 6,
+          "argv_sha256": "e82889108a05ea48a55f169df6b3efc519c2eb3c9b6bab393b78f6dfb7343d14",
+          "command_sha256": "ded64be0dc10c0f366c0d5c6f05975e5e7d6d1e7f276102431cced6e62e25168",
+          "review_reason": "Exact payload and destination lacked explicit authorization and trust verification."
+        },
+        "windows_compile_prepare_readback_native_science": "NOT_RUN; NO_ENGINE_GO",
+        "pending_approvals": [
+          "Direct response to the composite exact payload-and-destination question sent 2026-10-01T05:50:14.675593Z; it offers the exact six-file Windows SCP, the exact three-commit public push, either one, or neither. No human reply recorded."
+        ],
+        "publication_state": {
+          "local_documentation_head": "e0f9ab953b4284bfe21f3a1a39d632c7fe964e56",
+          "public_main": "fbf672f140a78bac3a8652832623c28435f855e3",
+          "new_push": "NOT_RUN",
+          "s19_docs_update": "INCLUDED_IN_CURRENT_SIX_DOCUMENT_STATUS_CHECKPOINT; EIGHT_FILE_LOCAL_COMMIT_NOT_CREATED_AT_CHECKPOINT",
+          "local_documentation_head_role": "PRE_CHECKPOINT_PARENT_DOCUMENTATION_HEAD",
+          "public_exact_three_commit_scope_head": "e0f9ab953b4284bfe21f3a1a39d632c7fe964e56"
+        },
+        "overall_w21": "PARTIAL",
+        "master_goal": "ACTIVE_THROUGH_W26",
+        "current_next_action": "Broad human authorization for future project-related uploads was received at 2026-10-01T05:41:47.839315Z. Automatic review then rejected the exact six-file SCP and exact three-commit public push before CreateProcess because each sensitive payload and destination still required specificity; neither action ran. Wait for the direct reply to the one composite exact payload-and-destination question sent at 2026-10-01T05:50:14.675593Z (pending, no human reply). If the reply specifically approves the six-file Windows transfer, resume only that transfer and its already-approved private compile/metadata PREPARE; do not issue an engine GO or publish Git. If it specifically approves the exact three-commit public push, push only those three commits after the existing fresh source/ref checks; do not transfer the Windows files. If it selects both, keep each action within its exact scope. No workaround. The full MASTER remains ACTIVE through W26.",
+        "artifact_manifest_sha256": "504578c55cc5c9ac1b5ebc438c02d7b6c78e361e6aa2455576918ae2c3189978",
+        "package_source_manifest_sha256": "81320d8e2b128615231941bb4b01940b2a998055bbf1c153867cd8275d34d9a0",
+        "worker_source_sha256": "0b7ec0a7304b0f1cdb16fe42fcca2de318cf687b97e66a5649da3f8a6f462947",
+        "runner_source_manifest_sha256": "52822362cee83c3a048930dbc4759c76432c991a9a5255002a17215b8b892b4e",
+        "local_java_compile": "PASS; JDK 11.0.31; 22 verified class files; SOURCE C0 ONLY; NO ENGINE",
+        "project_upload_authorization_20261001": {
+          "status": "USER_APPROVED_BROAD_PROJECT_UPLOADS",
+          "received_at_utc": "2026-10-01T05:41:47.839315Z",
+          "source": "Direct human reply",
+          "user_text": "批准未来所有与本项目相关的文件上传",
+          "scope": "All future project-related file uploads"
+        },
+        "exact_upload_review_and_pending_question_20261001": {
+          "broad_authorization": "Received and retained; it is not being represented as absent.",
+          "automatic_reviews": [
+            {
+              "action": "SCP exact six-file source archive, manifest, and four scripts to everwalker@192.168.100.2:C:/Temp/w21r19/",
+              "status": "AUTO_REVIEW_REJECTED_BEFORE_CREATEPROCESS; NO_PROCESS_OR_TRANSFER",
+              "reported_at_utc": "2026-10-01T05:46:06.605960Z",
+              "reason": "Automatic review required specific human authorization for this sensitive payload and destination despite the broad project-upload authorization; no workaround or alternate channel."
+            },
+            {
+              "action": "Ordinary non-force push of exact range 4b91915da18c3961566d84868cbf89f909b77364 -> c6815b3fd6b17ddc53342064059cc7c95015db77 -> e0f9ab953b4284bfe21f3a1a39d632c7fe964e56 to https://github.com/Everwalker/comsol-mcp.git refs/heads/main",
+              "status": "AUTO_REVIEW_REJECTED_BEFORE_CREATEPROCESS; NO_PROCESS_OR_PUSH",
+              "reason": "Automatic review required specific human authorization for the internal progress/state and diagnostic payload at this public destination despite the broad project-upload authorization; no workaround."
+            }
+          ],
+          "pending_human_question": {
+            "asked_at_utc": "2026-10-01T05:50:14.675593Z",
+            "status": "PENDING_NO_HUMAN_REPLY",
+            "scope": "One composite question requests specific payload-and-destination approval for the exact six-file Windows SCP and the exact three-commit public GitHub push; it offers both, either one alone, or neither.",
+            "retry_rule": "Do not retry or use an alternate path until a direct human reply selects the exact action scope."
+          }
+        }
       }
     },
     {
@@ -2578,8 +2660,59 @@
       ],
       "current_checkpoint": "docs/full_project_execution/w24/T058_ASSUMPTION_REPORT_CHECKPOINT.json",
       "current_native_controls_checkpoint": "docs/full_project_execution/w24/PHYSICAL_CONTROLS_SOFTWARE_CHECKPOINT.json",
-      "next_action": "Reuse accepted software checkpoints; inspect actual native bindings before freezing permitted-host control/setup/science candidates. Do not repeat the completed T058 report implementation or restore stale setup candidates. Preserve Windows6.3 requirement and Mac6.3 USER_REQUESTED_SKIP; continue original W21-W26 scope.",
-      "historical_execution_notes_qualification": "Execution notes preserve observations from earlier candidates. Later canonical checkpoints supersede implementation TODOs only; failed/UNKNOWN native observations remain preserved and do not become PASS."
+      "next_action": "The process-inventory privacy candidate remains root-accepted PASS_SCOPED_SOFTWARE_ONLY (13 focused + 1 required regression); the current W24 fixtures remain root-reviewed PASS_COMPILE_ONLY under JDK 11.0.31. The 8-GiB SSD-backed APFS image is storage-only, and environment preparation remains NOT_RUN. Acquisition of 32 official downloads plus one local wheel copy is root-reviewed; the historical native-app wheel is excluded. The runtime build plan remains a historical PASS_PLAN_ONLY snapshot. Attempt001 stopped before any build command after copying 108 source files and one builder wheel; command_count=0 and the partial capsule remains. Root confirmed the archive validator miscounted 16 nested setuptools vendor metadata pairs. Corrected attempt002 is root-authorized but has no reported result at this checkpoint; build, venv, install, pip check, import, native and science remain NOT_RUN. Preserve W24 requirements; overall W24 remains PARTIAL and the MASTER continues through W26.",
+      "historical_execution_notes_qualification": "Execution notes preserve observations from earlier candidates. Later canonical checkpoints supersede implementation TODOs only; failed/UNKNOWN native observations remain preserved and do not become PASS.",
+      "current_local_preparation_20261001": {
+        "path": "docs/full_project_execution/w24/PROCESS_INVENTORY_PRIVACY_SOFTWARE_CHECKPOINT.json",
+        "sha256": "650ea6f0ca1a60fb2bb6eb9c42a82a25b553dadc3b516db1edcb930eabea16af",
+        "status": "SCOPED_LOCAL_SOFTWARE_MILESTONES_ACCEPTED; ENVIRONMENT_AND_NATIVE_NOT_RUN",
+        "process_inventory_privacy": {
+          "candidate_fingerprint": "7f1939af87f3ccb1132f2b540f37eb7a5225b72cd2867d85ebce46959752d33e",
+          "root_review_sha256": "f2bd3bf38eee61bde820fb7f200dcf671b6bb408575752c96a7f033c28f56539",
+          "tests": "13 focused + 1 required regression PASS"
+        },
+        "fixture_java_compile": {
+          "status": "PASS_COMPILE_ONLY",
+          "receipt_sha256": "1cc42cb7bb86a01b42290663529fff4822a72fa564267b0b80aa23262761d990",
+          "root_review_sha256": "19aad6b321ecdca53dd24b1e723227bbc513c7255d8a9a107aa2414a9b3f6cd3",
+          "output": "3 Java 11 class files; major version 55"
+        },
+        "storage": {
+          "status": "PASS_LOCAL_STORAGE_ONLY",
+          "mountpoint": "/private/tmp/comsol-mcp-w24-cure-store-20261001-02",
+          "image": "8-GiB SSD-backed APFS"
+        },
+        "dependency_artifacts": {
+          "status": "PASS_ROOT_REVIEWED_COMPLETE",
+          "official_downloads": 32,
+          "local_copy": 1,
+          "artifact_count_total": 33,
+          "total_bytes": 21265363,
+          "receipt_sha256": "d6ef327bcb54d34405ddfd3ac5a1278955f04143c4958f366a621c92f484af3c",
+          "root_review_sha256": "e54e58f6800a058efa0c6ef9c0d9099c239dde940aea7b70b9b34dd6f70fff79",
+          "native_app_historical_wheel": "EXCLUDED"
+        },
+        "next_action": "Attempt001 stopped at first capsule-validation failure after copying 108 current-source files and one builder wheel (command_count=0); its partial capsule is retained. The root-confirmed issue is the archive validator counting 16 nested setuptools vendor metadata pairs as outer wheel metadata. Corrected attempt002 is root-authorized but its result is not yet available. Wheel build, venv, installation, pip check, app import, native, science, and network remain NOT_RUN.",
+        "environment_preparation": "NOT_RUN",
+        "native_acceptance": "NOT_RUN",
+        "scientific_acceptance": "NOT_RUN",
+        "runtime_build_attempt_001": {
+          "status": "STOPPED_FIRST_FAILURE",
+          "receipt_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w24-local-runtime-20261001-001/native-runtime-install-001.json",
+          "receipt_sha256": "72c1077a506eb4d8b63318f752cf686176042aabe4863140fdfd28d292b65dc6",
+          "root_failure_review_sha256": "09aa5c27c98f7c9c8b3e3f2abef785b7332e324b3e9594b6f243f6b13c98c507",
+          "command_count": 0,
+          "current_source_files_copied": 108,
+          "builder_artifacts_copied": 1,
+          "partial_capsule": "RETAINED",
+          "wheel_build": "NOT_RUN",
+          "venv_install_import_native_science_network": "NOT_RUN"
+        },
+        "runtime_build_attempt_002": {
+          "status": "ROOT_AUTHORIZED_PENDING_RESULT",
+          "root_authorization_review_sha256": "09aa5c27c98f7c9c8b3e3f2abef785b7332e324b3e9594b6f243f6b13c98c507"
+        }
+      }
     },
     {
       "id": "W25",

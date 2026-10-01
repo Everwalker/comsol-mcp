@@ -18,39 +18,62 @@ def _probe_result(command: list[str], *, stdout: str = "", stderr: str = "", cod
     return subprocess.CompletedProcess(command, code, stdout, stderr)
 
 
+def _observer_ps_row() -> str:
+    return f" {os.getpid()} {os.getppid()} python3.12 /usr/bin/python3.12 -m pytest\n"
+
+
+def _empty_lsof_table() -> str:
+    return "COMMAND PID USER FD TYPE DEVICE SIZE/OFF NODE NAME\n"
+
+
+def _unrelated_lsof_row(user: str = "local") -> str:
+    return f"OtherApp 742 {user} 7u IPv4 0x1 0t0 TCP *:1234 (LISTEN)\n"
+
+
 def test_w24_prebirth_inventory_requires_successful_process_and_listener_probes(monkeypatch):
     calls = []
 
     def run(command, **kwargs):
         calls.append(command)
         if command[0] == "/bin/ps":
-            return _probe_result(command)
-        return _probe_result(command, stdout="COMMAND PID USER FD TYPE DEVICE SIZE/OFF NODE NAME\n")
+            return _probe_result(command, stdout=_observer_ps_row())
+        return _probe_result(command, stdout=(
+            _empty_lsof_table() + _unrelated_lsof_row()))
 
     monkeypatch.setattr(runner.subprocess, "run", run)
     result = runner._process_inventory()
 
     assert result["probes_ok"] is True
     assert result["quiescent"] is True
+    assert result["ps"]["observer_present"] is True
+    assert result["comsol_listener_rows"] == []
+    assert result["ps"]["command"] == ["/bin/ps", "-axo", "pid=,ppid=,comm=,args="]
+    assert result["lsof"]["command"] == ["/usr/sbin/lsof", "-nP", "-iTCP", "-sTCP:LISTEN"]
+    assert result["ps"]["stdout"]["bytes"] == len(_observer_ps_row().encode("utf-8"))
+    assert len(result["ps"]["stdout"]["sha256"]) == 64
     assert len(calls) == 2
 
 
 def test_w24_prebirth_inventory_fails_closed_when_ps_is_denied(monkeypatch):
     def run(command, **kwargs):
         if command[0] == "/bin/ps":
-            return _probe_result(command, stderr="PermissionError: operation not permitted", code=1)
-        return _probe_result(command, stdout="COMMAND PID USER FD TYPE DEVICE SIZE/OFF NODE NAME\n")
+            return _probe_result(command, stderr="PermissionError: SECRET_PS_STDERR", code=1)
+        return _probe_result(command, stdout=_empty_lsof_table())
 
     monkeypatch.setattr(runner.subprocess, "run", run)
     result = runner._process_inventory()
 
     assert result["probes_ok"] is False
     assert result["quiescent"] is False
-    assert result["ps"]["stderr"]
+    assert result["ps"]["stderr"]["bytes"] > 0
+    assert {cause["code"] for cause in result["ps"]["failure_causes"]} >= {
+        "nonzero_exit", "stderr_nonempty"}
+    assert "SECRET_PS_STDERR" not in json.dumps(result)
 
 
 def test_w24_prebirth_inventory_blocks_existing_comsol_server_and_worker(monkeypatch):
     ps_rows = (
+        _observer_ps_row() +
         " 700 1 /Applications/COMSOL64/Multiphysics/bin/comsol mphserver -port 62001\n"
         " 701 1 java com.comsol.mcp.worker_java.PersistentComsolWorker\n"
     )
@@ -58,7 +81,7 @@ def test_w24_prebirth_inventory_blocks_existing_comsol_server_and_worker(monkeyp
     def run(command, **kwargs):
         if command[0] == "/bin/ps":
             return _probe_result(command, stdout=ps_rows)
-        return _probe_result(command, stdout="COMMAND PID USER FD TYPE DEVICE SIZE/OFF NODE NAME\n")
+        return _probe_result(command, stdout=_empty_lsof_table())
 
     monkeypatch.setattr(runner.subprocess, "run", run)
     result = runner._process_inventory()
@@ -67,6 +90,129 @@ def test_w24_prebirth_inventory_blocks_existing_comsol_server_and_worker(monkeyp
     assert result["quiescent"] is False
     assert [row["pid"] for row in result["comsol_engine_processes"]] == [700]
     assert [row["pid"] for row in result["persistent_worker_processes"]] == [701]
+    assert "argv" not in result["comsol_engine_processes"][0]
+
+
+def test_w24_prebirth_inventory_never_serializes_process_or_probe_secrets(monkeypatch):
+    ps_rows = (
+        _observer_ps_row() +
+        " 711 1 java unrelated-client --api-key=SECRET_NATIVE_ARGV\n"
+    )
+
+    def run(command, **kwargs):
+        if command[0] == "/bin/ps":
+            return _probe_result(command, stdout=ps_rows, stderr="SECRET_PS_STDERR")
+        return _probe_result(command,
+                             stdout=_empty_lsof_table() + _unrelated_lsof_row("SECRET_LISTENER_USER"),
+                             stderr="SECRET_LSOF_STDERR")
+
+    monkeypatch.setattr(runner.subprocess, "run", run)
+    result = runner._process_inventory()
+    serialized = json.dumps(result)
+
+    assert result["probes_ok"] is False
+    assert "SECRET_NATIVE_ARGV" not in serialized
+    assert "SECRET_PS_STDERR" not in serialized
+    assert "SECRET_LSOF_STDERR" not in serialized
+    assert "SECRET_LISTENER_USER" not in serialized
+    assert all(isinstance(probe["stdout"], dict) and "sha256" in probe["stdout"]
+               for probe in (result["ps"], result["lsof"]))
+
+
+@pytest.mark.parametrize("ps_case", [
+    ("", "inventory_empty"),
+    (_observer_ps_row() + "malformed secret process row\n", "malformed_process_rows"),
+    (" 799 1 background-worker /bin/background-worker\n", "observer_pid_missing"),
+])
+def test_w24_prebirth_inventory_rejects_empty_malformed_or_observer_missing_ps(
+        monkeypatch, ps_case):
+    ps_output, expected_cause = ps_case
+    def run(command, **kwargs):
+        if command[0] == "/bin/ps":
+            return _probe_result(command, stdout=ps_output)
+        return _probe_result(command, stdout=_empty_lsof_table())
+
+    monkeypatch.setattr(runner.subprocess, "run", run)
+    result = runner._process_inventory()
+
+    assert result["probes_ok"] is False
+    assert result["quiescent"] is False
+    assert expected_cause in {cause["code"] for cause in result["ps"]["failure_causes"]}
+
+
+def test_w24_prebirth_inventory_fails_closed_when_lsof_is_unavailable(monkeypatch):
+    def run(command, **kwargs):
+        if command[0] == "/bin/ps":
+            return _probe_result(command, stdout=_observer_ps_row())
+        return _probe_result(command, stderr="SECRET_LSOF_FAILURE", code=1)
+
+    monkeypatch.setattr(runner.subprocess, "run", run)
+    result = runner._process_inventory()
+
+    assert result["probes_ok"] is False
+    assert result["quiescent"] is False
+    assert {cause["code"] for cause in result["lsof"]["failure_causes"]} >= {
+        "listener_header_missing_or_malformed", "nonzero_exit", "stderr_nonempty"}
+    assert "SECRET_LSOF_FAILURE" not in json.dumps(result)
+
+
+@pytest.mark.parametrize("lsof_case", [
+    (_empty_lsof_table() + "OtherApp 742\n", "malformed_listener_rows"),
+    ("COMMAND PID USER FD\n", "listener_header_missing_or_malformed"),
+])
+def test_w24_prebirth_inventory_fails_closed_on_truncated_listener_inventory(
+        monkeypatch, lsof_case):
+    lsof_output, expected_cause = lsof_case
+
+    def run(command, **kwargs):
+        if command[0] == "/bin/ps":
+            return _probe_result(command, stdout=_observer_ps_row())
+        return _probe_result(command, stdout=lsof_output)
+
+    monkeypatch.setattr(runner.subprocess, "run", run)
+    result = runner._process_inventory()
+
+    assert result["probes_ok"] is False
+    assert result["quiescent"] is False
+    assert expected_cause in {cause["code"] for cause in result["lsof"]["failure_causes"]}
+    if expected_cause == "malformed_listener_rows":
+        assert result["lsof"]["malformed_rows"] == 1
+
+
+def test_w24_prebirth_inventory_allows_valid_kernel_rows_without_argv(monkeypatch):
+    ps_rows = _observer_ps_row() + " 0 0 kernel_task\n"
+
+    def run(command, **kwargs):
+        if command[0] == "/bin/ps":
+            return _probe_result(command, stdout=ps_rows)
+        return _probe_result(command, stdout=_empty_lsof_table())
+
+    monkeypatch.setattr(runner.subprocess, "run", run)
+    result = runner._process_inventory()
+
+    assert result["probes_ok"] is True
+    assert result["quiescent"] is True
+    assert result["ps"]["parsed_rows"] == 2
+    assert result["ps"]["malformed_rows"] == 0
+
+
+@pytest.mark.parametrize("comm", ["java", "/Applications/COMSOL64/Multiphysics/bin/comsol"])
+def test_w24_prebirth_inventory_fails_closed_for_ambiguous_native_comm_without_argv(
+        monkeypatch, comm):
+    ps_rows = _observer_ps_row() + f" 811 1 {comm}\n"
+
+    def run(command, **kwargs):
+        if command[0] == "/bin/ps":
+            return _probe_result(command, stdout=ps_rows)
+        return _probe_result(command, stdout=_empty_lsof_table())
+
+    monkeypatch.setattr(runner.subprocess, "run", run)
+    result = runner._process_inventory()
+
+    assert result["probes_ok"] is False
+    assert result["quiescent"] is False
+    assert "ambiguous_native_row_without_argv" in {
+        cause["code"] for cause in result["ps"]["failure_causes"]}
 
 
 def test_w24_runtime_appledouble_inventory_is_stable_across_relative_and_absolute_paths(monkeypatch):

@@ -621,40 +621,128 @@ def _mac_birth_epoch(raw: str) -> float:
     return parsed.replace(tzinfo=ZoneInfo("Asia/Shanghai")).timestamp()
 
 
+def _probe_output_summary(value: str) -> dict[str, Any]:
+    data = value.encode("utf-8", errors="surrogateescape")
+    return {"bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()}
+
+
 def _process_inventory() -> dict[str, Any]:
-    """Fail closed if either required native process/listener probe is unavailable."""
-    ps = subprocess.run(["/bin/ps", "-axo", "pid=,ppid=,comm=,args="],
-                       capture_output=True, text=True, check=False, timeout=15)
+    """Classify native processes transiently and return only privacy-safe evidence."""
+    ps_command = ["/bin/ps", "-axo", "pid=,ppid=,comm=,args="]
+    lsof_command = ["/usr/sbin/lsof", "-nP", "-iTCP", "-sTCP:LISTEN"]
+    ps = subprocess.run(ps_command, capture_output=True, text=True, check=False, timeout=15)
     rows: list[dict[str, Any]] = []
     worker_rows: list[dict[str, Any]] = []
+    ps_failures: list[dict[str, str]] = []
+    parsed_rows = 0
+    malformed_rows = 0
+    ambiguous_rows = 0
+    observer_pid = os.getpid()
+    observer_present = False
     for raw in ps.stdout.splitlines():
-        fields = raw.strip().split(None, 3)
-        if len(fields) < 4 or not fields[0].isdigit() or not fields[1].isdigit():
+        if not raw.strip():
             continue
-        pid, ppid, comm, argv = int(fields[0]), int(fields[1]), fields[2], fields[3]
+        fields = raw.strip().split(None, 3)
+        if len(fields) < 3 or not fields[0].isdigit() or not fields[1].isdigit():
+            malformed_rows += 1
+            continue
+        pid, ppid, comm = int(fields[0]), int(fields[1]), fields[2]
+        argv = fields[3] if len(fields) == 4 else ""
+        parsed_rows += 1
+        observer_present = observer_present or pid == observer_pid
         lowered = (comm + " " + argv).lower()
+        if not argv and ("java" in comm.lower() or "comsol" in comm.lower()):
+            ambiguous_rows += 1
         is_engine = ("mphserver" in lowered or
                      ("/applications/comsol64/multiphysics/" in lowered and
                       ("java" in comm.lower() or "comsol" in lowered)))
         is_worker = "persistentcomsolworker" in lowered or "comsolworker" in lowered
         if is_engine:
-            rows.append({"pid": pid, "ppid": ppid, "comm": comm, "argv": argv})
+            kind = "comsol_mphserver" if "mphserver" in lowered else "comsol_engine"
+            rows.append({"pid": pid, "ppid": ppid, "kind": kind})
         if is_worker:
-            worker_rows.append({"pid": pid, "ppid": ppid, "comm": comm, "argv": argv})
-    lsof = subprocess.run(["/usr/sbin/lsof", "-nP", "-iTCP", "-sTCP:LISTEN"],
-                          capture_output=True, text=True, check=False, timeout=15)
-    listener_rows = [line.strip() for line in lsof.stdout.splitlines()[1:]
-                     if line.strip() and ("mphserver" in line.lower() or "comsol" in line.lower())]
-    probes_ok = ps.returncode == 0 and lsof.returncode == 0 and not ps.stderr.strip() and not lsof.stderr.strip()
+            worker_rows.append({"pid": pid, "ppid": ppid, "kind": "persistent_comsol_worker"})
+    if ps.returncode != 0:
+        ps_failures.append({"code": "nonzero_exit"})
+    if ps.stderr.strip():
+        ps_failures.append({"code": "stderr_nonempty"})
+    if parsed_rows == 0:
+        ps_failures.append({"code": "inventory_empty"})
+    if malformed_rows:
+        ps_failures.append({"code": "malformed_process_rows"})
+    if ambiguous_rows:
+        ps_failures.append({"code": "ambiguous_native_row_without_argv"})
+    if not observer_present:
+        ps_failures.append({"code": "observer_pid_missing"})
+
+    lsof = subprocess.run(lsof_command, capture_output=True, text=True, check=False, timeout=15)
+    listener_rows: list[dict[str, Any]] = []
+    lsof_failures: list[dict[str, str]] = []
+    parsed_listener_rows = 0
+    malformed_listener_rows = 0
+    lsof_lines = [line.strip() for line in lsof.stdout.splitlines() if line.strip()]
+    header_fields = lsof_lines[0].split() if lsof_lines else []
+    expected_header = [
+        "COMMAND", "PID", "USER", "FD", "TYPE", "DEVICE", "SIZE/OFF", "NODE", "NAME",
+    ]
+    if [field.upper() for field in header_fields] != expected_header:
+        lsof_failures.append({"code": "listener_header_missing_or_malformed"})
+    else:
+        for line in lsof_lines[1:]:
+            fields = line.split(None, 8)
+            if len(fields) != 9 or not fields[1].isdigit():
+                malformed_listener_rows += 1
+                continue
+            name = fields[8]
+            endpoint = name[:-9] if name.endswith(" (LISTEN)") else ""
+            address, separator, port = endpoint.rpartition(":")
+            if (fields[4] not in {"IPv4", "IPv6"} or fields[7].upper() != "TCP" or
+                    not separator or not address or not port.isdigit()):
+                malformed_listener_rows += 1
+                continue
+            parsed_listener_rows += 1
+            lowered = line.lower()
+            if "mphserver" in lowered or "comsol" in lowered:
+                kind = "mphserver_listener" if "mphserver" in lowered else "comsol_listener"
+                listener_rows.append({"pid": int(fields[1]), "kind": kind})
+        if malformed_listener_rows:
+            lsof_failures.append({"code": "malformed_listener_rows"})
+    if lsof.returncode != 0:
+        lsof_failures.append({"code": "nonzero_exit"})
+    if lsof.stderr.strip():
+        lsof_failures.append({"code": "stderr_nonempty"})
+
+    ps_ok = not ps_failures
+    lsof_ok = not lsof_failures
+    probes_ok = ps_ok and lsof_ok
     return {
         "at_utc": utc_now(),
-        "ps": {"command": ["/bin/ps", "-axo", "pid=,ppid=,comm=,args="],
-               "exit_code": ps.returncode, "stdout": ps.stdout, "stderr": ps.stderr},
-        "lsof": {"command": ["/usr/sbin/lsof", "-nP", "-iTCP", "-sTCP:LISTEN"],
-                 "exit_code": lsof.returncode, "stdout": lsof.stdout, "stderr": lsof.stderr},
+        "ps": {
+            "command": ps_command,
+            "exit_code": ps.returncode,
+            "stdout": _probe_output_summary(ps.stdout),
+            "stderr": _probe_output_summary(ps.stderr),
+            "parsed_rows": parsed_rows,
+            "malformed_rows": malformed_rows,
+            "ambiguous_rows": ambiguous_rows,
+            "observer_pid": observer_pid,
+            "observer_present": observer_present,
+            "failure_causes": ps_failures,
+        },
+        "lsof": {
+            "command": lsof_command,
+            "exit_code": lsof.returncode,
+            "stdout": _probe_output_summary(lsof.stdout),
+            "stderr": _probe_output_summary(lsof.stderr),
+            "parsed_rows": parsed_listener_rows,
+            "malformed_rows": malformed_listener_rows,
+            "failure_causes": lsof_failures,
+        },
         "comsol_engine_processes": rows,
         "persistent_worker_processes": worker_rows,
         "comsol_listener_rows": listener_rows,
+        "failure_causes": ([{"probe": "ps", **cause} for cause in ps_failures] +
+                            [{"probe": "lsof", **cause} for cause in lsof_failures]),
         "probes_ok": probes_ok,
         "quiescent": probes_ok and not rows and not worker_rows and not listener_rows,
     }
