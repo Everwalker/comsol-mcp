@@ -26,19 +26,62 @@ def _validate_initial_proof(value, proof):
 
 
 def _refresh_initial_event_snapshot_receipt(proof):
-    """Rebind a deliberate event mutation to a valid snapshot manifest."""
+    """Rebind deliberate canonical event mutations to a valid snapshot receipt."""
     from comsol_mcp._stage_contract import sha256_json
 
     rows = proof["job_event_rows"]
     collection = proof["worker_event_collection"]
-    proof["worker_event_rows"] = [copy.deepcopy(row) for row in rows
-                                  if row.get("event") == "worker_request"]
-    collection["events_sha256"] = sha256_json(rows)
+    assert collection["status"] == "COMPLETE" and collection["complete"] is True
+    assert collection["job_row_count"] == 1 and collection["issues"] == []
+    assert collection["sentinel_checked"] is True
+    assert collection["terminal_sentinel_checked"] is True
+    assert collection["terminal_sentinel_count"] == collection["overflow_sentinel_count"] == 0
+    assert collection["terminal_sentinel"]["checked"] is True
+    assert collection["terminal_sentinel"]["count"] == 0
+    worker_rows = [row for row in rows if row.get("event") == "worker_request"]
+    proof["worker_event_rows"] = copy.deepcopy(worker_rows)
+    event_ids = [row["id"] for row in rows]
+    assert event_ids == sorted(set(event_ids))
     page_size = collection["page_size"]
-    for page in collection["pages"]:
-        offset = page["offset"]
+    page_count = (len(rows) + page_size - 1) // page_size if rows else 0
+    last_id = event_ids[-1] if event_ids else 0
+    id_sha256 = hashlib.sha256(",".join(str(value) for value in event_ids).encode("ascii")).hexdigest()
+    collection.update({
+        "expected_page_count": page_count,
+        "expected_event_count": len(rows),
+        "fetched_event_count": len(rows),
+        "fetched_job_event_count": len(rows),
+        "snapshot_last_id": last_id,
+        "event_ids": event_ids,
+        "id_sha256": id_sha256,
+        "events_sha256": sha256_json(rows),
+        "worker_request_event_count": len(worker_rows),
+        "limit": page_size,
+    })
+    pages = []
+    for page_index in range(page_count):
+        offset = page_index * page_size
         page_rows = rows[offset:offset + page_size]
-        page["events_sha256"] = sha256_json(page_rows)
+        page_ids = event_ids[offset:offset + page_size]
+        pages.append({
+            "index": page_index,
+            "offset": offset,
+            "count": len(page_rows),
+            "first_id": page_ids[0] if page_ids else None,
+            "last_id": page_ids[-1] if page_ids else None,
+            "id_sha256": hashlib.sha256(",".join(str(value) for value in page_ids).encode("ascii")).hexdigest(),
+            "events_sha256": sha256_json(page_rows),
+        })
+    collection["pages"] = pages
+    sentinel = collection["terminal_sentinel"]
+    sentinel.update({
+        "checked": True,
+        "job_id": collection["job_id"],
+        "snapshot_last_id": last_id,
+        "offset": len(rows),
+        "count": 0,
+        "event_id": None,
+    })
 
 
 def test_registered_initial_stage_accepts_complete_fake_worker_output(tmp_path):
@@ -265,7 +308,7 @@ def test_initial_acceptance_rejects_tampered_model_label_auxiliary_evidence(tmp_
     try:
         proof = copy.deepcopy(value["result"]["data"]["initial_output_acceptance"]["native_evidence"])
         aux_ids = {row["worker_request_id"] for row in proof["worker_auxiliary_requests"]}
-        label_rows = [row for row in proof["worker_event_rows"]
+        label_rows = [row for row in proof["job_event_rows"]
                       if row.get("metadata", {}).get("request_id") in aux_ids
                       and row.get("metadata", {}).get("metadata", {}).get("method") == "label"
                       and row.get("metadata", {}).get("w21_backend_binding", {}).get("phase") == "save"]
@@ -279,14 +322,19 @@ def test_initial_acceptance_rejects_tampered_model_label_auxiliary_evidence(tmp_
             label_rows[0]["metadata"]["request_hash"] = "0" * 64
         else:
             phase = "submitted" if tamper == "missing_submitted" else "observed"
-            proof["worker_event_rows"] = [
-                row for row in proof["worker_event_rows"]
+            matching_rows = [row for row in proof["job_event_rows"]
+                             if row.get("metadata", {}).get("request_id") == request_id
+                             and row.get("metadata", {}).get("phase") == phase]
+            assert len(matching_rows) == 1
+            proof["job_event_rows"] = [
+                row for row in proof["job_event_rows"]
                 if not (row.get("metadata", {}).get("request_id") == request_id
                         and row.get("metadata", {}).get("phase") == phase)
             ]
-            proof["worker_event_collection"]["worker_request_event_count"] = len(proof["worker_event_rows"])
+        _refresh_initial_event_snapshot_receipt(proof)
         valid, missing = _validate_initial_proof(value, proof)
         assert valid is False
+        assert "complete bounded exact-job event snapshot and Worker projection" not in missing
         if tamper in {"missing_submitted", "missing_observed"}:
             assert "auxiliary Worker request has a complete lifecycle" in missing
         else:

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import socket
 import subprocess
 import sys
@@ -955,3 +956,35 @@ class TestWorkerAllowlist:
     def test_the_node_allowlist_only_carries_the_reviewed_container_scoped_names(self):
         methods = _allowlist_block("METHODS")
         assert methods & DANGEROUS_GLOBAL_METHODS == set(REVIEWED_CONTAINER_SCOPED)
+
+
+def test_production_json_integer_parser_and_overload_dispatch(tmp_path):
+    """Compile and exercise the production Worker parser and dispatcher without COMSOL."""
+    javac = shutil.which("javac")
+    java = shutil.which("java")
+    if javac is None or java is None:
+        pytest.skip("NOT_RUN: Java compiler/runtime unavailable for production Worker parser regression")
+    api_dir = COMSOL_ROOT / "apiplugins"
+    jars = sorted(api_dir.glob("*.jar")) if api_dir.is_dir() else []
+    if not jars:
+        pytest.skip("NOT_RUN: COMSOL Java API classpath unavailable for production Worker parser regression")
+
+    repo = Path(__file__).resolve().parents[1]
+    harness = repo / "tests" / "java" / "PersistentComsolWorkerJsonNumberHarness.java"
+    classes = tmp_path / "production-worker-json-classes"
+    classes.mkdir()
+    classpath = os.pathsep.join(str(path) for path in jars)
+    compile_result = subprocess.run(
+        [javac, "-encoding", "UTF-8", "-classpath", classpath, "-d", str(classes),
+         str(WORKER_SOURCE), str(harness)],
+        cwd=repo, capture_output=True, text=True, timeout=120,
+    )
+    assert compile_result.returncode == 0, compile_result.stdout + compile_result.stderr
+
+    execution = subprocess.run(
+        [java, "-cp", str(classes) + os.pathsep + classpath,
+         "comsol_mcp.worker_java.PersistentComsolWorkerJsonNumberHarness"],
+        cwd=repo, capture_output=True, text=True, timeout=30,
+    )
+    assert execution.returncode == 0, execution.stdout + execution.stderr
+    assert execution.stdout.strip() == "PARSER_NUM_INTEGER_PRESERVATION_PASS"
