@@ -1,7 +1,7 @@
 {
   "schema": "W24_PROCESS_INVENTORY_PRIVACY_SOFTWARE_CHECKPOINT_V1",
   "recorded_at_utc": "2026-10-01T12:03:06Z",
-  "status": "SCOPED_SOFTWARE_AND_RUNTIME_ACCEPTED; CURRENT03_ODE_RESOLVER_PASS; CURRENT03_FREEZE_ADMISSION_PASS; CURRENT03_ATTEMPT001_FAIL_OR_INCOMPLETE_DURABLE_UNKNOWN_NO_RETRY; CURRENT02_ATTEMPT001_UNKNOWN_PRESERVED; W24_PARTIAL; SCIENCE_NOT_RUN",
+  "status": "SCOPED_SOFTWARE_AND_RUNTIME_ACCEPTED; CURRENT04_SOLVER_DIAGNOSTICS_PASS; CURRENT04_FREEZE_ADMISSION_PASS; CURRENT04_ATTEMPT001_FAIL_OR_INCOMPLETE_DURABLE_UNKNOWN_NO_RETRY; CURRENT03_AND_CURRENT02_UNKNOWNS_PRESERVED; W24_PARTIAL; SCIENCE_NOT_RUN",
   "candidate": {
     "candidate_id": "w24-local-native-admission-privacy-20261001-luna03",
     "fingerprint": "7f1939af87f3ccb1132f2b540f37eb7a5225b72cd2867d85ebce46959752d33e",
@@ -164,7 +164,7 @@
     "current03_offline_candidate_admission": "PASS_ROOT_REVIEWED_CURRENT03_ACTUAL_VERIFIER_ONLY; PRELAUNCH_FREEZE",
     "current03_native_acceptance": "FAIL_OR_INCOMPLETE; UNKNOWN_DURABLE_JOB; SAFE_RETRY_FALSE; EXACT_CLEANUP_PASS_THIS_ATTEMPT_ONLY; NO_REPLAY"
   },
-  "next_action": "Perform only READ_ONLY_SAME_VERSION_API_DIAGNOSIS_GENERATED_SOLVER_SEQUENCE_DISCOVERY for stdUV. The current03 native attempt failed after one engine birth and one Worker session, with zero solver submissions; its durable job ad531d1e-66be-450a-b311-096d413bfd4a remains UNKNOWN, execution_state_unknown=true, safe_retry=false. Root verified all 19 Worker requests terminal/no active jobs and exact-owned cleanup PASS for this attempt only. Do not retry current03 or replay historical current02 job 81210805-9f90-434e-aabc-5f1ce0840410, which remains UNKNOWN/no-retry. Equation View, template save/reopen, numerical and physical acceptance, and scientific acceptance remain NOT_RUN. W24 stays PARTIAL; MASTER remains ACTIVE through W26.",
+  "next_action": "After this checkpoint, implement the configured-sequence selector repair using documented None/SolverSequence categories, strict study attachment, and StudyStep/Variables/Time binding; then freeze and review software only. No native rerun, new engine birth, retry, or replay is authorized now. W24 remains PARTIAL; scientific acceptance is NOT_RUN.",
   "runtime_build_plan": {
     "status": "PASS_PLAN_ONLY",
     "plan": {
@@ -268,7 +268,7 @@
     "pip_check": "PASS",
     "scope": "Offline build/install only; no application import, tests, network, JVM/COMSOL launch, repository write, or Git write."
   },
-  "updated_at_utc": "2026-10-01T12:03:06Z",
+  "updated_at_utc": "2026-10-01T15:17:23Z",
   "noengine_preflight_001": {
     "status": "ROOT_ACCEPTED_NOENGINE_PREFLIGHT_ONLY",
     "root_review": {
@@ -623,5 +623,207 @@
       "do_not_replay": true
     },
     "next_action": "READ_ONLY_SAME_VERSION_API_DIAGNOSIS_GENERATED_SOLVER_SEQUENCE_DISCOVERY; NO_RETRY_OR_SECOND_BIRTH"
+  },
+  "current04_checkpoint": {
+    "status": "SOFTWARE_DIAGNOSTIC_PASS; CURRENT04_FREEZE_ADMISSION_PASS; CURRENT04_NATIVE_ATTEMPT001_FAIL_OR_INCOMPLETE_DURABLE_UNKNOWN_NO_RETRY; PRIOR_CURRENT02_AND_CURRENT03_UNKNOWNS_PRESERVED; W24_PARTIAL; SCIENCE_NOT_RUN",
+    "recorded_at_utc": "2026-10-01T15:07:18Z",
+    "candidate_id": "W24-CURE-HIST-AXISYM-01",
+    "software": {
+      "status": "PASS_SOFTWARE_ONLY_BOUNDED_SOLVER_DIAGNOSTICS",
+      "source_commit_anchor": "c2ced4e712cb0b7bb3604d055bbc027dd24dbb15",
+      "candidate_fingerprint": "4022889ff582f87d73ce94b905f4e3570933f42a7ff210e52982fa8d38972f6e",
+      "baseline": {
+        "path": "tools/w24_ode_tag_repair_candidate12_baseline.json",
+        "sha256": "82328a77fd34ebc1c530ad9cc898914a5bd0cbf8710c0685d41fcec6fd68caae"
+      },
+      "implementation_files": [
+        {
+          "path": "tools/java/W24CureCouponFixture.java",
+          "sha256": "b7035015087e9fc22e8b644101375c4244db573b6e71f5b50d1c7f601fd9e9fe"
+        },
+        {
+          "path": "tests/test_w24_cure_coupon_fixture.py",
+          "sha256": "e82be080430f23057af1825e5024b53f833f1746ab054c43022cf080fb50ed0a"
+        },
+        {
+          "path": "tests/java/W24SolverSequenceDiagnosticsHarness.java",
+          "sha256": "5b3662ef7070190a9b48a83f9b346f5bd8144997280cce1bced1a048a0f16dc9"
+        }
+      ],
+      "root_review": {
+        "path": "execution-scratch/w24-ode-feature-repair-20261001-001/root-solver-diagnostic-software-review001.json",
+        "sha256": "ff59719a9127d07d92d24f1de330693c9b8b169cfa990d149f29f42e9ff7ad8d",
+        "status": "PASS_SOFTWARE_ONLY_BOUNDED_SOLVER_DIAGNOSTICS"
+      },
+      "test_summary": {
+        "path": "execution-scratch/test-efficiency/20261001T125123Z-9b83de66.summary.json",
+        "sha256": "8e401a8cdc00a28cdd38cecd7e50bc8bbe65a91033d7b8d8d5d194713e2862b7",
+        "pytest_nodes": 3,
+        "passed": 3,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "internal_diagnostic_cases": {
+          "ode": 3,
+          "solver": 9,
+          "qualification": "Contained in the combined diagnostic pytest node; not additional pytest cases."
+        }
+      },
+      "python_compile_only": {
+        "unchanged_sources_and_pyc_inherited": 121,
+        "new_in_memory_compile": 1,
+        "pycache_written": false
+      },
+      "native_acceptance": "NOT_RUN_AT_SOFTWARE_REVIEW",
+      "scientific_acceptance": "NOT_RUN"
+    },
+    "offline_freeze": {
+      "path": "docs/full_project_execution/w24/evidence/setup_candidate_20261001_current04/offline_candidate_freeze.json",
+      "sha256": "033a9f3c135b2098b0abea0e2529c7e46e37bfe6824c02a415f7e45a4603dcf0",
+      "size_bytes": 96482,
+      "status": "PASS_CURRENT_OFFLINE_CANDIDATE_NATIVE_ADMISSION_ONLY",
+      "root_review": {
+        "path": "execution-scratch/w24-ode-feature-repair-20261001-001/root-current04-freeze-review001.json",
+        "sha256": "f1ba95de88d681ece5de9093172f1ca5a88ca7c185482a65d8db9c1fea6405f1",
+        "status": "PASS_CURRENT_OFFLINE_CANDIDATE_NATIVE_ADMISSION_ONLY"
+      },
+      "verified_artifact_hash_bindings": 192,
+      "verified_baseline_source_bindings": 134,
+      "native_source_count": 129,
+      "native_source_closure_sha256": "fae3290f020f9492344c90ecf3b41cdfe13b766947dca7933fcce0159f9efaf8",
+      "native_runtime_distributions": 34,
+      "native_acceptance": "NOT_RUN_AT_FREEZE",
+      "scientific_acceptance": "NOT_RUN_AT_FREEZE",
+      "qualification": "Admission-only freeze; historical no-engine evidence is inherited only for unchanged payload/runtime identities, not as verification of this current04 source closure."
+    },
+    "zero_birth_permission_probe": {
+      "root_review": {
+        "path": "execution-scratch/w24-ode-feature-repair-20261001-001/root-current04-zero-birth-failure-review001.json",
+        "sha256": "2078a06e01e7d3cf8814b0e04af0a964414657b4fd710165eb8d0b72643d97c5",
+        "status": "PASS_ZERO_BIRTH_PERMISSION_FAILURE_EVIDENCE_ONLY"
+      },
+      "summary_sha256": "2405c3a93b72163c8651895576f33c0fff21eda3a44613d118de10b0edf2125c",
+      "engine_births": 0,
+      "solver_submissions": 0,
+      "failure": "Default sandbox denied /bin/ps before server birth; this is a permission failure, not a source/model outcome."
+    },
+    "native_setup_authorization": {
+      "launch_plan": {
+        "path": "execution-scratch/w24-native-setup-20261001-current04/launch-plan002.json",
+        "sha256": "53e8307d6b1a84668e1db041a684362adb41a9d397d1eaaa8003b3cbfb4fc376"
+      },
+      "metadata_review": {
+        "path": "execution-scratch/w24-native-setup-20261001-current04/root-plan002-metadata-review001.json",
+        "sha256": "2f5fc400ac621b5420874546711e7f361323f2ec79f0aa44308bb8da3c690a3c",
+        "status": "PASS_METADATA_PLAN_ONLY_NO_NATIVE_GO"
+      },
+      "root_go": {
+        "path": "execution-scratch/w24-native-setup-20261001-current04/root-current04-native-go001.json",
+        "sha256": "173cceaac6941d15727b337253bf29b1d7dff85e437e4552c8712e2dd36c7205",
+        "qualification": "Separate current04 GO, consumed once."
+      },
+      "status": "CONSUMED_ONCE_BY_CURRENT04_ATTEMPT001; DO_NOT_RETRY_OR_REPLAY"
+    },
+    "native_attempt001": {
+      "status": "FAIL_OR_INCOMPLETE; UNKNOWN_DURABLE_JOB; SAFE_RETRY_FALSE; EXACT_CLEANUP_PASS_THIS_ATTEMPT_ONLY; NO_REPLAY",
+      "candidate_freeze_sha256": "033a9f3c135b2098b0abea0e2529c7e46e37bfe6824c02a415f7e45a4603dcf0",
+      "root_review": {
+        "path": "execution-scratch/w24-ode-feature-repair-20261001-001/root-current04-native-outcome-review001.json",
+        "sha256": "ba2f1573e56afa83de687873646bb6ae3543f4cef86473c4cb7252498ad6bab0",
+        "status": "PASS_FAILED_NATIVE_OUTCOME_AND_EXACT_OWNED_CLEANUP_ONLY"
+      },
+      "terminal_receipt": {
+        "path": "execution-scratch/w24-native-setup-20261001-current04/launcher-capture/controller-terminal-receipt-current04.json",
+        "sha256": "1eabc26c87a072965b8c36ab285379d1cc45d563c724862ba1aa74c03e40baac",
+        "exit_code": 2,
+        "qualification": "Raw tool return NOT_RETAINED; root-reviewed metadata receipt and retained stdout/stderr qualify the terminal outcome."
+      },
+      "engine_births": 1,
+      "worker_sessions": 1,
+      "worker_request_count": 19,
+      "all_worker_requests_terminal": true,
+      "solver_submissions": 0,
+      "worker_status": "FAILED",
+      "failure": "Configured selector expected one generated solver sequence for stdUV, but the exact SolverSequence category query returned []; the all-category query found sol1 after configuration.",
+      "solver_diagnostic": {
+        "before": {
+          "model_solver_tags": [],
+          "getSolverSequences_All": [],
+          "getSolverSequences_SolverSequence": []
+        },
+        "after": {
+          "model_solver_tags": [
+            "sol1"
+          ],
+          "getSolverSequences_All": [
+            "sol1"
+          ],
+          "getSolverSequences_SolverSequence": [],
+          "sol1_study": "stdUV",
+          "sol1_attached": true,
+          "sol1_root_features": {
+            "st1": "StudyStep",
+            "v1": "Variables",
+            "t1": "Time"
+          },
+          "sol1_solution_type": "NONE",
+          "sol1_sequence_type": "None"
+        },
+        "qualification": "The attempt created/configured sol1 and attached it to stdUV. partial_change_reported=false does not establish that the model was unchanged."
+      },
+      "durable_job": {
+        "job_id": "a53d23b7-cb03-477c-b82d-39301677e642",
+        "operation_id": "47b6fe51-1c03-4d29-8e91-62e38629779e",
+        "status": "UNKNOWN",
+        "execution_state_unknown": true,
+        "safe_retry": false,
+        "partial_change_reported": false
+      },
+      "ledger": {
+        "path": "/private/tmp/comsol-mcp-w24-cure-store-20261001-02/setup-only-900-20261001-current04/evidence/worker_ledger_reconciliation.json",
+        "sha256": "55b3411de2f56fb493f10347c7e814ee76a8deb87a1fb81b90345d4f978bb1a5",
+        "queued_or_running_jobs": 0
+      },
+      "cleanup": {
+        "status": "PASS_THIS_ATTEMPT_ONLY",
+        "signal": "SIGTERM",
+        "owned_signals": 3,
+        "owned_pids_absent": 3,
+        "owned_ports_absent": [
+          61984,
+          61987
+        ],
+        "postcleanup_quiescent": true,
+        "receipt_sha256": "fd782eae110fc2b05450a7ab7715ac126a8d0561277fdcbb7b262aa7db5cb379",
+        "postcleanup_inventory_sha256": "9388ac712394911b2ce457adc13abdc63913d04b7cb98be9f641f565b9e75976"
+      },
+      "summary": {
+        "path": "/private/tmp/comsol-mcp-w24-cure-store-20261001-02/setup-only-900-20261001-current04/evidence/summary.json",
+        "sha256": "3e05e5199c3035890abaab8345db598a8bcb69a88cfdc442e2ac0f0a03d71d57"
+      },
+      "equation_view": "NOT_RUN",
+      "template_save_reopen": "NOT_RUN",
+      "numerical_acceptance": "NOT_RUN",
+      "physical_acceptance": "NOT_RUN",
+      "scientific_acceptance": "NOT_RUN"
+    },
+    "prior_durable_unknowns": [
+      {
+        "job_id": "81210805-9f90-434e-aabc-5f1ce0840410",
+        "candidate": "current02",
+        "status": "UNKNOWN",
+        "safe_retry": false,
+        "do_not_replay": true
+      },
+      {
+        "job_id": "ad531d1e-66be-450a-b311-096d413bfd4a",
+        "candidate": "current03",
+        "status": "UNKNOWN",
+        "safe_retry": false,
+        "do_not_replay": true
+      }
+    ],
+    "project_status": "W24_PARTIAL; MASTER_ACTIVE_THROUGH_W26; SCIENCE_NOT_RUN",
+    "next_action": "After this checkpoint, implement the configured-sequence selector repair using documented None/SolverSequence categories, strict study attachment, and StudyStep/Variables/Time binding; then freeze and review software only. No native rerun, new engine birth, retry, or replay is authorized now. W24 remains PARTIAL; scientific acceptance is NOT_RUN."
   }
 }

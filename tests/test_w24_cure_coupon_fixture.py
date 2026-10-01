@@ -1,3 +1,5 @@
+import hashlib
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -8,8 +10,48 @@ import pytest
 REPO = Path(__file__).resolve().parents[1]
 FIXTURE = REPO / "tools/java/W24CureCouponFixture.java"
 HARNESS = REPO / "tests/java/W24DistributedODEResolverHarness.java"
+SOLVER_HARNESS = REPO / "tests/java/W24SolverSequenceDiagnosticsHarness.java"
 JAVA_HOME = Path("/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home")
 COMSOL_API_JAR = Path("/Applications/COMSOL64/Multiphysics/plugins/com.comsol.api_1.0.0.jar")
+
+
+def _sha256(path):
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def _capture(command, *, cwd, timeout, output_prefix):
+    try:
+        result = subprocess.run(
+            command, cwd=cwd, capture_output=True, text=False, timeout=timeout, check=False,
+        )
+        stdout = result.stdout
+        stderr = result.stderr
+        returncode = result.returncode
+        timed_out = False
+    except subprocess.TimeoutExpired as exc:
+        stdout = exc.stdout or b""
+        stderr = exc.stderr or b""
+        returncode = None
+        timed_out = True
+    stdout_path = output_prefix.with_suffix(".stdout.bin")
+    stderr_path = output_prefix.with_suffix(".stderr.bin")
+    stdout_path.write_bytes(stdout)
+    stderr_path.write_bytes(stderr)
+    return {
+        "command": list(command),
+        "returncode": returncode,
+        "timed_out": timed_out,
+        "stdout_path": str(stdout_path),
+        "stdout_sha256": _sha256(stdout_path),
+        "stderr_path": str(stderr_path),
+        "stderr_sha256": _sha256(stderr_path),
+        "stdout_text": stdout.decode("utf-8", errors="replace"),
+        "stderr_text": stderr.decode("utf-8", errors="replace"),
+    }
 
 
 def test_w24_fixture_is_build_only_and_uses_correct_cure_rates():
@@ -84,23 +126,73 @@ def test_w24_ode_equations_are_resolved_by_unique_feature_type_and_reported_tag(
 
     classes = tmp_path / "classes"
     classes.mkdir()
-    compile_result = subprocess.run(
-        [str(javac), "-proc:none", "-classpath", str(COMSOL_API_JAR), "-d", str(classes),
-         str(FIXTURE), str(HARNESS)],
-        cwd=REPO, capture_output=True, text=True, timeout=120, check=False,
-    )
-    assert compile_result.returncode == 0, (
-        "Corretto 11 failed to compile the production fixture and proxy harness:\n"
-        + compile_result.stdout + compile_result.stderr
-    )
-
+    sources = (FIXTURE, HARNESS, SOLVER_HARNESS)
+    compile_command = [
+        str(javac), "-proc:none", "-classpath", str(COMSOL_API_JAR), "-d", str(classes),
+        *(str(source) for source in sources),
+    ]
+    receipt_path = tmp_path / "w24-java-proxy-receipt.json"
+    version_results = {
+        "javac": _capture([str(javac), "-version"], cwd=REPO, timeout=15,
+                           output_prefix=tmp_path / "javac-version"),
+        "java": _capture([str(java), "-version"], cwd=REPO, timeout=15,
+                          output_prefix=tmp_path / "java-version"),
+    }
+    compile_result = _capture(compile_command, cwd=REPO, timeout=120,
+                              output_prefix=tmp_path / "javac-compile")
     classpath = os.pathsep.join((str(classes), str(COMSOL_API_JAR)))
-    run_result = subprocess.run(
-        [str(java), "-Djava.awt.headless=true", "-classpath", classpath,
-         "W24DistributedODEResolverHarness"],
-        cwd=REPO, capture_output=True, text=True, timeout=30, check=False,
+    run_results = {}
+    if compile_result["returncode"] == 0 and not compile_result["timed_out"]:
+        for main_class, output_name in (
+            ("W24DistributedODEResolverHarness", "ode-proxy"),
+            ("W24SolverSequenceDiagnosticsHarness", "solver-diagnostics-proxy"),
+        ):
+            run_results[main_class] = _capture(
+                [str(java), "-Djava.awt.headless=true", "-classpath", classpath, main_class],
+                cwd=REPO, timeout=30, output_prefix=tmp_path / output_name,
+            )
+
+    class_files = sorted(classes.rglob("*.class"))
+    class_artifacts = {}
+    for class_file in class_files:
+        bytecode = class_file.read_bytes()
+        class_artifacts[class_file.relative_to(classes).as_posix()] = {
+            "sha256": _sha256(class_file),
+            "major_version": int.from_bytes(bytecode[6:8], "big") if len(bytecode) >= 8 else None,
+        }
+    receipt = {
+        "schema": "W24_JAVA_PROXY_DIAGNOSTIC_RECEIPT_V1",
+        "receipt_path": str(receipt_path),
+        "jdk_home": str(JAVA_HOME),
+        "jdk_artifacts": {
+            "javac_path": str(javac), "javac_sha256": _sha256(javac),
+            "java_path": str(java), "java_sha256": _sha256(java),
+            "javac_version": version_results["javac"],
+            "java_version": version_results["java"],
+        },
+        "comsol_api_jar": str(COMSOL_API_JAR),
+        "comsol_api_jar_sha256": _sha256(COMSOL_API_JAR),
+        "sources": {str(source.relative_to(REPO)): _sha256(source) for source in sources},
+        "compile": compile_result,
+        "runs": run_results,
+        "classes": class_artifacts,
+    }
+    receipt_path.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    print(f"W24_JAVA_PROXY_RECEIPT={receipt_path}")
+
+    assert compile_result["returncode"] == 0 and not compile_result["timed_out"], (
+        "Corretto 11 failed to compile the production fixture and proxy harnesses:\n"
+        + compile_result["stdout_text"] + compile_result["stderr_text"]
     )
-    assert run_result.returncode == 0, (
-        "offline DistributedODE proxy checks failed:\n" + run_result.stdout + run_result.stderr
+    for main_class, expected_stdout in (
+        ("W24DistributedODEResolverHarness", "W24 DistributedODE resolver proxy checks: PASS (3 cases)"),
+        ("W24SolverSequenceDiagnosticsHarness", "W24 solver-sequence diagnostics proxy checks: PASS (9 cases)"),
+    ):
+        result = run_results[main_class]
+        assert result["returncode"] == 0 and not result["timed_out"], (
+            f"offline {main_class} failed:\n" + result["stdout_text"] + result["stderr_text"]
+        )
+        assert result["stdout_text"].strip() == expected_stdout
+    assert all(value["major_version"] == 55 for value in class_artifacts.values()), (
+        "Corretto 11 output must retain Java class major version 55"
     )
-    assert run_result.stdout.strip() == "W24 DistributedODE resolver proxy checks: PASS (3 cases)"

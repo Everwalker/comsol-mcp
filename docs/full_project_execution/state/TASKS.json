@@ -2637,7 +2637,11 @@
         "execution-scratch/w24-native-setup-20261001-current01/launcher-capture/attempt001-terminal-receipt.json",
         "execution-scratch/w24-ode-feature-repair-20261001-001/root-ode-feature-software-review001.json",
         "docs/full_project_execution/w24/evidence/setup_candidate_20261001_current03/offline_candidate_freeze.json",
-        "execution-scratch/w24-ode-feature-repair-20261001-001/root-current03-native-outcome-review001.json"
+        "execution-scratch/w24-ode-feature-repair-20261001-001/root-current03-native-outcome-review001.json",
+        "execution-scratch/w24-ode-feature-repair-20261001-001/root-solver-diagnostic-software-review001.json",
+        "docs/full_project_execution/w24/evidence/setup_candidate_20261001_current04/offline_candidate_freeze.json",
+        "execution-scratch/w24-ode-feature-repair-20261001-001/root-current04-freeze-review001.json",
+        "execution-scratch/w24-ode-feature-repair-20261001-001/root-current04-native-outcome-review001.json"
       ],
       "blockers": [
         "W24 0841Z setup-only attempt failed before engine/Worker birth at project.inspect; preserve its FAIL_OR_INCOMPLETE result and do not replay that stale candidate.",
@@ -2647,9 +2651,10 @@
         "W24 cure science executor and full gel/reference-state/viscoelastic/static-shape acceptance remain incomplete; native science budget is NOT_FROZEN/NOT_STARTED.",
         "Windows COMSOL 6.3 remains required and unassessed; only macOS COMSOL 6.3 arm64/x86_64 are USER_REQUESTED_SKIP.",
         "Stress component identity still requires complete native Equation View descriptions/units and both mechanics benchmarks; values or names alone are insufficient.",
-        "Current03 native attempt001 failed after one engine birth and one Worker session, zero solver submissions; durable job UNKNOWN and safe_retry=false. Exact cleanup PASS applies only to this attempt. Do not retry or create a second birth; perform read-only same-version API diagnosis. Equation View, save/reopen, numerical, physical, and science acceptance remain NOT_RUN."
+        "Current03 native attempt001 failed after one engine birth and one Worker session, zero solver submissions; durable job UNKNOWN and safe_retry=false. Exact cleanup PASS applies only to this attempt. Do not retry or create a second birth; perform read-only same-version API diagnosis. Equation View, save/reopen, numerical, physical, and science acceptance remain NOT_RUN.",
+        "Current04 setup-only attempt001 failed during generated solver-sequence selection; durable job a53d23b7-cb03-477c-b82d-39301677e642 is UNKNOWN/safe_retry=false. The attempt created attached sol1 but submitted zero solves; do not retry/replay. Exact cleanup PASS applies to this attempt only; science remains NOT_RUN."
       ],
-      "note": "W24 PARTIAL. Accepted historical software checkpoints include 14-slot sensitivity, two-control physical campaign (271 regression PASS at its frozen candidate), and T058 assumption/provenance report (323 regression PASS at its frozen candidate). These overlapping counts are not additive and are not a fresh current-HEAD regression. T058 report presentation is implemented; original T047 full lifecycle/history and T058 sensitivity/calibration/physical validation remain incomplete. Native controls and full gel/UV/reference-state/viscoelastic/static-shape acceptance remain NOT_RUN/UNVERIFIED. Current03 resolver passed root software review (7 tests: 5 focused plus 2 required regression; 3 Java proxy cases are included in one pytest case), and its exact freeze passed offline admission review. The one authorized current03 setup attempt then failed after one engine birth/Worker session and zero solver submissions: generated solver sequence discovery for stdUV returned an empty list. Durable job ad531d1e-66be-450a-b311-096d413bfd4a remains UNKNOWN with safe_retry=false and partial_change_reported=false; do not infer the target model was unchanged. Root verified 19 terminal Worker requests and exact-owned cleanup for this attempt only. Current02 job 81210805-9f90-434e-aabc-5f1ce0840410 remains separately UNKNOWN/no-retry. Read-only same-version API diagnosis is next; W24 remains PARTIAL and science NOT_RUN.",
+      "note": "W24 PARTIAL. Accepted historical software checkpoints include 14-slot sensitivity, two-control physical campaign (271 regression PASS at its frozen candidate), and T058 assumption/provenance report (323 regression PASS at its frozen candidate). These overlapping counts are not additive and are not a fresh current-HEAD regression. T058 report presentation is implemented; original T047 full lifecycle/history and T058 sensitivity/calibration/physical validation remain incomplete. Native controls and full gel/UV/reference-state/viscoelastic/static-shape acceptance remain NOT_RUN/UNVERIFIED. Current03 resolver passed root software review (7 tests: 5 focused plus 2 required regression; 3 Java proxy cases are included in one pytest case), and its exact freeze passed offline admission review. The one authorized current03 setup attempt then failed after one engine birth/Worker session and zero solver submissions: generated solver sequence discovery for stdUV returned an empty list. Durable job ad531d1e-66be-450a-b311-096d413bfd4a remains UNKNOWN with safe_retry=false and partial_change_reported=false; do not infer the target model was unchanged. Root verified 19 terminal Worker requests and exact-owned cleanup for this attempt only. Current02 job 81210805-9f90-434e-aabc-5f1ce0840410 remains separately UNKNOWN/no-retry. After current03, read-only same-version API diagnosis was the next action; current04 completed that diagnosis and supersedes it with the configured-sequence selector repair as the next software-only action. W24 remains PARTIAL and science NOT_RUN. Current04 solver-diagnostic software and freeze were root accepted within their scoped boundaries; its one authorized setup attempt failed at the stdUV SolverSequence selector with durable UNKNOWN/no-retry. The attempt created attached sol1, submitted zero solves, and had cleanup PASS for that attempt only. Current02/current03 UNKNOWN outcomes remain preserved; do not replay. Equation View/template save-reopen/numerical/physical/scientific acceptance remain NOT_RUN. Current04 details: docs/full_project_execution/w24/PROCESS_INVENTORY_PRIVACY_SOFTWARE_CHECKPOINT.json.",
       "execution_notes": [
         "0330Z native attempt: COMSOL 6.4.0.293 server PID 90771/port 63979 and one Worker PID 90848/port 63988; Python 3.14 lacked mcp during production ControlDaemon registry construction, before model setup. 0 solve submissions; exact cleanup and global quiescence verified.",
         "0346Z offline candidate adds exact Python interpreter/distribution inventory and a pre-birth production no-engine gate. Actual pip check passed; collect_legacy_registry and ControlDaemon construction/close passed; JDK11 compile and 37 focused tests passed. Software-only; no native result.",
@@ -2668,12 +2673,12 @@
       ],
       "current_checkpoint": "docs/full_project_execution/w24/T058_ASSUMPTION_REPORT_CHECKPOINT.json",
       "current_native_controls_checkpoint": "docs/full_project_execution/w24/PHYSICAL_CONTROLS_SOFTWARE_CHECKPOINT.json",
-      "next_action": "Perform only READ_ONLY_SAME_VERSION_API_DIAGNOSIS_GENERATED_SOLVER_SEQUENCE_DISCOVERY for stdUV. Current03 attempt001 failed with durable job UNKNOWN/safe_retry=false; cleanup PASS applies to this attempt only. Preserve historical current02 UNKNOWN/no-retry. No retry/second birth; W24 PARTIAL; science NOT_RUN.",
+      "next_action": "After this checkpoint, implement the configured-sequence selector repair using documented None/SolverSequence categories, strict study attachment, and StudyStep/Variables/Time binding; then freeze and review software only. No native rerun, new engine birth, retry, or replay is authorized now. W24 remains PARTIAL; scientific acceptance is NOT_RUN.",
       "historical_execution_notes_qualification": "Execution notes preserve observations from earlier candidates. Later canonical checkpoints supersede implementation TODOs only; failed/UNKNOWN native observations remain preserved and do not become PASS.",
       "current_local_preparation_20261001": {
         "path": "docs/full_project_execution/w24/PROCESS_INVENTORY_PRIVACY_SOFTWARE_CHECKPOINT.json",
-        "sha256": "149faad1c46cf3917a469a83b9cf958406ef54e32cda90cfb71e8bed82a53bc1",
-        "status": "SCOPED_SOFTWARE_AND_RUNTIME_ACCEPTED; CURRENT03_ODE_RESOLVER_PASS; CURRENT03_FREEZE_ADMISSION_PASS; CURRENT03_ATTEMPT001_FAIL_OR_INCOMPLETE_DURABLE_UNKNOWN_NO_RETRY; CURRENT02_ATTEMPT001_UNKNOWN_PRESERVED; W24_PARTIAL; SCIENCE_NOT_RUN",
+        "sha256": "1b56e022e1d473b0b83a3aad7ecaff8d6bc1a7fd3fc0203403493a2d5a1809e4",
+        "status": "SCOPED_SOFTWARE_AND_RUNTIME_ACCEPTED; CURRENT04_SOLVER_DIAGNOSTICS_PASS; CURRENT04_FREEZE_ADMISSION_PASS; CURRENT04_ATTEMPT001_FAIL_OR_INCOMPLETE_DURABLE_UNKNOWN_NO_RETRY; CURRENT03_AND_CURRENT02_UNKNOWNS_PRESERVED; W24_PARTIAL; SCIENCE_NOT_RUN",
         "process_inventory_privacy": {
           "candidate_id": "w24-local-native-admission-privacy-20261001-luna03",
           "fingerprint": "7f1939af87f3ccb1132f2b540f37eb7a5225b72cd2867d85ebce46959752d33e",
@@ -2939,7 +2944,7 @@
           "qualification": "This does not identify the failing statement; sampled models are not exact COMSOL 6.4.0.293 evidence.",
           "next_software_scope": "Minimal type-based unique resolver with meaningful tests; no native GO."
         },
-        "native_acceptance": "FAIL_OR_INCOMPLETE; UNKNOWN_DURABLE_JOB; SAFE_RETRY_FALSE; EXACT_CLEANUP_PASS_THIS_ATTEMPT_ONLY; NO_REPLAY",
+        "native_acceptance": "CURRENT04_FAIL_OR_INCOMPLETE; DURABLE_JOB_UNKNOWN; SAFE_RETRY_FALSE; EXACT_CLEANUP_PASS_THIS_ATTEMPT_ONLY; NO_REPLAY",
         "scientific_acceptance": "NOT_RUN",
         "documentation_checkpoint": {
           "pre_checkpoint_parent_head": "e0f9ab953b4284bfe21f3a1a39d632c7fe964e56",
@@ -2976,7 +2981,7 @@
             "scope": "Failed native outcome and exact owned cleanup only."
           }
         },
-        "next_action": "Perform only READ_ONLY_SAME_VERSION_API_DIAGNOSIS_GENERATED_SOLVER_SEQUENCE_DISCOVERY for stdUV. Current03 attempt001 failed with durable job UNKNOWN/safe_retry=false; cleanup PASS applies to this attempt only. Preserve historical current02 UNKNOWN/no-retry. No retry/second birth; W24 PARTIAL; science NOT_RUN.",
+        "next_action": "After this checkpoint, implement the configured-sequence selector repair using documented None/SolverSequence categories, strict study attachment, and StudyStep/Variables/Time binding; then freeze and review software only. No native rerun, new engine birth, retry, or replay is authorized now. W24 remains PARTIAL; scientific acceptance is NOT_RUN.",
         "runtime_build_attempt_001": {
           "status": "STOPPED_FIRST_FAILURE",
           "started_at_utc": "2026-10-01T07:18:30.553353Z",
@@ -3107,6 +3112,11 @@
             "do_not_replay": true
           },
           "next_action": "READ_ONLY_SAME_VERSION_API_DIAGNOSIS_GENERATED_SOLVER_SEQUENCE_DISCOVERY; NO_RETRY_OR_SECOND_BIRTH"
+        },
+        "current04_checkpoint": {
+          "path": "docs/full_project_execution/w24/PROCESS_INVENTORY_PRIVACY_SOFTWARE_CHECKPOINT.json",
+          "sha256": "1b56e022e1d473b0b83a3aad7ecaff8d6bc1a7fd3fc0203403493a2d5a1809e4",
+          "status": "SOFTWARE_DIAGNOSTIC_PASS; CURRENT04_FREEZE_ADMISSION_PASS; CURRENT04_NATIVE_ATTEMPT001_FAIL_OR_INCOMPLETE_DURABLE_UNKNOWN_NO_RETRY; PRIOR_CURRENT02_AND_CURRENT03_UNKNOWNS_PRESERVED; W24_PARTIAL; SCIENCE_NOT_RUN"
         }
       }
     },

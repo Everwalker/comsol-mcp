@@ -5,6 +5,7 @@ import com.comsol.model.Study;
 import com.comsol.model.StudyFeature;
 import com.comsol.model.SolverSequence;
 import com.comsol.model.SolverFeature;
+import com.comsol.model.SolverFeatureList;
 import com.comsol.model.Expr;
 import com.comsol.model.physics.PhysicsFeature;
 import com.comsol.model.physics.Physics;
@@ -26,6 +27,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -78,6 +80,11 @@ public final class W24CureCouponFixture {
     private static final String[] ABSOLUTE_TOLERANCES = {
         "1e-4", "1e-8", "1e-8", "1e-8", "1e-12", "1e-12"
     };
+    private static final int MAX_SOLVER_DIAGNOSTIC_TAGS = 32;
+    private static final int MAX_SOLVER_DIAGNOSTIC_SEQUENCES = 32;
+    private static final int MAX_SOLVER_DIAGNOSTIC_FEATURES = 48;
+    private static final int MAX_SOLVER_DIAGNOSTIC_CHARS = 1800;
+    private static final int MAX_SOLVER_DIAGNOSTIC_ERROR_CHARS = 160;
 
     private W24CureCouponFixture() { }
 
@@ -1193,17 +1200,7 @@ public final class W24CureCouponFixture {
             step.set("initstudy", sourceStudy);
             step.set("solnum", "last");
         }
-        study.createAutoSequences("sol");
-        String[] attached = study.getSolverSequences("SolverSequence");
-        if (attached.length != 1) {
-            throw new IllegalStateException("expected one generated solver sequence for " + studyTag +
-                ", got " + java.util.Arrays.toString(attached));
-        }
-        SolverSequence sequence = model.sol(attached[0]);
-        if (!sequence.isAttached() || !studyTag.equals(sequence.study())) {
-            throw new IllegalStateException("generated solver sequence is not attached to " + studyTag +
-                ": " + attached[0] + " -> " + sequence.study());
-        }
+        SolverSequence sequence = createAndRequireUniqueAttachedSolverSequence(model, study, step, studyTag);
         SolverFeature time = findUniqueTimeFeature(sequence, studyTag);
         time.set("timemethod", "bdf");
         time.set("tunit", "s");
@@ -1229,6 +1226,255 @@ public final class W24CureCouponFixture {
             time.setEntry("atol", field, ABSOLUTE_TOLERANCES[i]);
         }
         assertSolverSettings(time, studyTag, maxStepSeconds);
+    }
+
+    /**
+     * Generate the study's default solver configuration without running it,
+     * then retain the exact documented SolverSequence filter as the only
+     * selection source. The surrounding snapshots are best-effort diagnostics;
+     * their optional getter failures never prevent generation or change which
+     * sequence is selected.
+     */
+    private static SolverSequence createAndRequireUniqueAttachedSolverSequence(
+            Model model, Study study, StudyFeature step, String studyTag) {
+        String before = solverSequenceDiagnosticSnapshot(model, study, step);
+        try {
+            study.createAutoSequences("sol");
+        } catch (RuntimeException failure) {
+            String after = solverSequenceDiagnosticSnapshot(model, study, step);
+            throw solverSequenceFailure("createAutoSequences(\"sol\") failed for " + studyTag,
+                failure, before, after);
+        }
+        String after = solverSequenceDiagnosticSnapshot(model, study, step);
+        return requireUniqueAttachedSolverSequence(model, study, studyTag, before, after);
+    }
+
+    private static SolverSequence requireUniqueAttachedSolverSequence(
+            Model model, Study study, String studyTag, String before, String after) {
+        String[] attached;
+        try {
+            attached = study.getSolverSequences("SolverSequence");
+        } catch (RuntimeException failure) {
+            throw solverSequenceFailure("failed to read exact SolverSequence filter for " + studyTag,
+                failure, before, after);
+        }
+        if (attached == null || attached.length != 1) {
+            throw solverSequenceFailure("expected one generated solver sequence for " + studyTag +
+                ", got " + Arrays.toString(attached), null, before, after);
+        }
+        String sequenceTag = attached[0];
+        if (sequenceTag == null || sequenceTag.isBlank()) {
+            throw solverSequenceFailure("exact SolverSequence filter returned a blank tag for " + studyTag,
+                null, before, after);
+        }
+
+        SolverSequence sequence;
+        try {
+            sequence = model.sol(sequenceTag);
+        } catch (RuntimeException failure) {
+            throw solverSequenceFailure("failed to resolve attached solver tag " + sequenceTag +
+                " for " + studyTag, failure, before, after);
+        }
+        if (sequence == null) {
+            throw solverSequenceFailure("exact SolverSequence tag is absent from model.sol(): " +
+                sequenceTag + " for " + studyTag, null, before, after);
+        }
+
+        boolean isAttached;
+        String actualStudy;
+        try {
+            isAttached = sequence.isAttached();
+            actualStudy = sequence.study();
+        } catch (RuntimeException failure) {
+            throw solverSequenceFailure("failed to verify attachment relation for " + sequenceTag +
+                " and " + studyTag, failure, before, after);
+        }
+        if (!isAttached || !studyTag.equals(actualStudy)) {
+            throw solverSequenceFailure("generated solver sequence is not attached to " + studyTag +
+                ": " + sequenceTag + " -> " + actualStudy + ", isAttached=" + isAttached,
+                null, before, after);
+        }
+        return sequence;
+    }
+
+    private static IllegalStateException solverSequenceFailure(
+            String message, Throwable cause, String before, String after) {
+        String full = message + "; solver_diagnostic_before={" + before +
+            "}; solver_diagnostic_after={" + after + "}";
+        return cause == null ? new IllegalStateException(full) : new IllegalStateException(full, cause);
+    }
+
+    private static String solverSequenceDiagnosticSnapshot(Model model, Study study, StudyFeature step) {
+        List<String> fields = new ArrayList<>();
+        diagnosticField(fields, "time.tag", step::tag);
+        diagnosticField(fields, "time.type", step::type);
+        diagnosticField(fields, "time.active", step::isActive);
+        diagnosticTags(fields, "study.step_tags", () -> study.feature().tags());
+        diagnosticTags(fields, "model.study_tags", () -> model.study().tags());
+
+        String[] physicsTags = diagnosticTags(fields, "model.physics_tags", () -> model.physics().tags());
+        if (physicsTags != null) {
+            int count = Math.min(physicsTags.length, MAX_SOLVER_DIAGNOSTIC_TAGS);
+            for (int i = 0; i < count; i++) {
+                final String physicsTag = physicsTags[i];
+                diagnosticField(fields, "physics[" + physicsTag + "].type_uri_solveFor", () -> {
+                    Physics physics = model.physics(physicsTag);
+                    return physics.getType() + "," + physics.resolveModelPath() + "=" +
+                        step.solveFor(physics.resolveModelPath());
+                });
+            }
+            if (physicsTags.length > count) {
+                fields.add("physics.solveFor=[TRUNCATED " + count + "/" + physicsTags.length + "]");
+            }
+        }
+        diagnosticTags(fields, "component.mesh_tags", () -> model.component(COMPONENT).mesh().tags());
+        String[] globalTags = diagnosticTags(fields, "model.sol_tags", () -> model.sol().tags());
+        String[] allTags = diagnosticTags(fields, "study.getSolverSequences(All)",
+            () -> study.getSolverSequences("All"));
+        String[] exactTags = diagnosticTags(fields, "study.getSolverSequences(SolverSequence)",
+            () -> study.getSolverSequences("SolverSequence"));
+        appendObservedSequenceDetails(fields, model, globalTags, allTags, exactTags);
+        return boundedSolverDiagnostic(String.join("; ", fields));
+    }
+
+    private static void appendObservedSequenceDetails(List<String> fields, Model model,
+                                                     String[] globalTags, String[] allTags,
+                                                     String[] exactTags) {
+        Set<String> observed = new LinkedHashSet<>();
+        addDiagnosticTags(observed, globalTags);
+        addDiagnosticTags(observed, allTags);
+        addDiagnosticTags(observed, exactTags);
+        int sequenceCount = 0;
+        for (String sequenceTag : observed) {
+            if (sequenceCount >= MAX_SOLVER_DIAGNOSTIC_SEQUENCES) {
+                fields.add("solver_details=[TRUNCATED at " + MAX_SOLVER_DIAGNOSTIC_SEQUENCES +
+                    " of " + observed.size() + "]");
+                break;
+            }
+            final String tag = sequenceTag;
+            String prefix = "solver[" + tag + "]";
+            SolverSequence sequence;
+            try {
+                sequence = model.sol(tag);
+            } catch (RuntimeException failure) {
+                fields.add(prefix + ".lookup=READ_ERROR(" + shortDiagnosticError(failure) + ")");
+                sequenceCount++;
+                continue;
+            }
+            if (sequence == null) {
+                fields.add(prefix + ".lookup=READ_ERROR(returned null)");
+                sequenceCount++;
+                continue;
+            }
+            diagnosticField(fields, prefix + ".type", sequence::getType);
+            diagnosticField(fields, prefix + ".sequenceType", sequence::getSequenceType);
+            diagnosticField(fields, prefix + ".study", sequence::study);
+            diagnosticField(fields, prefix + ".isAttached", sequence::isAttached);
+            SolverFeatureList features;
+            try {
+                features = sequence.feature();
+            } catch (RuntimeException failure) {
+                fields.add(prefix + ".root_features=READ_ERROR(" + shortDiagnosticError(failure) + ")");
+                sequenceCount++;
+                continue;
+            }
+            if (features == null) {
+                fields.add(prefix + ".root_features=READ_ERROR(returned null)");
+                sequenceCount++;
+                continue;
+            }
+            String[] featureTags;
+            try {
+                featureTags = features.tags();
+            } catch (RuntimeException failure) {
+                fields.add(prefix + ".root_features=READ_ERROR(" + shortDiagnosticError(failure) + ")");
+                sequenceCount++;
+                continue;
+            }
+            if (featureTags == null) {
+                fields.add(prefix + ".root_features=READ_ERROR(returned null)");
+            } else {
+                int featureCount = Math.min(featureTags.length, MAX_SOLVER_DIAGNOSTIC_FEATURES);
+                List<String> rootTypes = new ArrayList<>();
+                for (int i = 0; i < featureCount; i++) {
+                    final String featureTag = featureTags[i];
+                    try {
+                        SolverFeature feature = features.get(featureTag);
+                        if (feature == null) {
+                            rootTypes.add(featureTag + "=READ_ERROR(returned null)");
+                        } else {
+                            rootTypes.add(featureTag + "=" + safeSolverDiagnosticRead(feature::getType));
+                        }
+                    } catch (RuntimeException failure) {
+                        rootTypes.add(featureTag + "=READ_ERROR(" + shortDiagnosticError(failure) + ")");
+                    }
+                }
+                String suffix = featureTags.length > featureCount
+                    ? " [TRUNCATED " + featureCount + "/" + featureTags.length + "]" : "";
+                fields.add(prefix + ".root_features=" + rootTypes + suffix);
+            }
+            sequenceCount++;
+        }
+    }
+
+    private static void addDiagnosticTags(Set<String> destination, String[] tags) {
+        if (tags == null) return;
+        int count = Math.min(tags.length, MAX_SOLVER_DIAGNOSTIC_TAGS);
+        for (int i = 0; i < count; i++) {
+            String tag = tags[i];
+            if (tag != null) destination.add(tag);
+        }
+    }
+
+    private static String[] diagnosticTags(List<String> fields, String name, SolverDiagnosticRead<String[]> read) {
+        try {
+            String[] tags = read.read();
+            if (tags == null) {
+                fields.add(name + "=READ_ERROR(returned null)");
+                return null;
+            }
+            int count = Math.min(tags.length, MAX_SOLVER_DIAGNOSTIC_TAGS);
+            String summary = Arrays.toString(Arrays.copyOf(tags, count));
+            if (tags.length > count) summary += " [TRUNCATED " + count + "/" + tags.length + "]";
+            fields.add(name + "=" + summary);
+            return tags;
+        } catch (Exception failure) {
+            fields.add(name + "=READ_ERROR(" + shortDiagnosticError(failure) + ")");
+            return null;
+        }
+    }
+
+    private static void diagnosticField(List<String> fields, String name, SolverDiagnosticRead<?> read) {
+        try {
+            fields.add(name + "=" + String.valueOf(read.read()));
+        } catch (Exception failure) {
+            fields.add(name + "=READ_ERROR(" + shortDiagnosticError(failure) + ")");
+        }
+    }
+
+    private static String safeSolverDiagnosticRead(SolverDiagnosticRead<?> read) {
+        try {
+            return String.valueOf(read.read());
+        } catch (Exception failure) {
+            return "READ_ERROR(" + shortDiagnosticError(failure) + ")";
+        }
+    }
+
+    private static String shortDiagnosticError(Throwable failure) {
+        String detail = failure.getClass().getSimpleName() + ": " + String.valueOf(failure.getMessage());
+        if (detail.length() <= MAX_SOLVER_DIAGNOSTIC_ERROR_CHARS) return detail;
+        return detail.substring(0, MAX_SOLVER_DIAGNOSTIC_ERROR_CHARS) + "...[TRUNCATED]";
+    }
+
+    private static String boundedSolverDiagnostic(String diagnostic) {
+        if (diagnostic.length() <= MAX_SOLVER_DIAGNOSTIC_CHARS) return diagnostic;
+        return diagnostic.substring(0, MAX_SOLVER_DIAGNOSTIC_CHARS) +
+            "...[TRUNCATED totalChars=" + diagnostic.length() + "]";
+    }
+
+    @FunctionalInterface
+    private interface SolverDiagnosticRead<T> {
+        T read() throws Exception;
     }
 
     private static SolverFeature findUniqueTimeFeature(SolverSequence sequence, String studyTag) {
