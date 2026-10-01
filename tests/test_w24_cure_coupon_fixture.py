@@ -9,6 +9,7 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[1]
 FIXTURE = REPO / "tools/java/W24CureCouponFixture.java"
+SCIENCE_FIXTURE = REPO / "tools/java/W24CureScienceFixture.java"
 HARNESS = REPO / "tests/java/W24DistributedODEResolverHarness.java"
 SOLVER_HARNESS = REPO / "tests/java/W24SolverSequenceDiagnosticsHarness.java"
 JAVA_HOME = Path("/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home")
@@ -126,7 +127,7 @@ def test_w24_ode_equations_are_resolved_by_unique_feature_type_and_reported_tag(
 
     classes = tmp_path / "classes"
     classes.mkdir()
-    sources = (FIXTURE, HARNESS, SOLVER_HARNESS)
+    sources = (FIXTURE, SCIENCE_FIXTURE, HARNESS, SOLVER_HARNESS)
     compile_command = [
         str(javac), "-proc:none", "-classpath", str(COMSOL_API_JAR), "-d", str(classes),
         *(str(source) for source in sources),
@@ -186,7 +187,7 @@ def test_w24_ode_equations_are_resolved_by_unique_feature_type_and_reported_tag(
     )
     for main_class, expected_stdout in (
         ("W24DistributedODEResolverHarness", "W24 DistributedODE resolver proxy checks: PASS (3 cases)"),
-        ("W24SolverSequenceDiagnosticsHarness", "W24 solver-sequence diagnostics proxy checks: PASS (9 cases)"),
+        ("W24SolverSequenceDiagnosticsHarness", "W24 solver-sequence diagnostics proxy checks: PASS (30 cases)"),
     ):
         result = run_results[main_class]
         assert result["returncode"] == 0 and not result["timed_out"], (

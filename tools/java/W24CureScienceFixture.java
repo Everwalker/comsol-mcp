@@ -186,14 +186,8 @@ public final class W24CureScienceFixture {
             Study study = model.study().create("stdMech");
             study.create("stat", "Stationary");
             study.createAutoSequences("sol");
-            String[] sequences = study.getSolverSequences("SolverSequence");
-            if (sequences.length != 1) {
-                throw new IllegalStateException("mechanics benchmark must have one generated stationary solver sequence");
-            }
-            SolverSequence sequence = model.sol(sequences[0]);
-            if (!sequence.isAttached() || !"stdMech".equals(sequence.study())) {
-                throw new IllegalStateException("mechanics benchmark solver sequence is not attached to stdMech");
-            }
+            SolverSequence sequence = requireUniqueAttachedSolverSequence(
+                model, study, "stdMech", "stat", "Stationary");
 
             String inventoryPath = String.valueOf(args.getOrDefault("equation_view_path", ""));
             if (inventoryPath.isBlank()) {
@@ -210,7 +204,7 @@ public final class W24CureScienceFixture {
             result.put("model_tag", modelTag);
             result.put("source_parent_model_tag", parent.tag());
             result.put("study_tag", "stdMech");
-            result.put("solver_sequence", sequences[0]);
+            result.put("solver_sequence", sequence.tag());
             result.put("geometry_dimension", geom.getSDim());
             result.put("geometry_axisymmetric", geom.isAxisymmetric());
             result.put("domain_ids", boxed(domainIds));
@@ -384,12 +378,8 @@ public final class W24CureScienceFixture {
         }
         requireMechanicsModel(model, caseId);
         Study study = model.study("stdMech");
-        String[] sequences = study.getSolverSequences("SolverSequence");
-        if (sequences.length != 1) throw new IllegalStateException("stdMech lost its unique solver sequence");
-        SolverSequence sequence = model.sol(sequences[0]);
-        if (!sequence.isAttached() || !"stdMech".equals(sequence.study())) {
-            throw new IllegalStateException("stdMech solver attachment readback failed");
-        }
+        SolverSequence sequence = requireUniqueAttachedSolverSequence(
+            model, study, "stdMech", "stat", "Stationary");
         int ordinal = appendInvocationBeforeStudyRun(Path.of(ledgerText), caseId, "stdMech");
         long started = System.nanoTime();
         study.run();
@@ -399,7 +389,7 @@ public final class W24CureScienceFixture {
         result.put("submission_index", ordinal);
         result.put("case_id", caseId);
         result.put("study_tag", "stdMech");
-        result.put("solver_sequence", sequences[0]);
+        result.put("solver_sequence", sequence.tag());
         result.put("elapsed_s", elapsed);
         result.put("study_run_calls_from_this_action", 1);
         return result;
@@ -1369,20 +1359,14 @@ public final class W24CureScienceFixture {
         time.set("rtol", "1e-5");
         time.set("useinitsol", "off");
         study.createAutoSequences("sol");
-        String[] sequences = study.getSolverSequences("SolverSequence");
-        if (sequences.length != 1) {
-            throw new IllegalStateException("stdCont must generate exactly one SolverSequence");
-        }
-        SolverSequence sequence = model.sol(sequences[0]);
-        if (!sequence.isAttached() || !"stdCont".equals(sequence.study())) {
-            throw new IllegalStateException("continuous solver sequence is not attached to stdCont");
-        }
+        SolverSequence sequence = requireUniqueAttachedSolverSequence(
+            model, study, "stdCont", "time", "Time");
         SolverFeature solverTime = findUniqueTimeFeature(sequence);
         configureTimeSolver(solverTime, maxStep);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("status", "CONTINUOUS_STUDY_CONFIGURED_NOT_SOLVED");
         result.put("study_tag", "stdCont");
-        result.put("sequence_tag", sequences[0]);
+        result.put("sequence_tag", sequence.tag());
         result.put("tlist", time.getString("tlist"));
         result.put("useinitsol", time.getString("useinitsol"));
         result.put("max_step_s", solverTime.getDouble("maxstepbdf"));
@@ -1438,15 +1422,9 @@ public final class W24CureScienceFixture {
         }
         if (ledgerText.isBlank()) throw new IllegalArgumentException("study_run requires an fsynced ledger_path");
         Study study = model.study(studyTag);
-        String[] sequences = study.getSolverSequences("SolverSequence");
-        if (sequences.length != 1) {
-            throw new IllegalStateException("study must have exactly one attached SolverSequence: " + studyTag);
-        }
-        SolverSequence sequence = model.sol(sequences[0]);
-        if (!sequence.isAttached() || !studyTag.equals(sequence.study())) {
-            throw new IllegalStateException("study solver sequence attachment mismatch for " + studyTag);
-        }
-        SolverFeature time = findUniqueTimeFeature(sequence);
+        SolverSequence sequence = requireUniqueAttachedSolverSequence(
+            model, study, studyTag, "time", "Time");
+        SolverFeature time = findUniqueSolverFeature(sequence, "Time", studyTag);
         if (!"bdf".equals(time.getString("timemethod")) ||
             !"strict".equals(time.getString("tstepsbdf")) ||
             !"tsteps".equals(time.getString("tout")) || time.getInt("tstepsstore") != 1) {
@@ -1491,7 +1469,7 @@ public final class W24CureScienceFixture {
         result.put("submission_index", ordinal);
         result.put("case_id", caseId);
         result.put("study_tag", studyTag);
-        result.put("solver_sequence", sequences[0]);
+        result.put("solver_sequence", sequence.tag());
         result.put("time_feature", time.tag());
         result.put("elapsed_s", elapsed / 1.0e9);
         result.put("immediate_save_path", savePath.isBlank() ? null : savePath);
@@ -1644,16 +1622,29 @@ public final class W24CureScienceFixture {
                 studyReadback.put("solnum", studyTime.getString("solnum"));
                 studyTimes.put(tag, studyReadback);
             }
-            String[] attached = model.study(tag).getSolverSequences("SolverSequence");
-            if (attached.length == 1) {
-                SolverSequence sequence = model.sol(attached[0]);
+            if (Arrays.asList("stdUV", "stdBake", "stdCool", "stdCont").contains(tag)) {
+                Study study = model.study(tag);
+                SolverSequence sequence = requireUniqueAttachedSolverSequence(
+                    model, study, tag, "time", "Time");
                 SolverFeature time = findUniqueTimeFeature(sequence);
-                solvers.put(tag, Map.of("sequence_tag", attached[0], "sequence_attached", sequence.isAttached(),
+                solvers.put(tag, Map.of("sequence_tag", sequence.tag(), "sequence_attached", sequence.isAttached(),
                     "sequence_study", sequence.study(), "time_feature_tag", time.tag(),
                     "timemethod", time.getString("timemethod"), "tstepsbdf", time.getString("tstepsbdf"),
                     "maxstepconstraintbdf", time.getString("maxstepconstraintbdf"),
                     "maxstepbdf", time.getDouble("maxstepbdf"), "tout", time.getString("tout"),
                     "tstepsstore", time.getInt("tstepsstore")));
+            } else {
+                String[] attached = model.study(tag).getSolverSequences("SolverSequence");
+                if (attached.length == 1) {
+                    SolverSequence sequence = model.sol(attached[0]);
+                    SolverFeature time = findUniqueTimeFeature(sequence);
+                    solvers.put(tag, Map.of("sequence_tag", attached[0], "sequence_attached", sequence.isAttached(),
+                        "sequence_study", sequence.study(), "time_feature_tag", time.tag(),
+                        "timemethod", time.getString("timemethod"), "tstepsbdf", time.getString("tstepsbdf"),
+                        "maxstepconstraintbdf", time.getString("maxstepconstraintbdf"),
+                        "maxstepbdf", time.getDouble("maxstepbdf"), "tout", time.getString("tout"),
+                        "tstepsstore", time.getInt("tstepsstore")));
+                }
             }
         }
         result.put("solver_readbacks", solvers);
@@ -1662,24 +1653,162 @@ public final class W24CureScienceFixture {
         return result;
     }
 
-    private static SolverFeature findUniqueTimeFeature(SolverSequence sequence) {
+    private static SolverSequence requireUniqueAttachedSolverSequence(
+            Model model, Study study, String studyTag, String studyStepTag, String expectedSolverType) {
+        Map<String, String> categories = new LinkedHashMap<>();
+        for (String category : new String[]{"SolverSequence", "None"}) {
+            String[] tags;
+            try {
+                tags = study.getSolverSequences(category);
+            } catch (RuntimeException failure) {
+                throw new IllegalStateException("failed to read required " + category +
+                    " filter for " + studyTag, failure);
+            }
+            if (tags == null) {
+                throw new IllegalStateException(category + " filter returned null for " + studyTag);
+            }
+            Set<String> seen = new HashSet<>();
+            for (String tag : tags) {
+                if (tag == null || tag.isBlank()) {
+                    throw new IllegalStateException(category + " filter returned a blank/null tag for " +
+                        studyTag + ": " + sequenceTagsPreview(tags));
+                }
+                if (!seen.add(tag)) {
+                    throw new IllegalStateException(category + " filter returned duplicate tag " + tag +
+                        " for " + studyTag);
+                }
+                String priorCategory = categories.putIfAbsent(tag, category);
+                if (priorCategory != null) {
+                    throw new IllegalStateException("solver tag overlaps required filters for " + studyTag +
+                        ": " + tag + " in " + priorCategory + " and " + category);
+                }
+            }
+        }
+        if (categories.size() != 1) {
+            throw new IllegalStateException("expected one attached solver sequence for " + studyTag +
+                ", got " + sequenceCategoryPreview(categories));
+        }
+        Map.Entry<String, String> candidate = categories.entrySet().iterator().next();
+        String sequenceTag = candidate.getKey();
+        SolverSequence sequence;
+        try {
+            sequence = model.sol(sequenceTag);
+        } catch (RuntimeException failure) {
+            throw new IllegalStateException("failed to resolve solver sequence " + sequenceTag +
+                " for " + studyTag, failure);
+        }
+        if (sequence == null) {
+            throw new IllegalStateException("required solver tag is absent from model.sol(): " + sequenceTag);
+        }
+        try {
+            String actualCategory = sequence.getSequenceType();
+            if (!candidate.getValue().equals(actualCategory)) {
+                throw new IllegalStateException("solver category mismatch for " + sequenceTag +
+                    ": filter=" + candidate.getValue() + ", getSequenceType()=" + actualCategory);
+            }
+            boolean attached = sequence.isAttached();
+            String actualStudy = sequence.study();
+            if (!attached || !studyTag.equals(actualStudy)) {
+                throw new IllegalStateException("generated solver sequence is not attached to " + studyTag +
+                    ": " + sequenceTag + " -> " + actualStudy + ", isAttached=" + attached);
+            }
+            verifySolverRootFeatures(sequence, sequenceTag, studyTag, studyStepTag);
+            findUniqueSolverFeature(sequence, expectedSolverType, studyTag);
+        } catch (IllegalStateException failure) {
+            throw failure;
+        } catch (RuntimeException failure) {
+            throw new IllegalStateException("failed to verify generated solver sequence " + sequenceTag +
+                " for " + studyTag, failure);
+        }
+        return sequence;
+    }
+
+    private static void verifySolverRootFeatures(SolverSequence sequence, String sequenceTag,
+            String studyTag, String studyStepTag) {
+        com.comsol.model.SolverFeatureList root = sequence.feature();
+        String[] tags = root.tags();
+        if (tags == null) throw new IllegalStateException("solver root feature tags are null for " + sequenceTag);
+        Set<String> seenTags = new HashSet<>();
+        Map<String, SolverFeature> required = new LinkedHashMap<>();
+        for (String tag : tags) {
+            if (tag == null || tag.isBlank() || !seenTags.add(tag)) {
+                throw new IllegalStateException("solver root has blank/null/duplicate feature tags for " +
+                    sequenceTag + ": " + sequenceTagsPreview(tags));
+            }
+            SolverFeature feature = root.get(tag);
+            if (feature == null) throw new IllegalStateException("solver root feature lookup returned null: " + tag);
+            String type = feature.getType();
+            if ("StudyStep".equals(type) || "Variables".equals(type)) {
+                if (required.putIfAbsent(type, feature) != null) {
+                    throw new IllegalStateException("solver root has duplicate " + type +
+                        " features for " + sequenceTag);
+                }
+            }
+        }
+        SolverFeature studyStep = required.get("StudyStep");
+        if (studyStep == null || !required.containsKey("Variables")) {
+            throw new IllegalStateException("solver root requires unique StudyStep and Variables features for " +
+                sequenceTag + "; found=" + required.keySet());
+        }
+        String linkedStudy = studyStep.getString("study");
+        String linkedStep = studyStep.getString("studystep");
+        if (!studyTag.equals(linkedStudy) || !studyStepTag.equals(linkedStep)) {
+            throw new IllegalStateException("solver StudyStep relation mismatch for " + sequenceTag +
+                ": study=" + linkedStudy + ", studystep=" + linkedStep +
+                ", expected=" + studyTag + "/" + studyStepTag);
+        }
+    }
+
+    private static SolverFeature findUniqueSolverFeature(
+            SolverSequence sequence, String expectedType, String studyTag) {
         Map<String, SolverFeature> matches = new LinkedHashMap<>();
-        collectTimeFeatures(sequence.feature().tags(), sequence.feature(), "", matches);
+        collectSolverFeatures(sequence.feature().tags(), sequence.feature(), "", expectedType, matches);
         if (matches.size() != 1) {
-            throw new IllegalStateException("expected one Time solver feature; found " + matches.keySet());
+            throw new IllegalStateException("expected exactly one native " + expectedType +
+                " solver feature for " + studyTag + ", found=" + matches.keySet());
         }
         return matches.values().iterator().next();
     }
 
-    private static void collectTimeFeatures(String[] tags, com.comsol.model.SolverFeatureList list,
-                                            String parent, Map<String, SolverFeature> matches) {
+    private static void collectSolverFeatures(String[] tags, com.comsol.model.SolverFeatureList list,
+            String parent, String expectedType, Map<String, SolverFeature> matches) {
         for (String tag : tags) {
             SolverFeature feature = list.get(tag);
             String path = parent.isEmpty() ? tag : parent + "/" + tag;
-            if ("Time".equals(feature.getType())) matches.put(path, feature);
+            if (expectedType.equals(feature.getType())) matches.put(path, feature);
             String[] childTags = feature.feature().tags();
-            if (childTags.length > 0) collectTimeFeatures(childTags, feature.feature(), path, matches);
+            if (childTags.length > 0) {
+                collectSolverFeatures(childTags, feature.feature(), path, expectedType, matches);
+            }
         }
+    }
+
+    private static String sequenceTagsPreview(String[] tags) {
+        int count = Math.min(tags.length, 16);
+        String[] preview = new String[count];
+        for (int i = 0; i < count; i++) preview[i] = boundedSequenceToken(tags[i]);
+        String text = Arrays.toString(preview);
+        return tags.length > count ? text + "...[TRUNCATED " + count + "/" + tags.length + "]" : text;
+    }
+
+    private static String sequenceCategoryPreview(Map<String, String> categories) {
+        List<String> preview = new ArrayList<>();
+        for (Map.Entry<String, String> entry : categories.entrySet()) {
+            if (preview.size() >= 16) break;
+            preview.add(boundedSequenceToken(entry.getKey()) + "(" + entry.getValue() + ")");
+        }
+        String text = preview.toString();
+        return categories.size() > preview.size()
+            ? text + "...[TRUNCATED " + preview.size() + "/" + categories.size() + "]" : text;
+    }
+
+    private static String boundedSequenceToken(String value) {
+        if (value == null || value.length() <= 64) return value;
+        return value.substring(0, 64) + "...[TRUNCATED]";
+    }
+
+    private static SolverFeature findUniqueTimeFeature(SolverSequence sequence) {
+        return findUniqueSolverFeature(sequence, "Time", "sequence");
     }
 
     private static String safeToken(Object value, String label) {

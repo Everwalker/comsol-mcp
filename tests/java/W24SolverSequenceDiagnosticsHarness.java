@@ -19,31 +19,34 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/** Offline proxies for W24 solver-sequence diagnostics and strict selection. */
+/** Offline proxy checks for the W24 typed solver-sequence selector. */
 public final class W24SolverSequenceDiagnosticsHarness {
-    private static final String STUDY_TAG = "stdUV";
-    private static final Method CREATE_AND_REQUIRE = method();
+    private static final Method COUPON_CREATE = method(W24CureCouponFixture.class,
+        "createAndRequireUniqueAttachedSolverSequence", Model.class, Study.class,
+        StudyFeature.class, String.class);
+    private static final Method SCIENCE_SELECT = method(W24CureScienceFixture.class,
+        "requireUniqueAttachedSolverSequence", Model.class, Study.class,
+        String.class, String.class, String.class);
+    private static int cases;
 
     private W24SolverSequenceDiagnosticsHarness() { }
 
     public static void main(String[] args) throws Exception {
-        exactFilterIsTheOnlySelector();
-        rejectsZeroExactSequences();
-        rejectsMultipleExactSequences();
-        rejectsNonattachedExactSequence();
-        rejectsExactSequenceAttachedToWrongStudy();
-        rejectsAllOnlyCopyStoredAndParametricSequences();
-        diagnosticGetterErrorIsRecordedAndDoesNotFallback();
-        generatorFailureRetainsCauseAndBothSnapshots();
-        largeTagArraysStayBoundedAndReportTruncation();
-        System.out.println("W24 solver-sequence diagnostics proxy checks: PASS (9 cases)");
+        acceptsTypedAndNoneSequencesForCoupon();
+        acceptsNoneTransientAndStationarySequencesForScience();
+        rejectsZeroMultipleAndMixedCandidates();
+        rejectsMalformedAndOverlappingTags();
+        rejectsWrongCategoryAndAttachment();
+        rejectsInvalidRootFeatureContracts();
+        failsClosedOnRequiredAndStructuralGetterErrors();
+        keepsAllDiagnosticOnlyAndRetainsGeneratorCause();
+        boundsLargeDiagnosticSnapshots();
+        System.out.println("W24 solver-sequence diagnostics proxy checks: PASS (" + cases + " cases)");
     }
 
-    private static Method method() {
+    private static Method method(Class<?> owner, String name, Class<?>... parameters) {
         try {
-            Method result = W24CureCouponFixture.class.getDeclaredMethod(
-                "createAndRequireUniqueAttachedSolverSequence", Model.class, Study.class,
-                StudyFeature.class, String.class);
+            Method result = owner.getDeclaredMethod(name, parameters);
             result.setAccessible(true);
             return result;
         } catch (ReflectiveOperationException exception) {
@@ -51,147 +54,237 @@ public final class W24SolverSequenceDiagnosticsHarness {
         }
     }
 
-    private static void exactFilterIsTheOnlySelector() throws Exception {
-        State state = new State();
-        state.globalTags = new String[]{"solGlobalOnly"};
-        state.allTags = new String[]{"solAllOnly"};
-        state.exactTags = new String[]{"solExact"};
-        state.addSequence("solGlobalOnly", "stdOther");
-        state.addSequence("solAllOnly", "stdOther");
-        SolverSequence selected = state.addSequence("solExact", STUDY_TAG);
+    private static void acceptsTypedAndNoneSequencesForCoupon() throws Exception {
+        State typed = state("stdUV", "time", "Time");
+        typed.solverSequenceTags = new String[]{"solTyped"};
+        typed.allTags = typed.solverSequenceTags;
+        typed.addSequence("solTyped", "stdUV", true, "SolverSequence");
+        require(runCoupon(typed) == typed.sequences.get("solTyped"), "typed coupon sequence was not selected");
+        require(typed.solverFilterCalls == 3 && typed.noneFilterCalls == 3 && typed.allFilterCalls == 2,
+            "coupon did not make required filters after the two diagnostic snapshots");
+        assertNoForbiddenActions(typed);
+        cases++;
 
-        SolverSequence result = create(state);
-        require(result == selected, "selection did not use the exact SolverSequence filter");
-        require(state.createAutoSequenceCalls == 1, "auto-sequence generation call count differs");
-        require(state.exactFilterCalls == 3, "before/after/strict exact-filter reads were not made");
-        require(state.allFilterCalls == 2, "All filter should be diagnostic-only before and after generation");
-        require(state.meshTagReads == 2, "mesh tags were not captured in both snapshots");
-        require(state.physicsSolveForReads == 2, "physics URI/solveFor was not captured in both snapshots");
-        assertNoForbiddenMutations(state);
+        State none = state("stdUV", "time", "Time");
+        none.noneTags = new String[]{"solNone"};
+        none.allTags = none.noneTags;
+        none.addSequence("solNone", "stdUV", true, "None");
+        require(runCoupon(none) == none.sequences.get("solNone"), "None coupon sequence was not selected");
+        assertNoForbiddenActions(none);
+        cases++;
     }
 
-    private static void rejectsZeroExactSequences() throws Exception {
-        State state = new State();
-        IllegalStateException failure = expectFailure(state,
-            "expected one generated solver sequence for " + STUDY_TAG, "got []");
-        require(state.exactFilterCalls == 3, "zero exact result was not checked after generation");
-        require(state.allFilterCalls == 2, "All diagnostics were not limited to pre/post snapshots");
-        require(failure.getMessage().contains("study.getSolverSequences(SolverSequence)=[]"),
-            "zero-result diagnostics omitted the exact filter result");
+    private static void acceptsNoneTransientAndStationarySequencesForScience() throws Exception {
+        State transientState = state("stdUV", "time", "Time");
+        transientState.noneTags = new String[]{"solTransient"};
+        transientState.addSequence("solTransient", "stdUV", true, "None");
+        require(runScience(transientState, "Time") == transientState.sequences.get("solTransient"),
+            "None transient science sequence was not selected");
+        require(transientState.solverFilterCalls == 1 && transientState.noneFilterCalls == 1,
+            "science transient selector did not query both required categories once");
+        assertNoForbiddenActions(transientState);
+        cases++;
+
+        State stationary = state("stdMech", "stat", "Stationary");
+        stationary.noneTags = new String[]{"solStationary"};
+        stationary.addSequence("solStationary", "stdMech", true, "None");
+        require(runScience(stationary, "Stationary") == stationary.sequences.get("solStationary"),
+            "None stationary science sequence was not selected");
+        assertNoForbiddenActions(stationary);
+        cases++;
     }
 
-    private static void rejectsMultipleExactSequences() throws Exception {
-        State state = new State();
-        state.globalTags = new String[]{"solA", "solB"};
-        state.allTags = new String[]{"solA", "solB"};
-        state.exactTags = new String[]{"solA", "solB"};
-        state.addSequence("solA", STUDY_TAG);
-        state.addSequence("solB", STUDY_TAG);
+    private static void rejectsZeroMultipleAndMixedCandidates() throws Exception {
+        State zero = state("stdUV", "time", "Time");
+        expectCouponFailure(zero, "expected one generated solver sequence", "got []");
+        cases++;
 
-        IllegalStateException failure = expectFailure(state,
-            "expected one generated solver sequence for " + STUDY_TAG, "got [solA, solB]");
-        require(failure.getMessage().contains("study.getSolverSequences(SolverSequence)=[solA, solB]"),
-            "multiple-result diagnostics omitted both exact candidates");
+        State multiple = state("stdUV", "time", "Time");
+        multiple.solverSequenceTags = new String[]{"solA", "solB"};
+        multiple.addSequence("solA", "stdUV", true, "SolverSequence");
+        multiple.addSequence("solB", "stdUV", true, "SolverSequence");
+        expectScienceFailure(multiple, "expected one attached solver sequence");
+        cases++;
+
+        State mixed = state("stdUV", "time", "Time");
+        mixed.solverSequenceTags = new String[]{"solTyped"};
+        mixed.noneTags = new String[]{"solNone"};
+        mixed.addSequence("solTyped", "stdUV", true, "SolverSequence");
+        mixed.addSequence("solNone", "stdUV", true, "None");
+        expectCouponFailure(mixed, "expected one generated solver sequence", "solTyped", "solNone");
+        cases++;
     }
 
-    private static void rejectsNonattachedExactSequence() throws Exception {
-        State state = new State();
-        state.globalTags = new String[]{"solDetached"};
-        state.allTags = new String[]{"solDetached"};
-        state.exactTags = new String[]{"solDetached"};
-        state.addSequence("solDetached", STUDY_TAG, false, "TimeDependent");
+    private static void rejectsMalformedAndOverlappingTags() throws Exception {
+        State blank = state("stdUV", "time", "Time");
+        blank.solverSequenceTags = new String[]{""};
+        expectCouponFailure(blank, "blank/null tag");
+        cases++;
 
-        expectFailure(state,
-            "generated solver sequence is not attached to " + STUDY_TAG +
-                ": solDetached -> " + STUDY_TAG + ", isAttached=false");
+        State nullTag = state("stdUV", "time", "Time");
+        nullTag.noneTags = new String[]{null};
+        expectScienceFailure(nullTag, "blank/null tag");
+        cases++;
+
+        State nullArray = state("stdUV", "time", "Time");
+        nullArray.noneTags = null;
+        expectCouponFailure(nullArray, "None filter returned null");
+        cases++;
+
+        State duplicate = state("stdUV", "time", "Time");
+        duplicate.solverSequenceTags = new String[]{"solDup", "solDup"};
+        expectScienceFailure(duplicate, "duplicate tag solDup");
+        cases++;
+
+        State overlap = state("stdUV", "time", "Time");
+        overlap.solverSequenceTags = new String[]{"solSame"};
+        overlap.noneTags = new String[]{"solSame"};
+        expectCouponFailure(overlap, "overlaps required filters");
+        cases++;
     }
 
-    private static void rejectsExactSequenceAttachedToWrongStudy() throws Exception {
-        State state = new State();
-        state.globalTags = new String[]{"solOtherStudy"};
-        state.allTags = new String[]{"solOtherStudy"};
-        state.exactTags = new String[]{"solOtherStudy"};
-        state.addSequence("solOtherStudy", "stdOther", true, "TimeDependent");
+    private static void rejectsWrongCategoryAndAttachment() throws Exception {
+        State category = state("stdUV", "time", "Time");
+        category.solverSequenceTags = new String[]{"solWrongCategory"};
+        category.addSequence("solWrongCategory", "stdUV", true, "None");
+        expectCouponFailure(category, "solver category mismatch", "filter=SolverSequence");
+        cases++;
 
-        expectFailure(state,
-            "generated solver sequence is not attached to " + STUDY_TAG +
-                ": solOtherStudy -> stdOther, isAttached=true");
+        State detached = state("stdUV", "time", "Time");
+        detached.noneTags = new String[]{"solDetached"};
+        detached.addSequence("solDetached", "stdUV", false, "None");
+        expectScienceFailure(detached, "not attached to stdUV", "isAttached=false");
+        cases++;
+
+        State wrongStudy = state("stdUV", "time", "Time");
+        wrongStudy.noneTags = new String[]{"solOtherStudy"};
+        wrongStudy.addSequence("solOtherStudy", "stdOther", true, "None");
+        expectCouponFailure(wrongStudy, "not attached to stdUV", "stdOther");
+        cases++;
     }
 
-    private static void rejectsAllOnlyCopyStoredAndParametricSequences() throws Exception {
-        State state = new State();
-        state.globalTags = new String[]{"solCopy", "solStored", "solParametric"};
-        state.allTags = state.globalTags;
-        state.addSequence("solCopy", "stdOther", true, "Copy");
-        state.addSequence("solStored", "stdOther", true, "StoredSolution");
-        state.addSequence("solParametric", "stdOther", true, "Parametric");
+    private static void rejectsInvalidRootFeatureContracts() throws Exception {
+        State missingStep = state("stdUV", "time", "Time");
+        missingStep.rootFeatures = new String[][]{{"v1", "Variables"}, {"t1", "Time"}};
+        missingStep.noneTags = new String[]{"solMissingStep"};
+        missingStep.addSequence("solMissingStep", "stdUV", true, "None");
+        expectCouponFailure(missingStep, "requires unique StudyStep and Variables");
+        cases++;
 
-        IllegalStateException failure = expectFailure(state,
-            "expected one generated solver sequence for " + STUDY_TAG, "got []");
-        require(state.exactFilterCalls == 3 && state.allFilterCalls == 2,
-            "All-only sequences changed the exact-filter selection path");
-        for (String sequenceDetail : new String[]{
-                "solver[solCopy].sequenceType=Copy",
-                "solver[solStored].sequenceType=StoredSolution",
-                "solver[solParametric].sequenceType=Parametric"}) {
-            require(failure.getMessage().contains(sequenceDetail),
-                "All-only sequence diagnostic was omitted: " + sequenceDetail);
-        }
+        State duplicateStep = state("stdMech", "stat", "Stationary");
+        duplicateStep.rootFeatures = new String[][]{
+            {"st1", "StudyStep"}, {"st2", "StudyStep"}, {"v1", "Variables"}, {"s1", "Stationary"}};
+        duplicateStep.noneTags = new String[]{"solDuplicateStep"};
+        duplicateStep.addSequence("solDuplicateStep", "stdMech", true, "None");
+        expectScienceFailure(duplicateStep, "duplicate StudyStep");
+        cases++;
+
+        State missingVariables = state("stdUV", "time", "Time");
+        missingVariables.rootFeatures = new String[][]{{"st1", "StudyStep"}, {"t1", "Time"}};
+        missingVariables.noneTags = new String[]{"solMissingVariables"};
+        missingVariables.addSequence("solMissingVariables", "stdUV", true, "None");
+        expectScienceFailure(missingVariables, "requires unique StudyStep and Variables");
+        cases++;
+
+        State duplicateVariables = state("stdUV", "time", "Time");
+        duplicateVariables.rootFeatures = new String[][]{
+            {"st1", "StudyStep"}, {"v1", "Variables"}, {"v2", "Variables"}, {"t1", "Time"}};
+        duplicateVariables.noneTags = new String[]{"solDuplicateVariables"};
+        duplicateVariables.addSequence("solDuplicateVariables", "stdUV", true, "None");
+        expectCouponFailure(duplicateVariables, "duplicate Variables");
+        cases++;
+
+        State missingSolver = state("stdUV", "time", "Time");
+        missingSolver.rootFeatures = new String[][]{{"st1", "StudyStep"}, {"v1", "Variables"}};
+        missingSolver.noneTags = new String[]{"solMissingTime"};
+        missingSolver.addSequence("solMissingTime", "stdUV", true, "None");
+        expectCouponFailure(missingSolver, "expected exactly one native Time solver feature");
+        cases++;
+
+        State duplicateSolver = state("stdMech", "stat", "Stationary");
+        duplicateSolver.rootFeatures = new String[][]{
+            {"st1", "StudyStep"}, {"v1", "Variables"}, {"s1", "Stationary"}, {"s2", "Stationary"}};
+        duplicateSolver.noneTags = new String[]{"solDuplicateStationary"};
+        duplicateSolver.addSequence("solDuplicateStationary", "stdMech", true, "None");
+        expectScienceFailure(duplicateSolver, "expected exactly one native Stationary solver feature");
+        cases++;
+
+        State wrongStudyLink = state("stdUV", "time", "Time");
+        wrongStudyLink.linkedStudy = "stdOther";
+        wrongStudyLink.noneTags = new String[]{"solWrongStudyLink"};
+        wrongStudyLink.addSequence("solWrongStudyLink", "stdUV", true, "None");
+        expectCouponFailure(wrongStudyLink, "StudyStep relation mismatch", "stdOther");
+        cases++;
+
+        State wrongStepLink = state("stdMech", "stat", "Stationary");
+        wrongStepLink.linkedStep = "time";
+        wrongStepLink.noneTags = new String[]{"solWrongStepLink"};
+        wrongStepLink.addSequence("solWrongStepLink", "stdMech", true, "None");
+        expectScienceFailure(wrongStepLink, "StudyStep relation mismatch", "expected=stdMech/stat");
+        cases++;
     }
 
-    private static void diagnosticGetterErrorIsRecordedAndDoesNotFallback() throws Exception {
-        State state = new State();
-        state.globalTags = new String[]{"solDecoy"};
-        state.allThrows = true;
-        state.exactResponses = new String[][]{
-            {"solExact"}, {"solExact"}, new String[0]
-        };
-        state.addSequence("solDecoy", "stdOther");
-        state.addSequence("solExact", STUDY_TAG);
+    private static void failsClosedOnRequiredAndStructuralGetterErrors() throws Exception {
+        State exactError = state("stdUV", "time", "Time");
+        exactError.solverFilterFailure = new IllegalStateException("synthetic SolverSequence failure");
+        expectCouponFailure(exactError, "failed to read required SolverSequence filter");
+        cases++;
 
-        IllegalStateException failure = expectFailure(state,
-            "expected one generated solver sequence for " + STUDY_TAG, "got []",
+        State noneError = state("stdUV", "time", "Time");
+        noneError.noneFilterFailure = new IllegalStateException("synthetic None failure");
+        expectScienceFailure(noneError, "failed to read required None filter");
+        cases++;
+
+        State structureError = state("stdUV", "time", "Time");
+        structureError.noneTags = new String[]{"solBadStepRead"};
+        structureError.addSequence("solBadStepRead", "stdUV", true, "None");
+        structureError.studyStepGetterFailure = new IllegalArgumentException("synthetic StudyStep read failure");
+        expectCouponFailure(structureError, "failed to verify generated solver sequence");
+        cases++;
+    }
+
+    private static void keepsAllDiagnosticOnlyAndRetainsGeneratorCause() throws Exception {
+        State allOnly = state("stdUV", "time", "Time");
+        allOnly.globalTags = new String[]{"solCopy", "solStored", "solParametric"};
+        allOnly.allTags = allOnly.globalTags;
+        allOnly.addSequence("solCopy", "stdOther", true, "CopySolution");
+        allOnly.addSequence("solStored", "stdOther", true, "Stored");
+        allOnly.addSequence("solParametric", "stdOther", true, "Parametric");
+        expectCouponFailure(allOnly, "expected one generated solver sequence", "got []",
+            "solver[solCopy].sequenceType=CopySolution", "solver[solStored].sequenceType=Stored",
+            "solver[solParametric].sequenceType=Parametric");
+        cases++;
+
+        State allGetterError = state("stdUV", "time", "Time");
+        allGetterError.allFilterFailure = new IllegalStateException("synthetic All unavailable");
+        expectCouponFailure(allGetterError, "expected one generated solver sequence", "got []",
             "study.getSolverSequences(All)=READ_ERROR(IllegalStateException: synthetic All unavailable)");
-        require(state.createAutoSequenceCalls == 1, "diagnostic getter failure blocked auto generation");
-        require(state.exactFilterCalls == 3 && state.allFilterCalls == 2,
-            "diagnostic error changed the exact-only selector");
-        require(failure.getMessage().contains("solver_diagnostic_before={") &&
-            failure.getMessage().contains("solver_diagnostic_after={"),
-            "diagnostic getter error omitted pre/post snapshots");
+        cases++;
+
+        State generatorFailure = state("stdUV", "time", "Time");
+        generatorFailure.generatorFailure = new IllegalArgumentException("synthetic generator failure");
+        IllegalStateException failure = expectCouponFailure(generatorFailure,
+            "createAutoSequences(\"sol\") failed for stdUV");
+        require(failure.getCause() == generatorFailure.generatorFailure,
+            "generator failure cause was not preserved");
+        cases++;
     }
 
-    private static void generatorFailureRetainsCauseAndBothSnapshots() throws Exception {
-        State state = new State();
-        state.generatorFailure = new IllegalArgumentException("synthetic generator failure");
-        IllegalStateException failure = expectFailure(state,
-            "createAutoSequences(\"sol\") failed for " + STUDY_TAG);
-        require(failure.getCause() == state.generatorFailure, "generator failure cause was not preserved");
-        require(state.exactFilterCalls == 2 && state.allFilterCalls == 2,
-            "pre/post snapshots were not both read after generator failure");
-        require(failure.getMessage().contains("solver_diagnostic_before={") &&
-            failure.getMessage().contains("solver_diagnostic_after={"),
-            "generator failure omitted pre/post snapshots");
-    }
-
-    private static void largeTagArraysStayBoundedAndReportTruncation() throws Exception {
-        State state = new State();
+    private static void boundsLargeDiagnosticSnapshots() throws Exception {
+        State state = state("stdUV", "time", "Time");
         state.globalTags = indexedTags("solGlobal", 100);
         state.allTags = indexedTags("solAll", 100);
-        for (String tag : state.globalTags) state.addSequence(tag, STUDY_TAG);
-        for (String tag : state.allTags) state.addSequence(tag, "stdOther");
-
-        IllegalStateException failure = expectFailure(state,
-            "expected one generated solver sequence for " + STUDY_TAG, "got []",
-            "model.sol_tags=[solGlobal00", "[TRUNCATED 32/100]");
-        require(state.sequenceLookupCalls == 64,
-            "diagnostic sequence lookups exceeded 32 candidates in either snapshot: " +
-                state.sequenceLookupCalls);
-        require(state.sequenceMetadataReads == 256,
-            "sequence metadata reads exceeded the 32-sequence bound: " + state.sequenceMetadataReads);
-        require(state.rootFeatureTypeReads == 128,
-            "root feature type reads exceeded the 32-sequence bound: " + state.rootFeatureTypeReads);
+        for (String tag : state.globalTags) state.addSequence(tag, "stdUV", true, "None");
+        for (String tag : state.allTags) state.addSequence(tag, "stdOther", true, "CopySolution");
+        IllegalStateException failure = expectCouponFailure(state,
+            "expected one generated solver sequence", "got []", "[TRUNCATED 32/100]");
+        require(state.sequenceLookupCalls <= 64,
+            "diagnostic model.sol lookups exceeded 32 tags in either of two snapshots: " + state.sequenceLookupCalls);
+        require(state.sequenceMetadataReads <= 256,
+            "sequence metadata reads exceeded bounded diagnostic snapshots: " + state.sequenceMetadataReads);
         require(!failure.getMessage().contains("solGlobal99") && !failure.getMessage().contains("solAll99"),
-            "diagnostic details unexpectedly reached beyond the bounded tag prefixes");
+            "diagnostic snapshots inspected tags past their bounded prefixes");
+        cases++;
     }
 
     private static String[] indexedTags(String prefix, int count) {
@@ -200,146 +293,166 @@ public final class W24SolverSequenceDiagnosticsHarness {
         return tags;
     }
 
-    private static SolverSequence create(State state) throws Exception {
+    private static State state(String studyTag, String studyStepTag, String expectedSolverType) {
+        return new State(studyTag, studyStepTag, expectedSolverType);
+    }
+
+    private static SolverSequence runCoupon(State state) throws Exception {
         try {
-            return (SolverSequence) CREATE_AND_REQUIRE.invoke(null, state.model, state.study,
-                state.step, STUDY_TAG);
+            return (SolverSequence) COUPON_CREATE.invoke(null, state.model, state.study, state.step,
+                state.studyTag);
         } catch (InvocationTargetException exception) {
-            Throwable cause = exception.getCause();
-            if (cause instanceof Exception) throw (Exception) cause;
-            throw exception;
+            throw asException(exception.getCause());
         }
     }
 
-    private static IllegalStateException expectFailure(State state, String... messageFragments)
-            throws Exception {
-        IllegalStateException failure;
+    private static SolverSequence runScience(State state, String expectedType) throws Exception {
+        state.study.createAutoSequences("sol");
         try {
-            create(state);
-            throw new AssertionError("solver-sequence operation unexpectedly succeeded");
+            return (SolverSequence) SCIENCE_SELECT.invoke(null, state.model, state.study,
+                state.studyTag, state.studyStepTag, expectedType);
+        } catch (InvocationTargetException exception) {
+            throw asException(exception.getCause());
+        }
+    }
+
+    private static Exception asException(Throwable cause) throws Exception {
+        if (cause instanceof Exception) return (Exception) cause;
+        throw new AssertionError("unexpected non-Exception failure", cause);
+    }
+
+    private static IllegalStateException expectCouponFailure(State state, String... fragments) throws Exception {
+        try {
+            runCoupon(state);
+            throw new AssertionError("coupon selector unexpectedly succeeded");
         } catch (IllegalStateException expected) {
-            failure = expected;
+            assertFragments(expected, fragments);
+            require(expected.getMessage().contains("solver_diagnostic_before={") &&
+                expected.getMessage().contains("solver_diagnostic_after={"),
+                "coupon failure omitted bounded pre/post snapshots");
+            require(state.createAutoSequenceCalls == 1, "coupon failure did not call generator exactly once");
+            assertNoForbiddenActions(state);
+            return expected;
         }
-        for (String fragment : messageFragments) {
-            require(failure.getMessage().contains(fragment),
-                "failure omitted expected message fragment " + fragment + ": " + failure.getMessage());
-        }
-        require(failure.getMessage().contains("solver_diagnostic_before={") &&
-            failure.getMessage().contains("solver_diagnostic_after={"),
-            "failure omitted pre/post snapshots");
-        require(state.createAutoSequenceCalls == 1, "failure path did not call generator exactly once");
-        assertNoForbiddenMutations(state);
-        return failure;
     }
 
-    private static void assertNoForbiddenMutations(State state) {
-        require(state.nativeRunCalls == 0, "proxy observed a solver/study run");
-        require(state.attachCalls == 0, "proxy observed a sequence attach/detach call");
-        require(state.setterCalls == 0, "proxy observed an unexpected setter or create call");
+    private static IllegalStateException expectScienceFailure(State state, String... fragments) throws Exception {
+        try {
+            runScience(state, state.expectedSolverType);
+            throw new AssertionError("science selector unexpectedly succeeded");
+        } catch (IllegalStateException expected) {
+            assertFragments(expected, fragments);
+            require(state.createAutoSequenceCalls == 1, "science failure did not call generator exactly once");
+            assertNoForbiddenActions(state);
+            return expected;
+        }
     }
 
-    private static final class SequenceSpec {
-        private final String tag;
-        private final String studyTag;
-        private final boolean attached;
-        private final String sequenceType;
-
-        private SequenceSpec(String tag, String studyTag, boolean attached, String sequenceType) {
-            this.tag = tag;
-            this.studyTag = studyTag;
-            this.attached = attached;
-            this.sequenceType = sequenceType;
+    private static void assertFragments(IllegalStateException failure, String[] fragments) {
+        for (String fragment : fragments) {
+            require(failure.getMessage().contains(fragment), "failure omitted " + fragment +
+                ": " + failure.getMessage());
         }
+    }
+
+    private static void assertNoForbiddenActions(State state) {
+        require(state.nativeRunCalls == 0, "proxy observed a study or solver run");
+        require(state.attachCalls == 0, "proxy observed a solver attach/detach call");
+        require(state.setterCalls == 0, "proxy observed a setter or unapproved create call");
     }
 
     private static final class State {
+        private final String studyTag;
+        private final String studyStepTag;
+        private final String expectedSolverType;
         private String[] globalTags = new String[0];
         private String[] allTags = new String[0];
-        private String[] exactTags = new String[0];
-        private String[][] exactResponses;
-        private boolean allThrows;
+        private String[] solverSequenceTags = new String[0];
+        private String[] noneTags = new String[0];
+        private String[][] rootFeatures;
+        private String linkedStudy;
+        private String linkedStep;
         private RuntimeException generatorFailure;
+        private RuntimeException solverFilterFailure;
+        private RuntimeException noneFilterFailure;
+        private RuntimeException allFilterFailure;
+        private RuntimeException studyStepGetterFailure;
         private int createAutoSequenceCalls;
-        private int exactFilterCalls;
+        private int solverFilterCalls;
+        private int noneFilterCalls;
         private int allFilterCalls;
-        private int meshTagReads;
-        private int physicsSolveForReads;
         private int sequenceLookupCalls;
         private int sequenceMetadataReads;
-        private int rootFeatureTypeReads;
         private int nativeRunCalls;
         private int attachCalls;
         private int setterCalls;
         private final Map<String, SolverSequence> sequences = new LinkedHashMap<>();
-        private final Model model = modelProxy(this);
-        private final Study study = studyProxy(this);
-        private final StudyFeature step = stepProxy(this);
+        private final Model model;
+        private final Study study;
+        private final StudyFeature step;
 
-        private SolverSequence addSequence(String tag, String studyTag) {
-            return addSequence(tag, studyTag, true, "TimeDependent");
+        private State(String studyTag, String studyStepTag, String expectedSolverType) {
+            this.studyTag = studyTag;
+            this.studyStepTag = studyStepTag;
+            this.expectedSolverType = expectedSolverType;
+            this.linkedStudy = studyTag;
+            this.linkedStep = studyStepTag;
+            String solverTag = expectedSolverType.equals("Time") ? "t1" : "s1";
+            this.rootFeatures = new String[][]{
+                {"st1", "StudyStep"}, {"v1", "Variables"}, {solverTag, expectedSolverType}};
+            this.step = stepProxy(this);
+            this.model = modelProxy(this);
+            this.study = studyProxy(this);
         }
 
-        private SolverSequence addSequence(String tag, String studyTag, boolean attached, String sequenceType) {
-            SequenceSpec spec = new SequenceSpec(tag, studyTag, attached, sequenceType);
-            SolverSequence result = sequenceProxy(this, spec);
+        private SolverSequence addSequence(String tag, String attachedStudy, boolean attached,
+                                           String sequenceType) {
+            SolverSequence result = sequenceProxy(this, tag, attachedStudy, attached, sequenceType);
             sequences.put(tag, result);
             return result;
         }
     }
 
     private static Model modelProxy(State state) {
-        StudyList studies = tagsOnly(StudyList.class, new String[]{STUDY_TAG});
+        StudyList studies = tagsOnly(StudyList.class, new String[]{state.studyTag});
         Physics physics = proxy(Physics.class, (instance, method, args) -> {
-            switch (method.getName()) {
-                case "getType": return "SolidMechanics";
-                case "resolveModelPath": return "comp1.solid";
-                default: return objectMethod(instance, method, args);
-            }
+            if (method.getName().equals("getType")) return "SolidMechanics";
+            if (method.getName().equals("resolveModelPath")) return "comp1.solid";
+            return objectMethod(instance, method, args);
         });
-        PhysicsList physicsList = tagsOnly(PhysicsList.class, new String[]{"solid"});
-        ModelNode component = componentProxy(state);
-        SolverSequenceList solverList = tagsOnly(SolverSequenceList.class, () -> state.globalTags);
-
+        PhysicsList physicses = tagsOnly(PhysicsList.class, new String[]{"solid"});
+        ModelNode component = proxy(ModelNode.class, (instance, method, args) -> {
+            if (method.getName().equals("mesh") && method.getParameterCount() == 0) {
+                return tagsOnly(ComponentMeshList.class, new String[]{"mesh1"});
+            }
+            return objectMethod(instance, method, args);
+        });
+        SolverSequenceList solvers = tagsOnly(SolverSequenceList.class, () -> state.globalTags);
         return proxy(Model.class, (instance, method, args) -> {
             switch (method.getName()) {
                 case "study":
                     if (method.getParameterCount() == 0) return studies;
                     throw new AssertionError("unexpected model.study overload");
                 case "physics":
-                    if (method.getParameterCount() == 0) return physicsList;
+                    if (method.getParameterCount() == 0) return physicses;
                     if (method.getParameterCount() == 1 && "solid".equals(args[0])) return physics;
-                    throw new AssertionError("unexpected model.physics call: " + Arrays.toString(args));
-                case "component":
-                    if (method.getParameterCount() == 1 && "comp1".equals(args[0])) return component;
-                    throw new AssertionError("unexpected model.component call: " + Arrays.toString(args));
+                    throw new AssertionError("unexpected model.physics call");
+                case "component": return component;
                 case "sol":
-                    if (method.getParameterCount() == 0) return solverList;
-                    if (method.getParameterCount() == 1) {
-                        state.sequenceLookupCalls++;
-                        return state.sequences.get(String.valueOf(args[0]));
-                    }
-                    throw new AssertionError("unexpected model.sol overload");
+                    if (method.getParameterCount() == 0) return solvers;
+                    state.sequenceLookupCalls++;
+                    return state.sequences.get(String.valueOf(args[0]));
                 default: return objectMethod(instance, method, args);
             }
         });
     }
 
-    private static ModelNode componentProxy(State state) {
-        ComponentMeshList meshes = tagsOnly(ComponentMeshList.class, () -> {
-            state.meshTagReads++;
-            return new String[]{"mesh1"};
-        });
-        return proxy(ModelNode.class, (instance, method, args) -> {
-            if (method.getName().equals("mesh") && method.getParameterCount() == 0) return meshes;
-            return objectMethod(instance, method, args);
-        });
-    }
-
     private static Study studyProxy(State state) {
-        StudyFeatureList features = tagsOnly(StudyFeatureList.class, new String[]{"time", "init1"});
+        StudyFeatureList features = tagsAndGet(StudyFeatureList.class,
+            new String[]{state.studyStepTag, "init1"}, Map.of(state.studyStepTag, state.step));
         return proxy(Study.class, (instance, method, args) -> {
             if (method.getName().equals("createAutoSequences")) {
-                require("sol".equals(args[0]), "fixture changed auto-sequence argument");
+                require("sol".equals(args[0]), "fixture changed createAutoSequences argument");
                 state.createAutoSequenceCalls++;
                 if (state.generatorFailure != null) throw state.generatorFailure;
                 return null;
@@ -348,22 +461,25 @@ public final class W24SolverSequenceDiagnosticsHarness {
             switch (method.getName()) {
                 case "feature":
                     if (method.getParameterCount() == 0) return features;
-                    throw new AssertionError("unexpected study.feature overload");
+                    return args[0].equals(state.studyStepTag) ? state.step : null;
                 case "getSolverSequences":
-                    String filter = String.valueOf(args[0]);
-                    if ("All".equals(filter)) {
+                    String category = String.valueOf(args[0]);
+                    if (category.equals("All")) {
                         state.allFilterCalls++;
-                        if (state.allThrows) throw new IllegalStateException("synthetic All unavailable");
+                        if (state.allFilterFailure != null) throw state.allFilterFailure;
                         return state.allTags;
                     }
-                    if ("SolverSequence".equals(filter)) {
-                        int index = state.exactFilterCalls++;
-                        if (state.exactResponses != null) {
-                            return state.exactResponses[Math.min(index, state.exactResponses.length - 1)];
-                        }
-                        return state.exactTags;
+                    if (category.equals("SolverSequence")) {
+                        state.solverFilterCalls++;
+                        if (state.solverFilterFailure != null) throw state.solverFilterFailure;
+                        return state.solverSequenceTags;
                     }
-                    throw new AssertionError("unexpected solver sequence filter: " + filter);
+                    if (category.equals("None")) {
+                        state.noneFilterCalls++;
+                        if (state.noneFilterFailure != null) throw state.noneFilterFailure;
+                        return state.noneTags;
+                    }
+                    throw new AssertionError("unexpected solver sequence category: " + category);
                 default: return objectMethod(instance, method, args);
             }
         });
@@ -373,60 +489,85 @@ public final class W24SolverSequenceDiagnosticsHarness {
         return proxy(StudyFeature.class, (instance, method, args) -> {
             rejectForbiddenMutation(state, method);
             switch (method.getName()) {
-                case "tag": return "time";
-                case "type": return "Transient";
+                case "tag": return state.studyStepTag;
+                case "type": return state.expectedSolverType.equals("Time") ? "Transient" : "Stationary";
                 case "isActive": return true;
-                case "solveFor":
-                    state.physicsSolveForReads++;
-                    return true;
+                case "solveFor": return true;
                 default: return objectMethod(instance, method, args);
             }
         });
     }
 
-    private static SolverSequence sequenceProxy(State state, SequenceSpec spec) {
-        String[] featureTags = {"st1", "t1"};
+    private static SolverSequence sequenceProxy(State state, String tag, String studyTag,
+            boolean attached, String sequenceType) {
         Map<String, SolverFeature> features = new LinkedHashMap<>();
-        features.put("st1", featureProxy(state, "StudyStep"));
-        features.put("t1", featureProxy(state, "Time"));
-        SolverFeatureList featureList = tagsAndGet(SolverFeatureList.class, featureTags, features);
+        String[] tags = new String[state.rootFeatures.length];
+        for (int i = 0; i < state.rootFeatures.length; i++) {
+            tags[i] = state.rootFeatures[i][0];
+            features.put(tags[i], featureProxy(state, tags[i], state.rootFeatures[i][1]));
+        }
+        SolverFeatureList root = tagsAndGet(SolverFeatureList.class, tags, features);
         return proxy(SolverSequence.class, (instance, method, args) -> {
             rejectForbiddenMutation(state, method);
             switch (method.getName()) {
-                case "tag": return spec.tag;
+                case "tag": return tag;
                 case "getType":
                     state.sequenceMetadataReads++;
                     return "SolverSequence";
                 case "getSequenceType":
                     state.sequenceMetadataReads++;
-                    return spec.sequenceType;
+                    return sequenceType;
                 case "study":
                     if (method.getParameterCount() == 0) {
                         state.sequenceMetadataReads++;
-                        return spec.studyTag;
+                        return studyTag;
                     }
-                    throw new AssertionError("unexpected solver study setter");
+                    throw new AssertionError("unexpected solver.study setter");
                 case "isAttached":
                     state.sequenceMetadataReads++;
-                    return spec.attached;
+                    return attached;
                 case "feature":
-                    if (method.getParameterCount() == 0) return featureList;
-                    if (method.getParameterCount() == 1) return features.get(String.valueOf(args[0]));
-                    throw new AssertionError("unexpected sequence.feature overload");
+                    if (method.getParameterCount() == 0) return root;
+                    return features.get(String.valueOf(args[0]));
                 default: return objectMethod(instance, method, args);
             }
         });
     }
 
-    private static SolverFeature featureProxy(State state, String type) {
+    private static SolverFeature featureProxy(State state, String tag, String type) {
         return proxy(SolverFeature.class, (instance, method, args) -> {
             rejectForbiddenMutation(state, method);
-            if (method.getName().equals("getType") && method.getParameterCount() == 0) {
-                state.rootFeatureTypeReads++;
-                return type;
+            if (method.getName().equals("getType") && method.getParameterCount() == 0) return type;
+            if (method.getName().equals("tag") && method.getParameterCount() == 0) return tag;
+            if (method.getName().equals("getString") && method.getParameterCount() == 1) {
+                if (state.studyStepGetterFailure != null) throw state.studyStepGetterFailure;
+                if (type.equals("StudyStep") && args[0].equals("study")) return state.linkedStudy;
+                if (type.equals("StudyStep") && args[0].equals("studystep")) return state.linkedStep;
+                throw new AssertionError("unexpected solver feature getString: " + Arrays.toString(args));
+            }
+            if (method.getName().equals("feature") && method.getParameterCount() == 0) {
+                return tagsOnly(SolverFeatureList.class, new String[0]);
             }
             return objectMethod(instance, method, args);
         });
+    }
+
+    private static void rejectForbiddenMutation(State state, Method method) {
+        String name = method.getName();
+        if (name.equals("run") || name.startsWith("run") || name.equals("continueRun")) {
+            state.nativeRunCalls++;
+            throw new AssertionError("unexpected native run call: " + name);
+        }
+        if (name.equals("attach") || name.equals("detach")) {
+            state.attachCalls++;
+            throw new AssertionError("unexpected sequence attach/detach: " + name);
+        }
+        if (name.startsWith("set") || name.equals("activate") ||
+            (name.startsWith("create") && !name.equals("createAutoSequences")) ||
+            (name.equals("study") && method.getParameterCount() > 0)) {
+            state.setterCalls++;
+            throw new AssertionError("unexpected mutation: " + name);
+        }
     }
 
     private interface Tags { String[] get(); }
@@ -452,30 +593,11 @@ public final class W24SolverSequenceDiagnosticsHarness {
         });
     }
 
-    private static void rejectForbiddenMutation(State state, Method method) {
-        String name = method.getName();
-        if (name.equals("run") || name.startsWith("run") ||
-            name.equals("runNoGen") || name.equals("continueRun")) {
-            state.nativeRunCalls++;
-            throw new AssertionError("unexpected study/solver run call: " + name);
-        }
-        if (name.equals("attach") || name.equals("detach")) {
-            state.attachCalls++;
-            throw new AssertionError("unexpected solver attach call: " + name);
-        }
-        if (name.startsWith("set") || name.equals("activate") || name.startsWith("create") ||
-            (name.equals("study") && method.getParameterCount() > 0)) {
-            state.setterCalls++;
-            throw new AssertionError("unexpected setter/create call: " + name);
-        }
-    }
-
     private static <T> T proxy(Class<T> api, InvocationHandler handler) {
         Object result = Proxy.newProxyInstance(api.getClassLoader(), new Class<?>[]{api}, (instance, method, args) -> {
             if (method.getDeclaringClass() == Object.class) return objectMethod(instance, method, args);
             Object value = handler.invoke(instance, method, args);
-            if (value == null && method.getReturnType().isPrimitive() &&
-                method.getReturnType() != Void.TYPE) {
+            if (value == null && method.getReturnType().isPrimitive() && method.getReturnType() != Void.TYPE) {
                 throw new AssertionError("unexpected primitive API call: " + method.getName());
             }
             return value;

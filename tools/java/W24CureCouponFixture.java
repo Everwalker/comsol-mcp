@@ -242,11 +242,10 @@ public final class W24CureCouponFixture {
     private static void configureV2DoseSolverTolerance(Model model) {
         String field = "comp1_Duv_rel";
         for (String studyTag : new String[]{"stdUV", "stdBake", "stdCool"}) {
-            String[] attached = model.study(studyTag).getSolverSequences("SolverSequence");
-            if (attached.length != 1) {
-                throw new IllegalStateException("v2 dose solver must have one attached sequence: " + studyTag);
-            }
-            SolverFeature time = findUniqueTimeFeature(model.sol(attached[0]), studyTag);
+            Study study = model.study(studyTag);
+            SolverSequence sequence = requireUniqueAttachedSolverSequence(
+                model, study, studyTag, "time", "Time", "", "");
+            SolverFeature time = findUniqueTimeFeature(sequence, studyTag);
             Set<String> entryKeys = new HashSet<>();
             for (String entry : time.getEntryKeys("atolmethod")) entryKeys.add(entry);
             if (!entryKeys.contains(field)) {
@@ -379,11 +378,10 @@ public final class W24CureCouponFixture {
         Map<String, Object> readbacks = new LinkedHashMap<>();
         String field = "comp1_Duv_rel";
         for (String studyTag : new String[]{"stdUV", "stdBake", "stdCool"}) {
-            String[] attached = model.study(studyTag).getSolverSequences("SolverSequence");
-            if (attached.length != 1) {
-                throw new IllegalStateException("v2 dose solver must have one attached sequence: " + studyTag);
-            }
-            SolverFeature time = findUniqueTimeFeature(model.sol(attached[0]), studyTag);
+            Study study = model.study(studyTag);
+            SolverSequence sequence = requireUniqueAttachedSolverSequence(
+                model, study, studyTag, "time", "Time", "", "");
+            SolverFeature time = findUniqueTimeFeature(sequence, studyTag);
             Set<String> entryKeys = new HashSet<>();
             for (String entry : time.getEntryKeys("atolmethod")) entryKeys.add(entry);
             if (!entryKeys.contains(field) ||
@@ -562,7 +560,7 @@ public final class W24CureCouponFixture {
         if (!"Quasistatic".equals(quasistatic)) {
             throw new IllegalStateException("Equation View capture requires actual Quasistatic Solid Mechanics readback");
         }
-        String tlist = model.study(studyTag).feature("time1").getString("tlist");
+        String tlist = model.study(studyTag).feature("time").getString("tlist");
         if (tlist == null || tlist.isBlank()) {
             throw new IllegalStateException("Equation View readback omitted the actual study time-list property");
         }
@@ -1230,8 +1228,8 @@ public final class W24CureCouponFixture {
 
     /**
      * Generate the study's default solver configuration without running it,
-     * then retain the exact documented SolverSequence filter as the only
-     * selection source. The surrounding snapshots are best-effort diagnostics;
+     * then select the unique candidate from the documented SolverSequence and
+     * None filters. The All filter remains diagnostic-only. Surrounding snapshots are best-effort diagnostics;
      * their optional getter failures never prevent generation or change which
      * sequence is selected.
      */
@@ -1246,28 +1244,49 @@ public final class W24CureCouponFixture {
                 failure, before, after);
         }
         String after = solverSequenceDiagnosticSnapshot(model, study, step);
-        return requireUniqueAttachedSolverSequence(model, study, studyTag, before, after);
+        return requireUniqueAttachedSolverSequence(model, study, studyTag, step.tag(), "Time", before, after);
     }
 
     private static SolverSequence requireUniqueAttachedSolverSequence(
-            Model model, Study study, String studyTag, String before, String after) {
-        String[] attached;
-        try {
-            attached = study.getSolverSequences("SolverSequence");
-        } catch (RuntimeException failure) {
-            throw solverSequenceFailure("failed to read exact SolverSequence filter for " + studyTag,
-                failure, before, after);
+            Model model, Study study, String studyTag, String studyStepTag, String expectedSolverType,
+            String before, String after) {
+        Map<String, String> categories = new LinkedHashMap<>();
+        for (String category : new String[]{"SolverSequence", "None"}) {
+            String[] tags;
+            try {
+                tags = study.getSolverSequences(category);
+            } catch (RuntimeException failure) {
+                throw solverSequenceFailure("failed to read required " + category +
+                    " filter for " + studyTag, failure, before, after);
+            }
+            if (tags == null) {
+                throw solverSequenceFailure(category + " filter returned null for " + studyTag,
+                    null, before, after);
+            }
+            Set<String> seen = new HashSet<>();
+            for (String tag : tags) {
+                if (tag == null || tag.isBlank()) {
+                    throw solverSequenceFailure(category + " filter returned a blank/null tag for " +
+                        studyTag + ": " + sequenceTagsPreview(tags), null, before, after);
+                }
+                if (!seen.add(tag)) {
+                    throw solverSequenceFailure(category + " filter returned duplicate tag " + tag +
+                        " for " + studyTag, null, before, after);
+                }
+                String priorCategory = categories.putIfAbsent(tag, category);
+                if (priorCategory != null) {
+                    throw solverSequenceFailure("solver tag overlaps required filters for " + studyTag +
+                        ": " + tag + " in " + priorCategory + " and " + category, null, before, after);
+                }
+            }
         }
-        if (attached == null || attached.length != 1) {
+        if (categories.size() != 1) {
             throw solverSequenceFailure("expected one generated solver sequence for " + studyTag +
-                ", got " + Arrays.toString(attached), null, before, after);
+                ", got " + sequenceCategoryPreview(categories), null, before, after);
         }
-        String sequenceTag = attached[0];
-        if (sequenceTag == null || sequenceTag.isBlank()) {
-            throw solverSequenceFailure("exact SolverSequence filter returned a blank tag for " + studyTag,
-                null, before, after);
-        }
-
+        Map.Entry<String, String> candidate = categories.entrySet().iterator().next();
+        String sequenceTag = candidate.getKey();
+        String category = candidate.getValue();
         SolverSequence sequence;
         try {
             sequence = model.sol(sequenceTag);
@@ -1276,25 +1295,129 @@ public final class W24CureCouponFixture {
                 " for " + studyTag, failure, before, after);
         }
         if (sequence == null) {
-            throw solverSequenceFailure("exact SolverSequence tag is absent from model.sol(): " +
+            throw solverSequenceFailure("required solver tag is absent from model.sol(): " +
                 sequenceTag + " for " + studyTag, null, before, after);
         }
-
-        boolean isAttached;
-        String actualStudy;
         try {
-            isAttached = sequence.isAttached();
-            actualStudy = sequence.study();
+            String actualCategory = sequence.getSequenceType();
+            if (!category.equals(actualCategory)) {
+                throw solverSequenceFailure("solver category mismatch for " + sequenceTag +
+                    ": filter=" + category + ", getSequenceType()=" + actualCategory,
+                    null, before, after);
+            }
+            boolean isAttached = sequence.isAttached();
+            String actualStudy = sequence.study();
+            if (!isAttached || !studyTag.equals(actualStudy)) {
+                throw solverSequenceFailure("generated solver sequence is not attached to " + studyTag +
+                    ": " + sequenceTag + " -> " + actualStudy + ", isAttached=" + isAttached,
+                    null, before, after);
+            }
+            verifySolverRootFeatures(sequence, sequenceTag, studyTag, studyStepTag,
+                expectedSolverType, before, after);
+            findUniqueSolverFeature(sequence, expectedSolverType, studyTag);
+        } catch (IllegalStateException failure) {
+            if (failure.getMessage() != null && failure.getMessage().contains("solver_diagnostic_before={")) {
+                throw failure;
+            }
+            throw solverSequenceFailure("generated solver sequence structure is invalid for " + studyTag +
+                ": " + failure.getMessage(),
+                failure, before, after);
         } catch (RuntimeException failure) {
-            throw solverSequenceFailure("failed to verify attachment relation for " + sequenceTag +
-                " and " + studyTag, failure, before, after);
-        }
-        if (!isAttached || !studyTag.equals(actualStudy)) {
-            throw solverSequenceFailure("generated solver sequence is not attached to " + studyTag +
-                ": " + sequenceTag + " -> " + actualStudy + ", isAttached=" + isAttached,
-                null, before, after);
+            throw solverSequenceFailure("failed to verify generated solver sequence " + sequenceTag +
+                " for " + studyTag, failure, before, after);
         }
         return sequence;
+    }
+
+    private static void verifySolverRootFeatures(SolverSequence sequence, String sequenceTag,
+            String studyTag, String studyStepTag, String expectedSolverType,
+            String before, String after) {
+        SolverFeatureList root = sequence.feature();
+        String[] rootTags = root.tags();
+        if (rootTags == null) {
+            throw solverSequenceFailure("solver root feature tags are null for " + sequenceTag,
+                null, before, after);
+        }
+        Map<String, SolverFeature> byType = new LinkedHashMap<>();
+        Set<String> seen = new HashSet<>();
+        for (String tag : rootTags) {
+            if (tag == null || tag.isBlank() || !seen.add(tag)) {
+                throw solverSequenceFailure("solver root has blank/null/duplicate feature tags for " +
+                    sequenceTag + ": " + sequenceTagsPreview(rootTags), null, before, after);
+            }
+            SolverFeature feature = root.get(tag);
+            if (feature == null) {
+                throw solverSequenceFailure("solver root feature lookup returned null for " +
+                    sequenceTag + ": " + tag, null, before, after);
+            }
+            String type = feature.getType();
+            if ("StudyStep".equals(type) || "Variables".equals(type)) {
+                if (byType.putIfAbsent(type, feature) != null) {
+                    throw solverSequenceFailure("solver root has duplicate " + type +
+                        " features for " + sequenceTag, null, before, after);
+                }
+            }
+        }
+        SolverFeature studyStep = byType.get("StudyStep");
+        if (studyStep == null || !byType.containsKey("Variables")) {
+            throw solverSequenceFailure("solver root requires unique StudyStep and Variables features for " +
+                sequenceTag + "; found=" + byType.keySet(), null, before, after);
+        }
+        String linkedStudy = studyStep.getString("study");
+        String linkedStep = studyStep.getString("studystep");
+        if (!studyTag.equals(linkedStudy) || !studyStepTag.equals(linkedStep)) {
+            throw solverSequenceFailure("solver StudyStep relation mismatch for " + sequenceTag +
+                ": study=" + linkedStudy + ", studystep=" + linkedStep +
+                ", expected=" + studyTag + "/" + studyStepTag, null, before, after);
+        }
+    }
+
+    private static SolverFeature findUniqueSolverFeature(
+            SolverSequence sequence, String expectedType, String studyTag) {
+        Map<String, SolverFeature> matches = new LinkedHashMap<>();
+        collectSolverFeatures(sequence.feature().tags(), sequence.feature(), "", expectedType, matches);
+        if (matches.size() != 1) {
+            throw new IllegalStateException("expected exactly one native " + expectedType +
+                " solver feature for " + studyTag + ", found=" + matches.keySet());
+        }
+        return matches.values().iterator().next();
+    }
+
+    private static void collectSolverFeatures(String[] tags, SolverFeatureList list, String parent,
+            String expectedType, Map<String, SolverFeature> matches) {
+        for (String tag : tags) {
+            SolverFeature feature = list.get(tag);
+            String path = parent.isEmpty() ? tag : parent + "/" + tag;
+            if (expectedType.equals(feature.getType())) matches.put(path, feature);
+            String[] childTags = feature.feature().tags();
+            if (childTags.length > 0) {
+                collectSolverFeatures(childTags, feature.feature(), path, expectedType, matches);
+            }
+        }
+    }
+
+    private static String sequenceTagsPreview(String[] tags) {
+        int count = Math.min(tags.length, 16);
+        String[] preview = new String[count];
+        for (int i = 0; i < count; i++) preview[i] = boundedSequenceToken(tags[i]);
+        String text = Arrays.toString(preview);
+        return tags.length > count ? text + "...[TRUNCATED " + count + "/" + tags.length + "]" : text;
+    }
+
+    private static String sequenceCategoryPreview(Map<String, String> categories) {
+        List<String> preview = new ArrayList<>();
+        for (Map.Entry<String, String> entry : categories.entrySet()) {
+            if (preview.size() >= 16) break;
+            preview.add(boundedSequenceToken(entry.getKey()) + "(" + entry.getValue() + ")");
+        }
+        String text = preview.toString();
+        return categories.size() > preview.size()
+            ? text + "...[TRUNCATED " + preview.size() + "/" + categories.size() + "]" : text;
+    }
+
+    private static String boundedSequenceToken(String value) {
+        if (value == null || value.length() <= 64) return value;
+        return value.substring(0, 64) + "...[TRUNCATED]";
     }
 
     private static IllegalStateException solverSequenceFailure(
@@ -1333,17 +1456,20 @@ public final class W24CureCouponFixture {
             () -> study.getSolverSequences("All"));
         String[] exactTags = diagnosticTags(fields, "study.getSolverSequences(SolverSequence)",
             () -> study.getSolverSequences("SolverSequence"));
-        appendObservedSequenceDetails(fields, model, globalTags, allTags, exactTags);
+        String[] noneTags = diagnosticTags(fields, "study.getSolverSequences(None)",
+            () -> study.getSolverSequences("None"));
+        appendObservedSequenceDetails(fields, model, globalTags, allTags, exactTags, noneTags);
         return boundedSolverDiagnostic(String.join("; ", fields));
     }
 
     private static void appendObservedSequenceDetails(List<String> fields, Model model,
                                                      String[] globalTags, String[] allTags,
-                                                     String[] exactTags) {
+                                                     String[] exactTags, String[] noneTags) {
         Set<String> observed = new LinkedHashSet<>();
         addDiagnosticTags(observed, globalTags);
         addDiagnosticTags(observed, allTags);
         addDiagnosticTags(observed, exactTags);
+        addDiagnosticTags(observed, noneTags);
         int sequenceCount = 0;
         for (String sequenceTag : observed) {
             if (sequenceCount >= MAX_SOLVER_DIAGNOSTIC_SEQUENCES) {
@@ -1745,14 +1871,12 @@ public final class W24CureCouponFixture {
     private static Map<String, Object> solverReadbacks(Model model) {
         Map<String, Object> out = new LinkedHashMap<>();
         for (String studyTag : new String[]{"stdUV", "stdBake", "stdCool"}) {
-            String[] attached = model.study(studyTag).getSolverSequences("SolverSequence");
-            if (attached.length != 1) {
-                throw new IllegalStateException("solver association changed for " + studyTag);
-            }
-            SolverSequence sequence = model.sol(attached[0]);
+            Study study = model.study(studyTag);
+            SolverSequence sequence = requireUniqueAttachedSolverSequence(
+                model, study, studyTag, "time", "Time", "", "");
             SolverFeature time = findUniqueTimeFeature(sequence, studyTag);
             Map<String, Object> values = new LinkedHashMap<>();
-            values.put("sequence_tag", attached[0]);
+            values.put("sequence_tag", sequence.tag());
             values.put("sequence_attached", sequence.isAttached());
             values.put("sequence_study", sequence.study());
             values.put("sequence_type", sequence.getType());
