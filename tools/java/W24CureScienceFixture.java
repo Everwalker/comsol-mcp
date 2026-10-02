@@ -4,6 +4,7 @@ import com.comsol.model.GeomSequence;
 import com.comsol.model.NumericalFeature;
 import com.comsol.model.MeshSequence;
 import com.comsol.model.physics.Physics;
+import com.comsol.model.physics.PhysicsField;
 import com.comsol.model.SolverFeature;
 import com.comsol.model.SolverSequence;
 import com.comsol.model.Study;
@@ -27,7 +28,9 @@ import java.nio.file.StandardOpenOption;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -41,9 +44,19 @@ public final class W24CureScienceFixture {
     private static final String COMPONENT = "comp1";
     private static final String GEOMETRY = "geom1";
     private static final String[] SOLVER_FIELDS = {
-        "comp1_T", "comp1_alpha", "comp1_alpha_iso", "comp1_qpost", "comp1_u", "comp1_w"
+        "comp1_T", "comp1_alpha", "comp1_alpha_iso", "comp1_qpost", "comp1_u"
     };
     private static final String[] ABSOLUTE_TOLERANCES = {
+        "1e-4", "1e-8", "1e-8", "1e-8", "1e-12"
+    };
+    private static final String[] LOGICAL_SOLVER_FIELDS = {
+        "comp1_T", "comp1_alpha", "comp1_alpha_iso", "comp1_qpost", "comp1_u", "comp1_w"
+    };
+    private static final String[] LOGICAL_COMPONENTS = {"T", "alpha", "alpha_iso", "qpost", "u", "w"};
+    private static final String[] LOGICAL_ENTRY_KEYS = {
+        "comp1_T", "comp1_alpha", "comp1_alpha_iso", "comp1_qpost", "comp1_u", "comp1_u"
+    };
+    private static final String[] LOGICAL_ABSOLUTE_TOLERANCES = {
         "1e-4", "1e-8", "1e-8", "1e-8", "1e-12", "1e-12"
     };
     private static final Set<String> STUDY_TAGS = new HashSet<>(Arrays.asList(
@@ -1362,7 +1375,7 @@ public final class W24CureScienceFixture {
         SolverSequence sequence = requireUniqueAttachedSolverSequence(
             model, study, "stdCont", "time", "Time");
         SolverFeature solverTime = findUniqueTimeFeature(sequence);
-        configureTimeSolver(solverTime, maxStep);
+        Map<String, Object> fieldReadbacks = configureTimeSolver(model, solverTime, maxStep);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("status", "CONTINUOUS_STUDY_CONFIGURED_NOT_SOLVED");
         result.put("study_tag", "stdCont");
@@ -1373,11 +1386,14 @@ public final class W24CureScienceFixture {
         result.put("tstepsbdf", solverTime.getString("tstepsbdf"));
         result.put("tout", solverTime.getString("tout"));
         result.put("tstepsstore", solverTime.getInt("tstepsstore"));
+        result.putAll(fieldReadbacks);
         result.put("native_solver_submissions", 0);
         return result;
     }
 
-    private static void configureTimeSolver(SolverFeature time, double maxStep) {
+    private static Map<String, Object> configureTimeSolver(Model model, SolverFeature time, double maxStep) {
+        Map<String, Object> fieldContract = readSolverFieldContract(model, time);
+        Set<String> entryKeys = new HashSet<>((List<String>) fieldContract.get("solver_entry_keys"));
         time.set("timemethod", "bdf");
         time.set("tunit", "s");
         time.set("tstepsbdf", "strict");
@@ -1388,8 +1404,6 @@ public final class W24CureScienceFixture {
         time.set("rtol", 1e-5);
         time.set("atolglobalmethod", "unscaled");
         time.set("atolglobal", 1e-8);
-        Set<String> entryKeys = new HashSet<>();
-        for (String key : time.getEntryKeys("atolmethod")) entryKeys.add(key);
         for (int i = 0; i < SOLVER_FIELDS.length; i++) {
             String field = SOLVER_FIELDS[i];
             if (!entryKeys.contains(field)) {
@@ -1399,17 +1413,180 @@ public final class W24CureScienceFixture {
             time.setEntry("atolmethod", field, "unscaled");
             time.setEntry("atolvaluemethod", field, "manual");
             time.setEntry("atol", field, ABSOLUTE_TOLERANCES[i]);
-            if (!"unscaled".equals(time.getString("atolmethod", field)) ||
-                !"manual".equals(time.getString("atolvaluemethod", field)) ||
-                Math.abs(Double.parseDouble(time.getString("atol", field)) -
-                         Double.parseDouble(ABSOLUTE_TOLERANCES[i])) > 1e-20) {
-                throw new IllegalStateException("continuous field tolerance readback mismatch for " + field);
-            }
+        }
+        String doseField = "comp1_Duv_rel";
+        if (entryKeys.contains(doseField)) {
+            time.setEntry("atolmethod", doseField, "unscaled");
+            time.setEntry("atolvaluemethod", doseField, "manual");
+            time.setEntry("atol", doseField, "1e-8");
         }
         if (!"strict".equals(time.getString("tstepsbdf")) ||
             !"tsteps".equals(time.getString("tout")) || time.getInt("tstepsstore") != 1 ||
             Math.abs(time.getDouble("maxstepbdf") - maxStep) > 1e-12) {
             throw new IllegalStateException("continuous BDF output/time readback mismatch");
+        }
+        Map<String, Object> readbacks = solverToleranceReadbacks(model, time);
+        assertLogicalToleranceRows(readbacks, "continuous solver");
+        return readbacks;
+    }
+
+    /** Pure fail-closed field/entry mapping gate, also exercised by the offline proxy harness. */
+    static Map<String, Object> validateSolverFieldContract(int geometryDimension, boolean axisymmetric,
+            String[] fieldTags, String[] fieldNames, String[][] fieldComponents, String[] actualEntryKeys) {
+        if (geometryDimension != 2 || !axisymmetric) {
+            throw new IllegalStateException("W24 displacement tolerance mapping requires 2-D axisymmetric geometry");
+        }
+        if (fieldTags == null || fieldNames == null || fieldComponents == null ||
+            fieldTags.length != 1 || fieldNames.length != 1 || fieldComponents.length != 1 ||
+            fieldTags[0] == null || fieldTags[0].isBlank() ||
+            !"u".equals(fieldNames[0]) || fieldComponents[0] == null) {
+            throw new IllegalStateException("solid PhysicsField must be one unambiguous field=u descriptor");
+        }
+        Set<String> components = new LinkedHashSet<>();
+        for (String component : fieldComponents[0]) {
+            if (component == null || component.isBlank() || !components.add(component)) {
+                throw new IllegalStateException("solid PhysicsField component descriptor is empty or ambiguous");
+            }
+        }
+        if (components.size() != 2 || !components.contains("u") || !components.contains("w")) {
+            throw new IllegalStateException("solid PhysicsField field=u components must be exactly {u,w}");
+        }
+        if (actualEntryKeys == null) {
+            throw new IllegalStateException("native time solver returned a null atolmethod entry table");
+        }
+        Set<String> actual = new LinkedHashSet<>();
+        for (String key : actualEntryKeys) {
+            if (key == null || key.isBlank() || !actual.add(key)) {
+                throw new IllegalStateException("native time solver entry table is empty or ambiguous");
+            }
+        }
+        Set<String> expected = new LinkedHashSet<>(Arrays.asList(SOLVER_FIELDS));
+        Set<String> withDose = new LinkedHashSet<>(expected);
+        withDose.add("comp1_Duv_rel");
+        if (!actual.equals(expected) && !actual.equals(withDose)) {
+            throw new IllegalStateException("native time solver entry table does not match observed fields; actual=" + actual);
+        }
+        List<String> sortedKeys = new ArrayList<>(actual);
+        Collections.sort(sortedKeys);
+        Map<String, Object> descriptor = new LinkedHashMap<>();
+        descriptor.put("physics_tag", "solid");
+        descriptor.put("physics_field_count", fieldTags.length);
+        descriptor.put("field_tag", fieldTags[0]);
+        descriptor.put("field", fieldNames[0]);
+        descriptor.put("components", new ArrayList<>(Arrays.asList(fieldComponents[0].clone())));
+        Map<String, Object> bindings = new LinkedHashMap<>();
+        bindings.put("u", "comp1_u");
+        bindings.put("w", "comp1_u");
+        Map<String, Object> contract = new LinkedHashMap<>();
+        contract.put("geometry_dimension", geometryDimension);
+        contract.put("geometry_axisymmetric", axisymmetric);
+        contract.put("physics_field_descriptor", descriptor);
+        contract.put("component_solver_entry_bindings", bindings);
+        contract.put("solver_entry_keys", sortedKeys);
+        return contract;
+    }
+
+    private static Map<String, Object> readSolverFieldContract(Model model, SolverFeature time) {
+        GeomSequence geom = model.component(COMPONENT).geom(GEOMETRY);
+        int dimension = geom.getSDim();
+        boolean axisymmetric = geom.isAxisymmetric();
+        if (dimension != 2 || !axisymmetric) {
+            throw new IllegalStateException("W24 displacement tolerance mapping requires 2-D axisymmetric geometry");
+        }
+        Physics solid = model.physics("solid");
+        String[] fieldTags = solid.field().tags();
+        if (fieldTags == null || fieldTags.length != 1 || fieldTags[0] == null || fieldTags[0].isBlank()) {
+            throw new IllegalStateException("solid PhysicsField list is missing or ambiguous");
+        }
+        String[] fieldNames = new String[fieldTags == null ? 0 : fieldTags.length];
+        String[][] components = new String[fieldNames.length][];
+        for (int i = 0; i < fieldNames.length; i++) {
+            PhysicsField field = solid.field(fieldTags[i]);
+            fieldNames[i] = field.field();
+            components[i] = field.component();
+        }
+        return validateSolverFieldContract(dimension, axisymmetric, fieldTags,
+            fieldNames, components, time.getEntryKeys("atolmethod"));
+    }
+
+    private static Map<String, Object> solverToleranceReadbacks(Model model, SolverFeature time) {
+        Map<String, Object> contract = readSolverFieldContract(model, time);
+        Map<String, Object> actualRows = new LinkedHashMap<>();
+        for (String field : (List<String>) contract.get("solver_entry_keys")) {
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("atolmethod", time.getString("atolmethod", field));
+            row.put("atolvaluemethod", time.getString("atolvaluemethod", field));
+            row.put("atol", time.getString("atol", field));
+            actualRows.put(field, row);
+        }
+        Map<String, Object> logicalRows = validateSolverToleranceRows(contract, actualRows);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("solver_field_contract", contract);
+        result.put("field_tolerances", actualRows);
+        result.put("logical_component_tolerances", logicalRows);
+        return result;
+    }
+
+    /** Validate actual solver-entry readbacks before deriving the six logical inputs. */
+    static Map<String, Object> validateSolverToleranceRows(Map<String, Object> contract,
+            Map<String, Object> actualRows) {
+        if (contract == null || actualRows == null ||
+            !actualRows.keySet().equals(new LinkedHashSet<>((List<String>) contract.get("solver_entry_keys")))) {
+            throw new IllegalStateException("actual solver tolerance rows differ from their observed entry-key table");
+        }
+        for (int i = 0; i < SOLVER_FIELDS.length; i++) {
+            requireToleranceRow(actualRows, SOLVER_FIELDS[i], ABSOLUTE_TOLERANCES[i], "native");
+        }
+        if (actualRows.containsKey("comp1_Duv_rel")) {
+            requireToleranceRow(actualRows, "comp1_Duv_rel", "1e-8", "native dose");
+        }
+        Map<String, Object> logicalRows = new LinkedHashMap<>();
+        for (int i = 0; i < LOGICAL_SOLVER_FIELDS.length; i++) {
+            String logicalField = LOGICAL_SOLVER_FIELDS[i];
+            String entry = LOGICAL_ENTRY_KEYS[i];
+            Map<String, Object> observed = (Map<String, Object>) actualRows.get(entry);
+            Map<String, Object> logical = new LinkedHashMap<>(observed);
+            logical.put("component", LOGICAL_COMPONENTS[i]);
+            logical.put("solver_entry_key", entry);
+            logical.put("source", "DERIVED_FROM_OBSERVED_PHYSICS_FIELD_BINDING");
+            logicalRows.put(logicalField, logical);
+        }
+        return logicalRows;
+    }
+
+    private static void requireToleranceRow(Map<String, Object> rows, String field,
+            String expectedAtol, String label) {
+        Map<String, Object> row = (Map<String, Object>) rows.get(field);
+        double atol;
+        try {
+            atol = Double.parseDouble(String.valueOf(row == null ? null : row.get("atol")));
+        } catch (NumberFormatException exception) {
+            throw new IllegalStateException(label + " solver atol readback is not numeric for " + field, exception);
+        }
+        if (row == null || !"unscaled".equals(row.get("atolmethod")) ||
+            !"manual".equals(row.get("atolvaluemethod")) || !Double.isFinite(atol) ||
+            Math.abs(atol - Double.parseDouble(expectedAtol)) > 1e-20) {
+            throw new IllegalStateException(label + " solver tolerance readback mismatch for " + field);
+        }
+    }
+
+    private static void assertLogicalToleranceRows(Map<String, Object> readbacks, String label) {
+        Map<String, Object> logicalRows = (Map<String, Object>) readbacks.get("logical_component_tolerances");
+        if (logicalRows == null || !logicalRows.keySet().equals(new LinkedHashSet<>(Arrays.asList(LOGICAL_SOLVER_FIELDS)))) {
+            throw new IllegalStateException(label + " omitted one or more derived logical field rows");
+        }
+        for (int i = 0; i < LOGICAL_SOLVER_FIELDS.length; i++) {
+            Map<String, Object> row = (Map<String, Object>) logicalRows.get(LOGICAL_SOLVER_FIELDS[i]);
+            double atol = Double.parseDouble(String.valueOf(row.get("atol")));
+            if (!"unscaled".equals(row.get("atolmethod")) ||
+                !"manual".equals(row.get("atolvaluemethod")) || !Double.isFinite(atol) ||
+                Math.abs(atol - Double.parseDouble(LOGICAL_ABSOLUTE_TOLERANCES[i])) > 1e-20 ||
+                !LOGICAL_ENTRY_KEYS[i].equals(row.get("solver_entry_key")) ||
+                !LOGICAL_COMPONENTS[i].equals(row.get("component")) ||
+                !"DERIVED_FROM_OBSERVED_PHYSICS_FIELD_BINDING".equals(row.get("source"))) {
+                throw new IllegalStateException(label + " logical field tolerance readback mismatch for " +
+                    LOGICAL_SOLVER_FIELDS[i]);
+            }
         }
     }
 
@@ -1627,12 +1804,19 @@ public final class W24CureScienceFixture {
                 SolverSequence sequence = requireUniqueAttachedSolverSequence(
                     model, study, tag, "time", "Time");
                 SolverFeature time = findUniqueTimeFeature(sequence);
-                solvers.put(tag, Map.of("sequence_tag", sequence.tag(), "sequence_attached", sequence.isAttached(),
-                    "sequence_study", sequence.study(), "time_feature_tag", time.tag(),
-                    "timemethod", time.getString("timemethod"), "tstepsbdf", time.getString("tstepsbdf"),
-                    "maxstepconstraintbdf", time.getString("maxstepconstraintbdf"),
-                    "maxstepbdf", time.getDouble("maxstepbdf"), "tout", time.getString("tout"),
-                    "tstepsstore", time.getInt("tstepsstore")));
+                Map<String, Object> solverReadback = new LinkedHashMap<>();
+                solverReadback.put("sequence_tag", sequence.tag());
+                solverReadback.put("sequence_attached", sequence.isAttached());
+                solverReadback.put("sequence_study", sequence.study());
+                solverReadback.put("time_feature_tag", time.tag());
+                solverReadback.put("timemethod", time.getString("timemethod"));
+                solverReadback.put("tstepsbdf", time.getString("tstepsbdf"));
+                solverReadback.put("maxstepconstraintbdf", time.getString("maxstepconstraintbdf"));
+                solverReadback.put("maxstepbdf", time.getDouble("maxstepbdf"));
+                solverReadback.put("tout", time.getString("tout"));
+                solverReadback.put("tstepsstore", time.getInt("tstepsstore"));
+                solverReadback.putAll(solverToleranceReadbacks(model, time));
+                solvers.put(tag, solverReadback);
             } else {
                 String[] attached = model.study(tag).getSolverSequences("SolverSequence");
                 if (attached.length == 1) {

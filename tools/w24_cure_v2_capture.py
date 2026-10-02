@@ -416,7 +416,7 @@ def validate_cure_law_v2_contract_readback(readback: Mapping[str, Any]) -> dict[
             raise CaptureError(f"loaded model Duv_rel solver atol differs for {tag}")
     solver_rows = row.get("solver_readbacks")
     expected_stages = {"stdUV", "stdBake", "stdCool"}
-    expected_solver_atols = {
+    expected_component_atols = {
         "comp1_T": 1e-4,
         "comp1_alpha": 1e-8,
         "comp1_alpha_iso": 1e-8,
@@ -424,12 +424,51 @@ def validate_cure_law_v2_contract_readback(readback: Mapping[str, Any]) -> dict[
         "comp1_u": 1e-12,
         "comp1_w": 1e-12,
     }
+    expected_native_atols = {
+        "comp1_T": 1e-4,
+        "comp1_alpha": 1e-8,
+        "comp1_alpha_iso": 1e-8,
+        "comp1_qpost": 1e-8,
+        "comp1_u": 1e-12,
+        "comp1_Duv_rel": 1e-8,
+    }
     if not isinstance(solver_rows, Mapping) or set(solver_rows) != expected_stages:
         raise CaptureError("loaded model v2 solver readback omitted a staged SolverSequence")
+    field_contract_signature: tuple[Any, ...] | None = None
     for stage, raw_solver in solver_rows.items():
         solver = _require_mapping(raw_solver, f"solver_readbacks.{stage}")
+        field_contract = _require_mapping(solver.get("solver_field_contract"),
+                                          f"solver_readbacks.{stage}.solver_field_contract")
+        descriptor = _require_mapping(field_contract.get("physics_field_descriptor"),
+                                      f"solver_readbacks.{stage}.solver_field_contract.physics_field_descriptor")
+        components = descriptor.get("components")
+        component_bindings = field_contract.get("component_solver_entry_bindings")
+        if (isinstance(field_contract.get("geometry_dimension"), bool) or
+                field_contract.get("geometry_dimension") != 2 or
+            field_contract.get("geometry_axisymmetric") is not True or
+            descriptor.get("physics_tag") != "solid" or
+            isinstance(descriptor.get("physics_field_count"), bool) or descriptor.get("physics_field_count") != 1 or
+            not isinstance(descriptor.get("field_tag"), str) or not descriptor["field_tag"] or
+                descriptor.get("field") != "u" or
+                not isinstance(components, list) or len(components) != 2 or
+                any(not isinstance(component, str) or not component for component in components) or
+                len(set(components)) != 2 or set(components) != {"u", "w"} or
+                component_bindings != {"u": "comp1_u", "w": "comp1_u"}):
+            raise CaptureError(f"loaded model solver field descriptor or observed u/w binding is incomplete for {stage}")
+        signature = (field_contract.get("geometry_dimension"), field_contract.get("geometry_axisymmetric"),
+                     descriptor.get("physics_tag"), descriptor.get("field_tag"), descriptor.get("field"),
+                     tuple(components), tuple(sorted(component_bindings.items())))
+        if field_contract_signature is None:
+            field_contract_signature = signature
+        elif signature != field_contract_signature:
+            raise CaptureError("loaded model SolverSequence stages have inconsistent field descriptors or bindings")
         fields = _require_mapping(solver.get("field_tolerances"), f"solver_readbacks.{stage}.field_tolerances")
-        if (set(fields) != set(expected_solver_atols) or
+        entry_keys = field_contract.get("solver_entry_keys")
+        logical_fields = _require_mapping(solver.get("logical_component_tolerances"),
+                                          f"solver_readbacks.{stage}.logical_component_tolerances")
+        if (not isinstance(entry_keys, list) or any(not isinstance(key, str) or not key for key in entry_keys) or
+                len(entry_keys) != len(set(entry_keys)) or set(entry_keys) != set(expected_native_atols) or
+                set(fields) != set(expected_native_atols) or set(logical_fields) != set(expected_component_atols) or
                 isinstance(solver.get("rtol"), bool) or
                 not isinstance(solver.get("rtol"), (int, float)) or
                 not math.isfinite(float(solver["rtol"])) or
@@ -440,7 +479,7 @@ def validate_cure_law_v2_contract_readback(readback: Mapping[str, Any]) -> dict[
                 not math.isfinite(float(solver["atolglobal"])) or
                 abs(float(solver["atolglobal"]) - 1e-8) > 1e-18):
             raise CaptureError(f"loaded model v2 solver global or dependent-field tolerance readback is incomplete for {stage}")
-        for field, expected_atol in expected_solver_atols.items():
+        for field, expected_atol in expected_native_atols.items():
             values = _require_mapping(fields.get(field), f"solver_readbacks.{stage}.{field}")
             try:
                 observed_atol = float(values.get("atol"))
@@ -450,6 +489,43 @@ def validate_cure_law_v2_contract_readback(readback: Mapping[str, Any]) -> dict[
                     values.get("atolvaluemethod") != "manual" or
                     not math.isfinite(observed_atol) or abs(observed_atol - expected_atol) > 1e-20):
                 raise CaptureError(f"loaded model v2 solver field tolerance differs for {stage}/{field}")
+        for logical_field, expected_atol in expected_component_atols.items():
+            entry_key = "comp1_u" if logical_field == "comp1_w" else logical_field
+            logical = _require_mapping(logical_fields.get(logical_field),
+                                       f"solver_readbacks.{stage}.logical_component_tolerances.{logical_field}")
+            observed = _require_mapping(fields.get(entry_key),
+                                        f"solver_readbacks.{stage}.field_tolerances.{entry_key}")
+            expected_component = logical_field.removeprefix("comp1_")
+            try:
+                logical_atol = float(logical.get("atol"))
+                observed_atol = float(observed.get("atol"))
+            except (TypeError, ValueError) as exc:
+                raise CaptureError(f"loaded model v2 logical solver atol is missing for {stage}/{logical_field}") from exc
+            if (logical.get("component") != expected_component or
+                    logical.get("solver_entry_key") != entry_key or
+                    logical.get("source") != "DERIVED_FROM_OBSERVED_PHYSICS_FIELD_BINDING" or
+                    logical.get("atolmethod") != observed.get("atolmethod") or
+                    logical.get("atolvaluemethod") != observed.get("atolvaluemethod") or
+                    not math.isfinite(logical_atol) or not math.isfinite(observed_atol) or
+                    abs(logical_atol - expected_atol) > 1e-20 or
+                    abs(observed_atol - expected_atol) > 1e-20):
+                raise CaptureError(f"loaded model v2 logical component tolerance differs for {stage}/{logical_field}")
+        dose_actual = _require_mapping(fields.get("comp1_Duv_rel"),
+                                       f"solver_readbacks.{stage}.field_tolerances.comp1_Duv_rel")
+        try:
+            dose_actual_atol = float(dose_actual.get("atol"))
+        except (TypeError, ValueError) as exc:
+            raise CaptureError(f"loaded model v2 actual dose solver atol is missing for {stage}") from exc
+        dose_readback = _require_mapping(tolerance_rows.get(stage), f"dose_solver_tolerance_readbacks.{stage}")
+        try:
+            dose_separate_atol = float(dose_readback.get("absolute_tolerance"))
+        except (TypeError, ValueError) as exc:
+            raise CaptureError(f"loaded model v2 independent dose solver atol is missing for {stage}") from exc
+        if (dose_actual.get("atolmethod") != "unscaled" or
+                dose_actual.get("atolvaluemethod") != "manual" or
+                not math.isfinite(dose_actual_atol) or abs(dose_actual_atol - 1e-8) > 1e-20 or
+                not math.isfinite(dose_separate_atol) or abs(dose_separate_atol - dose_actual_atol) > 1e-20):
+            raise CaptureError(f"loaded model v2 independent dose solver entry differs for {stage}")
     if row.get("native_study_run_calls") != 0:
         raise CaptureError("cure-law v2 contract readback must not submit a solver run")
     return {
@@ -460,9 +536,11 @@ def validate_cure_law_v2_contract_readback(readback: Mapping[str, Any]) -> dict[
         "maxwell_model": "GeneralizedMaxwell",
         "maxwell_branch_count": 1,
         "full_dof_absolute_tolerances": {
-            **expected_solver_atols,
+            **{name: float(expected_component_atols[name]) for name in expected_component_atols},
             "comp1_Duv_rel": 1e-8,
         },
+        "full_dof_absolute_tolerance_scope": "FROZEN_COMPONENT_COMPARISON_INPUTS_DERIVED_FROM_OBSERVED_FIELD_BINDING",
+        "effective_serendipity_dof_tolerance_conversion": "UNVERIFIED",
         "maxwell_branch_reference_state": "UNVERIFIED",
         "activation_history_semantics": "UNVERIFIED",
         "native_study_run_calls": 0,

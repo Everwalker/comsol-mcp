@@ -2603,6 +2603,10 @@ class NativeScienceCampaignAdapter:
             "solver_tag": report.get("solver_tag"),
             "full_dof_absolute_tolerances": dict(
                 contract_verified.get("capture_validation", {}).get("full_dof_absolute_tolerances", {})),
+            "full_dof_absolute_tolerance_scope": (
+                contract_verified.get("capture_validation", {}).get("full_dof_absolute_tolerance_scope")),
+            "effective_serendipity_dof_tolerance_conversion": (
+                contract_verified.get("capture_validation", {}).get("effective_serendipity_dof_tolerance_conversion")),
             "configuration_sha256": configuration_sha256,
             "snapshot_schema": snapshot_schema,
             "layout_sha256": (snapshot_frames[0]["dofs"].get("layout_sha256")
@@ -3553,10 +3557,15 @@ class NativeScienceCampaignAdapter:
             raise CampaignError("authenticated v2 comparison requires native frames and source lineages")
         observed = {row[0] for row in dof_value_map(frames[0]).values()}
         candidate_maps = [row.get("full_dof_absolute_tolerances") for row in lineages]
-        if (any(not isinstance(row, Mapping) for row in candidate_maps) or
+        expected_scope = "FROZEN_COMPONENT_COMPARISON_INPUTS_DERIVED_FROM_OBSERVED_FIELD_BINDING"
+        if (any(not isinstance(row, Mapping) for row in lineages) or
+                any(row.get("full_dof_absolute_tolerance_scope") != expected_scope or
+                row.get("effective_serendipity_dof_tolerance_conversion") != "UNVERIFIED"
+                for row in lineages) or
+                any(not isinstance(row, Mapping) for row in candidate_maps) or
                 any(dict(row) != dict(candidate_maps[0]) for row in candidate_maps[1:]) or
                 observed != set(candidate_maps[0])):
-            raise CampaignError("full Xmesh DOF set is not exactly covered by the authenticated v2 solver-atol readbacks")
+            raise CampaignError("full Xmesh comparison inputs are missing their observed-field scope or exact v2 tolerance map")
         return {str(name): float(value) for name, value in candidate_maps[0].items()}
 
     def _validate_authenticated_v2_frame_set(self,

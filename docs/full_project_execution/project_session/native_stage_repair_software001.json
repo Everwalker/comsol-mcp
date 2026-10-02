@@ -1,7 +1,7 @@
 {
   "schema": "W21_LOCAL_STAGE_REPAIR_SOFTWARE_SUMMARY_V1",
-  "updated_at_utc": "2026-10-01T10:38:54Z",
-  "status": "CANDIDATE03_SOFTWARE_ONLY; S19_STATIC_PREP_PASS_SCP_REJECTED_NO_TRANSFER; APPROVALS_PENDING; WINDOWS_COMPILE_PREPARE_READBACK_NATIVE_NOT_RUN; S18_PARTIAL_NOT_ACCEPTED; W21_PARTIAL; MASTER_ACTIVE_W26",
+  "updated_at_utc": "2026-10-02T01:18:45Z",
+  "status": "CANDIDATE03_SOFTWARE_ONLY; S19_STATIC_PREP_PASS_SCP_REJECTED_NO_TRANSFER; APPROVALS_PENDING; WINDOWS_COMPILE_PREPARE_READBACK_NATIVE_NOT_RUN; S18_PARTIAL_NOT_ACCEPTED; W21_PARTIAL; MASTER_ACTIVE_W26; W24_CANDIDATE16_SOFTWARE_IMPLEMENTATION_AND_BOUNDED_TESTS_IN_PROGRESS; W24_CANDIDATE17_SOFTWARE_PASS_WITH_HISTORICAL_PRESERVATION_QUALIFICATIONS; CURRENT06_FREEZE002_OFFLINE_ADMISSION_PASS; CURRENT06_FINAL_NOTGO_PLAN_CONTROLLER_AND_ROOT_PLAN_REVIEW_PENDING; SEPARATE_NATIVE_GO_NOT_AUTHORIZED; FRESH_GUARDS_PENDING; NATIVE_NOT_RUN",
   "w21_status": "PARTIAL; S19_STATIC_PREPARED_ONLY; SIX_FILE_TRANSFER_NOT_RUN_PENDING_INDEPENDENT_LAN_APPROVAL",
   "overall_project": "ACTIVE_INCOMPLETE",
   "source": {
@@ -121,7 +121,7 @@
       "working_tree_and_untracked": "Excluded from the exact-SHA push; remaining working-tree/untracked changes, including this status sync, are unpublished."
     }
   },
-  "next_authorized_scope": "Broad human authorization for future project-related uploads was received at 2026-10-01T05:41:47.839315Z. Automatic review then rejected the exact six-file SCP and exact three-commit public push before CreateProcess because each sensitive payload and destination still required specificity; neither action ran. Wait for the direct reply to the one composite exact payload-and-destination question sent at 2026-10-01T05:50:14.675593Z (pending, no human reply). If the reply specifically approves the six-file Windows transfer, resume only that transfer and its already-approved private compile/metadata PREPARE; do not issue an engine GO or publish Git. If it specifically approves the exact three-commit public push, push only those three commits after the existing fresh source/ref checks; do not transfer the Windows files. If it selects both, keep each action within its exact scope. No workaround. The full MASTER remains ACTIVE through W26.",
+  "next_authorized_scope": "Broad human authorization for future project-related uploads was received at 2026-10-01T05:41:47.839315Z. Automatic review then rejected the exact six-file SCP and exact three-commit public push before CreateProcess because each sensitive payload and destination still required specificity; neither action ran. Wait for the direct reply to the one composite exact payload-and-destination question sent at 2026-10-01T05:50:14.675593Z (pending, no human reply). If the reply specifically approves the six-file Windows transfer, resume only that transfer and its already-approved private compile/metadata PREPARE; do not issue an engine GO or publish Git. If it specifically approves the exact three-commit public push, push only those three commits after the existing fresh source/ref checks; do not transfer the Windows files. If it selects both, keep each action within its exact scope. No workaround. The full MASTER remains ACTIVE through W26. W24 candidate16 software implementation and bounded tests are in progress from source anchor e2e68ecd0217e2356cc6520d74a8602bf7122396 (plan execution-scratch/w24-ode-feature-repair-20261001-001/root-candidate16-implementation-plan001.json; SHA-256 51caae4d292931659a01fb27f636d9ba1edd5d8c94acc28e20513225b854d7b8). Wait for the complete software outcome and one root review; then require a distinct freeze, admission review, and separate GO. Candidate16 has no baseline/fingerprint/test-pass receipt/freeze/GO; native and science are NOT_RUN. W21 exact SCP/public-push scope remains pending and unchanged. W24 candidate17 root software review is PASS_FINAL_CANDIDATE17_SOFTWARE_WITH_HISTORICAL_PRESERVATION_QUALIFICATIONS: final 28 focus and 12 required regression JUnit cases pass with zero failures/errors/skips; 137 source hashes, nine overlay byte-equalities, nine Java classes at major 55 and 20 retained Java evidence files verified. Resolver 3 and diagnostics 80 are internal cases, not extra pytest. Current06 actual Native34 source/Python composition remains FINAL_COMPOSITION_PENDING, then fresh immutable freeze, root admission and separate GO are required before native. Native/science remain NOT_RUN; effective serendipity DOF tolerance remains UNVERIFIED. W21 external SCP/public-push scope remains pending and unchanged.",
   "remaining_scope": "W21 and MASTER W01-W26 remain ACTIVE and incomplete through W26. The prior BBC/7b1 checkpoint remains historical; Candidate03 is the current root-accepted PASS_SOFTWARE_ONLY candidate, with its 48-case test package and Java/parser checks passed locally. Its fixed native candidate has not been prepared or run. S19-007 is PASS_STATIC_PREPARATION_ONLY; the r19 root was created, but the six-file SCP was rejected before CreateProcess and no transfer occurred. Windows compile/PREPARE/readback/native remains NOT_RUN; exact-three Git and independent LAN approvals remain separate and pending. R17 attempt005 remains its distinct initial-stage capture-probe failure with cleanup complete only for that attempt; original r15/r16 UNKNOWN remain separate and non-replayable. S18 D1 FAIL/diagnosis and D2 five-guard review remain historical. S18 is PARTIAL_NOT_ACCEPTED: the jobs and linked operations rows failed STAGE_ACCEPTANCE_UNVERIFIED after a recorded successful solve; getISol reply was JSON scalar 0 without native runtime-type/signature instrumentation. The saved-model stream hash is verified by bytes only; output/field checks remain UNVERIFIED and science NOT_RUN. S18-scoped cleanup remains complete. No old-job replay or further native/engine action, COMSOL 6.3, deployment, commit, or push. W22 still requires actual Windows 6.4 native initial-stage acceptance on a reviewed fixed candidate; W23-W26 and final independent Reviewer remain open.",
   "r16_preparation": {
     "status": "R16_PREPARED_ONLY_PASS; ATTEMPT002_001_PRESEND_REFUSAL_PRESERVED; ATTEMPT002_002_CLIENT_UNKNOWN_TIMEOUT_IMMUTABLE_NO_RESUME_OR_REPLAY; JOB_OPERATION_QUEUED; STAGE_RUNNING_SOLVE_DISPATCHED; OUTPUT_READBACK_SAVE_NOT_RUN; ACCEPTANCE_NOT_EVALUATED; CLEANUP_UNVERIFIED; REPORT003_RECONCILED; LOCAL_REPAIR_AUTHORIZED_NOT_STARTED; NEXT_NATIVE_EXECUTION_REQUIRES_ROOT_AND_INDEPENDENT_REVIEW; ATTEMPT001_UNVERIFIED; ORIGINAL_R15_UNKNOWN_NONREPLAYABLE; OVERALL_PARTIAL",
@@ -1991,8 +1991,8 @@
   },
   "w24_local_preparation_20261001": {
     "path": "docs/full_project_execution/w24/PROCESS_INVENTORY_PRIVACY_SOFTWARE_CHECKPOINT.json",
-    "sha256": "21b3f48871f10d1eb793ba96c62ba0bd9a1bac89855d1f6ea95cbb8e57207ff5",
-    "status": "CANDIDATE15_SOFTWARE_PASS; CURRENT05_FREEZE002_ADMISSION_PASS; CURRENT05_NATIVE_ATTEMPT001_FAIL_OR_INCOMPLETE_UNKNOWN_NO_RETRY; CURRENT02_CURRENT03_CURRENT04_UNKNOWNS_PRESERVED; W24_PARTIAL; SCIENCE_NOT_RUN",
+    "sha256": "1c02c20b7334af4daafda9cf1ceb1c61ca88509baa7343065ded8f6d26fb7b7e",
+    "status": "CANDIDATE17_SOFTWARE_PASS_WITH_HISTORICAL_PRESERVATION_QUALIFICATIONS; CURRENT06_FREEZE002_OFFLINE_ADMISSION_PASS; FINAL_NOTGO_PLAN_CONTROLLER_AND_ROOT_PLAN_REVIEW_PENDING; SEPARATE_NATIVE_GO_NOT_AUTHORIZED; FRESH_GUARDS_PENDING; NATIVE_NOT_RUN; SCIENCE_NOT_RUN; CURRENT05_FAIL_UNKNOWN_NO_RETRY_CLEANUP_PASS_THIS_ATTEMPT_ONLY; CURRENT02_CURRENT03_CURRENT04_UNKNOWN; W24_PARTIAL",
     "process_inventory_privacy": {
       "candidate_id": "w24-local-native-admission-privacy-20261001-luna03",
       "fingerprint": "7f1939af87f3ccb1132f2b540f37eb7a5225b72cd2867d85ebce46959752d33e",
@@ -2258,8 +2258,8 @@
       "qualification": "This does not identify the failing statement; sampled models are not exact COMSOL 6.4.0.293 evidence.",
       "next_software_scope": "Minimal type-based unique resolver with meaningful tests; no native GO."
     },
-    "native_acceptance": "FAIL_OR_INCOMPLETE; UNKNOWN; SAFE_RETRY_FALSE; CURRENT05_CLEANUP_PASS_THIS_ATTEMPT_ONLY; NO_REPLAY",
-    "scientific_acceptance": "NOT_RUN",
+    "native_acceptance": "NOT_RUN_FOR_CANDIDATE17; CURRENT06_COMPOSITION_FREEZE_AND_ROOT_ADMISSION_PENDING; PRIOR_CURRENT05_FAIL_UNKNOWN_SAFE_RETRY_FALSE_NO_REPLAY_CLEANUP_PASS_THIS_ATTEMPT_ONLY",
+    "scientific_acceptance": "NOT_RUN_FOR_CANDIDATE17; PRIOR_CURRENT05_NOT_RUN",
     "documentation_checkpoint": {
       "pre_checkpoint_parent_head": "e0f9ab953b4284bfe21f3a1a39d632c7fe964e56",
       "prior_local_checkpoint_c1": {
@@ -2295,7 +2295,7 @@
         "scope": "Failed native outcome and exact owned cleanup only."
       }
     },
-    "next_action": "Only read-only same-version diagnosis of Solid displacement field groups/components versus Time tolerance entry mapping. After root decision, make a software-only repair and narrowly scoped tests/freeze under a distinct candidate. No deletion of comp1_w, no relaxation of 1e-12 tolerance, and no native/replay before reviewed new candidate plus separate GO.",
+    "next_action": "Freeze002 has root offline-candidate native admission PASS only. Finalize a fail-closed NOTGO plan/controller and obtain root plan review, then require separate explicit native GO before fresh guards; only after GO and passing guards may at most one zero-study-run native setup be attempted. Candidate17 software PASS carries historical-preservation qualifications; native acceptance and science remain NOT_RUN, and effective serendipity DOF tolerance remains UNVERIFIED. Preserve current05 failed/UNKNOWN/safe_retry=false/no replay with cleanup scoped only to that attempt; preserve current02/current03/current04 UNKNOWNs. W21 external SCP/public-push approval remains pending unchanged.",
     "runtime_build_attempt_001": {
       "status": "STOPPED_FIRST_FAILURE",
       "started_at_utc": "2026-10-01T07:18:30.553353Z",

@@ -180,18 +180,41 @@ def _equation_view_artifact(study_tag: str, solver_tag: str, times: list[float])
 
 
 def _contract_readback() -> dict:
-    fields = {
+    logical_fields = {
         "comp1_T": 1e-4, "comp1_alpha": 1e-8, "comp1_alpha_iso": 1e-8,
         "comp1_qpost": 1e-8, "comp1_u": 1e-12, "comp1_w": 1e-12,
     }
+    native_fields = {
+        "comp1_T": 1e-4, "comp1_alpha": 1e-8, "comp1_alpha_iso": 1e-8,
+        "comp1_qpost": 1e-8, "comp1_u": 1e-12, "comp1_Duv_rel": 1e-8,
+    }
     solvers = {}
     for stage in ("stdUV", "stdBake", "stdCool"):
+        actual_rows = {
+            name: {"atolmethod": "unscaled", "atolvaluemethod": "manual", "atol": atol}
+            for name, atol in native_fields.items()
+        }
+        logical_rows = {}
+        for name, atol in logical_fields.items():
+            entry = "comp1_u" if name == "comp1_w" else name
+            component = name.removeprefix("comp1_")
+            logical_rows[name] = {
+                **actual_rows[entry], "component": component, "solver_entry_key": entry,
+                "source": "DERIVED_FROM_OBSERVED_PHYSICS_FIELD_BINDING",
+            }
         solvers[stage] = {
             "rtol": 1e-5, "atolglobalmethod": "unscaled", "atolglobal": 1e-8,
-            "field_tolerances": {
-                name: {"atolmethod": "unscaled", "atolvaluemethod": "manual", "atol": atol}
-                for name, atol in fields.items()
+            "solver_field_contract": {
+                "geometry_dimension": 2, "geometry_axisymmetric": True,
+                "physics_field_descriptor": {
+                    "physics_tag": "solid", "physics_field_count": 1,
+                    "field_tag": "u", "field": "u", "components": ["u", "w"],
+                },
+                "component_solver_entry_bindings": {"u": "comp1_u", "w": "comp1_u"},
+                "solver_entry_keys": sorted(native_fields),
             },
+            "field_tolerances": actual_rows,
+            "logical_component_tolerances": logical_rows,
         }
     return {
         "cure_law_version": "W24_CURE_LAW_V2",
@@ -256,6 +279,133 @@ def test_v2_contract_readback_rejects_nonfinite_solver_tolerances(mutation):
         readback["dose_solver_tolerance_readbacks"]["stdCool"]["absolute_tolerance"] = float("nan")
     with pytest.raises(CaptureError):
         validate_cure_law_v2_contract_readback(readback)
+
+
+def test_v2_contract_readback_accepts_only_observed_grouped_displacement_entry():
+    from tools.w24_cure_v2_capture import validate_cure_law_v2_contract_readback
+
+    validated = validate_cure_law_v2_contract_readback(_contract_readback())
+    expected = {
+        "comp1_T": 1e-4, "comp1_alpha": 1e-8, "comp1_alpha_iso": 1e-8,
+        "comp1_qpost": 1e-8, "comp1_u": 1e-12, "comp1_w": 1e-12,
+        "comp1_Duv_rel": 1e-8,
+    }
+    assert validated["full_dof_absolute_tolerances"] == expected
+    assert validated["full_dof_absolute_tolerance_scope"] == (
+        "FROZEN_COMPONENT_COMPARISON_INPUTS_DERIVED_FROM_OBSERVED_FIELD_BINDING")
+    assert validated["effective_serendipity_dof_tolerance_conversion"] == "UNVERIFIED"
+    for stage in ("stdUV", "stdBake", "stdCool"):
+        solver = _contract_readback()["solver_readbacks"][stage]
+        actual = solver["field_tolerances"]
+        assert "comp1_w" not in actual
+        assert set(actual) == set(solver["solver_field_contract"]["solver_entry_keys"])
+        assert solver["solver_field_contract"]["physics_field_descriptor"]["components"] == ["u", "w"]
+        logical = solver["logical_component_tolerances"]
+        assert logical["comp1_u"]["solver_entry_key"] == "comp1_u"
+        assert logical["comp1_w"]["solver_entry_key"] == "comp1_u"
+        assert actual["comp1_Duv_rel"]["atol"] == 1e-8
+
+
+@pytest.mark.parametrize("mutation", [
+    "missing_field_contract", "null_field_descriptor", "ambiguous_physics_fields",
+    "wrong_geometry_dimension", "non_axisymmetric_geometry",
+    "wrong_field_name", "empty_components", "missing_w_component", "duplicate_component",
+    "wrong_component_binding", "missing_group_key", "forged_native_w_row",
+    "forged_logical_w_row", "wrong_atolmethod", "wrong_atolvaluemethod",
+    "wrong_logical_w_atol",
+    "nonfinite_native_atol", "wrong_native_atol", "missing_dose_actual_entry",
+    "mismatched_dose_actual_atol", "missing_scope", "false_scope", "verified_conversion_claim",
+])
+def test_v2_field_binding_and_full_dof_scope_reject_forged_readbacks(mutation):
+    from tools.w24_cure_v2_capture import CaptureError, validate_cure_law_v2_contract_readback
+
+    readback = _contract_readback()
+    solver = readback["solver_readbacks"]["stdUV"]
+    contract = solver["solver_field_contract"]
+    actual = solver["field_tolerances"]
+    if mutation == "missing_field_contract":
+        solver.pop("solver_field_contract")
+    elif mutation == "null_field_descriptor":
+        contract["physics_field_descriptor"] = None
+    elif mutation == "ambiguous_physics_fields":
+        contract["physics_field_descriptor"]["physics_field_count"] = 2
+    elif mutation == "wrong_geometry_dimension":
+        contract["geometry_dimension"] = 3
+    elif mutation == "non_axisymmetric_geometry":
+        contract["geometry_axisymmetric"] = False
+    elif mutation == "wrong_field_name":
+        contract["physics_field_descriptor"]["field"] = "v"
+    elif mutation == "empty_components":
+        contract["physics_field_descriptor"]["components"] = []
+    elif mutation == "missing_w_component":
+        contract["physics_field_descriptor"]["components"] = ["u"]
+    elif mutation == "duplicate_component":
+        contract["physics_field_descriptor"]["components"] = ["u", "u"]
+    elif mutation == "wrong_component_binding":
+        contract["component_solver_entry_bindings"]["w"] = "comp1_w"
+    elif mutation == "missing_group_key":
+        actual.pop("comp1_u")
+        contract["solver_entry_keys"].remove("comp1_u")
+    elif mutation == "forged_native_w_row":
+        actual["comp1_w"] = dict(actual["comp1_u"])
+        contract["solver_entry_keys"].append("comp1_w")
+    elif mutation == "forged_logical_w_row":
+        solver["logical_component_tolerances"]["comp1_w"]["solver_entry_key"] = "comp1_w"
+    elif mutation == "wrong_atolmethod":
+        actual["comp1_u"]["atolmethod"] = "factor"
+    elif mutation == "wrong_atolvaluemethod":
+        actual["comp1_u"]["atolvaluemethod"] = "factor"
+    elif mutation == "nonfinite_native_atol":
+        actual["comp1_u"]["atol"] = float("inf")
+    elif mutation == "wrong_native_atol":
+        actual["comp1_u"]["atol"] = 1e-9
+    elif mutation == "wrong_logical_w_atol":
+        solver["logical_component_tolerances"]["comp1_w"]["atol"] = 1e-9
+    elif mutation == "missing_dose_actual_entry":
+        actual.pop("comp1_Duv_rel")
+        contract["solver_entry_keys"].remove("comp1_Duv_rel")
+    elif mutation == "mismatched_dose_actual_atol":
+        actual["comp1_Duv_rel"]["atol"] = 1e-7
+    else:
+        frames, lineages = _full_dof_scope_fixture()
+        if mutation == "missing_scope":
+            lineages[0].pop("full_dof_absolute_tolerance_scope")
+        elif mutation == "false_scope":
+            lineages[0]["full_dof_absolute_tolerance_scope"] = "UNSCOPED_EFFECTIVE_TOLERANCE"
+        else:
+            lineages[0]["effective_serendipity_dof_tolerance_conversion"] = "VERIFIED"
+        with pytest.raises(runner.CampaignError, match="scope"):
+            runner.NativeScienceCampaignAdapter._v2_full_dof_tolerances(frames, lineages)
+        return
+    with pytest.raises(CaptureError):
+        validate_cure_law_v2_contract_readback(readback)
+
+
+def _full_dof_scope_fixture():
+    names = ["comp1_T", "comp1_alpha", "comp1_alpha_iso", "comp1_Duv_rel",
+             "comp1_qpost", "comp1_u", "comp1_w"]
+    frame = {
+        "dofs": {
+            "snapshot_schema": "W24-DOF-SNAPSHOT-2", "dofNames": names,
+            "geomNums": [1, 2, 3, 4, 5, 6, 7], "nodes": [1, 2, 3, 4, 5, 6, 7],
+            "coords": [[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+                       [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0]],
+            "coordinate_axes": 2, "nameInds": [0, 1, 2, 3, 4, 5, 6],
+            "solVectorInds": [0, 1, 2, 3, 4, 5, 6],
+        },
+        "u_real": [0.0] * 7, "u_imag": [0.0] * 7,
+    }
+    lineages = [{
+        "full_dof_absolute_tolerances": {
+            "comp1_T": 1e-4, "comp1_alpha": 1e-8, "comp1_alpha_iso": 1e-8,
+            "comp1_qpost": 1e-8, "comp1_u": 1e-12, "comp1_w": 1e-12,
+            "comp1_Duv_rel": 1e-8,
+        },
+        "full_dof_absolute_tolerance_scope": (
+            "FROZEN_COMPONENT_COMPARISON_INPUTS_DERIVED_FROM_OBSERVED_FIELD_BINDING"),
+        "effective_serendipity_dof_tolerance_conversion": "UNVERIFIED",
+    }]
+    return [frame], lineages
 
 
 class _RouteSnapshot:
@@ -955,10 +1105,17 @@ def test_real_control_daemon_authenticated_capture_reaches_full_dof_schedule_com
             capture, expected_case=slot.case_id, expected_study=slot.study_tag)
         assert lineage["source_identity_authenticated"] is True
         assert lineage["native_acceptance"] == "NOT_RUN"
+        assert lineage["full_dof_absolute_tolerance_scope"] == (
+            "FROZEN_COMPONENT_COMPARISON_INPUTS_DERIVED_FROM_OBSERVED_FIELD_BINDING")
+        assert lineage["effective_serendipity_dof_tolerance_conversion"] == "UNVERIFIED"
         assert len(frames) == 2
         assert set(frames[0]["dofs"]["dofNames"]) == {
             "comp1_T", "comp1_alpha", "comp1_alpha_iso", "comp1_Duv_rel",
             "comp1_qpost", "comp1_u", "comp1_w"}
+        tolerance_inputs = adapter._v2_full_dof_tolerances(frames, [lineage])
+        assert set(tolerance_inputs) == set(frames[0]["dofs"]["dofNames"])
+        assert tolerance_inputs["comp1_u"] == tolerance_inputs["comp1_w"] == 1e-12
+        assert "comp1_w" not in _contract_readback()["solver_readbacks"]["stdUV"]["field_tolerances"]
         result = adapter._compare_authenticated_v2_frames(
             frames, frames, [lineage], [lineage], label="same authenticated public schedule")
         assert result["status"] == (

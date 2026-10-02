@@ -285,20 +285,34 @@ The native solver policy is frozen for this proposal and must be read back
 before the first run. Use BDF with `maxstepconstraintbdf="const"`,
 `maxstepbdf=1[s]`, and `rtol=1e-5` in the baseline, staged/continuous,
 reset, coarse-mesh, and dose-sensitivity runs. Use `maxstepbdf=0.5[s]` in the
-tight-time control. Set
+tight-time control. The frozen six-entry strings are logical component-input
+and method requirements, not a native Time-solver entry table:
 `atolmethod="T unscaled alpha unscaled alpha_iso unscaled qpost unscaled u unscaled w unscaled"`,
-`atolglobalmethod="unscaled"`, `atolglobal=1e-8`, and the field-specific
-absolute tolerance string
-`"T 1e-4 alpha 1e-8 alpha_iso 1e-8 qpost 1e-8 u 1e-12 w 1e-12"`;
-for every field also set `atolvaluemethod="manual"`, the 6.4 solver's explicit
-manual-value mode, so the listed absolute values are applied rather than treated
-as scale factors. The fixture resolves the generated solver entries and expects
-the native keys `comp1_T`, `comp1_alpha`, `comp1_alpha_iso`, `comp1_qpost`,
-`comp1_u`, and `comp1_w`; each actual field key, method, and value must be read
-back exactly. The installed COMSOL 6.4 `data/completion/sol.xml` identifies
-`atolvaluemethod` as a `StringArray` with `factor|manual` values and `atol` as a
-field-keyed tolerance array. If COMSOL exposes different variable names or
+with `atolglobalmethod="unscaled"`, `atolglobal=1e-8`, and logical absolute
+component-input values
+`"T 1e-4 alpha 1e-8 alpha_iso 1e-8 qpost 1e-8 u 1e-12 w 1e-12"`.
+Before mapping the logical displacement inputs, read back a two-dimensional
+axisymmetric geometry and the unique Solid Mechanics `PhysicsField` with
+`field()="u"` and distinct `component()` values exactly `{u,w}`. The generated
+Time solver has the actual native keys `comp1_T`, `comp1_alpha`,
+`comp1_alpha_iso`, `comp1_qpost`, and `comp1_u`; both logical displacement
+inputs `u` and `w` bind to the observed `comp1_u` entry. Apply setters only to
+the actual keys returned by that Time solver after validating the geometry,
+PhysicsField descriptor, and component-to-entry binding. Do not issue a setter
+for `comp1_w` or invent a native `comp1_w` row. For every actual solver entry,
+set `atolvaluemethod="manual"`, the 6.4 solver's explicit manual-value mode,
+so its absolute tolerance is applied rather than treated as a scale factor.
+Keep the actual entry table and its method and value readbacks separate from
+the descriptor/binding and the six derived logical component rows. Preserve
+and independently configure/read back the dose entry `comp1_Duv_rel` at
+`1e-8` wherever it is present; never infer tolerance keys from the PhysicsField
+component list. The installed COMSOL 6.4
+`data/completion/sol.xml` identifies `atolvaluemethod` as a `StringArray` with
+`factor|manual` values and `atol` as a field-keyed tolerance array. If COMSOL
+exposes a missing or ambiguous descriptor, a different actual entry table, or
 rejects any property, stop before solving and revise/freeze a new proposal.
+The derived displacement values remain frozen component-comparison inputs;
+effective serendipity field-to-DOF tolerance conversion remains `UNVERIFIED`.
 These settings target
 one-second resolution of the hard gel gate; they do not claim exact event
 localization. Set `tstepsbdf="strict"` so each BDF run takes a step ending at

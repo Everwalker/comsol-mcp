@@ -1,7 +1,7 @@
 {
   "schema": "W24_PROCESS_INVENTORY_PRIVACY_SOFTWARE_CHECKPOINT_V1",
   "recorded_at_utc": "2026-10-01T12:03:06Z",
-  "status": "CANDIDATE15_SOFTWARE_PASS; CURRENT05_FREEZE002_ADMISSION_PASS; CURRENT05_NATIVE_ATTEMPT001_FAIL_OR_INCOMPLETE_UNKNOWN_NO_RETRY; CURRENT02_CURRENT03_CURRENT04_UNKNOWNS_PRESERVED; W24_PARTIAL; SCIENCE_NOT_RUN",
+  "status": "CANDIDATE17_SOFTWARE_PASS_WITH_HISTORICAL_PRESERVATION_QUALIFICATIONS; CURRENT06_NATIVE34_SOURCE_PYTHON_COMPOSITION_AND_FRESH_FREEZE_PENDING; ROOT_ADMISSION_AND_SEPARATE_GO_PENDING; NATIVE_NOT_RUN; SCIENCE_NOT_RUN; CURRENT05_FAIL_UNKNOWN_NO_RETRY_CLEANUP_PASS_THIS_ATTEMPT_ONLY; CURRENT02_CURRENT03_CURRENT04_UNKNOWN; W24_PARTIAL",
   "candidate": {
     "candidate_id": "w24-local-native-admission-privacy-20261001-luna03",
     "fingerprint": "7f1939af87f3ccb1132f2b540f37eb7a5225b72cd2867d85ebce46959752d33e",
@@ -164,7 +164,7 @@
     "current03_offline_candidate_admission": "PASS_ROOT_REVIEWED_CURRENT03_ACTUAL_VERIFIER_ONLY; PRELAUNCH_FREEZE",
     "current03_native_acceptance": "FAIL_OR_INCOMPLETE; UNKNOWN_DURABLE_JOB; SAFE_RETRY_FALSE; EXACT_CLEANUP_PASS_THIS_ATTEMPT_ONLY; NO_REPLAY"
   },
-  "next_action": "Only read-only same-version diagnosis of Solid displacement field groups/components versus Time tolerance entry mapping. After root decision, make a software-only repair and narrowly scoped tests/freeze under a distinct candidate. No deletion of comp1_w, no relaxation of 1e-12 tolerance, and no native/replay before reviewed new candidate plus separate GO.",
+  "next_action": "Complete actual Native34 source/Python composition (candidate17 review says FINAL_COMPOSITION_PENDING), create a fresh immutable current06 freeze, obtain root admission, and require a separate GO before fresh native setup. Do not promote candidate17 software PASS to native or effective serendipity DOF tolerance or scientific PASS. Preserve current05 failed/UNKNOWN/no-replay and attempt-scoped cleanup plus current02/current03/current04 UNKNOWNs. W21 external SCP/public-push approval remains pending unchanged.",
   "runtime_build_plan": {
     "status": "PASS_PLAN_ONLY",
     "plan": {
@@ -268,7 +268,7 @@
     "pip_check": "PASS",
     "scope": "Offline build/install only; no application import, tests, network, JVM/COMSOL launch, repository write, or Git write."
   },
-  "updated_at_utc": "2026-10-01T23:28:26Z",
+  "updated_at_utc": "2026-10-02T01:18:45Z",
   "noengine_preflight_001": {
     "status": "ROOT_ACCEPTED_NOENGINE_PREFLIGHT_ONLY",
     "root_review": {
@@ -441,7 +441,7 @@
     "qualification": "This does not identify the failing statement; sampled models are not exact COMSOL 6.4.0.293 evidence.",
     "next_software_scope": "Minimal type-based unique resolver with meaningful tests; no native GO."
   },
-  "native_acceptance": "FAIL_OR_INCOMPLETE; UNKNOWN; SAFE_RETRY_FALSE; CURRENT05_CLEANUP_PASS_THIS_ATTEMPT_ONLY; NO_REPLAY",
+  "native_acceptance": "NOT_RUN_FOR_CANDIDATE17; CURRENT06_COMPOSITION_FREEZE_AND_ROOT_ADMISSION_PENDING; CURRENT05_FAIL_OR_INCOMPLETE_UNKNOWN_SAFE_RETRY_FALSE_NO_REPLAY_CLEANUP_PASS_THIS_ATTEMPT_ONLY",
   "scientific_acceptance": "NOT_RUN",
   "current03_checkpoint": {
     "status": "SOFTWARE_PASS_AND_FREEZE_ADMITTED; CURRENT03_NATIVE_ATTEMPT001_FAIL_OR_INCOMPLETE; DURABLE_UNKNOWN; NO_RETRY; W24_PARTIAL; SCIENCE_NOT_RUN",
@@ -1031,5 +1031,280 @@
     "scientific_acceptance": "NOT_RUN",
     "status_qualification": "W24_PARTIAL; selector movement is partial observation only; no full native PASS.",
     "next_action": "Only read-only same-version diagnosis of Solid displacement field groups/components versus Time tolerance entry mapping. After root decision, make a software-only repair and narrowly scoped tests/freeze under a distinct candidate. No deletion of comp1_w, no relaxation of 1e-12 tolerance, and no native/replay before reviewed new candidate plus separate GO."
-  }
+  },
+  "candidate16_work_in_progress": {
+    "status": "SOFTWARE_IMPLEMENTATION_AND_BOUNDED_TESTS_IN_PROGRESS",
+    "source_anchor_commit": "e2e68ecd0217e2356cc6520d74a8602bf7122396",
+    "root_implementation_plan": {
+      "path": "execution-scratch/w24-ode-feature-repair-20261001-001/root-candidate16-implementation-plan001.json",
+      "sha256": "51caae4d292931659a01fb27f636d9ba1edd5d8c94acc28e20513225b854d7b8",
+      "status": "GO_SOFTWARE_IMPLEMENTATION_AND_BOUNDED_TESTS_ONLY"
+    },
+    "current05_local_commit_receipt": {
+      "path": "execution-scratch/w24-ode-feature-repair-20261001-001/root-current05-local-commit-receipt001.json",
+      "sha256": "5bc3fe99e99023020067d57f8334fc64a40456bfc324fc694702c33d902ad95c",
+      "status": "PASS_LOCAL_COMMIT_ONLY",
+      "commit": "e2e68ecd0217e2356cc6520d74a8602bf7122396"
+    },
+    "baseline": "NOT_YET_AVAILABLE",
+    "candidate_fingerprint": "NOT_YET_AVAILABLE",
+    "bounded_tests": "IN_PROGRESS; NO_TEST_PASS_RECEIPT_YET",
+    "freeze": "NOT_CREATED",
+    "admission_review": "NOT_RUN",
+    "native_go": "NOT_AUTHORIZED",
+    "native_acceptance": "NOT_RUN_FOR_CANDIDATE16",
+    "scientific_acceptance": "NOT_RUN_FOR_CANDIDATE16",
+    "updated_at_utc": "2026-10-02T00:03:52Z",
+    "next_action": "Wait for the executor complete software outcome; root performs one review; only after that create a distinct immutable freeze/admission review and request a separate GO."
+  },
+  "candidate16_review": {
+    "status": "SOFTWARE_TESTS_PASS; ROOT_CHANGES_REQUIRED; NATIVE_GO_FALSE",
+    "candidate_fingerprint": "4326d115b67ef350d8ea428c19b3b1944619291f082785133542a6e4d76390bd",
+    "source_anchor_commit": "e2e68ecd0217e2356cc6520d74a8602bf7122396",
+    "root_review": {
+      "path": "execution-scratch/w24-ode-feature-repair-20261001-001/root-candidate16-software-review001.json",
+      "sha256": "d7f936824ce8b0797e2ee02e06bda93c8269ac82ab9b04678f67519f767730c8",
+      "status": "CHANGES_REQUIRED_DOSE_ENTRY_GATE_AND_PROPOSAL_BINDING_CLARITY"
+    },
+    "software_evidence": {
+      "summary": {
+        "path": "execution-scratch/test-efficiency/20261002T002240Z-1e5b63dc.summary.json",
+        "sha256": "c322a2b398eb93b2016d104155f2262fbd9c133d92a45db97b0edb1075661a6b",
+        "status": "PASS"
+      },
+      "verified_source_bindings": 137,
+      "pytest_count": 39,
+      "passed": 39,
+      "failed_errors_skipped": 0,
+      "fresh_java_classes_verified": 8,
+      "raw_class_receipt_files_verified": 19,
+      "detailed_source_and_raw_artifact_tables": "Retained in the linked root review; not duplicated here."
+    },
+    "root_acceptance": "CHANGES_REQUIRED_DOSE_ENTRY_GATE_AND_PROPOSAL_BINDING_CLARITY",
+    "native_go": false,
+    "native_acceptance": "NOT_RUN",
+    "scientific_acceptance": "NOT_RUN",
+    "material_findings": [
+      "DOSE_ENTRY_GATE: When observed comp1_Duv_rel is present, its native mode/value remain unverified; the continuous Time configuration does not explicitly set frozen manual, unscaled 1e-8. Verify the observed entry and getter before reporting configured; preserve independent staged dose checks and do not invent an entry for dose-free V1.",
+      "PROPOSAL_BINDING_CLARITY: State the six component rows as logical requirements. Native setters may use only descriptor-verified actual keys; do not claim or invent native comp1_w."
+    ],
+    "next_action": "Candidate17 addresses the root findings within the software-only plan. The 39-test software PASS is not root acceptance and does not authorize native work."
+  },
+  "candidate17_work_in_progress": {
+    "status": "SOFTWARE_IMPLEMENTATION_AND_BOUNDED_TESTS_IN_PROGRESS",
+    "source_anchor_commit": "e2e68ecd0217e2356cc6520d74a8602bf7122396",
+    "root_implementation_plan": {
+      "path": "execution-scratch/w24-ode-feature-repair-20261001-001/root-candidate17-implementation-plan001.json",
+      "sha256": "2ce7af34cdeec57cc88dbb8a7b35508bc3c4653bbc41daff9c5e002c3de91363",
+      "status": "GO_SOFTWARE_DOSE_GATE_REPAIR_AND_BOUNDED_TESTS_ONLY"
+    },
+    "root_review_dependency": {
+      "path": "execution-scratch/w24-ode-feature-repair-20261001-001/root-candidate16-software-review001.json",
+      "sha256": "d7f936824ce8b0797e2ee02e06bda93c8269ac82ab9b04678f67519f767730c8",
+      "status": "CHANGES_REQUIRED_DOSE_ENTRY_GATE_AND_PROPOSAL_BINDING_CLARITY"
+    },
+    "scope": "Repair the observed optional dose-entry mode/value gate and clarify logical component requirements versus descriptor-verified native keys; preserve frozen physics and solve/run gates per the root plan.",
+    "baseline": "NOT_YET_AVAILABLE",
+    "candidate_fingerprint": "NOT_YET_AVAILABLE",
+    "bounded_tests": "IN_PROGRESS; NO_TEST_PASS_RECEIPT_YET",
+    "freeze": "NOT_CREATED",
+    "admission_review": "NOT_RUN",
+    "native_go": "NOT_AUTHORIZED",
+    "native_acceptance": "NOT_RUN_FOR_CANDIDATE17",
+    "scientific_acceptance": "NOT_RUN_FOR_CANDIDATE17",
+    "next_action": "Wait for the same executor to complete the software outcome and bounded tests; root performs one review. After root review, require a distinct immutable freeze, admission review, and separate GO before any native setup."
+  },
+  "candidate17_review": {
+    "status": "PASS_FINAL_CANDIDATE17_SOFTWARE_WITH_HISTORICAL_PRESERVATION_QUALIFICATIONS",
+    "source_anchor_commit": "e2e68ecd0217e2356cc6520d74a8602bf7122396",
+    "candidate_fingerprint": "849150e5973b387bba9f116b42b1a55bf6670f1649fe832835f50bbe2a989208",
+    "root_review": {
+      "path": "execution-scratch/w24-ode-feature-repair-20261001-001/root-candidate17-software-review001.json",
+      "sha256": "7b320f61a9d4ca00b51eaa2b8570a8258b5bc6b41677d151aa858384a20849ec",
+      "status": "PASS_FINAL_CANDIDATE17_SOFTWARE_WITH_HISTORICAL_PRESERVATION_QUALIFICATIONS"
+    },
+    "final_baseline": {
+      "path": "tools/w24_ode_tag_repair_candidate17_baseline.json",
+      "sha256": "65e50c9029439226241ba4509359afe085e8541061782df281102e8e30588011",
+      "bytes": 23105
+    },
+    "final_run": {
+      "run_id": "20261002T011112Z-cc307064",
+      "summary": {
+        "path": "/private/tmp/comsol-mcp-w24-testfreeze-20261001-01/candidate17-success-final-20261002-001/wrapper/summary.json",
+        "sha256": "96a6e17385daff7dd8a0329fbb2e02a4b970171bb5ece1667990f6d55956cb68"
+      },
+      "manifest": {
+        "path": "/private/tmp/comsol-mcp-w24-testfreeze-20261001-01/candidate17-success-final-20261002-001/preservation-manifest.json",
+        "sha256": "543517fe6604ba33a6ab302fc6756dec14ea5fc19cfe96ddca07eab7deb08772"
+      },
+      "status": "PASS",
+      "focus_junit_cases": 28,
+      "required_regression_junit_cases": 12,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0
+    },
+    "verified_scope": {
+      "overlay_byte_equal_files": 9,
+      "java_sources": 4,
+      "java_classes": 9,
+      "class_major": 55,
+      "java_retained_files": 20,
+      "java_proxy_receipt": {
+        "path": "/private/tmp/comsol-mcp-w24-testfreeze-20261001-01/candidate17-success-final-20261002-001/java/w24-java-proxy-receipt.json",
+        "sha256": "f63d290ad2f611f0ff9685db9f334fddd565f2babdbefc99bdf7bdcb3674138d"
+      },
+      "internal_resolver_cases": 3,
+      "internal_solver_diagnostics_cases": 80,
+      "internal_cases_are_extra_pytest_cases": false,
+      "software_side_composition_source_hashes": 137,
+      "software_side_composition_python_sources": 127,
+      "scope_qualification": "CANDIDATE17_SOFTWARE_ONLY; NOT_NATIVE_EXECUTABLE_CLOSURE_OR_NATIVE_ACCEPTANCE"
+    },
+    "attempt_chain": {
+      "path": "/private/tmp/comsol-mcp-w24-testfreeze-20261001-01/candidate17-final-attempt-chain-20261002-001/attempt-chain-qualification.json",
+      "sha256": "6faaa2178715a3a9fd501b880f9a90adcf9e8eca2b9685621f6ab0a5752609d7",
+      "root_review": {
+        "path": "execution-scratch/w24-ode-feature-repair-20261001-001/root-candidate17-attempt-chain-review001.json",
+        "sha256": "2527dc41a7a9818dce6f510efa258f6a6bb8b731fcbcc842da2b3eb97de0faab",
+        "status": "PASS_RETAINED_CHAIN_WITH_EXPLICIT_MISSING_RAW_QUALIFICATIONS"
+      },
+      "attempts": [
+        {
+          "run_id": "20261002T010209Z-2097ca58",
+          "status": "FAIL_COMPILE_JAVA11_SYNTAX",
+          "retained_files": 14
+        },
+        {
+          "run_id": "20261002T010443Z-0feeb7d9",
+          "status": "FAIL_EXPECTED_HARNESS_COUNT_LITERAL_79_ACTUAL_80",
+          "retained_files": 28
+        },
+        {
+          "run_id": "20261002T010627Z-220523de",
+          "status": "PASS_SUPERSEDED_BY_INDENTATION_CLEANUP_AND_FINAL_RERUN",
+          "retained_files": 30
+        },
+        {
+          "run_id": "20261002T011112Z-cc307064",
+          "status": "PASS_FINAL",
+          "retained_files": 34
+        }
+      ]
+    },
+    "historical_preservation_qualifications": [
+      "Old79 Python source bytes were not retained for both the compile-failure and count-mismatch attempts; only the hash and retained failure evidence remain, no reconstruction.",
+      "Precontrol original manifest bytes were not retained after in-place update; current manifest and independent qualification remain.",
+      "Precontrol outer tool return remains history-only; malformed transcription is derived and not raw.",
+      "Preserve-all was not fully satisfied for these historical artifacts; final candidate17 source/evidence are complete and independently verified."
+    ],
+    "native_go": false,
+    "native_acceptance": "NOT_RUN_FOR_CANDIDATE17",
+    "scientific_acceptance": "NOT_RUN",
+    "effective_serendipity_DOF_tolerance_acceptance": "UNVERIFIED",
+    "next_action": "Complete actual Native34 source/Python composition, then create a fresh immutable current06 freeze, obtain root admission, and require a separate GO before fresh native setup. Candidate17 software PASS does not establish native, effective serendipity DOF tolerance, or scientific acceptance."
+  },
+  "current06_composition_freeze": {
+    "status": "NATIVE34_SOURCE_PYTHON_COMPOSITION_PENDING; FRESH_CURRENT06_FREEZE_NOT_CREATED; ROOT_ADMISSION_PENDING; NO_NATIVE_GO",
+    "candidate_id": "W24-CURE-HIST-AXISYM-01-CANDIDATE17",
+    "source_anchor_commit": "e2e68ecd0217e2356cc6520d74a8602bf7122396",
+    "candidate_fingerprint": "849150e5973b387bba9f116b42b1a55bf6670f1649fe832835f50bbe2a989208",
+    "candidate17_review": {
+      "path": "execution-scratch/w24-ode-feature-repair-20261001-001/root-candidate17-software-review001.json",
+      "sha256": "7b320f61a9d4ca00b51eaa2b8570a8258b5bc6b41677d151aa858384a20849ec",
+      "status": "PASS_FINAL_CANDIDATE17_SOFTWARE_WITH_HISTORICAL_PRESERVATION_QUALIFICATIONS"
+    },
+    "native34_source_python_composition": "FINAL_COMPOSITION_PENDING",
+    "fresh_immutable_freeze": "NOT_CREATED",
+    "root_admission": "NOT_RUN",
+    "separate_native_go": "NOT_AUTHORIZED",
+    "native_acceptance": "NOT_RUN",
+    "scientific_acceptance": "NOT_RUN",
+    "effective_serendipity_DOF_tolerance_acceptance": "UNVERIFIED",
+    "next_action": "Complete actual Native34 source/Python composition; create a fresh immutable current06 freeze; obtain root admission and a separate GO before any fresh native setup.",
+    "required_native_executable_closure": {
+      "source_count": 129,
+      "python_source_count": 122,
+      "status": "UNCHANGED_CURRENT06_FREEZE_SCOPE; NOT_YET_FROZEN"
+    },
+    "software_candidate_source_closure": {
+      "path": "tools/w24_ode_tag_repair_candidate17_baseline.json",
+      "sha256": "65e50c9029439226241ba4509359afe085e8541061782df281102e8e30588011",
+      "candidate_fingerprint": "849150e5973b387bba9f116b42b1a55bf6670f1649fe832835f50bbe2a989208",
+      "source_count": 137,
+      "python_source_count": 127
+    },
+    "software_candidate_source_closure_status": "BOUND_AS_SEPARATE_SOFTWARE_SIDE_COMPOSITION; FRESH_GUARD_PENDING; NOT_NATIVE_ACCEPTANCE",
+    "fresh_guard": "PENDING"
+  },
+  "current06_offline_admission": {
+    "status": "PASS_CURRENT_OFFLINE_CANDIDATE_NATIVE_ADMISSION_ONLY",
+    "freeze": {
+      "path": "docs/full_project_execution/w24/evidence/setup_candidate_20261002_current06/offline_candidate_freeze002.json",
+      "sha256": "940ac2c59fa502d95f8d158f18477bfe48e05fef70b36c669f201a17da72056f",
+      "size_bytes": 254918,
+      "status": "FROZEN_OFFLINE_CANDIDATE_AWAITING_ROOT_NATIVE_SLOT"
+    },
+    "root_admission": {
+      "path": "execution-scratch/w24-native-setup-20261002-current06/root-current06-freeze002-review001.json",
+      "sha256": "264f700548cc624d9ca5515f24aecec3d4f4e2c754e24305c77552fca48b04a8",
+      "size_bytes": 3255,
+      "status": "PASS_CURRENT_OFFLINE_CANDIDATE_NATIVE_ADMISSION_ONLY"
+    },
+    "source_python_composition": {
+      "path": "execution-scratch/w24-ode-feature-repair-20261001-001/current06-candidate17-source-python-composition002/source-python-composition002.json",
+      "sha256": "f14ba863dd849f90d18ed9f5ba2c63adfd7d749ffee127a7cb7b5d075eceb0a9",
+      "size_bytes": 115174,
+      "status": "PASS_FULL_CANDIDATE17_SOURCE_AND_PYTHON_COVERAGE_COMPOSED"
+    },
+    "composition_root_review": {
+      "path": "execution-scratch/w24-ode-feature-repair-20261001-001/root-current06-candidate17-composition002-review001.json",
+      "sha256": "a9d23d33bcbd356bf103e4d2284e82f8985dab4822d575f756f062084d534f0b",
+      "size_bytes": 1539,
+      "status": "PASS_COMPOSED_SOURCE_SYNTAX_AND_ARTIFACT_BINDING_ONLY"
+    },
+    "candidate_id": "W24-CURE-HIST-AXISYM-01",
+    "candidate_fingerprint": "849150e5973b387bba9f116b42b1a55bf6670f1649fe832835f50bbe2a989208",
+    "native_executable_closure": {
+      "source_count": 129,
+      "python_source_count": 122,
+      "source_closure_sha256": "211e8a86c9737f84f1d712c441984e063bacc3216d02380249485257f84022b7"
+    },
+    "software_candidate_source_closure": {
+      "path": "tools/w24_ode_tag_repair_candidate17_baseline.json",
+      "sha256": "65e50c9029439226241ba4509359afe085e8541061782df281102e8e30588011",
+      "candidate_fingerprint": "849150e5973b387bba9f116b42b1a55bf6670f1649fe832835f50bbe2a989208",
+      "source_count": 137,
+      "python_source_count": 127
+    },
+    "composition_coverage": {
+      "current05_inherited_source_and_pyc_rehashed": 120,
+      "prep_in_memory_compile": 2,
+      "fresh_native34_in_memory_compile": 5,
+      "test_files": 5,
+      "selected_nodes": 11,
+      "junit_cases": 40
+    },
+    "prior_freeze001_metadata_rejection": {
+      "freeze_sha256": "d274f209d940acd092c5795a07db74b3808b0cf53cc871159b6f7cbf3b3e61dd",
+      "root_review_path": "execution-scratch/w24-native-setup-20261002-current06/root-freeze001-metadata-rejection001.json",
+      "root_review_sha256": "023117f8a0e31c391021fc9e9ca9f491eacc801e42474b8298b4bc8418e95d05",
+      "status": "CHANGES_REQUIRED_CURRENT05_HISTORY_AND_TEST_SELECTION_METADATA"
+    },
+    "offline_only": true,
+    "native_go": false,
+    "native_acceptance": "NOT_RUN",
+    "scientific_acceptance": "NOT_RUN",
+    "engine_births": 0,
+    "application_imports": 0,
+    "study_run_submissions": 0,
+    "noengine_preflight": "NOT_RERUN; PRIOR_105_34_EVIDENCE_UNCHANGED",
+    "fresh_guards": "PENDING_UNTIL_SEPARATE_NATIVE_GO",
+    "final_notgo_plan_controller": "PENDING",
+    "root_plan_review": "PENDING",
+    "separate_native_go": "NOT_AUTHORIZED",
+    "next_action": "Freeze002 has root offline-candidate native admission PASS only. Finalize a fail-closed NOTGO plan/controller and obtain root plan review, then require separate explicit native GO before fresh guards; only after GO and passing guards may at most one zero-study-run native setup be attempted."
+  },
+  "current06_next_action": "Freeze002 has root offline-candidate native admission PASS only. Finalize a fail-closed NOTGO plan/controller and obtain root plan review, then require separate explicit native GO before fresh guards; only after GO and passing guards may at most one zero-study-run native setup be attempted."
 }
