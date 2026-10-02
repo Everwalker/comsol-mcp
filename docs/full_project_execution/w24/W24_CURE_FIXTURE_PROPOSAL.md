@@ -293,7 +293,20 @@ component-input values
 `"T 1e-4 alpha 1e-8 alpha_iso 1e-8 qpost 1e-8 u 1e-12 w 1e-12"`.
 Before mapping the logical displacement inputs, read back a two-dimensional
 axisymmetric geometry and the unique Solid Mechanics `PhysicsField` with
-`field()="u"` and distinct `component()` values exactly `{u,w}`. The generated
+`field()="u"` and distinct `component()` values exactly `{u,w}`. Enumerate the
+complete `solid.field().tags()` list and read every field name and component
+array; uniqueness applies to the `field()="u"` selection, not the total list
+length. Retain the full descriptor inventory, actual total count, unique
+selected-displacement count and exact selected row across all stages. Other
+descriptors are observed metadata without an active/inactive claim. No
+nonselected descriptor may share component `u` or `w` with the selected
+displacement row; other auxiliary components are not given a global uniqueness
+constraint. Missing,
+duplicate, incomplete or failed getters remain fail-closed and include the
+getter stage plus actual tags/count/names/components in the failure. Current06
+reported a missing-or-ambiguous list failure but did not retain its raw tags or
+count; candidate18 is a software contract correction, not native root-cause
+closure or runtime acceptance. The generated
 Time solver has the actual native keys `comp1_T`, `comp1_alpha`,
 `comp1_alpha_iso`, `comp1_qpost`, and `comp1_u`; both logical displacement
 inputs `u` and `w` bind to the observed `comp1_u` entry. Apply setters only to

@@ -206,6 +206,11 @@ def _contract_readback() -> dict:
             "rtol": 1e-5, "atolglobalmethod": "unscaled", "atolglobal": 1e-8,
             "solver_field_contract": {
                 "geometry_dimension": 2, "geometry_axisymmetric": True,
+                "physics_field_count": 1, "selected_displacement_field_count": 1,
+                "physics_field_descriptors": [{
+                    "physics_tag": "solid", "physics_field_count": 1,
+                    "field_tag": "u", "field": "u", "components": ["u", "w"],
+                }],
                 "physics_field_descriptor": {
                     "physics_tag": "solid", "physics_field_count": 1,
                     "field_tag": "u", "field": "u", "components": ["u", "w"],
@@ -1865,3 +1870,94 @@ def test_declared_v2_loaded_model_contract_failure_stops_before_study_run(tmp_pa
         assert worker.study_runs == 0
     finally:
         daemon.close()
+
+
+def _with_auxiliary_physics_inventory(aux_first=True):
+    readback = _contract_readback()
+    for solver in readback["solver_readbacks"].values():
+        contract = solver["solver_field_contract"]
+        selected = dict(contract["physics_field_descriptor"], physics_field_count=2)
+        auxiliary = {"physics_tag": "solid", "physics_field_count": 2, "field_tag": "fixture_aux_tag",
+                     "field": "auxiliary_fixture_field", "components": ["fixture_aux"]}
+        contract.update(physics_field_count=2, physics_field_descriptor=selected,
+                        physics_field_descriptors=[auxiliary, dict(selected)] if aux_first else [dict(selected), auxiliary])
+    return readback
+
+
+@pytest.mark.parametrize("aux_first", [True, False])
+def test_v2_full_physics_inventory_accepts_unique_displacement_with_auxiliary(aux_first):
+    from tools.w24_cure_v2_capture import validate_cure_law_v2_contract_readback
+
+    result = validate_cure_law_v2_contract_readback(_with_auxiliary_physics_inventory(aux_first))
+    assert result["effective_serendipity_dof_tolerance_conversion"] == "UNVERIFIED"
+    assert result["full_dof_absolute_tolerances"]["comp1_w"] == 1e-12
+
+
+@pytest.mark.parametrize("mutation", [
+    "missing_inventory", "null_inventory", "empty_inventory", "total_count_wrong", "bool_count", "float_count",
+    "descriptor_float_count", "selected_descriptor_float_count", "duplicate_tags", "null_tag", "blank_field",
+    "null_components", "empty_aux_components", "duplicate_aux_components", "multiple_u", "missing_u",
+    "selected_count_wrong", "bool_selected_count", "float_selected_count", "selected_row_mismatch",
+    "full_inventory_truncation", "crossstage_inventory_mismatch", "crossstage_order_mismatch", "extra_time_key",
+    "aux_alias_u", "aux_alias_w", "aux_alias_uw",
+])
+def test_v2_full_physics_inventory_rejects_tampering_and_ambiguity(mutation):
+    from tools.w24_cure_v2_capture import CaptureError, validate_cure_law_v2_contract_readback
+
+    readback = _with_auxiliary_physics_inventory()
+    solver = readback["solver_readbacks"]["stdUV"]
+    contract = solver["solver_field_contract"]
+    inventory = contract["physics_field_descriptors"]
+    if mutation == "missing_inventory":
+        contract.pop("physics_field_descriptors")
+    elif mutation == "null_inventory":
+        contract["physics_field_descriptors"] = None
+    elif mutation == "empty_inventory":
+        contract["physics_field_descriptors"] = []
+    elif mutation == "total_count_wrong":
+        contract["physics_field_count"] = 3
+    elif mutation == "bool_count":
+        contract["physics_field_count"] = True
+    elif mutation == "float_count":
+        contract["physics_field_count"] = 2.0
+    elif mutation == "descriptor_float_count":
+        inventory[0]["physics_field_count"] = 2.0
+    elif mutation == "selected_descriptor_float_count":
+        contract["physics_field_descriptor"]["physics_field_count"] = 2.0
+    elif mutation == "duplicate_tags":
+        inventory[0]["field_tag"] = inventory[1]["field_tag"]
+    elif mutation == "null_tag":
+        inventory[0]["field_tag"] = None
+    elif mutation == "blank_field":
+        inventory[0]["field"] = " "
+    elif mutation == "null_components":
+        inventory[0]["components"] = None
+    elif mutation == "empty_aux_components":
+        inventory[0]["components"] = []
+    elif mutation == "duplicate_aux_components":
+        inventory[0]["components"] = ["fixture_aux", "fixture_aux"]
+    elif mutation in {"aux_alias_u", "aux_alias_w", "aux_alias_uw"}:
+        inventory[0]["components"] = {"aux_alias_u": ["u"], "aux_alias_w": ["w"], "aux_alias_uw": ["u", "w"]}[mutation]
+    elif mutation == "multiple_u":
+        inventory[0].update(field="u", components=["u", "w"])
+    elif mutation == "missing_u":
+        inventory[1]["field"] = "other_fixture_field"
+    elif mutation == "selected_count_wrong":
+        contract["selected_displacement_field_count"] = 2
+    elif mutation == "bool_selected_count":
+        contract["selected_displacement_field_count"] = True
+    elif mutation == "float_selected_count":
+        contract["selected_displacement_field_count"] = 1.0
+    elif mutation == "selected_row_mismatch":
+        contract["physics_field_descriptor"]["components"] = ["w", "u"]
+    elif mutation == "full_inventory_truncation":
+        contract["physics_field_descriptors"] = [inventory[1]]
+    elif mutation == "crossstage_inventory_mismatch":
+        contract["physics_field_descriptors"][0]["field"] = "changed_auxiliary_fixture_field"
+    elif mutation == "crossstage_order_mismatch":
+        contract["physics_field_descriptors"].reverse()
+    else:
+        contract["solver_entry_keys"].append("comp1_extra_active_fixture")
+        solver["field_tolerances"]["comp1_extra_active_fixture"] = dict(solver["field_tolerances"]["comp1_u"])
+    with pytest.raises(CaptureError):
+        validate_cure_law_v2_contract_readback(readback)

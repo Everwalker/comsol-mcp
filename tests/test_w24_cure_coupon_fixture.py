@@ -187,7 +187,7 @@ def test_w24_ode_equations_are_resolved_by_unique_feature_type_and_reported_tag(
     )
     for main_class, expected_stdout in (
         ("W24DistributedODEResolverHarness", "W24 DistributedODE resolver proxy checks: PASS (3 cases)"),
-        ("W24SolverSequenceDiagnosticsHarness", "W24 solver-sequence diagnostics proxy checks: PASS (80 cases)"),
+        ("W24SolverSequenceDiagnosticsHarness", "W24 solver-sequence diagnostics proxy checks: PASS (122 cases)"),
     ):
         result = run_results[main_class]
         assert result["returncode"] == 0 and not result["timed_out"], (

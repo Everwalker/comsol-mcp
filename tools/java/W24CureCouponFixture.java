@@ -1249,20 +1249,52 @@ public final class W24CureCouponFixture {
         if (geometryDimension != 2 || !axisymmetric) {
             throw new IllegalStateException("W24 displacement tolerance mapping requires 2-D axisymmetric geometry");
         }
-        if (fieldTags == null || fieldNames == null || fieldComponents == null ||
-            fieldTags.length != 1 || fieldNames.length != 1 || fieldComponents.length != 1 ||
-            fieldTags[0] == null || fieldTags[0].isBlank() ||
-            !"u".equals(fieldNames[0]) || fieldComponents[0] == null) {
-            throw new IllegalStateException("solid PhysicsField must be one unambiguous field=u descriptor");
+        if (fieldTags == null || fieldNames == null || fieldComponents == null || fieldTags.length == 0 ||
+            fieldNames.length != fieldTags.length || fieldComponents.length != fieldTags.length) {
+            throw physicsFieldContractFailure("validate:field=u descriptor arrays null/empty/misaligned", fieldTags, fieldNames, fieldComponents, null);
         }
-        Set<String> components = new LinkedHashSet<>();
-        for (String component : fieldComponents[0]) {
-            if (component == null || component.isBlank() || !components.add(component)) {
-                throw new IllegalStateException("solid PhysicsField component descriptor is empty or ambiguous");
+        Set<String> tags = new LinkedHashSet<>();
+        List<Map<String, Object>> descriptors = new ArrayList<>();
+        int selected = -1;
+        int displacementCount = 0;
+        for (int i = 0; i < fieldTags.length; i++) {
+            if (fieldTags[i] == null || fieldTags[i].isBlank() || !tags.add(fieldTags[i]) ||
+                fieldNames[i] == null || fieldNames[i].isBlank() || fieldComponents[i] == null || fieldComponents[i].length == 0) {
+                throw physicsFieldContractFailure("validate:field=u descriptor incomplete or ambiguous", fieldTags, fieldNames, fieldComponents, null);
             }
+            Set<String> components = new LinkedHashSet<>();
+            for (String component : fieldComponents[i]) {
+                if (component == null || component.isBlank() || !components.add(component)) {
+                    throw physicsFieldContractFailure("validate:component descriptor empty or ambiguous", fieldTags, fieldNames, fieldComponents, null);
+                }
+            }
+            if ("u".equals(fieldNames[i])) {
+                displacementCount++;
+                selected = i;
+                if (components.size() != 2 || !components.contains("u") || !components.contains("w")) {
+                    throw physicsFieldContractFailure("validate:field=u components must be exactly {u,w}", fieldTags, fieldNames, fieldComponents, null);
+                }
+            }
+            Map<String, Object> observed = new LinkedHashMap<>();
+            observed.put("physics_tag", "solid");
+            observed.put("physics_field_count", fieldTags.length);
+            observed.put("field_tag", fieldTags[i]);
+            observed.put("field", fieldNames[i]);
+            observed.put("components", new ArrayList<>(Arrays.asList(fieldComponents[i].clone())));
+            descriptors.add(observed);
         }
-        if (components.size() != 2 || !components.contains("u") || !components.contains("w")) {
-            throw new IllegalStateException("solid PhysicsField field=u components must be exactly {u,w}");
+        if (displacementCount != 1) {
+            throw physicsFieldContractFailure("validate:field=u selection missing or ambiguous; selected_count=" + displacementCount,
+                fieldTags, fieldNames, fieldComponents, null);
+        }
+        for (int i = 0; i < fieldTags.length; i++) {
+            if (i == selected) continue;
+            for (String component : fieldComponents[i]) {
+                if ("u".equals(component) || "w".equals(component)) {
+                    throw physicsFieldContractFailure("validate:nonselected descriptor aliases selected u/w component ownership",
+                        fieldTags, fieldNames, fieldComponents, null);
+                }
+            }
         }
         if (actualEntryKeys == null) {
             throw new IllegalStateException("native time solver returned a null atolmethod entry table");
@@ -1281,45 +1313,75 @@ public final class W24CureCouponFixture {
         }
         List<String> sortedKeys = new ArrayList<>(actual);
         Collections.sort(sortedKeys);
-        Map<String, Object> descriptor = new LinkedHashMap<>();
-        descriptor.put("physics_tag", "solid");
-        descriptor.put("physics_field_count", fieldTags.length);
-        descriptor.put("field_tag", fieldTags[0]);
-        descriptor.put("field", fieldNames[0]);
-        descriptor.put("components", new ArrayList<>(Arrays.asList(fieldComponents[0].clone())));
+        Map<String, Object> descriptor = descriptors.get(selected);
         Map<String, Object> bindings = new LinkedHashMap<>();
         bindings.put("u", "comp1_u");
         bindings.put("w", "comp1_u");
         Map<String, Object> contract = new LinkedHashMap<>();
         contract.put("geometry_dimension", geometryDimension);
         contract.put("geometry_axisymmetric", axisymmetric);
+        contract.put("physics_field_count", fieldTags.length);
+        contract.put("physics_field_descriptors", descriptors);
+        contract.put("selected_displacement_field_count", displacementCount);
         contract.put("physics_field_descriptor", descriptor);
         contract.put("component_solver_entry_bindings", bindings);
         contract.put("solver_entry_keys", sortedKeys);
         return contract;
     }
 
+    private static IllegalStateException physicsFieldContractFailure(String getterStage, String[] tags,
+            String[] names, String[][] components, RuntimeException cause) {
+        String message = "solid PhysicsField field=u contract failure; getter_stage=" + getterStage +
+            "; actual_tags=" + Arrays.toString(tags) + "; actual_total_count=" + (tags == null ? "UNOBSERVED" : tags.length) +
+            "; actual_field_names=" + Arrays.toString(names) + "; actual_components=" + Arrays.deepToString(components) +
+            (cause == null ? "" : "; cause=" + cause.getClass().getSimpleName() + ": " + cause.getMessage());
+        return cause == null ? new IllegalStateException(message) : new IllegalStateException(message, cause);
+    }
+
     private static Map<String, Object> readSolverFieldContract(Model model, SolverFeature time) {
-        GeomSequence geom = model.component(COMPONENT).geom(GEOMETRY);
-        int dimension = geom.getSDim();
-        boolean axisymmetric = geom.isAxisymmetric();
-        if (dimension != 2 || !axisymmetric) {
-            throw new IllegalStateException("W24 displacement tolerance mapping requires 2-D axisymmetric geometry");
+        String[] fieldTags = null;
+        String[] fieldNames = null;
+        String[][] components = null;
+        String getterStage = "geometry";
+        try {
+            GeomSequence geom = model.component(COMPONENT).geom(GEOMETRY);
+            getterStage = "geometry.getSDim";
+            int dimension = geom.getSDim();
+            getterStage = "geometry.isAxisymmetric";
+            boolean axisymmetric = geom.isAxisymmetric();
+            if (dimension != 2 || !axisymmetric) {
+                throw new IllegalStateException("W24 displacement tolerance mapping requires 2-D axisymmetric geometry");
+            }
+            getterStage = "model.physics(solid)";
+            Physics solid = model.physics("solid");
+            getterStage = "solid.field().tags()";
+            fieldTags = solid.field().tags();
+            if (fieldTags == null || fieldTags.length == 0) {
+                throw new IllegalStateException("field=u descriptor list is null or empty");
+            }
+            fieldNames = new String[fieldTags.length];
+            components = new String[fieldTags.length][];
+            Set<String> uniqueTags = new LinkedHashSet<>();
+            for (int i = 0; i < fieldTags.length; i++) {
+                getterStage = "field_tag[" + i + "]";
+                if (fieldTags[i] == null || fieldTags[i].isBlank() || !uniqueTags.add(fieldTags[i])) {
+                    throw new IllegalStateException("field=u descriptor tags incomplete or ambiguous");
+                }
+                getterStage = "solid.field(" + fieldTags[i] + ")";
+                PhysicsField field = solid.field(fieldTags[i]);
+                if (field == null) throw new IllegalStateException("PhysicsField getter returned null");
+                getterStage = "solid.field(" + fieldTags[i] + ").field()";
+                fieldNames[i] = field.field();
+                getterStage = "solid.field(" + fieldTags[i] + ").component()";
+                components[i] = field.component();
+            }
+            getterStage = "time.getEntryKeys(atolmethod)";
+            String[] entryKeys = time.getEntryKeys("atolmethod");
+            getterStage = "validateSolverFieldContract";
+            return validateSolverFieldContract(dimension, axisymmetric, fieldTags, fieldNames, components, entryKeys);
+        } catch (RuntimeException cause) {
+            throw physicsFieldContractFailure(getterStage, fieldTags, fieldNames, components, cause);
         }
-        Physics solid = model.physics("solid");
-        String[] fieldTags = solid.field().tags();
-        if (fieldTags == null || fieldTags.length != 1 || fieldTags[0] == null || fieldTags[0].isBlank()) {
-            throw new IllegalStateException("solid PhysicsField list is missing or ambiguous");
-        }
-        String[] fieldNames = new String[fieldTags == null ? 0 : fieldTags.length];
-        String[][] components = new String[fieldNames.length][];
-        for (int i = 0; i < fieldNames.length; i++) {
-            PhysicsField field = solid.field(fieldTags[i]);
-            fieldNames[i] = field.field();
-            components[i] = field.component();
-        }
-        return validateSolverFieldContract(dimension, axisymmetric, fieldTags,
-            fieldNames, components, time.getEntryKeys("atolmethod"));
     }
 
     private static Map<String, Object> solverToleranceReadbacks(Model model, SolverFeature time) {

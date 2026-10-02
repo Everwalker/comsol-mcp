@@ -443,20 +443,45 @@ def validate_cure_law_v2_contract_readback(readback: Mapping[str, Any]) -> dict[
                                       f"solver_readbacks.{stage}.solver_field_contract.physics_field_descriptor")
         components = descriptor.get("components")
         component_bindings = field_contract.get("component_solver_entry_bindings")
-        if (isinstance(field_contract.get("geometry_dimension"), bool) or
-                field_contract.get("geometry_dimension") != 2 or
-            field_contract.get("geometry_axisymmetric") is not True or
-            descriptor.get("physics_tag") != "solid" or
-            isinstance(descriptor.get("physics_field_count"), bool) or descriptor.get("physics_field_count") != 1 or
-            not isinstance(descriptor.get("field_tag"), str) or not descriptor["field_tag"] or
-                descriptor.get("field") != "u" or
-                not isinstance(components, list) or len(components) != 2 or
-                any(not isinstance(component, str) or not component for component in components) or
-                len(set(components)) != 2 or set(components) != {"u", "w"} or
+        inventory = field_contract.get("physics_field_descriptors")
+        count = field_contract.get("physics_field_count")
+        if (not isinstance(inventory, list) or not inventory or isinstance(count, bool) or
+                not isinstance(count, int) or count != len(inventory)):
+            raise CaptureError(f"loaded model full PhysicsField inventory/count is incomplete for {stage}")
+        tags = set()
+        displacement = []
+        inventory_signature = []
+        for raw_descriptor in inventory:
+            observed = _require_mapping(raw_descriptor, f"solver_readbacks.{stage}.physics_field_descriptors")
+            tag, name, observed_components = observed.get("field_tag"), observed.get("field"), observed.get("components")
+            if (set(observed) != {"physics_tag", "physics_field_count", "field_tag", "field", "components"} or
+                    observed.get("physics_tag") != "solid" or isinstance(observed.get("physics_field_count"), bool) or
+                    not isinstance(observed.get("physics_field_count"), int) or observed.get("physics_field_count") != count or
+                    not isinstance(tag, str) or not tag.strip() or tag in tags or
+                    not isinstance(name, str) or not name.strip() or
+                    not isinstance(observed_components, list) or not observed_components or
+                    any(not isinstance(component, str) or not component.strip() for component in observed_components) or
+                    len(set(observed_components)) != len(observed_components)):
+                raise CaptureError(f"loaded model full PhysicsField descriptor inventory is malformed for {stage}")
+            tags.add(tag)
+            inventory_signature.append((tag, name, tuple(observed_components)))
+            if name == "u":
+                displacement.append(observed)
+        if (isinstance(field_contract.get("geometry_dimension"), bool) or field_contract.get("geometry_dimension") != 2 or
+                field_contract.get("geometry_axisymmetric") is not True or len(displacement) != 1 or
+                isinstance(field_contract.get("selected_displacement_field_count"), bool) or
+                not isinstance(field_contract.get("selected_displacement_field_count"), int) or
+                field_contract.get("selected_displacement_field_count") != 1 or
+                isinstance(descriptor.get("physics_field_count"), bool) or
+                not isinstance(descriptor.get("physics_field_count"), int) or descriptor != displacement[0] or
+                not isinstance(components, list) or len(components) != 2 or set(components) != {"u", "w"} or
                 component_bindings != {"u": "comp1_u", "w": "comp1_u"}):
             raise CaptureError(f"loaded model solver field descriptor or observed u/w binding is incomplete for {stage}")
+        if any(set(observed["components"]) & {"u", "w"}
+               for observed in inventory if observed["field"] != "u"):
+            raise CaptureError(f"loaded model nonselected descriptor aliases selected u/w component ownership for {stage}")
         signature = (field_contract.get("geometry_dimension"), field_contract.get("geometry_axisymmetric"),
-                     descriptor.get("physics_tag"), descriptor.get("field_tag"), descriptor.get("field"),
+                     count, tuple(inventory_signature), descriptor.get("field_tag"), descriptor.get("field"),
                      tuple(components), tuple(sorted(component_bindings.items())))
         if field_contract_signature is None:
             field_contract_signature = signature

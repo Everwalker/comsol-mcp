@@ -49,6 +49,7 @@ public final class W24SolverSequenceDiagnosticsHarness {
         keepsAllDiagnosticOnlyAndRetainsGeneratorCause();
         boundsLargeDiagnosticSnapshots();
         verifiesCouponAndScienceFieldBindingContracts();
+        verifiesFullPhysicsFieldInventoryFromActualGetters();
         verifiesScienceContinuousDoseToleranceReadback();
         rejectsMissingNativeGroupBeforeScienceSolverConfiguration();
         System.out.println("W24 solver-sequence diagnostics proxy checks: PASS (" + cases + " cases)");
@@ -113,6 +114,141 @@ public final class W24SolverSequenceDiagnosticsHarness {
             rejectToleranceMutation(science, "comp1_Duv_rel", "atol", "NaN", "readback mismatch");
             rejectToleranceMutation(science, "comp1_Duv_rel", "atol", "1e-7", "readback mismatch");
         }
+    }
+
+    private static void verifiesFullPhysicsFieldInventoryFromActualGetters() throws Exception {
+        for (boolean science : new boolean[]{false, true}) {
+            Method reader = method(science ? W24CureScienceFixture.class : W24CureCouponFixture.class,
+                "readSolverFieldContract", Model.class, SolverFeature.class);
+            for (int order = 0; order < 3; order++) {
+                String[] tags = order == 0 ? new String[]{"disp"}
+                    : order == 1 ? new String[]{"aux", "disp"} : new String[]{"disp", "aux"};
+                String[] names = order == 0 ? new String[]{"u"}
+                    : order == 1 ? new String[]{"auxiliary_fixture_field", "u"} : new String[]{"u", "auxiliary_fixture_field"};
+                String[][] components = order == 0 ? new String[][]{{"u", "w"}}
+                    : order == 1 ? new String[][]{{"fixture_aux"}, {"u", "w"}} : new String[][]{{"u", "w"}, {"fixture_aux"}};
+                final int[] nameGetters = {0}, componentGetters = {0};
+                Model model = descriptorModel(tags, names, components, "", nameGetters, componentGetters);
+                SolverFeature time = entryTable("");
+                Map<String, Object> contract = (Map<String, Object>) reader.invoke(null, model, time);
+                List<Map<String, Object>> inventory = (List<Map<String, Object>>) contract.get("physics_field_descriptors");
+                require(inventory.size() == tags.length && contract.get("physics_field_count").equals(tags.length) &&
+                        contract.get("selected_displacement_field_count").equals(1) &&
+                        "disp".equals(((Map<?, ?>) contract.get("physics_field_descriptor")).get("field_tag")) &&
+                        nameGetters[0] == tags.length && componentGetters[0] == tags.length,
+                    "actual descriptor getters must retain the complete inventory and uniquely select u");
+                cases++;
+            }
+            for (String[] aliases : new String[][]{{"u"}, {"w"}, {"u", "w"}}) {
+                Model model = descriptorModel(new String[]{"aux", "disp"}, new String[]{"auxiliary_fixture_field", "u"},
+                    new String[][]{aliases, {"u", "w"}}, "", new int[]{0}, new int[]{0});
+                try {
+                    reader.invoke(null, model, entryTable(""));
+                    throw new AssertionError("nonselected actual descriptor aliased u/w component ownership");
+                } catch (InvocationTargetException expected) {
+                    String message = expected.getCause().getMessage();
+                    require(expected.getCause() instanceof IllegalStateException &&
+                            message.contains("aliases selected u/w component ownership") &&
+                            message.contains("actual_tags=[aux, disp]") && message.contains("actual_total_count=2") &&
+                            message.contains("actual_field_names=[auxiliary_fixture_field, u]") &&
+                            message.contains("actual_components="),
+                        "actual getter ownership alias must fail with complete observed inventory");
+                }
+                cases++;
+            }
+            for (String failing : new String[]{"tags", "lookup:aux", "lookup-null:aux", "field:aux", "component:aux", "entry_keys"}) {
+                Model model = descriptorModel(new String[]{"aux", "disp"}, new String[]{"auxiliary_fixture_field", "u"},
+                    new String[][]{{"fixture_aux"}, {"u", "w"}}, failing, new int[]{0}, new int[]{0});
+                try {
+                    reader.invoke(null, model, entryTable(failing));
+                    throw new AssertionError("required actual getter failure was ignored: " + failing);
+                } catch (InvocationTargetException expected) {
+                    String message = expected.getCause().getMessage();
+                    require(expected.getCause() instanceof IllegalStateException && message.contains("getter_stage=") &&
+                            message.contains("actual_tags=") && message.contains("actual_total_count=") &&
+                            message.contains("actual_field_names=") && message.contains("actual_components=") &&
+                            (failing.equals("lookup-null:aux") || message.contains("synthetic getter failure")),
+                        "required getter failure must preserve observed inventory and getter stage: " + failing);
+                }
+                cases++;
+            }
+            expectFieldFailure(science, 2, true, new String[]{"aux", "disp"}, new String[]{"u"},
+                new String[][]{{"fixture_aux"}, {"u", "w"}}, nativeKeys(), "misaligned");
+            expectFieldFailure(science, 2, true, new String[]{"aux", "disp"}, new String[]{"auxiliary_fixture_field", "u"},
+                new String[][]{{"u", "w"}}, nativeKeys(), "misaligned");
+            expectFieldFailure(science, 2, true, new String[]{"disp"}, null,
+                new String[][]{{"u", "w"}}, nativeKeys(), "null/empty/misaligned");
+            expectFieldFailure(science, 2, true, new String[]{"aux", "disp"}, new String[]{"auxiliary_fixture_field", "u"},
+                new String[][]{null, {"u", "w"}}, nativeKeys(), "incomplete");
+            expectFieldFailure(science, 2, true, new String[]{"aux", "disp"}, new String[]{"auxiliary_fixture_field", "u"},
+                new String[][]{new String[0], {"u", "w"}}, nativeKeys(), "incomplete");
+            expectFieldFailure(science, 2, true, new String[]{"aux", "disp"}, new String[]{" ", "u"},
+                new String[][]{{"fixture_aux"}, {"u", "w"}}, nativeKeys(), "incomplete");
+            expectFieldFailure(science, 2, true, new String[]{"disp1", "disp2"}, new String[]{"u", "u"},
+                new String[][]{{"u", "w"}, {"u", "w"}}, nativeKeys(), "selected_count=2");
+            expectFieldFailure(science, 2, true, new String[]{"aux"}, new String[]{"auxiliary_fixture_field"},
+                new String[][]{{"fixture_aux"}}, nativeKeys(), "selected_count=0");
+            expectFieldFailure(science, 2, true, new String[]{"aux", "disp"}, new String[]{"auxiliary_fixture_field", "u"},
+                new String[][]{{"fixture_aux", "fixture_aux"}, {"u", "w"}}, nativeKeys(), "ambiguous");
+        }
+    }
+
+    private static SolverFeature entryTable(String failing) {
+        return proxy(SolverFeature.class, (instance, method, args) -> {
+            if (method.getName().equals("getEntryKeys")) {
+                if (failing.equals("entry_keys")) throw new IllegalStateException("synthetic getter failure entry_keys");
+                return nativeKeys();
+            }
+            return objectMethod(instance, method, args);
+        });
+    }
+
+    private static Model descriptorModel(String[] tags, String[] names, String[][] components, String failing,
+            int[] nameGetters, int[] componentGetters) {
+        GeomSequence geom = proxy(GeomSequence.class, (instance, method, args) -> {
+            if (method.getName().equals("getSDim")) return 2;
+            if (method.getName().equals("isAxisymmetric")) return true;
+            return objectMethod(instance, method, args);
+        });
+        ModelNode component = proxy(ModelNode.class, (instance, method, args) -> {
+            if (method.getName().equals("geom") && method.getParameterCount() == 1) return geom;
+            return objectMethod(instance, method, args);
+        });
+        PhysicsFieldList list = proxy(PhysicsFieldList.class, (instance, method, args) -> {
+            if (method.getName().equals("tags") && method.getParameterCount() == 0) {
+                if (failing.equals("tags")) throw new IllegalStateException("synthetic getter failure tags");
+                return tags.clone();
+            }
+            return objectMethod(instance, method, args);
+        });
+        Physics physics = proxy(Physics.class, (instance, method, args) -> {
+            if (method.getName().equals("field") && method.getParameterCount() == 0) return list;
+            if (method.getName().equals("field") && method.getParameterCount() == 1) {
+                String tag = (String) args[0];
+                if (failing.equals("lookup:" + tag)) throw new IllegalStateException("synthetic getter failure lookup");
+                if (failing.equals("lookup-null:" + tag)) return null;
+                int index = Arrays.asList(tags).indexOf(tag);
+                return proxy(PhysicsField.class, (field, getter, parameters) -> {
+                    if (getter.getName().equals("field") && getter.getParameterCount() == 0) {
+                        if (failing.equals("field:" + tag)) throw new IllegalStateException("synthetic getter failure field");
+                        nameGetters[0]++;
+                        return names[index];
+                    }
+                    if (getter.getName().equals("component") && getter.getParameterCount() == 0) {
+                        if (failing.equals("component:" + tag)) throw new IllegalStateException("synthetic getter failure component");
+                        componentGetters[0]++;
+                        return components[index].clone();
+                    }
+                    return objectMethod(field, getter, parameters);
+                });
+            }
+            return objectMethod(instance, method, args);
+        });
+        return proxy(Model.class, (instance, method, args) -> {
+            if (method.getName().equals("component") && method.getParameterCount() == 1) return component;
+            if (method.getName().equals("physics") && method.getParameterCount() == 1) return physics;
+            return objectMethod(instance, method, args);
+        });
     }
 
     private static void verifiesScienceContinuousDoseToleranceReadback() throws Exception {
