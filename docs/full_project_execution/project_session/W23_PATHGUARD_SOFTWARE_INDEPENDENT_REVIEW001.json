@@ -1,0 +1,127 @@
+{
+  "schema": "comsol-mcp-independent-review/1",
+  "verdict": "PASS_BOUNDED_SOFTWARE_ONLY",
+  "actionable_findings": [],
+  "candidate": {
+    "path": "/private/tmp/comsol-mcp-w23-pathguard-candidate.aMCU7q",
+    "source_head": "68031c8527f649768d4d16ad73bd4159609b3ddd",
+    "source_freeze_sha256": "f181c9ac9b0c8debb01b8f771f6cce4d4bd36023d88f95611978ebd2179b8f90",
+    "files": [
+      "comsol_mcp/_managed_backend.py",
+      "tests/test_control_daemon_projects.py",
+      "tests/test_w23_project_path_boundary.py"
+    ],
+    "patch_sha256": "66bb6f721e66e10c5af2ebbfc2b53117235660de93971df6a0a4fc3b8367eed6",
+    "fingerprint_file_sha256": "efbe9c887f65f3b687eb788400c3f0dd1486aa43a62d6c16f4cc762b2dd9cdce",
+    "internal_fingerprint_sha256": "00daea72c541f2e58ac903812ac79cb9c4d45ee6691d42ad860a8d2c5f99a87d",
+    "evidence_index_sha256": "a1eb49c8d805b38ce752b036e6c80ad2f6eebc37b5260ded3fdd087749311641",
+    "fingerprints_unchanged_after_review": true
+  },
+  "live_tree": {
+    "head_before_after": "d4c4939152dc216d97828458b288187146669dd7",
+    "status_sha256_before_after": "105ab95c405a519e990eb29628621f8e706397d6d5fffbed3c7841262b528e69",
+    "status_entries_before_after": 2500,
+    "candidate_product_files_changed": false,
+    "protected_w24_state_touched": false
+  },
+  "review": {
+    "production_logic": "Only actual == model_create skips validation of unrelated persisted current_main_model_path and snapshot_dir. Explicit request path parameters remain canonicalized by ExecutionService.execute_legacy before callback. Existing project, permission, session, ModelRef, visible-main-lock, revision and idempotency gates remain in place.",
+    "explicit_paths": "Reviewer-owned checks submitted path, current_main_model_path and snapshot_dir with traversal, outside absolute and symlink-escape values; all 9 were denied before model_create callback. Safe nested/../ values for each field reached the callback canonicalized under the project root.",
+    "alias_and_idempotency": "operation_call fallback to model_create succeeded with unrelated outside persisted workflow paths; identical idempotency replay returned the cached result and did not create a second model.",
+    "public_schema_limit": "Explicit path-field checks exercise direct ControlDaemon dispatch when those fields are present; they do not assert the public model_create tool schema accepts those fields.",
+    "revision_review": "No revision code changed; selection/ModelRef rejection remains before the new path condition, and unchanged execution service/contract files match live HEAD."
+  },
+  "fresh_runs": [
+    {
+      "name": "focused production tests",
+      "path": "final-focused-five",
+      "passed": 5,
+      "failed": 0,
+      "deselected": 0,
+      "exit_code": 0,
+      "timeout_seconds": 90,
+      "summary_sha256": "ca06e094617d296cdbd61371ccb16507dc91c184dd835e66d819856844b8fbab",
+      "network_guard_events": 1,
+      "network_denials": 0
+    },
+    {
+      "name": "affected filtered regression tests",
+      "path": "final-filtered-48",
+      "passed": 48,
+      "failed": 0,
+      "deselected": 2,
+      "exit_code": 0,
+      "timeout_seconds": 90,
+      "summary_sha256": "bcf23b9537f8c142498088c18a6576a60f9d73abcf8a2494c08c59c1996d86d2",
+      "network_guard_events": 1,
+      "network_denials": 0
+    },
+    {
+      "name": "reviewer-owned explicit path, alias and replay checks",
+      "path": "final-reviewer-owned",
+      "passed": 2,
+      "failed": 0,
+      "deselected": 0,
+      "exit_code": 0,
+      "timeout_seconds": 90,
+      "summary_sha256": "88dc24b64bc57758e319c2a876e6bc0846efd872108e8f6b8e929a1e3e12c3e7",
+      "network_guard_events": 1,
+      "network_denials": 0
+    }
+  ],
+  "preserved_failure_denominator": {
+    "prepatch_focused_red": {
+      "passed": 0,
+      "failed": 1,
+      "failure": "tests.test_w23_project_path_boundary::test_pathless_model_create_ignores_each_unrelated_out_of_root_workflow_path"
+    },
+    "initial_existing_before_expectation_update": {
+      "passed": 47,
+      "failed": 3,
+      "failures": [
+        "tests.test_managed_backend::test_private_w21_stage_marker_binds_project_reply_without_changing_generic_calls",
+        "tests.test_managed_backend::test_explicit_reconnect_starts_existing_worker_and_invalidates_old_epoch",
+        "tests.test_control_daemon_projects::test_managed_model_creation_persists_project_binding_and_rejects_foreign_project"
+      ]
+    },
+    "final_unfiltered_five_file_suite": {
+      "passed": 48,
+      "failed": 2,
+      "failures": [
+        {
+          "nodeid": "tests.test_managed_backend::test_private_w21_stage_marker_binds_project_reply_without_changing_generic_calls",
+          "classification": "BASELINE_REPRODUCED_TEST_FIXTURE_FAILURE; fake Worker lacks generation and fails at WORKER_IDENTITY_UNAVAILABLE"
+        },
+        {
+          "nodeid": "tests.test_managed_backend::test_explicit_reconnect_starts_existing_worker_and_invalidates_old_epoch",
+          "classification": "NOT_RUN_BEHAVIOR_UNVERIFIED; strict guard denied gethostbyname(127.0.0.1) before reconnect behavior"
+        }
+      ]
+    },
+    "final_filtered_suite": {
+      "passed": 48,
+      "failed": 0,
+      "deselected": 2,
+      "deselected_failures_remain_in_unfiltered_denominator": true
+    },
+    "w21_prepatch_baseline": {
+      "passed": 0,
+      "failed": 1,
+      "failure": "tests.test_managed_backend::test_private_w21_stage_marker_binds_project_reply_without_changing_generic_calls"
+    }
+  },
+  "guard_and_limits": {
+    "python": "3.12.13",
+    "offline_guard_active_before_child": true,
+    "guard_denials_in_final_runs": 0,
+    "no_real_worker_start": true,
+    "no_jvm_or_comsol_native_runtime": true,
+    "w23_scientific_acceptance": "NOT_RUN"
+  },
+  "reviewer_attempt_notes": {
+    "exfat_tmp_attempt": "Preserved in exfat-basetemp-filtered-48: 46 passed, 2 environment failures (AppleDouble ._repeat directory entry and unsupported atomic hardlink for backup manifest); final run used /private/tmp and all 48 passed.",
+    "initial_harness_collection": "Preserved in initial-harness-errors: candidate PYTHONPATH was omitted, so collection ran zero tests; corrected run used candidate plus guard paths."
+  },
+  "evidence_root": "/Volumes/SSD/Comsol-MCP/execution-scratch/w23-pathguard-independent-review-20261005-001",
+  "full_report": "INDEPENDENT_REVIEW.md"
+}

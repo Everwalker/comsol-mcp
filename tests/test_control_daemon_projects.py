@@ -378,15 +378,17 @@ def test_managed_model_creation_persists_project_binding_and_rejects_foreign_pro
     project = _create_project(daemon, "model-owner")
     foreign = _create_project(daemon, "foreign")
     try:
-        # A project-local foreign path must still fail closed, while the
-        # legacy global workflow's stale path must not be consulted.
+        # A pathless in-memory create does not consume this configured path.
+        # It must preserve the state while binding its result to the current
+        # project and session; a later operation that uses the path still
+        # performs the normal project-boundary validation.
         with daemon.backend.project_root_scope(project["workspace"]):
             _state._write_workflow_state({
                 "current_main_model_path": str(Path(foreign["workspace"]) / "foreign.mph"),
             })
         foreign_path = daemon.dispatch({
             "operation": "model_create",
-            "arguments": {"model_name": "must-not-create"},
+            "arguments": {"model_name": "created-model"},
             "execution": {
                 "project_id": project["project_id"],
                 "session_id": "session",
@@ -394,30 +396,23 @@ def test_managed_model_creation_persists_project_binding_and_rejects_foreign_pro
                 "idempotency_key": "project-model-create-foreign-workflow-path",
             },
         })
-        assert foreign_path["success"] is False
-        assert foreign_path["error"]["code"] == "PERMISSION_DENIED"
-        assert created_names == []
-
-        with daemon.backend.project_root_scope(project["workspace"]):
-            _state._write_workflow_state({"current_main_model_path": "", "main_model_path": ""})
-        created = daemon.dispatch({
-            "operation": "model_create",
-            "arguments": {"model_name": "created-model"},
-            "execution": {
-                "project_id": project["project_id"],
-                "session_id": "session",
-                "request_id": "project-model-create",
-                "idempotency_key": "project-model-create",
-            },
-        })
-        assert created["success"] is True, created
-        assert created["execution"]["project_id"] == project["project_id"]
+        assert foreign_path["success"] is True, foreign_path
+        assert foreign_path["execution"]["project_id"] == project["project_id"]
+        assert foreign_path["execution"]["session_id"] == "session"
         assert created_names == ["created-model"]
-        ref = created["execution"]["model_ref"]
-        assert daemon.backend.model_project_binding(ref) == {
+        created_ref = foreign_path["execution"]["model_ref"]
+        assert daemon.backend.model_project_binding(created_ref) == {
             "attribution": "PROJECT_BOUND", "project_id": project["project_id"],
         }
         project_workflow = Path(project["workspace"]) / ".comsol_mcp" / "workflow_state.json"
+        project_state = json.loads(project_workflow.read_text(encoding="utf-8"))
+        assert project_state["current_main_model_path"] == str(Path(foreign["workspace"]) / "foreign.mph")
+        assert legacy_workflow.read_bytes() == original_legacy_bytes
+
+        # Clear the unrelated path only to set up the following model_load
+        # assertion, which explicitly exercises path consumption.
+        with daemon.backend.project_root_scope(project["workspace"]):
+            _state._write_workflow_state({"current_main_model_path": "", "main_model_path": ""})
         project_state = json.loads(project_workflow.read_text(encoding="utf-8"))
         assert project_state["current_main_model_path"] == ""
         assert project_state["snapshot_dir"] == ""

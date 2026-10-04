@@ -1136,14 +1136,15 @@ class ManagedBackend:
             elif ref and self.worker is not None:
                 bound_model = self.worker.client().model(ref.model_tag)
                 _set_current_model(bound_model, origin="bound-request")
+            actual = {"run_study_async": "run_study", "start_visible_main_workflow_async": "start_visible_main_workflow"}.get(operation, operation)
             # Validate configured paths too, not only paths present in this request.
-            if self.worker is not None:
+            # A pathless model_create does not consume either workflow path.
+            if self.worker is not None and actual != "model_create":
                 from ._state import _read_workflow_state
                 workflow = _read_workflow_state()
                 for field in ("current_main_model_path", "snapshot_dir"):
                     if workflow.get(field):
                         canonical_project_path(self.project_root, workflow[field])
-            actual = {"run_study_async": "run_study", "start_visible_main_workflow_async": "start_visible_main_workflow"}.get(operation, operation)
             callback = self.registry.get(actual)
             if starter:
                 from ._tools_workflow import _start_visible_main_workflow_payload
