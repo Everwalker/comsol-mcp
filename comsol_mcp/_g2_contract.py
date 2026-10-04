@@ -86,7 +86,7 @@ ACCESSOR_METHODS = frozenset({
     "mesh", "modelNode", "numerical", "param", "physics", "result", "selection",
     "sol", "study", "table", "variable", "view", "plotGroup", "export",
     "func", "multiphysics", "pair", "cpl", "coordSystem", "propertyGroup",
-    "extraDim", "probe",
+    "extraDim", "probe", "group",
 })
 
 

@@ -11,6 +11,7 @@ import com.comsol.model.SolutionInfo;
 import com.comsol.model.SolverSequence;
 import com.comsol.model.Study;
 import com.comsol.model.StudyFeature;
+import com.comsol.model.LocalSelection;
 import com.comsol.model.physics.Physics;
 import com.comsol.model.physics.PhysicsFeature;
 import com.comsol.model.physics.FeatureInfo;
@@ -25,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Collections;
+import java.util.function.Supplier;
 
 /**
  * Versioned COMSOL 6.4 API contract helpers for W23 radiation geometry v2.
@@ -91,6 +93,345 @@ public final class NativeW23RadiationGeometryV2 {
         result.put("SlitType", slitType);
         result.put("native_readback_required", true);
         return result;
+    }
+
+    /** Pure getter only. Routing identity is not creator ownership or native acceptance. */
+    public static Map<String, Object> readUserDefinedPml(
+            Model model, String componentTag, String geometryTag, String coordSysTag) {
+        PmlReadContext read = new PmlReadContext(componentTag, geometryTag, coordSysTag);
+        if (model == null || !pmlNonempty(componentTag) || !pmlNonempty(geometryTag)
+                || !pmlNonempty(coordSysTag)) {
+            read.issue("input", "INVALID_VALUE", "model and nonempty target tags are required", null, true);
+            return read.finish();
+        }
+        Object modelTag = read.stage("model.tag", model::tag);
+        if (!read.identityString("model.tag", "model_tag", modelTag, null)) return read.finish();
+        Object componentTags = read.stage("component.tags", () -> model.component().tags());
+        if (!read.containsTarget("component.tags", componentTags, componentTag)) return read.finish();
+        Object componentValue = read.stage("component.resolve", () -> model.component(componentTag));
+        if (!(componentValue instanceof ModelNode)) {
+            read.malformedUnlessError("component.resolve", "ModelNode resolution did not return a node");
+            return read.finish();
+        }
+        ModelNode component = (ModelNode) componentValue;
+        if (!read.identityString("component.tag", "component_tag",
+                read.stage("component.tag", component::tag), componentTag)) return read.finish();
+        Object geometryTags = read.stage("geometry.tags", () -> component.geom().tags());
+        if (!read.containsTarget("geometry.tags", geometryTags, geometryTag)) return read.finish();
+        Object geometryValue = read.stage("geometry.resolve", () -> component.geom(geometryTag));
+        if (!(geometryValue instanceof GeomSequence)) {
+            read.malformedUnlessError("geometry.resolve", "geometry resolution did not return a sequence");
+            return read.finish();
+        }
+        GeomSequence geometry = (GeomSequence) geometryValue;
+        if (!read.identityString("geometry.tag", "geometry_tag",
+                read.stage("geometry.tag", geometry::tag), geometryTag)) return read.finish();
+        Object spaceDimension = read.stage("geometry.getSDim", geometry::getSDim);
+        if (!read.identityInt("geometry.getSDim", "geometry_space_dimension", spaceDimension, 3))
+            return read.finish();
+        Object nodeTags = read.stage("coordSystem.tags", () -> component.coordSystem().tags());
+        if (!read.containsTarget("coordSystem.tags", nodeTags, coordSysTag)) return read.finish();
+        Object featureValue = read.stage("coordSystem.resolve", () -> component.coordSystem(coordSysTag));
+        if (!(featureValue instanceof Coordsys)) {
+            read.malformedUnlessError("coordSystem.resolve", "coordinate-system resolution did not return a node");
+            return read.finish();
+        }
+        Coordsys feature = (Coordsys) featureValue;
+        if (!read.identityString("feature.getType", "feature_type",
+                read.stage("feature.getType", feature::getType), "PML")) return read.finish();
+        if (!read.identityString("feature.tag", "coord_sys_tag",
+                read.stage("feature.tag", feature::tag), coordSysTag)) return read.finish();
+        Object selectionValue = read.stage("selection.resolve", feature::selection);
+        if (!(selectionValue instanceof LocalSelection)) {
+            read.malformedUnlessError("selection.resolve", "PML selection was not returned");
+            return read.finish();
+        }
+        LocalSelection selection = (LocalSelection) selectionValue;
+        Object selectionGeometry = read.stage("selection.geom", selection::geom);
+        if (selectionGeometry == null && !read.stageErrors.contains("selection.geom")) {
+            read.observed.put("selection_geometry", null);
+            read.issue("selection.geom", "IDENTITY_MISMATCH", "global selection has no geometry", null, true);
+            return read.finish();
+        }
+        if (!read.identityString("selection.geom", "selection_geometry", selectionGeometry, geometryTag))
+            return read.finish();
+        if (!read.identityInt("selection.dim", "selection_dim",
+                read.stage("selection.dim", selection::dim), 3)) return read.finish();
+        Object dimensions = read.stage("selection.dimension", selection::dimension);
+        if (!(dimensions instanceof int[])) {
+            read.malformedUnlessError("selection.dimension", "selection dimensions are malformed");
+            return read.finish();
+        }
+        int[] dims = ((int[]) dimensions).clone();
+        read.observed.put("selection_dimensions", asList(dims));
+        if (dims.length != 1 || dims[0] != 3) {
+            read.issue("selection.dimension", "IDENTITY_MISMATCH", "selection dimensions must be exactly [3]", null, true);
+            return read.finish();
+        }
+        Object domainValue = read.stage("selection.entities(3)", () -> selection.entities(3));
+        if (!(domainValue instanceof int[])) {
+            read.malformedUnlessError("selection.entities(3)", "selected domain vector is malformed");
+            return read.finish();
+        }
+        int[] domains = ((int[]) domainValue).clone();
+        read.observed.put("selected_domain_ids", asList(domains));
+        Set<Integer> uniqueDomains = new HashSet<>();
+        for (int id : domains) {
+            if (id < 1 || !uniqueDomains.add(id)) {
+                read.issue("selection.entities(3)", "IDENTITY_MISMATCH", "selected domains must be positive and unique", null, true);
+                return read.finish();
+            }
+        }
+        if (domains.length == 0) {
+            read.issue("selection.entities(3)", "IDENTITY_MISMATCH", "PML domain selection is empty", null, true);
+            return read.finish();
+        }
+        read.identityStatus = "REQUEST_TARGET_MATCH";
+        Map<String, Map<String, Object>> properties = new LinkedHashMap<>();
+        for (String name : new String[]{"ScalingType", "stretchingType", "wavelengthSourceType",
+                "directions", "d", "dmax", "PMLfactor", "PMLgamma", "typicalWavelength"}) {
+            Map<String, Object> row = read.property(feature, name);
+            properties.put(name, row);
+        }
+        Map<String, Object> countRow = properties.get("directions");
+        Object countValue = countRow.get("raw_value");
+        if ("READ".equals(countRow.get("status")) && "Int".equals(countRow.get("primary_type"))) {
+            int count = (Integer) countValue;
+            if (count < 1 || count > 3) {
+                read.issue("directions.semantic", "SEMANTIC_MISMATCH", "PML direction count must be 1, 2, or 3", null, true);
+            } else {
+                for (int i = 0; i < count; i++) {
+                    Map<String, Object> indexed = new LinkedHashMap<>();
+                    indexed.put("index", i);
+                    indexed.put("d", read.indexed(feature, properties.get("d"), "d", i, count));
+                    indexed.put("dmax", read.indexed(feature, properties.get("dmax"), "dmax", i, count));
+                    read.indexedDirections.add(indexed);
+                }
+            }
+        } else {
+            read.incomplete = true;
+        }
+        return read.finish();
+    }
+
+    private static boolean pmlNonempty(String value) { return value != null && !value.trim().isEmpty(); }
+
+    private static final class PmlReadContext {
+        final Map<String, Object> result = new LinkedHashMap<>();
+        final Map<String, Object> observed = new LinkedHashMap<>();
+        final List<Map<String, Object>> properties = new ArrayList<>();
+        final List<Map<String, Object>> indexedDirections = new ArrayList<>();
+        final List<Map<String, Object>> errors = new ArrayList<>();
+        final Set<String> stageErrors = new HashSet<>();
+        String identityStatus = "INCOMPLETE";
+        boolean incomplete;
+        boolean failed;
+
+        PmlReadContext(String component, String geometry, String tag) {
+            result.put("schema_id", "urn:comsol-mcp:w23:pml-node-readback:3.0.0");
+            result.put("producer", "NativeW23RadiationGeometryV2.readUserDefinedPml");
+            Map<String, Object> requested = new LinkedHashMap<>();
+            requested.put("component_tag", component == null ? "" : component);
+            requested.put("geometry_tag", geometry == null ? "" : geometry);
+            requested.put("coord_sys_tag", tag == null ? "" : tag);
+            result.put("requested", requested);
+            result.put("observed", observed);
+            result.put("properties", properties);
+            result.put("indexed_directions", indexedDirections);
+            result.put("errors", errors);
+            result.put("native_result", "UNVERIFIED");
+            result.put("ownership", "UNVERIFIED");
+            result.put("configuration_identity_safety", "UNACCEPTED");
+            result.put("wavelength_semantics", Map.of("status", "INCOMPLETE", "unit", "UNKNOWN", "representation", "UNKNOWN"));
+            result.put("dmax_native_semantics", "UNVERIFIED_NO_FROZEN_NATIVE_EXPRESSION_REGISTRY");
+        }
+
+        Object stage(String stage, Supplier<Object> getter) {
+            try { return getter.get(); }
+            catch (RuntimeException error) {
+                issue(stage, "EXCEPTION", String.valueOf(error.getMessage()), error, false);
+                return null;
+            }
+        }
+
+        void issue(String stage, String kind, String message, RuntimeException error, boolean hardFail) {
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("stage", stage); row.put("kind", kind); row.put("message", message);
+            if (error != null) row.put("exception_class", error.getClass().getName());
+            errors.add(row); stageErrors.add(stage);
+            if (hardFail) failed = true; else incomplete = true;
+        }
+
+        void malformedUnlessError(String stage, String message) {
+            if (!stageErrors.contains(stage)) issue(stage, "INVALID_VALUE", message, null, false);
+        }
+
+        boolean identityString(String stage, String field, Object raw, String expected) {
+            if (!(raw instanceof String) || !pmlNonempty((String) raw)) {
+                malformedUnlessError(stage, "identity getter returned malformed string"); return false;
+            }
+            observed.put(field, raw);
+            if (expected != null && !expected.equals(raw)) {
+                issue(stage, "IDENTITY_MISMATCH", "native identity differs from requested target", null, true); return false;
+            }
+            return true;
+        }
+
+        boolean identityInt(String stage, String field, Object raw, int expected) {
+            if (!(raw instanceof Integer)) { malformedUnlessError(stage, "identity getter returned malformed integer"); return false; }
+            observed.put(field, raw);
+            if (((Integer) raw) != expected) {
+                issue(stage, "IDENTITY_MISMATCH", "native dimension differs from the domain3 contract", null, true); return false;
+            }
+            return true;
+        }
+
+        boolean containsTarget(String stage, Object raw, String expected) {
+            if (!(raw instanceof String[])) { malformedUnlessError(stage, "target inventory is malformed"); return false; }
+            Set<String> tags = new HashSet<>();
+            for (String tag : (String[]) raw) {
+                if (!pmlNonempty(tag) || !tags.add(tag)) {
+                    malformedUnlessError(stage, "target inventory contains malformed/duplicate tags"); return false;
+                }
+            }
+            if (!tags.contains(expected)) {
+                issue(stage, "MISSING_TARGET", "requested target is absent from the actual inventory", null, true); return false;
+            }
+            return true;
+        }
+
+        Map<String, Object> property(Coordsys feature, String name) {
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("name", name); row.put("status", "NOT_READ");
+            row.put("unit", "UNKNOWN"); row.put("representation", "UNKNOWN");
+            properties.add(row);
+            String typeStage = "property." + name + ".getValueType";
+            Object typeValue = stage(typeStage, () -> feature.getValueType(name));
+            if (!(typeValue instanceof String) || !pmlNonempty((String) typeValue)) {
+                malformedUnlessError(typeStage, "primary type getter returned malformed string");
+                row.put("status", "ERROR"); return row;
+            }
+            String type = (String) typeValue;
+            row.put("primary_type", type); row.put("status", "TYPE_READ");
+            String getter;
+            Supplier<Object> call;
+            switch (type) {
+                case "Boolean": getter = "getBoolean(String)"; call = () -> feature.getBoolean(name); break;
+                case "String": getter = "getString(String)"; call = () -> feature.getString(name); break;
+                case "StringArray": case "DoubleRowMatrix": getter = "getStringArray(String)"; call = () -> feature.getStringArray(name); break;
+                case "StringMatrix": getter = "getStringMatrix(String)"; call = () -> feature.getStringMatrix(name); break;
+                case "Int": getter = "getInt(String)"; call = () -> feature.getInt(name); break;
+                case "IntArray": getter = "getIntArray(String)"; call = () -> feature.getIntArray(name); break;
+                case "Double": getter = "getDouble(String)"; call = () -> feature.getDouble(name); break;
+                case "DoubleArray": getter = "getDoubleArray(String)"; call = () -> feature.getDoubleArray(name); break;
+                case "DoubleMatrix": getter = "getDoubleMatrix(String)"; call = () -> feature.getDoubleMatrix(name); break;
+                default:
+                    row.put("status", "UNSUPPORTED_TYPE");
+                    issue(typeStage, "UNSUPPORTED_TYPE", "unsupported actual primary type: " + type, null, false);
+                    return row;
+            }
+            row.put("getter", getter);
+            String valueStage = "property." + name + "." + getter;
+            Object raw = stage(valueStage, call);
+            if (stageErrors.contains(valueStage)) { row.put("status", "ERROR"); return row; }
+            try {
+                List<Integer> shape = new ArrayList<>();
+                Object copy = pmlTypedCopy(type, raw, shape);
+                row.put("raw_value", copy); row.put("raw_shape", shape);
+                row.put("value_encoding", "JSON_NATIVE"); row.put("status", "READ");
+                row.put("representation", "DoubleRowMatrix".equals(type)
+                        ? "DOUBLE_ROW_MATRIX_STRING_VIEW_ORIGIN_UNKNOWN" : "RAW_PRIMARY_GETTER");
+            } catch (IllegalArgumentException malformed) {
+                row.put("status", "ERROR");
+                issue(valueStage, "INVALID_VALUE", malformed.getMessage(), null, false);
+            }
+            return row;
+        }
+
+        Map<String, Object> indexed(Coordsys feature, Map<String, Object> property,
+                String name, int index, int count) {
+            Map<String, Object> row = new LinkedHashMap<>();
+            if (!"READ".equals(property.get("status")) || !"StringArray".equals(property.get("primary_type"))) {
+                row.put("status", "UNVERIFIED_REPRESENTATION"); incomplete = true; return row;
+            }
+            List<?> raw = (List<?>) property.get("raw_value");
+            if (raw.size() != count) {
+                row.put("status", "UNVERIFIED_REPRESENTATION");
+                issue("property." + name + ".count", "SEMANTIC_MISMATCH", "native string vector count differs from directions", null, true);
+                return row;
+            }
+            row.put("getter", "getString(String,int)");
+            String stage = "property." + name + ".getString[" + index + "]";
+            Object value = stage(stage, () -> feature.getString(name, index));
+            if (stageErrors.contains(stage)) { row.put("status", "ERROR"); return row; }
+            if (!(value instanceof String)) {
+                row.put("status", "ERROR"); issue(stage, "INVALID_VALUE", "indexed getter returned malformed string", null, false); return row;
+            }
+            row.put("raw_value", value); row.put("status", "READ");
+            if (!value.equals(raw.get(index)))
+                issue(stage, "SEMANTIC_MISMATCH", "indexed getter differs from the primary string vector", null, true);
+            return row;
+        }
+
+        Map<String, Object> finish() {
+            result.put("identity_status", failed && !"REQUEST_TARGET_MATCH".equals(identityStatus) ? "FAIL" : identityStatus);
+            result.put("raw_read_status", failed ? "FAIL" : incomplete ? "INCOMPLETE" : "COMPLETE_RAW_READ");
+            return result;
+        }
+    }
+
+    private static Object pmlTypedCopy(String type, Object raw, List<Integer> shape) {
+        if (raw == null) throw new IllegalArgumentException("primary getter returned null; no value synthesized");
+        switch (type) {
+            case "Boolean": if (raw instanceof Boolean) return raw; break;
+            case "String": if (raw instanceof String) return raw; break;
+            case "Int": if (raw instanceof Integer) return raw; break;
+            case "Double":
+                if (raw instanceof Double && Double.isFinite((Double) raw)) return raw;
+                throw new IllegalArgumentException("nonfinite/malformed double getter return: " + String.valueOf(raw));
+            case "StringArray": case "DoubleRowMatrix":
+                if (raw instanceof String[]) {
+                    String[] vector = (String[]) raw; shape.add(vector.length);
+                    List<String> copy = new ArrayList<>();
+                    for (String value : vector) {
+                        if (value == null) throw new IllegalArgumentException("string vector contains null");
+                        copy.add(value);
+                    }
+                    return copy;
+                }
+                break;
+            case "IntArray":
+                if (raw instanceof int[]) { shape.add(((int[]) raw).length); return asList(((int[]) raw).clone()); }
+                break;
+            case "DoubleArray":
+                if (raw instanceof double[]) {
+                    double[] vector = (double[]) raw; shape.add(vector.length); List<Double> copy = new ArrayList<>();
+                    for (double value : vector) {
+                        if (!Double.isFinite(value)) throw new IllegalArgumentException("double vector contains nonfinite value: " + value);
+                        copy.add(value);
+                    }
+                    return copy;
+                }
+                break;
+            case "StringMatrix": case "DoubleMatrix":
+                int length = "StringMatrix".equals(type) && raw instanceof String[][] ? ((String[][]) raw).length
+                        : "DoubleMatrix".equals(type) && raw instanceof double[][] ? ((double[][]) raw).length : -1;
+                if (length >= 0) {
+                    List<Object> rows = new ArrayList<>(); int width = -1;
+                    for (int i = 0; i < length; i++) {
+                        Object vector = "StringMatrix".equals(type) ? ((String[][]) raw)[i] : ((double[][]) raw)[i];
+                        List<Integer> rowShape = new ArrayList<>();
+                        Object copy = pmlTypedCopy("StringMatrix".equals(type) ? "StringArray" : "DoubleArray", vector, rowShape);
+                        if (width < 0) width = rowShape.get(0);
+                        if (rowShape.get(0) != width) throw new IllegalArgumentException("primary matrix getter returned ragged rows");
+                        rows.add(copy);
+                    }
+                    shape.add(length); shape.add(width < 0 ? 0 : width); return rows;
+                }
+                break;
+            default: break;
+        }
+        throw new IllegalArgumentException("primary getter return does not match its actual type " + type);
     }
 
     public static Map<String, Object> configureUserDefinedPml(

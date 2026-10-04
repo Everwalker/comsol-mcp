@@ -1182,3 +1182,281 @@ def test_job_ledger_pages_real_public_control_daemon_sqlite_route(tmp_path: Path
         assert too_large["error"]["code"] == "INVALID_REQUEST"
     finally:
         daemon.close()
+
+
+def _native_mesh_readback(*, phase="initial", domains=(2, 9)):
+    from copy import deepcopy
+    attempts = ["feature_tags_before", "mesh_tag", "geometry_tag", "geometry_dimension", "domain_count", "up_down",
+                "generator_tag", "generator_type", "selection_geometry", "selection_dimension", "selection_dimensions",
+                "selection_entities", "selection_is_geom_raw", "selection_is_remaining_raw", "size_custom", "size_hmax",
+                "size_hmin", "mesh_dimension", "is_empty", "element_count", "is_complete", "has_problems", "problems"]
+    o = {"schema": "W23_FULL3D_OWNED_MESH_V1", "status": "NATIVE_MESH_GETTERS_ACCEPTED_NO_SCIENCE_CLAIM",
+         "phase": phase, "getter_attempts": attempts, "getter_errors": {},
+         "feature_tags_before": ["size"] + ([] if phase == "initial" else ["w23tet"]),
+         "selection_action_provenance": ("geom_3_all_called_this_initial_creation" if phase == "initial"
+             else "same_owned_generator_initial_geom_3_all_reused_no_selection_repair"),
+         "generator_created_in_call": 1 if phase == "initial" else 0,
+         "mesh_tag": "mesh3d", "geometry_tag": "geom3d", "geometry_dimension": 3,
+         "domain_count": len(domains), "up_down": [list(domains), [0] * len(domains)],
+         "domain_ids": list(domains), "generator_tag": "w23tet", "generator_type": "FreeTet",
+         "selection_geometry": "geom3d", "selection_dimension": 3, "selection_dimensions": [3],
+         "selection_entities": list(domains), "selection_is_geom_raw": False, "selection_is_remaining_raw": True,
+         "size_custom": "on", "size_hmax": "lambda0/(5*w23Nlens)", "size_hmin": "lambda0/(12*w23Nlens)",
+         "mesh_run_attempted": True, "mesh_run_returned": True, "mesh_dimension": 3, "is_empty": False,
+         "element_count": 19, "is_complete": True, "has_problems": False, "problems": []}
+    return deepcopy({"mesh": {"tag": "mesh3d", "geometry": "geom3d", "elements": 19,
+                             "hmax": o["size_hmax"], "hmin": o["size_hmin"], "observation": o}})
+
+
+def test_native_mesh_accepts_sparse_actual_ids_and_fresh_case_topology_without_guessing_all_flag():
+    from tools.run_native_w23_full3d_setup import validate_native_mesh_readback
+    before = validate_native_mesh_readback(_native_mesh_readback(), phase="initial")
+    case = _native_mesh_readback(phase="apply_case", domains=(4, 17, 31))
+    case["mesh"]["observation"]["selection_entities"] = [31, 4, 17]
+    case["mesh"]["observation"]["selection_is_geom_raw"] = True
+    case["mesh"]["observation"]["selection_is_remaining_raw"] = False
+    proof = validate_native_mesh_readback(case, phase="apply_case", previous=before)
+    assert proof["domain_ids"] == [4, 17, 31]
+    assert proof["scientific_acceptance"] == "NOT_RUN"
+
+
+@pytest.mark.parametrize("key,value", [
+    ("mesh_tag", "foreign"), ("geometry_tag", "foreign"), ("generator_tag", "foreign"),
+    ("generator_type", "FreeTri"), ("selection_geometry", "foreign"),
+    ("geometry_dimension", 2), ("selection_dimension", 2), ("mesh_dimension", 2),
+    ("geometry_dimension", 3.0), ("selection_dimension", True), ("mesh_dimension", 3.0),
+    ("selection_dimensions", [3, 2]), ("selection_dimensions", [3.0]), ("selection_dimensions", []),
+    ("domain_count", True), ("domain_count", 2.0), ("domain_count", 3),
+    ("domain_ids", [1, 2]), ("domain_ids", [2, 2]), ("domain_ids", [0, 9]), ("domain_ids", [2.0, 9]),
+    ("selection_entities", []), ("selection_entities", [2]), ("selection_entities", [2, 9, 12]),
+    ("selection_entities", [2, 2, 9]), ("selection_entities", [0, 2, 9]), ("selection_entities", [-1, 2, 9]),
+    ("selection_entities", [True, 9]), ("selection_entities", [2.0, 9]),
+    ("up_down", None), ("up_down", [[2], [0, 0]]), ("up_down", [[0], [0]]),
+    ("up_down", [[-2, 9], [0, 0]]), ("up_down", [[2.0, 9], [0, 0]]),
+    ("up_down", [[True, 9], [0, 0]]), ("up_down", [[], []]),
+    ("is_empty", True), ("is_empty", 0), ("is_complete", False), ("is_complete", 1),
+    ("has_problems", True), ("has_problems", 0), ("problems", ["partial"]), ("problems", None),
+    ("element_count", 0), ("element_count", -1), ("element_count", True), ("element_count", 19.0),
+    ("selection_is_geom_raw", 0), ("selection_is_remaining_raw", 1),
+    ("size_custom", "off"), ("size_hmax", "foreign"), ("size_hmin", "foreign"),
+    ("feature_tags_before", ["size", "w23tet"]), ("feature_tags_before", ["size", "size"]),
+    ("feature_tags_before", []), ("feature_tags_before", [None]),
+    ("generator_created_in_call", True), ("generator_created_in_call", 2),
+    ("selection_action_provenance", "all"), ("mesh_run_attempted", False), ("mesh_run_returned", False),
+    ("getter_errors", {"is_complete": {"type": "NativeError", "message": "actual error"}}),
+    ("getter_attempts", []), ("status", "PASS"), ("phase", "apply_case")])
+def test_native_mesh_rejects_tampered_partial_or_ambiguous_actual_getters(key, value):
+    from tools.run_native_w23_full3d_setup import validate_native_mesh_readback
+    r = _native_mesh_readback(); r["mesh"]["observation"][key] = value
+    with pytest.raises(CandidateError, match="native mesh"):
+        validate_native_mesh_readback(r, phase="initial")
+
+
+@pytest.mark.parametrize("mutation", ["outer_count_bool", "outer_count_drift", "outer_size_drift", "no_observation",
+                                     "getter_attempt_removed", "run_error", "failure_cause", "apply_create", "apply_no_tag",
+                                     "apply_size_changed", "apply_no_prior"])
+def test_native_mesh_cross_stage_identity_and_error_observations_fail_closed(mutation):
+    from tools.run_native_w23_full3d_setup import validate_native_mesh_readback
+    before = validate_native_mesh_readback(_native_mesh_readback(), phase="initial")
+    phase = "apply_case" if mutation.startswith("apply_") else "initial"
+    r = _native_mesh_readback(phase=phase); o = r["mesh"]["observation"]
+    if mutation == "outer_count_bool": r["mesh"]["elements"] = True
+    elif mutation == "outer_count_drift": r["mesh"]["elements"] = 20
+    elif mutation == "outer_size_drift": r["mesh"]["hmax"] = "other"
+    elif mutation == "no_observation": del r["mesh"]["observation"]
+    elif mutation == "getter_attempt_removed": o["getter_attempts"].remove("domain_count")
+    elif mutation == "run_error": o["mesh_run_error"] = {"type": "NativeError", "message": "partial"}
+    elif mutation == "failure_cause": o["failure_cause"] = {"message": "failed"}
+    elif mutation == "apply_create": o["generator_created_in_call"] = 1
+    elif mutation == "apply_no_tag": o["feature_tags_before"] = ["size"]
+    elif mutation == "apply_size_changed":
+        o["size_hmax"] = "(lambda0/(5*w23Nlens))*0.8"; o["size_hmin"] = "(lambda0/(12*w23Nlens))*0.8"
+    else: before = None
+    with pytest.raises(CandidateError, match="native mesh"):
+        validate_native_mesh_readback(r, phase=phase, previous=before if phase == "apply_case" else None)
+
+
+def test_native_mesh_consumer_precedes_existing_bma_dispatch_and_does_not_change_frozen_budgets():
+    import ast
+    from tools import run_native_w23_full3d_setup as m
+    s = Path(m.__file__).read_text(); tree = ast.parse(s)
+    execute = next(x for x in tree.body if isinstance(x, ast.FunctionDef) and x.name == "execute_candidate")
+    segment = ast.get_source_segment(s, execute)
+    build = segment.index('validate_native_mesh_readback(build_readback, phase="initial")')
+    apply = segment.index('apply_mesh_readback = validate_native_mesh_readback(')
+    assert build < apply < segment.index('if _is_bma_profile(freeze["campaign_profile"])')
+    assert m.SETUP_BUDGET["study_run_calls"] == 0 and m.SETUP_BUDGET["solver_calls"] == 0
+    assert m.SETUP_BUDGET["wall_clock_seconds_from_server_birth_including_cleanup"] == 1800
+    assert m.SETUP_BUDGET["reserved_cleanup_seconds"] == 120
+
+
+def _execute_candidate_bad_mesh_software_control(monkeypatch, tmp_path, *, bad_stage):
+    """Actual execute/route/binding/validator flow; explicit fake host launch seams only."""
+    import copy
+    import socket
+    from tools import run_native_w23_full3d_setup as m
+    from tools import w23_full3d_science as science
+    from tools.w23_full3d import canonical_full3d_recipe
+    actual_path_class = Path
+    root = actual_path_class(m.__file__).resolve().parents[1]
+    trace, guards, forbidden = [], [], []
+    model_ref = {"schema_version": 1, "session_id": "software-session", "server_instance_id": "software-server",
+                 "model_tag": "SoftwareModel", "generation": 1}
+    install, jdk, packages = [tmp_path / n for n in ("fake-install", "fake-jdk", "fake-packages")]
+    for p in (install, jdk, packages): p.mkdir()
+    preflight = {"schema_version": 1, "campaign_profile": "bma_probe", "source": {"checkout_kind": "git_archive"},
+        "runtime": {"install_root": str(install), "jdk_home": str(jdk), "comsol_version": "SOFTWARE_FAKE_6.4.0.293",
+                    "jdk_version": "SOFTWARE_FAKE_JDK11"},
+        "compile": {"classpath_manifest_sha256": "1" * 64, "classpath_jar_count": 1,
+                    "classpath_jar_content_fingerprint_sha256": "2" * 64},
+        "python_isolation": {"site_processing_disabled": True, "explicit_site_packages": str(packages)},
+        "budget": copy.deepcopy(m.BMA_PROBE_BUDGET)}
+    assert preflight["budget"] == m.BMA_PROBE_BUDGET  # original legal profile, no budget alteration.
+    monkeypatch.chdir(root)
+    monkeypatch.setattr(m, "INSTALL_ROOT", install);monkeypatch.setattr(m, "JAVA11", jdk)
+    monkeypatch.setattr(m, "EXPECTED_PYTHON", actual_path_class(sys.executable))
+    monkeypatch.setattr(m, "EXPLICIT_SITE_PACKAGES", packages)
+    monkeypatch.setattr(m, "_configure_archive_python", lambda repo: {"explicit_site_packages": str(packages), "SOFTWARE_HOST_FAKE": True})
+    monkeypatch.setattr(m, "verify_candidate", lambda **kw: copy.deepcopy(preflight))
+    monkeypatch.setattr(m, "_import_published_runtime_closure", lambda repo: {"SOFTWARE_HOST_FAKE": "no app import"})
+    monkeypatch.setattr(m, "_archive_import_audit", lambda repo: {"SOFTWARE_HOST_FAKE": True})
+    # Redirect only the hardcoded private work base into the real APFS test temp.
+    # Production path/identity/recipe functions elsewhere remain actual.
+    def software_path(value):
+        return tmp_path if value == "/private/tmp" else actual_path_class(value)
+    software_path.cwd = actual_path_class.cwd
+    monkeypatch.setattr(m, "Path", software_path)
+    for key in ("COMSOL_ROOT", "COMSOL_JAVA_HOME", "JAVA_HOME", "COMSOL_PREFS_DIR", "COMSOL_PROJECT_ROOT",
+                "COMSOL_SERVER_MCP_HOME", "COMSOL_MCP_TRUSTED_CODE", "COMSOL_MCP_ISOLATION_RECEIPT",
+                "COMSOL_SERVER_VERSION", "PYTHONPATH"):
+        monkeypatch.setenv(key, os.environ.get(key, "SOFTWARE_TEST_BEFORE"))
+    def deny(*a, **kw):
+        forbidden.append("attempted real process/network/host probe");raise AssertionError("real launcher/network/host probe forbidden")
+    for name in ("Popen", "run", "call", "check_call", "check_output"):
+        monkeypatch.setattr(subprocess, name, deny)
+    monkeypatch.setattr(os, "system", deny)
+    monkeypatch.setattr(socket, "socket", deny)
+    for name in ("_process_identity", "_lsof_listeners", "_lsof_process_listeners", "_stop_owned_process", "_stop_server_adapter"):
+        monkeypatch.setattr(m, name, deny)
+    def fake_module(name, **members):
+        mod = types.ModuleType(name)
+        for k,v in members.items(): setattr(mod,k,v)
+        monkeypatch.setitem(sys.modules,name,mod)
+        return mod
+    package = fake_module("comsol_mcp");package.__path__ = []
+    class FakeJavaPaths:
+        def __init__(self,*a,**kw): trace.append({"host_fake": "JavaWorkerPaths no JVM"})
+        def classpath(self): return ("SOFTWARE_FAKE_NO_JAR_LAUNCH", "1"*64, 1, "2"*64)
+        def comsol_version_info(self): return "SOFTWARE_FAKE_6.4.0.293"
+        def jdk_version_info(self): return "SOFTWARE_FAKE_JDK11"
+    fake_module("comsol_mcp._java_worker", JavaWorkerPaths=FakeJavaPaths)
+    def control_home():
+        home=actual_path_class(os.environ["COMSOL_SERVER_MCP_HOME"])/"control-private"
+        home.mkdir(parents=True,exist_ok=True);return home
+    fake_module("comsol_mcp._control_client", control_home=control_home)
+    fake_module("comsol_mcp._runtime_installation", runtime_id_for_root=lambda p: "SOFTWARE_FAKE_RUNTIME_ID")
+    class FakeProc:
+        pid = 999991  # synthetic software identity, never queried or signalled.
+    class FakeServer:
+        def __init__(self,work,evidence,**kw):
+            trace.append({"host_fake": "NativeLoopbackServer constructor, no process"})
+            self.project=work/"project";self.project.mkdir(parents=True);(self.project/"science").mkdir()
+            self.proc=FakeProc();self.port=51234
+            self.process_identity={"pid": self.proc.pid, "start_epoch_ms": int(time.time()*1000)}
+        def prepare_shadow(self): return {"SOFTWARE_HOST_FAKE": True}
+        def start_and_verify_listener(self):
+            trace.append({"host_fake": "synthetic listener, no bind"});return {"SOFTWARE_HOST_FAKE": True}
+    fake_module("tools.run_native_resume_smoke", NativeLoopbackServer=FakeServer)
+    def start_daemon(work,evidence,server,env,capture):
+        proc=types.SimpleNamespace(pid=999992)
+        ident={"pid":proc.pid,"start_epoch_ms":int(time.time()*1000)}
+        endpoint={"pid":proc.pid,"port":51235,"process_start_epoch_ms":ident["start_epoch_ms"],"token":"SOFTWARE_FAKE"}
+        capture(proc,ident,endpoint,None);trace.append({"host_fake":"control daemon no process"})
+        return proc,ident,endpoint,None
+    monkeypatch.setattr(m,"_start_control_daemon",start_daemon)
+    monkeypatch.setattr(m,"_bind_native_server_identity",lambda server, listener:dict(server.process_identity))
+    monkeypatch.setattr(m,"_resource_ownership_receipt",lambda **kw:{"SOFTWARE_HOST_FAKE_NO_RESOURCES":True})
+    # No real resources exist. Retain the original guard exception without invoking retirement/signals.
+    monkeypatch.setattr(m,"_job_ledger_terminal",lambda *a:{"all_terminal":False,"count":1,"jobs":[{"status":"RUNNING_SOFTWARE_FAKE"}]})
+    def java_response(request, phase):
+        args=request["arguments"]["arguments"]["arguments"]
+        readback=_native_mesh_readback(phase="initial" if phase=="build" else "apply_case")
+        readback.update({"fixture_id":args["fixture_id"],"recipe_sha256":args["recipe_sha256"],
+            "managed_identity":copy.deepcopy(args["managed_identity"]),"native_result":"NOT_RUN",
+            "study_or_solver_invoked":False,"status":"BUILT_CONFIGURED_NOT_SOLVED" if phase=="build" else "GEOMETRY_CASE_CONFIGURED_NOT_SOLVED"})
+        if phase=="build":
+            readback.update(_native_build_readback())
+            if bad_stage=="build_incomplete": readback["mesh"]["observation"]["is_complete"]=False
+        else:
+            case=args["case"]
+            readback.update({out:case[key] for out,key in [("case_id","case_id"),("case_identity_sha256","case_identity_sha256"),
+                ("experiment_id","experiment_id"),("factor","factor"),("factor_value","value")]})
+            if bad_stage=="apply_wrong_domain": readback["mesh"]["observation"]["selection_entities"]=[2,17]
+        return {"success":True,"execution":{"model_ref":copy.deepcopy(model_ref),"revision":2 if phase=="build" else 3},
+            "data":{"worker":{"ok":True,"status":"SUCCEEDED","result":{"readback":readback}},
+                    "readback":{"executed":True,"readback":readback}}}
+    class FakeAdapter:
+        def __init__(self,*a,**kw): trace.append({"host_fake":"PublicDispatchAdapter no HTTP"})
+        def bind_owned_control(self,*a): trace.append({"host_fake":"synthetic owned control binding"})
+        def dispatch(self,request):
+            op=request["operation"]
+            phase=(request.get("arguments",{}).get("arguments",{}).get("arguments",{}).get("phase")
+                   if op=="operation_call" else None)
+            trace.append({"operation":op,"phase":phase,"request":copy.deepcopy(request)})
+            if op=="project.create":
+                # Same actual containment/permission binder runs on this persisted-shaped response.
+                project=next(x for x in tmp_path.rglob("project/science"))
+                return {"success":True,"data":{"project":{"project_id":"software-project","workspace":str(project),
+                    "schema_version":1,"revision":0,"policy":{"permissions":["inspect","project_write","compute","trusted_code"]}}}}
+            if op=="session.connect":return {"success":True,"data":{"project_id":"software-project",
+                "session_id":"software-session","server_instance_id":"software-server","worker_instance_id":"software-worker",
+                "worker_epoch":1,"endpoint":{"host":"127.0.0.1","port":51234},"observed_peer":{"address":"127.0.0.1","port":51234},
+                "remote_engine_version":"SOFTWARE_FAKE_6.4","remote_engine_build":"SOFTWARE_FAKE_293"}}
+            if op=="session.inspect":return {"success":True,"data":{"runtime_live":True,
+                "lifecycle":{"state":"CONNECTED","worker_instance_id":"software-worker","worker_epoch":1},
+                "worker_binding":{"worker_instance_id":"software-worker","worker_epoch":1}}}
+            if op=="model_create":return {"success":True,"execution":{"model_ref":copy.deepcopy(model_ref),"revision":1}}
+            if op=="operation_call" and phase in {"build","apply_case"}:return java_response(request,phase)
+            raise AssertionError("unexpected downstream route was attempted: "+op+" phase="+str(phase))
+    monkeypatch.setattr(m,"PublicDispatchAdapter",FakeAdapter)
+    actual_validator=m.validate_native_mesh_readback
+    def observed_actual_validator(readback,**kw):
+        record={"phase":kw["phase"],"actual_input":copy.deepcopy(readback),"actual_validator_called":True}
+        guards.append(record)
+        try:
+            result=actual_validator(readback,**kw);record["returned"]=copy.deepcopy(result);return result
+        except CandidateError as exc:
+            record["actual_error"]={"type":type(exc).__name__,"message":str(exc)};raise
+    monkeypatch.setattr(m,"validate_native_mesh_readback",observed_actual_validator)
+    result=None
+    try:
+        result=m.execute_candidate(repo=root,evidence=tmp_path/"software-evidence",reviewed_sha256="a"*64,
+                                   install_root=install,jdk_home=jdk)
+    finally:
+        receipt={"scope":"SOFTWARE_FUNCTIONAL_ACTUAL_EXECUTE_AND_VALIDATOR_WITH_FAKE_HOST_PREFLIGHT_AND_ROUTES_NOT_NATIVE",
+            "bad_stage":bad_stage,"original_legal_profile_budget":preflight,"actual_target_guard_observations":guards,
+            "actual_route_trace":trace,"actual_execute_result":result,"forbidden_real_launches":forbidden,
+            "actual_production_sources":{"execute":str(actual_path_class(m.__file__).resolve()),
+                "science_bindings_and_dispatch":str(actual_path_class(science.__file__).resolve())}}
+        (tmp_path/"functional-mesh-control-result.json").write_text(json.dumps(receipt,indent=2,sort_keys=True))
+    assert result is not None and result["error"]["type"]=="CandidateError",result
+    expected="run/empty/completeness/problems/positive element count invalid" if bad_stage=="build_incomplete" else "FreeTet does not cover exact actual full geometry domain set"
+    assert result["error"]["message"]=="full3D native mesh: "+expected
+    assert len(guards)==(1 if bad_stage=="build_incomplete" else 2)
+    assert guards[-1]["actual_error"]==result["error"]
+    if bad_stage=="apply_wrong_domain":assert "returned" in guards[0]
+    actual_routes=[r for r in trace if "operation" in r]
+    expected_phases=["build"] if bad_stage=="build_incomplete" else ["build","apply_case"]
+    assert [r["phase"] for r in actual_routes if r["operation"]=="operation_call"]==expected_phases
+    assert not any(r["operation"] in {"study.run","run_study","solver.run","runAll"}
+                   or (r["phase"] and ("bma" in r["phase"].lower() or "run" in r["phase"].lower())) for r in actual_routes)
+    assert result["solver_call_attempts"]==result["solver_calls"]==result["study_run_calls"]==0
+    assert forbidden==[]
+
+
+def test_execute_candidate_incomplete_build_mesh_blocks_all_bma_study_solver_dispatch(monkeypatch,tmp_path):
+    _execute_candidate_bad_mesh_software_control(monkeypatch,tmp_path,bad_stage="build_incomplete")
+
+
+def test_execute_candidate_wrong_apply_domain_blocks_all_bma_study_solver_dispatch(monkeypatch,tmp_path):
+    _execute_candidate_bad_mesh_software_control(monkeypatch,tmp_path,bad_stage="apply_wrong_domain")

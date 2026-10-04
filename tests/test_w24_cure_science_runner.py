@@ -844,7 +844,7 @@ def test_mechanics_model_bindings_reject_parent_tag_project_mismatch_and_reuse()
 
 
 def test_failed_or_unobserved_solve_keeps_ledger_count_and_never_retries(tmp_path):
-    private = Path("/private/tmp") / f"comsol-mcp-w24-no-retry-{uuid.uuid4().hex}"
+    private = tmp_path / f'comsol-mcp-w24-no-retry-{uuid.uuid4().hex}'
     private.mkdir()
     evidence = private / "evidence"
     evidence.mkdir()

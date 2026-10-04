@@ -15,6 +15,7 @@ from ._execution_contract import (
     SessionLedger,
     canonical_project_path,
     permission_for_legacy_tool,
+    permission_for_effect,
     pre_dispatch_failure,
 )
 from ._domain_outcome import (
@@ -101,6 +102,7 @@ class ExecutionService:
         self.project_root = Path(project_root)
         self._project_root_context = ContextVar(f"execution_project_root_{id(self)}", default=None)
         self.on_state_change = on_state_change or (lambda _event: None)
+        self._owned_branch_context = ContextVar(f"owned_branch_proof_{id(self)}", default=None)
 
     @property
     def project_root(self) -> Path:
@@ -120,6 +122,71 @@ class ExecutionService:
             yield candidate
         finally:
             self._project_root_context.reset(token)
+
+    @contextmanager
+    def _owned_branch_scope(self):
+        # Internal serial-backend scope; no wire field can create this identity.
+        proof = {}
+        token = self._owned_branch_context.set(proof)
+        try:
+            yield proof
+        finally:
+            self._owned_branch_context.reset(token)
+
+    def _owned_branch_proven(self, proof, data, ref, snapshot, after):
+        if proof is None or self._owned_branch_context.get() is not proof:
+            return False
+        detail = data.get("data")
+        if not isinstance(detail, Mapping) or detail.get("revision_proof") != proof:
+            return False
+        source_before, source_after = proof.get("source_before"), proof.get("source_after")
+        if not isinstance(source_before, Mapping) or not isinstance(source_after, Mapping):
+            return False
+        if any(source_before.get(k) != snapshot[k] or source_after.get(k) != after[k]
+               for k in ("fingerprint", "external_event_counter")):
+            return False
+        newref = proof.get("branch_ref")
+        calls = proof.get("mutation_targets")
+        try:
+            from ._execution_contract import model_ref_from_mapping
+            branch_state = self.ledger._state_for(model_ref_from_mapping(dict(newref)))
+        except (ExecutionContractError, TypeError, ValueError):
+            return False
+        if (branch_state.ref.as_dict() != detail.get("branch_model_ref")
+                or branch_state.revision != detail.get("branch_revision")
+                or branch_state.dirty or branch_state.active_operation_id
+                or self.ledger.model_ownership.get(branch_state.ref.model_tag) != "mcp_owned"):
+            return False
+        persistence = detail.get("persistence")
+        if not isinstance(persistence, Mapping):
+            return False
+        revision_record = persistence.get("revision_record")
+        project_binding = persistence.get("project_binding")
+        if not isinstance(project_binding, Mapping):
+            return False
+        expected_record = {"model_ref": branch_state.ref.as_dict(), "revision": branch_state.revision,
+                           "dirty": branch_state.dirty, "fingerprint": branch_state.fingerprint,
+                           "active_operation_id": branch_state.active_operation_id,
+                           "project_id": project_binding.get("project_id"), "attribution": "PROJECT_BOUND"}
+        if (json.dumps(revision_record, sort_keys=True, separators=(",", ":"))
+                != json.dumps(expected_record, sort_keys=True, separators=(",", ":"))
+                or proof.get("persisted_revision_record") != revision_record):
+            return False
+        return (proof.get("action") == "checkpoint.branch" and proof.get("source_ref") == ref.as_dict()
+                and proof.get("source_before") == proof.get("source_after")
+                and proof.get("pointer_unchanged") is True and proof.get("identity_unchanged") is True
+                and proof.get("copy_verified") is True and proof.get("persistence_verified") is True
+                and proof.get("unknown") is False and proof.get("cleanup_errors") == []
+                and isinstance(newref, Mapping) and newref != ref.as_dict()
+                and newref.get("model_tag") == proof.get("owned_tag")
+                and isinstance(proof.get("clone_sha256"), str) and len(proof["clone_sha256"]) == 64
+                and isinstance(proof.get("operation_id"), str) and bool(proof["operation_id"])
+                and isinstance(calls, list) and len(calls) == 1
+                and calls[0].get("method") == "load" and calls[0].get("model_tag") == proof["owned_tag"]
+                and detail.get("persistence", {}).get("verified") is True
+                and detail.get("source_pointer_restored") is True
+                and detail.get("source_unchanged_within_scope") is True
+                and detail.get("status") == "SUCCEEDED" and data.get("success") is True)
 
     def bind_model(self, model_tag: str, *, ownership: str = "user_owned") -> dict[str, Any]:
         snapshot = self._snapshot(model_tag)
@@ -184,6 +251,7 @@ class ExecutionService:
         session_id: str | None = None,
         path_parameters: tuple[str, ...] = (),
         effect: str | None = None,
+        _owned_branch_proof: Mapping[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Call only after authorization, real selected-model check, and preflight.
 
@@ -191,7 +259,10 @@ class ExecutionService:
         the server-side legacy registry permission decision and are deliberately
         not given a synthetic revision.
         """
-        permission = permission_for_legacy_tool(tool_name)
+        # Only the serial backend may supply this effect, after actual public
+        # receiver/version/signature validation. Other legacy routes are unchanged.
+        permission = (permission_for_effect(effect) if tool_name == "api_invoke"
+                      else permission_for_legacy_tool(tool_name))
         if session_id is not None and session_id != self.ledger.session_id:
             raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "request session_id does not match this control session")
         args = dict(arguments or {})
@@ -311,6 +382,13 @@ class ExecutionService:
         outcome, changed = final_state(data, engine_changed=changed_engine)
         if _function_evaluate_read_ticket_proven(tool_name, effect, data, outcome, changed_engine):
             changed = False
+        if tool_name == "checkpoint_branch" and effect == "project_write" and outcome == "succeeded":
+            if not changed_engine and self._owned_branch_proven(_owned_branch_proof, data, model_ref, snapshot, after):
+                changed = False
+            else:
+                outcome, changed = "unknown", True
+                data = {**data, "success": False, "execution_state_unknown": True,
+                        "error": {"code": "EXECUTION_STATE_UNKNOWN", "message": "branch source proof not verified", "safe_retry": False}}
         result = self.ledger.finish(ticket, outcome=outcome, changed=changed, fingerprint=after["fingerprint"])
         self._emit("finished", model_ref, operation_id=ticket.operation_id)
         outcome_record = classify_envelope(data, engine_changed=changed_engine)

@@ -2,6 +2,9 @@ import com.comsol.model.Coordsys;
 import com.comsol.model.GeomMeasure;
 import com.comsol.model.GeomSequence;
 import com.comsol.model.Model;
+import com.comsol.model.MeshSequence;
+import com.comsol.model.MeshFeature;
+import com.comsol.model.MeshSelection;
 import com.comsol.model.NumericalFeature;
 import com.comsol.model.ParameterEntity;
 import com.comsol.model.PropFeature;
@@ -222,7 +225,9 @@ public final class NativeW23Full3DFixture {
         size.set("custom", "on");
         size.set("hmax", (String) meshLevel.get("hmax_expression"));
         size.set("hmin", (String) meshLevel.get("hmin_expression"));
-        model.component(COMPONENT).mesh("mesh3d").run();
+        Map<String, Object> meshObservation = runOwnedFull3dMesh(
+                model.component(COMPONENT).mesh("mesh3d"), geom, true,
+                (String) meshLevel.get("hmax_expression"), (String) meshLevel.get("hmin_expression"));
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("fixture_id", FIXTURE_ID);
@@ -294,13 +299,182 @@ public final class NativeW23Full3DFixture {
             throw new IllegalStateException("native mesh-size property readback differs from the requested frozen level");
         meshReadback.put("hmax", observedHmax);
         meshReadback.put("hmin", observedHmin);
-        meshReadback.put("elements", model.component(COMPONENT).mesh("mesh3d").getNumElem());
+        meshReadback.put("elements", meshObservation.get("element_count"));
+        meshReadback.put("observation", meshObservation);
         if (meshLevel.get("mesh_level_id") instanceof String) {
             meshReadback.put("mesh_level_id", meshLevel.get("mesh_level_id"));
             meshReadback.put("mesh_scale_factor", meshLevel.get("mesh_scale_factor"));
         }
         result.put("mesh", meshReadback);
         return result;
+    }
+
+    private static final String OWNED_TET = "w23tet";
+
+    private static Object meshGetter(Map<String, Object> o, String key,
+            java.util.function.Supplier<Object> getter) {
+        @SuppressWarnings("unchecked") List<String> attempts = (List<String>) o.get("getter_attempts");
+        @SuppressWarnings("unchecked") Map<String, Object> errors = (Map<String, Object>) o.get("getter_errors");
+        attempts.add(key);
+        try { Object value = getter.get(); o.put(key, value); return value; }
+        catch (RuntimeException e) {
+            errors.put(key, Map.of("type", e.getClass().getName(), "message", String.valueOf(e.getMessage())));
+            return null;
+        }
+    }
+
+    private static Set<Integer> meshPositiveIds(Object raw, String name) {
+        if (!(raw instanceof int[]) || ((int[]) raw).length == 0)
+            throw new IllegalStateException(name + " must be nonempty native int[]");
+        Set<Integer> ids = new LinkedHashSet<>();
+        for (int id : (int[]) raw)
+            if (id <= 0 || !ids.add(id)) throw new IllegalStateException(name + " invalid or duplicate entity");
+        return ids;
+    }
+
+    // getUpDown supplies actual domain numbers, never count-derived range IDs.
+    private static Set<Integer> meshTopologyDomains(Object raw) {
+        if (!(raw instanceof int[][])) throw new IllegalStateException("getUpDown must be int[][]");
+        int[][] rows = (int[][]) raw;
+        if (rows.length != 2 || rows[0] == null || rows[1] == null
+                || rows[0].length == 0 || rows[0].length != rows[1].length)
+            throw new IllegalStateException("getUpDown needs two aligned nonempty rows");
+        Set<Integer> domains = new LinkedHashSet<>();
+        for (int[] row : rows) for (int id : row) {
+            if (id < 0) throw new IllegalStateException("negative getUpDown domain");
+            if (id > 0) domains.add(id); // zero is documented void, not a domain.
+        }
+        if (domains.isEmpty()) throw new IllegalStateException("getUpDown has no positive domains");
+        return domains;
+    }
+
+    private static String meshSizeString(Map<String, Object> o, String key) {
+        Object value = o.get(key);
+        if (!(value instanceof String) || ((String) value).isBlank())
+            throw new IllegalStateException("invalid native mesh Size " + key);
+        return (String) value;
+    }
+
+    private static void meshNoGetterErrors(Map<String, Object> o) {
+        if (!((Map<?, ?>) o.get("getter_errors")).isEmpty())
+            throw new IllegalStateException("native mesh getter failure");
+    }
+
+    private static Map<String, Object> runOwnedFull3dMesh(MeshSequence mesh, GeomSequence geom,
+            boolean initial, String expectedHmax, String expectedHmin) {
+        Map<String, Object> o = new LinkedHashMap<>();
+        o.put("schema", "W23_FULL3D_OWNED_MESH_V1");
+        o.put("phase", initial ? "initial" : "apply_case");
+        o.put("getter_attempts", new ArrayList<String>());
+        o.put("getter_errors", new LinkedHashMap<String, Object>());
+        o.put("selection_action_provenance", initial ? "geom_3_all_called_this_initial_creation"
+                : "same_owned_generator_initial_geom_3_all_reused_no_selection_repair");
+        o.put("generator_created_in_call", 0);
+        o.put("mesh_run_attempted", false);
+        o.put("mesh_run_returned", false);
+        try {
+            Object rawTags = meshGetter(o, "feature_tags_before", () -> mesh.feature().tags());
+            meshNoGetterErrors(o);
+            if (!(rawTags instanceof String[])) throw new IllegalStateException("mesh feature tags missing");
+            Set<String> tags = new LinkedHashSet<>();
+            for (String t : (String[]) rawTags)
+                if (t == null || t.isBlank() || !tags.add(t)) throw new IllegalStateException("mesh feature tag ambiguity");
+            if (initial) {
+                if (tags.contains(OWNED_TET)) throw new IllegalStateException("owned FreeTet tag collision");
+                mesh.feature().create(OWNED_TET, "FreeTet");
+                o.put("generator_created_in_call", 1);
+                mesh.feature(OWNED_TET).selection().geom(GEOMETRY, 3).all();
+            } else if (!tags.contains(OWNED_TET)) {
+                throw new IllegalStateException("owned FreeTet missing; no recreation permitted");
+            }
+            MeshFeature tet = mesh.feature(OWNED_TET);
+            MeshSelection selection = tet.selection();
+            PropFeature size = mesh.feature("size");
+            meshGetter(o, "mesh_tag", () -> mesh.tag());
+            meshGetter(o, "geometry_tag", () -> geom.tag());
+            meshGetter(o, "geometry_dimension", () -> geom.getSDim());
+            meshGetter(o, "domain_count", () -> geom.getNDomains());
+            meshGetter(o, "up_down", () -> geom.getUpDown());
+            meshGetter(o, "generator_tag", () -> tet.tag());
+            meshGetter(o, "generator_type", () -> tet.getType());
+            meshGetter(o, "selection_geometry", () -> selection.geom());
+            meshGetter(o, "selection_dimension", () -> selection.dim());
+            meshGetter(o, "selection_dimensions", () -> selection.dimension());
+            meshGetter(o, "selection_entities", () -> selection.entities(3));
+            meshGetter(o, "selection_is_geom_raw", () -> selection.isGeom());
+            meshGetter(o, "selection_is_remaining_raw", () -> selection.isRemaining());
+            meshGetter(o, "size_custom", () -> size.getString("custom"));
+            meshGetter(o, "size_hmax", () -> size.getString("hmax"));
+            meshGetter(o, "size_hmin", () -> size.getString("hmin"));
+            meshNoGetterErrors(o);
+            Set<Integer> domains = meshTopologyDomains(o.get("up_down"));
+            List<Integer> sortedDomains = new ArrayList<>(domains); java.util.Collections.sort(sortedDomains);
+            o.put("domain_ids", sortedDomains);
+            if (!"mesh3d".equals(o.get("mesh_tag")) || !GEOMETRY.equals(o.get("geometry_tag"))
+                    || !Integer.valueOf(3).equals(o.get("geometry_dimension"))
+                    || !Integer.valueOf(domains.size()).equals(o.get("domain_count"))
+                    || !OWNED_TET.equals(o.get("generator_tag")) || !"FreeTet".equals(o.get("generator_type"))
+                    || !GEOMETRY.equals(o.get("selection_geometry"))
+                    || !Integer.valueOf(3).equals(o.get("selection_dimension"))
+                    || !(o.get("selection_dimensions") instanceof int[])
+                    || !Arrays.equals(new int[]{3}, (int[]) o.get("selection_dimensions"))
+                    || !domains.equals(meshPositiveIds(o.get("selection_entities"), "FreeTet selection"))
+                    || !(o.get("selection_is_geom_raw") instanceof Boolean)
+                    || !(o.get("selection_is_remaining_raw") instanceof Boolean)
+                    || !"on".equals(meshSizeString(o, "size_custom"))
+                    || !meshFrozenSize(o, initial, expectedHmax, expectedHmin))
+                throw new IllegalStateException("native whole-domain 3D FreeTet/Size identity mismatch");
+            o.put("mesh_run_attempted", true);
+            try { mesh.run(); o.put("mesh_run_returned", true); }
+            catch (RuntimeException e) {
+                o.put("mesh_run_error", Map.of("type", e.getClass().getName(), "message", String.valueOf(e.getMessage())));
+            }
+            // Read all health getters even after run error: partial native mesh is not acceptance.
+            meshGetter(o, "mesh_dimension", () -> mesh.getSDim());
+            meshGetter(o, "is_empty", () -> mesh.isEmpty());
+            meshGetter(o, "element_count", () -> mesh.getNumElem());
+            meshGetter(o, "is_complete", () -> mesh.isComplete());
+            meshGetter(o, "has_problems", () -> mesh.hasProblems());
+            meshGetter(o, "problems", () -> mesh.problems());
+            meshNoGetterErrors(o);
+            if (!Boolean.TRUE.equals(o.get("mesh_run_returned"))
+                    || !Integer.valueOf(3).equals(o.get("mesh_dimension"))
+                    || !Boolean.FALSE.equals(o.get("is_empty"))
+                    || !(o.get("element_count") instanceof Integer) || ((Integer) o.get("element_count")) <= 0
+                    || !Boolean.TRUE.equals(o.get("is_complete"))
+                    || !Boolean.FALSE.equals(o.get("has_problems"))
+                    || !(o.get("problems") instanceof String[]) || ((String[]) o.get("problems")).length != 0)
+                throw new IllegalStateException("native mesh incomplete, empty, failed, or has problems");
+            o.put("status", "NATIVE_MESH_GETTERS_ACCEPTED_NO_SCIENCE_CLAIM");
+            return o;
+        } catch (RuntimeException e) {
+            o.put("failure_cause", Map.of("type", e.getClass().getName(), "message", String.valueOf(e.getMessage())));
+            // Existing Worker exception retention keeps the full observed map; no fallback/rebuild.
+            throw new IllegalStateException("owned full3D mesh failed; observations=" + meshObservationText(o), e);
+        }
+    }
+
+    private static String meshObservationText(Map<String, Object> o) {
+        Map<String, Object> printable = new LinkedHashMap<>();
+        for (Map.Entry<String, Object> row : o.entrySet()) {
+            Object v = row.getValue();
+            if (v instanceof int[][]) v = Arrays.deepToString((int[][]) v);
+            else if (v instanceof int[]) v = Arrays.toString((int[]) v);
+            else if (v instanceof String[]) v = Arrays.toString((String[]) v);
+            printable.put(row.getKey(), v);
+        }
+        return printable.toString();
+    }
+
+    private static boolean meshFrozenSize(Map<String, Object> o, boolean initial,
+            String expectedHmax, String expectedHmin) {
+        String hmax = meshSizeString(o, "size_hmax"), hmin = meshSizeString(o, "size_hmin");
+        if (initial) return expectedHmax.equals(hmax) && expectedHmin.equals(hmin);
+        for (Map<String, Object> level : List.of(requestedMeshLevel(Map.of()),
+                requestedMeshLevel(Map.of("mesh_level_id", "mesh2", "mesh_scale_factor", 0.8)),
+                requestedMeshLevel(Map.of("mesh_level_id", "mesh3", "mesh_scale_factor", 0.64))))
+            if (hmax.equals(level.get("hmax_expression")) && hmin.equals(level.get("hmin_expression"))) return true;
+        return false;
     }
 
     private static Map<String, Object> requestedMeshLevel(Map<String, Object> args) {
@@ -394,7 +568,9 @@ public final class NativeW23Full3DFixture {
                 PORT_SELECTION_RADIAL_MARGIN_UM);
         SelectionFeature captureSelection = model.component(COMPONENT).selection("sel3dOutputCoreCapture");
         configureLocalPortCylinder(captureSelection, frame.axis, frame.center, frame.coreRadius, 0.0);
-        model.component(COMPONENT).mesh("mesh3d").run();
+        Map<String, Object> meshObservation = runOwnedFull3dMesh(
+                model.component(COMPONENT).mesh("mesh3d"), model.component(COMPONENT).geom(GEOMETRY),
+                false, null, null);
         Map<String, Object> result = new LinkedHashMap<>();
         for (String key : new String[]{"project_id", "model_ref", "model_tag", "experiment_id",
                                        "expected_revision", "case_id", "case_identity_sha256", "recipe_sha256"}) {
@@ -411,6 +587,8 @@ public final class NativeW23Full3DFixture {
         result.put("geometry", Map.of("dimension", 3, "domain_count", model.component(COMPONENT).geom(GEOMETRY).getNDomains(),
                 "input_port_entities", intList(model.component(COMPONENT).selection("sel3dInputPort").entities(2)),
                 "output_port_entities", intList(model.component(COMPONENT).selection("sel3dOutputPort").entities(2))));
+        result.put("mesh", Map.of("tag", "mesh3d", "geometry", GEOMETRY,
+                "elements", meshObservation.get("element_count"), "observation", meshObservation));
         result.put("receiver_port_section", portSectionReadback(model, portSelection,
                 frame.axis, frame.center, frame.claddingRadius, PORT_SELECTION_RADIAL_MARGIN_UM));
         result.put("receiver_core_capture_section", portSectionReadback(model, captureSelection,

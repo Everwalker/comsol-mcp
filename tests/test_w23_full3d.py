@@ -80,7 +80,7 @@ def test_full3d_java_builder_has_rotation_and_local_section_readback_but_no_stud
     apply_start = java.index("private static Map<String, Object> applyCase")
     geometry_update = java.index("geom(GEOMETRY).run();", apply_start)
     selection_update = java.index('configureLocalPortCylinder(portSelection, frame.axis', apply_start)
-    mesh_update = java.index('mesh("mesh3d").run();', apply_start)
+    mesh_update = java.index("meshObservation = runOwnedFull3dMesh(", apply_start)
     assert geometry_update < selection_update < mesh_update
     assert 'study_or_solver_invoked", false' in java
     build = java[java.index("private static Map<String, Object> build"):

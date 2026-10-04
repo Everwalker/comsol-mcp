@@ -73,7 +73,7 @@ CONTROL_READS = {
     "job.list", "job.wait", "job.cancel",
     "run_study_status", "visible_main_workflow_status",
     "registry_list", "registry_describe", "registry_search", "registry_manifest", "operation_describe",
-    "docs_search", "docs_get", "docs_examples", "docs_error_search", "checkpoint_list", "checkpoint_inspect", "checkpoint_diff",
+    "docs_search", "docs_get", "docs_examples", "docs_error_search", "checkpoint_list", "checkpoint_inspect",
 }
 CACHED_JOB_ACTIONS = frozenset({
     "job.list", "job.status", "job.log", "job.result", "job.reconcile", "job.wait", "job.cancel", "job.cleanup",
@@ -542,6 +542,35 @@ class ControlDaemon:
                     return cached
             if operation == "runtime_poc_v64":
                 raise ExecutionContractError("UNSUPPORTED_OPERATION", "historical one-shot probe is disabled in the managed backend")
+            from ._g2_registry import NODE_ACTIONS, validate_call
+            unit_a_actions = NODE_ACTIONS | {"api.describe", "api.invoke", "checkpoint.branch", "api.probe", "checkpoint.diff"}
+            unit_a_aliases = {name.replace(".", "_"): name for name in unit_a_actions}
+            operation = unit_a_aliases.get(operation, operation)
+            nested_a = operation in {"registry_call", "operation_call"} and arguments.get("operation_id") in unit_a_actions
+            if operation in {"registry_call", "operation_call"} and arguments.get("operation_id") in unit_a_aliases:
+                raise ExecutionContractError("INVALID_REQUEST", "Unit A fallback operation_id must be canonical")
+            if operation in unit_a_actions or nested_a:
+                scoped_operation = arguments["operation_id"] if nested_a else operation
+                if nested_a:
+                    if set(arguments) != {"operation_id", "arguments"} or not isinstance(arguments.get("arguments"), dict):
+                        raise ExecutionContractError("INVALID_REQUEST", "Unit A fallback requires exact operation_id/arguments object")
+                    body = arguments["arguments"]
+                    if scoped_operation == "api.invoke":
+                        from ._g2_public_api import routed_arguments
+                        routed_arguments(operation, arguments)
+                else:
+                    body = arguments
+                scoped = dict(body)
+                identities = ("project_id", "session_id", "model_ref", "expected_revision", "idempotency_key", "request_id")
+                for field in identities:
+                    # The outer envelope is authoritative, including absence.
+                    if field in body and body[field] != execution.get(field):
+                        raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", f"Unit A {field} conflicts with the execution envelope")
+                    if field in execution:
+                        scoped[field] = execution[field]
+                validate_call(scoped_operation, scoped)
+                clean = {key: value for key, value in body.items() if key not in identities}
+                arguments = {"operation_id": scoped_operation, "arguments": clean} if nested_a else clean
             from ._g3_w21 import ALIASES
             operation = ALIASES.get(operation, operation)
             operation = {"artifact_register": "artifact.register", "geometry_import": "geometry.import"}.get(operation, operation)
@@ -638,6 +667,7 @@ class ControlDaemon:
                 operation not in self.backend.registry
                 and operation not in {"registry_call", "operation_call", "model_adopt", "model_inspect", "model.adopt", "model.inspect", "artifact.register"}
                 and operation not in _g3_operations()
+                and operation not in unit_a_actions
             ):
                 raise ExecutionContractError("UNSUPPORTED_OPERATION", f"operation is not registered: {operation}")
             session_context = self._execution_session_context(execution)
@@ -10463,6 +10493,13 @@ class ControlDaemon:
                 effect = None
         if effect is None:
             effect = _g2_registry.LEGACY_TOOL_EFFECTS.get(scoped_operation)
+        if scoped_operation in {"api.invoke", "api_invoke"}:
+            from ._g2_public_api import routed_arguments, provisional_effect
+            effect = provisional_effect(routed_arguments(operation, arguments))
+        if scoped_operation in {"api.probe", "api_probe"}:
+            from ._g2_checkpoint_ops import inner_permission
+            probe_body = arguments["arguments"] if operation in {"registry_call", "operation_call"} else arguments
+            self.project_authority.authorize_operation(project_id, inner_permission(probe_body))
         permission = self._permission_for_effect(effect)
         if permission is None:
             raise ExecutionContractError("PROJECT_SCOPE_UNSUPPORTED", "project-scoped operation has no enforced effect mapping")
@@ -10891,7 +10928,7 @@ class ControlDaemon:
                 return self._exception(exc)
             except Exception as exc:
                 return self._error("UNAVAILABLE", "offline documentation index is unavailable", type=type(exc).__name__)
-        if operation in {"checkpoint_list", "checkpoint_inspect", "checkpoint_diff"}:
+        if operation in {"checkpoint_list", "checkpoint_inspect"}:
             try:
                 rows = self.store.list_metadata("checkpoints")
                 if operation == "checkpoint_list":
@@ -10900,10 +10937,6 @@ class ControlDaemon:
                 if operation == "checkpoint_inspect":
                     value = next((row for row in rows if row.get("checkpoint_id") == checkpoint_id or row.get("sha256") == checkpoint_id), None)
                     return {"success": bool(value), "data": value or {}, "error": None if value else {"code": "NODE_NOT_FOUND", "message": "checkpoint not found", "safe_retry": False}}
-                left = arguments.get("left"); right = arguments.get("right")
-                lrow = next((row for row in rows if row.get("checkpoint_id") == left or row.get("sha256") == left), None)
-                rrow = next((row for row in rows if row.get("checkpoint_id") == right or row.get("sha256") == right), None)
-                return {"success": bool(lrow and rrow), "data": {"left": lrow, "right": rrow, "equal": bool(lrow and rrow and lrow.get("sha256") == rrow.get("sha256"))}}
             except Exception as exc:
                 return self._error("UNAVAILABLE", "checkpoint metadata is unavailable", type=type(exc).__name__)
         if operation in {"session_health", "server_info"}:

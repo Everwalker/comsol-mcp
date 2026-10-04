@@ -2,6 +2,10 @@ package comsol_mcp.worker_java;
 
 import com.sun.security.auth.module.NTSystem;
 import com.comsol.model.Model;
+import com.comsol.model.ModelEntity;
+import com.comsol.model.NodeGroup;
+import com.comsol.model.NodeGroupList;
+import com.comsol.model.PrimitiveModelEntity;
 import com.comsol.model.GeomObjectSelection;
 import com.comsol.model.MeshSequence;
 import com.comsol.model.ModelParam;
@@ -47,6 +51,10 @@ import javax.tools.ToolProvider;
  * a solve is running.</p>
  */
 public final class PersistentComsolWorker {
+  private static final String D2_COMSOL_VERSION = "6.4.0.293";
+  private static final Set<String> D2_METADATA_METHODS = new HashSet<>(Arrays.asList(
+      "nodeGroup", "tags", "size", "get", "feature", "getAfter",
+      "getContainer", "resolveModelPath", "ungroup"));
   private static final long W21_FIELD_MAX_NUMERIC_SCALARS = 65_536L;
   private static final int W21_FIELD_MAX_JSON_BYTES = 8 * 1024 * 1024;
   private static final Set<String> METHODS = new HashSet<>(Arrays.asList(
@@ -160,7 +168,7 @@ public final class PersistentComsolWorker {
       // W18: plot group, geometry/mesh image, and export inspection/execution
       "isPlotGroup", "axis", "camera", "showFrame", "image", "plot",
       // ProbeFeature.genResult(String): explicit write, never history-read preparation.
-      "genResult"));
+      "genResult", "copy", "resolveModelPath"));
   private static final Set<String> MODEL_UTIL = new HashSet<>(Arrays.asList(
       "create", "load", "model", "remove", "tags", "uniquetag", "modelsUsedByOtherClients",
       "getComsolVersion",
@@ -293,7 +301,7 @@ public final class PersistentComsolWorker {
     if ("reflection_selftest".equals(type)) return map("ok", true, "result", reflectionSelftest());
     if ("marshalling_selftest".equals(type)) return map("ok", true, "result", marshallingSelftest());
     if ("shutdown".equals(type)) return error("PERMISSION_DENIED", "worker shutdown is controlled by its owner process");
-    if (!"connect".equals(type) && !"call".equals(type) && !"model".equals(type) && !"modelutil".equals(type) && !"license_checkout".equals(type) && !"model_snapshot".equals(type) && !"disconnect".equals(type) && !"lock_selftest".equals(type) && !"code_compile".equals(type) && !"code_execute".equals(type) && !"children".equals(type) && !"walk".equals(type))
+    if (!"connect".equals(type) && !"call".equals(type) && !"model".equals(type) && !"modelutil".equals(type) && !"license_checkout".equals(type) && !"model_snapshot".equals(type) && !"disconnect".equals(type) && !"lock_selftest".equals(type) && !"code_compile".equals(type) && !"code_execute".equals(type) && !"children".equals(type) && !"walk".equals(type) && !"public_describe".equals(type) && !"g2_entity_identity".equals(type) && !"g2_nodegroup_read".equals(type) && !"g2_nodegroup_ungroup".equals(type))
       return error("UNKNOWN_COMMAND", "unsupported internal worker command");
     String id = requiredId(request);
     RequestState old = requests.get(id);
@@ -327,6 +335,10 @@ public final class PersistentComsolWorker {
       else if ("code_execute".equals(type)) result = executeJava(request);
       else if ("children".equals(type)) result = childrenProbe(request);
       else if ("walk".equals(type)) result = walk(request);
+      else if ("public_describe".equals(type)) result = publicDescribe(request);
+      else if ("g2_entity_identity".equals(type)) result = g2EntityIdentity(request);
+      else if ("g2_nodegroup_read".equals(type)) result = g2NodeGroupRead(request);
+      else if ("g2_nodegroup_ungroup".equals(type)) result = g2NodeGroupUngroup(request);
       else result = call(request);
       state.succeed(encode(result));
     } catch (WorkerFailure t) {
@@ -1208,6 +1220,199 @@ public final class PersistentComsolWorker {
     return target;
   }
 
+  private static void requireD2RequestFields(Map<String, Object> request,
+      Set<String> required, Set<String> payloadFields) {
+    Set<String> allowed = new HashSet<>(required);
+    allowed.addAll(payloadFields);
+    allowed.add("type");
+    allowed.add("request_id");
+    if (request.containsKey("queue_timeout_ms")) allowed.add("queue_timeout_ms");
+    if (!request.keySet().containsAll(required) || !allowed.containsAll(request.keySet()))
+      throw new WorkerFailure("INVALID_REQUEST", "D2 private command contains missing or unknown fields");
+    if (!(request.get("request_id") instanceof String) || ((String) request.get("request_id")).isEmpty())
+      throw new WorkerFailure("INVALID_REQUEST", "D2 private command requires a nonempty request_id");
+    if (request.containsKey("queue_timeout_ms")) {
+      Object timeout = request.get("queue_timeout_ms");
+      if (!(timeout instanceof Long) || ((Long) timeout).longValue() < 0L)
+        throw new WorkerFailure("INVALID_REQUEST", "queue_timeout_ms must be an exact nonnegative integer");
+    }
+  }
+
+  private static long requireD2Generation(Map<String, Object> request) {
+    Object value = request.get("generation");
+    if (!(value instanceof Long) || ((Long) value).longValue() < 1L)
+      throw new WorkerFailure("INVALID_REQUEST", "generation must be an exact positive integer");
+    return ((Long) value).longValue();
+  }
+
+  private static String requireD2String(Map<String, Object> request, String field) {
+    Object value = request.get(field);
+    if (!(value instanceof String) || ((String) value).isEmpty())
+      throw new WorkerFailure("INVALID_REQUEST", field + " must be a nonempty string");
+    return (String) value;
+  }
+
+  private static List<?> requireD2Args(Map<String, Object> request) {
+    Object value = request.get("args");
+    if (!(value instanceof List<?>)) throw new WorkerFailure("INVALID_REQUEST", "args must be a JSON array");
+    return (List<?>) value;
+  }
+
+  private static void requireD2Signature(Class<?> owner, String name, Class<?> result, Class<?>... parameters) {
+    try {
+      Method method = owner.getMethod(name, parameters);
+      if (method.getReturnType() != result)
+        throw new WorkerFailure("API_UNSUPPORTED", "D2 API return type differs from its reviewed signature");
+    } catch (NoSuchMethodException failure) {
+      throw new WorkerFailure("API_UNSUPPORTED", "D2 API signature is absent from the compiled COMSOL interface", null, failure);
+    }
+  }
+
+  private static String requireD2RuntimeVersion() {
+    String actual = ModelUtil.getComsolVersion();
+    if (!D2_COMSOL_VERSION.equals(actual))
+      throw new WorkerFailure("API_UNSUPPORTED", "D2 API route requires COMSOL " + D2_COMSOL_VERSION);
+    return actual;
+  }
+
+  private Object g2EntityIdentity(Map<String, Object> request) {
+    ensureConnected();
+    requireD2RequestFields(request, new HashSet<>(Arrays.asList("left_handle", "right_handle", "generation")), Collections.emptySet());
+    long claimed = requireD2Generation(request);
+    if (claimed != generation.get()) throw new WorkerFailure("STALE_WORKER_HANDLE", "D2 identity generation is stale");
+    String leftHandle = requireD2String(request, "left_handle");
+    String rightHandle = requireD2String(request, "right_handle");
+    Object left = handles.get(leftHandle);
+    Object right = handles.get(rightHandle);
+    if (left == null || right == null)
+      throw new WorkerFailure("UNKNOWN_WORKER_HANDLE", "D2 identity requires two current non-null handles");
+    if (!(left instanceof PrimitiveModelEntity) || !(right instanceof PrimitiveModelEntity))
+      throw new WorkerFailure("API_UNSUPPORTED", "D2 identity operands must implement PrimitiveModelEntity");
+    // Do not query COMSOL metadata or properties here. Java reference identity
+    // is deliberately the sole witness carried by this private command.
+    return map("same_reference", left == right, "generation", claimed,
+        "identity_scope", "java_reference_identity");
+  }
+
+  private Object g2NodeGroupRead(Map<String, Object> request) throws Exception {
+    ensureConnected();
+    requireD2RequestFields(request, new HashSet<>(Arrays.asList("handle", "generation", "method", "args")), Collections.emptySet());
+    long claimed = requireD2Generation(request);
+    if (claimed != generation.get()) throw new WorkerFailure("STALE_WORKER_HANDLE", "D2 read generation is stale");
+    String handle = requireD2String(request, "handle");
+    String method = requireD2String(request, "method");
+    Object target = handles.get(handle);
+    if (target == null) throw new WorkerFailure("UNKNOWN_WORKER_HANDLE", "D2 read handle is absent or stale");
+    List<?> args = requireD2Args(request);
+    String receiver;
+    String returnType;
+    List<String> parameterTypes = new ArrayList<>();
+    Object value;
+    if ("nodeGroup".equals(method)) {
+      if (!(target instanceof Model) || (args.size() != 0 && args.size() != 1))
+        throw new WorkerFailure("API_UNSUPPORTED", "nodeGroup read requires Model.nodeGroup() or Model.nodeGroup(String)");
+      String version = requireD2RuntimeVersion();
+      receiver = Model.class.getName();
+      if (args.isEmpty()) {
+        requireD2Signature(Model.class, "nodeGroup", NodeGroupList.class);
+        value = ((Model) target).nodeGroup();
+        returnType = NodeGroupList.class.getName();
+      } else {
+        if (!(args.get(0) instanceof String) || ((String) args.get(0)).isEmpty())
+          throw new WorkerFailure("INVALID_REQUEST", "nodeGroup(String) requires one nonempty string tag");
+        requireD2Signature(Model.class, "nodeGroup", NodeGroup.class, String.class);
+        parameterTypes.add(String.class.getName());
+        value = ((Model) target).nodeGroup((String) args.get(0));
+        returnType = NodeGroup.class.getName();
+      }
+      if (value == null || (args.isEmpty() ? !(value instanceof NodeGroupList) : !(value instanceof NodeGroup)))
+        throw new WorkerFailure("API_UNSUPPORTED", "Model.nodeGroup returned an unexpected public receiver type");
+      return map("generation", claimed, "receiver_interface", receiver, "method", method,
+          "parameters", parameterTypes, "return_type", returnType, "runtime_version", version,
+          "value", encode(value));
+    }
+    String version = requireD2RuntimeVersion();
+    if ("tags".equals(method)) {
+      if (!(target instanceof NodeGroupList) || !args.isEmpty()) throw new WorkerFailure("API_UNSUPPORTED", "tags read requires NodeGroupList.tags()");
+      requireD2Signature(NodeGroupList.class, "tags", String[].class);
+      String[] tags = ((NodeGroupList) target).tags();
+      if (tags == null) throw new WorkerFailure("EXECUTION_STATE_UNKNOWN", "NodeGroupList.tags returned null");
+      Set<String> unique = new HashSet<>();
+      for (String tag : tags) if (tag == null || tag.isEmpty() || !unique.add(tag))
+        throw new WorkerFailure("EXECUTION_STATE_UNKNOWN", "NodeGroupList.tags returned an empty or duplicate tag");
+      receiver = NodeGroupList.class.getName(); returnType = String[].class.getName(); value = tags;
+    } else if ("size".equals(method)) {
+      if (!(target instanceof NodeGroup) || !args.isEmpty()) throw new WorkerFailure("API_UNSUPPORTED", "size read requires NodeGroup.size()");
+      requireD2Signature(NodeGroup.class, "size", int.class);
+      receiver = NodeGroup.class.getName(); returnType = int.class.getName(); value = Integer.valueOf(((NodeGroup) target).size());
+    } else if ("get".equals(method)) {
+      if (!(target instanceof NodeGroup) || args.size() != 1 || !(args.get(0) instanceof Long))
+        throw new WorkerFailure("API_UNSUPPORTED", "get read requires NodeGroup.get(int) with an exact integer");
+      long index = ((Long) args.get(0)).longValue();
+      if (index < 0L || index > Integer.MAX_VALUE) throw new WorkerFailure("INVALID_REQUEST", "NodeGroup.get index is out of range");
+      requireD2Signature(NodeGroup.class, "get", ModelEntity.class, int.class);
+      receiver = NodeGroup.class.getName(); returnType = ModelEntity.class.getName();
+      parameterTypes.add(int.class.getName()); value = ((NodeGroup) target).get((int) index);
+      if (!(value instanceof ModelEntity) || !(value instanceof PrimitiveModelEntity))
+        throw new WorkerFailure("API_UNSUPPORTED", "NodeGroup.get returned a non-primitive ModelEntity");
+    } else if ("feature".equals(method)) {
+      if (!(target instanceof NodeGroup) || !args.isEmpty()) throw new WorkerFailure("API_UNSUPPORTED", "feature read requires NodeGroup.feature()");
+      requireD2Signature(NodeGroup.class, "feature", NodeGroupList.class);
+      receiver = NodeGroup.class.getName(); returnType = NodeGroupList.class.getName(); value = ((NodeGroup) target).feature();
+      if (!(value instanceof NodeGroupList)) throw new WorkerFailure("API_UNSUPPORTED", "NodeGroup.feature returned an unexpected receiver type");
+    } else if ("getAfter".equals(method)) {
+      if (!(target instanceof NodeGroup) || !args.isEmpty()) throw new WorkerFailure("API_UNSUPPORTED", "getAfter read requires NodeGroup.getAfter()");
+      requireD2Signature(NodeGroup.class, "getAfter", ModelEntity.class);
+      receiver = NodeGroup.class.getName(); returnType = ModelEntity.class.getName(); value = ((NodeGroup) target).getAfter();
+      if (value != null && (!(value instanceof ModelEntity) || !(value instanceof PrimitiveModelEntity)))
+        throw new WorkerFailure("API_UNSUPPORTED", "NodeGroup.getAfter returned an unexpected entity type");
+    } else if ("getContainer".equals(method)) {
+      if (!(target instanceof PrimitiveModelEntity) || !args.isEmpty()) throw new WorkerFailure("API_UNSUPPORTED", "getContainer read requires PrimitiveModelEntity.getContainer()");
+      requireD2Signature(PrimitiveModelEntity.class, "getContainer", PrimitiveModelEntity.class);
+      receiver = PrimitiveModelEntity.class.getName(); returnType = PrimitiveModelEntity.class.getName(); value = ((PrimitiveModelEntity) target).getContainer();
+      if (value != null && !(value instanceof PrimitiveModelEntity)) throw new WorkerFailure("API_UNSUPPORTED", "getContainer returned an unexpected receiver type");
+    } else if ("resolveModelPath".equals(method)) {
+      if (!(target instanceof PrimitiveModelEntity) || !args.isEmpty()) throw new WorkerFailure("API_UNSUPPORTED", "resolveModelPath read requires PrimitiveModelEntity.resolveModelPath()");
+      requireD2Signature(PrimitiveModelEntity.class, "resolveModelPath", String.class);
+      receiver = PrimitiveModelEntity.class.getName(); returnType = String.class.getName(); value = ((PrimitiveModelEntity) target).resolveModelPath();
+      if (value != null && !(value instanceof String)) throw new WorkerFailure("API_UNSUPPORTED", "resolveModelPath returned a non-string value");
+    } else {
+      throw new WorkerFailure("API_UNSUPPORTED", "method is not in the private D2 read table");
+    }
+    return map("generation", claimed, "receiver_interface", receiver, "method", method,
+        "parameters", parameterTypes, "return_type", returnType, "runtime_version", version,
+        "value", encode(value));
+  }
+
+  private Object g2NodeGroupUngroup(Map<String, Object> request) throws Exception {
+    ensureConnected();
+    requireD2RequestFields(request, new HashSet<>(Arrays.asList("handle", "generation", "tag")), Collections.emptySet());
+    long claimed = requireD2Generation(request);
+    if (claimed != generation.get()) throw new WorkerFailure("STALE_WORKER_HANDLE", "D2 mutation generation is stale");
+    String handle = requireD2String(request, "handle");
+    String tag = requireD2String(request, "tag");
+    Object target = handles.get(handle);
+    if (!(target instanceof NodeGroupList)) throw new WorkerFailure("API_UNSUPPORTED", "ungroup requires an actual NodeGroupList receiver");
+    String version = requireD2RuntimeVersion();
+    requireD2Signature(NodeGroupList.class, "ungroup", void.class, String.class);
+    requireD2Signature(NodeGroupList.class, "tags", String[].class);
+    String[] tags = ((NodeGroupList) target).tags();
+    boolean found = false;
+    if (tags != null) for (String item : tags) if (tag.equals(item)) { found = true; break; }
+    if (!found) throw new WorkerFailure("NODE_NOT_FOUND", "target NodeGroup tag is no longer present",
+        map("ungroup_dispatched", false, "generation", claimed));
+    try {
+      ((NodeGroupList) target).ungroup(tag);
+    } catch (Throwable failure) {
+      String message = failure.getMessage() == null ? failure.getClass().getSimpleName() : failure.getMessage();
+      throw new WorkerFailure("NODEGROUP_UNGROUP_FAILED", message,
+          map("ungroup_dispatched", true, "execution_state_unknown", true, "post_dispatch", true,
+              "generation", claimed, "semantic_operation", "NodeGroupList.ungroup(String)"), failure);
+    }
+    return map("ungroup_dispatched", true, "generation", claimed, "tag", tag,
+        "semantic_operation", "NodeGroupList.ungroup(String)", "runtime_version", version);
+  }
+
   private String safeInvokeString(Object node, String method) {
     try {
       Object value = invoke(node, node.getClass(), method, Collections.emptyList());
@@ -1246,6 +1451,38 @@ public final class PersistentComsolWorker {
   private static Exception unwrap(InvocationTargetException e) throws Exception {
     Throwable cause = e.getCause(); if (cause instanceof Exception) return (Exception) cause;
     if (cause instanceof Error) throw (Error) cause; return new Exception(cause);
+  }
+  private static void publicInterfaces(Class<?> type, Set<Class<?>> out) {
+    if (type == null) return;
+    for (Class<?> iface : type.getInterfaces()) {
+      if (Modifier.isPublic(iface.getModifiers()) && iface.getName().startsWith("com.comsol.model.")) out.add(iface);
+      publicInterfaces(iface, out);
+    }
+    publicInterfaces(type.getSuperclass(), out);
+  }
+  private Object publicDescribe(Map<String, Object> request) {
+    ensureConnected();
+    if (number(request.get("generation"), -1) != generation.get()) throw new IllegalStateException("STALE_WORKER_HANDLE");
+    Object target = handles.get(string(request.get("handle")));
+    if (target == null) throw new IllegalArgumentException("UNKNOWN_WORKER_HANDLE");
+    Map<String, Object> descriptor = publicReceiverMetadata(target.getClass());
+    descriptor.put("runtime_version", ModelUtil.getComsolVersion());
+    return descriptor;
+  }
+  private static Map<String, Object> publicReceiverMetadata(Class<?> type) {
+    Set<Class<?>> interfaces = new TreeSet<>(Comparator.comparing(Class::getName));
+    publicInterfaces(type, interfaces);
+    List<String> names = new ArrayList<>(); List<Object> methods = new ArrayList<>();
+    for (Class<?> iface : interfaces) {
+      names.add(iface.getName());
+      for (Method method : iface.getMethods()) {
+        if ((!METHODS.contains(method.getName()) && !D2_METADATA_METHODS.contains(method.getName())) || Modifier.isStatic(method.getModifiers())) continue;
+        List<String> parameters = new ArrayList<>();
+        for (Class<?> parameter : method.getParameterTypes()) parameters.add(parameter.getName());
+        methods.add(map("interface", iface.getName(), "method", method.getName(), "parameters", parameters, "returns", method.getReturnType().getName()));
+      }
+    }
+    return map("interfaces", names, "methods", methods);
   }
   private static List<Method> publicMethods(Class<?> type) {
     LinkedHashMap<String, Method> out = new LinkedHashMap<>();

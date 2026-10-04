@@ -223,6 +223,44 @@ def is_mutation_call(method: str, args: Sequence[Any] = (), command: str = "call
     signature/arguments, receiver context, and command type. Unknown methods,
     trusted code execution, and unclassifiable calls default to True (fail-closed).
     """
+    # D2 uses private typed commands rather than widening the generic call
+    # allowlist.  Keep their dispatch classification local to the exact
+    # command and signature: malformed/private lookalikes remain conservative.
+    if command == "g2_nodegroup_ungroup":
+        return True
+    if command == "g2_nodegroup_read":
+        try:
+            call_args = tuple(args)
+        except TypeError:
+            return True
+        if type(method) is not str:
+            return True
+        zero_arg_reads = {
+            "tags", "size", "feature", "getAfter", "getContainer",
+            "resolveModelPath",
+        }
+        if method == "nodeGroup":
+            return not (
+                len(call_args) == 0
+                or (len(call_args) == 1 and type(call_args[0]) is str and bool(call_args[0]))
+            )
+        if method == "get":
+            return not (len(call_args) == 1 and type(call_args[0]) is int and call_args[0] >= 0)
+        if method in zero_arg_reads:
+            return len(call_args) != 0
+        return True
+    if command == "g2_entity_identity":
+        try:
+            call_args = tuple(args)
+        except TypeError:
+            return True
+        return not (
+            method == "entity_identity"
+            and len(call_args) == 3
+            and type(call_args[0]) is str and bool(call_args[0])
+            and type(call_args[1]) is str and bool(call_args[1])
+            and type(call_args[2]) is int and call_args[2] >= 0
+        )
     if not isinstance(method, str) or not method:
         return False
     if command in ("code_execute", "trusted_code", "execute_java_code"):

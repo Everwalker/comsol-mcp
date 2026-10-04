@@ -32,6 +32,22 @@ _UNCORRELATED_PROTOCOL_REJECTIONS = frozenset({
     "UNKNOWN_COMMAND",
 })
 
+_D2_COMSOL_VERSION = "6.4.0.293"
+_D2_READ_RECEIVERS = {
+    "nodeGroup": ("com.comsol.model.Model", {(): "com.comsol.model.NodeGroupList",
+                                               ("java.lang.String",): "com.comsol.model.NodeGroup"}),
+    "tags": ("com.comsol.model.NodeGroupList", {(): "[Ljava.lang.String;"}),
+    "size": ("com.comsol.model.NodeGroup", {(): "int"}),
+    "get": ("com.comsol.model.NodeGroup", {("int",): "com.comsol.model.ModelEntity"}),
+    "feature": ("com.comsol.model.NodeGroup", {(): "com.comsol.model.NodeGroupList"}),
+    "getAfter": ("com.comsol.model.NodeGroup", {(): "com.comsol.model.ModelEntity"}),
+    "getContainer": ("com.comsol.model.PrimitiveModelEntity", {(): "com.comsol.model.PrimitiveModelEntity"}),
+    "resolveModelPath": ("com.comsol.model.PrimitiveModelEntity", {(): "java.lang.String"}),
+}
+_D2_SUCCESS_ENVELOPE_FIELDS = frozenset({
+    "ok", "request_id", "type", "status", "queued_at_ms", "started_at_ms", "completed_at_ms", "result",
+})
+
 
 def _structured_true(value: Mapping[str, Any], name: str) -> bool:
     """Read one explicit boolean from a decoded worker mapping."""
@@ -600,7 +616,7 @@ class PersistentJavaWorker:
 
     def submit(self, kind: str, payload: Mapping[str, Any], *, request_id: str | None = None,
                queue_timeout_s: float | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
-        if kind not in {"connect", "disconnect", "model", "modelutil", "license_checkout", "model_snapshot", "call", "children", "walk", "lock_selftest", "code_compile", "code_execute"}:
+        if kind not in {"connect", "disconnect", "model", "modelutil", "license_checkout", "model_snapshot", "call", "children", "walk", "public_describe", "lock_selftest", "code_compile", "code_execute", "g2_entity_identity", "g2_nodegroup_read", "g2_nodegroup_ungroup"}:
             raise JavaWorkerError("unknown private worker command")
         body = dict(payload); body["type"] = kind; body["request_id"] = request_id or f"wrk-{uuid.uuid4()}"
         if queue_timeout_s is not None:
@@ -733,6 +749,111 @@ class PersistentJavaWorker:
             raise JavaWorkerError("worker walk returned an invalid result")
         return dict(result)
 
+    def describe_public(self, node: "RemoteJava") -> dict[str, Any]:
+        """Actual public receiver hierarchy, generation-fenced and read-only."""
+        if not isinstance(node, RemoteJava) or node._worker is not self or node._generation != self.generation:
+            raise JavaWorkerError("STALE_WORKER_HANDLE")
+        reply = self.submit("public_describe", {"handle": node._handle, "generation": node._generation})
+        result = _decode_reply(reply, self)
+        if not isinstance(result, Mapping):
+            raise JavaWorkerError("invalid public interface descriptor")
+        return dict(result)
+
+    def entity_identity(self, left: "RemoteJava", right: "RemoteJava", *,
+                        request_id: str | None = None, rpc_timeout_s: float | None = None) -> bool:
+        """Compare two current opaque handles by Java reference identity only."""
+        left = _require_d2_remote(self, left)
+        right = _require_d2_remote(self, right)
+        generation = self.generation
+        if type(generation) is not int or generation < 1 or left._generation != generation or right._generation != generation:
+            raise JavaWorkerError("STALE_WORKER_HANDLE")
+        from ._domain_outcome import record_engine_method
+        record_engine_method("entity_identity", left._handle, right._handle, generation,
+                             command="g2_entity_identity", receiver="private-worker")
+        reply = self.submit("g2_entity_identity", {"left_handle": left._handle,
+                              "right_handle": right._handle, "generation": generation},
+                            request_id=request_id, rpc_timeout_s=rpc_timeout_s)
+        result = _d2_success_result(reply, "g2_entity_identity")
+        if set(result) != {"same_reference", "generation", "identity_scope"}:
+            raise JavaWorkerError("D2 identity reply has missing or unknown fields", reply=reply)
+        if (type(result["same_reference"]) is not bool or type(result["generation"]) is not int
+                or result["generation"] != generation or result["identity_scope"] != "java_reference_identity"):
+            raise JavaWorkerError("D2 identity reply has invalid field types or generation", reply=reply)
+        return result["same_reference"]
+
+    def read_nodegroup(self, node: "RemoteJava", method: str, *args: Any,
+                       request_id: str | None = None, rpc_timeout_s: float | None = None) -> Any:
+        """Use only the exact private COMSOL 6.4 NodeGroup evidence table."""
+        from ._domain_outcome import record_engine_method
+        receiver_handle = getattr(node, "_handle", None)
+        record_engine_method(method, *args, command="g2_nodegroup_read", receiver=receiver_handle)
+        node = _require_d2_remote(self, node)
+        expected_receiver, parameter_types, return_type = _d2_read_signature(method, args)
+        descriptor = self.describe_public(node)
+        _require_d2_public_signature(descriptor, expected_receiver, method, parameter_types, return_type)
+        reply = self.submit("g2_nodegroup_read", {"handle": node._handle, "generation": node._generation,
+                              "method": method, "args": list(args)},
+                            request_id=request_id, rpc_timeout_s=rpc_timeout_s)
+        result = _d2_success_result(reply, "g2_nodegroup_read")
+        expected = {"generation", "receiver_interface", "method", "parameters", "return_type", "runtime_version", "value"}
+        if set(result) != expected:
+            raise JavaWorkerError("D2 read reply has missing or unknown fields", reply=reply)
+        if (type(result["generation"]) is not int or result["generation"] != node._generation
+                or type(result["receiver_interface"]) is not str or result["receiver_interface"] != expected_receiver
+                or type(result["method"]) is not str or result["method"] != method
+                or type(result["parameters"]) is not list or result["parameters"] != list(parameter_types)
+                or type(result["return_type"]) is not str or result["return_type"] != return_type
+                or type(result["runtime_version"]) is not str or result["runtime_version"] != _D2_COMSOL_VERSION):
+            raise JavaWorkerError("D2 read reply signature, version, or generation differs from its exact contract", reply=reply)
+        value = _decode_d2_typed_value(result["value"], self, node._generation)
+        if method == "tags":
+            if type(value) is not list or any(type(item) is not str or not item for item in value):
+                raise JavaWorkerError("NodeGroupList.tags returned a malformed String[]", reply=reply)
+            if len(set(value)) != len(value):
+                raise JavaWorkerError("NodeGroupList.tags returned duplicate tags", reply=reply)
+        elif method == "size":
+            if type(value) is not int or value < 0:
+                raise JavaWorkerError("NodeGroup.size returned a malformed int", reply=reply)
+        elif method == "get":
+            if not isinstance(value, RemoteJava):
+                raise JavaWorkerError("NodeGroup.get returned no typed entity handle", reply=reply)
+        elif method == "nodeGroup":
+            if not isinstance(value, RemoteJava):
+                raise JavaWorkerError("Model.nodeGroup returned no typed receiver handle", reply=reply)
+        elif method == "feature":
+            if not isinstance(value, RemoteJava):
+                raise JavaWorkerError("NodeGroup.feature returned no typed list handle", reply=reply)
+        elif method in {"getAfter", "getContainer"}:
+            if value is not None and not isinstance(value, RemoteJava):
+                raise JavaWorkerError(f"{method} returned neither null nor a typed handle", reply=reply)
+        elif method == "resolveModelPath" and value is not None and type(value) is not str:
+            raise JavaWorkerError("resolveModelPath returned a non-string value", reply=reply)
+        return value
+
+    def ungroup_nodegroup(self, node: "RemoteJava", tag: str, *,
+                          request_id: str | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
+        from ._domain_outcome import record_engine_method
+        handle = getattr(node, "_handle", None)
+        record_engine_method("ungroup", tag, command="g2_nodegroup_ungroup", receiver=handle)
+        node = _require_d2_remote(self, node)
+        if type(tag) is not str or not tag:
+            raise JavaWorkerError("ungroup tag must be a nonempty string")
+        descriptor = self.describe_public(node)
+        _require_d2_public_signature(descriptor, "com.comsol.model.NodeGroupList", "ungroup",
+                                     ("java.lang.String",), "void")
+        reply = self.submit("g2_nodegroup_ungroup", {"handle": node._handle,
+                              "generation": node._generation, "tag": tag},
+                            request_id=request_id, rpc_timeout_s=rpc_timeout_s)
+        result = _d2_success_result(reply, "g2_nodegroup_ungroup")
+        if (set(result) != {"ungroup_dispatched", "generation", "tag", "semantic_operation", "runtime_version"}
+                or result.get("ungroup_dispatched") is not True
+                or type(result.get("generation")) is not int or result["generation"] != node._generation
+                or type(result.get("tag")) is not str or result["tag"] != tag
+                or result.get("semantic_operation") != "NodeGroupList.ungroup(String)"
+                or result.get("runtime_version") != _D2_COMSOL_VERSION):
+            raise JavaWorkerError("D2 ungroup reply has invalid type, signature, version, or generation", reply=reply)
+        return dict(result)
+
     def close(self) -> None:
         # Only the child started by this instance is eligible for termination. No COMSOL server is touched.
         with self._lock:
@@ -742,6 +863,96 @@ class PersistentJavaWorker:
                 except subprocess.TimeoutExpired: self._process.kill(); self._process.wait(timeout=3)
             self._process = None; self._port = None; self._generation = None
             self._classes_dir = None
+
+
+def _require_d2_remote(worker: PersistentJavaWorker, node: Any) -> "RemoteJava":
+    if not isinstance(node, RemoteJava):
+        raise JavaWorkerError("D2 private transport requires an actual RemoteJava handle")
+    generation = worker.generation
+    if (node._worker is not worker or type(generation) is not int or generation < 1
+            or type(node._generation) is not int or node._generation != generation
+            or type(node._handle) is not str or not node._handle):
+        raise JavaWorkerError("STALE_WORKER_HANDLE")
+    return node
+
+
+def _d2_read_signature(method: Any, args: tuple[Any, ...]) -> tuple[str, tuple[str, ...], str]:
+    if type(method) is not str or not method:
+        raise JavaWorkerError("D2 read method must be a nonempty exact string")
+    rows = _D2_READ_RECEIVERS.get(method)
+    if rows is None:
+        raise JavaWorkerError("method is not in the private D2 read table")
+    receiver, overloads = rows
+    if method == "nodeGroup":
+        if not args:
+            parameters = ()
+        elif len(args) == 1 and type(args[0]) is str and args[0]:
+            parameters = ("java.lang.String",)
+        else:
+            raise JavaWorkerError("Model.nodeGroup accepts zero arguments or one nonempty string tag")
+    elif method == "get":
+        if len(args) != 1 or type(args[0]) is not int or args[0] < 0 or args[0] > 2**31 - 1:
+            raise JavaWorkerError("NodeGroup.get requires one exact nonnegative Java int")
+        parameters = ("int",)
+    else:
+        if args:
+            raise JavaWorkerError(f"{method} accepts no arguments on the D2 route")
+        parameters = ()
+    return_type = overloads.get(parameters)
+    if return_type is None:
+        raise JavaWorkerError("D2 read signature is not admitted")
+    return receiver, parameters, return_type
+
+
+def _require_d2_public_signature(descriptor: Mapping[str, Any], interface: str, method: str,
+                                 parameters: tuple[str, ...], returns: str) -> None:
+    if (not isinstance(descriptor, Mapping) or type(descriptor.get("runtime_version")) is not str
+            or descriptor.get("runtime_version") != _D2_COMSOL_VERSION):
+        raise JavaWorkerError("D2 public receiver has no exact supported COMSOL version")
+    interfaces = descriptor.get("interfaces")
+    methods = descriptor.get("methods")
+    if (type(interfaces) is not list or any(type(item) is not str for item in interfaces)
+            or interface not in interfaces or type(methods) is not list):
+        raise JavaWorkerError("D2 public receiver lacks its exact interface or method metadata")
+    wanted_parameters = list(parameters)
+    for row in methods:
+        if not isinstance(row, Mapping) or set(row) != {"interface", "method", "parameters", "returns"}:
+            continue
+        if (row.get("interface") == interface and row.get("method") == method
+                and type(row.get("parameters")) is list and row["parameters"] == wanted_parameters
+                and type(row.get("returns")) is str and row["returns"] == returns):
+            return
+    raise JavaWorkerError(f"D2 public receiver lacks exact {interface}.{method}{parameters} -> {returns}")
+
+
+def _d2_success_result(reply: Any, command: str) -> dict[str, Any]:
+    if not isinstance(reply, Mapping):
+        raise JavaWorkerError("D2 Worker reply is not an object")
+    if reply.get("ok") is not True:
+        raise JavaWorkerError(json.dumps(dict(reply), sort_keys=True), reply=reply)
+    if (set(reply) != _D2_SUCCESS_ENVELOPE_FIELDS or type(reply.get("ok")) is not bool
+            or type(reply.get("request_id")) is not str or not reply["request_id"]
+            or type(reply.get("type")) is not str or reply["type"] != command
+            or type(reply.get("status")) is not str or reply["status"] != "SUCCEEDED"
+            or any(type(reply.get(name)) is not str or not reply[name]
+                   for name in ("queued_at_ms", "started_at_ms", "completed_at_ms"))
+            or not isinstance(reply.get("result"), Mapping)):
+        raise JavaWorkerError("D2 Worker success envelope is malformed", reply=reply)
+    return dict(reply["result"])
+
+
+def _decode_d2_typed_value(value: Any, worker: PersistentJavaWorker, generation: int) -> Any:
+    if isinstance(value, Mapping) and "$worker_handle" in value:
+        if set(value) != {"$worker_handle", "generation", "java_type"}:
+            raise JavaWorkerError("D2 typed Java handle has missing or unknown fields")
+        handle = value.get("$worker_handle")
+        returned_generation = value.get("generation")
+        java_type = value.get("java_type")
+        if (type(handle) is not str or not handle or type(returned_generation) is not int
+                or returned_generation != generation or type(java_type) is not str or not java_type):
+            raise JavaWorkerError("D2 typed Java handle has malformed fields or stale generation")
+        return RemoteJava(worker, handle, generation, java_type)
+    return value
 
 
 class RemoteJava:

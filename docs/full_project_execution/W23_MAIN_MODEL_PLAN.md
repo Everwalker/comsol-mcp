@@ -48,3 +48,8 @@ The planar benchmark is an implementation checkpoint, not the W23 deliverable bo
 4. Deliver replayable owned inputs, native images, complex E/H and quadrature/normalization metadata, saved/reopened models and all applicable acceptance evidence. Reuse approved infrastructure, but leave every missing original route visible in ACTION_COVERAGE until actually implemented and checked.
 
 These are the original full-scope continuation obligations, not optional improvements after a planar numerical pass. Scientific fixture dimensions/materials may be declared estimated; physical calibration must remain separate.
+
+
+## Isolated U1 full3D mesh software successor (2026-10-02)
+
+U1 adds exactly one owned `w23tet` FreeTet generator at initial mesh creation; case application reuses that exact tag/type without repair. Actual selection geometry/dimensions/entities must equal fresh positive domain IDs read from native `getUpDown`; domain count only cross-checks cardinality. The initial `geom(geom3d,3).all()` action is recorded; no undocumented isAll getter is assumed. Mesh empty/count/completeness/problem getters and existing Size are validated before downstream dispatch. Isolated proxy and Python controls are software evidence only; native mesh and science remain UNVERIFIED/NOT_RUN. U2–U6, complete integration freeze and separately approved native campaign remain OPEN. Geometry, PML, physics, Size expressions/scales, thresholds and all original RUN/budget profiles are unchanged.

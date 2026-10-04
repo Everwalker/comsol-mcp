@@ -162,6 +162,8 @@ def canonical_request_hash(
 # Current legacy surface.  Every entry receives an effect decision; unlisted
 # tools fail closed, including future api-invoke methods with a claimed effect.
 LEGACY_TOOL_EFFECTS: dict[str, str] = {
+    **{name: "project_write" for name in ("node_create", "node_copy", "node_remove", "node_label_set", "node_active_set", "node_move", "node_selection_set")},
+    "node_selection_get": "inspect", "api_describe": "inspect", "api_invoke": "dynamic",
     **{name: "inspect" for name in (
         "server_info", "check_server_port", "workflow_info", "visible_main_workflow_status",
         "verify_visible_main_session", "mcp_tool_audit", "model_tree", "get_parameters",
@@ -200,6 +202,7 @@ LEGACY_TOOL_EFFECTS: dict[str, str] = {
         "node_property_set", "node_property_index_set", "node_property_entry_set",
         "checkpoint_create", "checkpoint_restore", "transaction_apply", "transaction_recover", "docs_index",
     )},
+    "checkpoint_branch": "project_write", "api_probe": "compute",
     "transaction_trial": "compute",
     "code_compile_java": "compute",
     "code_execute_java": "trusted_code",

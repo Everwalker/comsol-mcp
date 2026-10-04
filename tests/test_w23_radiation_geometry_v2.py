@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import math
+import json
 
 import pytest
 
@@ -115,6 +116,227 @@ def _software_pml_readback(plan: dict) -> dict:
             "nonorthogonal_comsol_pml_compatibility": "UNVERIFIED",
         },
     }
+
+
+@pytest.fixture(scope="module")
+def pml_node_observations_case() -> tuple[dict, dict, dict]:
+    """Consumer-only synthetic input; it is not an actual Java/native invocation."""
+    plan = build_pml_partition_plan(canonical_radiation_geometry_v2(), build_case_matrix()[0]["receiver_transform"])
+    readback = _software_pml_readback(plan)
+    nodes = []
+    for region in readback["regions"]:
+        count = len(region["directions"])
+        values = [
+            ("ScalingType", "String", "getString(String)", "userDefined", []),
+            ("stretchingType", "String", "getString(String)", "polynomial", []),
+            ("wavelengthSourceType", "String", "getString(String)", "userDefined", []),
+            ("directions", "Int", "getInt(String)", count, []),
+            ("d", "StringArray", "getStringArray(String)", [row["distance_expression"] for row in region["directions"]], [count]),
+            ("dmax", "StringArray", "getStringArray(String)", [f"opaque_thickness_{i}" for i in range(count)], [count]),
+            ("PMLfactor", "Double", "getDouble(String)", 1.0, []),
+            ("PMLgamma", "Double", "getDouble(String)", 1.0, []),
+            ("typicalWavelength", "String", "getString(String)", "unresolved_wavelength_symbol", []),
+        ]
+        properties = [dict(name=name, primary_type=primary, getter=getter, raw_value=value,
+                           raw_shape=shape, value_encoding="JSON_NATIVE", status="READ",
+                           unit="UNKNOWN", representation="RAW_PRIMARY_GETTER")
+                      for name, primary, getter, value, shape in values]
+        by_name = {row["name"]: row for row in properties}
+        nodes.append({
+            "schema_id": "urn:comsol-mcp:w23:pml-node-readback:3.0.0",
+            "producer": "NativeW23RadiationGeometryV2.readUserDefinedPml",
+            "requested": {"component_tag": "comp3d", "geometry_tag": "geom3d", "coord_sys_tag": region["node_tag"]},
+            "observed": {"model_tag": "consumer_fixture_model", "component_tag": "comp3d", "geometry_tag": "geom3d",
+                         "geometry_space_dimension": 3, "coord_sys_tag": region["node_tag"], "feature_type": "PML",
+                         "selection_geometry": "geom3d", "selection_dim": 3, "selection_dimensions": [3],
+                         "selected_domain_ids": list(region["domain_ids"])},
+            "properties": properties,
+            "indexed_directions": [dict(index=i, d={"status": "READ", "getter": "getString(String,int)", "raw_value": by_name["d"]["raw_value"][i]},
+                                        dmax={"status": "READ", "getter": "getString(String,int)", "raw_value": by_name["dmax"]["raw_value"][i]}) for i in range(count)],
+            "errors": [], "raw_read_status": "COMPLETE_RAW_READ", "identity_status": "REQUEST_TARGET_MATCH",
+            "native_result": "UNVERIFIED", "ownership": "UNVERIFIED", "configuration_identity_safety": "UNACCEPTED",
+            "wavelength_semantics": {"status": "INCOMPLETE", "unit": "UNKNOWN", "representation": "UNKNOWN"},
+            "dmax_native_semantics": "UNVERIFIED_NO_FROZEN_NATIVE_EXPRESSION_REGISTRY",
+        })
+    return plan, readback, {"schema_id": "urn:comsol-mcp:w23:pml-node-observations:3.0.0", "plan_sha256": plan["plan_sha256"], "nodes": nodes}
+
+
+def _pml_observation_property(node: dict, name: str) -> dict:
+    return next(row for row in node["properties"] if row["name"] == name)
+
+
+@pytest.mark.parametrize("direction_count", [1, 2, 3])
+def test_pml_node_observations_valid_raw_directions_still_incomplete(pml_node_observations_case, direction_count) -> None:
+    plan, readback, observations = copy.deepcopy(pml_node_observations_case)
+    assert any(len(node["indexed_directions"]) == direction_count for node in observations["nodes"])
+    result = verify_pml_region_assignment(plan, readback, node_observations=observations)
+    assert result["status"] == "PML_NODE_OBSERVATION_CONTRACT_INCOMPLETE"
+    assert result["ownership"] == result["native_result"] == "UNVERIFIED"
+    assert result["configuration_identity_safety"] == "UNACCEPTED"
+    assert result["wavelength_semantics"] == "INCOMPLETE"
+    assert result["node_observations"] == observations
+    assert result["actual_java_helper_invocation"] == "UNVERIFIED"
+    assert result["legacy_analytic_contract"]["native_result"] == "NOT_RUN"
+
+
+@pytest.mark.parametrize("mutation", [
+    "wrong_type", "wrong_tag", "wrong_geom", "wrong_sdim", "wrong_dim", "mixed_dim", "global_geom",
+    "duplicate_ids", "empty_ids", "foreign_ids", "missing_node", "duplicate_node", "foreign_tag", "different_cohort",
+    "source_enum", "profile", "factor", "gamma", "count_zero", "count_four", "count_region",
+    "missing_source", "type_getter", "shape", "missing_index", "index_order", "d_expression", "d_order",
+    "dmax_index", "native_flag", "owned_flag", "promote_native", "promote_owner", "promote_wavelength",
+])
+def test_pml_node_observations_reject_inconsistent_or_promoted_records(pml_node_observations_case, mutation) -> None:
+    plan, readback, observations = copy.deepcopy(pml_node_observations_case)
+    node = next(item for item in observations["nodes"] if len(item["indexed_directions"]) == 3)
+    prop = lambda name: _pml_observation_property(node, name)
+    identity = {"wrong_type": ("feature_type", "Cartesian"), "wrong_tag": ("coord_sys_tag", "foreign"),
+                "wrong_geom": ("selection_geometry", "foreign_geom"), "wrong_sdim": ("geometry_space_dimension", 2),
+                "wrong_dim": ("selection_dim", 2), "mixed_dim": ("selection_dimensions", [2, 3]), "global_geom": ("selection_geometry", None)}
+    if mutation in identity:
+        field, value = identity[mutation]; node["observed"][field] = value
+    elif mutation == "duplicate_ids": node["observed"]["selected_domain_ids"] *= 2
+    elif mutation == "empty_ids": node["observed"]["selected_domain_ids"] = []
+    elif mutation == "foreign_ids": node["observed"]["selected_domain_ids"] = [999999]
+    elif mutation == "missing_node": observations["nodes"].pop()
+    elif mutation == "duplicate_node": observations["nodes"][0] = copy.deepcopy(observations["nodes"][1])
+    elif mutation == "foreign_tag": node["requested"]["coord_sys_tag"] = "foreign"
+    elif mutation == "different_cohort": node["observed"]["model_tag"] = "different_model"
+    elif mutation == "source_enum": prop("wavelengthSourceType")["raw_value"] = "fromPhysics"
+    elif mutation == "profile": prop("stretchingType")["raw_value"] = "rational"
+    elif mutation == "factor": prop("PMLfactor")["raw_value"] = 2.0
+    elif mutation == "gamma": prop("PMLgamma")["raw_value"] = 2.0
+    elif mutation.startswith("count_"): prop("directions")["raw_value"] = {"count_zero": 0, "count_four": 4, "count_region": 2}[mutation]
+    elif mutation == "missing_source": node["properties"].remove(prop("wavelengthSourceType"))
+    elif mutation == "type_getter": prop("ScalingType")["getter"] = "getDouble(String)"
+    elif mutation == "shape": prop("d")["raw_shape"] = [2]
+    elif mutation == "missing_index": node["indexed_directions"].pop()
+    elif mutation == "index_order": node["indexed_directions"].reverse()
+    elif mutation == "d_expression": prop("d")["raw_value"][0] = "different"; node["indexed_directions"][0]["d"]["raw_value"] = "different"
+    elif mutation == "d_order": prop("d")["raw_value"].reverse(); [item["d"].update(raw_value=prop("d")["raw_value"][i]) for i, item in enumerate(node["indexed_directions"])]
+    elif mutation == "dmax_index": node["indexed_directions"][0]["dmax"]["raw_value"] = "different"
+    elif mutation == "native_flag": observations["actual_native"] = True
+    elif mutation == "owned_flag": node["owned"] = True
+    elif mutation == "promote_native": node["native_result"] = "PASS"
+    elif mutation == "promote_owner": node["ownership"] = "PROVEN"
+    elif mutation == "promote_wavelength": node["wavelength_semantics"]["unit"] = "um"
+    with pytest.raises(RadiationGeometryV2Error):
+        verify_pml_region_assignment(plan, readback, node_observations=observations)
+
+
+@pytest.mark.parametrize("name", list(("ScalingType", "stretchingType", "wavelengthSourceType", "directions", "d", "dmax", "PMLfactor", "PMLgamma", "typicalWavelength")))
+def test_pml_node_observations_primary_getter_errors_preserve_partial(pml_node_observations_case, name) -> None:
+    plan, readback, observations = copy.deepcopy(pml_node_observations_case)
+    node = observations["nodes"][0]
+    prop = _pml_observation_property(node, name)
+    prop["status"] = "ERROR"
+    for key in ("raw_value", "raw_shape", "value_encoding"): prop.pop(key)
+    stage = "property." + name + "." + prop["getter"]
+    node["errors"] = [{"stage": stage, "kind": "EXCEPTION", "exception_class": "SyntheticGetterError", "message": "preserved synthetic error"}]
+    if name == "directions": node["indexed_directions"] = []
+    elif name in ("d", "dmax"):
+        for direction in node["indexed_directions"]: direction[name] = {"status": "UNVERIFIED_REPRESENTATION"}
+    result = verify_pml_region_assignment(plan, readback, node_observations=observations)
+    assert result["node_observations"] == observations
+    assert any(item["stage"] == stage for item in result["diagnostics"])
+    assert result["native_result"] == "UNVERIFIED"
+
+
+@pytest.mark.parametrize("name", ["d", "dmax"])
+@pytest.mark.parametrize("index", [0, 1, 2])
+def test_pml_node_observations_index_getter_errors_no_fallback(pml_node_observations_case, name, index) -> None:
+    plan, readback, observations = copy.deepcopy(pml_node_observations_case)
+    node = next(item for item in observations["nodes"] if len(item["indexed_directions"]) == 3)
+    node["indexed_directions"][index][name] = {"status": "ERROR", "getter": "getString(String,int)"}
+    stage = f"property.{name}.getString[{index}]"
+    node["errors"] = [{"stage": stage, "kind": "EXCEPTION", "exception_class": "SyntheticIndexedError", "message": "keep partial"}]
+    result = verify_pml_region_assignment(plan, readback, node_observations=observations)
+    assert result["node_observations"] == observations
+    assert any(item["stage"] == stage for item in result["diagnostics"])
+
+
+@pytest.mark.parametrize("name", ["d", "dmax", "typicalWavelength"])
+def test_pml_node_observations_double_row_matrix_keeps_type_and_unknown_origin(pml_node_observations_case, name) -> None:
+    plan, readback, observations = copy.deepcopy(pml_node_observations_case)
+    node = observations["nodes"][0]
+    prop = _pml_observation_property(node, name)
+    strings = ["unresolved_expression", "assembled_numeric_string"]
+    prop.update(primary_type="DoubleRowMatrix", getter="getStringArray(String)", raw_value=strings, raw_shape=[2],
+                representation="DOUBLE_ROW_MATRIX_STRING_VIEW_ORIGIN_UNKNOWN")
+    if name in ("d", "dmax"):
+        for direction in node["indexed_directions"]: direction[name] = {"status": "UNVERIFIED_REPRESENTATION"}
+    result = verify_pml_region_assignment(plan, readback, node_observations=observations)
+    retained = _pml_observation_property(result["node_observations"]["nodes"][0], name)
+    assert retained["primary_type"] == "DoubleRowMatrix" and retained["raw_value"] == strings
+    assert retained["unit"] == "UNKNOWN"
+    if name in ("d", "dmax"):
+        node["indexed_directions"][0][name] = {"status": "READ", "getter": "getString(String,int)", "raw_value": strings[0]}
+        with pytest.raises(RadiationGeometryV2Error): verify_pml_region_assignment(plan, readback, node_observations=observations)
+
+
+@pytest.mark.parametrize("value", [math.nan, math.inf, -math.inf, None, {"bad": "value"}, 10**999, True, b"invalid_fixture"])
+def test_pml_node_observations_nonfinite_or_malformed_values_are_json_safe_incomplete(pml_node_observations_case, value) -> None:
+    plan, readback, observations = copy.deepcopy(pml_node_observations_case)
+    prop = _pml_observation_property(observations["nodes"][0], "typicalWavelength")
+    prop.update(primary_type="Double", getter="getDouble(String)", raw_value=value, raw_shape=[])
+    result = verify_pml_region_assignment(plan, readback, node_observations=observations)
+    assert any(item["reason"] == "NONFINITE_OR_MALFORMED_RAW_VALUE" for item in result["diagnostics"])
+    json.dumps(result, allow_nan=False)
+    assert result["wavelength_semantics"] == "INCOMPLETE"
+
+
+def test_pml_node_observations_coherent_dmax_changes_do_not_infer_units(pml_node_observations_case) -> None:
+    plan, readback, observations = copy.deepcopy(pml_node_observations_case)
+    node = observations["nodes"][0]
+    prop = _pml_observation_property(node, "dmax")
+    prop["raw_value"][0] = "some_unresolved_thickness_expression"
+    node["indexed_directions"][0]["dmax"]["raw_value"] = prop["raw_value"][0]
+    result = verify_pml_region_assignment(plan, readback, node_observations=observations)
+    assert result["dmax_native_semantics"] == "UNVERIFIED_NO_FROZEN_NATIVE_EXPRESSION_REGISTRY"
+    assert result["configuration_identity_safety"] == "UNACCEPTED"
+
+
+@pytest.mark.parametrize("primary,getter,value,shape", [
+    ("Boolean", "getBoolean(String)", True, []), ("Int", "getInt(String)", 1550, []),
+    ("Double", "getDouble(String)", 1.55, []), ("String", "getString(String)", "1.55[um]", []),
+    ("IntArray", "getIntArray(String)", [1, 2], [2]), ("DoubleArray", "getDoubleArray(String)", [1.55, 2.0], [2]),
+    ("StringArray", "getStringArray(String)", ["lambda0", "unresolved"], [2]),
+    ("StringMatrix", "getStringMatrix(String)", [["lambda0", "x"]], [1, 2]),
+    ("DoubleMatrix", "getDoubleMatrix(String)", [[1.55, 2.0]], [1, 2]),
+])
+def test_pml_node_observations_actual_primary_raw_shapes_do_not_infer_wavelength(pml_node_observations_case, primary, getter, value, shape) -> None:
+    plan, readback, observations = copy.deepcopy(pml_node_observations_case)
+    prop = _pml_observation_property(observations["nodes"][0], "typicalWavelength")
+    prop.update(primary_type=primary, getter=getter, raw_value=value, raw_shape=shape)
+    result = verify_pml_region_assignment(plan, readback, node_observations=observations)
+    assert _pml_observation_property(result["node_observations"]["nodes"][0], "typicalWavelength")["raw_value"] == value
+    assert result["wavelength_semantics"] == "INCOMPLETE"
+    assert "typical_wavelength_um" not in result
+
+
+@pytest.mark.parametrize("stage", ["model.tag", "component.tags", "geometry.resolve", "feature.getType", "selection.geom", "selection.entities(3)"])
+def test_pml_node_observations_partial_identity_keeps_error_without_property_claims(pml_node_observations_case, stage) -> None:
+    plan, readback, observations = copy.deepcopy(pml_node_observations_case)
+    node = observations["nodes"][0]
+    node.update(observed={}, properties=[], indexed_directions=[], raw_read_status="INCOMPLETE", identity_status="INCOMPLETE")
+    node["errors"] = [{"stage": stage, "kind": "EXCEPTION", "exception_class": "SyntheticIdentityError", "message": "raw stage preserved"}]
+    result = verify_pml_region_assignment(plan, readback, node_observations=observations)
+    assert result["node_observations"]["nodes"][0] == node
+    assert result["native_result"] == "UNVERIFIED"
+
+
+@pytest.mark.parametrize("name", ["d", "typicalWavelength"])
+def test_pml_node_observations_unknown_primary_type_retained_without_value_getter(pml_node_observations_case, name) -> None:
+    plan, readback, observations = copy.deepcopy(pml_node_observations_case)
+    node = observations["nodes"][0]
+    prop = _pml_observation_property(node, name)
+    prop.update(primary_type="unknown_runtime_type", status="UNSUPPORTED_TYPE", representation="UNKNOWN")
+    for key in ("getter", "raw_value", "raw_shape", "value_encoding"): prop.pop(key)
+    node["errors"] = [{"stage": f"property.{name}.getValueType", "kind": "UNSUPPORTED_TYPE", "message": "keep unknown token"}]
+    if name == "d":
+        for direction in node["indexed_directions"]:direction[name] = {"status": "UNVERIFIED_REPRESENTATION"}
+    result = verify_pml_region_assignment(plan, readback, node_observations=observations)
+    assert _pml_observation_property(result["node_observations"]["nodes"][0], name) == prop
 
 
 def _software_cv_readback() -> dict:

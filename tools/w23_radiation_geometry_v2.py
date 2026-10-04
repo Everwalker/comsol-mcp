@@ -948,7 +948,10 @@ def verify_radiation_geometry_v2(recipe: Mapping[str, Any]) -> dict[str, Any]:
             "power_balance_tolerance": "NOT_FROZEN", "pml_junction_native_status": "UNVERIFIED"}
 
 
-def verify_pml_region_assignment(plan: Mapping[str, Any], readback: Mapping[str, Any]) -> dict[str, Any]:
+def verify_pml_region_assignment(
+    plan: Mapping[str, Any], readback: Mapping[str, Any], *,
+    node_observations: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
     """Validate exclusive domain/node ownership and exact indexed PML readback."""
     if not isinstance(plan, Mapping) or not isinstance(readback, Mapping):
         _fail("PML partition plan and readback are required")
@@ -1078,9 +1081,255 @@ def verify_pml_region_assignment(plan: Mapping[str, Any], readback: Mapping[str,
     status = ("SOFTWARE_PML_PARTITION_CONTRACT_VALID_NATIVE_NOT_RUN"
               if mapping.get("evidence_scope") == "SOFTWARE_ANALYTIC_FIXTURE"
               else "NATIVE_GEOMETRY_READBACK_CONTRACT_VALID_COMPATIBILITY_STILL_REQUIRES_REVIEW")
-    return {"status": status, "native_result": "NOT_RUN" if status.startswith("SOFTWARE") else "UNVERIFIED",
-            "pml_region_count": len(actual_regions), "pml_domain_count": len(domain_ids),
-            "pml_node_count": len(tags), "complex_mapping": dict(mapping)}
+    legacy = {"status": status, "native_result": "NOT_RUN" if status.startswith("SOFTWARE") else "UNVERIFIED",
+              "pml_region_count": len(actual_regions), "pml_domain_count": len(domain_ids),
+              "pml_node_count": len(tags), "complex_mapping": dict(mapping)}
+    if node_observations is None:
+        return legacy
+    return _verify_pml_node_observations(plan, actual_regions, node_observations, legacy)
+
+
+_PML_NODE_SCHEMA = "urn:comsol-mcp:w23:pml-node-readback:3.0.0"
+_PML_OBSERVATIONS_SCHEMA = "urn:comsol-mcp:w23:pml-node-observations:3.0.0"
+_PML_GETTERS = {
+    "Boolean": "getBoolean(String)", "String": "getString(String)",
+    "StringArray": "getStringArray(String)", "StringMatrix": "getStringMatrix(String)",
+    "Int": "getInt(String)", "IntArray": "getIntArray(String)",
+    "Double": "getDouble(String)", "DoubleArray": "getDoubleArray(String)",
+    "DoubleMatrix": "getDoubleMatrix(String)", "DoubleRowMatrix": "getStringArray(String)",
+}
+_PML_PROPERTY_ORDER = ("ScalingType", "stretchingType", "wavelengthSourceType", "directions",
+                       "d", "dmax", "PMLfactor", "PMLgamma", "typicalWavelength")
+
+
+def _pml_diagnostic_copy(value: Any) -> Any:
+    """Keep invalid numeric diagnostics JSON-safe without inventing a getter value."""
+    if isinstance(value, float) and not math.isfinite(value):
+        return {"invalid_numeric_repr": repr(value), "diagnostic_only": "NONFINITE_INPUT"}
+    if isinstance(value, Mapping):
+        if any(not isinstance(key, str) for key in value):
+            return {"invalid_mapping_repr": repr(value), "diagnostic_only": "NON_JSON_INPUT"}
+        return {key: _pml_diagnostic_copy(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_pml_diagnostic_copy(item) for item in value]
+    if value is None or type(value) in (str, bool, int, float):
+        return value
+    return {"invalid_value_repr": repr(value), "diagnostic_only": "NON_JSON_INPUT"}
+
+
+def _pml_finite_number(value: Any) -> bool:
+    if type(value) not in (int, float):
+        return False
+    try:
+        return math.isfinite(value)
+    except OverflowError:
+        return False
+
+
+def _pml_raw_shape(primary: str, value: Any) -> list[int] | None:
+    """No coercion: the primary type selects one raw scalar/vector/matrix shape."""
+    scalar = {
+        "Boolean": lambda x: type(x) is bool,
+        "String": lambda x: isinstance(x, str),
+        "Int": lambda x: type(x) is int,
+        "Double": _pml_finite_number,
+    }
+    if primary in scalar:
+        return [] if scalar[primary](value) else None
+    vector_type = {"StringArray": "String", "DoubleRowMatrix": "String",
+                   "IntArray": "Int", "DoubleArray": "Double"}
+    if primary in vector_type:
+        return ([len(value)] if isinstance(value, list)
+                and all(scalar[vector_type[primary]](x) for x in value) else None)
+    if primary in {"StringMatrix", "DoubleMatrix"}:
+        item_type = "String" if primary == "StringMatrix" else "Double"
+        if (not isinstance(value, list) or any(not isinstance(row, list) for row in value)
+                or any(not scalar[item_type](item) for row in value for item in row)
+                or len({len(row) for row in value}) > 1):
+            return None
+        return [len(value), len(value[0]) if value else 0]
+    return None
+
+
+def _pml_record_keys(record: Any, required: set[str], allowed: set[str], label: str) -> None:
+    if not isinstance(record, Mapping) or not required.issubset(record) or not set(record).issubset(allowed):
+        _fail(f"{label} has missing/unknown fields; caller truth flags are not native evidence")
+
+
+def _verify_pml_node_observations(
+    plan: Mapping[str, Any], regions: Sequence[Mapping[str, Any]],
+    observations: Mapping[str, Any], legacy: Mapping[str, Any],
+) -> dict[str, Any]:
+    _pml_record_keys(observations, {"schema_id", "plan_sha256", "nodes"},
+                     {"schema_id", "plan_sha256", "nodes"}, "PML observations")
+    if observations["schema_id"] != _PML_OBSERVATIONS_SCHEMA or observations["plan_sha256"] != plan["plan_sha256"]:
+        _fail("PML node observations schema/plan binding is invalid")
+    nodes = observations["nodes"]
+    if not isinstance(nodes, list) or len(nodes) != len(regions):
+        _fail("PML node observations have missing/extra nodes")
+    expected_by_tag = {row["node_tag"]: row for row in regions}
+    expected_faces = {face["id"]: face for face in plan["faces"]}
+    seen: set[str] = set()
+    diagnostics: list[dict[str, Any]] = []
+    target_cohorts: set[tuple[str, str, str]] = set()
+    observed_fields = {"model_tag", "component_tag", "geometry_tag", "geometry_space_dimension",
+                       "coord_sys_tag", "feature_type", "selection_geometry", "selection_dim",
+                       "selection_dimensions", "selected_domain_ids"}
+    node_keys = {"schema_id", "producer", "requested", "observed", "properties", "indexed_directions",
+                "errors", "raw_read_status", "identity_status", "native_result", "ownership",
+                "configuration_identity_safety", "wavelength_semantics", "dmax_native_semantics"}
+    for node in nodes:
+        _pml_record_keys(node, node_keys, node_keys, "PML node observation")
+        if node["schema_id"] != _PML_NODE_SCHEMA or node["producer"] != "NativeW23RadiationGeometryV2.readUserDefinedPml":
+            _fail("PML node observation producer/schema is invalid")
+        if (node["native_result"] != "UNVERIFIED" or node["ownership"] != "UNVERIFIED"
+                or node["configuration_identity_safety"] != "UNACCEPTED"
+                or node["dmax_native_semantics"] != "UNVERIFIED_NO_FROZEN_NATIVE_EXPRESSION_REGISTRY"
+                or node["raw_read_status"] not in {"COMPLETE_RAW_READ", "INCOMPLETE", "FAIL"}
+                or node["identity_status"] not in {"REQUEST_TARGET_MATCH", "INCOMPLETE", "FAIL"}
+                or node["wavelength_semantics"] != {"status": "INCOMPLETE", "unit": "UNKNOWN", "representation": "UNKNOWN"}):
+            _fail("PML observation cannot assert native ownership, configuration safety, or inferred wavelength semantics")
+        requested = node["requested"]
+        target_keys = {"component_tag", "geometry_tag", "coord_sys_tag"}
+        _pml_record_keys(requested, target_keys, target_keys, "PML requested target")
+        if any(not isinstance(requested[key], str) or not requested[key].strip() for key in target_keys):
+            _fail("PML requested target has empty/malformed routing tags")
+        tag = requested["coord_sys_tag"]
+        if tag in seen or tag not in expected_by_tag:
+            _fail("PML observed node tag is duplicate or foreign to the supplied region reconciliation")
+        seen.add(tag)
+        row = expected_by_tag[tag]
+        observed = node["observed"]
+        _pml_record_keys(observed, set(), observed_fields, "PML actual identity")
+        errors = node["errors"]
+        if not isinstance(errors, list):
+            _fail("PML getter stage errors must be a list")
+        for error in errors:
+            _pml_record_keys(error, {"stage", "kind", "message"},
+                             {"stage", "kind", "message", "exception_class", "property", "index", "raw_stack_trace"},
+                             "PML getter error")
+            if (not isinstance(error["stage"], str) or not error["stage"]
+                    or not isinstance(error["message"], str)
+                    or error["kind"] not in {"EXCEPTION", "IDENTITY_MISMATCH", "MISSING_TARGET", "INVALID_VALUE",
+                                             "UNSUPPORTED_TYPE", "SHAPE_MISMATCH", "SEMANTIC_MISMATCH"}):
+                _fail("PML getter stage error is malformed")
+            if error["kind"] in {"IDENTITY_MISMATCH", "MISSING_TARGET", "SEMANTIC_MISMATCH"}:
+                _fail("PML native observation reports a target/selection/semantic mismatch")
+        for field, expected in {"component_tag": requested["component_tag"], "geometry_tag": requested["geometry_tag"],
+                                "coord_sys_tag": tag, "feature_type": "PML", "selection_geometry": requested["geometry_tag"],
+                                "geometry_space_dimension": 3, "selection_dim": 3, "selection_dimensions": [3]}.items():
+            if field in observed and (observed[field] != expected
+                                      or field in {"geometry_space_dimension", "selection_dim"} and type(observed[field]) is not int
+                                      or field == "selection_dimensions" and any(type(x) is not int for x in observed[field])):
+                _fail("PML actual type/tag/geometry/dimension differs from requested domain3 target")
+        if "selected_domain_ids" in observed:
+            ids = observed["selected_domain_ids"]
+            if (not isinstance(ids, list) or not ids or any(type(x) is not int or x < 1 for x in ids)
+                    or len(set(ids)) != len(ids) or Counter(ids) != Counter(row["domain_ids"])):
+                _fail("PML actual domain IDs are duplicate/missing/foreign to the supplied region")
+        identity_complete = observed_fields.issubset(observed)
+        if identity_complete and (not isinstance(observed["model_tag"], str) or not observed["model_tag"]):
+            _fail("PML actual model tag is malformed")
+        properties = node["properties"]
+        indexed = node["indexed_directions"]
+        if not isinstance(properties, list) or not isinstance(indexed, list):
+            _fail("PML property/index records must be lists")
+        if not identity_complete:
+            if properties or indexed or not errors:
+                _fail("partial PML identity cannot claim property reads or omit its getter error")
+            diagnostics.append({"node_tag": tag, "stage": "identity", "reason": "PARTIAL_GETTER_IDENTITY"})
+            continue
+        target_cohorts.add((observed["model_tag"], requested["component_tag"], requested["geometry_tag"]))
+        if [prop.get("name") for prop in properties if isinstance(prop, Mapping)] != list(_PML_PROPERTY_ORDER):
+            _fail("PML properties are missing/duplicate/out of declared getter order")
+        prop_by_name = {}
+        incomplete_properties: set[str] = set()
+        for prop in properties:
+            _pml_record_keys(prop, {"name", "status", "unit", "representation"},
+                             {"name", "status", "unit", "representation", "primary_type", "getter", "raw_value", "raw_shape", "value_encoding"},
+                             "PML primary getter record")
+            name = prop["name"]
+            prop_by_name[name] = prop
+            if prop["unit"] != "UNKNOWN":
+                _fail("PML primary getter cannot assert an inferred unit")
+            primary = prop.get("primary_type")
+            getter = prop.get("getter")
+            if getter is not None and getter != _PML_GETTERS.get(primary):
+                _fail("PML primary type/getter record mismatch or fallback")
+            if prop["status"] != "READ":
+                if (prop["status"] not in {"NOT_READ", "TYPE_READ", "ERROR", "UNSUPPORTED_TYPE"}
+                        or "raw_value" in prop or "raw_shape" in prop
+                        or not any(error["stage"].startswith("property." + name + ".") for error in errors)):
+                    _fail("incomplete PML property must retain its stage error without an invented value")
+                incomplete_properties.add(name)
+                continue
+            if primary not in _PML_GETTERS or getter != _PML_GETTERS[primary] or "raw_value" not in prop:
+                _fail("successful PML getter lacks actual primary type/method/value")
+            representation = ("DOUBLE_ROW_MATRIX_STRING_VIEW_ORIGIN_UNKNOWN" if primary == "DoubleRowMatrix"
+                              else "RAW_PRIMARY_GETTER")
+            if prop["representation"] != representation or prop.get("value_encoding") != "JSON_NATIVE":
+                _fail("PML getter representation is inconsistent with its primary type")
+            shape = _pml_raw_shape(primary, prop["raw_value"])
+            if shape is None:
+                incomplete_properties.add(name)
+                diagnostics.append({"node_tag": tag, "stage": "property." + name, "reason": "NONFINITE_OR_MALFORMED_RAW_VALUE"})
+                continue
+            if prop.get("raw_shape") != shape or any(type(x) is not int for x in prop.get("raw_shape", [])):
+                _fail("PML getter record shape differs from its actual raw value")
+        for name, primary, expected in [("ScalingType", "String", "userDefined"), ("stretchingType", "String", "polynomial"),
+                                         ("wavelengthSourceType", "String", "userDefined"), ("PMLfactor", "Double", 1.0),
+                                         ("PMLgamma", "Double", 1.0)]:
+            prop = prop_by_name[name]
+            if name not in incomplete_properties and (prop.get("primary_type") != primary or prop.get("raw_value") != expected):
+                _fail("PML observed source/profile/factor/gamma differs from the frozen actual primary contract")
+        count_prop = prop_by_name["directions"]
+        if "directions" in incomplete_properties:
+            if indexed:
+                _fail("PML indexed getter cannot claim directions after failed/malformed native count")
+        else:
+            count = count_prop.get("raw_value")
+            if count_prop.get("primary_type") != "Int" or type(count) is not int or count not in (1, 2, 3) or count != len(row["active_stretch_ids"]):
+                _fail("PML actual primary direction count differs from its region")
+            if len(indexed) != count:
+                _fail("PML indexed getter directions are missing/extra")
+            for index, direction in enumerate(indexed):
+                _pml_record_keys(direction, {"index", "d", "dmax"}, {"index", "d", "dmax"}, "PML indexed direction")
+                if type(direction["index"]) is not int or direction["index"] != index:
+                    _fail("PML indexed direction order is invalid")
+                for name in ("d", "dmax"):
+                    prop = prop_by_name[name]
+                    item = direction[name]
+                    _pml_record_keys(item, {"status"}, {"status", "getter", "raw_value"}, "PML indexed getter")
+                    eligible = name not in incomplete_properties and prop.get("primary_type") == "StringArray"
+                    if not eligible:
+                        if item != {"status": "UNVERIFIED_REPRESENTATION"}:
+                            _fail("PML non-StringArray/failed property cannot assert indexed expression success")
+                        diagnostics.append({"node_tag": tag, "stage": "property." + name, "reason": "INDEXED_REPRESENTATION_UNVERIFIED"})
+                        continue
+                    vector = prop["raw_value"]
+                    if len(vector) != count:
+                        _fail("PML native d/dmax string vector count differs from directions")
+                    if item["status"] == "ERROR":
+                        if (item.get("getter") != "getString(String,int)" or "raw_value" in item
+                                or not any(error["stage"] == f"property.{name}.getString[{index}]" for error in errors)):
+                            _fail("PML indexed getter error lacks stage evidence or invents a fallback value")
+                        diagnostics.append({"node_tag": tag, "stage": f"property.{name}.getString[{index}]", "reason": "INDEXED_GETTER_ERROR"})
+                        continue
+                    if item["status"] != "READ" or item.get("getter") != "getString(String,int)" or item.get("raw_value") != vector[index]:
+                        _fail("PML indexed getter differs from primary vector or claims a fallback")
+                    if name == "d" and vector[index] != expected_faces[row["active_stretch_ids"][index]]["distance_expression"]:
+                        _fail("PML actual indexed distance expression/order differs from the frozen plan")
+        for name in incomplete_properties:
+            diagnostics.append({"node_tag": tag, "stage": "property." + name, "reason": "PRIMARY_GETTER_INCOMPLETE"})
+        diagnostics.extend({"node_tag": tag, "stage": error["stage"], "reason": "RETAINED_GETTER_ERROR"} for error in errors)
+    if seen != set(expected_by_tag) or len(target_cohorts) > 1:
+        _fail("PML observations are missing nodes or combine different model/component/geometry cohorts")
+    # Neither these status strings nor a consistent JSON document authenticate a native environment.
+    return {"status": "PML_NODE_OBSERVATION_CONTRACT_INCOMPLETE", "native_result": "UNVERIFIED",
+            "ownership": "UNVERIFIED", "configuration_identity_safety": "UNACCEPTED",
+            "wavelength_semantics": "INCOMPLETE", "dmax_native_semantics": "UNVERIFIED_NO_FROZEN_NATIVE_EXPRESSION_REGISTRY",
+            "legacy_analytic_contract": dict(legacy), "node_observations": _pml_diagnostic_copy(observations),
+            "diagnostics": diagnostics, "actual_java_helper_invocation": "UNVERIFIED"}
 
 
 def control_volume_face_contract() -> list[dict[str, Any]]:

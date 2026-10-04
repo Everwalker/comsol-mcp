@@ -1,3 +1,17 @@
+**D2/R canonical051 cutoff (2026-10-04T11:16:24.130280+00:00).** D2 focused89 and exact740+24 Python software were Root accepted: 764 passed, 0 failed/error/skipped, including 114 UnitA Python cases (37 daemon cases); the earlier 045 missing-dependency failure remains preserved with no retry. D2 source209/210 closure fingerprints are 86d2ee29f4e823891d5ef1d0c6f2805bb03c321b011ad0452d63c15cda47360b / 6a05c401ea2e2bf12a089c82e3887d2ad85a13f6a318dd5f8092c58244ea3316. Current R209/210 closure focused89 and exact740+24 Python software were separately Root accepted: 764 passed, 0 failed/error/skipped, including 247 selected W23 Python cases and the one authorized W24 no-retry tmp_path case; fingerprints e18b15d3e4f4ead7724b8ecfcb6cf9723ba137b2e2002cea5dfd11befeba1aec / 5a0dc543d4c96e37968ada5ff2f461494d3df8c72b62222c2f47e9ec82a5e58d. Root acceptance, independent review, and bounded readback refs are recorded in the identical bounded_MASTER207_selected_cutoff051 objects in the seven JSON documents. Publication awaits Root review of the exact 40-path diff; no Git staging or commit was performed. Compiled UnitA JVM and 13 other worker/socket/JVM functions remain pending; native/science/full-master remains NOT_ACCEPTED, release NOT_SELECTED, and original 26 work packages / 272 actions / 360 test cells remain unchanged with zero acceptance cells changed.
+
+# Current checkpoint 050 — 2026-10-04
+
+Goal ACTIVE / full project INCOMPLETE. G01 approved 11 commits and the accepted Wire V4 stage are uploaded; HEAD and origin/main were verified at `c8832647e5e4c64d892b1714c92c3bacca0f9c14`.
+
+D2-045: focused89 actual PASS and Root accepted. Required764 actual 763 passed / 1 failed, child exit1, no retry. Failure is a tracked javap evidence file omitted from the isolated runtime closure. Corrected failure readback passed23/23 integrity checks; the763/1 failure result remains unchanged. D2-046 is preparing unchanged209 code plus1 explicitly frozen evidence dependency; no test assertions are being removed.
+
+Current R: the old209 closure cannot reuse D2 selectors because eight W23 files lack inherited mesh/PML readback implementation and checks. Integrating those eight paths and preserving R23/W24 edits. One W24 no-retry test receives an explicit one-line temporary-directory relocation under pytest to satisfy the existing write guard; all assertions remain. Then freeze a new R candidate with its own tests. R runtime remains NOT_RUN. Native/science/full-project acceptance remain open; release NOT_SELECTED.
+
+Next: finish corrected failure readback and dependency freeze, run D2 focus/regression under new grants, verify the integrated R candidate, then continue T038 compatibility/profile/fallback and W26 real build/install/rollback. Accepted phases are synchronized immediately. Canonical detail: `docs/full_project_execution/state/RESUME.json`, cutoff050.
+
+---
+
 # COMSOL MCP full-project progress — current update 2026-10-04T08:49:49.298318+00:00 (canonical049)
 
 **Current recovery state (2026-10-04T08:49:49.298318+00:00; canonical049).** MASTER remains ACTIVE_INCOMPLETE: 26 work packages, 272 actions, 60 test families, 360 target cells, zero acceptance cells changed; release remains NOT_SELECTED. Source207 remains content-identity-only at 207 members with fingerprint f6b596c14898df2d5ac3af412106d24e3fd7933438a954f401d7cf84b2a1c26e; source006 inode/runtime provenance is not restored and R is NOT_PROMOTED.

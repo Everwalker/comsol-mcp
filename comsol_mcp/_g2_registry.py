@@ -61,14 +61,17 @@ CATALOG_PATH = _select_catalog_path()
 # 272-action design catalog so an unimplemented action cannot be called by
 # accident.  G3 (W13-W16) domain operations live in ``_g3_ops`` and extend
 # this surface through ``is_implemented`` below.
+NODE_ACTIONS = frozenset({"node.create", "node.copy", "node.remove", "node.label_set", "node.active_set", "node.move", "node.selection_get", "node.selection_set"})
 IMPLEMENTED_OPERATIONS = frozenset({
     "registry.list", "registry.describe", "registry.search", "registry.call", "registry.manifest",
     "model.adopt", "model.inspect", "job.resume", "artifact.register",
     "desktop.status",
     "node.inspect", "node.children", "node.find", "node.property_schema", "node.property_get",
     "node.property_set", "node.property_index_set", "node.property_entry_set",
+    "node.create", "node.copy", "node.remove", "node.label_set", "node.active_set", "node.move",
+    "node.selection_get", "node.selection_set", "api.describe", "api.invoke", "checkpoint.branch", "api.probe",
     "code.describe_java", "code.compile_java", "code.execute_java", "code.inspect_run",
-    "checkpoint.create", "checkpoint.list", "checkpoint.inspect", "checkpoint.restore",
+    "checkpoint.create", "checkpoint.list", "checkpoint.inspect", "checkpoint.restore", "checkpoint.diff",
     "transaction.preview", "transaction.trial", "transaction.apply", "transaction.verify", "transaction.recover",
     "docs.index", "docs.search", "docs.get", "docs.examples", "docs.error_search",
 })
@@ -216,11 +219,13 @@ _PROFILE_DOMAIN_TOOLS = frozenset({
     "list_solver_features", "create_solver_config", "configure_solver", "manage_variables", "docs_index", "docs_search",
     "docs_get", "docs_examples", "docs_error_search", "transaction_preview", "transaction_trial", "transaction_apply",
     "transaction_verify", "transaction_recover", "checkpoint_list", "checkpoint_inspect", "checkpoint_diff",
+    *{operation.replace(".", "_") for operation in NODE_ACTIONS}, "checkpoint_branch", "api_probe",
 })
 _PROFILE_EXPERT_TOOLS = frozenset({
     "code_describe_java", "code_compile_java", "code_execute_java", "code_inspect_run", "docs_index", "docs_search",
     "docs_get", "docs_examples", "docs_error_search", "transaction_preview", "transaction_trial", "transaction_apply",
     "transaction_verify", "transaction_recover", "checkpoint_list", "checkpoint_inspect", "checkpoint_diff",
+    *{operation.replace(".", "_") for operation in NODE_ACTIONS}, "api_describe", "api_invoke", "checkpoint_branch", "api_probe",
 })
 
 
@@ -285,6 +290,51 @@ class ActionEntry:
             "notes": self.notes,
             "executable": is_implemented(self.operation_id) or self.operation_id in LEGACY_FALLBACK_NAMES,
         }
+        if self.operation_id in NODE_ACTIONS | {"api.describe", "api.invoke"}:
+            result["data_schema"] = _unit_a_data_schema(self.operation_id)
+            result["runtime_dispatch_contract"] = {
+                "handler": "serial managed actual public-interface adapter",
+                "entrypoints": [self.operation_id, self.mcp_tool_name, "registry_call", "operation_call"],
+                "effect_resolution": "api.invoke: pure exact overload at project ACL; actual receiver/interface/version before write ticket; caller declaration is assertion only",
+                "verification_scope": "software implementation only; native capability/dependency verification remains separately UNVERIFIED",
+                "limits": ["same-list copy only until cross-parent tag-path native verification", "remove refuses unknown dependency coverage", "selection geometric revision and spatial/object adapters remain unsupported"],
+            }
+        if self.operation_id in {"checkpoint.branch", "api.probe"}:
+            from ._g2_checkpoint_ops import data_schema
+            result["data_schema"] = data_schema(self.operation_id)
+            branch = self.operation_id == "checkpoint.branch"
+            result["runtime_dispatch_contract"] = {
+                "handler": "serial managed owned checkpoint-copy adapter",
+                "entrypoints": [self.operation_id, self.mcp_tool_name, "registry_call", "operation_call"],
+                "scope": "exact checkpoint into persistent independently bound owned branch; source pointer/ref retained"
+                         if branch else "invoke/create_feature only on owned private checkpoint copy; explicit typed source/private readback; no automatic source apply",
+                "permissions": "project_write" if branch else "compute plus server-resolved inner inspect/project_write permission at project ACL and backend",
+                "engine_queue": "one existing serialized engine claim and one existing WRITE ticket"
+                                if branch else "one existing serialized engine claim and one COMPUTE ticket; current source revision captured internally",
+                "revision_policy": "only exact service-owned verified branch proof can preserve source revision"
+                                   if branch else "caller expected_revision forbidden; original COMPUTE ticket revision semantics retained",
+                "lifetime": "owned branch model/file/ref persist; uncertain failures retain owned evidence"
+                            if branch else "temporary actual private ModelRef; exact owned model/file cleanup and ref retirement only after verified removal",
+                "failure_policy": "unresolved load/bind/readback/source/pointer/persistence/cleanup is UNKNOWN with safe_retry=false; no automatic retry",
+                "verification_scope": "software implementation only; real COMSOL checkpoint lifecycle and native semantics remain UNVERIFIED",
+                "limits": ["exact authoritative checkpoint source epoch required; no unrecorded lineage is inferred",
+                           "source observations cover declared snapshot/readback only; full semantic untouched remains unknown"],
+            }
+        if self.operation_id == "checkpoint.diff":
+            from ._g2_checkpoint_diff import data_schema
+            result["data_schema"] = data_schema()
+            result["runtime_dispatch_contract"] = {
+                "handler": "serial managed public typed pure-getter semantic projection",
+                "entrypoints": [self.operation_id, self.mcp_tool_name, "registry_call", "operation_call"],
+                "permissions": "inspect; historical MPH requires existing verified owned-copy isolation",
+                "scope": "default full model; explicit typed subtrees/named properties are scoped comparisons",
+                "selectors": "exact current or authoritative checkpoint ID; SHA/label aliases refused; same selector still read",
+                "engine_queue": "one existing serialized READ claim; no WRITE ticket or source ephemeral mutation",
+                "completeness": "EQUAL/DIFFERENT only with all requested getter coverage, cleanup and source observations complete; otherwise INCOMPLETE/equal=null",
+                "failure_policy": "owned-copy cleanup/source uncertainty is UNKNOWN with safe_retry=false and dirty source guard",
+                "limits": "2000 nodes/20 seconds/5000 getter RPC default; page100 max500; 500MiB observed serialized projection/private input engineering bound; no hard native cancellation",
+                "verification_scope": "software implementation only; real COMSOL checkpoint semantic coverage/native lifecycle remain UNVERIFIED",
+            }
         if self.operation_id in CONTROL_IMPLEMENTED_OPERATIONS:
             result["runtime_dispatch_contract"] = {
                 "handler": ("ControlDaemon project authority over the durable operation store"
@@ -534,8 +584,60 @@ COMPONENT_MANAGE_TAGGED_ACTIONS: tuple[str, ...] = tuple(
 )
 
 
+def _unit_a_data_schema(operation: str) -> dict[str, Any]:
+    # Domain output is closed; the enclosing ActionResult keeps its shared wire.
+    fields = {
+        "schema_version": {"const": 1}, "operation": {"const": operation},
+        "status": {"enum": ["OBSERVED", "INCOMPLETE", "UNKNOWN"]}, "complete": {"type": "boolean"},
+        "source_identity": {"type": "object"}, "evidence": {"type": "object"},
+        "coverage": {"type": "array", "items": {"type": "object"}}, "errors": {"type": "array", "items": {"type": "object"}},
+        "isolation_proof": {"type": "object"},
+        "domain_state": {"type": "string"}, "verification_status": {"type": "string"},
+        "execution_state_unknown": {"type": "boolean"}, "partial_change": {"type": "boolean"},
+        "cleanup_failed": {"type": "boolean"}, "dispatch_stage": {"type": "string"},
+        "domain_outcome": {"type": "object"}, "effect": {"type": "string"}, "verified_outcome": {"type": "string"},
+    }
+    strings = {"type_id", "copy_method", "source_tag_path", "requested_label", "resolved_effect", "runtime_version", "capability_registry_sha"}
+    arrays = {"applied", "failed", "not_executed", "order_before", "order_after", "methods", "receiver_interfaces", "public_interfaces"}
+    booleans = {"created"}
+    integers = {"index_dispatched"}
+    allowed = {
+        "node.create": {"created_path", "type_id", "created", "applied", "failed", "not_executed", "readback", "dependency_check", "property_result"},
+        "node.copy": {"source_path", "target_path", "copy_method", "source_tag_path", "readback", "dependency_check"},
+        "node.remove": {"removed_path", "affected", "applied", "failed", "dependency_check", "checkpoint_id"},
+        "node.label_set": {"path", "requested_label", "before", "after"},
+        "node.active_set": {"path", "before", "after", "validity_observation"},
+        "node.move": {"path", "anchor", "order_before", "order_after", "index_dispatched"},
+        "node.selection_get": {"path", "selection_name", "public_interfaces", "selection", "readback"},
+        "node.selection_set": {"path", "selection_name", "public_interfaces", "selection", "readback", "requested", "applied"},
+        "api.describe": {"path", "runtime_version", "methods", "receiver_interfaces", "capability_registry_sha"},
+        "api.invoke": {"path", "capability", "resolved_effect", "typed_return", "readback"},
+    }[operation]
+    for name in allowed:
+        fields[name] = ({"type": "string"} if name in strings else {"type": "array"} if name in arrays
+                        else {"type": "boolean"} if name in booleans else {"type": "integer"} if name in integers else {})
+    if operation == "api.invoke":
+        def typed_return(kind, payload):
+            return {"type": "object", "properties": {"kind": {"const": kind}, **payload},
+                    "required": ["kind", *payload], "additionalProperties": False}
+        fields["typed_return"] = {"oneOf": [
+            typed_return("value", {"java_type": {"type": "string"}, "value": {"$ref": "common.schema.json#/$defs/TypedValue"}}),
+            typed_return("null", {"java_type": {"type": "string"}}),
+            typed_return("void", {}),
+            typed_return("node_ref", {"model_ref": {"type": "object"}, "path": {"$ref": "common.schema.json#/$defs/NodePath"}, "public_interface": {"type": "string"}}),
+        ]}
+    return {"type": "object", "required": ["schema_version", "operation", "status", "complete", "source_identity", "evidence", "coverage", "errors"],
+            "properties": fields, "additionalProperties": False}
+
+
 def _effective_input_schema(catalog_schema: Mapping[str, Any], operation_id: str = "") -> dict[str, Any]:
     """Make the published schema describe the actual MCP compatibility wire."""
+    if operation_id == "checkpoint.diff":
+        from ._g2_checkpoint_diff import input_schema
+        return input_schema()
+    if operation_id in {"checkpoint.branch", "api.probe"}:
+        from ._g2_checkpoint_ops import input_schema
+        return input_schema(operation_id)
     if operation_id in {"metric.define", "metric.list", "metric.evaluate", "metric.remove", "metric.compare"}:
         from ._metric_contract import input_schema
         return input_schema(operation_id)
@@ -557,6 +659,14 @@ def _effective_input_schema(catalog_schema: Mapping[str, Any], operation_id: str
             "additionalProperties": False,
             "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
         }
+    if operation_id == "node.create":
+        properties["properties"]["default"] = []
+    elif operation_id == "node.remove":
+        properties["cascade"]["default"] = False
+    elif operation_id == "node.move":
+        effective["oneOf"] = [{"required": ["before"], "not": {"required": ["after"]}}, {"required": ["after"], "not": {"required": ["before"]}}]
+    elif operation_id == "api.invoke":
+        properties["declared_effect"] = {"type": "string", "enum": ["READ", "WRITE"], "description": "Assertion only; the server determines actual effect from the reviewed exact capability."}
     # The offline index adapter accepts optional provenance selectors when it
     # writes a source.  Older catalog snapshots omitted them even though the
     # production control path has always carried these fields.
@@ -836,7 +946,7 @@ def registry_manifest(profile: str | None = None) -> dict[str, Any]:
             "material", "physics", "mesh", "study", "solver",
         }]
     elif profile == "expert":
-        executable = [entry for entry in executable if entry.domain in {"registry", "node", "code", "transaction", "checkpoint"}]
+        executable = [entry for entry in executable if entry.domain in {"registry", "node", "api", "code", "transaction", "checkpoint"}]
     return {
         "profile": profile,
         "publication_profile": current_tool_profile(),
@@ -968,6 +1078,30 @@ def _validate_operation_shape(operation_id: str, arguments: Mapping[str, Any]) -
     malformed typed action before the no-model gate reports ENGINE_UNRESPONSIVE.
     """
     from ._g2_contract import NodePath, validate_property_set, validate_typed_value
+
+    if operation_id == "checkpoint.diff":
+        from ._g2_checkpoint_diff import normalize
+        normalize(arguments)
+        return
+    if operation_id in {"checkpoint.branch", "api.probe"}:
+        from ._g2_checkpoint_ops import normalize
+        normalize(operation_id, arguments)
+        return
+    if operation_id.startswith("node.") and operation_id in NODE_ACTIONS:
+        from ._g2_engine import validate_node_action
+        validate_node_action(operation_id, arguments)
+        return
+    if operation_id == "api.invoke":
+        from ._g2_public_api import provisional_effect
+        resolved = provisional_effect(arguments)
+        if arguments.get("declared_effect") != resolved:
+            raise ExecutionContractError("PERMISSION_DENIED", "declared effect differs from server exact capability")
+        return
+    if operation_id == "api.describe":
+        NodePath.from_wire(arguments.get("path"))
+        if arguments.get("method") is not None and not isinstance(arguments["method"], str):
+            raise ExecutionContractError("INVALID_REQUEST", "method must be a string")
+        return
 
     if operation_id == "experiment.stage_define":
         from ._stage_contract import validate_stage_plan_definition

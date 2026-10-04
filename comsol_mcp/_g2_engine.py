@@ -22,6 +22,377 @@ from ._g2_contract import (
 from ._g2_transactions import INVARIANT_TYPES, TransactionRecord, run_transaction, transaction_fingerprint
 
 
+NODE_ACTION_FIELDS = {
+    "node.create": ({"parent", "collection", "tag", "type_id"}, {"properties"}),
+    "node.copy": ({"source", "target_parent", "tag"}, set()),
+    "node.remove": ({"path"}, {"cascade"}),
+    "node.label_set": ({"path", "label"}, set()),
+    "node.active_set": ({"path", "active"}, set()),
+    "node.move": ({"path"}, {"before", "after"}),
+    "node.selection_get": ({"path"}, {"selection_name"}),
+    "node.selection_set": ({"path", "selection"}, {"selection_name"}),
+}
+
+
+def validate_node_action(operation: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+    """Structural and TypedValue obligations, independent of an engine receiver."""
+    from ._g2_public_api import IDENTITY_FIELDS
+    from ._g2_contract import ACCESSOR_METHODS
+    required, optional = NODE_ACTION_FIELDS[operation]
+    if not isinstance(arguments, Mapping) or set(arguments) - required - optional - IDENTITY_FIELDS or not required <= set(arguments):
+        raise PreWriteRefusal("INVALID_REQUEST", f"{operation} has missing or unknown fields")
+    body = {key: value for key, value in arguments.items() if key not in IDENTITY_FIELDS}
+    for field in ("path", "parent", "source", "target_parent", "before", "after"):
+        if field in body:
+            if field == "path" and operation == "node.remove":
+                from . import _g2_group_remove
+                if _g2_group_remove.is_model_root_nodegroup_path(body[field]):
+                    continue
+            NodePath.from_wire(body[field], allow_empty=field in {"parent", "target_parent", "path"} and operation in {"node.create", "node.copy", "node.selection_get", "node.selection_set", "node.label_set", "node.active_set"})
+    for field in ("tag", "type_id", "collection", "selection_name"):
+        if field in body and (not isinstance(body[field], str) or not body[field] or any(c in body[field] for c in "/\\\x00")):
+            raise PreWriteRefusal("INVALID_REQUEST", f"{field} must be one nonempty tag/type identifier")
+    if operation == "node.create":
+        if body["collection"] not in ACCESSOR_METHODS:
+            raise PreWriteRefusal("INVALID_NODE_PATH", "collection has no typed path accessor")
+        body["properties"] = validate_property_set(body.get("properties", []))
+        for item in body["properties"]:
+            value = item["value"]
+            if value["kind"] in {"int64", "complex128"} or len(value["shape"]) > 2:
+                raise PreWriteRefusal("API_UNSUPPORTED", "no reviewed PropFeature setter for this kind/rank")
+            signature = value.get("java_signature")
+            if signature:
+                spec = signature_spec(signature)
+                if not spec or spec["kind"] != ("string" if value["kind"] == "expression" else value["kind"]) or spec["rank"] != len(value["shape"]):
+                    raise PreWriteRefusal("PROPERTY_TYPE_MISMATCH", "initial property has incompatible exact Java signature")
+    elif operation == "node.active_set" and type(body["active"]) is not bool:
+        raise PreWriteRefusal("INVALID_REQUEST", "active must be a boolean")
+    elif operation == "node.label_set" and not isinstance(body["label"], str):
+        raise PreWriteRefusal("INVALID_REQUEST", "label must be a string")
+    elif operation == "node.remove":
+        body.setdefault("cascade", False)
+        if type(body["cascade"]) is not bool:
+            raise PreWriteRefusal("INVALID_REQUEST", "cascade must be a boolean")
+    elif operation == "node.move":
+        if ("before" in body) == ("after" in body):
+            raise PreWriteRefusal("INVALID_REQUEST", "move requires exactly one before/after anchor")
+    elif operation == "node.selection_set":
+        from ._g3_common import validate_selection_spec
+        body["selection"] = validate_selection_spec(body["selection"])
+        kind_fields = {
+            "named": {"kind", "component", "tag", "geometry_revision"},
+            "explicit": {"kind", "component", "geometry", "entity_dimension", "entities", "geometry_revision"},
+            "all": {"kind", "component", "geometry", "entity_dimension", "geometry_revision"},
+            "inherited": {"kind", "component", "geometry_revision"},
+            "objects": {"kind", "component", "geometry", "object_tags", "entity_dimension", "geometry_revision"},
+            "spatial": {"kind", "component", "geometry", "entity_dimension", "query", "geometry_revision"},
+        }
+        if set(body["selection"]) - kind_fields[body["selection"]["kind"]]:
+            raise PreWriteRefusal("INVALID_REQUEST", "SelectionSpec contains fields inapplicable to its kind")
+    return body
+
+
+def _public_require(worker: Any, node: Any, interface: str, method: str, parameters: tuple[str, ...]):
+    from ._g2_public_api import VERSION, describe_receiver, supports
+    descriptor = describe_receiver(worker, node)
+    if descriptor["runtime_version"] != VERSION or not supports(descriptor, interface, method, parameters):
+        raise PreWriteRefusal("API_UNSUPPORTED", f"actual public receiver has no reviewed {interface}.{method}{parameters}")
+    return descriptor
+
+
+def _actual_tags(node: Any) -> list[str]:
+    tags = _call(node, "tags")
+    if not isinstance(tags, (list, tuple)) or not all(isinstance(tag, str) and tag for tag in tags) or len(set(tags)) != len(tags):
+        raise PreWriteRefusal("EXECUTION_STATE_UNKNOWN", "typed collection returned invalid actual tags")
+    return list(tags)
+
+
+def _entity_parent(worker: Any, model_tag: str, path: Mapping[str, Any]):
+    parsed = NodePath.from_wire(path, allow_empty=False)
+    leaf = parsed.segments[-1]
+    if leaf.collection is None:
+        raise PreWriteRefusal("API_UNSUPPORTED", "action requires a tagged entity, not an accessor/container")
+    parent_path = NodePath(parsed.segments[:-1]).as_dict()
+    parent = resolve_node_path(_model(worker, model_tag), parent_path)
+    container = _call(parent, leaf.collection)
+    return parent_path, container, leaf
+
+
+def prepare_node_action(worker: Any, model_tag: str, operation: str, arguments: Mapping[str, Any], *, model_revision: int | None = None) -> dict[str, Any]:
+    """Resolve the actual public capability before taking any new write ticket."""
+    from ._g2_public_api import MODEL_ENTITY, VERSION, describe_receiver, supports
+    body = validate_node_action(operation, arguments)
+    prepared: dict[str, Any] = {"body": body}
+    if operation == "node.remove":
+        from . import _g2_group_remove
+        if body["cascade"] is not False:
+            raise PreWriteRefusal("API_UNSUPPORTED", "cascade=true has no reviewed dependency-safe remove adapter",
+                                  details={"receiver_accessed": False, "unknown_obligations": ["complete incoming consumer graph", "authorized cascade scope"]})
+        if not _g2_group_remove.is_model_root_nodegroup_path(body["path"]):
+            raise PreWriteRefusal("API_UNSUPPORTED", "only a model-root NodeGroup structural ungroup adapter is reviewed",
+                                  details={"receiver_accessed": False, "known_scope": {"path": body["path"]},
+                                           "unknown_obligations": ["ordinary entity-family dependency graph", "component and nested NodeGroup adapters", "incoming expression/selection consumers"],
+                                           "complete": False})
+        model = _model(worker, model_tag)
+        prepared["group_remove"] = _g2_group_remove.prepare(
+            worker, model, body["path"], model_tag=model_tag, model_revision=model_revision
+        )
+        prepared["descriptor"] = prepared["group_remove"].get("model_descriptor")
+        return prepared
+    model = _model(worker, model_tag)
+    string = "java.lang.String"
+    list_interface = "com.comsol.model.ModelEntityList"
+    if operation == "node.create":
+        parent = resolve_node_path(model, body["parent"])
+        container = _call(parent, body["collection"])
+        descriptor = describe_receiver(worker, container)
+        owners = ("com.comsol.model.GeomFeatureList", "com.comsol.model.PropFeatureList")
+        owner = next((owner for owner in owners if supports(descriptor, owner, "create", (string, string))), None)
+        if owner is None:
+            raise PreWriteRefusal("API_UNSUPPORTED", "typed list lacks reviewed create(String,String)")
+        _public_require(worker, container, owner, "create", (string, string))
+        if body["tag"] in _actual_tags(container):
+            raise PreWriteRefusal("IDEMPOTENCY_KEY_CONFLICT", "target tag already exists; no identity proof permits overwrite")
+        prepared.update(container=container, descriptor=descriptor,
+                        target_path={"segments": body["parent"]["segments"] + [{"collection": body["collection"], "tag": body["tag"]}]})
+    elif operation == "node.copy":
+        source = resolve_node_path(model, body["source"])
+        source_parent, source_list, leaf = _entity_parent(worker, model_tag, body["source"])
+        target = resolve_node_path(model, body["target_parent"])
+        container = _call(target, leaf.collection)
+        descriptor = _public_require(worker, container, list_interface, "copy", (string, string))
+        if body["tag"] in _actual_tags(container):
+            raise PreWriteRefusal("IDEMPOTENCY_KEY_CONFLICT", "copy target tag already exists")
+        source_tag_path = leaf.tag
+        if source_parent != body["target_parent"]:
+            # A tag-only same-list adapter is verified. No unverified formatter
+            # turns an implementation model path into a cross-parent tag path.
+            raise PreWriteRefusal("API_UNSUPPORTED", "cross-parent tag-path formatter requires native adapter verification")
+        from . import _g2_copy_subtree as copy_view
+        # Reuse the same resolved source-list receiver; proxy handle equality
+        # does not establish native list identity.
+        descriptor = _public_require(worker, source_list, list_interface, "copy", (string, string))
+        order_before = _actual_tags(source_list)
+        if leaf.tag not in order_before or body["tag"] in order_before:
+            raise PreWriteRefusal("NODE_NOT_FOUND", "exact copy source/target native tags changed")
+        copy_budget = copy_view.new_budget(body["source"])
+        source_projection = copy_view.observe(worker, model_tag, body["source"], copy_budget, "source_prepare")
+        prepared.update(source=source, container=source_list, descriptor=descriptor, source_tag_path=source_tag_path,
+                        order_before=order_before, copy_budget=copy_budget, source_projection=source_projection,
+                        target_path={"segments": body["target_parent"]["segments"] + [{"collection": leaf.collection, "tag": body["tag"]}]})
+    else:
+        node = resolve_node_path(model, body["path"])
+        prepared["node"] = node
+        if operation in {"node.label_set", "node.active_set"}:
+            method, getter, parameter = (("label", "label", string) if operation == "node.label_set" else ("active", "isActive", "boolean"))
+            descriptor = _public_require(worker, node, MODEL_ENTITY, method, (parameter,))
+            _public_require(worker, node, MODEL_ENTITY, getter, ())
+            prepared.update(method=method, getter=getter, before=_call(node, getter), descriptor=descriptor)
+        elif operation == "node.move":
+            parent_path, container, leaf = _entity_parent(worker, model_tag, body["path"])
+            anchor_field = "before" if "before" in body else "after"
+            anchor_parent, _, anchor = _entity_parent(worker, model_tag, body[anchor_field])
+            if parent_path != anchor_parent or leaf.collection != anchor.collection or leaf.tag == anchor.tag:
+                raise PreWriteRefusal("INVALID_NODE_PATH", "move anchor must be another entity in the same actual list")
+            descriptor = _public_require(worker, container, "com.comsol.model.IListMove", "move", (string, "int"))
+            order = _actual_tags(container)
+            if leaf.tag not in order or anchor.tag not in order:
+                raise PreWriteRefusal("NODE_NOT_FOUND", "move source/anchor not in actual tags")
+            expected = [tag for tag in order if tag != leaf.tag]
+            index = expected.index(anchor.tag) + (1 if anchor_field == "after" else 0)
+            expected.insert(index, leaf.tag)
+            prepared.update(container=container, tag=leaf.tag, index=index, order_before=order, expected_order=expected, descriptor=descriptor)
+        else:
+            selection_name = body.get("selection_name")
+            owner_descriptor = describe_receiver(worker, node)
+            if owner_descriptor["runtime_version"] != VERSION:
+                raise PreWriteRefusal("API_UNSUPPORTED", "selection owner runtime version has no reviewed adapter")
+            selection_parameters = () if selection_name is None else (string,)
+            if not any(supports(owner_descriptor, interface, "selection", selection_parameters) for interface in owner_descriptor["interfaces"]):
+                raise PreWriteRefusal("API_UNSUPPORTED", "owner has no exact public selection getter")
+            selection = _call(node, "selection", *(() if selection_name is None else (selection_name,)))
+            descriptor = describe_receiver(worker, selection)
+            if descriptor["runtime_version"] != VERSION:
+                raise PreWriteRefusal("API_UNSUPPORTED", "selection receiver runtime version has no reviewed adapter")
+            prepared.update(selection=selection, descriptor=descriptor)
+            if operation == "node.selection_set":
+                spec = body["selection"]
+                segments = NodePath.from_wire(body["path"]).segments
+                component = next((segment.tag for segment in segments if segment.collection == "component"), None)
+                if spec.get("component") is not None and spec["component"] != component:
+                    raise PreWriteRefusal("INVALID_REQUEST", "selection component differs from its actual owner path")
+                if "geometry_revision" in spec:
+                    raise PreWriteRefusal("API_UNSUPPORTED", "no verified geometric revision getter; model revision is not geometry revision")
+                interface = "com.comsol.model.Selection"
+                if spec["kind"] in {"spatial", "objects"}:
+                    raise PreWriteRefusal("API_UNSUPPORTED", "this local selection adapter does not support spatial/object selection")
+                if spec["kind"] == "named":
+                    _public_require(worker, selection, "com.comsol.model.LocalSelection", "named", (string,))
+                    # Resolve the named dependency in the same component before mutation.
+                    _call(_call(model, "component", component), "selection", spec["tag"])
+                elif spec["kind"] in {"explicit", "all"}:
+                    if "entity_dimension" not in spec:
+                        raise PreWriteRefusal("INVALID_REQUEST", "local entity selection needs entity_dimension")
+                    geom_parameters = (string, "int") if spec.get("geometry") else ("int",)
+                    _public_require(worker, selection, interface, "geom", geom_parameters)
+                    _public_require(worker, selection, interface, "set" if spec["kind"] == "explicit" else "all", ("[I",) if spec["kind"] == "explicit" else ())
+                    if spec.get("geometry"):
+                        _call(_call(model, "component", component), "geom", spec["geometry"])
+                else:
+                    _public_require(worker, selection, interface, "inherit", ("boolean",))
+                    _public_require(worker, selection, interface, "isInheriting", ())
+            prepared["owner_descriptor"] = owner_descriptor
+    return prepared
+
+
+def _node_action_data(operation, prepared, model_ref):
+    body = prepared["body"]
+    path = body.get("path") or prepared.get("target_path")
+    return {"schema_version": 1, "operation": operation, "status": "OBSERVED", "complete": True,
+            "source_identity": {"model_ref": model_ref}, "evidence": {"descriptor": prepared.get("descriptor")},
+            "coverage": [{"path": path, "field": "requested action readback", "status": "VERIFIED"}], "errors": []}
+
+
+def execute_node_action(worker: Any, model_tag: str, operation: str, prepared: Mapping[str, Any], *, model_ref: Mapping[str, Any]) -> dict[str, Any]:
+    from ._g3_common import apply_local_selection, selection_state
+    body = prepared["body"]
+    data = _node_action_data(operation, prepared, model_ref)
+    mutation_possible = False
+    try:
+        if operation == "node.create":
+            mutation_possible = True
+            _call(prepared["container"], "create", body["tag"], body["type_id"])
+            data.update(created=True, created_path=prepared["target_path"], type_id=body["type_id"], applied=[], failed=[], not_executed=[])
+            created = resolve_node_path(_model(worker, model_tag), prepared["target_path"])
+            actual_type = _call(created, "getType")
+            data["readback"] = {"type_id": actual_type}
+            if actual_type != body["type_id"]:
+                raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "created type differs from requested type")
+            if body["properties"]:
+                # Authoritative property metadata becomes available only now.
+                result = property_set(worker, model_tag, prepared["target_path"], body["properties"])
+                data.update({key: value for key, value in result.get("data", {}).items() if key in {"applied", "failed", "not_executed"}})
+                if not result.get("success"):
+                    data["property_result"] = result
+                    raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "node exists but initial property writes were incomplete")
+            data["dependency_check"] = {"scope": "initial requested properties", "complete": True}
+        elif operation == "node.copy":
+            from . import _g2_copy_subtree as copy_view
+            data["readback"] = {"source_prepare": prepared["source_projection"]}
+            before = copy_view.observe(worker, model_tag, body["source"], prepared["copy_budget"], "source_fresh")
+            try:
+                copy_view.match_observed(prepared["source_projection"], before, body["source"], body["source"])
+            except ExecutionContractError as exc:
+                raise PreWriteRefusal("API_UNSUPPORTED", "observed copy source changed before mutation", details=exc.details).with_cause(exc) from exc
+            order_before = _actual_tags(prepared["container"])
+            if order_before != prepared["order_before"]:
+                raise PreWriteRefusal("API_UNSUPPORTED", "copy native source list changed before mutation")
+            mutation_possible = True
+            _call(prepared["container"], "copy", body["tag"], prepared["source_tag_path"])
+            order_after = _actual_tags(prepared["container"])
+            data["readback"].update(native_order_before=order_before, native_order_after=order_after)
+            copy_view.require_copy_order(order_before, order_after, prepared["source_tag_path"], body["tag"])
+            after = copy_view.observe(worker, model_tag, prepared["target_path"], prepared["copy_budget"], "target_after")
+            data["readback"]["target"] = copy_view.legacy_summary(after, prepared["target_path"])
+            source_after = copy_view.observe(worker, model_tag, body["source"], prepared["copy_budget"], "source_after")
+            data["readback"]["source_after"] = source_after
+            copy_view.match_observed(before, source_after, body["source"], body["source"])
+            comparison = copy_view.match_observed(before, after, body["source"], prepared["target_path"])
+            data.update(source_path=body["source"], target_path=prepared["target_path"], copy_method="copy(String,String)",
+                        source_tag_path=prepared["source_tag_path"],
+                        dependency_check={"complete": False, "incoming_complete": False,
+                                          "scope": "actual observed recursive typed fields/children/order only; native and reference obligations remain open",
+                                          "status": "UNVERIFIED", "observed_comparison": comparison, "budget": prepared["copy_budget"].as_dict()})
+            data["readback"]["source"] = copy_view.legacy_summary(before, body["source"])
+            data["coverage"].extend(before["coverage"] + after["coverage"] + source_after["coverage"])
+            data["errors"].extend(before["errors"] + after["errors"] + source_after["errors"])
+            data["complete"] = False
+            data["status"] = "INCOMPLETE"
+            data["coverage"].append({"path": prepared["target_path"], "field": "complete dependency graph", "status": "UNSUPPORTED", "reason": "no verified public incoming/reference graph getter"})
+        elif operation in {"node.label_set", "node.active_set"}:
+            requested = body["label" if operation == "node.label_set" else "active"]
+            mutation_possible = True
+            _call(prepared["node"], prepared["method"], requested)
+            after = _call(prepared["node"], prepared["getter"])
+            if type(after) is not type(requested) or after != requested:
+                raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "setter actual typed readback differs from request")
+            data.update(path=body["path"], before=prepared["before"], after=after)
+            if operation == "node.active_set":
+                data["validity_observation"] = {"rebuild_or_solve": "NOT_RUN"}
+            else:
+                data["requested_label"] = requested
+        elif operation == "node.move":
+            mutation_possible = True
+            index = {"kind": "int32", "shape": [], "data": prepared["index"], "java_signature": "int"}
+            _call(prepared["container"], "move", prepared["tag"], index)
+            after = _actual_tags(prepared["container"])
+            if after != prepared["expected_order"]:
+                raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "actual native order differs from the requested move")
+            data.update(path=body["path"], anchor=body.get("before", body.get("after")), order_before=prepared["order_before"], order_after=after, index_dispatched=prepared["index"])
+        elif operation == "node.remove":
+            from . import _g2_group_remove
+            def mark_group_remove_dispatch() -> None:
+                nonlocal mutation_possible
+                mutation_possible = True
+            _g2_group_remove.execute(
+                worker, prepared["group_remove"], _model(worker, model_tag), model_ref, data,
+                before_dispatch=mark_group_remove_dispatch
+            )
+        elif operation in {"node.selection_get", "node.selection_set"}:
+            selection = prepared["selection"]
+            data.update(path=body["path"], selection_name=body.get("selection_name"), public_interfaces=prepared["descriptor"]["interfaces"])
+            if operation == "node.selection_set":
+                mutation_possible = True
+                data["requested"] = body["selection"]
+                result = apply_local_selection(selection, worker, model_tag, None, body["selection"], owner=prepared["node"])
+                data["applied"] = result["applied"]
+            state = selection_state(selection)
+            from ._g3_common import require_entity_id_array
+            # Never publish an untyped list as COMSOL integer entity IDs.
+            if state.get("entities") is not None:
+                try:
+                    state["entities"] = require_entity_id_array(state["entities"], "selection.entities()", allow_empty=True)
+                except ExecutionContractError as exc:
+                    state["entities"] = None
+                    state["entities_error"] = str(exc)
+            if state.get("is_inheriting") is not None and type(state["is_inheriting"]) is not bool:
+                state["is_inheriting"] = None
+                state["is_inheriting_error"] = "actual getter did not return boolean"
+            state["kind"] = ("named" if isinstance(state.get("named"), str) and state["named"]
+                             else "inherited" if state.get("is_inheriting") is True else "UNKNOWN")
+            state["geometry_revision"] = None
+            state["geometry_revision_status"] = "UNVERIFIED_NO_PUBLIC_GETTER"
+            data["selection"] = state
+            data["readback"] = state
+            data.update(complete=False, status="INCOMPLETE")
+            data["coverage"].append({"path": body["path"], "field": "geometry_revision/selection-kind", "status": "UNSUPPORTED", "reason": "entity IDs do not prove all versus explicit; no reviewed geometric revision getter"})
+            errors = {name: value for name, value in state.items() if name.endswith("_error") and value is not None}
+            if errors:
+                data["complete"] = False
+                data["status"] = "INCOMPLETE"
+                data["errors"] = [{"path": body["path"], "field": name, "message": str(value), "stage": "readback", "dispatched": mutation_possible, "mutation_possible": mutation_possible} for name, value in errors.items()]
+            if operation == "node.selection_set" and body["selection"]["kind"] == "inherited" and state.get("is_inheriting") is not True:
+                raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "inherited selection cannot be confirmed by actual readback")
+        else:
+            raise PreWriteRefusal("API_UNSUPPORTED", "remove dependency adapter is unavailable")
+        return {"success": True, "data": data}
+    except Exception as exc:
+        if not mutation_possible:
+            raise
+        data.update(status="UNKNOWN", complete=False)
+        if operation == "node.copy":
+            data["evidence"]["copy_failure"] = exc.as_dict() if isinstance(exc, ExecutionContractError) else {"cause_type": type(exc).__name__, "message": str(exc)}
+        elif operation == "node.remove":
+            data["evidence"]["group_remove_failure"] = (
+                exc.as_dict() if isinstance(exc, ExecutionContractError)
+                else {"cause_type": type(exc).__name__, "message": str(exc),
+                      "worker_reply": dict(getattr(exc, "reply", {}) or {})}
+            )
+        data["errors"].append({"code": getattr(exc, "code", "NODE_ACTION_FAILED"), "message": str(exc), "stage": "post_dispatch", "dispatched": True, "mutation_possible": True})
+        return {"success": False, "execution_state_unknown": True, "partial_change": True, "data": data,
+                "error": {"code": "EXECUTION_STATE_UNKNOWN", "message": str(exc), "safe_retry": False}}
+
+
 def _model(worker: Any, model_tag: str) -> Any:
     try:
         return worker.client().model(model_tag)

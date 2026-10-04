@@ -875,6 +875,13 @@ class ManagedBackend:
         return {"success": True, "data": {"model_tag": tag}, **metadata}
 
     def invoke(self, operation, arguments, execution, operation_id, event_callback):
+        from ._g2_registry import NODE_ACTIONS
+        unit_a = NODE_ACTIONS | {"api.describe", "api.invoke", "checkpoint.branch", "api.probe", "checkpoint.diff"}
+        aliases = {name.replace(".", "_"): name for name in unit_a}
+        operation = aliases.get(operation, operation)
+        if operation in {"registry_call", "operation_call"} and arguments.get("operation_id") == "api.invoke":
+            from ._g2_public_api import routed_arguments
+            routed_arguments(operation, arguments)
         if operation == "server_connect":
             return self.connect(arguments, operation_id, event_callback, project_id=execution.get("project_id"))
         if operation == "artifact.register":
@@ -966,7 +973,7 @@ class ManagedBackend:
         if operation in {"docs_index", "docs.index", "docs.search", "docs.get", "docs.examples", "docs.error_search",
                          "code_describe_java", "code.describe_java", "code_compile_java", "code.compile_java",
                          "code.inspect_run", "code_inspect_run",
-                         "transaction_preview", "transaction.preview", "checkpoint.list", "checkpoint.inspect", "checkpoint.diff"}:
+                         "transaction_preview", "transaction.preview", "checkpoint.list", "checkpoint.inspect"}:
             return self._invoke_g2_control(operation, arguments, execution, operation_id)
         if operation in RUNTIME_SCOPED_OPERATIONS:
             # C05: a runtime capability/licence question is a property of the
@@ -1340,7 +1347,7 @@ class ManagedBackend:
         if operation in {"transaction_preview", "transaction.preview"}:
             data = preview_transaction(arguments.get("actions", []), arguments.get("invariants"), model_ref=execution.get("model_ref"))
             return {"success": True, "data": data, "execution": {"operation_id": operation_id}}
-        if operation in {"checkpoint.list", "checkpoint.inspect", "checkpoint.diff"}:
+        if operation in {"checkpoint.list", "checkpoint.inspect"}:
             rows = self.store.list_metadata("checkpoints")
             if operation == "checkpoint.list":
                 return {"success": True, "data": {"status": "SUCCEEDED", "checkpoints": rows}, "execution": {"operation_id": operation_id}}
@@ -1352,8 +1359,6 @@ class ManagedBackend:
                 path = Path(row.get("path", ""))
                 verified = path.is_file() and (not row.get("sha256") or hashlib.sha256(path.read_bytes()).hexdigest() == row.get("sha256"))
                 return {"success": True, "data": {"status": "SUCCEEDED" if verified else "FAILED", "checkpoint": row, "hash_verified": verified}, "execution": {"operation_id": operation_id}}
-            return {"success": False, "data": {"status": "NOT_RUN", "reason": "checkpoint diff requires a versioned COMSOL comparison adapter"},
-                    "error": {"code": "UNSUPPORTED_OPERATION", "message": "checkpoint.diff is not available in this G2 adapter", "safe_retry": False}}
         raise ExecutionContractError("UNSUPPORTED_OPERATION", f"unsupported G2 control operation {operation}")
 
     def _ensure_compile_worker(self) -> None:
@@ -1648,6 +1653,12 @@ class ManagedBackend:
     def _invoke_g2_model(self, operation, arguments, execution, operation_id, event_callback):
         if self.service is None or self.worker is None:
             raise ExecutionContractError("ENGINE_UNRESPONSIVE", "a connected persistent Worker is required")
+        if operation == "checkpoint.diff":
+            from ._g2_checkpoint_diff import invoke_diff
+            return invoke_diff(self, arguments, execution, operation_id)
+        if operation in {"checkpoint.branch", "api.probe"}:
+            from ._g2_checkpoint_ops import invoke_owned
+            return invoke_owned(self, operation, arguments, execution, operation_id)
         if operation == "geometry.import":
             # The design-catalog body may carry these identity fields for
             # compatibility, but the managed envelope is authoritative. Never
@@ -1679,6 +1690,19 @@ class ManagedBackend:
                            else False)
                 if not matches:
                     raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "geometry.import model_ref differs from the execution envelope")
+        from ._g2_registry import NODE_ACTIONS
+        unit_a = operation in NODE_ACTIONS or operation in {"api.describe", "api.invoke"}
+        if unit_a:
+            # These new capabilities never select a hidden current model or
+            # replace the managed identity from a nested/direct body.
+            for field in ("project_id", "session_id", "model_ref"):
+                if execution.get(field) is None:
+                    raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", f"{operation} requires outer {field}")
+            if not isinstance(execution["model_ref"], dict):
+                raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "outer model_ref must be an object")
+            for field in ("project_id", "session_id", "model_ref", "expected_revision", "idempotency_key", "request_id"):
+                if field in arguments and arguments[field] != execution.get(field):
+                    raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", f"{field} differs from the execution envelope")
         session = execution.get("session_id") or arguments.get("session_id")
         if session is not None and session != self.service.ledger.session_id:
             raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "session mismatch")
@@ -1758,6 +1782,33 @@ class ManagedBackend:
         bound_revision = self.service.ledger._state_for(ref).revision if ref is not None else None
         body = self._g2_body(arguments, operation)
         alias = self._g2_alias(operation)
+        prepared_a = None
+        resolved_a_effect = None
+        if unit_a:
+            from ._execution_contract import permission_for_effect
+            from ._g2_public_api import legacy_effect, provisional_effect, prepare_invoke
+            from ._g2_engine import prepare_node_action
+            resolved_a_effect = (legacy_effect(provisional_effect(body)) if operation == "api.invoke"
+                                 else "inspect" if operation in {"api.describe", "node.selection_get"} else "project_write")
+            required_permission = permission_for_effect(resolved_a_effect)
+            if required_permission not in self.service.ledger.permissions:
+                raise ExecutionContractError("PERMISSION_DENIED", f"permission required: {required_permission}")
+            revision = execution.get("expected_revision")
+            if revision is not None and (type(revision) is not int or revision != bound_revision):
+                raise ExecutionContractError("REVISION_CONFLICT", "Unit A expected_revision differs from the bound source")
+            if resolved_a_effect != "inspect" and (revision is None or not isinstance(execution.get("idempotency_key"), str) or not execution["idempotency_key"]):
+                raise ExecutionContractError("INVALID_REQUEST", "Unit A write requires revision and idempotency key")
+            if resolved_a_effect != "inspect" and self.service.ledger._state_for(ref).dirty:
+                # A retained owned-copy UNKNOWN epoch is evidence, not a
+                # writable capability. Refuse before receiver/Worker access.
+                raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "bound model is dirty; write requires verified reconciliation")
+            if operation == "api.invoke":
+                prepared_a = prepare_invoke(self.worker, ref.model_tag, body)
+                prepared_a["model_ref"] = ref.as_dict()
+                if prepared_a["effect"] != resolved_a_effect:
+                    raise ExecutionContractError("PERMISSION_DENIED", "actual capability effect differs from provisional policy")
+            elif operation in NODE_ACTIONS:
+                prepared_a = prepare_node_action(self.worker, ref.model_tag, operation, body, model_revision=bound_revision)
 
         if operation == "model.inspect":
             if "inspect" not in self.service.ledger.permissions:
@@ -1834,7 +1885,7 @@ class ManagedBackend:
             return {"success": True, "data": data, "execution": identity.get("execution", {})}
 
         if operation not in _g3_operations():
-            permission = permission_for_legacy_tool(alias)
+            permission = permission_for_effect(resolved_a_effect) if unit_a else permission_for_legacy_tool(alias)
             if permission != "inspect" and ref is not None:
                 supplied_rev = execution.get("expected_revision")
                 if supplied_rev is None:
@@ -1894,7 +1945,7 @@ class ManagedBackend:
                 })
                 result = {**dict(result), "execution": enriched}
             return result
-        if operation in {"node.property_set", "node.property_index_set", "node.property_entry_set",
+        if (unit_a and resolved_a_effect != "inspect") or operation in {"node.property_set", "node.property_index_set", "node.property_entry_set",
                          "code.execute_java", "checkpoint.create", "checkpoint.restore",
                          "transaction.trial", "transaction.apply", "transaction.recover"}:
             isolation = self._require_g2_isolation()
@@ -1935,10 +1986,22 @@ class ManagedBackend:
             return self.service.execute_legacy(alias, callback, body, model_ref=ref,
                 expected_revision=execution.get("expected_revision", arguments.get("expected_revision")),
                 request_id=execution.get("request_id"), session_id=session, effect="evaluate")
-        callback = self._g2_callback(operation, ref, body, operation_id, bound_revision)
+        if unit_a:
+            from ._g2_public_api import execute_prepared, describe_api
+            from ._g2_engine import execute_node_action
+            def callback(_args):
+                if operation == "api.invoke":
+                    call = lambda: execute_prepared(self.worker, prepared_a)
+                elif operation == "api.describe":
+                    call = lambda: describe_api(self.worker, ref.model_tag, body)
+                else:
+                    call = lambda: execute_node_action(self.worker, ref.model_tag, operation, prepared_a, model_ref=ref.as_dict())
+                return self._dispatch_with_witness(operation, call, effect=resolved_a_effect)
+        else:
+            callback = self._g2_callback(operation, ref, body, operation_id, bound_revision)
         result = self.service.execute_legacy(alias, callback, body, model_ref=ref,
                 expected_revision=execution.get("expected_revision", arguments.get("expected_revision")),
-                request_id=execution.get("request_id"), session_id=session, effect={
+                request_id=execution.get("request_id"), session_id=session, effect=resolved_a_effect if unit_a else {
                     "node.property_set": "project_write", "node.property_index_set": "project_write", "node.property_entry_set": "project_write",
                     "node.property_schema": "inspect", "node.property_get": "inspect", "node.inspect": "inspect", "node.children": "inspect", "node.find": "inspect",
                     "code.execute_java": "trusted_code",

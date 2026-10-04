@@ -843,10 +843,16 @@ WITHHELD_PENDING_TABLE_REPAIR = {
 
 def _allowlist_block(name: str) -> set[str]:
     source = WORKER_SOURCE.read_text(encoding="utf-8")
-    start = source.index(f"{name} = new HashSet")
-    end = source.index("));", start)
     import re as _re
 
+    declaration = _re.compile(
+        rf"(?m)^[ \t]*private[ \t]+static[ \t]+final[ \t]+Set<String>[ \t]+"
+        rf"{_re.escape(name)}[ \t]*=[ \t]*new HashSet<>\(Arrays\.asList\("
+    )
+    matches = list(declaration.finditer(source))
+    assert len(matches) == 1, f"expected one exact Java allow-list declaration for {name!r}, found {len(matches)}"
+    start = matches[0].start()
+    end = source.index("));", start)
     return set(_re.findall(r'"([A-Za-z_][A-Za-z0-9_]*)"', source[start:end]))
 
 

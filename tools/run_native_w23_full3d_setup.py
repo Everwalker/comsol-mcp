@@ -964,6 +964,104 @@ def validate_retirement_response(response: Mapping[str, Any], *, project_id: str
     return dict(proof)
 
 
+def validate_native_mesh_readback(readback: Mapping[str, Any], *, phase: str,
+                                  previous: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    """Verify actual whole-domain mesh getters before any existing solve route.
+
+    The all() action is provenance; fresh topology/selection equality supplies
+    the coverage evidence. No native isAll getter or count-derived IDs exist.
+    """
+    def fail(message: str) -> None:
+        raise CandidateError("full3D native mesh: " + message)
+
+    def positive_ids(value: Any, label: str) -> set[int]:
+        if (not isinstance(value, list) or not value
+                or any(type(v) is not int or v <= 0 for v in value)
+                or len(set(value)) != len(value)):
+            fail(label + " needs unique positive actual int IDs")
+        return set(value)
+
+    mesh = readback.get("mesh")
+    if not isinstance(mesh, Mapping) or mesh.get("tag") != "mesh3d" or mesh.get("geometry") != "geom3d":
+        fail("mesh identity missing")
+    o = mesh.get("observation")
+    if not isinstance(o, Mapping):
+        fail("native getter observation missing")
+    expected_attempts = [
+        "feature_tags_before", "mesh_tag", "geometry_tag", "geometry_dimension", "domain_count", "up_down",
+        "generator_tag", "generator_type", "selection_geometry", "selection_dimension", "selection_dimensions",
+        "selection_entities", "selection_is_geom_raw", "selection_is_remaining_raw", "size_custom", "size_hmax",
+        "size_hmin", "mesh_dimension", "is_empty", "element_count", "is_complete", "has_problems", "problems"]
+    if (o.get("schema") != "W23_FULL3D_OWNED_MESH_V1"
+            or o.get("status") != "NATIVE_MESH_GETTERS_ACCEPTED_NO_SCIENCE_CLAIM"
+            or o.get("phase") != phase or phase not in {"initial", "apply_case"}
+            or o.get("getter_attempts") != expected_attempts
+            or o.get("getter_errors") != {} or "failure_cause" in o or "mesh_run_error" in o):
+        fail("schema, stage, getter attempts or errors invalid")
+    tags = o.get("feature_tags_before")
+    if (not isinstance(tags, list) or not tags or any(not isinstance(t, str) or not t.strip() for t in tags)
+            or len(set(tags)) != len(tags) or "size" not in tags):
+        fail("feature tag inventory incomplete/ambiguous")
+    initial = phase == "initial"
+    if (type(o.get("generator_created_in_call")) is not int
+            or o["generator_created_in_call"] != (1 if initial else 0)
+            or ("w23tet" in tags) == initial
+            or o.get("selection_action_provenance") != (
+                "geom_3_all_called_this_initial_creation" if initial
+                else "same_owned_generator_initial_geom_3_all_reused_no_selection_repair")):
+        fail("generator ownership or configured all action provenance invalid")
+    if (o.get("mesh_tag") != "mesh3d" or o.get("geometry_tag") != "geom3d"
+            or o.get("generator_tag") != "w23tet" or o.get("generator_type") != "FreeTet"
+            or o.get("selection_geometry") != "geom3d"):
+        fail("native identity/type mismatch")
+    for key in ("geometry_dimension", "selection_dimension", "mesh_dimension"):
+        if type(o.get(key)) is not int or o[key] != 3:
+            fail(key + " is not actual dimension 3")
+    dims = o.get("selection_dimensions")
+    if not isinstance(dims, list) or len(dims) != 1 or type(dims[0]) is not int or dims[0] != 3:
+        fail("selection dimension inventory invalid")
+    up_down = o.get("up_down")
+    if (not isinstance(up_down, list) or len(up_down) != 2 or any(not isinstance(row, list) for row in up_down)
+            or not up_down[0] or len(up_down[0]) != len(up_down[1])
+            or any(type(v) is not int or v < 0 for row in up_down for v in row)):
+        fail("native getUpDown malformed")
+    domains = {v for row in up_down for v in row if v > 0}
+    if not domains or type(o.get("domain_count")) is not int or o["domain_count"] != len(domains):
+        fail("getNDomains cardinality differs from actual topology IDs")
+    if positive_ids(o.get("domain_ids"), "domain_ids") != domains:
+        fail("domain IDs differ from actual fresh getUpDown")
+    if positive_ids(o.get("selection_entities"), "selection_entities") != domains:
+        fail("FreeTet does not cover exact actual full geometry domain set")
+    for key in ("selection_is_geom_raw", "selection_is_remaining_raw", "is_empty", "is_complete", "has_problems"):
+        if type(o.get(key)) is not bool:
+            fail(key + " is not native Boolean")
+    if (o.get("mesh_run_attempted") is not True or o.get("mesh_run_returned") is not True
+            or o["is_empty"] is not False or o["is_complete"] is not True or o["has_problems"] is not False
+            or o.get("problems") != [] or type(o.get("element_count")) is not int or o["element_count"] <= 0
+            or type(mesh.get("elements")) is not int or mesh["elements"] != o["element_count"]):
+        fail("run/empty/completeness/problems/positive element count invalid")
+    sizes = (o.get("size_hmax"), o.get("size_hmin"))
+    base = ("lambda0/(5*w23Nlens)", "lambda0/(12*w23Nlens)")
+    frozen_sizes = {base, *((f"({base[0]})*{s}", f"({base[1]})*{s}") for s in ("0.8", "0.64"))}
+    if o.get("size_custom") != "on" or any(not isinstance(v, str) for v in sizes) or sizes not in frozen_sizes:
+        fail("Size is outside original frozen expression pairs")
+    if initial:
+        if mesh.get("hmax") != sizes[0] or mesh.get("hmin") != sizes[1]:
+            fail("legacy Size readback differs from actual mesh getters")
+        if previous is not None:
+            fail("initial mesh cannot inherit prior proof")
+    else:
+        if not isinstance(previous, Mapping) or previous.get("phase") != "initial":
+            fail("apply needs exact initial mesh proof")
+        if previous.get("size_hmax") != sizes[0] or previous.get("size_hmin") != sizes[1]:
+            fail("apply changed original build Size")
+    return {"status": "NATIVE_MESH_GETTERS_VALIDATED_NO_SCIENCE_CLAIM", "phase": phase,
+            "mesh_tag": "mesh3d", "generator_tag": "w23tet", "generator_type": "FreeTet",
+            "domain_ids": sorted(domains), "size_hmax": sizes[0], "size_hmin": sizes[1],
+            "element_count": o["element_count"], "Study_or_Solver_RUN": False,
+            "scientific_acceptance": "NOT_RUN"}
+
+
 def validate_native_mode_configuration(readback: Mapping[str, Any], *, inventory: bool = False) -> dict[str, Any]:
     """Validate only native configuration readback, never mode-solution identity.
 
@@ -2125,6 +2223,7 @@ def execute_candidate(*, repo: Path, evidence: Path, reviewed_sha256: str,
         build_readback = _java_action_readback(build_response, "full3d_fixture_build")
         _check_full3d_fixture_readback(build_readback,
             recipe_sha256=recipe_check["recipe_sha256"], project_id=project["project_id"], model=model)
+        build_mesh_readback = validate_native_mesh_readback(build_readback, phase="initial")
         configuration_readback = validate_native_mode_configuration(build_readback)
 
         plan = bind_case_matrix(recipe, project_id=project["project_id"],
@@ -2144,6 +2243,8 @@ def execute_candidate(*, repo: Path, evidence: Path, reviewed_sha256: str,
         _check_full3d_fixture_readback(apply_readback,
             recipe_sha256=recipe_check["recipe_sha256"], project_id=project["project_id"],
             model=model, case=baseline_rows[0])
+        apply_mesh_readback = validate_native_mesh_readback(
+            apply_readback, phase="apply_case", previous=build_mesh_readback)
         if (build_readback.get("study_or_solver_invoked") is not False
                 or apply_readback.get("study_or_solver_invoked") is not False):
             raise CandidateError("fixture builder reported a Study/solver invocation")
@@ -2287,6 +2388,7 @@ def execute_candidate(*, repo: Path, evidence: Path, reviewed_sha256: str,
             "recipe_sha256": recipe_check["recipe_sha256"],
             "build_readback": build_readback, "baseline_readback": apply_readback,
             "configuration_readback": configuration_readback,
+            "build_mesh_readback": build_mesh_readback, "apply_mesh_readback": apply_mesh_readback,
             "inventory_configuration_readback": inventory_configuration,
             "solution_inventory": inventory, "saved_mph": saved_artifact,
             "study_run_calls": 0,
