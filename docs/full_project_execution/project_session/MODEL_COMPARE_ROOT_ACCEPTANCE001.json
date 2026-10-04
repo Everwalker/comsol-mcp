@@ -1,0 +1,120 @@
+{
+  "schema": "root-model-compare-acceptance/1",
+  "recorded_utc": "2026-10-04T21:27:06.968906+00:00",
+  "decision": "ACCEPT_EXACT_FINAL7_SOURCE_SOFTWARE_ONLY",
+  "baseline_commit": "07a29d855fe684322d095aef98021c874e1e6af3",
+  "candidate_fingerprint": "40e251ad1a25e1e1d619a14b04c018d72cf62f33a1495b933c02538ed7896cfa",
+  "fingerprint_scope": "canonical payload baseline/changed7/contract/handoff/test16; not full-tree or native identity",
+  "source7": [
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "size_bytes": 727972,
+      "sha256": "a4d15b76c28f766c61e5f626f72731152392fe563c18529b4bafd2b6cc2e46a5"
+    },
+    {
+      "path": "comsol_mcp/_execution_contract.py",
+      "size_bytes": 22753,
+      "sha256": "dbb112cbbdef9a4d45f69c230123d4e9e57f7b71e337532d83989aa827e6c9e3"
+    },
+    {
+      "path": "comsol_mcp/_g2_checkpoint_diff.py",
+      "size_bytes": 60492,
+      "sha256": "ee3b2f9339634de4429c63a64c90a37ad0eb46d503b0da50849a40e2b0687c57"
+    },
+    {
+      "path": "comsol_mcp/_g2_model_compare.py",
+      "size_bytes": 53038,
+      "sha256": "96a5750d8c7760d9a20244585e0a9b0d97a5b04840e690a8283d25dfd4e83597"
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "size_bytes": 84435,
+      "sha256": "33f21bd1ca205d240bed5491c4a8060b0924a03d036975f10f15736d83af42d8"
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "size_bytes": 198339,
+      "sha256": "9929dca82d3fca97815da38f7e8ecb00547c363dae20ebd03e86df722b2a8e6d"
+    },
+    {
+      "path": "tests/test_unit_c_model_compare.py",
+      "size_bytes": 21781,
+      "sha256": "0672f207b016be2bff8a1d5baf1dbea496913e70f622ba76361df7e441393987"
+    }
+  ],
+  "freeze_manifest": {
+    "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/model-compare-software-candidate-20261005-001/final-freeze-successor-07a-001/freeze_manifest.json",
+    "size_bytes": 17583,
+    "sha256": "d294f3e735d8592d3dea23d2da189e2b50c5a4711f193265b36afc65218aea84"
+  },
+  "contract": {
+    "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/model-compare-software-candidate-20261005-001/../model-delivery-same-version-evidence-20261005-001/ROOT_MODEL_COMPARE_IMPLEMENTATION_CONTRACT001.json",
+    "size_bytes": 5270,
+    "sha256": "079e3afc4566d1f9d564121aec2490c642c2ed718bd5b4a02afc5f54151f755f"
+  },
+  "independent_report": {
+    "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/model-compare-software-candidate-20261005-001/fresh-independent-review001/ROOT_MODEL_COMPARE_FRESH_INDEPENDENT_REVIEW001.json",
+    "size_bytes": 35794,
+    "sha256": "195c4c700d9c9b064d08248dd1ec2010e1331ba262b41e0041c1198c2e890a1a"
+  },
+  "independent_markdown": {
+    "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/model-compare-software-candidate-20261005-001/fresh-independent-review001/ROOT_MODEL_COMPARE_FRESH_INDEPENDENT_REVIEW001.md",
+    "size_bytes": 2069,
+    "sha256": "9b0a53f0b6b9164a74685dd8fb38a6ac9a6e744cd97916cb7a09b7aa77b8ed15"
+  },
+  "independent_inventory": {
+    "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/model-compare-software-candidate-20261005-001/fresh-independent-review001/evidence_inventory.json",
+    "size_bytes": 10607,
+    "sha256": "7a679d8d49fe81a48145e01b57d7de085bc055046cb3fe43c20e757017cbd01e"
+  },
+  "source_and_raw_evidence_review": [
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/model-compare-software-candidate-20261005-001/ROOT_COMPARE_SOURCE_PRELIMINARY_REVIEW001.json",
+      "size_bytes": 2690,
+      "sha256": "09b51aa176140aab80493183161bfa107e4e4f5e5d978e31478321dbbee42fb1"
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/model-compare-software-candidate-20261005-001/ROOT_FINAL_MERGED_EVIDENCE_REVIEW001.json",
+      "size_bytes": 441,
+      "sha256": "f02573d8e2450dba3958b45f1c3ccbdaf32444cf605024aa44542811f8514099"
+    }
+  ],
+  "root_review": "Reviewed bounded compare module and exact integration diff; independently recomputed all7 sources/16 closure/fingerprint and every producer/reviewer raw result ref; inspected four reviewer controls through real ManagedBackend/ControlDaemon. No blocking source issue.",
+  "producer_tests": {
+    "final": 237,
+    "passed": 237,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "independent_tests": {
+    "final_production": 237,
+    "own_controls": 4,
+    "passed": 241,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "failures_preserved": "Producer initial206PASS/1fixtureFAIL and independent initial235PASS/2sparse-copyFAIL remain preserved; corrections did not erase failures.",
+  "behavior": [
+    "Two complete canonical current same-project/session/Worker ModelRefs authorized before getters.",
+    "Serial READ typed requested projection; stable complete requested fields only EQUAL/DIFFERENT; units/type/null/missing/budgets yield INCOMPLETE.",
+    "No clone/load/save/remove/temporary model/write ticket or stable revision increment.",
+    "Requested observation/identity/handle/counter/revision drift fences both refs as persisted UNKNOWN safe_retry=false."
+  ],
+  "not_accepted": [
+    "Native COMSOL API/version coverage",
+    "Full model semantic equality or unrequested fields",
+    "Scientific acceptance",
+    "Full current-source release archives/platform installation",
+    "Original full26/272/360/1632 acceptance"
+  ],
+  "original_scope": {
+    "work_packages": 26,
+    "actions": 272,
+    "acceptance_cells": 360,
+    "target_cells": 1632,
+    "cells_changed": 0
+  },
+  "next_action": "Promote exact7 immutable sources with consistent canonical progress, review exact diff, commit/push/fetch verify, then continue artifact.verify corrections and parameter IO implementation. Model.package/rebuild_target and remaining original routes remain required."
+}

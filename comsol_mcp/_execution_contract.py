@@ -196,6 +196,7 @@ LEGACY_TOOL_EFFECTS: dict[str, str] = {
         "registry_list", "registry_describe", "registry_search", "registry_manifest",
         "node_inspect", "node_children", "node_find", "node_property_schema", "node_property_get",
         "code_describe_java", "code_inspect_run", "checkpoint_list", "checkpoint_inspect", "checkpoint_diff",
+        "model_compare",
         "transaction_preview", "transaction_verify", "docs_search", "docs_get", "docs_examples", "docs_error_search",
     )},
     **{name: "project_write" for name in (

@@ -76,6 +76,9 @@ def data_schema():
 
 class BudgetStop(Exception):pass
 
+class UnknownObservationStop(Exception):
+    """Stop a model.compare projection after an unresolved Worker observation."""
+
 class Budget:
     SERIALIZED_BYTES_CAP=500*1024*1024
     def __init__(self,limits):self.limits=limits;self.started=time.monotonic();self.rpc=0;self.nodes=0;self.pages=0;self.projected_bytes=0
@@ -102,8 +105,9 @@ def semantic_metadata():
     }
 
 class Reader:
-    def __init__(self,worker,tag,scope,budget,page_size,role):
+    def __init__(self,worker,tag,scope,budget,page_size,role,*,stop_on_unknown=False):
         self.worker=worker;self.tag=tag;self.scope=scope;self.budget=budget;self.page_size=page_size;self.role=role
+        self.stop_on_unknown=stop_on_unknown
         self.nodes={};self.coverage=[];self.errors=[];self.descriptors={};self.unknown=False;self.root_tag=None;self.receiver_receipts=[];self.receivers=[];self.receipt_keys=set()
     def coverage_row(self,path,field,status,signature=None,reason=None):
         self.coverage.append({'side':self.role,'path':path,'field':field,'status':status,'getter':signature,'reason':reason})
@@ -142,7 +146,10 @@ class Reader:
                 self.error(path,field,ExecutionContractError('NULL_GETTER','actual getter returned null'),dispatched=True);return {'kind':'null','java_type':rows[0]['returns']}
             self.coverage_row(path,field,'VERIFIED',signature);return value
         except BudgetStop:raise
-        except Exception as exc:self.error(path,field,exc,dispatched=True);return _MISSING
+        except Exception as exc:
+            self.error(path,field,exc,dispatched=True)
+            if self.stop_on_unknown and self.unknown:raise UnknownObservationStop() from exc
+            return _MISSING
     def scalar(self,node,desc,path,field,name,params=(),args=(),returns=None):
         value=self.get(node,desc,path,field,name,params,args,returns)
         if value is _MISSING:return _MISSING
@@ -351,6 +358,8 @@ class Reader:
                 for p in self.scope['properties']:
                     self.budget.take(node=True);node=self.resolve(model,p['path']);desc=self.descriptor(node,p['path'])
                     for name in p['names']:self.property(node,desc,p['path'],name)
+        except UnknownObservationStop:
+            pass
         except BudgetStop as exc:self.error({'segments':[]},'requested_scope',exc,status='TRUNCATED')
         except Exception as exc:self.error({'segments':[]},'requested_scope',exc)
         return {'schema':SCHEMA,'runtime_version':VERSION,'normalized_scope':self.scope,'nodes':[self.nodes[k] for k in sorted(self.nodes)],

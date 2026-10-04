@@ -65,6 +65,7 @@ NODE_ACTIONS = frozenset({"node.create", "node.copy", "node.remove", "node.label
 IMPLEMENTED_OPERATIONS = frozenset({
     "registry.list", "registry.describe", "registry.search", "registry.call", "registry.manifest",
     "model.adopt", "model.inspect", "job.resume", "artifact.register",
+    "model.compare",
     "desktop.status",
     "node.inspect", "node.children", "node.find", "node.property_schema", "node.property_get",
     "node.property_set", "node.property_index_set", "node.property_entry_set",
@@ -220,7 +221,7 @@ _PROFILE_DOMAIN_TOOLS = frozenset({
     "list_solver_features", "create_solver_config", "configure_solver", "manage_variables", "docs_index", "docs_search",
     "docs_get", "docs_examples", "docs_error_search", "transaction_preview", "transaction_trial", "transaction_apply",
     "transaction_verify", "transaction_recover", "checkpoint_list", "checkpoint_inspect", "checkpoint_diff",
-    *{operation.replace(".", "_") for operation in NODE_ACTIONS}, "checkpoint_branch", "api_probe",
+    "model_compare", *{operation.replace(".", "_") for operation in NODE_ACTIONS}, "checkpoint_branch", "api_probe",
 })
 _PROFILE_EXPERT_TOOLS = frozenset({
     "code_describe_java", "code_compile_java", "code_execute_java", "code_inspect_run", "docs_index", "docs_search",
@@ -335,6 +336,21 @@ class ActionEntry:
                 "failure_policy": "owned-copy cleanup/source uncertainty is UNKNOWN with safe_retry=false and dirty source guard",
                 "limits": "2000 nodes/20 seconds/5000 getter RPC default; page100 max500; 500MiB observed serialized projection/private input engineering bound; no hard native cancellation",
                 "verification_scope": "software implementation only; real COMSOL checkpoint semantic coverage/native lifecycle remain UNVERIFIED",
+            }
+        if self.operation_id == "model.compare":
+            from ._g2_model_compare import data_schema
+            result["data_schema"] = data_schema()
+            result["runtime_dispatch_contract"] = {
+                "handler": "serial managed public typed pure-getter comparison of two current ModelRefs",
+                "entrypoints": [self.operation_id, self.mcp_tool_name, "registry_call", "operation_call"],
+                "permissions": "inspect on both exact same-project ModelRefs",
+                "other_model_ref": "canonical JSON serialization of a complete ModelRef; tags, paths and hashes are not aliases",
+                "engine_queue": "one existing serialized READ operation context; no WRITE ticket, clone/load/save/remove or temporary model",
+                "scope": "versioned closed model structure/key-property projection, explicit NodePaths/properties and exact named typed getter metrics",
+                "completeness": "EQUAL/DIFFERENT only when both full requested projections, units and repeated readback are complete and stable; otherwise INCOMPLETE/equal=null",
+                "failure_policy": "identity, Worker, revision, counter, handle or requested-value drift yields UNKNOWN and conservatively fences both model revisions",
+                "verification_scope": "bounded software implementation only; complete native API coverage remains UNVERIFIED",
+                "limits": "2000 nodes/20 seconds/5000 getter RPC default; page100 max500; 500MiB observed serialized projection engineering bound; no hard native cancellation",
             }
         if self.operation_id in CONTROL_IMPLEMENTED_OPERATIONS:
             result["runtime_dispatch_contract"] = {
@@ -649,6 +665,9 @@ def _effective_input_schema(catalog_schema: Mapping[str, Any], operation_id: str
     """Make the published schema describe the actual MCP compatibility wire."""
     if operation_id == "checkpoint.diff":
         from ._g2_checkpoint_diff import input_schema
+        return input_schema()
+    if operation_id == "model.compare":
+        from ._g2_model_compare import input_schema
         return input_schema()
     if operation_id in {"checkpoint.branch", "api.probe"}:
         from ._g2_checkpoint_ops import input_schema
@@ -1183,6 +1202,10 @@ def _validate_operation_shape(operation_id: str, arguments: Mapping[str, Any]) -
 
     if operation_id == "checkpoint.diff":
         from ._g2_checkpoint_diff import normalize
+        normalize(arguments)
+        return
+    if operation_id == "model.compare":
+        from ._g2_model_compare import normalize
         normalize(arguments)
         return
     if operation_id in {"checkpoint.branch", "api.probe"}:

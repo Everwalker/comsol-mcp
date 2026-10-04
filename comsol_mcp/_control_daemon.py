@@ -548,7 +548,7 @@ class ControlDaemon:
             if operation == "runtime_poc_v64":
                 raise ExecutionContractError("UNSUPPORTED_OPERATION", "historical one-shot probe is disabled in the managed backend")
             from ._g2_registry import NODE_ACTIONS, validate_call
-            unit_a_actions = NODE_ACTIONS | {"api.describe", "api.invoke", "checkpoint.branch", "api.probe", "checkpoint.diff"}
+            unit_a_actions = NODE_ACTIONS | {"api.describe", "api.invoke", "checkpoint.branch", "api.probe", "checkpoint.diff", "model.compare"}
             unit_a_aliases = {name.replace(".", "_"): name for name in unit_a_actions}
             operation = unit_a_aliases.get(operation, operation)
             nested_a = operation in {"registry_call", "operation_call"} and arguments.get("operation_id") in unit_a_actions

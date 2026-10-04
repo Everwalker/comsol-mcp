@@ -876,7 +876,7 @@ class ManagedBackend:
 
     def invoke(self, operation, arguments, execution, operation_id, event_callback):
         from ._g2_registry import NODE_ACTIONS
-        unit_a = NODE_ACTIONS | {"api.describe", "api.invoke", "checkpoint.branch", "api.probe", "checkpoint.diff"}
+        unit_a = NODE_ACTIONS | {"api.describe", "api.invoke", "checkpoint.branch", "api.probe", "checkpoint.diff", "model.compare"}
         aliases = {name.replace(".", "_"): name for name in unit_a}
         operation = aliases.get(operation, operation)
         if operation in {"registry_call", "operation_call"} and arguments.get("operation_id") == "api.invoke":
@@ -1654,6 +1654,9 @@ class ManagedBackend:
     def _invoke_g2_model(self, operation, arguments, execution, operation_id, event_callback):
         if self.service is None or self.worker is None:
             raise ExecutionContractError("ENGINE_UNRESPONSIVE", "a connected persistent Worker is required")
+        if operation == "model.compare":
+            from ._g2_model_compare import invoke_compare
+            return invoke_compare(self, arguments, execution, operation_id)
         if operation == "checkpoint.diff":
             from ._g2_checkpoint_diff import invoke_diff
             return invoke_diff(self, arguments, execution, operation_id)

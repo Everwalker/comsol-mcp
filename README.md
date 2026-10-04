@@ -10,7 +10,7 @@
 这个项目的目标不是把 COMSOL 当成黑盒批处理器，而是让自动化过程保持可见：
 你可以在 Desktop 中实时观察 MCP 对几何、参数、网格、求解和保存流程的修改。
 
-## 当前执行状态（2026-10-04，Full MASTER W01–W26）
+## 当前执行状态（2026-10-05，Full MASTER W01–W26）
 
 > Full MASTER 仍在推进，原始 W01–W26 范围保持不变。以下是不同冻结候选的有界软件结果，不合并为全项目验收。
 
@@ -19,7 +19,9 @@
 - **Release helper**：64 个聚焦测试全部通过（0 failures/errors/skips）。其中 candidate-only 清理断言仅由 mock 验证；四个 helper 源码/测试文件已通过独立审查及主 Agent 验收；默认模式的 8 个既有回退回归也已通过（mock 软件测试）。
 - **W26 transition**：有界单机合成数据 `0.1.9 → 0.2.0.dev1 → 0.1.9` 转换获接受，独立检查 18/18；未使用真实用户数据，另一次真实非空 candidate-only 卸载已获独立和主 Agent 验收；SQLite 备份仅覆盖控制台账，引用模型和产物文件需单独备份。
 - **W21/reconnect test fixtures**：仅修复测试夹具，生产源码不变；两项重点测试和五模块50项回归通过，独立审查51/51（含一项guard负控）。原失败记录保留，原生/JVM/真实Worker启动未运行。
-- **Artifact queries**：`artifact.list/inspect` 四项缺陷已修复，独立复审与主 Agent 软件验收通过，严格网络防护下38/38通过；项目权限/有界分页/内容与文件身份检查已接线。旧失败保留；包完整性验证与原生验收未通过。`artifact.verify`、`model.compare` 继续隔离实现。
+- **Artifact queries**：`artifact.list/inspect` 四项缺陷已修复，独立复审与主 Agent 软件验收通过，严格网络防护下38/38通过；项目权限/有界分页/内容与文件身份检查已接线。旧失败保留；包完整性验证与原生验收未通过。`artifact.verify` 独立复审为 CHANGES_REQUIRED（57项中51通过、6失败），尚未晋升。
+- **Model compare（cutoff065）**：Root与新鲜独立审查接受精确7个源码的有界软件能力；生产回归237/237，独立检查241/241（237项最终生产测试加4项审查控制）。仅比较授权后的两个完整同项目/会话/Worker ModelRef所请求的字段投影，不代表完整模型语义相等，也不代表COMSOL原生/JVM/Worker或科学验收；候选指纹 40e251ad1a25e1e1d619a14b04c018d72cf62f33a1495b933c02538ed7896cfa。早期失败记录保留。
+- **Parameter import/export**：首个 production roundtrip 为1 PASS；完整功能仍未验收。
 - **W22 historical source content**：10,102 条历史源码内容及安全 APFS 还原已通过独立与主 Agent 验收；原 tar 字节和完整 Git 历史未恢复，没有科学重放。归档本体保留在本地。
 - **W23 model_create guard**：无路径创建不再因无关持久化工作流路径而提前拒绝；独立与主 Agent 软件验收通过，原生/科学验收仍未运行。此前冻结的 dev1 包不含此修复。
 - **Windows / Intel dev1 archives**：已通过独立与主 Agent 归档验收；目标机安装和 COMSOL 运行仍为 NOT_RUN。
@@ -29,7 +31,7 @@
 - Full-project、native、science 和 platform-matrix acceptance 均为 `NOT_ACCEPTED`；final release 为 `NOT_SELECTED`。当前 `pyproject.toml` 已声明 Windows/macOS；已有冻结 `.dev1` 构件保留旧元数据，最终构件仍需在候选冻结后重建。
 - Full profile 的 operation 清单通过 `registry_manifest(profile="full")` 动态发现；本 README 不固定工具数量。
 
-当前目标和证据入口：[MASTER_GOAL](docs/full_project_execution/MASTER_GOAL.md)、[PROGRESS](PROGRESS.md)、[cutoff062 checkpoint](docs/full_project_execution/w24/PROCESS_INVENTORY_PRIVACY_SOFTWARE_CHECKPOINT.json)、[R048 structural JVM acceptance](docs/full_project_execution/project_session/R048_STRUCTURAL_JVM_SOFTWARE_ACCEPTANCE001.json) 和 [stage-backend checkpoint](docs/full_project_execution/project_session/STAGE_BACKEND_SOFTWARE_CHECKPOINT.json)。
+当前目标和证据入口：[MASTER_GOAL](docs/full_project_execution/MASTER_GOAL.md)、[PROGRESS](PROGRESS.md)、[cutoff065 checkpoint](docs/full_project_execution/state/RESUME.json)、[R048 structural JVM acceptance](docs/full_project_execution/project_session/R048_STRUCTURAL_JVM_SOFTWARE_ACCEPTANCE001.json) 和 [stage-backend checkpoint](docs/full_project_execution/project_session/STAGE_BACKEND_SOFTWARE_CHECKPOINT.json)。
 
 ## 历史验收快照（2026-09-24，G3.8 / W20）
 
