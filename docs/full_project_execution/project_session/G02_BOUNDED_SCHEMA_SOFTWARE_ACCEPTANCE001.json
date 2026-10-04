@@ -1,0 +1,57 @@
+{
+  "schema": "G02_BOUNDED_SCHEMA_SOFTWARE_ACCEPTANCE_SUMMARY/1",
+  "recorded_at_utc": "2026-10-04T12:41:18.853406+00:00",
+  "decision": "ACCEPT_FINITE_SCHEMA_BINDING_AND_SESSION_DEFAULT_CHECKS_ONLY",
+  "root_acceptance_ref": {
+    "alias": "G02 root acceptance",
+    "path": "execution-scratch/t038-g02-schema-delta-20261004-001/ROOT_G02_BOUNDED_SOFTWARE_ACCEPTANCE001.json",
+    "size_bytes": 8729,
+    "sha256": "b2f63713d1b6509827ac319c3312deb00e7f9027348315556961d8476aee8e39"
+  },
+  "independent_review_ref": {
+    "alias": "G02 independent review",
+    "path": "execution-scratch/t038-g02-schema-delta-20261004-001/G02_INDEPENDENT_RUNTIME_REVIEW001.json",
+    "size_bytes": 16953,
+    "sha256": "d3a1ecc93de1cbe6a9ef040d166a72d38a8e263117331f016fa9114c16260096"
+  },
+  "actual_verification_ref": {
+    "alias": "G02 actual verification 010",
+    "path": "execution-scratch/t038-g02-schema-delta-20261004-001/G02_ACTUAL_VERIFICATION010.log",
+    "size_bytes": 17566,
+    "sha256": "030f5a1ec14b13576b1aced1ad01eb49d850428cd1e29114a4a48e5f4d29008e"
+  },
+  "correction_ref": {
+    "alias": "G02 corrected analysis",
+    "path": "execution-scratch/t038-g02-schema-delta-20261004-001/G02_T038_SCHEMA_DELTA_ANALYSIS_CORRECTION001.json",
+    "size_bytes": 9872,
+    "sha256": "7112e54782948545fd4f80d641ae159176931db54aec4cc20bbb92303157055e"
+  },
+  "source209_fingerprint": "e18b15d3e4f4ead7724b8ecfcb6cf9723ba137b2e2002cea5dfd11befeba1aec",
+  "checks": {
+    "original_schema_pairs": 50,
+    "pinned_deltas": 28,
+    "host_port_deltas": 24,
+    "optional_additions": 4,
+    "embedded_goldens": 9,
+    "schema_documents": 158,
+    "finite_cases": 330,
+    "finite_instance_validations": 890,
+    "signature_bind_cases": 280,
+    "fallback_names": 51,
+    "profile_cases": 21,
+    "session_resolution": "PASS_SYNTHETIC_CONTEXT_RESET"
+  },
+  "interpretation": {
+    "finite_shape_binding_session_checks": "PASS",
+    "endpoint_default_semantics": "CHANGED",
+    "legacy_tool_body_equivalence": "UNVERIFIED",
+    "literal_default_contract_violation": "NOT_ESTABLISHED_FROM_PINNED_CONTRACT",
+    "reused_764_test_regression": "PASS_BOUND_R046_EVIDENCE_NOT_RERUN"
+  },
+  "limits": [
+    "In-process Python guard only; OS-level containment NOT_PROVEN.",
+    "No tool bodies, child processes, sockets, JVM, COMSOL or native/scientific operations were invoked.",
+    "All nine earlier checker/debug attempts remain preserved.",
+    "No native COMSOL/JVM or scientific acceptance is established; full-master acceptance is NOT_ACCEPTED and release is NOT_SELECTED."
+  ]
+}

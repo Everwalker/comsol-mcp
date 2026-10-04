@@ -1,0 +1,48 @@
+{
+  "schema": "R048_STRUCTURAL_JVM_SOFTWARE_ACCEPTANCE_SUMMARY/1",
+  "recorded_at_utc": "2026-10-04T12:41:18.853406+00:00",
+  "decision": "ACCEPT_TWO_STRUCTURAL_HARNESSES_AND_W23_COMPILE_ONLY",
+  "root_acceptance_ref": {
+    "alias": "R048 root acceptance",
+    "path": "execution-scratch/r209-runtime-preparation-20261004-048/ROOT_R048_STRUCTURAL_JVM_ACCEPTANCE001.json",
+    "size_bytes": 6409,
+    "sha256": "e9554f0edde9ae2ab28ea28f0be6dfba1fce19305576f505f154d34f6ddad409"
+  },
+  "independent_review_ref": {
+    "alias": "R048 independent review",
+    "path": "execution-scratch/r209-runtime-preparation-20261004-048/independent-review001/R048_STRUCTURAL_JVM_SCOPE2_INDEPENDENT_REVIEW001.json",
+    "size_bytes": 12456,
+    "sha256": "67ad5aa58cf3c49ca9d81b3fee9060c5501d4db16627205cd4035d4b5346c9b9"
+  },
+  "actual_readback_ref": {
+    "alias": "R048 actual readback",
+    "path": "execution-scratch/r209-runtime-preparation-20261004-048/STRUCTURAL_JVM_SCOPE2_ACTUAL_READBACK048.json",
+    "size_bytes": 15011,
+    "sha256": "01b6ccfb6655a4782628e6d07016808f274fe635d5e9c4d1f549487dae8c3954"
+  },
+  "scope": {
+    "source209_count": 209,
+    "source209_fingerprint": "e18b15d3e4f4ead7724b8ecfcb6cf9723ba137b2e2002cea5dfd11befeba1aec",
+    "runtime_closure210_fingerprint": "5a0dc543d4c96e37968ada5ff2f461494d3df8c72b62222c2f47e9ec82a5e58d",
+    "selected_tests": 2,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "owned_children": {
+      "javac": 3,
+      "java_harnesses": 2,
+      "all_five_exit_zero": true
+    },
+    "w23": "COMPILE_ONLY"
+  },
+  "diagnostic_correction": "The restrictive Java policy was supplied to the two Java harness children only; all three javac children used -proc:none without the policy. The terminal/binding labels claiming policy for all five were inaccurate; per-child evidence and test results are unaffected.",
+  "limitations": {
+    "configured_java_policy_enforcement": "UNVERIFIED",
+    "individual_jvm_child_pids": "NOT_RECORDED",
+    "os_level_containment": "NOT_PROVEN",
+    "native_or_scientific_acceptance": "NOT_ESTABLISHED",
+    "full_master_acceptance": "NOT_ACCEPTED",
+    "release": "NOT_SELECTED"
+  },
+  "prior_failures": "R046 and R047 failures remain preserved; no retries or edits to their frozen outputs."
+}
