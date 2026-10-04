@@ -1,0 +1,92 @@
+{
+  "acceptance_boundary": {
+    "archive_and_extraction_static_readback": "PASS",
+    "final_release": "NOT_SELECTED",
+    "full_project_acceptance": "NOT_ACCEPTED",
+    "native_execution": "UNVERIFIED",
+    "packaged_helper_offline_install": "NOT_RUN_PENDING_FINAL_HANDOFF"
+  },
+  "archive": {
+    "bytes": 22273564,
+    "crc_test": "PASS",
+    "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/p4-current-source-macos-arm64-bundle-20261004-001/bundle/comsol-mcp-macos_arm64-0.2.0.dev1.zip",
+    "sha256": "1ec8f985d49fd7acf8aa2230c4cee421b8d31c7918d8a709e38cc6e6270d736c",
+    "unique_members": 47,
+    "zip_members": 47
+  },
+  "extraction": {
+    "appledouble_sidecar_count_recorded": 52,
+    "payload_mismatches": [],
+    "readback_status": "PASS_ARCHIVE_AND_CLEAN_EXTRACTION_HASH_READBACK_NATIVE_UNVERIFIED",
+    "regular_archive_payloads_checked": 46
+  },
+  "helpers": {
+    "tools/full_project_release.py": {
+      "byte_match": true,
+      "bytes": 195353,
+      "repo_path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/tools/full_project_release.py",
+      "sha256": "708700ca4271521190d6ad74991b501f887a7af8b1e8727d1ccf922a6f295a72",
+      "zip_payload_sha256": "708700ca4271521190d6ad74991b501f887a7af8b1e8727d1ccf922a6f295a72"
+    },
+    "tools/release_transition_lifecycle.py": {
+      "byte_match": true,
+      "bytes": 26823,
+      "repo_path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/tools/release_transition_lifecycle.py",
+      "sha256": "c710b496bd3ec35be7198361ac72a9d0af9ef641e97f0f85342f040b910ddde3",
+      "zip_payload_sha256": "c710b496bd3ec35be7198361ac72a9d0af9ef641e97f0f85342f040b910ddde3"
+    }
+  },
+  "input_evidence": [
+    {
+      "bytes": 1109,
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/p4-current-source-macos-arm64-bundle-20261004-001/ROOT_P4_BUNDLE_ARCHIVE_READBACK001.json",
+      "sha256": "eb2850d15f5079aee51cccc129608d3c5e7ba736177931412c4b79df05ab6e7b"
+    },
+    {
+      "bytes": 4093,
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/p4-current-source-macos-arm64-bundle-20261004-001/MANIFEST_READBACK_ACTUAL002.json",
+      "sha256": "aa3a7e6dd3a493dc8b4b0420cd16ab5713c91bc763992977d2c487692ba57f42"
+    },
+    {
+      "bytes": 27632,
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/p4-current-source-macos-arm64-bundle-20261004-001/EXTRACTION_READBACK.json",
+      "sha256": "89ff45379f86db867012541a595937e60d4df7b84516a5b674f8e4e3dbb1328d"
+    }
+  ],
+  "offline_manifest": {
+    "extra_payloads": [],
+    "missing_payloads": [],
+    "native_execution_verified": false,
+    "path_in_archive": "OFFLINE_BUNDLE_MANIFEST.json",
+    "payload_count": 46,
+    "payload_hash_mismatches": [],
+    "python": "3.12",
+    "sha256": "afcda829677e6f775da2a76b8d6ee93fee3b7afc890283a9e1e7b5fde1c20f1f",
+    "status": "PACKAGED_NATIVE_UNVERIFIED",
+    "target": "macos_arm64"
+  },
+  "package_metadata": {
+    "license_components": 34,
+    "licenses_sha256": "299bf9272486af267e99df8c9e15b4e8872c09d7906281deadfae107fc19c0bb",
+    "lock_hash_bindings": "PASS",
+    "package_manifest_sha256": "659cf5c5808b5f21900926523894afa238d107dd91dd11e069ba33f5803e4fc2",
+    "sbom_components": 34,
+    "sbom_sha256": "840e9c233c135580ba14291661db431e77cc4c28eb2de73e09efd60bb7716949",
+    "wheel_count": 34,
+    "wheelhouse_sidecar_records": 34
+  },
+  "review_limitations": [
+    "This report verifies archive, manifest, metadata bindings, helper byte identity, and extracted payload hashes only.",
+    "It does not import or execute the packaged product, run tests, install from the bundle, validate native behavior, or establish cross-platform acceptance."
+  ],
+  "schema": "P4_BUNDLE_INDEPENDENT_STATIC_REVIEW/1",
+  "scope": "Independent read-only review of the frozen macOS arm64 0.2.0.dev1 offline bundle and clean extraction. Packaged-helper offline installation remains pending the final W26 install handoff.",
+  "source_binding": {
+    "platform_matrix": "UNVERIFIED",
+    "source_file_count": 113,
+    "source_manifest_sha256": "9d546642090373ad08e7f7960ea6be10039dc679154371ea66495435a72306d0",
+    "wheel_native_execution": "NOT_RUN",
+    "wheel_sha256": "db18a66f1a39a3e7a519ad88029093e68e2ae89d3632a04af6b8a13e71bfe3dc"
+  },
+  "status": "PASS_ARCHIVE_AND_EXTRACTION_STATIC_REVIEW_NATIVE_UNVERIFIED_INSTALL_NOT_RUN"
+}

@@ -18,11 +18,12 @@
 - **结构 JVM 检查**：R048 接受了两个结构 harness 测试；OS 级进程隔离仍为 `NOT_PROVEN`，W23 为 `COMPILE_ONLY`。
 - **Release helper**：64 个聚焦测试全部通过（0 failures/errors/skips）。其中 candidate-only 清理断言仅由 mock 验证；四个 helper 源码/测试文件已通过独立审查及主 Agent 验收；默认模式的 8 个既有回退回归也已通过（mock 软件测试）。
 - **W26 transition**：有界单机合成数据 `0.1.9 → 0.2.0.dev1 → 0.1.9` 转换获接受，独立检查 18/18；未使用真实用户数据，另一次真实非空 candidate-only 卸载已获独立和主 Agent 验收；SQLite 备份仅覆盖控制台账，引用模型和产物文件需单独备份。
+- **P4 offline bundle**：macARM 冻结构件与真实包内 helper 离线安装已获独立和主 Agent 软件范围验收；其他平台和科学验收仍未完成。
 - **Loopback7**：最新实际子进程通过 7/7（0 failures/errors/skips），套接字均已关闭、辅助线程均已结束；独立运行时审查和主 Agent 验收已通过。原始工具回执确认 exit 0，与子进程及 supervisor PASS 一致。此前失败记录保留；本结果仅覆盖合成回环软件测试。
-- Full-project、native、science 和 platform-matrix acceptance 均为 `NOT_ACCEPTED`；final release 为 `NOT_SELECTED`。`pyproject.toml` 目前只有 Microsoft Windows operating-system classifier，这是尚未解决的发布元数据缺口。
+- Full-project、native、science 和 platform-matrix acceptance 均为 `NOT_ACCEPTED`；final release 为 `NOT_SELECTED`。当前 `pyproject.toml` 已声明 Windows/macOS；已有冻结 `.dev1` 构件保留旧元数据，最终构件仍需在候选冻结后重建。
 - Full profile 的 operation 清单通过 `registry_manifest(profile="full")` 动态发现；本 README 不固定工具数量。
 
-当前目标和证据入口：[MASTER_GOAL](docs/full_project_execution/MASTER_GOAL.md)、[PROGRESS](PROGRESS.md)、[cutoff057 checkpoint](docs/full_project_execution/w24/PROCESS_INVENTORY_PRIVACY_SOFTWARE_CHECKPOINT.json)、[R048 structural JVM acceptance](docs/full_project_execution/project_session/R048_STRUCTURAL_JVM_SOFTWARE_ACCEPTANCE001.json) 和 [stage-backend checkpoint](docs/full_project_execution/project_session/STAGE_BACKEND_SOFTWARE_CHECKPOINT.json)。
+当前目标和证据入口：[MASTER_GOAL](docs/full_project_execution/MASTER_GOAL.md)、[PROGRESS](PROGRESS.md)、[cutoff058 checkpoint](docs/full_project_execution/w24/PROCESS_INVENTORY_PRIVACY_SOFTWARE_CHECKPOINT.json)、[R048 structural JVM acceptance](docs/full_project_execution/project_session/R048_STRUCTURAL_JVM_SOFTWARE_ACCEPTANCE001.json) 和 [stage-backend checkpoint](docs/full_project_execution/project_session/STAGE_BACKEND_SOFTWARE_CHECKPOINT.json)。
 
 ## 历史验收快照（2026-09-24，G3.8 / W20）
 
@@ -359,11 +360,12 @@ steps, and saved snapshots evolve in COMSOL Desktop.
 - **Structural JVM:** R048 accepted two harness tests; OS-level containment is `NOT_PROVEN`, and W23 was `COMPILE_ONLY`.
 - **Release helper:** all 64 focused cases passed; candidate-only cleanup assertions were mock-only, and the four helper source/test files passed independent review and Root acceptance; the eight existing default-mode rollback regressions also passed (mocked software tests).
 - **W26 transition:** the bounded same-machine synthetic-data `0.1.9 → 0.2.0.dev1 → 0.1.9` transition was accepted with 18/18 independent checks. Real user data was not exercised. A separate actual nonempty candidate-only uninstall passed independent and Root review. SQLite backup covers the control ledger; referenced model and artifact files require separate backup.
+- **P4 offline bundle:** the frozen macARM artifact and actual extracted-helper offline install passed independent and Root software acceptance; other platform and science acceptance remain incomplete.
 - **Loopback7:** the latest actual child passed 7/7 (0 failures/errors/skips), with all sockets closed and helper threads joined; independent runtime review and Root acceptance passed. The original tool receipt confirms exit 0, consistent with the child and supervisor PASS. Earlier failures are preserved. This covers synthetic loopback software only.
-- Full-project, native, science, and platform-matrix acceptance remain `NOT_ACCEPTED`; final release remains `NOT_SELECTED`. The current `pyproject.toml` lists only the Microsoft Windows OS classifier, an unresolved packaging metadata gap.
+- Full-project, native, science, and platform-matrix acceptance remain `NOT_ACCEPTED`; final release remains `NOT_SELECTED`. The current `pyproject.toml` declares Windows/macOS. Existing frozen `.dev1` artifacts retain their old metadata; the final artifact still needs rebuilding after candidate freeze.
 - The current full-profile operation list is obtained at runtime with `registry_manifest(profile="full")`; no fixed tool count is stated here.
 
-See [MASTER_GOAL](docs/full_project_execution/MASTER_GOAL.md), [PROGRESS](PROGRESS.md), the [cutoff057 checkpoint](docs/full_project_execution/w24/PROCESS_INVENTORY_PRIVACY_SOFTWARE_CHECKPOINT.json), [R048 structural JVM acceptance](docs/full_project_execution/project_session/R048_STRUCTURAL_JVM_SOFTWARE_ACCEPTANCE001.json), and the [stage-backend checkpoint](docs/full_project_execution/project_session/STAGE_BACKEND_SOFTWARE_CHECKPOINT.json) for the canonical scope and evidence.
+See [MASTER_GOAL](docs/full_project_execution/MASTER_GOAL.md), [PROGRESS](PROGRESS.md), the [cutoff058 checkpoint](docs/full_project_execution/w24/PROCESS_INVENTORY_PRIVACY_SOFTWARE_CHECKPOINT.json), [R048 structural JVM acceptance](docs/full_project_execution/project_session/R048_STRUCTURAL_JVM_SOFTWARE_ACCEPTANCE001.json), and the [stage-backend checkpoint](docs/full_project_execution/project_session/STAGE_BACKEND_SOFTWARE_CHECKPOINT.json) for the canonical scope and evidence.
 
 ### Historical implementation snapshot (2026-09-23, G3.5)
 

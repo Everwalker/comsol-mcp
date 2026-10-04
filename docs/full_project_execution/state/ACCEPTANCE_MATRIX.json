@@ -3936,14 +3936,9 @@
     }
   ],
   "execution_checkpoint": {
-    "updated_at": "2026-10-04T02:11:53Z",
-    "phase": "TEMP_SOURCE_LOSS_RECOVERY_20261004_CURRENT047",
-    "status": "MASTER_ACTIVE_INCOMPLETE_TEMP_SOURCE_LOSS_RECOVERY",
-    "canonical_central": {
-      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/docs/full_project_execution/w24/PROCESS_INVENTORY_PRIVACY_SOFTWARE_CHECKPOINT.json",
-      "size_bytes": 2270244,
-      "sha256": "49e030799e4ee562bf5f9469fdc9c108b0ca7908faf7a43fb3ea4c28051d429d"
-    },
+    "updated_at": "2026-10-04T16:52:54.811051+00:00",
+    "phase": "W26_P4_MACARM_SOFTWARE_INSTALL_ACCEPTED",
+    "status": "MASTER_ACTIVE_INCOMPLETE",
     "root_reviews": {
       "P0B_final003": {
         "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/original-p0-api-checkpoint-design-20261002-001/unit-b-isolated-source001/root-unit-B-final003-software-review001.json",
@@ -7385,7 +7380,18 @@
         }
       },
       "runtime": "NOT_AUTHORIZED_FOR_BUILD005_REGISTRY005_OR_D2_JVM_NATIVE"
-    }
+    },
+    "current_candidate_pointer": "bounded_MASTER207_selected_cutoff058",
+    "root_acceptance": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/p4-current-source-macos-arm64-bundle-20261004-001/ROOT_P4_OFFLINE_INSTALL_ACCEPTANCE001.json",
+      "size_bytes": 3540,
+      "sha256": "c597f1330ee5d0e6c4cfecd314fc9063b8e715be7d4defa000f530669492e415",
+      "device": 16777238,
+      "inode": 1950159,
+      "mode": 33216,
+      "mtime_ns": 1791132774830000000
+    },
+    "native_science_full": "NOT_ACCEPTED"
   },
   "execution_checkpoint_history": [
     {
@@ -36210,5 +36216,46 @@
       "scope": "FROZEN113_BUILD_PLUS_SEPARATELY_BOUND_CURRENT_RELEASE_HELPERS_NOT_FULL_LIVE_TREE",
       "native_verified": false
     }
+  },
+  "bounded_MASTER207_selected_cutoff058": {
+    "schema": "bounded-master-selected-cutoff/1",
+    "recorded_utc": "2026-10-04T16:52:54.811051+00:00",
+    "previous_cutoff": "bounded_MASTER207_selected_cutoff057",
+    "last_published_commit": "7c0b0ead809dda41d1a17c6c179b68526e1e5f88",
+    "original_scope": {
+      "work_packages": 26,
+      "actions": 272,
+      "acceptance_cells": 360,
+      "acceptance_cells_changed": 0
+    },
+    "offline_bundle": "ROOT_AND_INDEPENDENT_ACCEPTED_FROZEN_DEV1_MACARM_SOFTWARE_INSTALL_ONLY",
+    "root_acceptance": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/p4-current-source-macos-arm64-bundle-20261004-001/ROOT_P4_OFFLINE_INSTALL_ACCEPTANCE001.json",
+      "size_bytes": 3540,
+      "sha256": "c597f1330ee5d0e6c4cfecd314fc9063b8e715be7d4defa000f530669492e415",
+      "device": 16777238,
+      "inode": 1950159,
+      "mode": 33216,
+      "mtime_ns": 1791132774830000000
+    },
+    "independent_review": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-p4-independent-offline-install-review-20261005-001/P4_OFFLINE_INSTALL_INDEPENDENT_REVIEW001.json",
+      "size_bytes": 6613,
+      "sha256": "e8a3b82ab8ddb8afa8f607d9c85df4e7104bfbdef624fb4903b1c42ec968b89c",
+      "device": 16777238,
+      "inode": 1950145,
+      "mode": 33216,
+      "mtime_ns": 1791132737150000000
+    },
+    "public_review_paths": [
+      "docs/full_project_execution/project_session/W26_P4_OFFLINE_INSTALL_INDEPENDENT_REVIEW001.json",
+      "docs/full_project_execution/project_session/W26_P4_OFFLINE_INSTALL_ROOT_ACCEPTANCE001.json",
+      "docs/full_project_execution/project_session/W26_P4_BUNDLE_INDEPENDENT_STATIC_REVIEW001.json"
+    ],
+    "native_acceptance": "NOT_ACCEPTED",
+    "science_acceptance": "NOT_ACCEPTED",
+    "full_project_acceptance": "NOT_ACCEPTED",
+    "final_release": "NOT_SELECTED",
+    "next_action": "Complete remaining Windows/Intel offline artifact inputs and actual target checks; finish W22 scoped scientific replay archive and independent extraction review; diagnose W23 project-path boundary in current software. Preserve all native UNKNOWNs and original native/science acceptance requirements."
   }
 }

@@ -1,0 +1,102 @@
+{
+  "acceptance_boundary": {
+    "COMSOL": "NOT_RUN",
+    "JUnit": "NOT_APPLICABLE",
+    "final_release": "NOT_SELECTED",
+    "full_live_HEAD_source_currentness": "NOT_CLAIMED",
+    "full_project": "NOT_ACCEPTED",
+    "native_engine": "NOT_RUN",
+    "platform_matrix": "UNVERIFIED",
+    "pytest": "NOT_RUN",
+    "software_install_scope": "PASS"
+  },
+  "acceptance_criteria": {
+    "bytes": 947,
+    "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/canonical058-p4-offline-install-accepted-20261005-001/FROZEN_SCOPED_ACCEPTANCE_CRITERIA001.json",
+    "sha256": "7d1b0f75772d57b04c11a88e571ee761b659b3b431e706b3eda8c4c20d14acce"
+  },
+  "bounded_install_result": {
+    "bundle_sha256": "1ec8f985d49fd7acf8aa2230c4cee421b8d31c7918d8a709e38cc6e6270d736c",
+    "doctor_import": "PASS; imported 0.2.0.dev1 under the isolated venv; doctor capabilities remain UNVERIFIED",
+    "entrypoint": "metadata/path exists at /private/tmp/w26-p4-dev1-offline-install-20261004-002/venv/bin/comsol-mcp; console-script CLI was NOT executed",
+    "frozen_source": "113 files; fingerprint 9d546642090373ad08e7f7960ea6be10039dc679154371ea66495435a72306d0; wheel SHA-256 db18a66f1a39a3e7a519ad88029093e68e2ae89d3632a04af6b8a13e71bfe3dc",
+    "install": "PASS exit 0; local extracted wheelhouse; --no-index, --require-hashes, --only-binary; requirements lock SHA-256 fd525bbdcbd546b367b8886678e3f1c4c13cb60ded2b57280bab1a32a556fa5d",
+    "network": "PASS child sandbox profile `(deny network*)`, SHA-256 52d2e8f0d947edf9c29e8b85a5ebe6fa47cfd8cbedb27247643fe143a638dd62; negative probe EPERM; listener_accepted=false",
+    "package_version": "0.2.0.dev1",
+    "pip_check": "PASS exit 0: No broken requirements found.",
+    "process_closure": "PASS child reaped; process group empty; exit 0; no timeout or cleanup signals; venv preserved in /private/tmp/w26-p4-dev1-offline-install-20261004-002",
+    "python": "3.12.13",
+    "target": "macos_arm64"
+  },
+  "failure_denominator": {
+    "attempt001": "Retained guard refusal before Popen: environment guard mismatch; no installer child or venv; no automatic retry. Ref SHA-256 586b7668b9ed8a0c39c53755819bd8c9991f288caec2a79bdd7669645e15a617",
+    "attempt002": "Retained default-sandbox failure at outer loopback bind (PermissionError EPERM) before sandbox child/profile; no install, venv, or network-denial result. Handoff SHA-256 a2bbc2b585b180c044588f207303b23e53bbe60f24960e2c2b6472ff15a4e207; readback SHA-256 fba33b420d2324634698b61747ed8b02e570b734b1d9eed3448b983ee3d062e3",
+    "attempt003": "Separate successful fresh-root run under authorized require_escalated outer invocation; child deny-network profile remained bound."
+  },
+  "finding": "No material hash, stat, handoff/session, output, or scope contradiction found.",
+  "metadata_diff_review": {
+    "finding": "pyproject.toml adds only `Operating System :: MacOS`; README states frozen dev1 retains old metadata and final artifact must be rebuilt. The classifier establishes no architecture or native acceptance.",
+    "pyproject": {
+      "bytes": 1404,
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/pyproject.toml",
+      "sha256": "d90f6dc18494895716e1aef82efce248a73a1b35821806e898580e99e7ef5de8"
+    },
+    "readme": {
+      "bytes": 24575,
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/README.md",
+      "sha256": "e04c1d3eba8bcb7d09ff8d5cc54991711c4c57fc8f703a2b125587556f3a077a"
+    }
+  },
+  "primary_evidence": {
+    "actual_launch_record": {
+      "bytes": 1297,
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/p4-current-source-macos-arm64-bundle-20261004-001/OFFLINE_INSTALL_LAUNCH_ATTEMPT003_ACTUAL.json",
+      "sha256": "f4b14f137a158e85e23df72deaa6a0333a59f73ec4f8dc2c6664206d64d44ddd"
+    },
+    "actual_terminal_wait": {
+      "bytes": 838,
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/p4-current-source-macos-arm64-bundle-20261004-001/OFFLINE_INSTALL_TERMINAL_WAIT003_ACTUAL.json",
+      "sha256": "4e73ce320bfafdd1371a518d53ab7238d074183c0b14af0c59d32773c96dd0b4"
+    },
+    "attempt003_handoff": {
+      "bytes": 17709,
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/p4-current-source-macos-arm64-bundle-20261004-001/OFFLINE_INSTALL_EXECUTION_HANDOFF003.json",
+      "sha256": "c83346b5c2258fc3d161c17165f0be1db010b1362dd9ec23853b3b3c9ad3bef2"
+    },
+    "execution_readback": {
+      "bytes": 8088,
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/p4-current-source-macos-arm64-bundle-20261004-001/OFFLINE_INSTALL_EXECUTION_READBACK003.json",
+      "sha256": "52873dd19f571f33cbc1c5e52cd40c72bf68087bc01bba152695f53f2af0434b"
+    },
+    "prelaunch_handoff": {
+      "bytes": 38578,
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/p4-current-source-macos-arm64-bundle-20261004-001/P4_OFFLINE_INSTALL_PRELAUNCH_HANDOFF003.json",
+      "sha256": "7bb45e87649c4d2c21dbf0dc72621e6c9604aa9dc5c9e4c6f9fc53d55155a5bc"
+    },
+    "prior_static_bundle_review": {
+      "bytes": 4484,
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/p4-current-source-macos-arm64-bundle-20261004-001/independent-p4-bundle-review001/P4_BUNDLE_INDEPENDENT_STATIC_REVIEW001.json",
+      "sha256": "c6a78f7d968e33dcc7b9e407dd9441f5cea94f164ddfdab9c444dcdd565436ab"
+    },
+    "root_readback": {
+      "bytes": 5271,
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/p4-current-source-macos-arm64-bundle-20261004-001/ROOT_P4_ACTUAL_INSTALL_READBACK001.json",
+      "sha256": "aea52f30e656525adf3beb0e1b6da383ce40a58a64670c21577a00b6e8bd5356"
+    }
+  },
+  "reference_checks": {
+    "prelaunch_directory_refs": "6/6 stat matched",
+    "prelaunch_file_refs": "50/50 hash, size, and stat matched",
+    "root_readback_file_refs": "26/26 independently rechecked; no unbound refs or mismatches",
+    "successful_output_refs": "8/8 hash, size, and stat matched",
+    "terminal_session": {
+      "launch_session_matches": true,
+      "session_id": 20044,
+      "supervisor_returncode": 0,
+      "terminal_exit_code": 0
+    }
+  },
+  "schema": "W26_P4_ATTEMPT003_INDEPENDENT_READ_ONLY_REVIEW/1",
+  "scope": "Fresh read-only review of attempt003 records and outputs. No product code was rerun, imported, or launched by this reviewer; no native/JVM/COMSOL checks were performed.",
+  "status": "PASS_SCOPED_FROZEN_DEV1_MACARM_OFFLINE_INSTALL_SOFTWARE_ONLY"
+}
