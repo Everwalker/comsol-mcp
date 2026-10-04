@@ -1,0 +1,549 @@
+{
+  "acceptance": {
+    "COMSOL_runtime": "NOT_RUN",
+    "archive_and_member_bytes": "PASS",
+    "final_release": "NOT_AUTHORIZED",
+    "intel_dev1_install": "NOT_RUN",
+    "intel_dev1_native_execution": "NOT_RUN",
+    "lock_wheel_SBOM_LICENSES": "PASS",
+    "scientific_capability": "NOT_RUN",
+    "target_tags": "PASS",
+    "windows_dev1_install": "NOT_RUN",
+    "windows_dev1_native_execution": "NOT_RUN"
+  },
+  "checks": [
+    {
+      "detail": {
+        "all_member_sha_crc_match_readback_and_existing_extraction": true,
+        "archive_has_no_AppleDouble_payload": true,
+        "archive_ref_matches_full_handoff": true,
+        "bundle_manifest_record_count": 47,
+        "bundle_manifest_records_match_all_other_archive_members": true,
+        "existing_clean_extraction_exact_member_set": true,
+        "member_count": 48,
+        "member_count_expected": 48,
+        "names_unique": true,
+        "no_symlinks": true,
+        "paths_safe": true,
+        "producer_manifest_self_excluded": true,
+        "producer_record_match_false_for": [
+          "OFFLINE_BUNDLE_MANIFEST.json"
+        ],
+        "sidecar_count": 53,
+        "sidecars_all_valid_header_and_paired": true,
+        "zip_crc_test": "PASS"
+      },
+      "name": "win_amd64 exact archive and existing extraction",
+      "status": "PASS"
+    },
+    {
+      "detail": {
+        "count": 53,
+        "paired_peer_and_header": "PASS"
+      },
+      "name": "win_amd64 preserved AppleDouble sidecars",
+      "status": "PASS"
+    },
+    {
+      "detail": {
+        "component_reconciliation": "PASS",
+        "intel_static_native_component": null,
+        "licenses_component_count": 35,
+        "production_file_ref_binding": "PASS",
+        "sbom_component_count": 35,
+        "status": "ARTIFACTS_HASHED_NATIVE_UNVERIFIED",
+        "target": "win_amd64",
+        "target_execution_verified": false,
+        "target_tags_verified": true,
+        "wheel_check_errors": [],
+        "wheel_count": 35,
+        "wheel_lock_internal_metadata_licenses_check": "PASS"
+      },
+      "name": "win_amd64 lock, wheel metadata/tags/licenses, SBOM/Licenses",
+      "status": "PASS"
+    },
+    {
+      "detail": {
+        "current_delta": [
+          {
+            "name": "comsol-mcp",
+            "new_sha256": "db18a66f1a39a3e7a519ad88029093e68e2ae89d3632a04af6b8a13e71bfe3dc",
+            "new_version": "0.2.0.dev1",
+            "old_sha256": "605a2c991e98b0d4574974b1995b36688bd91110c56a8e22329fb6db5328bd4a",
+            "old_version": "0.1.9"
+          }
+        ],
+        "prior_archive_sha256": "41f8ac4736506b78be64163cc86d3d2a41bd3e3c5f19c93017138e3968417c5b"
+      },
+      "name": "win_amd64 prior dependency wheel identities",
+      "status": "PASS"
+    },
+    {
+      "detail": {
+        "compose_lock": {
+          "active_package_count": 35,
+          "requirements_sha256": "01d39aaa5fa1672fd335915a2f3046d93cbc9c3b15a52ce2c2046a6d4353834b",
+          "status": "LOCK_COMPOSED",
+          "target": "win_amd64"
+        },
+        "package_bundle": {
+          "bytes": 29377711,
+          "manifest_sha256": "8321882fab8826f4e1c852ee17d57bfea7769131158c7db458efa1bce9eebf73",
+          "member_count": 48,
+          "native_execution_verified": false,
+          "sha256": "72cedd9f70e273a1e7509ce6f4537850741e9f94e8d51bed2275d633a1c2fca3",
+          "status": "OFFLINE_BUNDLE_PACKAGED_NATIVE_UNVERIFIED",
+          "target": "win_amd64"
+        },
+        "receipts": {
+          "compose_lock": {
+            "exit_code": 0,
+            "output_capture_truncated": false,
+            "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/PLATFORM_WINDOWS_COMPOSE_LOCK_ACTUAL001.json",
+            "sha256": "be76d0466195626a1314b66edfed4d5016e4c4907a7eeead0283d26014098125",
+            "size": 1545
+          },
+          "manifest": {
+            "exit_code": 0,
+            "output_capture_truncated": true,
+            "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/PLATFORM_WINDOWS_MANIFEST_COMMAND_ACTUAL001.json",
+            "sha256": "28af0df981fafeb3fb8b5518617975c10cfaa522334f7b274cdbde09901f66e0",
+            "size": 6459
+          },
+          "package_bundle": {
+            "exit_code": 0,
+            "output_capture_truncated": false,
+            "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/PLATFORM_WINDOWS_PACKAGE_BUNDLE_ACTUAL001.json",
+            "sha256": "fdd1b0c667a786f2de7a0201f1ac0a1d6ca1547e289b38a3196b7c58853031b4",
+            "size": 2399
+          }
+        }
+      },
+      "name": "win_amd64 production command receipts",
+      "status": "PASS"
+    },
+    {
+      "detail": {
+        "all_member_sha_crc_match_readback_and_existing_extraction": true,
+        "archive_has_no_AppleDouble_payload": true,
+        "archive_ref_matches_full_handoff": true,
+        "bundle_manifest_record_count": 48,
+        "bundle_manifest_records_match_all_other_archive_members": true,
+        "existing_clean_extraction_exact_member_set": true,
+        "member_count": 49,
+        "member_count_expected": 49,
+        "names_unique": true,
+        "no_symlinks": true,
+        "paths_safe": true,
+        "producer_manifest_self_excluded": true,
+        "producer_record_match_false_for": [
+          "OFFLINE_BUNDLE_MANIFEST.json"
+        ],
+        "sidecar_count": 55,
+        "sidecars_all_valid_header_and_paired": true,
+        "zip_crc_test": "PASS"
+      },
+      "name": "macos_x86_64 exact archive and existing extraction",
+      "status": "PASS"
+    },
+    {
+      "detail": {
+        "count": 55,
+        "paired_peer_and_header": "PASS"
+      },
+      "name": "macos_x86_64 preserved AppleDouble sidecars",
+      "status": "PASS"
+    },
+    {
+      "detail": {
+        "component_reconciliation": "PASS",
+        "intel_static_native_component": {
+          "cryptography_wheel_sha256": "aaadaf6690ed20966ab3fa3fdac6a5797a46d9bfdbdce4889dc5f6facf280696",
+          "extra_component": "OpenSSL 4.0.2",
+          "intel_pywin32_in_target_requirements_wheel_sbom_licenses": false,
+          "is_installed_wheel_or_python_distribution": false,
+          "linkage": "static",
+          "linked_into": "cryptography==50.0.1",
+          "openssl_license_sha256": "7d5450cb2d142651b8afa315b5f238efc805dad827d91ba367d8516bc9d49e7a",
+          "openssl_source_sha256": "736b467530f916737b7031310ccb21d8218c6229e61e8e160cd1d3458cd543a8",
+          "provenance_sha256": "b56d17cd67c2a6fb95e68f385a0dee57ce615fca06d6f336f9a28207c251666c",
+          "provenance_status": "BUILD_CANDIDATE",
+          "provenance_wheel_sha256": "aaadaf6690ed20966ab3fa3fdac6a5797a46d9bfdbdce4889dc5f6facf280696",
+          "sbom_and_license_entries": true,
+          "scope_marker": "statically-linked-native-dependency",
+          "shared_uv_lock_pywin32_marker": "sys_platform == 'win32'",
+          "target": "macos_x86_64"
+        },
+        "licenses_component_count": 35,
+        "production_file_ref_binding": "PASS",
+        "sbom_component_count": 35,
+        "status": "ARTIFACTS_HASHED_NATIVE_UNVERIFIED",
+        "target": "macos_x86_64",
+        "target_execution_verified": false,
+        "target_tags_verified": true,
+        "wheel_check_errors": [],
+        "wheel_count": 34,
+        "wheel_lock_internal_metadata_licenses_check": "PASS"
+      },
+      "name": "macos_x86_64 lock, wheel metadata/tags/licenses, SBOM/Licenses",
+      "status": "PASS"
+    },
+    {
+      "detail": {
+        "current_delta": [
+          {
+            "name": "comsol-mcp",
+            "new_sha256": "db18a66f1a39a3e7a519ad88029093e68e2ae89d3632a04af6b8a13e71bfe3dc",
+            "new_version": "0.2.0.dev1",
+            "old_sha256": "605a2c991e98b0d4574974b1995b36688bd91110c56a8e22329fb6db5328bd4a",
+            "old_version": "0.1.9"
+          }
+        ],
+        "prior_archive_sha256": "696b07fd065943f5ad112424ddf25b07a016f0ed8fdb07f74f6e45f9767cc75b"
+      },
+      "name": "macos_x86_64 prior dependency wheel identities",
+      "status": "PASS"
+    },
+    {
+      "detail": {
+        "compose_lock": {
+          "active_package_count": 34,
+          "requirements_sha256": "c3d760c566608f48888386cbc58508c8ec8df8b5617c0c4d635f2a4613fa9bb2",
+          "status": "LOCK_COMPOSED",
+          "target": "macos_x86_64"
+        },
+        "package_bundle": {
+          "bytes": 27409151,
+          "manifest_sha256": "9e640353a467f5a3cb16fe94235e75d7851360e6fc7d536b7a8e82f4c396edb3",
+          "member_count": 49,
+          "native_execution_verified": false,
+          "sha256": "66c5ad0fd9089c721071d199835506a0e9544ccb2ed7e729239a24baa04e1521",
+          "status": "OFFLINE_BUNDLE_PACKAGED_NATIVE_UNVERIFIED",
+          "target": "macos_x86_64"
+        },
+        "receipts": {
+          "compose_lock": {
+            "exit_code": 0,
+            "output_capture_truncated": false,
+            "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/PLATFORM_MACOS_X86_64_COMPOSE_LOCK_ACTUAL001.json",
+            "sha256": "5f1bd7fac2c57cf596624e2f2d2506902aef7695a283ded9e9030661b7e9c622",
+            "size": 1566
+          },
+          "manifest": {
+            "exit_code": 0,
+            "output_capture_truncated": true,
+            "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/PLATFORM_MACOS_X86_64_MANIFEST_COMMAND_ACTUAL001.json",
+            "sha256": "a10190472688f979f4e7b47374c2080f5d84a2c1d599f328b940bcfd452f68f1",
+            "size": 6886
+          },
+          "package_bundle": {
+            "exit_code": 0,
+            "output_capture_truncated": false,
+            "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/PLATFORM_MACOS_X86_64_PACKAGE_BUNDLE_ACTUAL001.json",
+            "sha256": "7dca8bbacc68f7345605310de6f28ee38896465bdbe1e0dae48a35d25d7e1da0",
+            "size": 2842
+          }
+        }
+      },
+      "name": "macos_x86_64 production command receipts",
+      "status": "PASS"
+    },
+    {
+      "detail": {
+        "passed": 27,
+        "total": 27,
+        "unchanged_during_review": true
+      },
+      "name": "27 frozen source input refs",
+      "status": "PASS"
+    },
+    {
+      "detail": {
+        "file_count": 113,
+        "fingerprint": "9d546642090373ad08e7f7960ea6be10039dc679154371ea66495435a72306d0",
+        "mismatches": []
+      },
+      "name": "113-file source manifest and fingerprint",
+      "status": "PASS"
+    },
+    {
+      "detail": {
+        "new_dev1_install": "NOT_RUN",
+        "receipt_path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/docs/full_project_execution/release/windows_preliminary_20260926_01/windows-preliminary-result.json",
+        "receipt_sha256": "388a7511054e8c6e4a85c85595d66bead924030f0350d5e5daf97e13e53cc147",
+        "version": "0.1.9"
+      },
+      "name": "historical Windows install receipt remains version 0.1.9",
+      "status": "PASS"
+    },
+    {
+      "detail": {
+        "all_top_level_sidecars_paired_and_valid": true,
+        "failure_ledger_status": "PRESERVED_ALL_NONPRODUCT_ATTEMPTS",
+        "failure_related_sidecars": 6,
+        "handoff_summary_failures": 1,
+        "invalid_sidecars": [],
+        "preparation_attempts": 5,
+        "review_output_sidecar_current_sha256": "d6d225ec5bc392b00d3c663a218d2a1062d702040feb4d84e818465f3fb4abc5",
+        "separate_readback_attempts": 3,
+        "top_level_sidecars": 78
+      },
+      "name": "preserved failures and AppleDouble metadata",
+      "status": "PASS"
+    },
+    {
+      "detail": {
+        "passed": 27,
+        "total": 27
+      },
+      "name": "frozen source inputs unchanged after read-only verification",
+      "status": "PASS"
+    }
+  ],
+  "created_utc": "2026-10-04T17:38:16.455586+00:00",
+  "evidence_refs": {
+    "application_wheel": {
+      "device": 16777238,
+      "inode": 1944349,
+      "mode": 448,
+      "mtime_ns": 1791128778690000000,
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/p4-current-source-macos-arm64-bundle-20261004-001/extracted/wheelhouse/comsol_mcp-0.2.0.dev1-py3-none-any.whl",
+      "sha256": "db18a66f1a39a3e7a519ad88029093e68e2ae89d3632a04af6b8a13e71bfe3dc",
+      "size": 1120874
+    },
+    "handoff_readback": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/PLATFORM_BUNDLE_HANDOFF_READBACK003.json",
+      "sha256": "2ebe2ecfcd823d29592b1aef3bf39df3259876e6ce29b5d8ffb4df9dc8384731"
+    },
+    "input_inventory": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/PLATFORM_BUNDLE_INPUT_INVENTORY001.json",
+      "sha256": "b518dd76a00b950a9be2c3015a8708bd44110e0e218c9358ab71f3efa7979c5e"
+    },
+    "producer_archive_readback": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/PLATFORM_BUNDLE_ARCHIVE_READBACK002.json",
+      "role": "producer-side readback only; this report is the independent review",
+      "sha256": "c37931068a13190ecf10cb54b9df5ab0b78dd96cf5edebb7edd8eb043dd5b574"
+    },
+    "producer_handoff": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/PLATFORM_BUNDLE_HANDOFF002.json",
+      "sha256": "3d956674c73fd50b3643521e3937ca53a6804d33a3dc097b1cc9c569f7a8bb20"
+    },
+    "source_snapshot_manifest": {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/p4-current-source-macos-arm64-bundle-20261004-001/extracted/evidence/source-snapshot-manifest.json",
+      "sha256": "538272c6a2f3feaec688d8ad8bee778430b5d60fd39bed8d2ded4e4d5ac22dd8"
+    }
+  },
+  "failed_checks": [],
+  "frozen_inputs": {
+    "full_inventory_refs_matched": 27,
+    "status": "PASS",
+    "total": 27,
+    "unchanged_during_and_after_review": true
+  },
+  "historical_windows_install": {
+    "new_dev1_install": "NOT_RUN",
+    "python": "3.12.10",
+    "status": "PASS_NO_INDEX_INSTALL_NETWORK_ISOLATION_NOT_RUN",
+    "version": "0.1.9"
+  },
+  "intel_component_count_resolution": {
+    "explanation": "Intel has 34 target wheels plus one separately disclosed OpenSSL 4.0.2 statically-linked native dependency under the cryptography 50.0.1 BUILD_CANDIDATE provenance; the extra entry is not a Python wheel or installed distribution. The shared uv.lock carries pywin32 only with sys_platform == win32; Intel target requirements.lock, wheel set, SBOM, and LICENSES contain no pywin32 component. Windows target requirements.lock carries pywin32==312 with the win32 marker and the Windows archive contains its matching wheel.",
+    "status": "PASS"
+  },
+  "limit": "Static archives, wheel tags, and metadata support only archive-level acceptance. This review does not independently execute the Intel static link or validate either platform runtime; native/install/COMSOL/scientific acceptance remains NOT_RUN.",
+  "preserved_failure_denominator": {
+    "files": [
+      {
+        "attempt_count": 5,
+        "name": "PLATFORM_BUNDLE_PREPARATION_FAILURES001.json",
+        "sha256": "91c395d1a2279ea449096894a4d28243c33b01af624ab03d01e8b5de1b3df284",
+        "status": "PRESERVED_ALL_NONPRODUCT_ATTEMPTS"
+      },
+      {
+        "attempt_count": 1,
+        "name": "PLATFORM_BUNDLE_READBACK_ATTEMPT001_FAILURE.json",
+        "sha256": "a3c2175db8f90d5be253ec1342aeef833b5fe0b9fbc1523c00b744fce74f06ca",
+        "status": "FAILED_BEFORE_EXTRACTION_NO_OUTPUT"
+      },
+      {
+        "attempt_count": 1,
+        "name": "PLATFORM_BUNDLE_READBACK_ATTEMPT002_FAILURE.json",
+        "sha256": "eed770a051885df6a2d9fd82c339eb0074c9f56e9a87c34be1f0f2eed5b53b6f",
+        "status": "FAILED_DURING_INTEL_TAG_CHECK_WINDOWS_EXTRACTION_COMPLETE"
+      },
+      {
+        "attempt_count": 1,
+        "name": "PLATFORM_BUNDLE_READBACK_ATTEMPT003_FAILURE.json",
+        "sha256": "830cb13d82993ff8d33361dcc5adda4fc1e84cf168769aa9123fb441c9475a1c",
+        "status": "FAILED_DURING_INTEL_DERIVED_RECORD_SHAPE_CHECK_WINDOWS_EXTRACTION_COMPLETE"
+      },
+      {
+        "attempt_count": 1,
+        "name": "PLATFORM_BUNDLE_HANDOFF_ATTEMPT001_FAILURE.json",
+        "sha256": "571db44182fdf0773a3bc51fbf0fac4b5b3ee1e6c20b7bd5f1c2d2fb20f42158",
+        "status": "SUMMARY_PRINT_FAILED_AFTER_HANDOFF_AND_READBACK_WRITTEN"
+      }
+    ],
+    "filesystem_metadata": "Existing paired AppleDouble sidecars were preserved; all 78 top-level JSON sidecars and all 6 failure-related sidecars had valid AppleDouble headers and paired peers.",
+    "handoff_summary_print_failure": 1,
+    "preparation_verifier_inventory_attempts": 5,
+    "product_bundle_command_failures": false,
+    "readback_attempts": 3,
+    "status": "PRESERVED_ALL_NONPRODUCT_ATTEMPTS"
+  },
+  "producer_readback_note": "The only producer record_match=false row per target is OFFLINE_BUNDLE_MANIFEST.json, which is excluded from its own files_excluding_this_manifest list by design. The list exactly covers all other ZIP members and every listed size/SHA-256 matches. This review independently confirmed the excluded manifest\u2019s own ZIP CRC, SHA-256, size, clean-extraction bytes, and package-receipt/handoff hash binding.",
+  "review_id": "independent-platform-bundle-review001",
+  "review_output_sidecar": {
+    "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/independent-platform-bundle-review001/._review.json",
+    "preserved": true,
+    "sha256": "d6d225ec5bc392b00d3c663a218d2a1062d702040feb4d84e818465f3fb4abc5",
+    "valid_AppleDouble_header_and_paired_peer": true
+  },
+  "schema": "comsol-mcp-independent-platform-bundle-review/1",
+  "scope": "Independent static read-only review of the exact Windows amd64 and macOS x86_64 0.2.0.dev1 ZIP bundles and their already-existing clean extractions. No rebuild, extraction, product import, installation, native/JVM, COMSOL, or network execution.",
+  "source_snapshot": {
+    "file_count": 113,
+    "fingerprint": "9d546642090373ad08e7f7960ea6be10039dc679154371ea66495435a72306d0",
+    "mismatch_paths": [],
+    "status": "PASS"
+  },
+  "status": "PASS_ARCHIVE_ONLY_BOTH_TARGETS_NATIVE_UNVERIFIED",
+  "targets": [
+    {
+      "archive": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/windows-dev1-bundle-20261005-001/bundle/comsol-mcp-win_amd64-0.2.0.dev1.zip",
+        "sha256": "72cedd9f70e273a1e7509ce6f4537850741e9f94e8d51bed2275d633a1c2fca3",
+        "size": 29377711
+      },
+      "archive_member_count": 48,
+      "intel_native_component": null,
+      "licenses_component_count": 35,
+      "licenses_sha256": "8b44bbf6fa76d4d0588a10e24e3dd407746a8f5d9ece86a266713546aebf92e8",
+      "manifest_status": "ARTIFACTS_HASHED_NATIVE_UNVERIFIED",
+      "offline_bundle_manifest_self_exclusion": {
+        "all_listed_member_sha256_and_sizes_match": true,
+        "listed_nonself_members": 47,
+        "member_count": 48,
+        "path_set_exact": true
+      },
+      "offline_bundle_manifest_sha256": "8321882fab8826f4e1c852ee17d57bfea7769131158c7db458efa1bce9eebf73",
+      "package_manifest_sha256": "89eb93f5bebe11d7ca607a42b0d2151a1a659a725dd1b6aa7b3f8269281ef325",
+      "prior_delta": [
+        {
+          "name": "comsol-mcp",
+          "new_sha256": "db18a66f1a39a3e7a519ad88029093e68e2ae89d3632a04af6b8a13e71bfe3dc",
+          "new_version": "0.2.0.dev1",
+          "old_sha256": "605a2c991e98b0d4574974b1995b36688bd91110c56a8e22329fb6db5328bd4a",
+          "old_version": "0.1.9"
+        }
+      ],
+      "production_command_receipts": {
+        "compose_lock": {
+          "exit_code": 0,
+          "output_capture_truncated": false,
+          "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/PLATFORM_WINDOWS_COMPOSE_LOCK_ACTUAL001.json",
+          "sha256": "be76d0466195626a1314b66edfed4d5016e4c4907a7eeead0283d26014098125",
+          "size": 1545
+        },
+        "manifest": {
+          "exit_code": 0,
+          "output_capture_truncated": true,
+          "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/PLATFORM_WINDOWS_MANIFEST_COMMAND_ACTUAL001.json",
+          "sha256": "28af0df981fafeb3fb8b5518617975c10cfaa522334f7b274cdbde09901f66e0",
+          "size": 6459
+        },
+        "package_bundle": {
+          "exit_code": 0,
+          "output_capture_truncated": false,
+          "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/PLATFORM_WINDOWS_PACKAGE_BUNDLE_ACTUAL001.json",
+          "sha256": "fdd1b0c667a786f2de7a0201f1ac0a1d6ca1547e289b38a3196b7c58853031b4",
+          "size": 2399
+        }
+      },
+      "requirements_lock_sha256": "01d39aaa5fa1672fd335915a2f3046d93cbc9c3b15a52ce2c2046a6d4353834b",
+      "sbom_component_count": 35,
+      "sbom_sha256": "9e9885d55218cef8c255ea8f213f1324852544585b57e3b451375d1a2f818aaa",
+      "target": "win_amd64",
+      "target_execution_verified": false,
+      "target_tags_verified": true,
+      "uv_lock_sha256": "08b6b8fb1f6a7a110f45df7d9f3ac3dae3e343fddc1ce2ddae84e458c3130b3f",
+      "wheel_count": 35
+    },
+    {
+      "archive": {
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/macos-x86_64-dev1-bundle-20261005-001/bundle/comsol-mcp-macos_x86_64-0.2.0.dev1.zip",
+        "sha256": "66c5ad0fd9089c721071d199835506a0e9544ccb2ed7e729239a24baa04e1521",
+        "size": 27409151
+      },
+      "archive_member_count": 49,
+      "intel_native_component": {
+        "cryptography_wheel_sha256": "aaadaf6690ed20966ab3fa3fdac6a5797a46d9bfdbdce4889dc5f6facf280696",
+        "extra_component": "OpenSSL 4.0.2",
+        "intel_pywin32_in_target_requirements_wheel_sbom_licenses": false,
+        "is_installed_wheel_or_python_distribution": false,
+        "linkage": "static",
+        "linked_into": "cryptography==50.0.1",
+        "openssl_license_sha256": "7d5450cb2d142651b8afa315b5f238efc805dad827d91ba367d8516bc9d49e7a",
+        "openssl_source_sha256": "736b467530f916737b7031310ccb21d8218c6229e61e8e160cd1d3458cd543a8",
+        "provenance_sha256": "b56d17cd67c2a6fb95e68f385a0dee57ce615fca06d6f336f9a28207c251666c",
+        "provenance_status": "BUILD_CANDIDATE",
+        "provenance_wheel_sha256": "aaadaf6690ed20966ab3fa3fdac6a5797a46d9bfdbdce4889dc5f6facf280696",
+        "sbom_and_license_entries": true,
+        "scope_marker": "statically-linked-native-dependency",
+        "shared_uv_lock_pywin32_marker": "sys_platform == 'win32'",
+        "target": "macos_x86_64"
+      },
+      "licenses_component_count": 35,
+      "licenses_sha256": "ca3ff913400ca5bb3bd172570040bca8b1c276a8aead9dd052dd7af65a7809b7",
+      "manifest_status": "ARTIFACTS_HASHED_NATIVE_UNVERIFIED",
+      "offline_bundle_manifest_self_exclusion": {
+        "all_listed_member_sha256_and_sizes_match": true,
+        "listed_nonself_members": 48,
+        "member_count": 49,
+        "path_set_exact": true
+      },
+      "offline_bundle_manifest_sha256": "9e640353a467f5a3cb16fe94235e75d7851360e6fc7d536b7a8e82f4c396edb3",
+      "package_manifest_sha256": "e63de7764a93e793d58345b7d74ce1830be143019868be61561baee5146ea713",
+      "prior_delta": [
+        {
+          "name": "comsol-mcp",
+          "new_sha256": "db18a66f1a39a3e7a519ad88029093e68e2ae89d3632a04af6b8a13e71bfe3dc",
+          "new_version": "0.2.0.dev1",
+          "old_sha256": "605a2c991e98b0d4574974b1995b36688bd91110c56a8e22329fb6db5328bd4a",
+          "old_version": "0.1.9"
+        }
+      ],
+      "production_command_receipts": {
+        "compose_lock": {
+          "exit_code": 0,
+          "output_capture_truncated": false,
+          "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/PLATFORM_MACOS_X86_64_COMPOSE_LOCK_ACTUAL001.json",
+          "sha256": "5f1bd7fac2c57cf596624e2f2d2506902aef7695a283ded9e9030661b7e9c622",
+          "size": 1566
+        },
+        "manifest": {
+          "exit_code": 0,
+          "output_capture_truncated": true,
+          "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/PLATFORM_MACOS_X86_64_MANIFEST_COMMAND_ACTUAL001.json",
+          "sha256": "a10190472688f979f4e7b47374c2080f5d84a2c1d599f328b940bcfd452f68f1",
+          "size": 6886
+        },
+        "package_bundle": {
+          "exit_code": 0,
+          "output_capture_truncated": false,
+          "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/PLATFORM_MACOS_X86_64_PACKAGE_BUNDLE_ACTUAL001.json",
+          "sha256": "7dca8bbacc68f7345605310de6f28ee38896465bdbe1e0dae48a35d25d7e1da0",
+          "size": 2842
+        }
+      },
+      "requirements_lock_sha256": "c3d760c566608f48888386cbc58508c8ec8df8b5617c0c4d635f2a4613fa9bb2",
+      "sbom_component_count": 35,
+      "sbom_sha256": "376fdee30dadaa8d54f2ed36e826f9f43964d21ef6b6c50e98331b8adeefe766",
+      "target": "macos_x86_64",
+      "target_execution_verified": false,
+      "target_tags_verified": true,
+      "uv_lock_sha256": "08b6b8fb1f6a7a110f45df7d9f3ac3dae3e343fddc1ce2ddae84e458c3130b3f",
+      "wheel_count": 34
+    }
+  ]
+}
