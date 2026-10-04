@@ -4,6 +4,8 @@ from contextlib import nullcontext
 from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import json
+import os
+import sqlite3
 from pathlib import Path
 from threading import Barrier
 
@@ -131,6 +133,65 @@ def _register(daemon, *, path="inputs/shape.step", key="artifact-register-1", re
 
 def _error_code(envelope):
     return envelope.get("error", {}).get("code") or envelope.get("data", {}).get("error", {}).get("code")
+
+
+def _register_for_project(daemon, project_id, *, path, role="geometry_source", classification="internal", key="register-extra"):
+    return daemon.dispatch({
+        "operation": "artifact.register",
+        "arguments": {
+            "project_id": project_id,
+            "idempotency_key": key,
+            "request_id": f"{key}-request",
+            "path": path,
+            "role": role,
+            "classification": classification,
+        },
+        "execution": {"project_id": project_id, "idempotency_key": key, "request_id": f"{key}-request"},
+    })
+
+
+def _create_project(daemon, *, workspace, label):
+    response = daemon.dispatch({
+        "operation": "project.create",
+        "arguments": {
+            "label": label,
+            "workspace": workspace,
+            "policy": {"permissions": ["inspect", "project_write", "compute"]},
+        },
+        "execution": {"request_id": f"create-{workspace}", "idempotency_key": f"create-{workspace}"},
+    })
+    assert response["success"] is True
+    project = response["data"]["project"]
+    (Path(project["workspace"]) / "inputs").mkdir(parents=True)
+    return project
+
+
+def _store_rows_for_read_assertion(store):
+    tables = ("operations", "jobs", "job_events", "artifacts", "revisions", "projects")
+    snapshot = {}
+    with store.lock:
+        for table in tables:
+            columns = [row[1] for row in store.db.execute(f"PRAGMA table_info({table})").fetchall()]
+            snapshot[table] = [tuple(row) for row in store.db.execute(f"SELECT * FROM {table} ORDER BY rowid").fetchall()]
+            snapshot[f"{table}_columns"] = columns
+    return snapshot
+
+
+def _read_action(daemon, operation, project_id, arguments, *, entrypoint="direct", request_id=None):
+    body = {"project_id": project_id, **arguments}
+    execution = {"project_id": project_id}
+    if request_id:
+        body["request_id"] = request_id
+        execution["request_id"] = request_id
+    if entrypoint == "direct":
+        request = {"operation": operation, "arguments": body, "execution": execution}
+    else:
+        request = {
+            "operation": entrypoint,
+            "arguments": {"operation_id": operation, "arguments": body},
+            "execution": execution,
+        }
+    return daemon.dispatch(request)
 
 
 def _inject_artifact_metadata_for_test(store, key, metadata):
@@ -611,3 +672,479 @@ def test_geometry_import_refuses_nonlocal_engine_before_domain_dispatch(tmp_path
         assert calls == []
     finally:
         daemon.close()
+
+
+def test_artifact_list_uses_scoped_keyset_pages_without_file_reads_or_row_writes(tmp_path, monkeypatch):
+    from comsol_mcp import _artifact_store
+
+    daemon, project_root, _ = _make_daemon(tmp_path)
+    try:
+        expected = []
+        for index, (role, classification) in enumerate((
+            ("geometry_source", "internal"),
+            ("geometry_source", "internal"),
+            ("mesh_source", "internal"),
+            ("geometry_source", "restricted"),
+        )):
+            relative = f"inputs/list-{index}.step"
+            (project_root / relative).write_bytes(f"list fixture {index}".encode())
+            registered = _register_for_project(
+                daemon, daemon._test_project_id, path=relative, role=role,
+                classification=classification, key=f"list-register-{index}",
+            )
+            assert registered["success"] is True
+            if classification == "internal":
+                expected.append(registered["data"]["artifact_id"])
+
+        with daemon.store.lock:
+            daemon.store.db.execute(
+                "INSERT INTO artifacts(artifact_id,metadata) VALUES(?,?)",
+                ("f" * 64, "{malformed-json"),
+            )
+        daemon.backend.service = None
+        daemon.backend.worker = None
+        assert daemon.backend.service is None and daemon.backend.worker is None
+        other_project = _create_project(daemon, workspace="other-artifact-project", label="other-artifact-project")
+
+        with monkeypatch.context() as patcher:
+            patcher.setattr(
+                _artifact_store, "resolve_registered_artifact",
+                lambda *_args, **_kwargs: pytest.fail("artifact.list must not open or hash artifact files"),
+            )
+            patcher.setattr(
+                daemon.store, "list_metadata",
+                lambda *_args, **_kwargs: pytest.fail("artifact.list must not fall back to a table scan"),
+            )
+            baseline = _store_rows_for_read_assertion(daemon.store)
+            filters = {"classification": "internal"}
+            first = _read_action(
+                daemon, "artifact.list", daemon._test_project_id,
+                {"filter": filters, "limit": 1}, request_id="list-page-1",
+            )
+            assert first["success"] is True
+            first_data = first["data"]
+            assert first_data["verification_scope"] == "METADATA_ONLY"
+            assert first_data["request_id"] == "list-page-1"
+            assert first_data["has_more"] is True
+            assert first_data["items"][0]["verification_status"] == "NOT_CHECKED"
+            assert first_data["items"][0]["producer_job_status"] == "NOT_LOOKED_UP"
+            assert first_data["items"][0]["version_status"] == "NOT_RECORDED"
+            cursor = first_data["next_cursor"]
+            raw_cursor = __import__("base64").urlsafe_b64decode(cursor + "=" * (-len(cursor) % 4))
+            cursor_payload = json.loads(raw_cursor)
+            assert set(cursor_payload) == {
+                "schema", "project_id", "scope_sha256", "filter_sha256", "after_artifact_id",
+            }
+            assert "project_root_identity" not in cursor_payload
+            assert "host_identity" not in cursor_payload
+            assert "engine_host_identity" not in cursor_payload
+            assert str(project_root).encode() not in raw_cursor
+            assert b"127.0.0.1:2036" not in raw_cursor
+
+            second = _read_action(
+                daemon, "artifact.list", daemon._test_project_id,
+                {"filter": filters, "limit": 1, "cursor": cursor}, entrypoint="registry_call",
+            )
+            assert second["success"] is True
+            assert second["data"]["has_more"] is True
+            third = _read_action(
+                daemon, "artifact.list", daemon._test_project_id,
+                {"filter": filters, "limit": 1, "cursor": second["data"]["next_cursor"]},
+                entrypoint="operation_call",
+            )
+            assert third["success"] is True
+            assert third["data"]["has_more"] is False
+            observed = [item["artifact_id"] for response in (first, second, third) for item in response["data"]["items"]]
+            assert observed == sorted(expected)
+            assert "f" * 64 not in observed
+            assert str(project_root) not in json.dumps([first, second, third], sort_keys=True)
+
+            changed_filter = _read_action(
+                daemon, "artifact.list", daemon._test_project_id,
+                {"filter": {"classification": "restricted"}, "limit": 1, "cursor": cursor},
+            )
+            assert changed_filter["success"] is False
+            assert _error_code(changed_filter) == "INVALID_CURSOR"
+
+            foreign_cursor = _read_action(
+                daemon, "artifact.list", other_project["project_id"],
+                {"filter": filters, "limit": 1, "cursor": cursor}, entrypoint="operation_call",
+            )
+            assert foreign_cursor["success"] is False
+            assert _error_code(foreign_cursor) == "INVALID_CURSOR"
+
+            with monkeypatch.context() as changed_root:
+                changed_root.setattr(_artifact_store, "project_root_identity", lambda _path: "changed-root-scope")
+                stale_root = _read_action(
+                    daemon, "artifact.list", daemon._test_project_id,
+                    {"filter": filters, "limit": 1, "cursor": cursor},
+                )
+            assert stale_root["success"] is False
+            assert _error_code(stale_root) == "INVALID_CURSOR"
+
+            with monkeypatch.context() as changed_host:
+                changed_host.setattr(_artifact_store, "local_artifact_host_identity", lambda: "changed-host-scope")
+                stale_host = _read_action(
+                    daemon, "artifact.list", daemon._test_project_id,
+                    {"filter": filters, "limit": 1, "cursor": cursor},
+                )
+            assert stale_host["success"] is False
+            assert _error_code(stale_host) == "INVALID_CURSOR"
+            assert _store_rows_for_read_assertion(daemon.store) == baseline
+    finally:
+        daemon.close()
+
+
+def test_artifact_inspect_is_host_only_scoped_and_reports_registration_provenance(tmp_path, monkeypatch):
+    daemon, project_root, _ = _make_daemon(tmp_path)
+    source = project_root / "inputs" / "inspect.step"
+    source.write_bytes(b"synthetic inspect content")
+    try:
+        registered = _register(daemon, path="inputs/inspect.step")
+        assert registered["success"] is True
+        artifact_id = registered["data"]["artifact_id"]
+        daemon.backend.service = None
+        daemon.backend.worker = None
+        with monkeypatch.context() as patcher:
+            patcher.setattr(
+                daemon.store, "list_metadata",
+                lambda *_args, **_kwargs: pytest.fail("artifact.inspect must use the exact scoped lookup"),
+            )
+            baseline = _store_rows_for_read_assertion(daemon.store)
+            direct = _read_action(
+                daemon, "artifact.inspect", daemon._test_project_id,
+                {"artifact_id": artifact_id}, request_id="inspect-direct",
+            )
+            nested = _read_action(
+                daemon, "artifact.inspect", daemon._test_project_id,
+                {"artifact_id": artifact_id}, entrypoint="registry_call",
+            )
+            operation = _read_action(
+                daemon, "artifact.inspect", daemon._test_project_id,
+                {"artifact_id": artifact_id}, entrypoint="operation_call",
+            )
+            for response in (direct, nested, operation):
+                assert response["success"] is True
+                assert response["data"]["sha256"] == artifact_id
+                assert response["data"]["size_bytes"] == len(source.read_bytes())
+                assert response["data"]["relative_path"] == f"g2_artifacts/registered/{artifact_id}.step"
+                assert response["data"]["file_integrity"]["status"] == "VERIFIED_CONTENT_AND_PINNED_IDENTITY"
+                assert response["data"]["producer_job"]["status"] == "SUCCEEDED"
+                assert isinstance(response["data"]["producer_job"]["job_id"], str)
+                assert response["data"]["package_status"] == "NOT_VERIFIED"
+                assert response["data"]["format_version_status"] == "NOT_RECORDED"
+                assert str(project_root) not in json.dumps(response, sort_keys=True)
+            assert direct["data"]["request_id"] == "inspect-direct"
+            assert _store_rows_for_read_assertion(daemon.store) == baseline
+
+        # A listed metadata row with a scoped but malformed payload fails closed;
+        # the read must not repair it or fall back to a global metadata scan.
+        record = daemon.store.get_metadata("artifacts", artifact_id)
+        corrupted = dict(record)
+        corrupted.pop("size")
+        _inject_artifact_metadata_for_test(daemon.store, artifact_id, corrupted)
+        corrupted_rows = _store_rows_for_read_assertion(daemon.store)
+        broken = _read_action(
+            daemon, "artifact.inspect", daemon._test_project_id,
+            {"artifact_id": artifact_id},
+        )
+        assert broken["success"] is False
+        assert _error_code(broken) in {"ARTIFACT_STATE_UNKNOWN", "ARTIFACT_IDENTITY_MISMATCH"}
+        assert _store_rows_for_read_assertion(daemon.store) == corrupted_rows
+    finally:
+        daemon.close()
+
+
+def test_artifact_inspect_checks_permission_before_scoped_metadata_lookup(tmp_path, monkeypatch):
+    daemon, project_root, _ = _make_daemon(tmp_path)
+    (project_root / "inputs" / "permission.step").write_bytes(b"permission fixture")
+    try:
+        registered = _register(daemon, path="inputs/permission.step")
+        assert registered["success"] is True
+        daemon.project_authority.permission_provider = lambda: set()
+        monkeypatch.setattr(
+            daemon.store, "get_project_artifact_metadata",
+            lambda *_args, **_kwargs: pytest.fail("artifact metadata lookup occurred before permission denial"),
+        )
+        response = _read_action(
+            daemon, "artifact.inspect", daemon._test_project_id,
+            {"artifact_id": registered["data"]["artifact_id"]},
+        )
+        assert response["success"] is False
+        assert _error_code(response) == "PERMISSION_DENIED"
+    finally:
+        daemon.close()
+
+
+def test_artifact_inspect_rejects_same_hash_registered_to_another_project(tmp_path):
+    daemon, project_root, _ = _make_daemon(tmp_path)
+    source = project_root / "inputs" / "same-bytes.step"
+    source.write_bytes(b"same immutable bytes")
+    try:
+        first = _register(daemon, path="inputs/same-bytes.step")
+        assert first["success"] is True
+        other = _create_project(daemon, workspace="artifact-owner-two", label="artifact-owner-two")
+        (Path(other["workspace"]) / "inputs" / "same-bytes.step").write_bytes(source.read_bytes())
+        second = _register_for_project(
+            daemon, other["project_id"], path="inputs/same-bytes.step", key="same-bytes-other-project",
+        )
+        assert second["success"] is False
+        assert _error_code(second) == "ARTIFACT_REGISTRATION_CONFLICT"
+        foreign = _read_action(
+            daemon, "artifact.inspect", other["project_id"],
+            {"artifact_id": first["data"]["artifact_id"]},
+        )
+        forged = _read_action(
+            daemon, "artifact.inspect", other["project_id"],
+            {"artifact_id": "a" * 64},
+        )
+        assert foreign["success"] is False and forged["success"] is False
+        assert _error_code(foreign) == _error_code(forged) == "ARTIFACT_NOT_FOUND"
+        assert foreign["error"]["message"] == forged["error"]["message"]
+    finally:
+        daemon.close()
+
+
+def test_artifact_read_preserves_safe_mime_namespaced_and_freeform_metadata(tmp_path):
+    from jsonschema import validate
+    from comsol_mcp._g2_registry import registry_describe
+
+    daemon, project_root, _ = _make_daemon(tmp_path)
+    (project_root / "inputs" / "metadata.step").write_bytes(b"metadata fixture")
+    try:
+        registered = _register_for_project(
+            daemon, daemon._test_project_id, path="inputs/metadata.step",
+            role="geometry/source v2", classification="internal review",
+            key="metadata-safe-values",
+        )
+        assert registered["success"] is True
+        artifact_id = registered["data"]["artifact_id"]
+        record = daemon.store.get_metadata("artifacts", artifact_id)
+        _inject_artifact_metadata_for_test(daemon.store, artifact_id, {
+            **record,
+            "artifact_type": "application/octet-stream",
+            "format_version": "comsol-mcp-full-release/1",
+        })
+        listed = _read_action(daemon, "artifact.list", daemon._test_project_id, {"limit": 1})
+        inspected = _read_action(daemon, "artifact.inspect", daemon._test_project_id, {"artifact_id": artifact_id})
+        assert listed["success"] is True
+        assert inspected["success"] is True
+        item = listed["data"]["items"][0]
+        assert item["role"] == "geometry/source v2"
+        assert item["classification"] == "internal review"
+        assert item["version_status"] == "DECLARED"
+        assert "format_version_status" not in item
+        assert inspected["data"]["type_hint"] == {"value": "application/octet-stream", "status": "DECLARED"}
+        assert inspected["data"]["format_version"] == "comsol-mcp-full-release/1"
+        assert inspected["data"]["format_version_status"] == "DECLARED"
+        validate(instance=listed["data"], schema=registry_describe("artifact.list")["data_schema"])
+        validate(instance=inspected["data"], schema=registry_describe("artifact.inspect")["data_schema"])
+    finally:
+        daemon.close()
+
+
+@pytest.mark.parametrize("field", ["artifact_type", "format_version", "role", "classification"])
+def test_artifact_reads_reject_absolute_pathlike_metadata_without_disclosure(tmp_path, field):
+    daemon, project_root, _ = _make_daemon(tmp_path)
+    (project_root / "inputs" / "private-metadata.step").write_bytes(b"private metadata fixture")
+    try:
+        registered = _register(daemon, path="inputs/private-metadata.step", key=f"bad-{field}")
+        assert registered["success"] is True
+        artifact_id = registered["data"]["artifact_id"]
+        record = daemon.store.get_metadata("artifacts", artifact_id)
+        absolute_value = str(tmp_path / "private-source-path")
+        _inject_artifact_metadata_for_test(daemon.store, artifact_id, {**record, field: absolute_value})
+        for operation, arguments in (
+            ("artifact.inspect", {"artifact_id": artifact_id}),
+            ("artifact.list", {"limit": 200}),
+        ):
+            response = _read_action(daemon, operation, daemon._test_project_id, arguments)
+            assert response["success"] is False
+            assert _error_code(response) == "ARTIFACT_STATE_UNKNOWN"
+            assert absolute_value not in json.dumps(response, sort_keys=True)
+            assert str(project_root) not in json.dumps(response, sort_keys=True)
+    finally:
+        daemon.close()
+
+
+def test_artifact_inspect_sanitizes_symlink_resolver_error_without_losing_code(tmp_path):
+    daemon, project_root, _ = _make_daemon(tmp_path)
+    source = project_root / "inputs" / "symlink-boundary.step"
+    source.write_bytes(b"symlink boundary fixture")
+    try:
+        registered = _register(daemon, path="inputs/symlink-boundary.step", key="symlink-boundary")
+        assert registered["success"] is True
+        artifact_id = registered["data"]["artifact_id"]
+        managed = project_root / daemon.store.get_metadata("artifacts", artifact_id)["path"]
+        outside = tmp_path / "outside-symlink-target.step"
+        outside.write_bytes(source.read_bytes())
+        managed.unlink()
+        managed.symlink_to(outside)
+        daemon.backend.service = None
+        daemon.backend.worker = None
+        response = _read_action(daemon, "artifact.inspect", daemon._test_project_id, {"artifact_id": artifact_id})
+        assert response["success"] is False
+        assert _error_code(response) == "ACCESS_VIOLATION"
+        assert str(project_root) not in json.dumps(response, sort_keys=True)
+        assert str(outside) not in json.dumps(response, sort_keys=True)
+    finally:
+        daemon.close()
+
+
+def test_artifact_list_rejects_non_sha256_scoped_metadata_key(tmp_path):
+    from comsol_mcp import _artifact_store
+
+    daemon, project_root, _ = _make_daemon(tmp_path)
+    try:
+        malformed_id = "g" * 64
+        record = {
+            "schema_version": 2,
+            "artifact_id": malformed_id,
+            "sha256": malformed_id,
+            "path": f"g2_artifacts/registered/{malformed_id}.step",
+            "size": 0,
+            "file_identity": {"device": 1, "inode": 1, "size": 0, "mtime_ns": 1},
+            "project_id": daemon._test_project_id,
+            "project_root_identity": _artifact_store.project_root_identity(project_root),
+            "host_identity": local_artifact_host_identity(),
+            "engine_host_identity": local_engine_host_identity("127.0.0.1:2036"),
+            "role": "geometry_source",
+            "classification": "internal",
+        }
+        with daemon.store.lock:
+            daemon.store.db.execute(
+                "INSERT INTO artifacts(artifact_id,metadata) VALUES(?,?)",
+                (malformed_id, json.dumps(record, sort_keys=True)),
+            )
+        response = _read_action(daemon, "artifact.list", daemon._test_project_id, {"limit": 1})
+        assert response["success"] is False
+        assert _error_code(response) == "ARTIFACT_STATE_UNKNOWN"
+        assert "g" * 64 not in json.dumps(response, sort_keys=True)
+    finally:
+        daemon.close()
+
+
+def test_artifact_inspect_fails_closed_on_scope_and_pinned_metadata_tampering(tmp_path):
+    daemon, project_root, _ = _make_daemon(tmp_path)
+    source = project_root / "inputs" / "tamper.step"
+    source.write_bytes(b"pinned metadata fixture")
+    try:
+        registered = _register(daemon, path="inputs/tamper.step")
+        assert registered["success"] is True
+        artifact_id = registered["data"]["artifact_id"]
+        original = daemon.store.get_metadata("artifacts", artifact_id)
+        variants = []
+        for field, value in (
+            ("project_id", "foreign-project"),
+            ("project_root_identity", "foreign-root"),
+            ("host_identity", "foreign-host"),
+            ("engine_host_identity", "foreign-engine"),
+        ):
+            altered = json.loads(json.dumps(original))
+            altered[field] = value
+            variants.append((altered, "ARTIFACT_NOT_FOUND"))
+        altered_path = json.loads(json.dumps(original))
+        altered_path["path"] = f"g2_artifacts/registered/{'0' * 64}.step"
+        variants.append((altered_path, "ARTIFACT_STATE_UNKNOWN"))
+        altered_size = json.loads(json.dumps(original))
+        altered_size.pop("size")
+        variants.append((altered_size, "ARTIFACT_STATE_UNKNOWN"))
+        altered_inode = json.loads(json.dumps(original))
+        altered_inode["file_identity"]["inode"] += 1
+        variants.append((altered_inode, "ARTIFACT_IDENTITY_MISMATCH"))
+
+        for altered, expected_code in variants:
+            _inject_artifact_metadata_for_test(daemon.store, artifact_id, altered)
+            response = _read_action(
+                daemon, "artifact.inspect", daemon._test_project_id,
+                {"artifact_id": artifact_id},
+            )
+            assert response["success"] is False
+            assert _error_code(response) == expected_code
+            assert daemon.store.get_metadata("artifacts", artifact_id) == altered
+            _inject_artifact_metadata_for_test(daemon.store, artifact_id, original)
+
+        managed = project_root / original["path"]
+        managed.write_bytes(b"changed bytes after registration")
+        changed_bytes = _read_action(
+            daemon, "artifact.inspect", daemon._test_project_id,
+            {"artifact_id": artifact_id},
+        )
+        assert changed_bytes["success"] is False
+        assert _error_code(changed_bytes) == "ARTIFACT_HASH_MISMATCH"
+        assert daemon.store.get_metadata("artifacts", artifact_id) == original
+    finally:
+        daemon.close()
+
+
+def test_artifact_inspect_rejects_symlink_and_same_byte_hardlink_replacement(tmp_path):
+    daemon, project_root, _ = _make_daemon(tmp_path)
+    source = project_root / "inputs" / "filesystem-identity.step"
+    source.write_bytes(b"same bytes, different file identity")
+    try:
+        registered = _register(daemon, path="inputs/filesystem-identity.step")
+        assert registered["success"] is True
+        artifact_id = registered["data"]["artifact_id"]
+        record = daemon.store.get_metadata("artifacts", artifact_id)
+        managed = project_root / record["path"]
+
+        outside = tmp_path / "outside.step"
+        outside.write_bytes(source.read_bytes())
+        managed.unlink()
+        managed.symlink_to(outside)
+        symlink = _read_action(
+            daemon, "artifact.inspect", daemon._test_project_id,
+            {"artifact_id": artifact_id},
+        )
+        assert symlink["success"] is False
+        assert _error_code(symlink) == "ACCESS_VIOLATION"
+
+        managed.unlink()
+        os.link(source, managed)
+        hardlink = _read_action(
+            daemon, "artifact.inspect", daemon._test_project_id,
+            {"artifact_id": artifact_id},
+        )
+        assert hardlink["success"] is False
+        assert _error_code(hardlink) == "ARTIFACT_IDENTITY_MISMATCH"
+        assert hashlib.sha256(managed.read_bytes()).hexdigest() == artifact_id
+    finally:
+        daemon.close()
+
+
+def test_artifact_scope_index_migration_preserves_malformed_rows_and_schema_version(tmp_path):
+    from comsol_mcp._operation_store import ARTIFACT_SCOPE_INDEX
+
+    database = tmp_path / "legacy-artifacts.sqlite3"
+    connection = sqlite3.connect(database)
+    connection.execute("CREATE TABLE schema_meta(version INTEGER NOT NULL)")
+    connection.execute("INSERT INTO schema_meta VALUES(1)")
+    connection.execute("CREATE TABLE artifacts(artifact_id TEXT PRIMARY KEY, metadata TEXT NOT NULL)")
+    good = {"schema_version": 2, "project_id": "p1", "artifact_id": "a" * 64}
+    original_rows = [("a" * 64, json.dumps(good, sort_keys=True)), ("b" * 64, "{malformed-json")]
+    connection.executemany("INSERT INTO artifacts VALUES(?,?)", original_rows)
+    connection.commit()
+    connection.close()
+
+    store = OperationStore(database)
+    try:
+        with store.lock:
+            observed = [tuple(row) for row in store.db.execute("SELECT artifact_id,metadata FROM artifacts ORDER BY artifact_id")]
+            version = store.db.execute("SELECT version FROM schema_meta").fetchone()[0]
+            index = store.db.execute(
+                "SELECT name FROM sqlite_master WHERE type='index' AND name=?", (ARTIFACT_SCOPE_INDEX,),
+            ).fetchone()
+        assert observed == original_rows
+        assert version == 1
+        assert index is not None
+    finally:
+        store.close()
+
+
+def test_artifact_verify_remains_unimplemented_until_package_contract_is_frozen():
+    from comsol_mcp._g2_registry import CONTROL_IMPLEMENTED_OPERATIONS, validate_call
+
+    assert "artifact.verify" not in CONTROL_IMPLEMENTED_OPERATIONS
+    with pytest.raises(ExecutionContractError) as error:
+        validate_call("artifact.verify", {"project_id": "p1", "artifact_id": "a" * 64})
+    assert error.value.code == "UNSUPPORTED_OPERATION"

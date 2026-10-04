@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import hashlib
+import re
 import sqlite3
 import threading
 import time
@@ -28,6 +29,20 @@ METADATA_TABLES = {
     "artifacts": "artifact_id",
     "checkpoints": "checkpoint_id",
 }
+ARTIFACT_SCOPE_INDEX = "idx_artifacts_v2_project_scope"
+_ARTIFACT_SCOPE_JSON_FIELDS = (
+    "schema_version", "project_id", "project_root_identity",
+    "host_identity", "engine_host_identity",
+)
+
+
+def _artifact_json_value(field: str) -> str:
+    """A malformed historical metadata row must evaluate to NULL, not abort a page."""
+    if field not in _ARTIFACT_SCOPE_JSON_FIELDS and field not in {"role", "classification"}:
+        raise ValueError("unsupported artifact metadata field")
+    return f"CASE WHEN json_valid(metadata) THEN json_extract(metadata, '$.{field}') END"
+
+
 PROJECT_TABLE_COLUMNS = (
     ("project_id", "TEXT", 1, 1),
     ("workspace", "TEXT", 1, 0),
@@ -208,6 +223,16 @@ class OperationStore:
                 )
             self.db.execute("CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status)")
             self.db.execute("CREATE INDEX IF NOT EXISTS idx_jobs_created_at ON jobs(created_at)")
+            self.db.execute("CREATE INDEX IF NOT EXISTS idx_operations_request_id ON operations(request_id)")
+            # Existing artifact metadata predates project-scoped reads. This
+            # additive index lets those reads seek directly into one v2
+            # project/root/host range. CASE keeps malformed legacy JSON
+            # fail-closed during index creation and query evaluation.
+            scope_terms = ", ".join(f"({_artifact_json_value(field)})" for field in _ARTIFACT_SCOPE_JSON_FIELDS)
+            self.db.execute(
+                f"CREATE INDEX IF NOT EXISTS {ARTIFACT_SCOPE_INDEX} "
+                f"ON artifacts({scope_terms}, artifact_id)"
+            )
             # Additive extension: existing operation/job/audit/result tables
             # are unchanged, so v1 databases open transactionally without a
             # rewrite or version bump.  A claim is unique per source job and
@@ -2613,6 +2638,118 @@ class OperationStore:
         self._metadata_column(table)  # Table interpolation is safe only after allowlisting.
         with self.lock:
             return [json.loads(row[0]) for row in self.db.execute(f"SELECT metadata FROM {table}")]
+
+    def list_project_artifact_page(
+        self,
+        *,
+        project_id: str,
+        project_root_identity: str,
+        host_identity: str,
+        engine_host_identity: str,
+        filters: dict[str, str],
+        after_artifact_id: str | None,
+        limit: int,
+    ) -> tuple[list[dict[str, Any]], bool]:
+        """Read one bounded, project-scoped page of v2 artifact metadata.
+
+        The index and WHERE clause exclude malformed JSON and every record not
+        bound to the exact project/root/host/engine tuple. This deliberately
+        does not fall back to ``list_metadata`` or scan the filesystem.
+        """
+        identities = (project_id, project_root_identity, host_identity, engine_host_identity)
+        if any(not isinstance(value, str) or not value for value in identities):
+            raise ValueError("artifact page scope identities must be nonempty strings")
+        if not isinstance(filters, dict) or set(filters) - {"role", "classification"}:
+            raise ValueError("unsupported artifact page filter")
+        if any(not isinstance(value, str) or not value for value in filters.values()):
+            raise ValueError("artifact page filters must be nonempty strings")
+        if after_artifact_id is not None and (
+                not isinstance(after_artifact_id, str) or len(after_artifact_id) != 64):
+            raise ValueError("artifact page cursor key is malformed")
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 200:
+            raise ValueError("artifact page limit must be between 1 and 200")
+
+        clauses = [f"({_artifact_json_value(field)}) = ?" for field in _ARTIFACT_SCOPE_JSON_FIELDS]
+        params: list[Any] = [2, *identities]
+        for field in ("role", "classification"):
+            if field in filters:
+                clauses.append(f"({_artifact_json_value(field)}) = ?")
+                params.append(filters[field])
+        if after_artifact_id is not None:
+            clauses.append("artifact_id > ?")
+            params.append(after_artifact_id)
+        params.append(limit + 1)
+        query = (
+            f"SELECT artifact_id, metadata FROM artifacts INDEXED BY {ARTIFACT_SCOPE_INDEX} "
+            f"WHERE {' AND '.join(clauses)} ORDER BY artifact_id ASC LIMIT ?"
+        )
+        with self.lock:
+            rows = self.db.execute(query, params).fetchall()
+        has_more = len(rows) > limit
+        page_rows = rows[:limit]
+        output: list[dict[str, Any]] = []
+        for row in page_rows:
+            try:
+                record = json.loads(row["metadata"])
+            except (TypeError, json.JSONDecodeError) as exc:
+                raise ValueError("scoped artifact metadata is malformed") from exc
+            key = row["artifact_id"]
+            if (not isinstance(key, str) or re.fullmatch(r"[0-9a-f]{64}", key) is None
+                    or not isinstance(record, dict) or type(record.get("schema_version")) is not int
+                    or record.get("schema_version") != 2
+                    or record.get("artifact_id") != key or record.get("sha256") != key
+                    or record.get("project_id") != project_id
+                    or record.get("project_root_identity") != project_root_identity
+                    or record.get("host_identity") != host_identity
+                    or record.get("engine_host_identity") != engine_host_identity):
+                raise ValueError("scoped artifact metadata identity is malformed")
+            output.append(record)
+        return output, has_more
+
+    def get_project_artifact_metadata(
+        self,
+        artifact_id: str,
+        *,
+        project_id: str,
+        project_root_identity: str,
+        host_identity: str,
+        engine_host_identity: str,
+    ) -> dict[str, Any] | None:
+        """Fetch a registration only when its complete v2 scope matches."""
+        identities = (project_id, project_root_identity, host_identity, engine_host_identity)
+        if not isinstance(artifact_id, str) or not artifact_id:
+            raise ValueError("artifact_id must be nonempty")
+        if any(not isinstance(value, str) or not value for value in identities):
+            raise ValueError("artifact lookup scope identities must be nonempty strings")
+        clauses = [
+            f"({_artifact_json_value(field)}) = ?"
+            for field in _ARTIFACT_SCOPE_JSON_FIELDS
+        ]
+        params: list[Any] = [2, *identities, artifact_id]
+        query = (
+            f"SELECT artifact_id, metadata FROM artifacts INDEXED BY {ARTIFACT_SCOPE_INDEX} "
+            f"WHERE {' AND '.join(clauses)} AND artifact_id = ? LIMIT 1"
+        )
+        with self.lock:
+            row = self.db.execute(query, params).fetchone()
+        if row is None:
+            return None
+        try:
+            record = json.loads(row["metadata"])
+        except (TypeError, json.JSONDecodeError) as exc:
+            # The scope expression already excludes malformed JSON. Keep this
+            # guard in case SQLite's JSON decoder and Python disagree.
+            raise ValueError("scoped artifact metadata is malformed") from exc
+        if (not isinstance(record, dict) or type(record.get("schema_version")) is not int
+                or record.get("schema_version") != 2
+                or row["artifact_id"] != artifact_id
+                or record.get("artifact_id") != artifact_id or record.get("sha256") != artifact_id
+                or record.get("project_id") != project_id
+                or record.get("project_root_identity") != project_root_identity
+                or record.get("host_identity") != host_identity
+                or record.get("engine_host_identity") != engine_host_identity):
+            raise ValueError("scoped artifact metadata identity is malformed")
+        return record
 
     def persist_artifact(self, key: str, metadata: dict[str, Any]) -> None:
         if not metadata.get("sha256"):

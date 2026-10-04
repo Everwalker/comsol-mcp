@@ -83,6 +83,7 @@ IMPLEMENTED_OPERATIONS = frozenset({
 CONTROL_IMPLEMENTED_OPERATIONS = frozenset({
     "job.list", "job.status", "job.log", "job.result", "job.reconcile",
     "job.wait", "job.cancel", "job.cleanup",
+    "artifact.list", "artifact.inspect",
     "project.create", "project.inspect", "project.contract_set",
     "project.policy_set", "project.permissions", "project.state_export",
     "experiment.inspect", "experiment.case_result", "experiment.stage_define", "experiment.stage_run",
@@ -343,6 +344,20 @@ class ActionEntry:
                 "engine_queue": "bypassed; project actions remain usable without a COMSOL connection" if self.operation_id.startswith("project.") else "bypassed",
                 "nested_identity": "model/session/revision/idempotency/request identifiers are not nested action fields and are never copied from the outer execution envelope",
                 "verification_scope": "control-plane software behavior only; no COMSOL solver capability implied",
+            }
+        if self.operation_id in {"artifact.list", "artifact.inspect"}:
+            result["data_schema"] = _artifact_read_data_schema(self.operation_id)
+            result["runtime_dispatch_contract"] = {
+                "handler": "ControlDaemon ProjectAuthority plus project-scoped OperationStore and registered-artifact resolver",
+                "entrypoints": [self.operation_id, "registry_call", "operation_call"],
+                "permissions": "inspect checked before artifact metadata lookup",
+                "project_binding": "exact persisted project_id/workspace/root and local host/configured loopback engine identity",
+                "engine_queue": "bypassed; no Worker lookup or COMSOL request",
+                "store_effects": "request path is read-only; additive scope indexes are created at OperationStore initialization",
+                "artifact.list": "bounded indexed keyset page; filters limited to role/classification; listed files remain NOT_CHECKED",
+                "artifact.inspect": "schema-v2 registration only; verifies registered bytes, size, pinned file identity and symlink-free path",
+                "limits": "type is a declared hint, absent format version/producer metadata is NOT_RECORDED, and package/dependency/target-format verification is not performed",
+                "verification_scope": "software route only; no package completeness or native compatibility implied",
             }
         if self.operation_id in {"experiment.inspect", "experiment.case_result"}:
             result["runtime_dispatch_contract"] = {
@@ -791,6 +806,93 @@ def _effective_input_schema(catalog_schema: Mapping[str, Any], operation_id: str
              }},
         ]
     return effective
+
+
+def _artifact_read_data_schema(operation_id: str) -> dict[str, Any]:
+    type_hint = {
+        "type": "object", "required": ["value", "status"], "additionalProperties": False,
+        "properties": {
+            "value": {"type": ["string", "null"]},
+            "status": {"type": "string", "enum": ["DECLARED", "DECLARED_SUFFIX_ONLY", "NOT_RECORDED"]},
+        },
+    }
+    if operation_id == "artifact.list":
+        item = {
+            "type": "object",
+            "required": ["artifact_id", "sha256", "size_bytes", "role", "classification",
+                         "record_schema_version", "type_hint", "version_status",
+                         "producer_job_status", "verification_status"],
+            "additionalProperties": False,
+            "properties": {
+                "artifact_id": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                "size_bytes": {"type": "integer", "minimum": 0},
+                "role": {"type": "string"},
+                "classification": {"type": "string"},
+                "record_schema_version": {"type": "integer", "const": 2},
+                "type_hint": type_hint,
+                "version_status": {"type": "string", "enum": ["DECLARED", "NOT_RECORDED"]},
+                "producer_job_status": {"type": "string", "const": "NOT_LOOKED_UP"},
+                "verification_status": {"type": "string", "const": "NOT_CHECKED"},
+            },
+        }
+        return {
+            "type": "object",
+            "required": ["data_schema_version", "project_id", "items", "next_cursor", "has_more", "limit", "verification_scope"],
+            "additionalProperties": False,
+            "properties": {
+                "data_schema_version": {"type": "integer", "const": 1},
+                "project_id": {"type": "string"},
+                "request_id": {"type": "string"},
+                "items": {"type": "array", "items": item},
+                "next_cursor": {"type": ["string", "null"]},
+                "has_more": {"type": "boolean"},
+                "limit": {"type": "integer", "minimum": 1, "maximum": 200},
+                "verification_scope": {"type": "string", "const": "METADATA_ONLY"},
+            },
+        }
+    if operation_id == "artifact.inspect":
+        producer_job = {
+            "type": "object", "required": ["job_id", "status"], "additionalProperties": False,
+            "properties": {
+                "job_id": {"type": ["string", "null"]},
+                "status": {"type": "string", "enum": ["NOT_RECORDED", "UNVERIFIABLE", "UNKNOWN",
+                    "QUEUED", "RUNNING", "SUCCEEDED", "FAILED", "CANCELLED", "EXPIRED", "LOST"]},
+            },
+        }
+        integrity = {
+            "type": "object", "required": ["status", "checks"], "additionalProperties": False,
+            "properties": {
+                "status": {"type": "string", "const": "VERIFIED_CONTENT_AND_PINNED_IDENTITY"},
+                "checks": {"type": "array", "items": {"type": "string"}},
+            },
+        }
+        return {
+            "type": "object",
+            "required": ["data_schema_version", "project_id", "artifact_id", "sha256", "size_bytes",
+                         "relative_path", "role", "classification", "record_schema_version", "type_hint",
+                         "format_version", "format_version_status", "producer_job", "file_integrity", "package_status"],
+            "additionalProperties": False,
+            "properties": {
+                "data_schema_version": {"type": "integer", "const": 1},
+                "project_id": {"type": "string"},
+                "request_id": {"type": "string"},
+                "artifact_id": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                "size_bytes": {"type": "integer", "minimum": 0},
+                "relative_path": {"type": "string"},
+                "role": {"type": "string"},
+                "classification": {"type": "string"},
+                "record_schema_version": {"type": "integer", "const": 2},
+                "type_hint": type_hint,
+                "format_version": {"type": ["string", "null"]},
+                "format_version_status": {"type": "string", "enum": ["DECLARED", "NOT_RECORDED"]},
+                "producer_job": producer_job,
+                "file_integrity": integrity,
+                "package_status": {"type": "string", "const": "NOT_VERIFIED"},
+            },
+        }
+    raise ValueError("unsupported artifact read action")
 
 
 def _catalog_entries() -> tuple[ActionEntry, ...]:

@@ -1,0 +1,96 @@
+{
+  "schema": "root-artifact-reads-stage-acceptance/1",
+  "utc": "2026-10-04T20:40:47.894518+00:00",
+  "decision": "ACCEPT_EXACT_FINAL5_SOURCE_SOFTWARE_ONLY",
+  "base_commit": "041cd318065f4b543a74dd91c01795f07eeb8ea8",
+  "final5_source_refs": [
+    {
+      "path": "comsol_mcp/_operation_store.py",
+      "size_bytes": 226849,
+      "sha256": "d9d6c3d54ff4afc625f28f5e70595fd23f6a899e05863a9cdf0b05711a0808fa"
+    },
+    {
+      "path": "comsol_mcp/_g2_artifact_reads.py",
+      "size_bytes": 18949,
+      "sha256": "b5f48c6f27d3fd017ae91edbc9f9b54739ad109dc61d552ccc25bf896099bb67"
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "size_bytes": 727955,
+      "sha256": "9b719b62a88e8df3f4f95e2c8f0d66baf044e6e9884e3f33a1e92f88eb3595d7"
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "size_bytes": 82554,
+      "sha256": "8af622f9e85950fc07e10fe62172f503943de01e3dd8dea083a3d31f100a17e3"
+    },
+    {
+      "path": "tests/test_artifact_registration_import.py",
+      "size_bytes": 52448,
+      "sha256": "99c1f3d64697fb183ba2d124052d802813df4b48b1d95760b139e306a336d4b8"
+    }
+  ],
+  "candidate_full_tree_fingerprint": "b32762b3e2ee52f44882ae3fd904342c20149fdb038ad16d2d403f0d97ded8fe",
+  "independent_review": {
+    "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/artifact-control-reads-repair-20261005-001/independent-repair-review001/INDEPENDENT_REPAIR_REVIEW_REPORT.md",
+    "size_bytes": 5306,
+    "sha256": "a0c5dc767b05315876bac44ad691b8d3be0e8f13f5903185e1bb1b3245f0a732"
+  },
+  "independent_runtime_check": {
+    "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/artifact-control-reads-repair-20261005-001/ROOT_INDEPENDENT_REPAIR_RUNTIME_CHECK001.json",
+    "size_bytes": 1814,
+    "sha256": "9fb73803e9ab8a21256d5ebae4e7ff43958e43658c0ee14a01ac76e64ba979a8"
+  },
+  "source_review": {
+    "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/artifact-control-reads-repair-20261005-001/ROOT_REPAIR_FINAL5_SOURCE_REVIEW001.json",
+    "size_bytes": 1912,
+    "sha256": "c43bed152ecf4409d598819015e8584f47804e7c61864814634f8a4d18a5d070"
+  },
+  "producer_handoff": {
+    "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/artifact-control-reads-repair-20261005-001/REPAIR_HANDOFF001.json",
+    "size_bytes": 4956,
+    "sha256": "a5dfc4aedec28bc5d2623596580a662951b2e9e00cfc99521bdb5f1d51e684e9"
+  },
+  "old_changes_required": {
+    "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/artifact-control-reads-20261005-001/ROOT_LIST_INSPECT_CHANGES_REQUIRED001.json",
+    "size_bytes": 1676,
+    "sha256": "508c9bad5cb19ef7036406b071d3ba38781175043ec95890667a95317513a934"
+  },
+  "producer_tests": {
+    "tests": 38,
+    "failed": 0
+  },
+  "independent_tests": {
+    "tests": 38,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "four_original_failures": "REPAIRED_AND_INDEPENDENTLY_RETESTED; prior failed artifacts preserved",
+  "accepted_behavior": [
+    "project permission checked before exact scoped metadata query",
+    "bounded keyset list defaults100/max200; no file access or Worker",
+    "inspect content hash and pinned filesystem identity; symlink/hardlink guards",
+    "safe typed errors and metadata retain legitimate MIME/namespace/freeform values",
+    "direct and nested control dispatch/effective schemas; historical catalog unchanged"
+  ],
+  "limitations": [
+    "Listed files NOT_CHECKED; declared type/version are hints",
+    "Package/dependency/target-format verification NOT_IMPLEMENTED in this stage",
+    "Unsigned cursor is continuation hint; not authorization",
+    "OperationStore initialization creates additive index; request reads do not write",
+    "Only tested offline synthetic software scope; no native/scientific claim"
+  ],
+  "protected9_sha_unchanged": true,
+  "original_scope": {
+    "work_packages": 26,
+    "actions": 272,
+    "acceptance_cells": 360,
+    "action_target_cells": 1632,
+    "cells_changed": 0
+  },
+  "native": "NOT_RUN",
+  "science_full": "NOT_ACCEPTED",
+  "final_release": "NOT_SELECTED",
+  "github": "NOT_RUN_BEFORE_COMMIT"
+}

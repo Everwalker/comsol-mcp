@@ -19,7 +19,7 @@
 - **Release helper**：64 个聚焦测试全部通过（0 failures/errors/skips）。其中 candidate-only 清理断言仅由 mock 验证；四个 helper 源码/测试文件已通过独立审查及主 Agent 验收；默认模式的 8 个既有回退回归也已通过（mock 软件测试）。
 - **W26 transition**：有界单机合成数据 `0.1.9 → 0.2.0.dev1 → 0.1.9` 转换获接受，独立检查 18/18；未使用真实用户数据，另一次真实非空 candidate-only 卸载已获独立和主 Agent 验收；SQLite 备份仅覆盖控制台账，引用模型和产物文件需单独备份。
 - **W21/reconnect test fixtures**：仅修复测试夹具，生产源码不变；两项重点测试和五模块50项回归通过，独立审查51/51（含一项guard负控）。原失败记录保留，原生/JVM/真实Worker启动未运行。
-- **Artifact queries**：独立审查为 `CHANGES_REQUIRED`，四项缺陷正于隔离候选中整改；尚未合入。`model.compare` 已按冻结契约开始隔离实现。
+- **Artifact queries**：`artifact.list/inspect` 四项缺陷已修复，独立复审与主 Agent 软件验收通过，严格网络防护下38/38通过；项目权限/有界分页/内容与文件身份检查已接线。旧失败保留；包完整性验证与原生验收未通过。`artifact.verify`、`model.compare` 继续隔离实现。
 - **W22 historical source content**：10,102 条历史源码内容及安全 APFS 还原已通过独立与主 Agent 验收；原 tar 字节和完整 Git 历史未恢复，没有科学重放。归档本体保留在本地。
 - **W23 model_create guard**：无路径创建不再因无关持久化工作流路径而提前拒绝；独立与主 Agent 软件验收通过，原生/科学验收仍未运行。此前冻结的 dev1 包不含此修复。
 - **Windows / Intel dev1 archives**：已通过独立与主 Agent 归档验收；目标机安装和 COMSOL 运行仍为 NOT_RUN。

@@ -88,6 +88,8 @@ SESSION_OPERATIONS = frozenset({
     "session.recover",
 })
 EXPERIMENT_DURABLE_READS = frozenset({"experiment.inspect", "experiment.case_result"})
+ARTIFACT_CONTROL_READS = frozenset({"artifact.list", "artifact.inspect"})
+ARTIFACT_READ_ALIASES = {"artifact_list": "artifact.list", "artifact_inspect": "artifact.inspect"}
 
 _PRESERVE_SERVER_PROCESS_IDENTITY = object()
 _CONTROL_DAEMON_IDENTITY_SCHEMA = "COMSOL_CONTROL_DAEMON_IDENTITY_V1"
@@ -515,6 +517,9 @@ class ControlDaemon:
             if not isinstance(operation, str) or not isinstance(arguments, dict) or not isinstance(execution, dict):
                 raise ExecutionContractError("INVALID_REQUEST", "invalid operation/arguments/execution")
             operation = SESSION_ALIASES.get(operation, operation)
+            operation = ARTIFACT_READ_ALIASES.get(operation, operation)
+            if operation in ARTIFACT_CONTROL_READS:
+                return self._dispatch_artifact_control_read(operation, arguments, execution)
             if operation in {"experiment.stage_define", "experiment_stage_define"}:
                 return self._dispatch_experiment_stage_define(arguments, execution)
             if operation in {"experiment.stage_run", "experiment_stage_run"}:
@@ -794,8 +799,16 @@ class ControlDaemon:
         inner_operation = outer_arguments.get("operation_id")
         if isinstance(inner_operation, str):
             inner_operation = SESSION_ALIASES.get(inner_operation, inner_operation)
+            inner_operation = ARTIFACT_READ_ALIASES.get(inner_operation, inner_operation)
         if extra_outer and inner_operation in DESKTOP_OPERATIONS:
             raise ExecutionContractError("INVALID_REQUEST", f"{outer_operation} has unsupported arguments: {', '.join(extra_outer)}")
+        if inner_operation in ARTIFACT_CONTROL_READS:
+            if extra_outer:
+                raise ExecutionContractError("INVALID_REQUEST", f"{outer_operation} has unsupported arguments: {', '.join(extra_outer)}")
+            inner_arguments = outer_arguments.get("arguments", {})
+            if not isinstance(inner_arguments, dict):
+                raise ExecutionContractError("INVALID_REQUEST", "registry call arguments must be an object")
+            return self._dispatch_artifact_control_read(inner_operation, inner_arguments, execution)
         if inner_operation in SESSION_OPERATIONS:
             if extra_outer:
                 raise ExecutionContractError("INVALID_REQUEST", f"{outer_operation} has unsupported arguments: {', '.join(extra_outer)}")
@@ -855,6 +868,14 @@ class ControlDaemon:
                 )
 
         return self._dispatch_catalog_job_control(inner_operation, inner_arguments, execution=execution)
+
+    def _dispatch_artifact_control_read(
+        self, operation: str, arguments: dict[str, Any], execution: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Route bounded registered-artifact reads around the Worker queue."""
+        from ._g2_artifact_reads import dispatch
+
+        return dispatch(self, operation, arguments, execution)
 
     @staticmethod
     def _experiment_record_sha256(record: Mapping[str, Any]) -> str:
