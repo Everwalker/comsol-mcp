@@ -1,0 +1,419 @@
+{
+  "actual_nonempty_cleanup": {
+    "argv_suffix": [
+      "-m",
+      "pip",
+      "uninstall",
+      "--yes",
+      "wheel"
+    ],
+    "attempted": true,
+    "executed_after_old_package_rollback": true,
+    "exit_code": 0,
+    "package_names": [
+      "wheel"
+    ],
+    "record_reconciles_with_runner_readback_and_transition": true,
+    "restored_full_distribution_fingerprint_equals_initial_old": true,
+    "restored_full_package_fingerprint_equals_initial_old": true,
+    "stderr": "",
+    "stdout_confirmation": "Successfully uninstalled wheel-0.48.0"
+  },
+  "attempt_history": {
+    "execution_tool_receipt_records_process_creation_timeout_before_launch_once_then_one_permitted_dispatch_retry": true,
+    "no_transition_rerun_after_completion": true,
+    "parser_refusal_status": "BLOCKED_PRELAUNCH_NO_CHILD",
+    "parser_refusal_was_pre_go_no_child": true,
+    "prelaunch_events_are_not_runtime_test_failures": true,
+    "root_go_preparation_failure_preserved": true,
+    "successful_transition_execution_count": 1
+  },
+  "checks_passed": [
+    "Execution handoff, execution readback, immutable tool receipt, one-use GO marker, runner and root summary agree on one completed transition and exact refs.",
+    "All 79 pre/post refs are equal and match current bytes: 78 regular files rehashed with O_NOFOLLOW; the single interpreter symlink is checked through its pinned chain and resolved-target supplement.",
+    "Current old34 and candidate35 locks and wheel bytes match the input manifests; candidate lock adds only wheel.",
+    "Installed states are 0.1.9, 0.2.0.dev1, 0.1.9; raw counts are lock34+pip, lock35+pip, lock34+pip.",
+    "Actual cleanup attempts and confirms removal of wheel 0.48.0 only, exits 0; restored old full distribution and package fingerprints equal initial values.",
+    "Synthetic control SQLite backup and legacy data digest are verified before and after restore; production restore and old-data/idempotency reopen checks pass."
+  ],
+  "evidence_refs": [
+    {
+      "device": 16777238,
+      "inode": 1943653,
+      "mode": 33216,
+      "mtime_ns": 1791127967530000000,
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/CANDIDATE_ONLY_CLEANUP_EXECUTION_HANDOFF001.json",
+      "sha256": "b3a6d122e33c07361ba7f270aa36ff355c771bf9434fce93e3846c60a6581cdd",
+      "size_bytes": 9189
+    },
+    {
+      "device": 16777238,
+      "inode": 1943651,
+      "mode": 33216,
+      "mtime_ns": 1791127967520000000,
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/CANDIDATE_ONLY_CLEANUP_EXECUTION_READBACK001.json",
+      "sha256": "33866106cef72f3a558d6b6a042d196967de277079058ad1e12731f3795ecbc4",
+      "size_bytes": 17783
+    },
+    {
+      "device": 16777238,
+      "inode": 1943649,
+      "mode": 33216,
+      "mtime_ns": 1791127967520000000,
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/CANDIDATE_ONLY_CLEANUP_EXECUTION_TOOL_RESULT001.json",
+      "sha256": "ec7cac00d8b445b3fb7b3d27a04707eddfc8c3da7fc594e740dd3e24fd504e77",
+      "size_bytes": 4781
+    },
+    {
+      "device": 16777238,
+      "inode": 1943620,
+      "mode": 33216,
+      "mtime_ns": 1791127716500000000,
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/CANDIDATE_ONLY_CLEANUP_RUNNER_RESULT001.json",
+      "sha256": "daeb56f7453564e0f74ca62132a1e926614c6d9bed353a2dce440aa8373e86cb",
+      "size_bytes": 163899
+    },
+    {
+      "device": 16777238,
+      "inode": 1943623,
+      "mode": 33216,
+      "mtime_ns": 1791127814930000000,
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/ROOT_CANDIDATE_ONLY_CLEANUP_ACTUAL_READBACK001.json",
+      "sha256": "2d078057428f38ae8061b86189a0ff7f247e68b7c9f49ed75134ab8d847e1e57",
+      "size_bytes": 2384
+    },
+    {
+      "device": 16777238,
+      "inode": 1942644,
+      "mode": 33216,
+      "mtime_ns": 1791127699560000000,
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/CANDIDATE_ONLY_CLEANUP_REQUEST_BINDING001.json",
+      "sha256": "7b276f416eb427f5f5be81aa5cf31a7188431a865ad7648ea080cf3154563082",
+      "size_bytes": 36613
+    },
+    {
+      "device": 16777238,
+      "inode": 1942236,
+      "mode": 33216,
+      "mtime_ns": 1791124139010000000,
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/CANDIDATE_ONLY_CLEANUP_PLAN_HANDOFF002.json",
+      "sha256": "25bd0c86cd01cd83cc6590aabe43cd8489ad5fe8e4293597b7f3acab9177cdd4",
+      "size_bytes": 7096
+    },
+    {
+      "device": 16777238,
+      "inode": 1942256,
+      "mode": 33216,
+      "mtime_ns": 1791124521660000000,
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/ROOT_CANDIDATE_ONLY_CLEANUP_GO001.json",
+      "sha256": "b294c7ec001a03e98307eef7241c47374f43b726846113889791cb0a641e5f99",
+      "size_bytes": 36414
+    },
+    {
+      "device": 16777238,
+      "inode": 1942646,
+      "mode": 33216,
+      "mtime_ns": 1791127699560000000,
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/CANDIDATE_ONLY_CLEANUP_GO001_CONSUMED.json",
+      "sha256": "2dbe12c60c4c1c27c3318ae930c2479718da000198c5455b9712696e16778a99",
+      "size_bytes": 1248
+    },
+    {
+      "device": 16777238,
+      "inode": 1942642,
+      "mode": 33216,
+      "mtime_ns": 1791127699550000000,
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/CANDIDATE_ONLY_CLEANUP_INTERPRETER_REF_SUPPLEMENT001.json",
+      "sha256": "7268c2945f24c3576b418b54698bd0b0536c7bc85b722d31dd262ca91dde3b60",
+      "size_bytes": 2452
+    },
+    {
+      "device": 16777238,
+      "inode": 1942601,
+      "mode": 33216,
+      "mtime_ns": 1791127406520000000,
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/CANDIDATE_ONLY_CLEANUP_LAUNCH_ATTEMPT001_ACTUAL.json",
+      "sha256": "bed56ec17fb391e2ace83668037e0c62bd89f96ebcdc1c33c508bdf209281c50",
+      "size_bytes": 2996
+    },
+    {
+      "device": 16777238,
+      "inode": 1942254,
+      "mode": 33216,
+      "mtime_ns": 1791124521610000000,
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/ROOT_CLEANUP_GO_PREPARATION_FAILURE001.json",
+      "sha256": "a17397c06ebce61d0789a8a1221cb9146d674e6060cddc465b70f17ba5e30739",
+      "size_bytes": 255
+    },
+    {
+      "device": 16777238,
+      "inode": 1942628,
+      "mode": 33216,
+      "mtime_ns": 1791127553950000000,
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/CANDIDATE_ONLY_CLEANUP_LOCK_PARSER_STATIC_CHECK001.json",
+      "sha256": "dbde50a49b46a54b33985a3e72495266e5ccea699fd4ea8078a00430350fcbe5",
+      "size_bytes": 2197
+    },
+    {
+      "device": 16777251,
+      "inode": 39881,
+      "mode": 33188,
+      "mtime_ns": 1791127701085687481,
+      "path": "/Volumes/CTestRecovery1004/full-MASTER-recovery-20261004-001/w26-candidate-only-dev1-20261004-001/transition-evidence/old-wheel-input.json",
+      "sha256": "e821c56d7b8a1e7c96c4c348af119ec77ef4990269adb4470848c7051028a1b3",
+      "size_bytes": 65181
+    },
+    {
+      "device": 16777251,
+      "inode": 39882,
+      "mode": 33188,
+      "mtime_ns": 1791127701086623980,
+      "path": "/Volumes/CTestRecovery1004/full-MASTER-recovery-20261004-001/w26-candidate-only-dev1-20261004-001/transition-evidence/candidate-wheel-input.json",
+      "sha256": "08c6cfa861cc82e95f7452edb4971e6404d34c2225a0fd8a40de09fdf5307b68",
+      "size_bytes": 78605
+    },
+    {
+      "device": 16777238,
+      "inode": 1937542,
+      "mode": 33216,
+      "mtime_ns": 1791115020070000000,
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/inputs/old-target-wheelhouse/comsol_mcp-0.1.9-py3-none-any.whl",
+      "sha256": "8511dbc550792fbe538646897c951649a49de668030e66bd9306868801b94e5d",
+      "size_bytes": 611307
+    },
+    {
+      "device": 16777238,
+      "inode": 1942049,
+      "mode": 33216,
+      "mtime_ns": 1791123077470000000,
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w26-real-build-current-20261004-001/inputs/candidate-only-dev1-target-wheelhouse/comsol_mcp-0.2.0.dev1-py3-none-any.whl",
+      "sha256": "db18a66f1a39a3e7a519ad88029093e68e2ae89d3632a04af6b8a13e71bfe3dc",
+      "size_bytes": 1120874
+    },
+    {
+      "device": 16777251,
+      "inode": 52703,
+      "mode": 33152,
+      "mtime_ns": 1791127716478403405,
+      "path": "/Volumes/CTestRecovery1004/full-MASTER-recovery-20261004-001/w26-candidate-only-dev1-20261004-001-guard/transition_check.stdout.bin",
+      "sha256": "d2853eabfb7d798b3bf138ce4d09b538f99f037157c75c41a3769a1dc3abdba3",
+      "size_bytes": 117724
+    },
+    {
+      "device": 16777251,
+      "inode": 52702,
+      "mode": 33188,
+      "mtime_ns": 1791127716467564913,
+      "path": "/Volumes/CTestRecovery1004/full-MASTER-recovery-20261004-001/w26-candidate-only-dev1-20261004-001/transition-result.json",
+      "sha256": "c47f591bbd9558e0b8fb14df46e7779f4112d3edeeecd21735b8431e09d83d14",
+      "size_bytes": 117724
+    },
+    {
+      "device": 16777251,
+      "inode": 52693,
+      "mode": 33188,
+      "mtime_ns": 1791127716195635859,
+      "path": "/Volumes/CTestRecovery1004/full-MASTER-recovery-20261004-001/w26-candidate-only-dev1-20261004-001/transition-evidence/lifecycle-017-rollback-candidate-only-cleanup.json",
+      "sha256": "03fa2a93b1af2bc6539129e441abf5cbab554a7e58bf9e73f536d9b8afacff90",
+      "size_bytes": 716
+    },
+    {
+      "device": 16777251,
+      "inode": 48760,
+      "mode": 33188,
+      "mtime_ns": 1791127712664643784,
+      "path": "/Volumes/CTestRecovery1004/full-MASTER-recovery-20261004-001/w26-candidate-only-dev1-20261004-001/transition-evidence/lifecycle-008-production-backup.json",
+      "sha256": "d5d77234e203c4353832ba76b5ca07df0ffd7ec4edfb20d39ca578e5ed52a552",
+      "size_bytes": 2548
+    },
+    {
+      "device": 16777251,
+      "inode": 48752,
+      "mode": 33152,
+      "mtime_ns": 1791127712653936167,
+      "path": "/Volumes/CTestRecovery1004/full-MASTER-recovery-20261004-001/w26-candidate-only-dev1-20261004-001/transition-evidence/before-candidate-open.sqlite3",
+      "sha256": "78a5d069960c249f048aa5b872f40bc2be821751aceab61b555a632121a451f0",
+      "size_bytes": 90112
+    },
+    {
+      "device": 16777251,
+      "inode": 48757,
+      "mode": 33152,
+      "mtime_ns": 1791127712656420540,
+      "path": "/Volumes/CTestRecovery1004/full-MASTER-recovery-20261004-001/w26-candidate-only-dev1-20261004-001/transition-evidence/before-candidate-open.sqlite3.manifest.json",
+      "sha256": "d342d271c7dd2ebae1d8545c5b0969c4ba75d92030d75867500f6432721bd86a",
+      "size_bytes": 1124
+    },
+    {
+      "device": 16777251,
+      "inode": 48766,
+      "mode": 33188,
+      "mtime_ns": 1791127712792931150,
+      "path": "/Volumes/CTestRecovery1004/full-MASTER-recovery-20261004-001/w26-candidate-only-dev1-20261004-001/transition-evidence/lifecycle-012-verify-backup-before-restore.json",
+      "sha256": "12c291e749a4e4c61a0076006d6dee1403d7676890a268de19a70c21d268746b",
+      "size_bytes": 3781
+    },
+    {
+      "device": 16777251,
+      "inode": 48788,
+      "mode": 33188,
+      "mtime_ns": 1791127712908012608,
+      "path": "/Volumes/CTestRecovery1004/full-MASTER-recovery-20261004-001/w26-candidate-only-dev1-20261004-001/transition-evidence/lifecycle-014-verify-backup-after-restore.json",
+      "sha256": "fce6bf9f8c565c1c582bc27e8327776fc7a7c5d07531007adf7ca2691c721e78",
+      "size_bytes": 3779
+    },
+    {
+      "device": 16777251,
+      "inode": 48787,
+      "mode": 33188,
+      "mtime_ns": 1791127712878045672,
+      "path": "/Volumes/CTestRecovery1004/full-MASTER-recovery-20261004-001/w26-candidate-only-dev1-20261004-001/transition-evidence/lifecycle-013-production-restore.json",
+      "sha256": "32be352215b3db7ad1c57eea39d609001b6a43e868a9adb2be7f9ca327165171",
+      "size_bytes": 1719
+    },
+    {
+      "device": 16777251,
+      "inode": 52701,
+      "mode": 33188,
+      "mtime_ns": 1791127716465295206,
+      "path": "/Volumes/CTestRecovery1004/full-MASTER-recovery-20261004-001/w26-candidate-only-dev1-20261004-001/transition-evidence/lifecycle-020-old-independent-reopen.json",
+      "sha256": "5914eea5cccf0977b420ae3ce0d536c22838aad8028d50082f3c5082b4bf5bf0",
+      "size_bytes": 11141
+    }
+  ],
+  "execution_context": {
+    "authorized_one_use_go_sha256": "b294c7ec001a03e98307eef7241c47374f43b726846113889791cb0a641e5f99",
+    "automatic_retry": false,
+    "git_head_recorded_in_plan_at_execution": "0b7563fe70f73bb1a0088f4ecb51134bee504c01",
+    "pre_post_current_refs": {
+      "count": 79,
+      "exact_rows_equal": true,
+      "interpreter_symlink_chain_and_resolved_target_verified": 1,
+      "mismatches": 0,
+      "regular_files_rehashed_with_o_nofollow": 78
+    },
+    "process_reaped": true,
+    "runner_exit_code": 0,
+    "runner_status": "TRANSITION_COMPLETED",
+    "stdout_and_transition_result_parsed_json_equal": true,
+    "stdout_sha256": "d2853eabfb7d798b3bf138ce4d09b538f99f037157c75c41a3769a1dc3abdba3",
+    "successful_session_id": 77493,
+    "timed_out": false,
+    "transition_exit_code": 0,
+    "transition_result_sha256": "c47f591bbd9558e0b8fb14df46e7779f4112d3edeeecd21735b8431e09d83d14"
+  },
+  "limits": {
+    "arbitrary_crash_or_power_loss": "NOT_EXERCISED; lifecycle exercised only a bounded injected exit-73 failure",
+    "backup_excludes_referenced_model_and_artifact_files": true,
+    "native_jvm_science_and_platform_matrix": "NOT_RUN",
+    "network_boundary": "outer metadata/control supervisor remains uncontained so it can bind parent 127.0.0.1 negative control; actual helper child trees use existing deny-network profiles with negative control; no all-helper containment claim",
+    "old_dependency_provenance": "UNVERIFIED",
+    "one_machine_offline_synthetic_fixture_only": true,
+    "real_user_data": "NOT_USED",
+    "release_acceptance": "NOT_RUN"
+  },
+  "package_transition": {
+    "bootstrap_inventory": [
+      {
+        "name": "pip",
+        "version": "26.1"
+      }
+    ],
+    "candidate_lock_count": 35,
+    "candidate_lock_delta_from_old": [
+      "wheel"
+    ],
+    "candidate_version": "0.2.0.dev1",
+    "candidate_wheel_sha256": "db18a66f1a39a3e7a519ad88029093e68e2ae89d3632a04af6b8a13e71bfe3dc",
+    "lock_counts": [
+      34,
+      35,
+      34
+    ],
+    "old_lock_count": 34,
+    "old_version": "0.1.9",
+    "old_wheel_sha256": "8511dbc550792fbe538646897c951649a49de668030e66bd9306868801b94e5d",
+    "raw_distribution_counts": [
+      35,
+      36,
+      35
+    ],
+    "restored_version": "0.1.9",
+    "target": "disposable macOS ARM64 CPython 3.12.13 offline wheel transition fixture",
+    "wheel_present_by_state": [
+      false,
+      true,
+      false
+    ]
+  },
+  "review_mode": "read_only_independent_actual_output_review",
+  "reviewed_at_utc": "2026-10-04 15:51:31 UTC",
+  "reviewer_checker_failures": [
+    {
+      "classification": "REVIEWER_ASSERTION_ERROR_NOT_RUNTIME_FAILURE",
+      "issue": "Initial set comparison mistakenly expected wheel above candidate35. Current locks show candidate35 is exactly old34 plus wheel; corrected check uses that exact delta."
+    },
+    {
+      "classification": "REVIEWER_ASSERTION_ERROR_NOT_RUNTIME_FAILURE",
+      "issue": "Initial argv check compared a four-element slice with a three-element expected suffix. Corrected check compares the exact five-element suffix -m pip uninstall --yes wheel."
+    },
+    {
+      "classification": "REVIEWER_ASSERTION_ERROR_NOT_RUNTIME_FAILURE",
+      "issue": "Initial byte comparison assumed transition stdout and transition-result.json were byte-identical. Their key ordering and SHA-256 values differ, but independently parsed JSON objects are equal; corrected check parses and binds both separately."
+    },
+    {
+      "classification": "REVIEWER_ASSERTION_ERROR_NOT_RUNTIME_FAILURE",
+      "issue": "Initial check treated readback.prelaunch_refusal_preserved as a boolean; it is a full reference object. Corrected check compares it with the preserved prelaunch refusal fullref."
+    },
+    {
+      "classification": "REVIEWER_ASSERTION_ERROR_NOT_RUNTIME_FAILURE",
+      "issue": "One scripted lock-set check overescaped its whitespace pattern in the checker. Replaced it with direct stripped-line lock parsing; the verified counts are 34 and 35, differing only by wheel."
+    }
+  ],
+  "reviewer_modified_candidate_or_source": false,
+  "reviewer_reran_runtime": false,
+  "schema": "W26_CANDIDATE_ONLY_CLEANUP_INDEPENDENT_REVIEW/1",
+  "synthetic_data_lifecycle": {
+    "backup_bytes": 90112,
+    "backup_bytes_and_legacy_data_hash_verified_before_and_after_restore": true,
+    "backup_scope": "control SQLite ledger only; referenced model/artifact files are not included",
+    "backup_sha256": "78a5d069960c249f048aa5b872f40bc2be821751aceab61b555a632121a451f0",
+    "old_data_reopen_and_idempotency_controls_pass": true,
+    "production_restore_success": true,
+    "restore_semantics": "Production restore migrates a verified backup copy; backup artifact stayed hash-identical while restored home uses an evolved schema.",
+    "restored_home_bytes_equal_backup": false,
+    "restored_home_schema_equal_backup": false,
+    "schema_version_equal": true,
+    "seed_sha256": "4871c3d77ff889761f5affe536cab5e1321f173a063b402fd10229cfe6e374c1",
+    "status": "PASS_DISPOSABLE_CODE_DATA_LIFECYCLE",
+    "synthetic_home": "/Volumes/CTestRecovery1004/full-MASTER-recovery-20261004-001/w26-candidate-only-dev1-20261004-001/synthetic-control-home"
+  },
+  "verdict": "PASS_SCOPED_ACTUAL_NONEMPTY_CANDIDATE_CLEANUP_AND_ROLLBACK",
+  "verification_checks": {
+    "79_bound_rows_equal": true,
+    "79_current_files_rehashed": true,
+    "actual_cleanup_exactly_wheel": true,
+    "cleanup_record_and_order": true,
+    "exact_lock_delta": true,
+    "execution_readback_matches_cleanup": true,
+    "go_prep_failure_preserved": true,
+    "handoff_is_pinned": true,
+    "handoff_readback_runner_refs_agree": true,
+    "handoff_reports_scoped_pass": true,
+    "manifests_and_app_wheels_match": true,
+    "old_candidate_old_state_counts": true,
+    "old_data_reopen_and_boundaries": true,
+    "old_full_fingerprints_equal": true,
+    "one_completed_reaped_transition": true,
+    "only_pip_bootstrap_and_wheel_candidate_only": true,
+    "prelaunch_refusal_preserved": true,
+    "readback_is_pinned": true,
+    "root_readback_was_pending_review": true,
+    "single_use_go_refs_agree": true,
+    "stdout_and_result_json_agree": true,
+    "stdout_result_refs_separately_pinned": true,
+    "synthetic_backup_and_restore": true,
+    "tool_record_is_pinned": true,
+    "tool_result_and_request_refs_agree": true
+  }
+}
