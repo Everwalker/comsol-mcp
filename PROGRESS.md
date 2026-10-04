@@ -1,3 +1,19 @@
+# COMSOL MCP full-project progress — current update 2026-10-04T08:49:49.298318+00:00 (canonical049)
+
+**Current recovery state (2026-10-04T08:49:49.298318+00:00; canonical049).** MASTER remains ACTIVE_INCOMPLETE: 26 work packages, 272 actions, 60 test families, 360 target cells, zero acceptance cells changed; release remains NOT_SELECTED. Source207 remains content-identity-only at 207 members with fingerprint f6b596c14898df2d5ac3af412106d24e3fd7933438a954f401d7cf84b2a1c26e; source006 inode/runtime provenance is not restored and R is NOT_PROMOTED.
+
+Wire V4 received fresh independent runtime review PASS_SCOPED_WIRE_RUNTIME and Root ACCEPT_ACTUAL_WIRE_V4_SYNTHETIC_STDIO_PROTOCOL_ONLY. The bounded synthetic actual-stdio capture exited 0 across 13 cases; observed tools/list is one complete page of 112 names, the synthetic business cursor spans two pages, and post-terminal revalidation passed. The frozen-input binding has 44 reference occurrences over 43 unique paths because the expected registry is intentionally listed twice; the independent reviewer checked the full multiset. Multipage tools/list, original-50 compatibility, 28-schema deltas, T037, native, science and product acceptance remain open.
+
+D2 042 remains accepted 89/89 PASS on its fingerprint. D2 043 remains FAIL_PRESERVED at 758 pass / 6 fail, with the recorded test-selector suffix collision. D2 source044 was accepted as a one-file test-helper-only successor at fingerprint 86d2ee29f4e823891d5ef1d0c6f2805bb03c321b011ad0452d63c15cda47360b; its 89 and 764 runs were not executed. The later D2 044 launch is FAIL_PRECOLLECTION_PRESERVED (exit 90, zero tests collected): ROOT_D2_STATIC_PARAMETERIZATION_ORACLE007.json was absent, as were scope010 and exact740 local copies, and three planned newroot controls were omitted. D2 executor045 is preparation-only on the same source fingerprint; no retry or runtime GO is authorized.
+
+R23 remains static-only at candidate fingerprint baaf86abebfdfcc3a3c093c3177dd5872109b6edc1c42fd34bda7bc0b7f82864 with independent static READY_FOR_GUARDED_SOFTWARE_TESTS; R23 runtime remains NOT_RUN. The bounded Wire V4 package has a path-scanned seven-file public candidate subset; full binding, manifest and review receipts remain local-only. The exact 15-path allowlist is prepared for Root review. No commit or push was made.
+
+G01’s approved 11 commits covering 49 text paths are synchronized to main at 3cfc24502b184ac9b0d8299be5142425ed18d604. Current R209 has nine preserved W23/W24 files differing from source044 and requires its own freeze and tests.
+
+**Next:** Publish the reviewed 15-path Wire V4 stage through the standing non-force main flow. Finish controller045 admission on unchanged source044, then run fresh focused89 and required764. Separately freeze current R209 with its nine preserved W23/W24 differences, run its required regression, and continue T038 compatibility/profile/fallback and W26 source-external build/install/rollback. This checkpoint grants no runtime, native, GUI or SCP action; required tests and full acceptance remain open. Canonical048 and its full history are preserved below.
+
+---
+
 # COMSOL MCP full-project progress — current update 2026-10-04T05:30:01Z (canonical048)
 
 **Current recovery state (2026-10-04T05:30:01Z; canonical048).** MASTER remains `ACTIVE_INCOMPLETE`: 26 work packages, 272 actions, 60 test families and 360 target cells remain unchanged; zero acceptance cells changed, and release remains `NOT_SELECTED`. Canonical047 stays intact below as historical state.

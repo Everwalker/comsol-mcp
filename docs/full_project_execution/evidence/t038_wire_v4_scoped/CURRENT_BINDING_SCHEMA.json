@@ -1,0 +1,282 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.invalid/T038_CURRENT_BINDING_V1",
+  "title": "T038 current source and runtime binding",
+  "type": "object",
+  "required": [
+    "schema",
+    "source",
+    "runtime",
+    "expected_registry",
+    "source_selection",
+    "runtime_path_readback",
+    "environment_readback",
+    "fixed_environment",
+    "sdk_files",
+    "entrypoint",
+    "gateway",
+    "harness_root",
+    "output_parent",
+    "harness_files"
+  ],
+  "properties": {
+    "schema": {
+      "const": "T038_CURRENT_BINDING_V1"
+    },
+    "source": {
+      "type": "object",
+      "required": [
+        "schema",
+        "root",
+        "fingerprint",
+        "members"
+      ],
+      "properties": {
+        "schema": {
+          "const": "T038_SOURCE_MEMBERS_V1"
+        },
+        "root": {
+          "type": "string",
+          "minLength": 1
+        },
+        "fingerprint": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "members": {
+          "type": "array",
+          "minItems": 207,
+          "maxItems": 207,
+          "items": {
+            "type": "object",
+            "required": [
+              "relative_path",
+              "size_bytes",
+              "sha256"
+            ],
+            "properties": {
+              "relative_path": {
+                "type": "string",
+                "minLength": 1
+              },
+              "size_bytes": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "runtime": {
+      "type": "object",
+      "required": [
+        "executable",
+        "python_version",
+        "prefix",
+        "base_prefix",
+        "sys_path",
+        "site_packages",
+        "distributions"
+      ],
+      "properties": {
+        "executable": {
+          "type": "string",
+          "minLength": 1
+        },
+        "python_version": {
+          "const": "3.12.13"
+        },
+        "prefix": {
+          "type": "string",
+          "minLength": 1
+        },
+        "base_prefix": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sys_path": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "site_packages": {
+          "type": "string",
+          "minLength": 1
+        },
+        "distributions": {
+          "type": "object",
+          "required": [
+            "mcp",
+            "anyio",
+            "jsonschema"
+          ],
+          "properties": {
+            "mcp": {
+              "const": "1.30.0"
+            },
+            "anyio": {
+              "const": "4.15.1"
+            },
+            "jsonschema": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "expected_registry": {
+      "$ref": "#/$defs/file"
+    },
+    "source_selection": {
+      "$ref": "#/$defs/file"
+    },
+    "runtime_path_readback": {
+      "$ref": "#/$defs/file"
+    },
+    "environment_readback": {
+      "$ref": "#/$defs/file"
+    },
+    "sdk_files": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/file"
+      }
+    },
+    "entrypoint": {
+      "$ref": "#/$defs/file"
+    },
+    "gateway": {
+      "$ref": "#/$defs/file"
+    },
+    "harness_root": {
+      "type": "string",
+      "minLength": 1
+    },
+    "output_parent": {
+      "$ref": "#/$defs/directory"
+    },
+    "fixed_environment": {
+      "type": "object",
+      "required": [
+        "COMSOL_MCP_TOOL_PROFILE",
+        "LC_CTYPE",
+        "PATH",
+        "PYTEST_DISABLE_PLUGIN_AUTOLOAD",
+        "PYTHONDONTWRITEBYTECODE",
+        "PYTHONNOUSERSITE",
+        "PYTHONUTF8"
+      ],
+      "properties": {
+        "PATH": {
+          "type": "string",
+          "minLength": 1
+        },
+        "COMSOL_MCP_TOOL_PROFILE": {
+          "const": "full"
+        },
+        "PYTHONDONTWRITEBYTECODE": {
+          "const": "1"
+        },
+        "PYTHONNOUSERSITE": {
+          "const": "1"
+        },
+        "PYTHONUTF8": {
+          "const": "1"
+        },
+        "PYTEST_DISABLE_PLUGIN_AUTOLOAD": {
+          "const": "1"
+        },
+        "LC_CTYPE": {
+          "const": "C.UTF-8"
+        }
+      },
+      "additionalProperties": false
+    },
+    "runtime_files": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/file"
+      }
+    },
+    "harness_files": {
+      "type": "array",
+      "minItems": 4,
+      "items": {
+        "$ref": "#/$defs/file"
+      }
+    },
+    "provenance": {
+      "type": "object"
+    }
+  },
+  "$defs": {
+    "file": {
+      "type": "object",
+      "required": [
+        "path",
+        "size_bytes",
+        "sha256"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "directory": {
+      "type": "object",
+      "required": [
+        "path",
+        "device",
+        "inode",
+        "mode"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "device": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "inode": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "mode": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

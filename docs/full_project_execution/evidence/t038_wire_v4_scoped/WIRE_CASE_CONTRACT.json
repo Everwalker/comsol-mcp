@@ -1,0 +1,31 @@
+{
+  "schema": "T038_WIRE_CASE_CONTRACT_V2",
+  "scope": "local MCP stdio software protocol with synthetic business dispatch only",
+  "limits": {"wall_seconds_max": 180, "request_bytes_max": 1048576, "response_bytes_max": 4194304, "tools_list_page_limit": 8},
+  "preconditions": [
+    "one completed source-bound G01 metadata observer record tied to the exact current binding",
+    "separate Root one-use runtime decision and independent review of frozen executable scripts and finite guard policy",
+    "fresh attempt directory and COMSOL_SERVER_MCP_HOME under the task-owned output root",
+    "Python 3.12.13, MCP 1.30.0, AnyIO 4.15.1, full public profile"
+  ],
+  "cases": [
+    {"id": "initialize_and_session", "input": "real JSON-RPC initialize request with integer id; notifications/initialized; subsequent string ids", "check": "negotiated session stays usable across list, calls, malformed input, and ping"},
+    {"id": "tools_list", "input": "actual tools/list through production main and installed SDK; follow actual nextCursor values up to the 8-page cap", "check": "aggregate every received page before lookup or equality; detect duplicate tool names and cursors; compare the complete 112-row aggregate with the accepted G01 observer schemas only after no nextCursor remains"},
+    {"id": "tools_list_cursor", "input": "tools/list request with explicit cursor probe, then follow each actual nextCursor value up to 8 total pages", "check": "record actual advertised/accepted behavior; if a cursor remains at the cap, preserve OPEN/incomplete status and do not claim complete G01 equality or whole-wire PASS; retain multipage OPEN when unsupported"},
+    {"id": "call_success", "input": "server_info with synthetic execution marker", "synthetic": "success envelope", "check": "structuredContent preserved and isError false"},
+    {"id": "call_refusal", "input": "server_info with synthetic execution marker", "synthetic": "explicit refusal envelope", "check": "structuredContent preserves refusal and isError true"},
+    {"id": "call_unknown_or_cleanup", "input": "server_info with synthetic execution marker", "synthetic": "success true plus execution_state_unknown true and cleanup_failed true", "check": "isError true despite success flag"},
+    {"id": "call_partial", "input": "server_info with synthetic execution marker", "synthetic": "failure envelope with partial data/applied/not_executed", "check": "partial data retained; not represented as full success"},
+    {"id": "call_malformed_backend", "input": "server_info with synthetic execution marker", "synthetic": "malformed JSON string", "check": "generic invalid-backend error and isError true"},
+    {"id": "call_exception_redaction", "input": "server_info with synthetic execution marker", "synthetic": "raise RuntimeError containing fixed sentinel", "check": "wire, stderr and actual file logs do not contain the sentinel; isError true"},
+    {"id": "missing_required", "input": "after aggregating actual tools/list pages, choose a returned tool with at least one required input and omit it", "synthetic": "none expected", "check": "isError true and dispatcher call count unchanged; if an incomplete capped list contains no required-input tool, record NOT_RUN and retain OPEN/incomplete status"},
+    {"id": "extra_top_level", "input": "server_info with one unexpected top-level key", "synthetic": "observe if SDK/model rejects or ignores; do not assume", "check": "accept only actual reject-before-dispatch with count 0 and an error, or ignored-extra dispatch with count 1 and a successful response; retain the actual response and count"},
+    {"id": "null_arguments", "input": "server_info tools/call arguments null", "synthetic": "observe actual behavior", "check": "record response and whether dispatch occurred"},
+    {"id": "nested_invalid", "input": "experiment_stage_define with a version-2 definition whose nested stage has an unknown key and omits required fields", "synthetic": "none expected", "check": "actual FastMCP input-schema validation error and dispatcher count unchanged; no control dispatcher invocation"},
+    {"id": "unknown_tool", "input": "tools/call for a name absent from G01 tool list", "synthetic": "none expected", "check": "actual SDK error response and dispatcher count unchanged"},
+    {"id": "malformed_json_frame", "input": "one literal non-JSON line followed by a ping request", "synthetic": "none expected", "check": "preserve every output/notification; ping proves session continuation; no non-JSON stdout"},
+    {"id": "business_cursor", "input": "registry_list limit 1 with cursor empty, then repeat using the exact returned next_cursor", "synthetic": "two deterministic synthetic pages", "check": "cursor and structured page data survive transport across two pages; transport-only evidence"},
+    {"id": "eof_and_owned_shutdown", "input": "close the sole child stdin after finite cases", "synthetic": "none", "check": "actual SDK returns on EOF; capture loop/socket/thread join state, child PID/SID/exit/reap; retain partial evidence on failures"}
+  ],
+  "explicitly_open": ["MCP tools/list multi-page pagination when no nextCursor is advertised or page following is incomplete", "six original OS/COMSOL target combinations", "T037 OS-level isolation", "COMSOL/JVM/native, GUI, provider, or scientific acceptance", "original 26 WPs / 272 actions / 60x6 completion"]
+}

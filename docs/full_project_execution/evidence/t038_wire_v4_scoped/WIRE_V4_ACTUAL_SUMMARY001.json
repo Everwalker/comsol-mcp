@@ -1,0 +1,70 @@
+{
+  "schema": "T038_WIRE_V4_ACTUAL_SUMMARY001/1",
+  "created_utc": "2026-10-04T08:39:56Z",
+  "status": "ACCEPTED_SCOPED_WIRE_V4_SYNTHETIC_STDIO_ONLY",
+  "candidate": {
+    "source_fingerprint": "f6b596c14898df2d5ac3af412106d24e3fd7933438a954f401d7cf84b2a1c26e",
+    "source_members": 207,
+    "frozen_manifest_sha256": "03596d2651e4ccc49b6956cbfb1fb69ece5a969d3b03d2585a7f327f83f4da46",
+    "current_binding_sha256": "1fb74b977675f629f4884f4d36be5d897f12e64733d457f3ea4a874df000a9a2",
+    "static_review": "READY_SCOPED_STATIC",
+    "runtime_review": "PASS_SCOPED_WIRE_RUNTIME",
+    "root_acceptance": "ACCEPT_ACTUAL_WIRE_V4_SYNTHETIC_STDIO_PROTOCOL_ONLY"
+  },
+  "actual_run": {
+    "launch_exit_code": 0,
+    "parent_status": "PASS_WIRE_PARENT_CAPTURE",
+    "elapsed_seconds": 1.234489,
+    "synthetic_wire_cases": 13,
+    "all_parent_checks_true": true,
+    "tools_list": {
+      "expected": 112,
+      "observed": 112,
+      "complete": true,
+      "matches_g01": true,
+      "observed_pages": 1,
+      "pagination_status": "OPEN_NOT_ADVERTISED_SINGLE_PAGE_COMPLETE"
+    },
+    "business_cursor_pages": 2,
+    "extra_top_level_field": "IGNORED_AND_DISPATCHED",
+    "extra_top_level_dispatch_count": 1,
+    "child": {
+      "returncode": 0,
+      "reaped": true,
+      "stdout_eof": true,
+      "stderr_eof": true
+    },
+    "finalization_status": "PASS_WIRE_POST_TERMINAL_REVALIDATION",
+    "finalization_inputs_unchanged": true,
+    "finalization_directories_stable": true,
+    "source_fingerprint_after": "f6b596c14898df2d5ac3af412106d24e3fd7933438a954f401d7cf84b2a1c26e",
+    "source_members_after": 207,
+    "fixed_input_reference_occurrences": 44,
+    "unique_fixed_input_paths": 43,
+    "duplicate_reference": "CURRENT_STATIC_EXPECTED_REGISTRY_T038.json is deliberately referenced twice; fresh independent reviewer verified the full 44-occurrence multiset."
+  },
+  "scope_limits": {
+    "synthetic_business_actual_stdio_only": true,
+    "tools_list_was_one_page": true,
+    "multipage_tools_list": "OPEN",
+    "original_50_compatibility": "OPEN",
+    "28_schema_delta": "OPEN",
+    "T037": "OPEN",
+    "native_and_scientific_acceptance": "OPEN",
+    "product_acceptance": "NOT_CLAIMED"
+  },
+  "source_result_refs": {
+    "parent_result": {
+      "evidence_alias": "T038_OUTPUT/wire-parent-result.json",
+      "sha256": "e1efb2eed2864315a4166cb35ed584834f47e2692a4980ad4a404d2fbbfb41e7",
+      "size_bytes": 305555
+    },
+    "post_terminal_revalidation": {
+      "evidence_alias": "T038_OUTPUT/wire-finalization-revalidation.json",
+      "sha256": "c8c48a873745aa104f2b57038acbfb747de768db18d7ef845ec020842b20e76e",
+      "size_bytes": 100054
+    },
+    "runtime_review_sha256": "4a15200d2580bfb1d96fde6fbb020a750d6ab63c28df4abaa6c8cc68bb3ef44a",
+    "root_acceptance_sha256": "10270dae0a6273bafecbf47abd9a1da400366332158a5962dc0b6b15dd621f51"
+  }
+}
