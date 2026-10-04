@@ -10,7 +10,21 @@
 这个项目的目标不是把 COMSOL 当成黑盒批处理器，而是让自动化过程保持可见：
 你可以在 Desktop 中实时观察 MCP 对几何、参数、网格、求解和保存流程的修改。
 
-## 当前实现状态（2026-09-24，G3.8 / W20 验收完成）
+## 当前执行状态（2026-10-04，Full MASTER W01–W26）
+
+> Full MASTER 仍在推进，原始 W01–W26 范围保持不变。以下是不同冻结候选的有界软件结果，不合并为全项目验收。
+
+- **Python 软件回归**：D2 与 current-R 两个独立 source-bound 测试范围分别通过 764/764；它们是分开的候选结果。
+- **结构 JVM 检查**：R048 接受了两个结构 harness 测试；OS 级进程隔离仍为 `NOT_PROVEN`，W23 为 `COMPILE_ONLY`。
+- **Release helper**：64 个聚焦测试全部通过（0 failures/errors/skips）。其中 candidate-only 清理断言仅由 mock 验证；四个 helper 源码/测试文件已通过独立审查及主 Agent 验收；默认模式的 8 个既有回退回归也已通过（mock 软件测试）。
+- **W26 transition**：有界单机合成数据 `0.1.9 → 0.2.0.dev1 → 0.1.9` 转换获接受，独立检查 18/18；未使用真实用户数据，另一次真实非空 candidate-only 卸载已实际通过，独立审查待完成。
+- **Loopback7**：最新实际子进程通过 7/7（0 failures/errors/skips），套接字均已关闭、辅助线程均已结束；独立运行时审查和主 Agent 验收已通过。原始工具回执确认 exit 0，与子进程及 supervisor PASS 一致。此前失败记录保留；本结果仅覆盖合成回环软件测试。
+- Full-project、native、science 和 platform-matrix acceptance 均为 `NOT_ACCEPTED`；final release 为 `NOT_SELECTED`。`pyproject.toml` 目前只有 Microsoft Windows operating-system classifier，这是尚未解决的发布元数据缺口。
+- Full profile 的 operation 清单通过 `registry_manifest(profile="full")` 动态发现；本 README 不固定工具数量。
+
+当前目标和证据入口：[MASTER_GOAL](docs/full_project_execution/MASTER_GOAL.md)、[PROGRESS](PROGRESS.md)、[cutoff056 checkpoint](docs/full_project_execution/w24/PROCESS_INVENTORY_PRIVACY_SOFTWARE_CHECKPOINT.json)、[R048 structural JVM acceptance](docs/full_project_execution/project_session/R048_STRUCTURAL_JVM_SOFTWARE_ACCEPTANCE001.json) 和 [stage-backend checkpoint](docs/full_project_execution/project_session/STAGE_BACKEND_SOFTWARE_CHECKPOINT.json)。
+
+## 历史验收快照（2026-09-24，G3.8 / W20）
 
 > 本节反映 G3.8（W20: 物理与数值验证套件，覆盖 COMSOL 6.3 与 6.4 Windows 原生双版本实机验收）的实机 live 验收状态。
 > 权威验收判定为 **PASS**，状态标识为 `EVIDENCE_STRUCTURE_AND_HASHES_OK_NOT_NATIVE_CERTIFICATION`（全量 44 项用例全部 PASS，0 errors，0 pending），严格停止于 W20，未进入 W21。
@@ -60,7 +74,7 @@
 - 支持 visible-main 主模型锁，避免误切换或误保存模型
 - 支持参数设置、表达式求值、几何特征创建/更新/删除、物理场、变量、求解器配置和研究运行
 - 支持主模型快照、当前模型保存、异步加载大型 `.mph`
-- 公开工具接口稳定；默认 full profile 当前注册 **112 个 MCP 工具**；可执行领域 operations 由 `registry_manifest(profile="full")` 动态列出。
+- 公开工具接口稳定；可执行领域 operations 由 `registry_manifest(profile="full")` 动态列出，数量以当前运行时清单为准。
 
 ## 适用场景
 
@@ -337,7 +351,21 @@ The goal is visible automation. Instead of treating COMSOL as a black-box
 batch runner, this server lets you watch geometry, parameters, mesh, solve
 steps, and saved snapshots evolve in COMSOL Desktop.
 
-### Current implementation status (2026-09-23, G3.5 completed)
+### Current execution status (2026-10-04, Full MASTER W01–W26)
+
+> Full MASTER remains active. The results below are separate bounded software scopes and do not establish full-project acceptance.
+
+- **Python:** the D2 and current-R source-bound suites each passed 764/764 in separate candidate runs.
+- **Structural JVM:** R048 accepted two harness tests; OS-level containment is `NOT_PROVEN`, and W23 was `COMPILE_ONLY`.
+- **Release helper:** all 64 focused cases passed; candidate-only cleanup assertions were mock-only, and the four helper source/test files passed independent review and Root acceptance; the eight existing default-mode rollback regressions also passed (mocked software tests).
+- **W26 transition:** the bounded same-machine synthetic-data `0.1.9 → 0.2.0.dev1 → 0.1.9` transition was accepted with 18/18 independent checks. Real user data was not exercised. A separate actual nonempty candidate-only uninstall passed; independent review is pending.
+- **Loopback7:** the latest actual child passed 7/7 (0 failures/errors/skips), with all sockets closed and helper threads joined; independent runtime review and Root acceptance passed. The original tool receipt confirms exit 0, consistent with the child and supervisor PASS. Earlier failures are preserved. This covers synthetic loopback software only.
+- Full-project, native, science, and platform-matrix acceptance remain `NOT_ACCEPTED`; final release remains `NOT_SELECTED`. The current `pyproject.toml` lists only the Microsoft Windows OS classifier, an unresolved packaging metadata gap.
+- The current full-profile operation list is obtained at runtime with `registry_manifest(profile="full")`; no fixed tool count is stated here.
+
+See [MASTER_GOAL](docs/full_project_execution/MASTER_GOAL.md), [PROGRESS](PROGRESS.md), the [cutoff056 checkpoint](docs/full_project_execution/w24/PROCESS_INVENTORY_PRIVACY_SOFTWARE_CHECKPOINT.json), [R048 structural JVM acceptance](docs/full_project_execution/project_session/R048_STRUCTURAL_JVM_SOFTWARE_ACCEPTANCE001.json), and the [stage-backend checkpoint](docs/full_project_execution/project_session/STAGE_BACKEND_SOFTWARE_CHECKPOINT.json) for the canonical scope and evidence.
+
+### Historical implementation snapshot (2026-09-23, G3.5)
 
 > This section reflects the completed verification status of G3.5 (Gate A fixes G01–G12 + W19 job directory, queued/running cancellation, recovery, and concurrency control J01–J10).
 > Authoritative acceptance verdict is **PASS** (`G3_5_MAC_W19_VERIFIED_SCOPED`), stopped strictly at W19 without advancing to W20–W26.

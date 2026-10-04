@@ -6,6 +6,7 @@ import io
 import json
 import os
 import pathlib
+import struct
 import sys
 import types
 import zipfile
@@ -58,6 +59,132 @@ def make_build_evidence(path: pathlib.Path, wheel: pathlib.Path, *, version: str
         "source_manifest_sha256": source_hash, "source_file_count": 1,
         "wheel_metadata": {"name": "comsol-mcp", "version": version},
     }), encoding="utf-8")
+
+
+def make_appledouble(peer: pathlib.Path, *, zero_length: bool = False) -> pathlib.Path:
+    # Descriptor shape from a read-only actual exFAT sample: Finder Info at
+    # 50/3760 and resource fork at3810. Also exercise legal zero-length EOF.
+    resource_size = 0 if zero_length else 286
+    sidecar = peer.with_name("._" + peer.name)
+    sidecar.write_bytes(struct.pack(">II16sHIIIIII", 0x00051607, 0x00020000,
+                                   b"Mac OS X        ", 2, 9, 50, 3760,
+                                   2, 3810, resource_size) + bytes(3760 + resource_size))
+    return sidecar
+
+
+@pytest.mark.parametrize("zero_length", [False, True])
+def test_flat_wheel_inventory_records_valid_metadata_and_keeps_general_audit_strict(tmp_path, zero_length):
+    house = tmp_path / "wheelhouse"
+    wheel = house / "demo_pkg-1.0-py3-none-any.whl"
+    make_wheel(wheel)
+    sidecar = make_appledouble(wheel, zero_length=zero_length)
+    wheels, metadata = release.flat_wheel_inventory(house)
+    assert wheels == [wheel]
+    assert metadata[0]["path"] == sidecar.name
+    assert metadata[0]["sha256"] == release.sha256_file(sidecar)
+    assert metadata[0]["peer_sha256"] == release.sha256_file(wheel)
+    assert metadata[0]["header"]["entry_count"] == 2
+    if zero_length:
+        assert metadata[0]["entries"][1] == {"id": 2, "offset": sidecar.stat().st_size, "length": 0}
+    assert release.audit_wheelhouse(house, wheels)["status"] == "PASS"
+    assert any(r["kind"] == "APPLEDOUBLE_SIDECAR" for r in release.audit_tree(house)["findings"])
+
+
+@pytest.mark.parametrize("defect", ["magic", "version", "header", "table", "offset-header", "offset-past", "length-past",
+                                   "data-fork", "zero-id", "duplicate", "overlap", "orphan", "sidecar-link", "peer-link", "peer-size", "directory", "unexpected"])
+def test_flat_wheel_inventory_rejects_invalid_metadata_and_nonflat_inputs(tmp_path, monkeypatch, defect):
+    house = tmp_path / "wheelhouse"
+    wheel = house / "demo_pkg-1.0-py3-none-any.whl"
+    make_wheel(wheel)
+    sidecar = make_appledouble(wheel)
+    data = bytearray(sidecar.read_bytes())
+    if defect in {"magic", "version"}:
+        struct.pack_into(">I", data, 0 if defect == "magic" else 4, 0)
+    elif defect == "header": data = data[:25]
+    elif defect == "table": data = data[:37]
+    elif defect in {"offset-header", "offset-past", "length-past"}:
+        struct.pack_into(">I", data, 34 if defect == "length-past" else 30,
+                         1 if defect == "offset-header" else len(data) + 1)
+    elif defect in {"data-fork", "zero-id"}: struct.pack_into(">I", data, 26, 1 if defect == "data-fork" else 0)
+    elif defect in {"duplicate", "overlap"}:
+        data = bytearray(struct.pack(">II16sHIIIIII", 0x00051607, 0x00020000, b"\0"*16, 2,
+                                    9, 50, 4, 9 if defect == "duplicate" else 2, 52, 2) + b"four")
+    sidecar.write_bytes(data)
+    if defect == "orphan": wheel.unlink()
+    elif defect == "sidecar-link":
+        other = tmp_path / "metadata"; other.write_bytes(data); sidecar.unlink(); sidecar.symlink_to(other)
+    elif defect == "peer-link":
+        other = tmp_path / "wheel"; other.write_bytes(wheel.read_bytes()); wheel.unlink(); wheel.symlink_to(other)
+    elif defect == "peer-size":
+        monkeypatch.setattr(release, "MAX_FILE_BYTES", 128 * 1024)
+        with wheel.open("r+b") as f: f.truncate(128 * 1024 + 1)
+    elif defect == "directory": (house / "nested").mkdir()
+    elif defect == "unexpected": (house / "other.txt").write_text("not wheel metadata")
+    with pytest.raises(release.ReleaseError): release.flat_wheel_inventory(house)
+
+
+def test_valid_sidecar_does_not_hide_corrupt_real_wheel(tmp_path):
+    house = tmp_path / "wheelhouse"; house.mkdir()
+    wheel = house / "demo_pkg-1.0-py3-none-any.whl"; wheel.write_bytes(b"not a ZIP")
+    make_appledouble(wheel)
+    lock = tmp_path / "requirements.lock"; lock.write_text(f"demo-pkg==1.0 --hash=sha256:{release.sha256_file(wheel)}\n")
+    with pytest.raises(release.ReleaseError, match="INVALID_ZIP"):
+        release.create_bundle_manifest(house, "win_amd64", lock, None, tmp_path / "metadata")
+
+
+def test_wheelhouse_exception_does_not_allow_sidecars_inside_real_wheel(tmp_path):
+    house = tmp_path / "wheelhouse"; wheel = house / "demo_pkg-1.0-py3-none-any.whl"
+    sha = make_wheel(wheel, extra=("demo_pkg/._hidden.txt", b"metadata"))
+    make_appledouble(wheel)
+    lock = tmp_path / "requirements.lock"; lock.write_text(f"demo-pkg==1.0 --hash=sha256:{sha}\n")
+    with pytest.raises(release.ReleaseError, match="APPLEDOUBLE_SIDECAR"):
+        release.create_bundle_manifest(house, "win_amd64", lock, None, tmp_path / "metadata")
+
+
+@pytest.mark.parametrize("sidecar_change", ["removed", "added", "changed"])
+def test_offline_bundle_replays_portable_identity_without_sidecar_equality(tmp_path, sidecar_change):
+    house = tmp_path / "wheelhouse"; wheel = house / "comsol_mcp-0.1.9-py3-none-any.whl"
+    sha = make_wheel(wheel, name="comsol-mcp", version="0.1.9")
+    lock = tmp_path / "requirements.lock"; lock.write_text(f"comsol-mcp==0.1.9 --hash=sha256:{sha}\n")
+    source_lock = tmp_path / "uv.lock"; source_lock.write_text("version = 1\n")
+    if sidecar_change != "added": make_appledouble(wheel)
+    metadata = tmp_path / "metadata"; release.create_bundle_manifest(house, "win_amd64", lock, source_lock, metadata)
+    if sidecar_change == "removed": wheel.with_name("._" + wheel.name).unlink()
+    else: make_appledouble(wheel, zero_length=True)
+    build = tmp_path / "build"; make_build_evidence(build, wheel)
+    tool = tmp_path / "full_project_release.py"; tool.write_text("# fixture tool\n")
+    operations = tmp_path / "RELEASE_OPERATIONS.md"; operations.write_text("offline operations\n")
+    archive = tmp_path / "bundle.zip"
+    result = release.package_wheelhouse_bundle(house, lock, source_lock, metadata, operations, "win_amd64", archive, tmp_path / "evidence", build, tool)
+    assert result["status"] == "OFFLINE_BUNDLE_PACKAGED_NATIVE_UNVERIFIED"
+    with zipfile.ZipFile(archive) as z:
+        assert not any(pathlib.PurePosixPath(n).name.startswith("._") for n in z.namelist())
+        assert z.read("wheelhouse/" + wheel.name) == wheel.read_bytes()
+    # Portable replay still rejects real wheel mutation instead of relaxing identity.
+    wheel.write_bytes(wheel.read_bytes() + b"changed")
+    with pytest.raises(release.ReleaseError, match="SHA256"):
+        release.package_wheelhouse_bundle(house, lock, source_lock, metadata, operations, "win_amd64", tmp_path / "changed.zip", tmp_path / "changed-evidence", build, tool)
+
+
+@pytest.mark.parametrize("invalid", [False, True])
+def test_build_output_uses_validated_metadata_inventory_software_mock(tmp_path, monkeypatch, invalid):
+    """Mocked builder transport only; no pip/build/installation executed."""
+    out = tmp_path / "out"
+    def snapshot(source, stage):
+        stage.mkdir(); return {"files": [], "file_count": 0, "manifest_sha256": release.hashlib.sha256(b"[]").hexdigest()}
+    def run(argv, **kwargs):
+        if "wheel" in argv:
+            wheel = out / "comsol_mcp-0.1.9-py3-none-any.whl"; make_wheel(wheel, name="comsol-mcp", version="0.1.9")
+            sidecar = make_appledouble(wheel)
+            if invalid: sidecar.write_bytes(b"invalid metadata")
+        return types.SimpleNamespace(returncode=0, stdout="fixture builder", stderr="")
+    monkeypatch.setattr(release, "source_snapshot", snapshot); monkeypatch.setattr(release.subprocess, "run", run)
+    if invalid:
+        with pytest.raises(release.ReleaseError, match="AppleDouble"):
+            release.build_wheel(tmp_path, out, pathlib.Path(sys.executable), tmp_path / "evidence")
+    else:
+        result = release.build_wheel(tmp_path, out, pathlib.Path(sys.executable), tmp_path / "evidence")
+        assert len(result["wheelhouse_metadata_sidecars"]) == 1 and result["audit"]["file_count"] == 1
 
 
 def make_derived_crypto_inputs(tmp_path: pathlib.Path) -> tuple[pathlib.Path, pathlib.Path, pathlib.Path, pathlib.Path, pathlib.Path, str]:
@@ -467,7 +594,8 @@ def test_relative_archive_path_rejects_traversal_and_windows_drive() -> None:
             release.safe_relative(value)
 
 
-def test_offline_bundle_contains_auditable_hashed_inputs_and_source_lock(tmp_path: pathlib.Path) -> None:
+@pytest.mark.parametrize("lifecycle_helper", [False, True, "missing"])
+def test_offline_bundle_contains_auditable_hashed_inputs_and_source_lock(tmp_path: pathlib.Path, lifecycle_helper) -> None:
     wheelhouse = tmp_path / "wheelhouse"
     wheel = wheelhouse / "comsol_mcp-0.1.9-py3-none-any.whl"
     digest = make_wheel(wheel, name="comsol-mcp", version="0.1.9")
@@ -480,10 +608,17 @@ def test_offline_bundle_contains_auditable_hashed_inputs_and_source_lock(tmp_pat
     build_evidence = tmp_path / "build-evidence"
     make_build_evidence(build_evidence, wheel)
     tool = tmp_path / "full_project_release.py"
-    tool.write_text("# release tool fixture\n", encoding="utf-8")
+    tool.write_text("# release tool fixture\n" + ("# --with-data-lifecycle\n" if lifecycle_helper else ""), encoding="utf-8")
+    if lifecycle_helper is True:
+        tool.with_name("release_transition_lifecycle.py").write_text("# lifecycle helper fixture\n")
     operations = tmp_path / "RELEASE_OPERATIONS.md"
     operations.write_text("Offline installation operations.\n", encoding="utf-8")
     archive_path = tmp_path / "comsol-mcp-win_amd64.zip"
+    if lifecycle_helper == "missing":
+        with pytest.raises(release.ReleaseError, match="lifecycle helper is missing"):
+            release.package_wheelhouse_bundle(wheelhouse, requirements, source_lock, metadata, operations,
+                "win_amd64", archive_path, tmp_path / "evidence", build_evidence, tool)
+        return
     result = release.package_wheelhouse_bundle(
         wheelhouse, requirements, source_lock, metadata, operations,
         "win_amd64", archive_path, tmp_path / "evidence", build_evidence, tool,
@@ -496,6 +631,7 @@ def test_offline_bundle_contains_auditable_hashed_inputs_and_source_lock(tmp_pat
         assert "locks/uv.lock" in members
         assert "evidence/wheel-build-receipt.json" in members
         assert "evidence/source-snapshot-manifest.json" in members
+        assert ("tools/release_transition_lifecycle.py" in members) is (lifecycle_helper is True)
         bundle_manifest = json.loads(archive.read("OFFLINE_BUNDLE_MANIFEST.json"))
         listed = {row["path"]: row for row in bundle_manifest["files_excluding_this_manifest"]}
         assert listed["README_OFFLINE_INSTALL.txt"]["sha256"] == hashlib.sha256(archive.read("README_OFFLINE_INSTALL.txt")).hexdigest()

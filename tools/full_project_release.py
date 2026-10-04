@@ -21,6 +21,7 @@ import re
 import shutil
 import socket
 import stat as stat_module
+import struct
 import subprocess
 import sys
 import tarfile
@@ -279,6 +280,87 @@ def audit_tree(root: pathlib.Path) -> dict[str, Any]:
             "files": files}
 
 
+def flat_wheel_inventory(root: pathlib.Path) -> tuple[list[pathlib.Path], list[dict[str, Any]]]:
+    """Exclude only validated paired AppleDouble metadata in a flat wheelhouse.
+
+    RFC 1740 Appendix A/B: big-endian 26-byte v2 header, 12-byte entry
+    descriptors, AppleDouble magic, and no data-fork entry. This exception is
+    local to wheel enumeration; source and archive audits remain strict.
+    """
+    if root.is_symlink() or not root.is_dir():
+        raise ReleaseError("wheelhouse must be a regular non-symlink directory")
+    wheels: list[pathlib.Path] = []
+    sidecars: list[dict[str, Any]] = []
+    total = 0
+    for path in sorted(root.iterdir()):
+        if path.is_symlink() or not stat_module.S_ISREG(path.lstat().st_mode):
+            raise ReleaseError(f"wheelhouse link or special file: {path.name}")
+        size = path.stat().st_size
+        total += size
+        if size > MAX_FILE_BYTES or total > MAX_TOTAL_BYTES:
+            raise ReleaseError("wheelhouse file or total size limit exceeded")
+        if path.suffix != ".whl":
+            raise ReleaseError(f"wheelhouse must contain only flat .whl files: {path.name}")
+        if not path.name.startswith("._"):
+            wheels.append(path)
+            continue
+        peer = path.with_name(path.name[2:])
+        if peer.name.startswith("._") or peer.is_symlink() or not peer.is_file():
+            raise ReleaseError(f"AppleDouble wheel metadata has no regular peer: {path.name}")
+        if not stat_module.S_ISREG(peer.lstat().st_mode):
+            raise ReleaseError(f"AppleDouble wheel peer is not regular: {path.name}")
+        if peer.stat().st_size > MAX_FILE_BYTES:
+            raise ReleaseError(f"AppleDouble wheel peer exceeds size limit: {path.name}")
+        with path.open("rb") as stream:
+            header = stream.read(26)
+            if len(header) != 26:
+                raise ReleaseError(f"truncated AppleDouble header: {path.name}")
+            magic, version, filler, count = struct.unpack(">II16sH", header)
+            if magic != 0x00051607 or version != 0x00020000:
+                raise ReleaseError(f"invalid AppleDouble magic/version: {path.name}")
+            table = stream.read(12 * count)
+            if len(table) != 12 * count:
+                raise ReleaseError(f"truncated AppleDouble entry table: {path.name}")
+        entries = []
+        ids: set[int] = set()
+        ranges: list[tuple[int, int]] = []
+        for entry_id, offset, length in struct.iter_unpack(">III", table):
+            if entry_id in {0, 1} or entry_id in ids:
+                raise ReleaseError(f"invalid/data-fork/duplicate AppleDouble entry: {path.name}")
+            ids.add(entry_id)
+            if offset < 26 + 12 * count or offset > size or length > size - offset:
+                raise ReleaseError(f"AppleDouble entry out of bounds: {path.name}")
+            if length:
+                ranges.append((offset, offset + length))
+            entries.append({"id": entry_id, "offset": offset, "length": length})
+        ordered_ranges = sorted(ranges)
+        if any(right[0] < left[1] for left, right in zip(ordered_ranges, ordered_ranges[1:])):
+            raise ReleaseError(f"overlapping AppleDouble entries: {path.name}")
+        sidecars.append({"path": path.name, "bytes": size, "sha256": sha256_file(path),
+                         "peer": peer.name, "peer_sha256": sha256_file(peer),
+                         "header": {"magic": magic, "version": version,
+                                    "filler_hex": filler.hex(), "entry_count": count},
+                         "entries": entries})
+    return wheels, sidecars
+
+
+def audit_wheelhouse(root: pathlib.Path, wheels: list[pathlib.Path]) -> dict[str, Any]:
+    """Run the unchanged recursive artifact scanner on selected real wheels."""
+    files = []
+    findings: list[dict[str, str]] = []
+    for wheel in wheels:
+        kind = scan_member_name(wheel.name)
+        if kind:
+            findings.append({"path": wheel.name, "kind": kind})
+            continue
+        files.append({"path": wheel.name, "bytes": wheel.stat().st_size, "sha256": sha256_file(wheel)})
+        _inspect_bytes(wheel.name, wheel.read_bytes(), findings)
+    findings = _dedupe_findings(findings)
+    return {"status": "PASS" if not findings else "FAIL", "root_label": root.name,
+            "file_count": len(files), "total_bytes": sum(row["bytes"] for row in files),
+            "findings": findings, "files": files}
+
+
 def _dedupe_findings(rows: Iterable[dict[str, str]]) -> list[dict[str, str]]:
     result = {json.dumps(row, sort_keys=True): row for row in rows}
     return [result[key] for key in sorted(result)]
@@ -374,7 +456,8 @@ def _marker_matches(marker: str, target: str) -> bool:
     return Marker(marker).evaluate(env)
 
 
-def parse_hash_requirements(path: pathlib.Path, target: str | None = None) -> dict[str, dict[str, Any]]:
+def parse_hash_requirements(path: pathlib.Path, target: str | None = None, *,
+                            marker_environment: dict[str, str] | None = None) -> dict[str, dict[str, Any]]:
     """Read exact PEP 508 pins emitted by uv/pip and require at least one SHA256."""
     logical: list[str] = []
     pending = ""
@@ -400,7 +483,11 @@ def parse_hash_requirements(path: pathlib.Path, target: str | None = None) -> di
         if not hashes:
             raise ReleaseError(f"requirements lock has no SHA256 pin for {name}=={version}")
         marker = tail.split(";", 1)[1].split("--hash=", 1)[0].strip() if ";" in tail else ""
-        if target and not _marker_matches(marker, target):
+        if marker_environment is not None and marker:
+            from packaging.markers import Marker
+            if not Marker(marker).evaluate(marker_environment):
+                continue
+        elif target and not _marker_matches(marker, target):
             continue
         key = normalized_name(name)
         if key in result:
@@ -633,13 +720,10 @@ def create_bundle_manifest(bundle: pathlib.Path, target: str, requirements: path
     output_files = [output_dir / n for n in ("PACKAGE_MANIFEST.json", "SBOM.cdx.json", "LICENSES.json")]
     if any(path.exists() for path in output_files):
         raise ReleaseError(f"manifest evidence already exists; choose a new output directory: {output_dir}")
-    audit = audit_tree(bundle)
+    wheels, metadata_sidecars = flat_wheel_inventory(bundle)
+    audit = audit_wheelhouse(bundle, wheels)
     if audit["status"] != "PASS":
         raise ReleaseError("release bundle scan failed: " + json.dumps(audit["findings"], ensure_ascii=False))
-    unexpected = [p.name for p in bundle.iterdir() if not p.is_file() or p.suffix != ".whl"]
-    if unexpected:
-        raise ReleaseError("wheelhouse must contain only flat .whl files: " + ", ".join(sorted(unexpected)))
-    wheels = sorted(bundle.glob("*.whl"))
     if not wheels:
         raise ReleaseError("wheelhouse is empty")
     pins = parse_hash_requirements(requirements, target)
@@ -701,6 +785,7 @@ def create_bundle_manifest(bundle: pathlib.Path, target: str, requirements: path
         "requirements": {"filename": requirements.name, "sha256": sha256_file(requirements)},
         "source_lock": ({"filename": source_lock.name, "sha256": sha256_file(source_lock)} if source_lock else None),
         "wheel_count": len(wheels), "wheels": [], "scan": {"status": audit["status"], "file_count": audit["file_count"], "findings": audit["findings"]},
+        "wheelhouse_metadata_sidecars": metadata_sidecars,
     }
     licenses = {"schema": SCHEMA, "created_utc": utc_now(), "target": target, "components": []}
     for wheel, component in zip(wheels, components):
@@ -936,12 +1021,21 @@ def package_wheelhouse_bundle(wheelhouse: pathlib.Path, requirements: pathlib.Pa
         ("evidence/source-snapshot-manifest.json", source_manifest_path),
         ("docs/RELEASE_OPERATIONS.md", operations_doc),
     ]
+    lifecycle_helper = tool_path.with_name("release_transition_lifecycle.py")
+    if "--with-data-lifecycle" in tool_path.read_text(encoding="utf-8"):
+        if not lifecycle_helper.is_file() or lifecycle_helper.is_symlink():
+            raise ReleaseError("release data lifecycle helper is missing or symlinked")
+        files.append(("tools/release_transition_lifecycle.py", lifecycle_helper))
+    lifecycle_doc = operations_doc.with_name("REAL_BUILD_DATA_TRANSITION.md")
+    if lifecycle_doc.is_file() and not lifecycle_doc.is_symlink():
+        files.append(("docs/REAL_BUILD_DATA_TRANSITION.md", lifecycle_doc))
     if derived_provenance is not None and openssl_license is not None:
         files.extend([
             ("evidence/cryptography-x86-derived-provenance.json", derived_provenance),
             ("licenses/openssl-4.0.2-LICENSE.txt", openssl_license),
         ])
-    files.extend((f"wheelhouse/{wheel.name}", wheel) for wheel in sorted(wheelhouse.glob("*.whl")))
+    bundle_wheels, bundle_metadata_sidecars = flat_wheel_inventory(wheelhouse)
+    files.extend((f"wheelhouse/{wheel.name}", wheel) for wheel in bundle_wheels)
     install_notes = (
         f"COMSOL MCP offline bundle for {target} / CPython {TARGETS[target]['python']}.\n"
         "Extract this archive to a clean directory. Use a separate Python 3.12 venv.\n"
@@ -974,7 +1068,8 @@ def package_wheelhouse_bundle(wheelhouse: pathlib.Path, requirements: pathlib.Pa
                        "requirements_included": "locks/requirements.lock",
                        "source_lock_sha256": sha256_file(source_lock),
                        "requirements_sha256": sha256_file(requirements),
-                       "files_excluding_this_manifest": records}
+                       "files_excluding_this_manifest": records,
+                       "wheelhouse_metadata_sidecars_at_packaging": bundle_metadata_sidecars}
     archive_path.parent.mkdir(parents=True, exist_ok=True)
     bundle_manifest_bytes = (json.dumps(bundle_manifest, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
     with zipfile.ZipFile(archive_path, "x", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
@@ -2043,10 +2138,10 @@ def build_wheel(source: pathlib.Path, out: pathlib.Path, python: pathlib.Path,
         _json_write(evidence / "wheel-build-log.json", log)
         if proc.returncode:
             raise ReleaseError("wheel build failed; see wheel-build-log.json")
-        audit = audit_tree(out)
+        wheels, metadata_sidecars = flat_wheel_inventory(out)
+        audit = audit_wheelhouse(out, wheels)
         if audit["status"] != "PASS":
             raise ReleaseError("built wheel audit failed: " + json.dumps(audit["findings"], ensure_ascii=False))
-        wheels = sorted(path for path in out.glob("*.whl") if not path.name.startswith("._"))
         if len(wheels) != 1:
             raise ReleaseError(f"expected exactly one application wheel, found {len(wheels)}")
         result = {"schema": SCHEMA, "status": "WHEEL_BUILT_NATIVE_UNVERIFIED", "created_utc": utc_now(),
@@ -2054,6 +2149,7 @@ def build_wheel(source: pathlib.Path, out: pathlib.Path, python: pathlib.Path,
                   "source_manifest_sha256": src["manifest_sha256"], "source_file_count": src["file_count"],
                   "wheel_metadata": {k: wheel_metadata(wheels[0])[k] for k in ("name", "version", "license", "wheel_tags", "member_count")},
                   "audit": {"status": audit["status"], "file_count": audit["file_count"], "findings": audit["findings"]},
+                  "wheelhouse_metadata_sidecars": metadata_sidecars,
                   "native_execution": "NOT_RUN", "platform_matrix": "UNVERIFIED"}
         _json_write(evidence / "wheel-build-receipt.json", result)
         return result
@@ -2765,22 +2861,56 @@ def transition_check(args: argparse.Namespace, script: pathlib.Path) -> dict[str
         result["status"] = "BLOCKED_LOCK_VERSION_UNRESOLVED"
         return result
 
+    lifecycle = None
+    if getattr(args, "with_data_lifecycle", False):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("release_transition_lifecycle", script.with_name("release_transition_lifecycle.py"))
+        if spec is None or spec.loader is None:
+            raise ReleaseError("data lifecycle helper unavailable")
+        helper = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(helper)
+        try:
+            lifecycle = helper.Lifecycle(args, sys.modules[__name__], evidence, old_lock_snapshot, new_lock_snapshot, sandbox)
+        except (OSError, ValueError, TypeError, ReleaseError) as exc:
+            result["status"] = "BLOCKED_LIFECYCLE_INPUTS"
+            result["data_lifecycle"] = {"status": "NOT_RUN", "reason": str(exc)}
+            return result
+        result["migration_scope"] = "disposable real-build package/code/data lifecycle; release/matrix/native/science acceptance remains NOT_RUN"
+        old_version, new_version = lifecycle.old["version"], lifecycle.new["version"]
+        result["expected_versions"] = {"old": old_version, "candidate": new_version}
+    capture = lifecycle.capture if lifecycle is not None else _capture_transition_state
+
     # Use the same network-denying supervisor as offline-install; a local
     # listener probe proves the child process actually inherited the profile.
     inner = argparse.Namespace(python=args.python, requirements=old_lock_snapshot,
                                wheelhouse=args.old_wheelhouse, venv=venv, evidence=evidence)
     first = offline_install(inner, script)
+    if lifecycle is not None:
+        lifecycle.retain_record("initial-offline-install", first)
     if first.get("status") != "PASS_PROCESS_ISOLATED_INSTALL_AND_IMPORT":
         result["status"] = "BLOCKED_OR_FAIL_INITIAL_INSTALL"
         result["initial_install"] = first
         return result
 
     py = venv / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
-    original = _capture_transition_state(py)
+    original = capture(py)
     result["states"].append({"state": "old_release_installed", **original})
     if original.get("capture_errors"):
         result["status"] = "UNKNOWN_INITIAL_STATE"
         return result
+
+    if lifecycle is not None:
+        if not lifecycle.verify_installed("old", py, original, lifecycle.old):
+            result["status"] = "FAIL_OLD_WHEEL_IDENTITY"
+            result["data_lifecycle"] = lifecycle.finish(py, False, False)
+            return result
+        try:
+            lifecycle.seed_old(py)
+        except Exception as exc:
+            result["status"] = "FAIL_OLD_DATA_SEED"
+            result["data_lifecycle_error"] = str(exc)
+            result["data_lifecycle"] = lifecycle.finish(py, False, True)
+            return result
     if original.get("installed_version") != old_version:
         result["status"] = "FAIL_INITIAL_VERSION_MISMATCH"
         return result
@@ -2790,8 +2920,9 @@ def transition_check(args: argparse.Namespace, script: pathlib.Path) -> dict[str
         return result
 
     profile = evidence / "network-deny-transition.sb"
-    with profile.open("x", encoding="utf-8") as stream:
-        stream.write("(version 1)\n(deny network*)\n(allow default)\n")
+    if lifecycle is None:
+        with profile.open("x", encoding="utf-8") as stream:
+            stream.write("(version 1)\n(deny network*)\n(allow default)\n")
     candidate_args = [str(py), "-m", "pip", "install", "--no-index", "--only-binary=:all:",
                       "--disable-pip-version-check", "--no-input", "--force-reinstall", "--find-links",
                       str(args.new_wheelhouse), "--require-hashes", "--requirement", str(new_lock_snapshot)]
@@ -2803,8 +2934,26 @@ def transition_check(args: argparse.Namespace, script: pathlib.Path) -> dict[str
         upgrade = {"argv": [sandbox, "-f", str(profile), *candidate_args], "exit_code": None,
                    "stdout": "", "stderr": f"{type(exc).__name__}: {exc}", "duration_seconds": None}
     result["upgrade"] = upgrade
-    candidate = _capture_transition_state(py)
+    if lifecycle is not None:
+        lifecycle.retain_record("candidate-package-install", upgrade)
+    candidate = capture(py)
     result["states"].append({"state": "candidate_attempted", "exit_code": upgrade.get("exit_code"), **candidate})
+
+    if lifecycle is not None:
+        candidate_identity = lifecycle.verify_installed("candidate", py, candidate, lifecycle.new)
+        if upgrade.get("exit_code") == 0 and candidate_identity:
+            try:
+                lifecycle.candidate_phase(py)
+            except Exception as exc:
+                lifecycle.failures.append("candidate-phase-error:" + type(exc).__name__)
+                result["data_lifecycle_error"] = str(exc)
+            try:
+                lifecycle.restore_candidate(py)
+            except Exception as exc:
+                lifecycle.failures.append("restore-phase-error:" + type(exc).__name__)
+                result["data_restore_error"] = str(exc)
+        else:
+            lifecycle.failures.append("candidate-install-or-identity")
 
     rollback_args = [str(py), "-m", "pip", "install", "--no-index", "--only-binary=:all:",
                      "--disable-pip-version-check", "--no-input", "--force-reinstall", "--find-links",
@@ -2815,11 +2964,13 @@ def transition_check(args: argparse.Namespace, script: pathlib.Path) -> dict[str
         rollback = {"argv": [sandbox, "-f", str(profile), *rollback_args], "exit_code": None,
                     "stdout": "", "stderr": f"{type(exc).__name__}: {exc}", "duration_seconds": None}
     result["rollback"] = rollback
+    if lifecycle is not None:
+        lifecycle.retain_record("old-package-rollback", rollback)
 
     # pip's old-lock install does not uninstall dependencies introduced only by
     # the candidate. Remove only such distributions, and only inside this newly
     # created disposable venv, then verify the entire distribution set.
-    before_cleanup = _capture_transition_state(py)
+    before_cleanup = capture(py)
     original_rows = original["distribution_fingerprint"]["distributions"]
     current_inventory = before_cleanup.get("distribution_fingerprint")
     original_names = {row["name"] for row in original_rows}
@@ -2839,8 +2990,10 @@ def transition_check(args: argparse.Namespace, script: pathlib.Path) -> dict[str
     else:
         result["rollback_candidate_only_cleanup"] = {"status": "NOT_NEEDED", "attempted": False,
                                                      "package_names": []}
+    if lifecycle is not None:
+        lifecycle.retain_record("rollback-candidate-only-cleanup", result["rollback_candidate_only_cleanup"])
 
-    restored = _capture_transition_state(py)
+    restored = capture(py)
     result["states"].append({"state": "old_release_restored", **restored})
     result["candidate_only_distribution_names_attempted"] = candidate_only_names
     restored_inventory = restored.get("distribution_fingerprint")
@@ -2880,6 +3033,18 @@ def transition_check(args: argparse.Namespace, script: pathlib.Path) -> dict[str
         result["status"] = "FAIL_CANDIDATE_VERSION_ROLLED_BACK"
     else:
         result["status"] = "PASS_ARTIFACT_ROLLBACK_MIGRATION_UNVERIFIED"
+    if lifecycle is not None:
+        package_pass = result["status"] == "PASS_ARTIFACT_ROLLBACK_MIGRATION_UNVERIFIED"
+        restored_identity = lifecycle.verify_installed("restored", py, restored, lifecycle.old)
+        result["data_lifecycle"] = lifecycle.finish(py, package_pass, restored_identity)
+        if result["data_lifecycle"]["status"] == "PASS_DISPOSABLE_CODE_DATA_LIFECYCLE":
+            result["status"] = "PASS_DISPOSABLE_CODE_DATA_LIFECYCLE_RELEASE_UNVERIFIED"
+            result["code_transition_verified"] = True
+            result["data_compatibility_and_backup_rollback_verified"] = True
+        elif package_pass:
+            result["status"] = "FAIL_OR_UNKNOWN_DATA_LIFECYCLE_ROLLED_BACK"
+        # Version identity is distinct from same-version real-code transition.
+        result["version_migration_verified"] = bool(result.get("code_transition_verified") and old_version != new_version)
     return result
 
 
@@ -3006,6 +3171,10 @@ def command_parser() -> argparse.ArgumentParser:
     trans.add_argument("--old-wheelhouse", type=pathlib.Path, required=True)
     trans.add_argument("--new-requirements", type=pathlib.Path, required=True)
     trans.add_argument("--new-wheelhouse", type=pathlib.Path, required=True)
+    trans.add_argument("--with-data-lifecycle", action="store_true",
+                       help="fixed synthetic ledger lifecycle using verified real old/candidate builds; release acceptance remains separate")
+    trans.add_argument("--old-wheel-sha256", default="", help="required expected application wheel SHA256 in lifecycle mode")
+    trans.add_argument("--new-wheel-sha256", default="", help="required expected candidate application wheel SHA256 in lifecycle mode")
     internal = sub.add_parser("_offline_child", help=argparse.SUPPRESS)
     internal.add_argument("--python", type=pathlib.Path, required=True)
     internal.add_argument("--venv", type=pathlib.Path, required=True)
