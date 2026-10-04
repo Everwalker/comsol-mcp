@@ -1,0 +1,229 @@
+{
+  "$id": "https://local.invalid/T038_G01_ONE_USE_RUNTIME_GO_V1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "attempt_name": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+      "type": "string"
+    },
+    "binding": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "command": {
+      "additionalProperties": false,
+      "properties": {
+        "attempt_name": {
+          "type": "string"
+        },
+        "binding_path": {
+          "type": "string"
+        },
+        "binding_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "executable": {
+          "type": "string"
+        },
+        "go_path": {
+          "type": "string"
+        },
+        "go_sha256": {
+          "const": "CLI_SHA256_OF_THIS_GO_FILE"
+        },
+        "interpreter_flags": {
+          "const": [
+            "-I",
+            "-B"
+          ]
+        },
+        "manifest_path": {
+          "type": "string"
+        },
+        "manifest_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "mode": {
+          "const": "g01"
+        },
+        "script": {
+          "type": "string"
+        },
+        "timeout_seconds": {
+          "const": 180
+        }
+      },
+      "required": [
+        "executable",
+        "interpreter_flags",
+        "script",
+        "mode",
+        "manifest_path",
+        "manifest_sha256",
+        "binding_path",
+        "binding_sha256",
+        "go_path",
+        "go_sha256",
+        "attempt_name",
+        "timeout_seconds"
+      ],
+      "type": "object"
+    },
+    "decision": {
+      "const": "GRANTED"
+    },
+    "decision_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+      "type": "string"
+    },
+    "expires_at_utc": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "issued_at_utc": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "manifest": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "output_parent": {
+      "additionalProperties": false,
+      "properties": {
+        "device": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "inode": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "mode": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "device",
+        "inode",
+        "mode"
+      ],
+      "type": "object"
+    },
+    "runtime": {
+      "additionalProperties": false,
+      "properties": {
+        "anyio": {
+          "const": "4.15.1"
+        },
+        "executable": {
+          "type": "string"
+        },
+        "jsonschema": {
+          "const": "4.26.0"
+        },
+        "mcp": {
+          "const": "1.30.0"
+        },
+        "prefix": {
+          "type": "string"
+        },
+        "python_version": {
+          "const": "3.12.13"
+        }
+      },
+      "required": [
+        "executable",
+        "python_version",
+        "prefix",
+        "mcp",
+        "anyio",
+        "jsonschema"
+      ],
+      "type": "object"
+    },
+    "schema": {
+      "const": "T038_G01_ONE_USE_RUNTIME_GO_V1"
+    },
+    "scope": {
+      "const": "G01_METADATA_OBSERVER_ONLY"
+    },
+    "single_use": {
+      "additionalProperties": false,
+      "properties": {
+        "consume_marker_name": {
+          "pattern": "^\\.t038-go-consumed-[A-Za-z0-9][A-Za-z0-9._-]{0,63}\\.json$",
+          "type": "string"
+        },
+        "max_parent_launches": {
+          "const": 1
+        }
+      },
+      "required": [
+        "max_parent_launches",
+        "consume_marker_name"
+      ],
+      "type": "object"
+    },
+    "source_fingerprint": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema",
+    "decision",
+    "decision_id",
+    "scope",
+    "issued_at_utc",
+    "expires_at_utc",
+    "manifest",
+    "binding",
+    "source_fingerprint",
+    "runtime",
+    "output_parent",
+    "attempt_name",
+    "command",
+    "single_use"
+  ],
+  "title": "Single-use G01 runtime decision",
+  "type": "object"
+}

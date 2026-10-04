@@ -1,0 +1,1131 @@
+{
+  "schema": "G01_V10_ACTUAL_SUMMARY001",
+  "checkpoint": "G01 scoped actual metadata-observer acceptance; D2 current focused89 execution failure preserved",
+  "captured_utc": "2026-10-04T05:17:49Z",
+  "G01": {
+    "decision": "ACCEPT_ACTUAL_G01_METADATA_OBSERVER_ONLY",
+    "decision_sha256": "09b5df89a4122f47b235db1f7013f5fc7dade412d25beb0830c1ad2fe3b349f0",
+    "source_content_fingerprint_sha256": "f6b596c14898df2d5ac3af412106d24e3fd7933438a954f401d7cf84b2a1c26e",
+    "source_members": 207,
+    "actual_tool_count": 112,
+    "unique_names": 112,
+    "callable_mappings": 112,
+    "callable_mismatches": 0,
+    "input_schema_validation": "PASS_112",
+    "actual_invocation": {
+      "tool_chunk_id": "49b6f1",
+      "exit_code": 0
+    },
+    "independent_review": "READY_SCOPED",
+    "local_refs": 43,
+    "scope": "metadata-only; no main/tool/business/wire call; JVM/native not in scope",
+    "open_or_not_run": {
+      "original50_compatibility": "OPEN",
+      "28_schema_deltas": "OPEN",
+      "MCP_tools_list_multipage": "OPEN",
+      "profile_fallback_business_semantics": "OPEN",
+      "original_T038_protocol_wire": "NOT_RUN",
+      "JVM_native": "NOT_IN_SCOPE",
+      "R_promotion": "NOT_PROMOTED"
+    },
+    "schema_hash_method": "SHA-256 of UTF-8 JSON with sorted keys, ensure_ascii=false, compact separators comma/colon",
+    "schema_rows_aggregate_sha256": "d44f4100a7328b19f6cc7f8654a80f3768ba7f5d4ccb3d634df752e0ffda2ece",
+    "tools": [
+      {
+        "name": "check_server_port",
+        "actual_callable": "comsol_mcp._tools_connection.check_server_port",
+        "expected_callable": "comsol_mcp._tools_connection.check_server_port",
+        "actual_source": "comsol_mcp/_tools_connection.py",
+        "expected_source": "comsol_mcp/_tools_connection.py",
+        "callable_match": true,
+        "input_schema_sha256": "1fb1f1040d4deadc974ce79f816bc3d2d4e4b63265490413d8b150742388b0e7"
+      },
+      {
+        "name": "commit_current_main_model",
+        "actual_callable": "comsol_mcp._tools_snapshot.commit_current_main_model",
+        "expected_callable": "comsol_mcp._tools_snapshot.commit_current_main_model",
+        "actual_source": "comsol_mcp/_tools_snapshot.py",
+        "expected_source": "comsol_mcp/_tools_snapshot.py",
+        "callable_match": true,
+        "input_schema_sha256": "aeb25078c961a3a4482f3c0bce4d91031ccd60f6686db9acb557ff83cc16bcf7"
+      },
+      {
+        "name": "configure_single_main_workflow",
+        "actual_callable": "comsol_mcp._tools_workflow.configure_single_main_workflow",
+        "expected_callable": "comsol_mcp._tools_workflow.configure_single_main_workflow",
+        "actual_source": "comsol_mcp/_tools_workflow.py",
+        "expected_source": "comsol_mcp/_tools_workflow.py",
+        "callable_match": true,
+        "input_schema_sha256": "d9131e6fef2ddf29963888710a8aeef9049b80bd9f108a7a53094792f582a0a3"
+      },
+      {
+        "name": "configure_solver",
+        "actual_callable": "comsol_mcp._tools_solver.configure_solver",
+        "expected_callable": "comsol_mcp._tools_solver.configure_solver",
+        "actual_source": "comsol_mcp/_tools_solver.py",
+        "expected_source": "comsol_mcp/_tools_solver.py",
+        "callable_match": true,
+        "input_schema_sha256": "a5816fc7fd890852ba50105fd36b09104967b3fce859227d1d3226fe1615f235"
+      },
+      {
+        "name": "create_feature",
+        "actual_callable": "comsol_mcp._tools_geometry.create_feature",
+        "expected_callable": "comsol_mcp._tools_geometry.create_feature",
+        "actual_source": "comsol_mcp/_tools_geometry.py",
+        "expected_source": "comsol_mcp/_tools_geometry.py",
+        "callable_match": true,
+        "input_schema_sha256": "41df618b931eac6562dcea043ff30c247600bf6d103eb0f1572cbfe14857ebe1"
+      },
+      {
+        "name": "create_physics",
+        "actual_callable": "comsol_mcp._tools_physics.create_physics",
+        "expected_callable": "comsol_mcp._tools_physics.create_physics",
+        "actual_source": "comsol_mcp/_tools_physics.py",
+        "expected_source": "comsol_mcp/_tools_physics.py",
+        "callable_match": true,
+        "input_schema_sha256": "137cf43660f52566a7082e6553b0ea1d134ac7fcd29fef975f76ad30ca676687"
+      },
+      {
+        "name": "create_physics_feature",
+        "actual_callable": "comsol_mcp._tools_physics.create_physics_feature",
+        "expected_callable": "comsol_mcp._tools_physics.create_physics_feature",
+        "actual_source": "comsol_mcp/_tools_physics.py",
+        "expected_source": "comsol_mcp/_tools_physics.py",
+        "callable_match": true,
+        "input_schema_sha256": "e441a612437f30b016b400f8b0e1ac88593f7c380fa66a4c565bcee617bce847"
+      },
+      {
+        "name": "create_solver_config",
+        "actual_callable": "comsol_mcp._tools_solver.create_solver_config",
+        "expected_callable": "comsol_mcp._tools_solver.create_solver_config",
+        "actual_source": "comsol_mcp/_tools_solver.py",
+        "expected_source": "comsol_mcp/_tools_solver.py",
+        "callable_match": true,
+        "input_schema_sha256": "3a03eeb59abb25aa6a9c55e9b68ac305d0b848819d88e5e514c905f0b1434dc1"
+      },
+      {
+        "name": "delete_feature",
+        "actual_callable": "comsol_mcp._tools_geometry.delete_feature",
+        "expected_callable": "comsol_mcp._tools_geometry.delete_feature",
+        "actual_source": "comsol_mcp/_tools_geometry.py",
+        "expected_source": "comsol_mcp/_tools_geometry.py",
+        "callable_match": true,
+        "input_schema_sha256": "6e7ab5cebaf71995e15c62ef28286b95284802e450f6b834bf9d742208780fb2"
+      },
+      {
+        "name": "desktop_action",
+        "actual_callable": "comsol_mcp._tools_desktop.desktop_action",
+        "expected_callable": "comsol_mcp._tools_desktop.desktop_action",
+        "actual_source": "comsol_mcp/_tools_desktop.py",
+        "expected_source": "comsol_mcp/_tools_desktop.py",
+        "callable_match": true,
+        "input_schema_sha256": "7be1244a7eba41831cfebeeacd2bd15f44f64b4ddf407c7291eefbf0fda0d6c8"
+      },
+      {
+        "name": "desktop_bind",
+        "actual_callable": "comsol_mcp._tools_desktop.desktop_bind",
+        "expected_callable": "comsol_mcp._tools_desktop.desktop_bind",
+        "actual_source": "comsol_mcp/_tools_desktop.py",
+        "expected_source": "comsol_mcp/_tools_desktop.py",
+        "callable_match": true,
+        "input_schema_sha256": "53e9e61f99125d53c8755babba73cdb77513c9da99be92468db1ee0e1f670fb4"
+      },
+      {
+        "name": "desktop_capture",
+        "actual_callable": "comsol_mcp._tools_desktop.desktop_capture",
+        "expected_callable": "comsol_mcp._tools_desktop.desktop_capture",
+        "actual_source": "comsol_mcp/_tools_desktop.py",
+        "expected_source": "comsol_mcp/_tools_desktop.py",
+        "callable_match": true,
+        "input_schema_sha256": "b8b8dc177ca1ccd25f323f8a1f2f1432e03abd8c767750af6f5899121c6d0551"
+      },
+      {
+        "name": "desktop_migrate_standalone",
+        "actual_callable": "comsol_mcp._tools_desktop.desktop_migrate_standalone",
+        "expected_callable": "comsol_mcp._tools_desktop.desktop_migrate_standalone",
+        "actual_source": "comsol_mcp/_tools_desktop.py",
+        "expected_source": "comsol_mcp/_tools_desktop.py",
+        "callable_match": true,
+        "input_schema_sha256": "394d105d346084a788f4fd65382a86c2b8a1f1a4a0614b18a910e5aca861ef13"
+      },
+      {
+        "name": "desktop_select_node",
+        "actual_callable": "comsol_mcp._tools_desktop.desktop_select_node",
+        "expected_callable": "comsol_mcp._tools_desktop.desktop_select_node",
+        "actual_source": "comsol_mcp/_tools_desktop.py",
+        "expected_source": "comsol_mcp/_tools_desktop.py",
+        "callable_match": true,
+        "input_schema_sha256": "1ec4d74a77d0e490d50d773ea10b601e8e0f1a4af134413736af28f3c9a3b536"
+      },
+      {
+        "name": "desktop_shell_execute",
+        "actual_callable": "comsol_mcp._tools_desktop.desktop_shell_execute",
+        "expected_callable": "comsol_mcp._tools_desktop.desktop_shell_execute",
+        "actual_source": "comsol_mcp/_tools_desktop.py",
+        "expected_source": "comsol_mcp/_tools_desktop.py",
+        "callable_match": true,
+        "input_schema_sha256": "8eb13ec12f286cd88e338c63a4a460dc04a403e62a71b14c36765032a2eec06d"
+      },
+      {
+        "name": "desktop_show_model",
+        "actual_callable": "comsol_mcp._tools_desktop.desktop_show_model",
+        "expected_callable": "comsol_mcp._tools_desktop.desktop_show_model",
+        "actual_source": "comsol_mcp/_tools_desktop.py",
+        "expected_source": "comsol_mcp/_tools_desktop.py",
+        "callable_match": true,
+        "input_schema_sha256": "f6ec1fb56ee17e7e46e56753f59319caf96255466cd7e0992534badffdc015e3"
+      },
+      {
+        "name": "desktop_status",
+        "actual_callable": "comsol_mcp._tools_desktop.desktop_status",
+        "expected_callable": "comsol_mcp._tools_desktop.desktop_status",
+        "actual_source": "comsol_mcp/_tools_desktop.py",
+        "expected_source": "comsol_mcp/_tools_desktop.py",
+        "callable_match": true,
+        "input_schema_sha256": "5224b82496bb22d8c05e15c129d302c24d5a0ffeb4d0360b934b5d6f4f5812af"
+      },
+      {
+        "name": "ensure_component",
+        "actual_callable": "comsol_mcp._tools_geometry.ensure_component",
+        "expected_callable": "comsol_mcp._tools_geometry.ensure_component",
+        "actual_source": "comsol_mcp/_tools_geometry.py",
+        "expected_source": "comsol_mcp/_tools_geometry.py",
+        "callable_match": true,
+        "input_schema_sha256": "571f414a84fff2bfef00dbc65122de3df155072f7a1321afb725a2a38d60368c"
+      },
+      {
+        "name": "ensure_geometry",
+        "actual_callable": "comsol_mcp._tools_geometry.ensure_geometry",
+        "expected_callable": "comsol_mcp._tools_geometry.ensure_geometry",
+        "actual_source": "comsol_mcp/_tools_geometry.py",
+        "expected_source": "comsol_mcp/_tools_geometry.py",
+        "callable_match": true,
+        "input_schema_sha256": "ce9c4e4f0a8752cb953f571f8ac3ebd13771def4196a0e8fcd04dbd88934c735"
+      },
+      {
+        "name": "ensure_mesh",
+        "actual_callable": "comsol_mcp._tools_geometry.ensure_mesh",
+        "expected_callable": "comsol_mcp._tools_geometry.ensure_mesh",
+        "actual_source": "comsol_mcp/_tools_geometry.py",
+        "expected_source": "comsol_mcp/_tools_geometry.py",
+        "callable_match": true,
+        "input_schema_sha256": "da6ba76b67916ce7c1e5c331163bd63e50801da2cd4a2efb9188780952243444"
+      },
+      {
+        "name": "evaluate_expressions",
+        "actual_callable": "comsol_mcp._tools_params.evaluate_expressions",
+        "expected_callable": "comsol_mcp._tools_params.evaluate_expressions",
+        "actual_source": "comsol_mcp/_tools_params.py",
+        "expected_source": "comsol_mcp/_tools_params.py",
+        "callable_match": true,
+        "input_schema_sha256": "beb1cc9ea0aeb92fd5f981c8199ece88852d9e71c969b089c01586385892c552"
+      },
+      {
+        "name": "experiment_case_result",
+        "actual_callable": "comsol_mcp._tools_w21.experiment_case_result",
+        "expected_callable": "comsol_mcp._tools_w21.experiment_case_result",
+        "actual_source": "comsol_mcp/_tools_w21.py",
+        "expected_source": "comsol_mcp/_tools_w21.py",
+        "callable_match": true,
+        "input_schema_sha256": "bb0f8c054de2ceb192d0d5c9386d7b7050b45ad114ecf73e5dc9315e0b2afdbc"
+      },
+      {
+        "name": "experiment_design",
+        "actual_callable": "comsol_mcp._tools_w21.experiment_design",
+        "expected_callable": "comsol_mcp._tools_w21.experiment_design",
+        "actual_source": "comsol_mcp/_tools_w21.py",
+        "expected_source": "comsol_mcp/_tools_w21.py",
+        "callable_match": true,
+        "input_schema_sha256": "f9e31614160c50748daf5b4770f55de1d03b63e9f85f52751233790469b6a305"
+      },
+      {
+        "name": "experiment_inspect",
+        "actual_callable": "comsol_mcp._tools_w21.experiment_inspect",
+        "expected_callable": "comsol_mcp._tools_w21.experiment_inspect",
+        "actual_source": "comsol_mcp/_tools_w21.py",
+        "expected_source": "comsol_mcp/_tools_w21.py",
+        "callable_match": true,
+        "input_schema_sha256": "514571f18449b099bf7b55bc49c0e41d43ccc8de3fdd2e411db365f9d30ba04f"
+      },
+      {
+        "name": "experiment_run",
+        "actual_callable": "comsol_mcp._tools_w21.experiment_run",
+        "expected_callable": "comsol_mcp._tools_w21.experiment_run",
+        "actual_source": "comsol_mcp/_tools_w21.py",
+        "expected_source": "comsol_mcp/_tools_w21.py",
+        "callable_match": true,
+        "input_schema_sha256": "125619b29c53b74a1a373e6305a3dc5f30c79dc880a284d25e6094c47e342e28"
+      },
+      {
+        "name": "experiment_stage_define",
+        "actual_callable": "comsol_mcp._tools_w21.experiment_stage_define",
+        "expected_callable": "comsol_mcp._tools_w21.experiment_stage_define",
+        "actual_source": "comsol_mcp/_tools_w21.py",
+        "expected_source": "comsol_mcp/_tools_w21.py",
+        "callable_match": true,
+        "input_schema_sha256": "c8c2ce1992d029b115781e668b0ea91418a2d44bf9f21ff49b455e810ff00c10"
+      },
+      {
+        "name": "experiment_stage_run",
+        "actual_callable": "comsol_mcp._tools_w21.experiment_stage_run",
+        "expected_callable": "comsol_mcp._tools_w21.experiment_stage_run",
+        "actual_source": "comsol_mcp/_tools_w21.py",
+        "expected_source": "comsol_mcp/_tools_w21.py",
+        "callable_match": true,
+        "input_schema_sha256": "8d3eb46e14d5f28e18104dc7a351a5329e21463ec8352fa0d8037e1bb4801c80"
+      },
+      {
+        "name": "experiment_state_map",
+        "actual_callable": "comsol_mcp._tools_w21.experiment_state_map",
+        "expected_callable": "comsol_mcp._tools_w21.experiment_state_map",
+        "actual_source": "comsol_mcp/_tools_w21.py",
+        "expected_source": "comsol_mcp/_tools_w21.py",
+        "callable_match": true,
+        "input_schema_sha256": "ed5148dc8912f8628cc55f06198a88c0d56923a8d89c205fedd22c828e0aecdf"
+      },
+      {
+        "name": "get_core_metrics",
+        "actual_callable": "comsol_mcp._tools_params.get_core_metrics",
+        "expected_callable": "comsol_mcp._tools_params.get_core_metrics",
+        "actual_source": "comsol_mcp/_tools_params.py",
+        "expected_source": "comsol_mcp/_tools_params.py",
+        "callable_match": true,
+        "input_schema_sha256": "a7156738c7675724c917700c9ac7955cddca742a0cadf7aff54a7acaa781a704"
+      },
+      {
+        "name": "get_parameters",
+        "actual_callable": "comsol_mcp._tools_params.get_parameters",
+        "expected_callable": "comsol_mcp._tools_params.get_parameters",
+        "actual_source": "comsol_mcp/_tools_params.py",
+        "expected_source": "comsol_mcp/_tools_params.py",
+        "callable_match": true,
+        "input_schema_sha256": "01ad81633587c13cd370254dd96feed06a7144f8229c8813c9260fe5cc51a20b"
+      },
+      {
+        "name": "job_cancel",
+        "actual_callable": "comsol_mcp._tools_control.job_cancel",
+        "expected_callable": "comsol_mcp._tools_control.job_cancel",
+        "actual_source": "comsol_mcp/_tools_control.py",
+        "expected_source": "comsol_mcp/_tools_control.py",
+        "callable_match": true,
+        "input_schema_sha256": "3948d641a9007e1238fd85d1c519f7de8f97b78e54b3c2fc42b7af02c7713961"
+      },
+      {
+        "name": "job_list",
+        "actual_callable": "comsol_mcp._tools_control.job_list",
+        "expected_callable": "comsol_mcp._tools_control.job_list",
+        "actual_source": "comsol_mcp/_tools_control.py",
+        "expected_source": "comsol_mcp/_tools_control.py",
+        "callable_match": true,
+        "input_schema_sha256": "f815a829dd19fd809801e4c92a97a43ecf324c6d0b4bc5e51a7165ed4be20fee"
+      },
+      {
+        "name": "job_log",
+        "actual_callable": "comsol_mcp._tools_control.job_log",
+        "expected_callable": "comsol_mcp._tools_control.job_log",
+        "actual_source": "comsol_mcp/_tools_control.py",
+        "expected_source": "comsol_mcp/_tools_control.py",
+        "callable_match": true,
+        "input_schema_sha256": "772808c73d1cad33119bd77ac26b47212434086f064abd11070318071ef2349a"
+      },
+      {
+        "name": "job_reconcile",
+        "actual_callable": "comsol_mcp._tools_control.job_reconcile",
+        "expected_callable": "comsol_mcp._tools_control.job_reconcile",
+        "actual_source": "comsol_mcp/_tools_control.py",
+        "expected_source": "comsol_mcp/_tools_control.py",
+        "callable_match": true,
+        "input_schema_sha256": "6837bc02d734c1cc82fbba4d0bc15a4302dbd23405039a15cc70ee5264311f0c"
+      },
+      {
+        "name": "job_result",
+        "actual_callable": "comsol_mcp._tools_control.job_result",
+        "expected_callable": "comsol_mcp._tools_control.job_result",
+        "actual_source": "comsol_mcp/_tools_control.py",
+        "expected_source": "comsol_mcp/_tools_control.py",
+        "callable_match": true,
+        "input_schema_sha256": "640acb7b4f10e093c562b1a187918de52e57498b3813ad2e8c864081c2ffe8fe"
+      },
+      {
+        "name": "job_status",
+        "actual_callable": "comsol_mcp._tools_control.job_status",
+        "expected_callable": "comsol_mcp._tools_control.job_status",
+        "actual_source": "comsol_mcp/_tools_control.py",
+        "expected_source": "comsol_mcp/_tools_control.py",
+        "callable_match": true,
+        "input_schema_sha256": "81e9a27475da013ed26e5eff480e4cc921ac9027e4acaf0012da604053bc4dd2"
+      },
+      {
+        "name": "job_wait",
+        "actual_callable": "comsol_mcp._tools_control.job_wait",
+        "expected_callable": "comsol_mcp._tools_control.job_wait",
+        "actual_source": "comsol_mcp/_tools_control.py",
+        "expected_source": "comsol_mcp/_tools_control.py",
+        "callable_match": true,
+        "input_schema_sha256": "532a9b3e1589ccc21f9843dcc7ac2bfc48fb42b935c138001b2666bf20131a69"
+      },
+      {
+        "name": "list_physics",
+        "actual_callable": "comsol_mcp._tools_physics.list_physics",
+        "expected_callable": "comsol_mcp._tools_physics.list_physics",
+        "actual_source": "comsol_mcp/_tools_physics.py",
+        "expected_source": "comsol_mcp/_tools_physics.py",
+        "callable_match": true,
+        "input_schema_sha256": "c00eab503d084648b1dcada039a4b8492d10f5db24aa95613b8f9b93cfe429be"
+      },
+      {
+        "name": "list_physics_features",
+        "actual_callable": "comsol_mcp._tools_physics.list_physics_features",
+        "expected_callable": "comsol_mcp._tools_physics.list_physics_features",
+        "actual_source": "comsol_mcp/_tools_physics.py",
+        "expected_source": "comsol_mcp/_tools_physics.py",
+        "callable_match": true,
+        "input_schema_sha256": "b0cc7147599668be2d32ba859205b723e5398adaeddef0567e867032b60fdce7"
+      },
+      {
+        "name": "list_solver_config",
+        "actual_callable": "comsol_mcp._tools_solver.list_solver_config",
+        "expected_callable": "comsol_mcp._tools_solver.list_solver_config",
+        "actual_source": "comsol_mcp/_tools_solver.py",
+        "expected_source": "comsol_mcp/_tools_solver.py",
+        "callable_match": true,
+        "input_schema_sha256": "a57461dee1d5df653500c25cc2b780767d9e4c183fa2c65d57b31adbdce1c997"
+      },
+      {
+        "name": "list_solver_features",
+        "actual_callable": "comsol_mcp._tools_solver.list_solver_features",
+        "expected_callable": "comsol_mcp._tools_solver.list_solver_features",
+        "actual_source": "comsol_mcp/_tools_solver.py",
+        "expected_source": "comsol_mcp/_tools_solver.py",
+        "callable_match": true,
+        "input_schema_sha256": "8d61850ff8307c5a98a9aae2a1add22bb286cef2d6552024b55d3291adac5fd8"
+      },
+      {
+        "name": "load_current_main_model",
+        "actual_callable": "comsol_mcp._tools_workflow.load_current_main_model",
+        "expected_callable": "comsol_mcp._tools_workflow.load_current_main_model",
+        "actual_source": "comsol_mcp/_tools_workflow.py",
+        "expected_source": "comsol_mcp/_tools_workflow.py",
+        "callable_match": true,
+        "input_schema_sha256": "5b66f6676cb9de13e8e93a7113cf5b513ce81e31630df2444a43de27d0505fbd"
+      },
+      {
+        "name": "load_visible_main_model",
+        "actual_callable": "comsol_mcp._tools_workflow.load_visible_main_model",
+        "expected_callable": "comsol_mcp._tools_workflow.load_visible_main_model",
+        "actual_source": "comsol_mcp/_tools_workflow.py",
+        "expected_source": "comsol_mcp/_tools_workflow.py",
+        "callable_match": true,
+        "input_schema_sha256": "87a2da59ab3cc2fd22352b5627bcecfc0fe382e1258e8a6c61aaa7e16a2e9649"
+      },
+      {
+        "name": "manage_variables",
+        "actual_callable": "comsol_mcp._tools_physics.manage_variables",
+        "expected_callable": "comsol_mcp._tools_physics.manage_variables",
+        "actual_source": "comsol_mcp/_tools_physics.py",
+        "expected_source": "comsol_mcp/_tools_physics.py",
+        "callable_match": true,
+        "input_schema_sha256": "f81208258df9fa2d582d4917b6ede24a400518c620d20113e3e23afa48fecd6b"
+      },
+      {
+        "name": "mcp_tool_audit",
+        "actual_callable": "comsol_mcp._tools_workflow.mcp_tool_audit",
+        "expected_callable": "comsol_mcp._tools_workflow.mcp_tool_audit",
+        "actual_source": "comsol_mcp/_tools_workflow.py",
+        "expected_source": "comsol_mcp/_tools_workflow.py",
+        "callable_match": true,
+        "input_schema_sha256": "058b1dcb7081f1477abe4e015d2cb5ddf6fcf4057d19e96c7e895b88941900d1"
+      },
+      {
+        "name": "model_adopt",
+        "actual_callable": "comsol_mcp._tools_control.model_adopt",
+        "expected_callable": "comsol_mcp._tools_control.model_adopt",
+        "actual_source": "comsol_mcp/_tools_control.py",
+        "expected_source": "comsol_mcp/_tools_control.py",
+        "callable_match": true,
+        "input_schema_sha256": "0bf7f99c1afe33da83b99715a1e771d085f072039f126c75d4469c5523055cff"
+      },
+      {
+        "name": "model_create",
+        "actual_callable": "comsol_mcp._tools_model.model_create",
+        "expected_callable": "comsol_mcp._tools_model.model_create",
+        "actual_source": "comsol_mcp/_tools_model.py",
+        "expected_source": "comsol_mcp/_tools_model.py",
+        "callable_match": true,
+        "input_schema_sha256": "0324a282f6f99b71102f52869897e0a03eaecd5a269c0fd2c0adba175b5f27c4"
+      },
+      {
+        "name": "model_inspect",
+        "actual_callable": "comsol_mcp._tools_control.model_inspect",
+        "expected_callable": "comsol_mcp._tools_control.model_inspect",
+        "actual_source": "comsol_mcp/_tools_control.py",
+        "expected_source": "comsol_mcp/_tools_control.py",
+        "callable_match": true,
+        "input_schema_sha256": "3792660fd46778ff566c78fb50d453cc6824da3dff0e0e4895c0b47b5cea81e7"
+      },
+      {
+        "name": "model_load",
+        "actual_callable": "comsol_mcp._tools_model.model_load",
+        "expected_callable": "comsol_mcp._tools_model.model_load",
+        "actual_source": "comsol_mcp/_tools_model.py",
+        "expected_source": "comsol_mcp/_tools_model.py",
+        "callable_match": true,
+        "input_schema_sha256": "5f7a85f9003d235cd4cfa6041fe4b7cec50e6527a4ebc823a8306fda56ef4d0a"
+      },
+      {
+        "name": "model_tree",
+        "actual_callable": "comsol_mcp._tools_workflow.model_tree",
+        "expected_callable": "comsol_mcp._tools_workflow.model_tree",
+        "actual_source": "comsol_mcp/_tools_workflow.py",
+        "expected_source": "comsol_mcp/_tools_workflow.py",
+        "callable_match": true,
+        "input_schema_sha256": "0da2287fb689c76df395d9c34bad2c7017c5c1a2870d9b9c9ad5010daae5c82a"
+      },
+      {
+        "name": "operation_call",
+        "actual_callable": "comsol_mcp._g2_tools.operation_call",
+        "expected_callable": "comsol_mcp._g2_tools.operation_call",
+        "actual_source": "comsol_mcp/_g2_tools.py",
+        "expected_source": "comsol_mcp/_g2_tools.py",
+        "callable_match": true,
+        "input_schema_sha256": "3d2a0f7b6802f6d0c6a6bdc61bb7f044f7ca93da778939c45e614f2ea0ba9fc6"
+      },
+      {
+        "name": "operation_describe",
+        "actual_callable": "comsol_mcp._g2_tools.operation_describe",
+        "expected_callable": "comsol_mcp._g2_tools.operation_describe",
+        "actual_source": "comsol_mcp/_g2_tools.py",
+        "expected_source": "comsol_mcp/_g2_tools.py",
+        "callable_match": true,
+        "input_schema_sha256": "2c48fb6adcb21ce69c08789e154312d12d85981d37b46c0728692f37d3e50f7c"
+      },
+      {
+        "name": "optimization.bounded_run",
+        "actual_callable": "comsol_mcp._tools_w21.optimization_bounded_run",
+        "expected_callable": "comsol_mcp._tools_w21.optimization_bounded_run",
+        "actual_source": "comsol_mcp/_tools_w21.py",
+        "expected_source": "comsol_mcp/_tools_w21.py",
+        "callable_match": true,
+        "input_schema_sha256": "64212d539d28c8bfd4e99875165e3d3bf120b438e0400d84039c43f8e8cd44f7"
+      },
+      {
+        "name": "optimization_bounded_run",
+        "actual_callable": "comsol_mcp._tools_w21.optimization_bounded_run",
+        "expected_callable": "comsol_mcp._tools_w21.optimization_bounded_run",
+        "actual_source": "comsol_mcp/_tools_w21.py",
+        "expected_source": "comsol_mcp/_tools_w21.py",
+        "callable_match": true,
+        "input_schema_sha256": "5a2159ba92a8814c6d166cadef9333fd55e70b75f3ae418e8979ffff4574cd03"
+      },
+      {
+        "name": "parameter.case_manage",
+        "actual_callable": "comsol_mcp._tools_w21.parameter_case_manage",
+        "expected_callable": "comsol_mcp._tools_w21.parameter_case_manage",
+        "actual_source": "comsol_mcp/_tools_w21.py",
+        "expected_source": "comsol_mcp/_tools_w21.py",
+        "callable_match": true,
+        "input_schema_sha256": "f1aa0887eb8112d80042d12435e0f0251428496ac42a931b7340db26e76d3018"
+      },
+      {
+        "name": "parameter_case_manage",
+        "actual_callable": "comsol_mcp._tools_w21.parameter_case_manage",
+        "expected_callable": "comsol_mcp._tools_w21.parameter_case_manage",
+        "actual_source": "comsol_mcp/_tools_w21.py",
+        "expected_source": "comsol_mcp/_tools_w21.py",
+        "callable_match": true,
+        "input_schema_sha256": "1fb31e82f3577b83f1ee1a94c13a5c032b95b3a5206691ba487ada7874b48d06"
+      },
+      {
+        "name": "plot.render",
+        "actual_callable": "comsol_mcp._tools_w18.plot_render",
+        "expected_callable": "comsol_mcp._tools_w18.plot_render",
+        "actual_source": "comsol_mcp/_tools_w18.py",
+        "expected_source": "comsol_mcp/_tools_w18.py",
+        "callable_match": true,
+        "input_schema_sha256": "db2e753ae86e7394e5d41dcb9588e93c770e043541a1d365663a7928d3c0ea7e"
+      },
+      {
+        "name": "plot_render",
+        "actual_callable": "comsol_mcp._tools_w18.plot_render",
+        "expected_callable": "comsol_mcp._tools_w18.plot_render",
+        "actual_source": "comsol_mcp/_tools_w18.py",
+        "expected_source": "comsol_mcp/_tools_w18.py",
+        "callable_match": true,
+        "input_schema_sha256": "cc6fcad0a7115920c4fb3798fdd0c63bc722ff3e2ba0009950874ba12aa47250"
+      },
+      {
+        "name": "prune_loaded_models",
+        "actual_callable": "comsol_mcp._tools_model.prune_loaded_models",
+        "expected_callable": "comsol_mcp._tools_model.prune_loaded_models",
+        "actual_source": "comsol_mcp/_tools_model.py",
+        "expected_source": "comsol_mcp/_tools_model.py",
+        "callable_match": true,
+        "input_schema_sha256": "4d0daa27c8e655fed051ac4a954c7ea84cd032613d9e3bcbebdffa16627792c5"
+      },
+      {
+        "name": "registry_call",
+        "actual_callable": "comsol_mcp._g2_tools.registry_call",
+        "expected_callable": "comsol_mcp._g2_tools.registry_call",
+        "actual_source": "comsol_mcp/_g2_tools.py",
+        "expected_source": "comsol_mcp/_g2_tools.py",
+        "callable_match": true,
+        "input_schema_sha256": "c5bba1523c2db28a74a7b70cee5f240ef3bd6c6b997f27ed5721d66341c1667a"
+      },
+      {
+        "name": "registry_describe",
+        "actual_callable": "comsol_mcp._g2_tools.registry_describe",
+        "expected_callable": "comsol_mcp._g2_tools.registry_describe",
+        "actual_source": "comsol_mcp/_g2_tools.py",
+        "expected_source": "comsol_mcp/_g2_tools.py",
+        "callable_match": true,
+        "input_schema_sha256": "86f988d86569c7a23011291c692fbc0f7c04010cccf80ff43b43481082ddca30"
+      },
+      {
+        "name": "registry_list",
+        "actual_callable": "comsol_mcp._g2_tools.registry_list",
+        "expected_callable": "comsol_mcp._g2_tools.registry_list",
+        "actual_source": "comsol_mcp/_g2_tools.py",
+        "expected_source": "comsol_mcp/_g2_tools.py",
+        "callable_match": true,
+        "input_schema_sha256": "c71a4b435014015ef78029bfdf0cc8f50fa0448c515a5850d7576816e3e9e2d4"
+      },
+      {
+        "name": "registry_manifest",
+        "actual_callable": "comsol_mcp._g2_tools.registry_manifest",
+        "expected_callable": "comsol_mcp._g2_tools.registry_manifest",
+        "actual_source": "comsol_mcp/_g2_tools.py",
+        "expected_source": "comsol_mcp/_g2_tools.py",
+        "callable_match": true,
+        "input_schema_sha256": "3c52f14c52f51025fb135ba4bd16d543e187286d482399cbdc127b92c3f33dab"
+      },
+      {
+        "name": "registry_search",
+        "actual_callable": "comsol_mcp._g2_tools.registry_search",
+        "expected_callable": "comsol_mcp._g2_tools.registry_search",
+        "actual_source": "comsol_mcp/_g2_tools.py",
+        "expected_source": "comsol_mcp/_g2_tools.py",
+        "callable_match": true,
+        "input_schema_sha256": "2c509262bdb564fc76d2ca1857ad388e54d920ed3fe86f97d15cec471da8d7b8"
+      },
+      {
+        "name": "remove_physics",
+        "actual_callable": "comsol_mcp._tools_physics.remove_physics",
+        "expected_callable": "comsol_mcp._tools_physics.remove_physics",
+        "actual_source": "comsol_mcp/_tools_physics.py",
+        "expected_source": "comsol_mcp/_tools_physics.py",
+        "callable_match": true,
+        "input_schema_sha256": "c7afbdbfe5759ae770065d7b923aa8519b90a56326e17961c9bf7de60145ef57"
+      },
+      {
+        "name": "remove_physics_feature",
+        "actual_callable": "comsol_mcp._tools_physics.remove_physics_feature",
+        "expected_callable": "comsol_mcp._tools_physics.remove_physics_feature",
+        "actual_source": "comsol_mcp/_tools_physics.py",
+        "expected_source": "comsol_mcp/_tools_physics.py",
+        "callable_match": true,
+        "input_schema_sha256": "d1ef1ff0704558521cc8159ac6f6bba3c3572ed788774f62b5478b99045390f5"
+      },
+      {
+        "name": "run_feature",
+        "actual_callable": "comsol_mcp._tools_geometry.run_feature",
+        "expected_callable": "comsol_mcp._tools_geometry.run_feature",
+        "actual_source": "comsol_mcp/_tools_geometry.py",
+        "expected_source": "comsol_mcp/_tools_geometry.py",
+        "callable_match": true,
+        "input_schema_sha256": "33c394c2c2f84fc17d671b27054dffabcdd2bac3f18177f52a405d2046046324"
+      },
+      {
+        "name": "run_study",
+        "actual_callable": "comsol_mcp._tools_workflow.run_study",
+        "expected_callable": "comsol_mcp._tools_workflow.run_study",
+        "actual_source": "comsol_mcp/_tools_workflow.py",
+        "expected_source": "comsol_mcp/_tools_workflow.py",
+        "callable_match": true,
+        "input_schema_sha256": "4074e7c6db12b4a1511a7e4afebb35dedc79a1d1f2b03698b36c62bb05451e7c"
+      },
+      {
+        "name": "run_study_async",
+        "actual_callable": "comsol_mcp._tools_solver.run_study_async",
+        "expected_callable": "comsol_mcp._tools_solver.run_study_async",
+        "actual_source": "comsol_mcp/_tools_solver.py",
+        "expected_source": "comsol_mcp/_tools_solver.py",
+        "callable_match": true,
+        "input_schema_sha256": "f1c0ff5da2a23a23203041cf4fe9dddc2c2a56a90f991eec9594b2c9db0124f8"
+      },
+      {
+        "name": "run_study_status",
+        "actual_callable": "comsol_mcp._tools_solver.run_study_status",
+        "expected_callable": "comsol_mcp._tools_solver.run_study_status",
+        "actual_source": "comsol_mcp/_tools_solver.py",
+        "expected_source": "comsol_mcp/_tools_solver.py",
+        "callable_match": true,
+        "input_schema_sha256": "f001833629f2657f64ed635d331ed60277b00049ecfaab435c42d66bc7bf1a50"
+      },
+      {
+        "name": "run_visible_main_iteration",
+        "actual_callable": "comsol_mcp._tools_snapshot.run_visible_main_iteration",
+        "expected_callable": "comsol_mcp._tools_snapshot.run_visible_main_iteration",
+        "actual_source": "comsol_mcp/_tools_snapshot.py",
+        "expected_source": "comsol_mcp/_tools_snapshot.py",
+        "callable_match": true,
+        "input_schema_sha256": "cdfa500d42e7bd29026222144288bf60c4e74d90fd14c1ef6e77e59312b73f72"
+      },
+      {
+        "name": "runtime_poc_v64",
+        "actual_callable": "comsol_mcp._tools_phase1.runtime_poc_v64",
+        "expected_callable": "comsol_mcp._tools_phase1.runtime_poc_v64",
+        "actual_source": "comsol_mcp/_tools_phase1.py",
+        "expected_source": "comsol_mcp/_tools_phase1.py",
+        "callable_match": true,
+        "input_schema_sha256": "d51c332adb6a4deaac7806a7af228c7b722b2f3864f726470c61e5057d9f1242"
+      },
+      {
+        "name": "save_main_model_snapshot",
+        "actual_callable": "comsol_mcp._tools_snapshot.save_main_model_snapshot",
+        "expected_callable": "comsol_mcp._tools_snapshot.save_main_model_snapshot",
+        "actual_source": "comsol_mcp/_tools_snapshot.py",
+        "expected_source": "comsol_mcp/_tools_snapshot.py",
+        "callable_match": true,
+        "input_schema_sha256": "155f1eb0629a84f4e63c661abebabd7f34910a1fa0cb60c0acc019419476909b"
+      },
+      {
+        "name": "save_model",
+        "actual_callable": "comsol_mcp._tools_snapshot.save_model",
+        "expected_callable": "comsol_mcp._tools_snapshot.save_model",
+        "actual_source": "comsol_mcp/_tools_snapshot.py",
+        "expected_source": "comsol_mcp/_tools_snapshot.py",
+        "callable_match": true,
+        "input_schema_sha256": "cdce076de55769a6806017efeaff2832faeb7c3a3fc2dc63a899ed99154d4261"
+      },
+      {
+        "name": "server_connect",
+        "actual_callable": "comsol_mcp._tools_connection.server_connect",
+        "expected_callable": "comsol_mcp._tools_connection.server_connect",
+        "actual_source": "comsol_mcp/_tools_connection.py",
+        "expected_source": "comsol_mcp/_tools_connection.py",
+        "callable_match": true,
+        "input_schema_sha256": "e94a7fb9f0357990259411d6fb79cce5e1b90a77a13adeda33ed4217449bc055"
+      },
+      {
+        "name": "server_disconnect",
+        "actual_callable": "comsol_mcp._tools_connection.server_disconnect",
+        "expected_callable": "comsol_mcp._tools_connection.server_disconnect",
+        "actual_source": "comsol_mcp/_tools_connection.py",
+        "expected_source": "comsol_mcp/_tools_connection.py",
+        "callable_match": true,
+        "input_schema_sha256": "3f31fc28dc25765fd0899657c54e67247516b468c3dc517ccf301945d2993f97"
+      },
+      {
+        "name": "server_info",
+        "actual_callable": "comsol_mcp._tools_connection.server_info",
+        "expected_callable": "comsol_mcp._tools_connection.server_info",
+        "actual_source": "comsol_mcp/_tools_connection.py",
+        "expected_source": "comsol_mcp/_tools_connection.py",
+        "callable_match": true,
+        "input_schema_sha256": "386b5e42ad4503b83c79fde9a8b9106d515f22fef1c7795e573510f65023003c"
+      },
+      {
+        "name": "server_start",
+        "actual_callable": "comsol_mcp._tools_connection.server_start",
+        "expected_callable": "comsol_mcp._tools_connection.server_start",
+        "actual_source": "comsol_mcp/_tools_connection.py",
+        "expected_source": "comsol_mcp/_tools_connection.py",
+        "callable_match": true,
+        "input_schema_sha256": "3c8c618bdebb43f6ba4d34337b14abf587ed8f9d7cc748595a2cf6e2563c9b11"
+      },
+      {
+        "name": "session_health",
+        "actual_callable": "comsol_mcp._tools_control.session_health",
+        "expected_callable": "comsol_mcp._tools_control.session_health",
+        "actual_source": "comsol_mcp/_tools_control.py",
+        "expected_source": "comsol_mcp/_tools_control.py",
+        "callable_match": true,
+        "input_schema_sha256": "91b62b062a5cf0d64131b47c50d4d4b32292179aba0c57c1f8fd0b27f0361306"
+      },
+      {
+        "name": "set_parameters",
+        "actual_callable": "comsol_mcp._tools_params.set_parameters",
+        "expected_callable": "comsol_mcp._tools_params.set_parameters",
+        "actual_source": "comsol_mcp/_tools_params.py",
+        "expected_source": "comsol_mcp/_tools_params.py",
+        "callable_match": true,
+        "input_schema_sha256": "5c4c1e86bf30e1903086f41c76d116e5e7202cc334ad87547305e53904fb4194"
+      },
+      {
+        "name": "set_physics_selection",
+        "actual_callable": "comsol_mcp._tools_physics.set_physics_selection",
+        "expected_callable": "comsol_mcp._tools_physics.set_physics_selection",
+        "actual_source": "comsol_mcp/_tools_physics.py",
+        "expected_source": "comsol_mcp/_tools_physics.py",
+        "callable_match": true,
+        "input_schema_sha256": "cc56342171b7c77030a89ad17f8d7436c2a68897aa4f749cb9d285c5be9a8449"
+      },
+      {
+        "name": "solver_solution_transfer",
+        "actual_callable": "comsol_mcp._tools_w21.solver_solution_transfer",
+        "expected_callable": "comsol_mcp._tools_w21.solver_solution_transfer",
+        "actual_source": "comsol_mcp/_tools_w21.py",
+        "expected_source": "comsol_mcp/_tools_w21.py",
+        "callable_match": true,
+        "input_schema_sha256": "0f174e07877a4b869a71d1de49a180ce4c9623daff2f0bf83cfc4d73cb7cc90b"
+      },
+      {
+        "name": "stage.checkpoint_create",
+        "actual_callable": "comsol_mcp._tools_w21.stage_checkpoint_create",
+        "expected_callable": "comsol_mcp._tools_w21.stage_checkpoint_create",
+        "actual_source": "comsol_mcp/_tools_w21.py",
+        "expected_source": "comsol_mcp/_tools_w21.py",
+        "callable_match": true,
+        "input_schema_sha256": "7c3bb63f790231e6e45e2fc1bdb65f06a2f16aaea22e4b7b7bb39e4154d0b0c5"
+      },
+      {
+        "name": "stage.state_transfer",
+        "actual_callable": "comsol_mcp._tools_w21.stage_state_transfer",
+        "expected_callable": "comsol_mcp._tools_w21.stage_state_transfer",
+        "actual_source": "comsol_mcp/_tools_w21.py",
+        "expected_source": "comsol_mcp/_tools_w21.py",
+        "callable_match": true,
+        "input_schema_sha256": "842f3a2a68b2cfc3b8bbe2cb373c15457ee0c01b9d0f387fbd9d79370d290aa1"
+      },
+      {
+        "name": "stage_checkpoint_create",
+        "actual_callable": "comsol_mcp._tools_w21.stage_checkpoint_create",
+        "expected_callable": "comsol_mcp._tools_w21.stage_checkpoint_create",
+        "actual_source": "comsol_mcp/_tools_w21.py",
+        "expected_source": "comsol_mcp/_tools_w21.py",
+        "callable_match": true,
+        "input_schema_sha256": "1afcbe58c84bac48b82073884326a36d5012ba93961171858eebf24a50e9780a"
+      },
+      {
+        "name": "stage_state_transfer",
+        "actual_callable": "comsol_mcp._tools_w21.stage_state_transfer",
+        "expected_callable": "comsol_mcp._tools_w21.stage_state_transfer",
+        "actual_source": "comsol_mcp/_tools_w21.py",
+        "expected_source": "comsol_mcp/_tools_w21.py",
+        "callable_match": true,
+        "input_schema_sha256": "74a884f6c29862c0e90ff9f75e1cf43ebe26f005169bd5940809e4937ff46805"
+      },
+      {
+        "name": "start_visible_main_workflow",
+        "actual_callable": "comsol_mcp._tools_workflow.start_visible_main_workflow",
+        "expected_callable": "comsol_mcp._tools_workflow.start_visible_main_workflow",
+        "actual_source": "comsol_mcp/_tools_workflow.py",
+        "expected_source": "comsol_mcp/_tools_workflow.py",
+        "callable_match": true,
+        "input_schema_sha256": "805c59df805932ce7d59ba3bd06a1eb8c139136ce0ee3cceaa966bd0203b702a"
+      },
+      {
+        "name": "start_visible_main_workflow_async",
+        "actual_callable": "comsol_mcp._tools_workflow.start_visible_main_workflow_async",
+        "expected_callable": "comsol_mcp._tools_workflow.start_visible_main_workflow_async",
+        "actual_source": "comsol_mcp/_tools_workflow.py",
+        "expected_source": "comsol_mcp/_tools_workflow.py",
+        "callable_match": true,
+        "input_schema_sha256": "b3bd40e018cfd3e3774f5a8e06ad67b0441912709e131573367e91ac7a86cdae"
+      },
+      {
+        "name": "study.sweep_manage",
+        "actual_callable": "comsol_mcp._tools_w21.study_sweep_manage",
+        "expected_callable": "comsol_mcp._tools_w21.study_sweep_manage",
+        "actual_source": "comsol_mcp/_tools_w21.py",
+        "expected_source": "comsol_mcp/_tools_w21.py",
+        "callable_match": true,
+        "input_schema_sha256": "117f8f8219987923f884e7e421593d8a99ae084221f70cee520dac4ff1ac7fd8"
+      },
+      {
+        "name": "study_sweep_manage",
+        "actual_callable": "comsol_mcp._tools_w21.study_sweep_manage",
+        "expected_callable": "comsol_mcp._tools_w21.study_sweep_manage",
+        "actual_source": "comsol_mcp/_tools_w21.py",
+        "expected_source": "comsol_mcp/_tools_w21.py",
+        "callable_match": true,
+        "input_schema_sha256": "77685e41602dd65f18c850085da8f7f757af153d741260835b26548955d9842d"
+      },
+      {
+        "name": "unlock_visible_main",
+        "actual_callable": "comsol_mcp._tools_workflow.unlock_visible_main",
+        "expected_callable": "comsol_mcp._tools_workflow.unlock_visible_main",
+        "actual_source": "comsol_mcp/_tools_workflow.py",
+        "expected_source": "comsol_mcp/_tools_workflow.py",
+        "callable_match": true,
+        "input_schema_sha256": "40436df2ea15cc7054a55ad11825f1e938f5e806b32042de86e1cfe2ea1f0385"
+      },
+      {
+        "name": "update_feature",
+        "actual_callable": "comsol_mcp._tools_geometry.update_feature",
+        "expected_callable": "comsol_mcp._tools_geometry.update_feature",
+        "actual_source": "comsol_mcp/_tools_geometry.py",
+        "expected_source": "comsol_mcp/_tools_geometry.py",
+        "callable_match": true,
+        "input_schema_sha256": "c39fd65b2b685bbe85a5fc95db9505df7b9571dafd28c75ddeb9c1db232b0722"
+      },
+      {
+        "name": "update_physics_feature",
+        "actual_callable": "comsol_mcp._tools_physics.update_physics_feature",
+        "expected_callable": "comsol_mcp._tools_physics.update_physics_feature",
+        "actual_source": "comsol_mcp/_tools_physics.py",
+        "expected_source": "comsol_mcp/_tools_physics.py",
+        "callable_match": true,
+        "input_schema_sha256": "56a9679646d48172f02030c8bfd964913bb4578b5d3d3dfdc02cbc9a1ad7a27b"
+      },
+      {
+        "name": "validate.boundary_conditions",
+        "actual_callable": "comsol_mcp._tools_w20.validate_boundary_conditions",
+        "expected_callable": "comsol_mcp._tools_w20.validate_boundary_conditions",
+        "actual_source": "comsol_mcp/_tools_w20.py",
+        "expected_source": "comsol_mcp/_tools_w20.py",
+        "callable_match": true,
+        "input_schema_sha256": "0320b6753a0315a4de8b0264cc0609dee3f041034c254ac29d6b40bedcb6a5e0"
+      },
+      {
+        "name": "validate.conservation",
+        "actual_callable": "comsol_mcp._tools_w20.validate_conservation",
+        "expected_callable": "comsol_mcp._tools_w20.validate_conservation",
+        "actual_source": "comsol_mcp/_tools_w20.py",
+        "expected_source": "comsol_mcp/_tools_w20.py",
+        "callable_match": true,
+        "input_schema_sha256": "edf541e1ba699271c01e02cceb219f7b39f4c92453a57038804b4458c2f7496a"
+      },
+      {
+        "name": "validate.convergence",
+        "actual_callable": "comsol_mcp._tools_w20.validate_convergence",
+        "expected_callable": "comsol_mcp._tools_w20.validate_convergence",
+        "actual_source": "comsol_mcp/_tools_w20.py",
+        "expected_source": "comsol_mcp/_tools_w20.py",
+        "callable_match": true,
+        "input_schema_sha256": "5c04625eefb75008a62de64fc41b4c3db39c827bae75fde4153fa17fa14ab355"
+      },
+      {
+        "name": "validate.expressions",
+        "actual_callable": "comsol_mcp._tools_w20.validate_expressions",
+        "expected_callable": "comsol_mcp._tools_w20.validate_expressions",
+        "actual_source": "comsol_mcp/_tools_w20.py",
+        "expected_source": "comsol_mcp/_tools_w20.py",
+        "callable_match": true,
+        "input_schema_sha256": "abf57ae855481cf656aa2e01cf7517e55eb0b2c48756dffa82bb9a215fb52e4c"
+      },
+      {
+        "name": "validate.preflight",
+        "actual_callable": "comsol_mcp._tools_w20.validate_preflight",
+        "expected_callable": "comsol_mcp._tools_w20.validate_preflight",
+        "actual_source": "comsol_mcp/_tools_w20.py",
+        "expected_source": "comsol_mcp/_tools_w20.py",
+        "callable_match": true,
+        "input_schema_sha256": "72840a1e78095cec1b401a19dab44102ebb986b3c01ea318bcdecb21e477b93f"
+      },
+      {
+        "name": "validate.report",
+        "actual_callable": "comsol_mcp._tools_w20.validate_report",
+        "expected_callable": "comsol_mcp._tools_w20.validate_report",
+        "actual_source": "comsol_mcp/_tools_w20.py",
+        "expected_source": "comsol_mcp/_tools_w20.py",
+        "callable_match": true,
+        "input_schema_sha256": "01fa9a8e7cb9c013f00ed3ccc7e1e83552acddaf883173670d919b3a3490e711"
+      },
+      {
+        "name": "validate.solution",
+        "actual_callable": "comsol_mcp._tools_w20.validate_solution",
+        "expected_callable": "comsol_mcp._tools_w20.validate_solution",
+        "actual_source": "comsol_mcp/_tools_w20.py",
+        "expected_source": "comsol_mcp/_tools_w20.py",
+        "callable_match": true,
+        "input_schema_sha256": "db5e9faa3fd297f44ef9002d466bebed4cdc7e2a72b5354dd5e71ae85490b0c4"
+      },
+      {
+        "name": "validate.structure",
+        "actual_callable": "comsol_mcp._tools_w20.validate_structure",
+        "expected_callable": "comsol_mcp._tools_w20.validate_structure",
+        "actual_source": "comsol_mcp/_tools_w20.py",
+        "expected_source": "comsol_mcp/_tools_w20.py",
+        "callable_match": true,
+        "input_schema_sha256": "37fb55c903f7e5b220b5a2519eb3fdca570328222ce55331782e7c88bc23ecd4"
+      },
+      {
+        "name": "validate_boundary_conditions",
+        "actual_callable": "comsol_mcp._tools_w20.validate_boundary_conditions",
+        "expected_callable": "comsol_mcp._tools_w20.validate_boundary_conditions",
+        "actual_source": "comsol_mcp/_tools_w20.py",
+        "expected_source": "comsol_mcp/_tools_w20.py",
+        "callable_match": true,
+        "input_schema_sha256": "7121411e97daf170fe227992ae7c211ce7c6abf10350f849777bb4a2ea887902"
+      },
+      {
+        "name": "validate_conservation",
+        "actual_callable": "comsol_mcp._tools_w20.validate_conservation",
+        "expected_callable": "comsol_mcp._tools_w20.validate_conservation",
+        "actual_source": "comsol_mcp/_tools_w20.py",
+        "expected_source": "comsol_mcp/_tools_w20.py",
+        "callable_match": true,
+        "input_schema_sha256": "aaabe95aabd870447851a70bbbf11c70014540d0db342ed4a67bf26d5abc9c8f"
+      },
+      {
+        "name": "validate_convergence",
+        "actual_callable": "comsol_mcp._tools_w20.validate_convergence",
+        "expected_callable": "comsol_mcp._tools_w20.validate_convergence",
+        "actual_source": "comsol_mcp/_tools_w20.py",
+        "expected_source": "comsol_mcp/_tools_w20.py",
+        "callable_match": true,
+        "input_schema_sha256": "2c941fb073a3626fb3275b8c511c107a9fce9cd217531a71ec117bc773323eaf"
+      },
+      {
+        "name": "validate_expressions",
+        "actual_callable": "comsol_mcp._tools_w20.validate_expressions",
+        "expected_callable": "comsol_mcp._tools_w20.validate_expressions",
+        "actual_source": "comsol_mcp/_tools_w20.py",
+        "expected_source": "comsol_mcp/_tools_w20.py",
+        "callable_match": true,
+        "input_schema_sha256": "9336ba31a404fe92b7dbf8228f813a3254360bd3c69a2474837d5852d88f6a96"
+      },
+      {
+        "name": "validate_preflight",
+        "actual_callable": "comsol_mcp._tools_w20.validate_preflight",
+        "expected_callable": "comsol_mcp._tools_w20.validate_preflight",
+        "actual_source": "comsol_mcp/_tools_w20.py",
+        "expected_source": "comsol_mcp/_tools_w20.py",
+        "callable_match": true,
+        "input_schema_sha256": "e46cdbcee9c1722978d2e057eb429c275fdf83b29a34da51ae0d3de34cd6366c"
+      },
+      {
+        "name": "validate_report",
+        "actual_callable": "comsol_mcp._tools_w20.validate_report",
+        "expected_callable": "comsol_mcp._tools_w20.validate_report",
+        "actual_source": "comsol_mcp/_tools_w20.py",
+        "expected_source": "comsol_mcp/_tools_w20.py",
+        "callable_match": true,
+        "input_schema_sha256": "8f577c64590410b0826820b64555295a03a5cd5c8c2215846eed4533de269047"
+      },
+      {
+        "name": "validate_solution",
+        "actual_callable": "comsol_mcp._tools_w20.validate_solution",
+        "expected_callable": "comsol_mcp._tools_w20.validate_solution",
+        "actual_source": "comsol_mcp/_tools_w20.py",
+        "expected_source": "comsol_mcp/_tools_w20.py",
+        "callable_match": true,
+        "input_schema_sha256": "f6d4072b2ffb18eb0ae50f76fa6eb419a96290320480d161ffe5b9ab3477c346"
+      },
+      {
+        "name": "validate_structure",
+        "actual_callable": "comsol_mcp._tools_w20.validate_structure",
+        "expected_callable": "comsol_mcp._tools_w20.validate_structure",
+        "actual_source": "comsol_mcp/_tools_w20.py",
+        "expected_source": "comsol_mcp/_tools_w20.py",
+        "callable_match": true,
+        "input_schema_sha256": "a6077efb29369e3a6643f24a9ae5902585276ca78f7103b660b3b8d75fd850fe"
+      },
+      {
+        "name": "verify_visible_main_session",
+        "actual_callable": "comsol_mcp._tools_workflow.verify_visible_main_session",
+        "expected_callable": "comsol_mcp._tools_workflow.verify_visible_main_session",
+        "actual_source": "comsol_mcp/_tools_workflow.py",
+        "expected_source": "comsol_mcp/_tools_workflow.py",
+        "callable_match": true,
+        "input_schema_sha256": "581be2ea6713e9c0778a92f842b67baebb64a40f45f80b63c6cfc57265536ade"
+      },
+      {
+        "name": "visible_main_workflow_status",
+        "actual_callable": "comsol_mcp._tools_workflow.visible_main_workflow_status",
+        "expected_callable": "comsol_mcp._tools_workflow.visible_main_workflow_status",
+        "actual_source": "comsol_mcp/_tools_workflow.py",
+        "expected_source": "comsol_mcp/_tools_workflow.py",
+        "callable_match": true,
+        "input_schema_sha256": "b1615d94b0b6b685edad4f8b9fe33c5e580f0242b499b7878ffd357370d18e3c"
+      },
+      {
+        "name": "workflow_info",
+        "actual_callable": "comsol_mcp._tools_workflow.workflow_info",
+        "expected_callable": "comsol_mcp._tools_workflow.workflow_info",
+        "actual_source": "comsol_mcp/_tools_workflow.py",
+        "expected_source": "comsol_mcp/_tools_workflow.py",
+        "callable_match": true,
+        "input_schema_sha256": "a283a0c78469612c73c5755be6c35f1d834f6dee83d4d2876e7c10d09c25c6eb"
+      }
+    ],
+    "evidence_refs": [
+      {
+        "alias": "T038_SCRATCH/ROOT_G01_V10_SCOPED_ACCEPTANCE001.json",
+        "size_bytes": 4951,
+        "sha256": "09b5df89a4122f47b235db1f7013f5fc7dade412d25beb0830c1ad2fe3b349f0"
+      },
+      {
+        "alias": "T038_SCRATCH/G01_V10_ACTUAL_INVOCATION_EVIDENCE001.json",
+        "size_bytes": 3265,
+        "sha256": "65cfa46bba31704ff53d4ba125050453d6c268e8c3ccc99b6c72db2703f8f302"
+      },
+      {
+        "alias": "T038_ACTUAL_RUN/g01-parent-result.json",
+        "size_bytes": 119909,
+        "sha256": "7726ad6429fb02c6d2614cf12afc7c7e5004a62abc383aa2ded61872b9973b52"
+      },
+      {
+        "alias": "T038_ACTUAL_RUN/g01-finalization-revalidation.json",
+        "size_bytes": 19352,
+        "sha256": "3fbbb6c44401476d8aad7a8ba1b9a378513e632d36295dcd65f11e44a5ec434b"
+      },
+      {
+        "alias": "T038_ACTUAL_RUN/results/g01-observer.json",
+        "size_bytes": 440648,
+        "sha256": "96db213dd1d34dcf0849bb39271ab8bc4edf1ebc55ac55722d0efa237d569a96"
+      },
+      {
+        "alias": "INDEPENDENT_REVIEW/G01_REVIEW001.md",
+        "size_bytes": 2593,
+        "sha256": "27d20b0aec83be03e6a482bd5c7702e301ee7ad1add0cfc3e94f82292bd7dae1"
+      },
+      {
+        "alias": "INDEPENDENT_REVIEW/G01_REVIEW001.json",
+        "size_bytes": 8550,
+        "sha256": "9e817b56d71c104a6095754c74fecf052ab662644197313e6418c87801823061"
+      },
+      {
+        "alias": "INDEPENDENT_REVIEW/G01_REVIEW_MANIFEST001.json",
+        "size_bytes": 6437,
+        "sha256": "ac38bfd1047f7ed762403c09c7297879901349bc93d2eb5a5bb7dcdb6a58f18b"
+      },
+      {
+        "alias": "INDEPENDENT_REVIEW/G01_CLOSED_READBACK001.json",
+        "size_bytes": 2414,
+        "sha256": "21b41389630c7f4fceb47fd0e9fdd1d90bc2a1db4406ead47743fa70db982157"
+      }
+    ]
+  },
+  "D2": {
+    "status": "FAIL_PRESERVED",
+    "collection": {
+      "actual_collected": 89,
+      "status": "COLLECTED_NOT_YET_ACCEPTED"
+    },
+    "junit": {
+      "tests": 89,
+      "passed": 84,
+      "failed": 5,
+      "errors": 0,
+      "skipped": 0
+    },
+    "exit_code": 1,
+    "frozen_launch_refs": 27,
+    "frozen_launch_refs_unchanged": true,
+    "failure_class": "harness envelope/boundary assertions; fix and rerun against actual daemon/store, without weakening production checks",
+    "runtime_acceptance": "FAIL; required historical740 plus pure-worker24 revalidation NOT_RUN",
+    "execution_readback_ref": {
+      "alias": "D2_SCRATCH/FOCUSED89_EXECUTION_READBACK040.json",
+      "size_bytes": 12692,
+      "sha256": "7cf6422a8c25429429254701c710cd075e4d4ede6c50106f2576a199152dda9f"
+    }
+  },
+  "successors": "NOT_RUN",
+  "master": {
+    "status": "ACTIVE_INCOMPLETE",
+    "work_packages": 26,
+    "actions": 272,
+    "tests": 60,
+    "target_cells": 360,
+    "acceptance_cells_changed": 0,
+    "release": "NOT_SELECTED"
+  },
+  "source_isolation": {
+    "status": "SOURCE207_CONTENT_IDENTITY_VERIFIED_ONLY",
+    "R": "NOT_PROMOTED",
+    "source006_inode_runtime_provenance": "NOT_RESTORED"
+  },
+  "publication_state": "LOCAL_REVIEW_PACKAGE_PREPARED; no Git commit or push"
+}

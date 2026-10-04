@@ -1,0 +1,197 @@
+{
+  "attempt_name": "t038-g01-v7-f6b596-20261004-001",
+  "authorization_state": "PROPOSED_NOT_GRANTED",
+  "binding_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/t038-real-stdio-harness-20261004-001/G01_CURRENT_BINDING_V7.json",
+  "command_fields_to_bind": [
+    "executable",
+    "interpreter_flags",
+    "script",
+    "mode",
+    "manifest_path",
+    "manifest_sha256",
+    "binding_path",
+    "binding_sha256",
+    "go_path",
+    "go_sha256",
+    "attempt_name",
+    "timeout_seconds"
+  ],
+  "command_template": [
+    "/private/tmp/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python",
+    "-I",
+    "-B",
+    "/Volumes/SSD/Comsol-MCP/execution-scratch/t038-real-stdio-harness-20261004-001/g01-frozen-v7/stdio_parent.py",
+    "--mode",
+    "g01",
+    "--manifest",
+    "/Volumes/SSD/Comsol-MCP/execution-scratch/t038-real-stdio-harness-20261004-001/G01_FROZEN_MANIFEST_V7.json",
+    "--manifest-sha256",
+    "<MANIFEST_SHA256>",
+    "--binding",
+    "/Volumes/SSD/Comsol-MCP/execution-scratch/t038-real-stdio-harness-20261004-001/G01_CURRENT_BINDING_V7.json",
+    "--binding-sha256",
+    "<BINDING_SHA256>",
+    "--go",
+    "/Volumes/SSD/Comsol-MCP/execution-scratch/t038-real-stdio-harness-20261004-001/G01_RUNTIME_GO_V7.json",
+    "--go-sha256",
+    "<GO_FILE_SHA256>",
+    "--attempt-name",
+    "t038-g01-v7-f6b596-20261004-001",
+    "--timeout-seconds",
+    "180"
+  ],
+  "consumption": "Parent creates exactly one O_EXCL marker named .t038-go-consumed-<decision_id>.json under the bound output parent before child launch; marker collision fails closed and consumes no second launch.",
+  "decision_id": "t038-g01-v7-f6b596-20261004-001",
+  "decision_to_be_made_by_root": "A fresh one-use Root-authored V7 GO is required for the narrow V7 output guard correction; V5 and V6 invocation grants are consumed and not reusable.",
+  "grant_file_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/t038-real-stdio-harness-20261004-001/G01_RUNTIME_GO_V7.json",
+  "grant_schema": "T038_G01_ONE_USE_RUNTIME_GO_V1",
+  "grant_status_field": "Set decision to GRANTED only in a new Root-authored V7 GO file; this proposal grants no execution authority.",
+  "manifest_path": "/Volumes/SSD/Comsol-MCP/execution-scratch/t038-real-stdio-harness-20261004-001/G01_FROZEN_MANIFEST_V7.json",
+  "max_child_launches": 1,
+  "output_parent": {
+    "device": 16777251,
+    "inode": 17,
+    "mode": 16832,
+    "path": "/Volumes/CTestRecovery1004/full-MASTER-recovery-20261004-001/t038"
+  },
+  "post_terminal_gate": "After child captures, raw capture readbacks, observer report readback, and parent-result write, parent re-reads the same original GO file/ref, manifest, binding, all source members and every frozen input before its final held-directory checks and successful return.",
+  "prior_v3_invocation": {
+    "attempt_directory": "ABSENT",
+    "consume_marker": "ABSENT",
+    "launcher_exit_code": 2,
+    "observer_child": "NOT_LAUNCHED",
+    "status": "FAIL_G01_PARENT",
+    "underlying_exception": "UNKNOWN_NOT_PRESERVED"
+  },
+  "prior_v4_invocation": {
+    "attempt_directory": "/Volumes/CTestRecovery1004/full-MASTER-recovery-20261004-001/t038/t038-g01-v4-f6b596-20261004-001",
+    "child_pid": 76294,
+    "exit_code": 2,
+    "failure": "Inherited child process environment included LC_CTYPE and __CF_USER_TEXT_ENCODING beyond v4 frozen expected mapping; v4 artifacts preserved.",
+    "retry": "NOT_AUTHORIZED; v5 is a new proposal and requires a new Root GO.",
+    "status": "NOT_READY_G01_METADATA_OBSERVER"
+  },
+  "prior_v5_invocation": {
+    "failure": "Parent rejected manifest because external_output_parent had an extra descriptive state field; grant consumed, no child launch."
+  },
+  "prior_v6_invocation": {
+    "child_pid": 1611,
+    "child_reaped": true,
+    "child_returncode": 3,
+    "evidence": {
+      "actual_invocation_evidence": {
+        "device": 16777238,
+        "inode": 1795787,
+        "mode": 33216,
+        "mtime_ns": 1791083576160000000,
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/t038-real-stdio-harness-20261004-001/G01_V6_ACTUAL_INVOCATION_EVIDENCE001.json",
+        "sha256": "cedc7297e29a6e0496c5b180f59bce9a068fa0147cc65762f093403c04e89bf7",
+        "size_bytes": 3604
+      },
+      "child_stderr": {
+        "device": 16777251,
+        "inode": 1800,
+        "mode": 33152,
+        "mtime_ns": 1791083562133828964,
+        "path": "/Volumes/CTestRecovery1004/full-MASTER-recovery-20261004-001/t038/t038-g01-v6-f6b596-20261004-001/results/g01-child.stderr.bin",
+        "sha256": "5d9e0f7ef92b51fd76df8e251368fdf2827c6bf089ec680836eb576d6aab19c1",
+        "size_bytes": 33
+      },
+      "child_stdout": {
+        "device": 16777251,
+        "inode": 1799,
+        "mode": 33152,
+        "mtime_ns": 1791083562133643256,
+        "path": "/Volumes/CTestRecovery1004/full-MASTER-recovery-20261004-001/t038/t038-g01-v6-f6b596-20261004-001/results/g01-child.stdout.bin",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "size_bytes": 0
+      },
+      "consume_marker": {
+        "device": 16777251,
+        "inode": 1790,
+        "mode": 33152,
+        "mtime_ns": 1791083561222663981,
+        "path": "/Volumes/CTestRecovery1004/full-MASTER-recovery-20261004-001/t038/.t038-go-consumed-t038-g01-v6-f6b596-20261004-001.json",
+        "sha256": "9b3e06361217adead3ae285413043b368de7588ae755b822f29abefa03e3fa7b",
+        "size_bytes": 1367
+      },
+      "finalization_revalidation": {
+        "device": 16777251,
+        "inode": 1802,
+        "mode": 33152,
+        "mtime_ns": 1791083562173856533,
+        "path": "/Volumes/CTestRecovery1004/full-MASTER-recovery-20261004-001/t038/t038-g01-v6-f6b596-20261004-001/g01-finalization-revalidation.json",
+        "sha256": "6fdf5ad0dfe77e7cc3352094237306d1ca001ea6744f0fcbb18ebf1df5e94cd1",
+        "size_bytes": 19093
+      },
+      "parent_result": {
+        "device": 16777251,
+        "inode": 1801,
+        "mode": 33152,
+        "mtime_ns": 1791083562153909436,
+        "path": "/Volumes/CTestRecovery1004/full-MASTER-recovery-20261004-001/t038/t038-g01-v6-f6b596-20261004-001/g01-parent-result.json",
+        "sha256": "c538a213be448e8c76c6d7a89825bf99e0431f8518b68005401e03a1ec69c192",
+        "size_bytes": 118821
+      },
+      "root_GO": {
+        "device": 16777238,
+        "inode": 1795759,
+        "mode": 33216,
+        "mtime_ns": 1791083513910000000,
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/t038-real-stdio-harness-20261004-001/G01_RUNTIME_GO_V6.json",
+        "sha256": "9b5e1c5edf794afb30d28e0a111f05f852a774b372582bad6964e6b8a0d25e80",
+        "size_bytes": 2459
+      },
+      "root_decision": {
+        "device": 16777238,
+        "inode": 1795761,
+        "mode": 33216,
+        "mtime_ns": 1791083513910000000,
+        "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/t038-real-stdio-harness-20261004-001/ROOT_G01_V6_INVOCATION_DECISION001.json",
+        "sha256": "14448e77d47e3e009eeeb6425a72fbd1d7b47ee4fae6e0e6e439f63f4a591216",
+        "size_bytes": 3759
+      }
+    },
+    "exit_code": 2,
+    "observer_report": "not preserved; child output writer returned NotReady",
+    "status": "FAIL_G01_PARENT_CAPTURE"
+  },
+  "review_scope": "Focused review of the V6 child output failure: allow reads only from the owned results directory and exact already-bound fixed file paths required by existing terminal verification; retain write-only-to-results behavior and all import/effect/process limits.",
+  "runtime": {
+    "anyio": "4.15.1",
+    "executable": "/private/tmp/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python",
+    "jsonschema": "4.26.0",
+    "mcp": "1.30.0",
+    "prefix": "/private/tmp/comsol-mcp-recovery-runtime-20261004-001/python312",
+    "python_version": "3.12.13"
+  },
+  "runtime_GO": "PROPOSED_NOT_GRANTED",
+  "schema": "T038_G01_GO_PROPOSAL_V2",
+  "scope": "G01_METADATA_OBSERVER_ONLY",
+  "source_fingerprint": "f6b596c14898df2d5ac3af412106d24e3fd7933438a954f401d7cf84b2a1c26e",
+  "status": "PROPOSED_NOT_GRANTED",
+  "time_fields_to_fill": "issued_at_utc and expires_at_utc in UTC RFC3339; execution requires issued_at_utc <= current UTC <= expires_at_utc.",
+  "time_values_to_set_by_root": [
+    "issued_at_utc",
+    "expires_at_utc"
+  ],
+  "timeout_seconds": 180,
+  "v5_environment_delta": {
+    "child_startup_normalization": {
+      "key": "__CF_USER_TEXT_ENCODING",
+      "operation": "os.environ.pop(key, None)",
+      "report": "presence boolean only",
+      "value_read_or_recorded": false
+    },
+    "fixed_environment_addition": {
+      "LC_CTYPE": "C.UTF-8"
+    },
+    "scope": "Only the observed startup key is removed before the strict comparison. All other variables remain exact-match requirements."
+  },
+  "v6_io_guard_delta": {
+    "finite_loop": "No event-loop code change: Runner context manager remains around loop acquisition/observation, with existing post-context closed-loop/self-pipe checks.",
+    "output_failure_stderr": "One bounded JSON record with output exception type/message and original result status/error; each string at most 1000 characters; no complete result or environment dump.",
+    "read_roots": "Exact attempt-owned results_root plus every path in the current already-bound fixed_files list; no metadata directories or general workspace.",
+    "write_roots": "Unchanged: exact attempt-owned results_root only."
+  }
+}
