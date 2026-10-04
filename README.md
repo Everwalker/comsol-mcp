@@ -18,10 +18,12 @@
 - **结构 JVM 检查**：R048 接受了两个结构 harness 测试；OS 级进程隔离仍为 `NOT_PROVEN`，W23 为 `COMPILE_ONLY`。
 - **Release helper**：64 个聚焦测试全部通过（0 failures/errors/skips）。其中 candidate-only 清理断言仅由 mock 验证；四个 helper 源码/测试文件已通过独立审查及主 Agent 验收；默认模式的 8 个既有回退回归也已通过（mock 软件测试）。
 - **W26 transition**：有界单机合成数据 `0.1.9 → 0.2.0.dev1 → 0.1.9` 转换获接受，独立检查 18/18；未使用真实用户数据，另一次真实非空 candidate-only 卸载已获独立和主 Agent 验收；SQLite 备份仅覆盖控制台账，引用模型和产物文件需单独备份。
+- **W21/reconnect test fixtures**：仅修复测试夹具，生产源码不变；两项重点测试和五模块50项回归通过，独立审查51/51（含一项guard负控）。原失败记录保留，原生/JVM/真实Worker启动未运行。
+- **Artifact queries**：独立审查为 `CHANGES_REQUIRED`，四项缺陷正于隔离候选中整改；尚未合入。`model.compare` 已按冻结契约开始隔离实现。
 - **W22 historical source content**：10,102 条历史源码内容及安全 APFS 还原已通过独立与主 Agent 验收；原 tar 字节和完整 Git 历史未恢复，没有科学重放。归档本体保留在本地。
 - **W23 model_create guard**：无路径创建不再因无关持久化工作流路径而提前拒绝；独立与主 Agent 软件验收通过，原生/科学验收仍未运行。此前冻结的 dev1 包不含此修复。
 - **Windows / Intel dev1 archives**：已通过独立与主 Agent 归档验收；目标机安装和 COMSOL 运行仍为 NOT_RUN。
-- **W22 replay archive**：422 个成员的本地归档已获独立与主 Agent 字节/干净解压验收；没有执行新的科学重放，完整历史源码内容恢复继续进行。
+- **W22 replay archive**：422 个成员的本地归档已获独立与主 Agent 字节/干净解压验收；没有执行新的科学重放，历史源码内容恢复已另行通过内容验收，见对应条目。
 - **P4 offline bundle**：macARM 冻结构件与真实包内 helper 离线安装已获独立和主 Agent 软件范围验收；其他平台和科学验收仍未完成。
 - **Loopback7**：最新实际子进程通过 7/7（0 failures/errors/skips），套接字均已关闭、辅助线程均已结束；独立运行时审查和主 Agent 验收已通过。原始工具回执确认 exit 0，与子进程及 supervisor PASS 一致。此前失败记录保留；本结果仅覆盖合成回环软件测试。
 - Full-project、native、science 和 platform-matrix acceptance 均为 `NOT_ACCEPTED`；final release 为 `NOT_SELECTED`。当前 `pyproject.toml` 已声明 Windows/macOS；已有冻结 `.dev1` 构件保留旧元数据，最终构件仍需在候选冻结后重建。

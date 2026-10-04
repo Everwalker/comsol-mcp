@@ -94,16 +94,22 @@ def test_private_w21_stage_marker_binds_project_reply_without_changing_generic_c
             "study_tag": "std1",
         }
         class Worker:
+            generation = 71
+            model_generation = 71
+            model_generation_offset = 0
+
             def client(self):
                 return self
 
             def model(self, _tag):
-                return type("BoundModel", (), {"_handle": "model-h", "_generation": 71})()
+                generation = self.model_generation + self.model_generation_offset
+                return type("BoundModel", (), {"_handle": "model-h", "_generation": generation})()
 
             def operation_context(self, *_args, **_kwargs):
                 return nullcontext()
 
-        backend.worker = Worker()
+        worker = Worker()
+        backend.worker = worker
         execution = {
             "project_id": "project-a", "session_id": "s", "model_ref": ref,
             "expected_revision": 0, "request_id": "attempt-a:solve",
@@ -119,12 +125,44 @@ def test_private_w21_stage_marker_binds_project_reply_without_changing_generic_c
         with pytest.raises(ExecutionContractError, match="private W21 stage dispatch marker"):
             backend.invoke("run_study", {"study_tag": "std1"}, tampered, "operation-a", lambda _event: None)
         assert calls == [{"study_tag": "std1"}]
+
+        worker.model_generation_offset = -1
+        with pytest.raises(ExecutionContractError, match="different Worker handle or generation"):
+            backend.invoke("run_study", {"study_tag": "std1"}, execution, "operation-a", lambda _event: None)
+        assert calls == [{"study_tag": "std1"}]
+
+        original_generation = Worker.generation
+        worker.model_generation_offset = 0
+        del Worker.generation
+        try:
+            with pytest.raises(ExecutionContractError, match="no current Worker generation"):
+                backend.invoke("run_study", {"study_tag": "std1"}, execution, "operation-a", lambda _event: None)
+            assert calls == [{"study_tag": "std1"}]
+        finally:
+            Worker.generation = original_generation
     finally:
         store.close()
 
 
 def test_explicit_reconnect_starts_existing_worker_and_invalidates_old_epoch(tmp_path, monkeypatch):
     import comsol_mcp._server as srv
+    from types import SimpleNamespace
+
+    import comsol_mcp._managed_backend as managed_backend_module
+
+    resolved_hosts = []
+    def resolve_fixture_host(host):
+        if host != "127.0.0.1":
+            raise AssertionError(f"unexpected DNS fixture input: {host!r}")
+        resolved_hosts.append(host)
+        return "127.0.0.1"
+
+    # Isolate only ManagedBackend.connect's deterministic numeric-loopback
+    # canonicalization; leave the process-wide network guard installed.
+    monkeypatch.setattr(
+        managed_backend_module, "socket",
+        SimpleNamespace(gethostbyname=resolve_fixture_host),
+    )
     for name in ("_remote_client_factory", "_client", "_client_connected", "_connected_host", "_connected_port", "_server_started_by_mcp"):
         monkeypatch.setattr(srv, name, getattr(srv, name))
     class Worker:
@@ -153,6 +191,7 @@ def test_explicit_reconnect_starts_existing_worker_and_invalidates_old_epoch(tmp
         worker.replacement_pending = True
         backend.connect(args, "explicit-recovery", lambda _: None)
         assert worker.starts == 2
+        assert resolved_hosts == ["127.0.0.1", "127.0.0.1"]
         from comsol_mcp._execution_contract import model_ref_from_mapping
         with pytest.raises(ExecutionContractError, match="another session or server"):
             backend.service.inspect(model_ref_from_mapping(ref))

@@ -1,0 +1,234 @@
+{
+  "schema": "root-fixture-maintenance-acceptance/1",
+  "created_utc": "2026-10-04T20:10:30.143193+00:00",
+  "decision": "ACCEPT_EXACT_ONE_TEST_FILE_MAINTENANCE_ONLY",
+  "candidate_fingerprint": "02753e96e54a1d8245d1da3c6cee40343da88870caf6d3efae7ea3351011ae6b",
+  "baseline_source": "607516192f94a33aa5e0b2788d2f8882d65510c9",
+  "current_published_head": "01159f1af685b8a39aea99775806b5ee7eadd948",
+  "test_sha256": "27883a5d1948308e64338183ded6caab66de92b9166d16d661b7639a6eacdc7c",
+  "patch_sha256": "c466ad54b06ccb7fd3e2e41fd619e928dc4db3412c2ed828049bebbe07f4a0be",
+  "only_changed_source_path": "tests/test_managed_backend.py",
+  "root_pinned_blob_verification_refs": 113,
+  "producer_tests": {
+    "focus": 2,
+    "unfiltered_affected_modules": 50,
+    "result": "PASS"
+  },
+  "independent_tests": {
+    "unfiltered_affected_modules": 50,
+    "reviewer_owned_negative": 1,
+    "total": 51,
+    "errors": 0,
+    "failures": 0,
+    "skips": 0,
+    "result": "PASS_TESTS_ONLY"
+  },
+  "guard": {
+    "active": 1,
+    "expected_dns_denial_before_socket": 1,
+    "unexpected_denials": 0,
+    "setup_errors": 0
+  },
+  "reviewer": "/root/luna_artifact_reads_independent_review; independent from both implementers; separate candidate/report, same review context after Host thread-limit refusal",
+  "procedural_deviation": {
+    "configured_timeout_s": 120,
+    "requested_timeout_s": 90,
+    "actual_elapsed_ms": 1226.496,
+    "assessment": "Non-blocking test harness configuration deviation; actual execution completed within requested bound, no native or timeout acceptance affected; future runs <=90s"
+  },
+  "scope": "Coherent generation fixture, independently rejecting stale and absent generation before callback; module-local numeric-loopback DNS fixture while global network guard remains installed. No production source change.",
+  "prior_failure_ledger": "Original W21 missing-generation fixture failure, reconnect guard denial and attempts001-003 retained; final pass does not rewrite historical outcomes",
+  "artifact_reads": "CHANGES_REQUIRED; four independent findings retained, separate repaired candidate in progress, not promoted",
+  "native_acceptance": "NOT_RUN",
+  "science_acceptance": "NOT_ACCEPTED",
+  "full_project_acceptance": "NOT_ACCEPTED",
+  "final_release": "NOT_SELECTED",
+  "original_scope": {
+    "work_packages": 26,
+    "actions": 272,
+    "acceptance_cells": 360,
+    "action_target_cells": 1632,
+    "cells_changed": 0
+  },
+  "references": [
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w23-reconnect-fixture-maintenance-20261005-001/independent-review001/INDEPENDENT_REVIEW_REPORT.md",
+      "size_bytes": 2527,
+      "sha256": "8312c20fe2e25615dd813ad7a1aeaae2c4e6eda4a7d8a4c2645e80cc79644335",
+      "device": 16777238,
+      "inode": 2080719,
+      "mtime_ns": 1791144484900000000
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w23-reconnect-fixture-maintenance-20261005-001/independent-review001/TEST_RUN_RECEIPT.json",
+      "size_bytes": 16230,
+      "sha256": "66155a190f6c858d5beba15e5f5f55993703c88672ca4e174dcfb9478dd2a4b3",
+      "device": 16777238,
+      "inode": 2080685,
+      "mtime_ns": 1791144235010000000
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w23-reconnect-fixture-maintenance-20261005-001/independent-review001/CANDIDATE_FREEZE.json",
+      "size_bytes": 13026,
+      "sha256": "62a9751caf21bd8feefa1aa8293a0fa6c969ddb8d70af2ed1afa9c3ddfc8472f",
+      "device": 16777238,
+      "inode": 2080676,
+      "mtime_ns": 1791144225700000000
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w23-reconnect-fixture-maintenance-20261005-001/independent-review001/test_independent_fixture_guards.py",
+      "size_bytes": 1974,
+      "sha256": "01141533db511888fdaf0272ada297cf44f70511bb498b36ad3964ca3a3dffca",
+      "device": 16777238,
+      "inode": 2080653,
+      "mtime_ns": 1791144205360000000
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w23-reconnect-fixture-maintenance-20261005-001/attempt-004/test_managed_backend.py",
+      "size_bytes": 16130,
+      "sha256": "27883a5d1948308e64338183ded6caab66de92b9166d16d661b7639a6eacdc7c",
+      "device": 16777238,
+      "inode": 2034297,
+      "mtime_ns": 1791142583750000000
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w23-reconnect-fixture-maintenance-20261005-001/attempt-004/candidate.patch",
+      "size_bytes": 3906,
+      "sha256": "c466ad54b06ccb7fd3e2e41fd619e928dc4db3412c2ed828049bebbe07f4a0be",
+      "device": 16777238,
+      "inode": 2034300,
+      "mtime_ns": 1791142583780000000
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w23-reconnect-fixture-maintenance-20261005-001/attempt-004/final_acceptance.json",
+      "size_bytes": 14835,
+      "sha256": "0aedb256ae2f1ac499ffd66170b929f41d9e93d3320b7e050e8fbf5523d61c54",
+      "device": 16777238,
+      "inode": 2034302,
+      "mtime_ns": 1791142584690000000
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w23-reconnect-fixture-maintenance-20261005-001/attempt-004/final_handoff.json",
+      "size_bytes": 2051,
+      "sha256": "0eb33ccfc0b2763d6194ad06b511590ce983f6ed1c4ae5f0c5f574331a782a46",
+      "device": 16777238,
+      "inode": 2034306,
+      "mtime_ns": 1791142585390000000
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w23-fixture-maintenance-root-review-20261005-001/ROOT_FINAL_SOURCE_AND_TEST_EVIDENCE_CHECK001.json",
+      "size_bytes": 984,
+      "sha256": "cc819538888faa9151e46dcf46e6f9eff23dca344678011f5d6a7e72b64da135",
+      "device": 16777238,
+      "inode": 2076410,
+      "mtime_ns": 1791143577660000000
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w23-reconnect-fixture-maintenance-20261005-001/independent-review001/pytest.junit.xml",
+      "size_bytes": 7558,
+      "sha256": "628e2fff768d3795a6a38001c623e79ed36676f5f54ccf8ea992c199108e6695",
+      "device": 16777238,
+      "inode": 2080680,
+      "mtime_ns": 1791144234920000000
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w23-reconnect-fixture-maintenance-20261005-001/independent-review001/pytest.stdout.txt",
+      "size_bytes": 99,
+      "sha256": "7a66920bf0be0afe4497538f48b9fb01f18c169a411e00a7e5c705a1fafe9499",
+      "device": 16777238,
+      "inode": 2080682,
+      "mtime_ns": 1791144234990000000
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w23-reconnect-fixture-maintenance-20261005-001/independent-review001/pytest.stderr.txt",
+      "size_bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "device": 16777238,
+      "inode": 18446744073707974541,
+      "mtime_ns": 1791144234990000000
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/w23-reconnect-fixture-maintenance-20261005-001/independent-review001/network_guard.jsonl",
+      "size_bytes": 512,
+      "sha256": "e9aac66191cd7c760e03828f54d25038123c56beacc8b522a4cfc9ccb3086bdc",
+      "device": 16777238,
+      "inode": 2080678,
+      "mtime_ns": 1791144234910000000
+    }
+  ],
+  "protected9_tracked_before": {
+    "docs/full_project_execution/w24/W24_CURE_FIXTURE_PROPOSAL.md": {
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/docs/full_project_execution/w24/W24_CURE_FIXTURE_PROPOSAL.md",
+      "size_bytes": 42864,
+      "sha256": "642995c0f082fa5410095e1f76e07df50fc914c95430f8b5d74c63cd09bef6a7",
+      "device": 16777238,
+      "inode": 677360,
+      "mtime_ns": 1790941950590000000
+    },
+    "tests/java/W24SolverSequenceDiagnosticsHarness.java": {
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/tests/java/W24SolverSequenceDiagnosticsHarness.java",
+      "size_bytes": 114198,
+      "sha256": "8fc272d9f266e6dfe49f53c3a889914bea5f1df418f82b0bca221cd8a8ba06c5",
+      "device": 16777238,
+      "inode": 735569,
+      "mtime_ns": 1790941805940000000
+    },
+    "tests/test_w24_cure_capture_link.py": {
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/tests/test_w24_cure_capture_link.py",
+      "size_bytes": 115487,
+      "sha256": "f2e454dabde2cac962b6674f60498d976c5d87be5ab90add79f6d6a50223cb98",
+      "device": 16777238,
+      "inode": 653632,
+      "mtime_ns": 1790916043510000000
+    },
+    "tests/test_w24_cure_coupon_fixture.py": {
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/tests/test_w24_cure_coupon_fixture.py",
+      "size_bytes": 11549,
+      "sha256": "cfbe96de3b8a61dc9020803e003ca335b588cff0895559287f7417200840b60b",
+      "device": 16777238,
+      "inode": 735570,
+      "mtime_ns": 1790941805950000000
+    },
+    "tests/test_w24_cure_science_runner.py": {
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/tests/test_w24_cure_science_runner.py",
+      "size_bytes": 63550,
+      "sha256": "bddad671bb5ea817c06183f9489eb0e6617555f4a21bf9a59770fcbd74c70d39",
+      "device": 16777238,
+      "inode": 1923185,
+      "mtime_ns": 1791106845540000000
+    },
+    "tools/java/W24CureCouponFixture.java": {
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/tools/java/W24CureCouponFixture.java",
+      "size_bytes": 128888,
+      "sha256": "79f4ba8fffd86a8a363e57bd769daa86e06704c49801c4da2475ae80a78b476b",
+      "device": 16777238,
+      "inode": 735568,
+      "mtime_ns": 1790941805910000000
+    },
+    "tools/java/W24CureScienceFixture.java": {
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/tools/java/W24CureScienceFixture.java",
+      "size_bytes": 121351,
+      "sha256": "2ffd59615704c588976364812e9e4cd18f8105331ef0f0db3942d51fca4c22a1",
+      "device": 16777238,
+      "inode": 687899,
+      "mtime_ns": 1790938050200000000
+    },
+    "tools/run_native_w24_cure_science.py": {
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/tools/run_native_w24_cure_science.py",
+      "size_bytes": 380112,
+      "sha256": "9cfbe11ef1cc7dac885385ff6c9553cd731f303962093008c3a02c93729eaa99",
+      "device": 16777238,
+      "inode": 687907,
+      "mtime_ns": 1790938050200000000
+    },
+    "tools/w24_cure_v2_capture.py": {
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_FULL_PROJECT_WORKPACK/repository/tools/w24_cure_v2_capture.py",
+      "size_bytes": 107075,
+      "sha256": "a866a669f8718caf391728ab1e33557d8f7b45f6f00f1c9ddfacf9f8b484307e",
+      "device": 16777238,
+      "inode": 653573,
+      "mtime_ns": 1790915819300000000
+    }
+  },
+  "promotion": "AUTHORIZED_EXACT_TEST_BYTES_ONLY; pending actual copy and Git publication receipts"
+}
