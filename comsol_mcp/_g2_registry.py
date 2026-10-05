@@ -84,7 +84,7 @@ IMPLEMENTED_OPERATIONS = frozenset({
 CONTROL_IMPLEMENTED_OPERATIONS = frozenset({
     "job.list", "job.status", "job.log", "job.result", "job.reconcile",
     "job.wait", "job.cancel", "job.cleanup",
-    "artifact.list", "artifact.inspect",
+    "artifact.list", "artifact.inspect", "artifact.verify",
     "project.create", "project.inspect", "project.contract_set",
     "project.policy_set", "project.permissions", "project.state_export",
     "experiment.inspect", "experiment.case_result", "experiment.stage_define", "experiment.stage_run",
@@ -361,19 +361,27 @@ class ActionEntry:
                 "nested_identity": "model/session/revision/idempotency/request identifiers are not nested action fields and are never copied from the outer execution envelope",
                 "verification_scope": "control-plane software behavior only; no COMSOL solver capability implied",
             }
-        if self.operation_id in {"artifact.list", "artifact.inspect"}:
-            result["data_schema"] = _artifact_read_data_schema(self.operation_id)
+        if self.operation_id in {"artifact.list", "artifact.inspect", "artifact.verify"}:
+            result["data_schema"] = (
+                _artifact_verify_data_schema() if self.operation_id == "artifact.verify"
+                else _artifact_read_data_schema(self.operation_id)
+            )
             result["runtime_dispatch_contract"] = {
-                "handler": "ControlDaemon ProjectAuthority plus project-scoped OperationStore and registered-artifact resolver",
-                "entrypoints": [self.operation_id, "registry_call", "operation_call"],
+                "handler": (
+                    "ControlDaemon ProjectAuthority plus project-scoped OperationStore and bounded registered-bundle verifier"
+                    if self.operation_id == "artifact.verify" else
+                    "ControlDaemon ProjectAuthority plus project-scoped OperationStore and registered-artifact resolver"
+                ),
+                "entrypoints": [self.operation_id, self.mcp_tool_name, "registry_call", "operation_call"],
                 "permissions": "inspect checked before artifact metadata lookup",
                 "project_binding": "exact persisted project_id/workspace/root and local host/configured loopback engine identity",
                 "engine_queue": "bypassed; no Worker lookup or COMSOL request",
                 "store_effects": "request path is read-only; additive scope indexes are created at OperationStore initialization",
                 "artifact.list": "bounded indexed keyset page; filters limited to role/classification; listed files remain NOT_CHECKED",
                 "artifact.inspect": "schema-v2 registration only; verifies registered bytes, size, pinned file identity and symlink-free path",
-                "limits": "type is a declared hint, absent format version/producer metadata is NOT_RECORDED, and package/dependency/target-format verification is not performed",
-                "verification_scope": "software route only; no package completeness or native compatibility implied",
+                "artifact.verify": "bounded read-only ZIP/wheel parsing of declared package content through the existing host-only registration route; no extraction, payload imports, subprocess, Worker or native runtime",
+                "limits": "resource ceilings are explicit; unsupported formats/marker semantics or budget hits cannot produce VERIFIED_DECLARED_PACKAGE_CONTENT",
+                "verification_scope": "declared software package content only; producer trust and native compatibility remain unverified/not run",
             }
         if self.operation_id in {"experiment.inspect", "experiment.case_result"}:
             result["runtime_dispatch_contract"] = {
@@ -912,6 +920,61 @@ def _artifact_read_data_schema(operation_id: str) -> dict[str, Any]:
             },
         }
     raise ValueError("unsupported artifact read action")
+
+
+def _artifact_verify_data_schema() -> dict[str, Any]:
+    finding = {
+        "type": "object", "required": ["code", "severity", "detail"],
+        "additionalProperties": False,
+        "properties": {
+            "code": {"type": "string", "minLength": 1, "maxLength": 64},
+            "severity": {"type": "string", "enum": ["ERROR", "WARNING"]},
+            "detail": {"type": "string", "maxLength": 240},
+            "member": {"type": "string", "maxLength": 240},
+        },
+    }
+    native_component = {
+        "type": "object", "required": ["name", "version", "linkage", "status"],
+        "additionalProperties": False,
+        "properties": {
+            "name": {"type": "string"},
+            "version": {"type": "string"},
+            "linkage": {"type": "string"},
+            "status": {"type": "string", "const": "DECLARED_CONTENT_BINDING_ONLY"},
+        },
+    }
+    return {
+        "type": "object",
+        "required": [
+            "data_schema_version", "project_id", "artifact_id", "format", "format_schema",
+            "format_verdict", "member_integrity", "dependency_closure", "target_format",
+            "declared_target", "declared_python", "producer_trust", "native_compatibility",
+            "native_components", "findings", "source_note", "resource_budget_note",
+        ],
+        "additionalProperties": False,
+        "properties": {
+            "data_schema_version": {"type": "integer", "const": 1},
+            "project_id": {"type": "string", "minLength": 1},
+            "request_id": {"type": "string", "minLength": 1},
+            "artifact_id": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "format": {"type": "string", "minLength": 1},
+            "format_schema": {"type": ["string", "null"]},
+            "format_verdict": {"type": "string", "enum": [
+                "VERIFIED_DECLARED_PACKAGE_CONTENT", "INVALID", "INCOMPLETE", "UNSUPPORTED",
+            ]},
+            "member_integrity": {"type": "string", "enum": ["PASS", "FAIL", "INCOMPLETE"]},
+            "dependency_closure": {"type": "string", "enum": ["PASS_DECLARED_TARGET", "FAIL", "INCOMPLETE"]},
+            "target_format": {"type": "string", "enum": ["PASS_STATIC_TAGS", "FAIL", "INCOMPLETE"]},
+            "declared_target": {"type": ["string", "null"]},
+            "declared_python": {"type": ["string", "null"]},
+            "producer_trust": {"type": "string", "const": "UNVERIFIED_UNLESS_EXISTING_AUTHORITATIVE_PRODUCER_PROOF"},
+            "native_compatibility": {"type": "string", "const": "NOT_RUN"},
+            "native_components": {"type": "array", "items": native_component},
+            "findings": {"type": "array", "items": finding, "maxItems": 101},
+            "source_note": {"type": "string"},
+            "resource_budget_note": {"type": "string"},
+        },
+    }
 
 
 def _catalog_entries() -> tuple[ActionEntry, ...]:

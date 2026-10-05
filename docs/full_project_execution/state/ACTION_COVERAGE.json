@@ -49532,5 +49532,101 @@
     "scientific_and_full_project_acceptance": "NOT_ACCEPTED",
     "release": "NOT_SELECTED",
     "next_action": "Repair the independently reviewed artifact.verify CHANGES_REQUIRED findings; preserve its 57-test result (51 passed, 6 failed) and do not promote or publish that candidate. Continue parameter.import/export after its initial one-roundtrip production PASS, while full-feature acceptance remains open; continue remaining original272 routes including model.package/rebuild_target. Preserve native UNKNOWN safe_retry=false and all native, scientific, and platform acceptance gates."
+  },
+  "bounded_MASTER210_selected_cutoff066": {
+    "schema": "canonical066-artifact-verify-software-checkpoint/1",
+    "recorded_utc": "2026-10-05T00:07:50.113395+00:00",
+    "previous_cutoff": "bounded_MASTER209_selected_cutoff065",
+    "baseline_head_at_assembly": "6ec9d888c24743509d984e874b262adcf9023e55",
+    "stage": "ROOT_AND_FRESH_INDEPENDENT_ACCEPTED_EXACT_MERGED_SOFTWARE_ONLY",
+    "candidate_fingerprint": "d4fa872557004c186d56613bcf18e17f8861889c6dbfb0367bc7d34c98c17d8a",
+    "candidate_tree_oid": "1198d2aaca1c2828d926b1b3853cc6ecfe8ae5e2",
+    "source6_count": 6,
+    "source6_sha256": {
+      "comsol_mcp/_control_daemon.py": "deaa0019608f9e6d10b6663de62ac3d6a79b0fb7c9f2472e28e359ca2fb489f7",
+      "comsol_mcp/_g2_artifact_reads.py": "87569cce9e90c5a945489f7de645655ded099d0e03de051f5720e599fdd5ab18",
+      "comsol_mcp/_g2_artifact_verify.py": "7f481e11221d0233054a5443f6aa4d67ad2532dd559e3c718cd21aa977f9560e",
+      "comsol_mcp/_g2_registry.py": "2d933c2ade7de189e68c45ea08ab916a31cf3a1adca2cbcf71b4785ed91e9603",
+      "tests/test_artifact_registration_import.py": "f69bbbd610fcf3dd83c2050015940e68637b638dee9e11e758b0ffc373964a04",
+      "tests/test_artifact_verify.py": "e633be9d6d8e92526ce66d84f63eee7697d867aa3b38167d7cdffb2f547e2276"
+    },
+    "producer_tests": {
+      "tests": 273,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "independent_tests": {
+      "tests": 273,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "root_evidence_ack": "docs/full_project_execution/project_session/ARTIFACT_VERIFY_ROOT_ACCEPTANCE002.json",
+    "independent_review_markdown": "docs/full_project_execution/project_session/ARTIFACT_VERIFY_JOINT_INDEPENDENT_REVIEW001.md",
+    "runtime_attribution_addendum": "docs/full_project_execution/project_session/ARTIFACT_VERIFY_RUNTIME_ATTRIBUTION_ADDENDUM001.md",
+    "reports_sha256": {
+      "docs/full_project_execution/project_session/ARTIFACT_VERIFY_ROOT_ACCEPTANCE002.json": "ca2ac90ea3ca031ee0f86dcc262f4f2522d98d17074fe2b44d0c10464b718152",
+      "docs/full_project_execution/project_session/ARTIFACT_VERIFY_JOINT_INDEPENDENT_REVIEW001.md": "ffb77fb7e4653b2c0155fb79a9b260b385a736bcf97cc61aebed947b73c63a15",
+      "docs/full_project_execution/project_session/ARTIFACT_VERIFY_RUNTIME_ATTRIBUTION_ADDENDUM001.md": "6fa2cce2be413424b9f3edd7eaab6f486d78dce3768669d235cab13a3962e2d5",
+      "docs/full_project_execution/project_session/ARTIFACT_VERIFY_REPAIRED_INDEPENDENT_REVIEW002.md": "28d77fb71dbb0481510012132226b7eabf59ea8da03f0a3dd195754a305a08d1"
+    },
+    "evidence_transcription_correction": {
+      "original_report_and_successor_seal_preserved": true,
+      "reported_handoff_sha256": "c596d3e28bcf6f0f71982a7a2a9b2a2d036f2be5727d3fec55f0c6631492667434a2b",
+      "actual_verified_handoff_sha256": "c596d3e28bcf6f0f71982a53a2d036f2be5727d3fec55f0c6631492667434a2b",
+      "reason": "Literal handoff SHA transcription typo in report/seal; actual frozen handoff rehashed by Root and matches integration freeze/handoff source record; all13 referenced evidence hashes and exact6postimages verified"
+    },
+    "earlier_failures_preserved": [
+      "original V01-V06 review 51PASS6FAIL",
+      "joint-run001 exFAT3FAIL1SKIP",
+      "joint-run002 realarchive1SKIP",
+      "independent-run001 temp placement sideeffect",
+      "outer-controller runtime attribution correction"
+    ],
+    "original_scope": {
+      "work_packages": 26,
+      "logical_actions": 272,
+      "acceptance_cells": 360,
+      "action_target_cells": 1632,
+      "original_cells_changed": 0
+    },
+    "artifact_verify": {
+      "status": "ACCEPTED_DECLARED_SOFTWARE_PACKAGE_CONTENT_ONLY",
+      "prior_independent_result": "51_PASS_6_FAIL_PRESERVED",
+      "repaired_independent_result": "66_PASS",
+      "joint_producer_result": "273_PASS",
+      "joint_independent_result": "273_PASS",
+      "producer_trust": "UNVERIFIED",
+      "native_compatibility": "NOT_RUN",
+      "current_full_source_bundle": "NOT_PROVEN"
+    },
+    "parameter_io": {
+      "candidate001": "CHANGES_REQUIRED_PIO01_PIO02",
+      "candidate002": "DARWIN_REPAIR_7_TARGETED_335_AFFECTED_PASS_INDEPENDENT_REVIEW_NOT_RUN",
+      "original_11_409_scope": "NOT_SUBSTITUTED_BY_7_335",
+      "windows": "NOT_IMPLEMENTED_NOT_RUN",
+      "status": "PAUSED_NOT_ACCEPTED"
+    },
+    "artifact_preview": {
+      "candidate001": "CHANGES_REQUIRED_PNG_ORDER_PINNED_IO",
+      "candidate002": "PAUSED_CHECKPOINT_NOT_FROZEN_NOT_ACCEPTED",
+      "repair_tests": 13,
+      "immutable_controls": 21,
+      "focused_tests": 24,
+      "regression54": "NOT_RUN",
+      "independent_review002": "NOT_RUN",
+      "handoff": "execution-scratch/artifact-preview-design-20261005-001/candidate-002/ROOT_ARTIFACT_PREVIEW_CANDIDATE002_PAUSE_HANDOFF.md"
+    },
+    "native_comsol_jvm_worker": "NOT_RUN",
+    "scientific_and_full_project_acceptance": "NOT_ACCEPTED",
+    "release": "NOT_SELECTED",
+    "user_pause": "REQUESTED_AFTER_C066_GITHUB_SYNC",
+    "next_action": "After the exact C066 ordinary GitHub main sync and fetched hash equality, pause project work at the user request and perform read-only local storage analysis, especially /private/tmp. Do not start C067, parameter002 independent review, preview002 regression/review, native retries or model delivery implementation until the user resumes. Preserve all candidates, failure evidence, protected scientific changes and native UNKNOWN safe_retry=false."
+  },
+  "current_software_checkpoint_pointer": "bounded_MASTER210_selected_cutoff066",
+  "user_requested_pause_after_cutoff066_sync": {
+    "status": "PAUSE_REQUESTED",
+    "next_action": "After the exact C066 ordinary GitHub main sync and fetched hash equality, pause project work at the user request and perform read-only local storage analysis, especially /private/tmp. Do not start C067, parameter002 independent review, preview002 regression/review, native retries or model delivery implementation until the user resumes. Preserve all candidates, failure evidence, protected scientific changes and native UNKNOWN safe_retry=false."
   }
 }

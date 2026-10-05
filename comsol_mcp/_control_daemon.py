@@ -88,8 +88,12 @@ SESSION_OPERATIONS = frozenset({
     "session.recover",
 })
 EXPERIMENT_DURABLE_READS = frozenset({"experiment.inspect", "experiment.case_result"})
-ARTIFACT_CONTROL_READS = frozenset({"artifact.list", "artifact.inspect"})
-ARTIFACT_READ_ALIASES = {"artifact_list": "artifact.list", "artifact_inspect": "artifact.inspect"}
+ARTIFACT_CONTROL_READS = frozenset({"artifact.list", "artifact.inspect", "artifact.verify"})
+ARTIFACT_READ_ALIASES = {
+    "artifact_list": "artifact.list",
+    "artifact_inspect": "artifact.inspect",
+    "artifact_verify": "artifact.verify",
+}
 
 _PRESERVE_SERVER_PROCESS_IDENTITY = object()
 _CONTROL_DAEMON_IDENTITY_SCHEMA = "COMSOL_CONTROL_DAEMON_IDENTITY_V1"

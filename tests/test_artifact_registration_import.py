@@ -1141,10 +1141,18 @@ def test_artifact_scope_index_migration_preserves_malformed_rows_and_schema_vers
         store.close()
 
 
-def test_artifact_verify_remains_unimplemented_until_package_contract_is_frozen():
-    from comsol_mcp._g2_registry import CONTROL_IMPLEMENTED_OPERATIONS, validate_call
+def test_artifact_verify_is_registered_with_the_frozen_input_and_output_contract():
+    from jsonschema import validate
+    from comsol_mcp._g2_registry import CONTROL_IMPLEMENTED_OPERATIONS, registry_describe, validate_call
 
-    assert "artifact.verify" not in CONTROL_IMPLEMENTED_OPERATIONS
-    with pytest.raises(ExecutionContractError) as error:
-        validate_call("artifact.verify", {"project_id": "p1", "artifact_id": "a" * 64})
-    assert error.value.code == "UNSUPPORTED_OPERATION"
+    assert "artifact.verify" in CONTROL_IMPLEMENTED_OPERATIONS
+    entry = validate_call("artifact.verify", {"project_id": "p1", "artifact_id": "a" * 64})
+    assert entry.operation_id == "artifact.verify"
+    description = registry_describe("artifact.verify")
+    assert description["implementation_status"] == "SUPPORTED_UNVERIFIED"
+    assert set(description["input_schema"]["properties"]) == {"project_id", "artifact_id", "request_id"}
+    assert description["data_schema"]["properties"]["format_verdict"]["enum"] == [
+        "VERIFIED_DECLARED_PACKAGE_CONTENT", "INVALID", "INCOMPLETE", "UNSUPPORTED",
+    ]
+    with pytest.raises(Exception):
+        validate(instance={"format_verdict": "PASS"}, schema=description["data_schema"])

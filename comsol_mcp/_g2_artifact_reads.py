@@ -333,6 +333,27 @@ def dispatch(daemon: Any, operation: str, arguments: dict[str, Any], execution: 
         raise ExecutionContractError("ARTIFACT_NOT_FOUND", "artifact_id is not registered in the current managed project")
     role, classification, _artifact_type, format_version = _validate_read_metadata(record)
     _validate_inspect_record(record, artifact_id)
+    if operation == "artifact.verify":
+        from ._g2_artifact_verify import verify_registered_bundle
+
+        try:
+            data = verify_registered_bundle(
+                project_root, record, project_id=project_id, artifact_id=artifact_id,
+                current_host_identity=host_identity,
+                current_engine_host_identity=engine_host_identity,
+            )
+        except ExecutionContractError as exc:
+            # The artifact verifier runs at this public read boundary. Preserve
+            # typed access failures but never forward resolver details that can
+            # contain an absolute project path.
+            if exc.code == "ACCESS_VIOLATION":
+                raise ExecutionContractError("ACCESS_VIOLATION", "registered artifact failed a safe access check", stage=exc.stage) from exc
+            if exc.code == "ARTIFACT_NOT_FOUND":
+                raise ExecutionContractError("ARTIFACT_NOT_FOUND", "registered artifact content is unavailable", stage=exc.stage) from exc
+            raise
+        if request_id is not None:
+            data["request_id"] = request_id
+        return {"success": True, "data": data}
     try:
         resolved = resolve_registered_artifact(
             project_root, daemon.store, artifact_id, project_id=project_id,
