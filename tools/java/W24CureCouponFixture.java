@@ -1167,6 +1167,7 @@ public final class W24CureCouponFixture {
         localSize(model, mesh, "sizeAu", "sel_gold", 50e-6, 5e-6);
         localSize(model, mesh, "sizeAdh", "sel_adhesive", 8e-6, 2e-6);
         localSize(model, mesh, "sizeFiber", "sel_fiber", 25e-6, 5e-6);
+        mesh.create("ftri1", "FreeTri");
         mesh.run();
     }
 
@@ -1245,9 +1246,15 @@ public final class W24CureCouponFixture {
 
     /** Pure fail-closed field/entry mapping gate, also exercised by the offline proxy harness. */
     static Map<String, Object> validateSolverFieldContract(int geometryDimension, boolean axisymmetric,
+            Boolean includeTwist, Boolean modeExtension,
             String[] fieldTags, String[] fieldNames, String[][] fieldComponents, String[] actualEntryKeys) {
         if (geometryDimension != 2 || !axisymmetric) {
             throw new IllegalStateException("W24 displacement tolerance mapping requires 2-D axisymmetric geometry");
+        }
+        if (!Boolean.FALSE.equals(includeTwist) || !Boolean.FALSE.equals(modeExtension)) {
+            throw new IllegalStateException("W24 configured u/w binding requires observed disabled Mode2Daxi " +
+                "includeTwist and ModeExtension; actual_includeTwist=" + includeTwist +
+                "; actual_ModeExtension=" + modeExtension);
         }
         if (fieldTags == null || fieldNames == null || fieldComponents == null || fieldTags.length == 0 ||
             fieldNames.length != fieldTags.length || fieldComponents.length != fieldTags.length) {
@@ -1271,8 +1278,9 @@ public final class W24CureCouponFixture {
             if ("u".equals(fieldNames[i])) {
                 displacementCount++;
                 selected = i;
-                if (components.size() != 2 || !components.contains("u") || !components.contains("w")) {
-                    throw physicsFieldContractFailure("validate:field=u components must be exactly {u,w}", fieldTags, fieldNames, fieldComponents, null);
+                if (!(components.equals(new LinkedHashSet<>(Arrays.asList("u", "w"))) ||
+                      components.equals(new LinkedHashSet<>(Arrays.asList("u", "v", "w"))))) {
+                    throw physicsFieldContractFailure("validate:field=u components must be exactly {u,w} or {u,v,w}", fieldTags, fieldNames, fieldComponents, null);
                 }
             }
             Map<String, Object> observed = new LinkedHashMap<>();
@@ -1290,8 +1298,8 @@ public final class W24CureCouponFixture {
         for (int i = 0; i < fieldTags.length; i++) {
             if (i == selected) continue;
             for (String component : fieldComponents[i]) {
-                if ("u".equals(component) || "w".equals(component)) {
-                    throw physicsFieldContractFailure("validate:nonselected descriptor aliases selected u/w component ownership",
+                if (Arrays.asList(fieldComponents[selected]).contains(component)) {
+                    throw physicsFieldContractFailure("validate:nonselected descriptor aliases selected raw component ownership",
                         fieldTags, fieldNames, fieldComponents, null);
                 }
             }
@@ -1320,6 +1328,20 @@ public final class W24CureCouponFixture {
         Map<String, Object> contract = new LinkedHashMap<>();
         contract.put("geometry_dimension", geometryDimension);
         contract.put("geometry_axisymmetric", axisymmetric);
+        Map<String, Object> modes = new LinkedHashMap<>();
+        modes.put("physics_tag", "solid");
+        modes.put("property_node", "Mode2Daxi");
+        Map<String, Object> twist = new LinkedHashMap<>();
+        twist.put("getter", "getBoolean");
+        twist.put("value", includeTwist);
+        Map<String, Object> extension = new LinkedHashMap<>();
+        extension.put("getter", "getBoolean");
+        extension.put("value", modeExtension);
+        modes.put("includeTwist", twist);
+        modes.put("ModeExtension", extension);
+        contract.put("axisymmetric_mode_readbacks", modes);
+        contract.put("configured_logical_components", Arrays.asList("u", "w"));
+        contract.put("effective_solved_dof_validation", "UNVERIFIED");
         contract.put("physics_field_count", fieldTags.length);
         contract.put("physics_field_descriptors", descriptors);
         contract.put("selected_displacement_field_count", displacementCount);
@@ -1342,20 +1364,25 @@ public final class W24CureCouponFixture {
         String[] fieldTags = null;
         String[] fieldNames = null;
         String[][] components = null;
+        Integer dimension = null;
+        Boolean axisymmetric = null;
+        String[] entryKeys = null;
+        boolean entryKeysObserved = false;
+        boolean fieldTagsObserved = false;
+        Boolean includeTwist = null;
+        Boolean modeExtension = null;
         String getterStage = "geometry";
         try {
             GeomSequence geom = model.component(COMPONENT).geom(GEOMETRY);
             getterStage = "geometry.getSDim";
-            int dimension = geom.getSDim();
+            dimension = geom.getSDim();
             getterStage = "geometry.isAxisymmetric";
-            boolean axisymmetric = geom.isAxisymmetric();
-            if (dimension != 2 || !axisymmetric) {
-                throw new IllegalStateException("W24 displacement tolerance mapping requires 2-D axisymmetric geometry");
-            }
+            axisymmetric = geom.isAxisymmetric();
             getterStage = "model.physics(solid)";
             Physics solid = model.physics("solid");
             getterStage = "solid.field().tags()";
             fieldTags = solid.field().tags();
+            fieldTagsObserved = true;
             if (fieldTags == null || fieldTags.length == 0) {
                 throw new IllegalStateException("field=u descriptor list is null or empty");
             }
@@ -1376,11 +1403,26 @@ public final class W24CureCouponFixture {
                 components[i] = field.component();
             }
             getterStage = "time.getEntryKeys(atolmethod)";
-            String[] entryKeys = time.getEntryKeys("atolmethod");
+            entryKeys = time.getEntryKeys("atolmethod");
+            entryKeysObserved = true;
+            getterStage = "solid.prop(Mode2Daxi)";
+            com.comsol.model.physics.PhysicsProp modes = solid.prop("Mode2Daxi");
+            if (modes == null) throw new IllegalStateException("Mode2Daxi property node getter returned null");
+            getterStage = "solid.prop(Mode2Daxi).getBoolean(includeTwist)";
+            includeTwist = modes.getBoolean("includeTwist");
+            getterStage = "solid.prop(Mode2Daxi).getBoolean(ModeExtension)";
+            modeExtension = modes.getBoolean("ModeExtension");
             getterStage = "validateSolverFieldContract";
-            return validateSolverFieldContract(dimension, axisymmetric, fieldTags, fieldNames, components, entryKeys);
+            return validateSolverFieldContract(dimension, axisymmetric, includeTwist, modeExtension, fieldTags, fieldNames, components, entryKeys);
         } catch (RuntimeException cause) {
-            throw physicsFieldContractFailure(getterStage, fieldTags, fieldNames, components, cause);
+            String message = physicsFieldContractFailure(getterStage, fieldTags, fieldNames, components, cause).getMessage() +
+                "; actual_tags_observed=" + fieldTagsObserved +
+                "; actual_geometry_dimension=" + (dimension == null ? "UNOBSERVED" : dimension) +
+                "; actual_geometry_axisymmetric=" + (axisymmetric == null ? "UNOBSERVED" : axisymmetric) +
+                "; actual_Time_atolmethod_entry_keys=" + (!entryKeysObserved ? "UNOBSERVED" : Arrays.toString(entryKeys)) +
+                "; actual_Mode2Daxi_includeTwist=" + (includeTwist == null ? "UNOBSERVED" : includeTwist) +
+                "; actual_Mode2Daxi_ModeExtension=" + (modeExtension == null ? "UNOBSERVED" : modeExtension);
+            throw new IllegalStateException(message, cause);
         }
     }
 
@@ -1891,6 +1933,189 @@ public final class W24CureCouponFixture {
         }
     }
 
+    /** Mesh-only physical volume observation. Never evaluate a solution or rebuild a mesh. */
+    private static Map<String, Object> observeAxisymmetricPhysicalVolume(
+            Model model, int[] entities, double expectedVolume, String datasetTag, String numericalTag) {
+        Map<String, Object> observed = new LinkedHashMap<>();
+        String stage = "geometry";
+        String[] originalDatasets = null, originalNumericals = null;
+        boolean datasetAttempted = false, numericalAttempted = false;
+        RuntimeException primary = null;
+        List<String> cleanupFailures = new ArrayList<>();
+        try {
+            GeomSequence geom = model.component(COMPONENT).geom(GEOMETRY);
+            int dimension = geom.getSDim();
+            observed.put("geometry_dimension", dimension);
+            boolean axisymmetric = geom.isAxisymmetric();
+            observed.put("geometry_axisymmetric", axisymmetric);
+            if (dimension != 2 || !axisymmetric) {
+                throw new IllegalStateException("physical volume requires actual 2-D axisymmetric geometry");
+            }
+            stage = "domain_entities";
+            observed.put("domain_entities", entities == null ? null : Arrays.toString(entities));
+            if (entities == null || entities.length != 1 || entities[0] <= 0) {
+                throw new IllegalStateException("physical volume selection must contain exactly one positive domain");
+            }
+            if (!Double.isFinite(expectedVolume) || expectedVolume <= 0.0) {
+                throw new IllegalStateException("invalid frozen expected physical volume");
+            }
+            stage = "already_built_mesh";
+            MeshSequence mesh = model.component(COMPONENT).mesh("mesh1");
+            String meshGeometry = mesh.geom();
+            observed.put("mesh_geometry", meshGeometry);
+            int meshDimension = mesh.getSDim();
+            observed.put("mesh_dimension", meshDimension);
+            boolean meshEmpty = mesh.isEmpty();
+            observed.put("mesh_empty", meshEmpty);
+            int elementCount = mesh.getNumElem();
+            observed.put("mesh_element_count", elementCount);
+            if (!GEOMETRY.equals(meshGeometry) || meshDimension != 2 || meshEmpty || elementCount <= 0) {
+                throw new IllegalStateException("physical volume requires available already-built mesh1 on geom1");
+            }
+            stage = "cross_section_area";
+            model.component(COMPONENT).measure().selection().geom(GEOMETRY, 2).set(entities);
+            double area = model.component(COMPONENT).measure().getVolume();
+            observed.put("cross_section_area_m2", area);
+            if (!Double.isFinite(area) || area <= 0.0) {
+                throw new IllegalStateException("invalid native 2-D cross-section area");
+            }
+            stage = "temporary_tag_ownership";
+            originalDatasets = model.result().dataset().tags();
+            originalNumericals = model.result().numerical().tags();
+            if (originalDatasets == null || originalNumericals == null ||
+                    new HashSet<>(Arrays.asList(originalDatasets)).size() != originalDatasets.length ||
+                    new HashSet<>(Arrays.asList(originalNumericals)).size() != originalNumericals.length ||
+                    datasetTag == null || datasetTag.isBlank() || numericalTag == null || numericalTag.isBlank() ||
+                    Arrays.asList(originalDatasets).contains(datasetTag) ||
+                    Arrays.asList(originalNumericals).contains(numericalTag)) {
+                throw new IllegalStateException("temporary physical-volume tag collision or invalid inventory");
+            }
+            observed.put("dataset_tag", datasetTag);
+            observed.put("numerical_tag", numericalTag);
+            stage = "dataset_create";
+            datasetAttempted = true;
+            model.result().dataset().create(datasetTag, "Mesh");
+            com.comsol.model.DatasetFeature dataset = model.result().dataset(datasetTag);
+            dataset.set("mesh", "mesh1");
+            stage = "dataset_getters";
+            String datasetType = dataset.getType();
+            observed.put("dataset_type", datasetType);
+            String datasetMesh = dataset.getString("mesh");
+            observed.put("dataset_mesh", datasetMesh);
+            if (!"Mesh".equals(datasetType) || !"mesh1".equals(datasetMesh)) {
+                throw new IllegalStateException("temporary Mesh dataset binding readback mismatch");
+            }
+            stage = "numerical_create";
+            numericalAttempted = true;
+            model.result().numerical().create(numericalTag, "MeasureSurface");
+            com.comsol.model.NumericalFeature integral = model.result().numerical(numericalTag);
+            integral.set("data", datasetTag);
+            integral.selection().geom(GEOMETRY, 2).set(entities);
+            integral.set("frametype", "spatial");
+            integral.set("unit", new String[]{"m^3"});
+            integral.set("intvolume", "on");
+            stage = "numerical_getters";
+            String numericalType = integral.getType();
+            observed.put("numerical_type", numericalType);
+            String data = integral.getString("data");
+            observed.put("numerical_data", data);
+            String selectionGeometry = integral.selection().geom();
+            observed.put("selection_geometry", selectionGeometry);
+            int selectionDimension = integral.selection().dim();
+            observed.put("selection_dimension", selectionDimension);
+            int[] selectionDimensions = integral.selection().dimension();
+            observed.put("selection_dimensions", selectionDimensions == null ? null : Arrays.toString(selectionDimensions));
+            int[] selected = integral.selection().entities();
+            observed.put("selection_entities", selected == null ? null : Arrays.toString(selected));
+            String frameType = integral.getString("frametype");
+            observed.put("frametype", frameType);
+            stage = "unit_value_type";
+            String unitValueType = integral.getValueType("unit");
+            observed.put("unit_value_type", unitValueType);
+            String[] units;
+            if ("String".equals(unitValueType)) {
+                stage = "unit_scalar_getter";
+                String scalarUnit = integral.getString("unit");
+                observed.put("unit_raw", scalarUnit);
+                units = new String[]{scalarUnit};
+            } else if ("StringArray".equals(unitValueType)) {
+                stage = "unit_array_getter";
+                units = integral.getStringArray("unit");
+                observed.put("unit_raw", units == null ? null : Arrays.asList(units));
+            } else {
+                throw new IllegalStateException("unsupported actual measurement unit value type: " + unitValueType);
+            }
+            observed.put("unit", units == null ? null : Arrays.asList(units));
+            stage = "numerical_getters";
+            String intvolume = integral.getString("intvolume");
+            observed.put("intvolume", intvolume);
+            if (!"MeasureSurface".equals(numericalType) || !datasetTag.equals(data) ||
+                    !GEOMETRY.equals(selectionGeometry) || selectionDimension != 2 ||
+                    !Arrays.equals(new int[]{2}, selectionDimensions) ||
+                    !Arrays.equals(entities, selected) || !"spatial".equals(frameType) ||
+                    !Arrays.equals(new String[]{"m^3"}, units) || !"on".equals(intvolume)) {
+                throw new IllegalStateException("mesh-only physical-volume integration readback mismatch");
+            }
+            stage = "getReal";
+            double[][] values = integral.getReal();
+            observed.put("integral_matrix", values == null ? null : Arrays.deepToString(values));
+            if (values == null || values.length != 1 || values[0] == null || values[0].length != 1 ||
+                    !Double.isFinite(values[0][0]) || values[0][0] <= 0.0) {
+                throw new IllegalStateException("physical-volume integral must be exactly 1x1 finite-positive");
+            }
+            double volume = values[0][0];
+            double relativeError = Math.abs(volume - expectedVolume) / expectedVolume;
+            observed.put("volume_m3", volume);
+            observed.put("expected_volume_m3", expectedVolume);
+            observed.put("relative_volume_error", relativeError);
+            observed.put("physical_measure_source", "NATIVE_MESH_MEASURESURFACE_SPATIAL_INTVOLUME_ON");
+            if (!Double.isFinite(relativeError) || relativeError > 1.0e-6) {
+                throw new IllegalStateException("axisymmetric physical domain volume failed pre-solve gate: native=" +
+                    volume + ", expected=" + expectedVolume + ", relative_error=" + relativeError);
+            }
+        } catch (RuntimeException failure) {
+            primary = failure;
+        } finally {
+            // Tags were absent in the observed pre-create inventory. A failed create may have made its node.
+            // Remove only those reserved nodes whose create was actually attempted, numerical before dataset.
+            if (numericalAttempted) {
+                try {
+                    if (Arrays.asList(model.result().numerical().tags()).contains(numericalTag)) {
+                        model.result().numerical().remove(numericalTag);
+                    }
+                } catch (RuntimeException failure) { cleanupFailures.add("numerical: " + failure); }
+            }
+            if (datasetAttempted) {
+                try {
+                    if (Arrays.asList(model.result().dataset().tags()).contains(datasetTag)) {
+                        model.result().dataset().remove(datasetTag);
+                    }
+                } catch (RuntimeException failure) { cleanupFailures.add("dataset: " + failure); }
+            }
+            if (datasetAttempted || numericalAttempted) {
+                try {
+                    String[] datasetsAfter = model.result().dataset().tags();
+                    String[] numericalsAfter = model.result().numerical().tags();
+                    observed.put("dataset_tags_after_cleanup", datasetsAfter == null ? null : Arrays.asList(datasetsAfter));
+                    observed.put("numerical_tags_after_cleanup", numericalsAfter == null ? null : Arrays.asList(numericalsAfter));
+                    if (datasetsAfter == null || numericalsAfter == null ||
+                            !new HashSet<>(Arrays.asList(originalDatasets)).equals(new HashSet<>(Arrays.asList(datasetsAfter))) ||
+                            !new HashSet<>(Arrays.asList(originalNumericals)).equals(new HashSet<>(Arrays.asList(numericalsAfter))) ||
+                            Arrays.asList(datasetsAfter).contains(datasetTag) || Arrays.asList(numericalsAfter).contains(numericalTag)) {
+                        cleanupFailures.add("owned temporary nodes leaked or preexisting tag inventory changed");
+                    }
+                } catch (RuntimeException failure) { cleanupFailures.add("cleanup verification: " + failure); }
+            }
+            observed.put("temporary_cleanup", cleanupFailures.isEmpty() ?
+                (datasetAttempted || numericalAttempted ? "VERIFIED_OWNED_NODES_REMOVED" : "NOT_CREATED") : "FAILED");
+        }
+        if (primary != null || !cleanupFailures.isEmpty()) {
+            throw new IllegalStateException("mesh-only physical-volume observation failed; getter_stage=" + stage +
+                "; observed=" + observed + "; primary=" + primary + "; cleanup_failures=" + cleanupFailures, primary);
+        }
+        return observed;
+    }
+
     private static Map<String, Object> readback(Model model) {
         Map<String, Object> result = new LinkedHashMap<>();
         GeomSequence geom = model.component(COMPONENT).geom(GEOMETRY);
@@ -1911,22 +2136,12 @@ public final class W24CureCouponFixture {
                 throw new IllegalStateException("domain center selection must resolve to exactly one domain: " +
                     DOMAIN_TAGS[i] + " -> " + java.util.Arrays.toString(entities));
             }
-            double volume = Double.NaN;
-            if (entities.length > 0) {
-                model.component(COMPONENT).measure().selection().geom(GEOMETRY, 2).set(entities);
-                volume = model.component(COMPONENT).measure().getVolume();
-            }
-            double relativeError = Math.abs(volume - EXPECTED_VOLUMES[i]) / EXPECTED_VOLUMES[i];
-            domains.put(DOMAIN_LABELS[i], Map.of(
-                "selection", DOMAIN_TAGS[i], "entities", entities, "volume_m3", volume,
-                "expected_volume_m3", EXPECTED_VOLUMES[i],
-                "relative_volume_error", relativeError
-            ));
-            if (!Double.isFinite(volume) || relativeError > 1.0e-6) {
-                throw new IllegalStateException("axisymmetric physical domain volume failed pre-solve gate for " +
-                    DOMAIN_LABELS[i] + ": native=" + volume + ", expected=" + EXPECTED_VOLUMES[i] +
-                    ", relative_error=" + relativeError);
-            }
+            String unique = java.util.UUID.randomUUID().toString().replace("-", "");
+            Map<String, Object> volumeReadback = observeAxisymmetricPhysicalVolume(
+                model, entities, EXPECTED_VOLUMES[i], "w24mesh_" + unique, "w24vol_" + unique);
+            volumeReadback.put("selection", DOMAIN_TAGS[i]);
+            volumeReadback.put("entities", entities);
+            domains.put(DOMAIN_LABELS[i], volumeReadback);
         }
         result.put("domain_readbacks", domains);
         Map<String, Object> externalEdges = new LinkedHashMap<>();

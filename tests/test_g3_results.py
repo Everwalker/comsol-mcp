@@ -1209,8 +1209,14 @@ def test_chain_a_column_contract_survives_the_drivers_case_insensitive_lookup(tm
 
 def java_allow_lists() -> tuple[set[str], set[str]]:
     text = JAVA_WORKER.read_text(encoding="utf-8")
-    methods_block = re.search(r"METHODS = new HashSet<>\(Arrays\.asList\((.*?)\)\);", text, re.S)
-    modelutil_block = re.search(r"MODEL_UTIL = new HashSet<>\(Arrays\.asList\((.*?)\)\);", text, re.S)
+    methods_block = re.search(
+        r"^\s*private static final Set<String> METHODS = new HashSet<>\(Arrays\.asList\((.*?)\)\);",
+        text, re.S | re.M,
+    )
+    modelutil_block = re.search(
+        r"^\s*private static final Set<String> MODEL_UTIL = new HashSet<>\(Arrays\.asList\((.*?)\)\);",
+        text, re.S | re.M,
+    )
     assert methods_block is not None and modelutil_block is not None
     extract = lambda block: set(re.findall(r'"([^"]+)"', block))  # noqa: E731
     return extract(methods_block.group(1)), extract(modelutil_block.group(1))

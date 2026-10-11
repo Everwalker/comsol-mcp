@@ -21,6 +21,7 @@ returned as *data* (``status``/``partial_change``/``execution_state_unknown``/
 """
 from __future__ import annotations
 
+import copy
 import json
 import os
 import re
@@ -119,8 +120,22 @@ class FList:
             raise FakeEngineError(f"tag {tag} does not exist")
         del self.items[tag]
 
+    def copy(self, new_tag: str, tag: str) -> Any:
+        self.calls.append(("copy", (new_tag, tag)))
+        if "copy" in self.unavailable:
+            raise _rejected("copy")
+        if tag not in self.items:
+            raise FakeEngineError(f"tag {tag} does not exist")
+        if new_tag in self.items:
+            raise FakeEngineError(f"tag {new_tag} already exists")
+        copied = copy.deepcopy(self.items[tag])
+        if hasattr(copied, "tag_"):
+            copied.tag_ = new_tag
+        self.items[new_tag] = copied
+        return copied
+
     def mutation_calls(self) -> list[tuple[str, tuple[Any, ...]]]:
-        return [call for call in self.calls if call[0] in {"create", "remove"}]
+        return [call for call in self.calls if call[0] in {"create", "remove", "copy"}]
 
     def __getattr__(self, name: str) -> Any:
         raise AttributeError(name)
@@ -2270,13 +2285,44 @@ class TestComponentManage:
         expect_error("NODE_NOT_FOUND", call, "definition.component_manage", worker,
                      {"action": "remove", "tag": "comp2"})
 
-    def test_copy_is_refused_with_the_allow_list_entry(self):
+    def test_copy_uses_model_entity_list_signature_and_preserves_source(self):
         worker, model, _ = world()
+        components = model.collections["component"]
+        source = components.items["comp1"]
         before = list(model.collections["component"].mutation_calls())
-        error = expect_error("API_UNSUPPORTED", call, "definition.component_manage", worker,
-                             {"action": "copy", "tag": "comp2"})
-        assert "copy" in str(error)
-        assert model.collections["component"].mutation_calls() == before
+        result = call("definition.component_manage", worker,
+                      {"action": "copy", "source_tag": "comp1", "tag": "comp2"})
+        assert result["copy_method"] == "ModelEntityList.copy(newTag,tag)"
+        assert result["copied"] is True
+        assert result["source_tag"] == "comp1" and result["tag"] == "comp2"
+        assert result["source_type_id"] == result["type_readback"] == "Component"
+        assert result["readback"] == {"tags": ["comp1", "comp2"],
+                                      "source_preserved": True, "target_present": True}
+        copy_index = components.calls.index(("copy", ("comp2", "comp1")))
+        assert ("get", ("comp2",)) in components.calls[copy_index + 1:]
+        assert components.items["comp1"] is source
+        assert components.items["comp2"] is not source
+        assert components.mutation_calls() == before + [("copy", ("comp2", "comp1"))]
+
+    def test_copy_refuses_missing_source_and_tag_conflict_before_mutation(self):
+        worker, model, _ = world()
+        components = model.collections["component"]
+        before = list(components.mutation_calls())
+        expect_error("NODE_NOT_FOUND", call, "definition.component_manage", worker,
+                     {"action": "copy", "source_tag": "missing", "tag": "comp2"})
+        expect_error("TAG_CONFLICT", call, "definition.component_manage", worker,
+                     {"action": "copy", "source_tag": "comp1", "tag": "comp1"})
+        assert components.mutation_calls() == before
+
+    def test_copy_requires_source_tag_and_rejects_it_for_other_actions(self):
+        worker, model, _ = world()
+        components = model.collections["component"]
+        before = list(components.mutation_calls())
+        expect_error("INVALID_REQUEST", call, "definition.component_manage", worker,
+                     {"action": "copy", "tag": "comp2"})
+        expect_error("INVALID_REQUEST", call, "definition.component_manage", worker,
+                     {"action": "inspect", "tag": "comp1", "source_tag": "comp2"})
+        assert components.mutation_calls() == before
 
     def test_unknown_action_and_extra_fields_are_refused(self):
         worker, _, _ = world()

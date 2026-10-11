@@ -47,12 +47,14 @@ def versioned_native_profile(platform: str) -> dict[str, object]:
     }
 
 
-def create_native_metadata_adapter() -> MetadataOnlyDesktopAdapter:
+def create_native_metadata_adapter(*, macos_accessibility_observer: bool = False) -> MetadataOnlyDesktopAdapter:
     """Return the host's read-only identity observer, with controls still gated."""
     if sys.platform == "win32":
         from ._desktop_windows import WindowsMetadataAdapter
         return WindowsMetadataAdapter()
     if sys.platform == "darwin":
-        from ._desktop_macos import MacOSMetadataAdapter
+        from ._desktop_macos import MacOSMetadataAdapter, MacOSAccessibilityObserver
+        if macos_accessibility_observer:
+            return MacOSAccessibilityObserver()
         return MacOSMetadataAdapter()
     return MetadataOnlyDesktopAdapter()

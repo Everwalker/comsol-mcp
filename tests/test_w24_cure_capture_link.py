@@ -206,6 +206,13 @@ def _contract_readback() -> dict:
             "rtol": 1e-5, "atolglobalmethod": "unscaled", "atolglobal": 1e-8,
             "solver_field_contract": {
                 "geometry_dimension": 2, "geometry_axisymmetric": True,
+                "axisymmetric_mode_readbacks": {
+                    "physics_tag": "solid", "property_node": "Mode2Daxi",
+                    "includeTwist": {"getter": "getBoolean", "value": False},
+                    "ModeExtension": {"getter": "getBoolean", "value": False},
+                },
+                "configured_logical_components": ["u", "w"],
+                "effective_solved_dof_validation": "UNVERIFIED",
                 "physics_field_count": 1, "selected_displacement_field_count": 1,
                 "physics_field_descriptors": [{
                     "physics_tag": "solid", "physics_field_count": 1,
@@ -1959,5 +1966,99 @@ def test_v2_full_physics_inventory_rejects_tampering_and_ambiguity(mutation):
     else:
         contract["solver_entry_keys"].append("comp1_extra_active_fixture")
         solver["field_tolerances"]["comp1_extra_active_fixture"] = dict(solver["field_tolerances"]["comp1_u"])
+    with pytest.raises(CaptureError):
+        validate_cure_law_v2_contract_readback(readback)
+
+
+@pytest.mark.parametrize("raw_components", [["u", "w"], ["u", "v", "w"], ["w", "v", "u"]])
+@pytest.mark.parametrize("aux_first", [True, False])
+def test_v2_configured_axisymmetric_modes_preserve_raw_components(raw_components, aux_first):
+    from tools.w24_cure_v2_capture import validate_cure_law_v2_contract_readback
+
+    readback = _with_auxiliary_physics_inventory(aux_first)
+    for solver in readback["solver_readbacks"].values():
+        contract = solver["solver_field_contract"]
+        contract["physics_field_descriptor"]["components"] = list(raw_components)
+        selected = next(row for row in contract["physics_field_descriptors"] if row["field"] == "u")
+        selected["components"] = list(raw_components)
+    before = copy.deepcopy(readback)
+    result = validate_cure_law_v2_contract_readback(readback)
+    assert readback == before
+    assert result["effective_serendipity_dof_tolerance_conversion"] == "UNVERIFIED"
+    assert result["full_dof_absolute_tolerances"]["comp1_u"] == 1e-12
+    assert result["full_dof_absolute_tolerances"]["comp1_w"] == 1e-12
+
+
+@pytest.mark.parametrize("property_name", ["includeTwist", "ModeExtension"])
+@pytest.mark.parametrize("value", [None, "false", "off", 0, 0.0, True])
+def test_v2_axisymmetric_mode_values_require_strict_false_boolean(property_name, value):
+    from tools.w24_cure_v2_capture import CaptureError, validate_cure_law_v2_contract_readback
+
+    readback = _contract_readback()
+    modes = readback["solver_readbacks"]["stdUV"]["solver_field_contract"]["axisymmetric_mode_readbacks"]
+    modes[property_name]["value"] = value
+    with pytest.raises(CaptureError):
+        validate_cure_law_v2_contract_readback(readback)
+
+
+@pytest.mark.parametrize("mutation", [
+    "missing_modes", "null_modes", "extra_mode_key", "wrong_physics", "wrong_node",
+    "missing_twist", "missing_extension", "null_twist", "null_extension",
+    "missing_getter", "wrong_getter", "extra_getter_key", "missing_value",
+    "both_enabled", "crossstage_mode", "crossstage_raw", "unknown_raw", "duplicate_raw", "renamed_raw",
+    "alias_v", "alias_uv", "alias_uvw", "configured_components", "verified_effective_dof",
+])
+def test_v2_axisymmetric_mode_provenance_and_raw_inventory_reject_tampering(mutation):
+    from tools.w24_cure_v2_capture import CaptureError, validate_cure_law_v2_contract_readback
+
+    readback = _with_auxiliary_physics_inventory()
+    for solver in readback["solver_readbacks"].values():
+        contract = solver["solver_field_contract"]
+        contract["physics_field_descriptor"]["components"] = ["u", "v", "w"]
+        next(row for row in contract["physics_field_descriptors"] if row["field"] == "u")["components"] = ["u", "v", "w"]
+    contract = readback["solver_readbacks"]["stdUV"]["solver_field_contract"]
+    modes = contract["axisymmetric_mode_readbacks"]
+    if mutation == "missing_modes":
+        contract.pop("axisymmetric_mode_readbacks")
+    elif mutation == "null_modes":
+        contract["axisymmetric_mode_readbacks"] = None
+    elif mutation == "extra_mode_key":
+        modes["forged"] = False
+    elif mutation == "wrong_physics":
+        modes["physics_tag"] = "another_solid"
+    elif mutation == "wrong_node":
+        modes["property_node"] = "ShapeProperty"
+    elif mutation in {"missing_twist", "missing_extension"}:
+        modes.pop("includeTwist" if mutation == "missing_twist" else "ModeExtension")
+    elif mutation in {"null_twist", "null_extension"}:
+        modes["includeTwist" if mutation == "null_twist" else "ModeExtension"] = None
+    elif mutation == "missing_getter":
+        modes["includeTwist"].pop("getter")
+    elif mutation == "wrong_getter":
+        modes["ModeExtension"]["getter"] = "getString"
+    elif mutation == "extra_getter_key":
+        modes["ModeExtension"]["fallback"] = False
+    elif mutation == "missing_value":
+        modes["includeTwist"].pop("value")
+    elif mutation == "both_enabled":
+        modes["includeTwist"]["value"] = modes["ModeExtension"]["value"] = True
+    elif mutation == "crossstage_mode":
+        readback["solver_readbacks"]["stdCool"]["solver_field_contract"]["axisymmetric_mode_readbacks"]["ModeExtension"]["value"] = True
+    elif mutation == "crossstage_raw":
+        other = readback["solver_readbacks"]["stdCool"]["solver_field_contract"]
+        other["physics_field_descriptor"]["components"] = ["u", "w"]
+        next(row for row in other["physics_field_descriptors"] if row["field"] == "u")["components"] = ["u", "w"]
+    elif mutation in {"unknown_raw", "duplicate_raw", "renamed_raw"}:
+        raw = {"unknown_raw": ["u", "v", "w", "other"], "duplicate_raw": ["u", "v", "v", "w"],
+               "renamed_raw": ["u", "v", "other"]}[mutation]
+        contract["physics_field_descriptor"]["components"] = raw
+        next(row for row in contract["physics_field_descriptors"] if row["field"] == "u")["components"] = list(raw)
+    elif mutation in {"alias_v", "alias_uv", "alias_uvw"}:
+        contract["physics_field_descriptors"][0]["components"] = {
+            "alias_v": ["v"], "alias_uv": ["u", "v"], "alias_uvw": ["u", "v", "w"]}[mutation]
+    elif mutation == "configured_components":
+        contract["configured_logical_components"] = ["u", "v", "w"]
+    elif mutation == "verified_effective_dof":
+        contract["effective_solved_dof_validation"] = "PASS"
     with pytest.raises(CaptureError):
         validate_cure_law_v2_contract_readback(readback)

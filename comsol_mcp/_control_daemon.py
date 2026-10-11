@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import base64
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
+from contextvars import ContextVar
 from contextlib import ExitStack, contextmanager, nullcontext
 from datetime import datetime, timezone
 import hashlib
@@ -77,6 +78,7 @@ CONTROL_READS = {
 }
 CACHED_JOB_ACTIONS = frozenset({
     "job.list", "job.status", "job.log", "job.result", "job.reconcile", "job.wait", "job.cancel", "job.cleanup",
+    "solver.log_read",
 })
 DESKTOP_OPERATIONS = frozenset({
     "desktop.status", "desktop.bind", "desktop.show_model", "desktop.select_node",
@@ -88,11 +90,12 @@ SESSION_OPERATIONS = frozenset({
     "session.recover",
 })
 EXPERIMENT_DURABLE_READS = frozenset({"experiment.inspect", "experiment.case_result"})
-ARTIFACT_CONTROL_READS = frozenset({"artifact.list", "artifact.inspect", "artifact.verify"})
+ARTIFACT_CONTROL_READS = frozenset({"artifact.list", "artifact.inspect", "artifact.verify", "artifact.preview"})
 ARTIFACT_READ_ALIASES = {
     "artifact_list": "artifact.list",
     "artifact_inspect": "artifact.inspect",
     "artifact_verify": "artifact.verify",
+    "artifact_preview": "artifact.preview",
 }
 
 _PRESERVE_SERVER_PROCESS_IDENTITY = object()
@@ -328,6 +331,7 @@ class ControlDaemon:
             permission_provider=self._project_host_permissions,
             authorization_verifier=project_authorization_verifier,
         )
+        self.backend.project_authorizer = self.project_authority.authorize_operation
         self.queue = ThreadPoolExecutor(max_workers=1, thread_name_prefix="comsol-engine-queue")
         self.session_registry = SessionRuntimeRegistry()
         self.session_scheduler = SessionEndpointScheduler()
@@ -366,6 +370,8 @@ class ControlDaemon:
             resolve_artifact=self._resolve_desktop_artifact,
             authorize_save_copy=self._authorize_desktop_save_copy,
         )
+        self._desktop_request_scope = ContextVar(f"desktop_request_{id(self)}", default=None)
+        self._desktop_unpersisted_attempts = {}
         self.lock = threading.RLock()
         self._admission_lock = threading.RLock()
         self._worker_retirement_state = "OPEN"
@@ -580,6 +586,22 @@ class ControlDaemon:
                 validate_call(scoped_operation, scoped)
                 clean = {key: value for key, value in body.items() if key not in identities}
                 arguments = {"operation_id": scoped_operation, "arguments": clean} if nested_a else clean
+            delivery_actions = {"model.dependencies", "model.package", "model.rebuild_target"}
+            if operation in delivery_actions:
+                # These three G3 model actions have a stricter additive managed
+                # wire than their frozen historical schemas. Validate identity,
+                # revision and operation arguments before durable queue admission.
+                from ._g2_registry import validate_call
+                scoped = dict(arguments)
+                identities = ("project_id", "session_id", "model_ref", "expected_revision",
+                              "idempotency_key", "request_id")
+                for field in identities:
+                    if field in scoped and field in execution and scoped[field] != execution[field]:
+                        raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", f"{operation} {field} conflicts with the outer execution envelope")
+                    if field not in scoped and field in execution:
+                        scoped[field] = execution[field]
+                validate_call(operation, scoped)
+                arguments = {key: value for key, value in arguments.items() if key not in identities}
             from ._g3_w21 import ALIASES
             operation = ALIASES.get(operation, operation)
             operation = {"artifact_register": "artifact.register", "geometry_import": "geometry.import"}.get(operation, operation)
@@ -841,6 +863,13 @@ class ControlDaemon:
             if not isinstance(inner_arguments, dict):
                 raise ExecutionContractError("INVALID_REQUEST", "registry call arguments must be an object")
             return self._dispatch_experiment_stage_run(inner_arguments, execution)
+        if inner_operation == "solver.log_read":
+            if extra_outer:
+                raise ExecutionContractError("INVALID_REQUEST", f"{outer_operation} has unsupported arguments: {', '.join(extra_outer)}")
+            inner_arguments = outer_arguments.get("arguments", {})
+            if not isinstance(inner_arguments, dict):
+                raise ExecutionContractError("INVALID_REQUEST", "registry call arguments must be an object")
+            return self._dispatch_catalog_job_control(inner_operation, inner_arguments, execution=execution)
         if inner_operation in PROJECT_OPERATIONS:
             inner_arguments = outer_arguments.get("arguments", {})
             if not isinstance(inner_arguments, dict):
@@ -3935,7 +3964,36 @@ class ControlDaemon:
             routed,
             allow_coordinator_only=True,
         )
-        return self.desktop.dispatch(operation, routed)
+        frozen = json.dumps(routed, sort_keys=True, allow_nan=False)
+        semantic = {k: v for k, v in routed.items() if k not in {"request_id", "idempotency_key"}}
+        scope = {"operation": operation, "arguments_json": frozen,
+                 "hash": canonical_request_hash(operation, semantic, None, None, project_id=routed["project_id"])}
+        token = self._desktop_request_scope.set(scope)
+        try:
+            try:
+                result = self.desktop.dispatch(operation, routed)
+            except Exception as exc:
+                # Coordinator terminal persistence can itself fail after load.
+                # Keep authoritative parent status distinct from target readiness.
+                if operation != "desktop.migrate_standalone" or not scope.get("attempt"):
+                    raise
+                attempt, capture, record = scope["attempt"], scope["capture"], scope["record"]
+                self.session_scheduler.submit(capture["runtime"], self._desktop_freeze_owned_attempt,
+                                              capture, record, attempt, exc).result()
+                try:
+                    parent = self.store.get_operation(record["operation_id"])
+                    status = parent.get("status") if parent else "UNOBSERVED"
+                except Exception:
+                    status = "UNOBSERVED"
+                return self._desktop_non_ready_result(None, str(exc), status, attempt)
+            if operation == "desktop.migrate_standalone":
+                try:
+                    return self._desktop_finish_attempt(result, scope)
+                except Exception as exc:
+                    return self._desktop_non_ready_result(result, str(exc), "UNOBSERVED")
+            return result
+        finally:
+            self._desktop_request_scope.reset(token)
 
     def _authorize_desktop(self, project_id: str, permission: str) -> bool:
         """Map catalog Desktop permissions to host-owned capability grants."""
@@ -3955,45 +4013,560 @@ class ControlDaemon:
         required = {"READ": "inspect", "HOST_CONTROL": "host_control", "TRUSTED_CODE": "trusted_code"}.get(permission)
         return required is not None and required in permissions
 
+    def _desktop_parent_claim(self, context, *, migration=False):
+        if context is None:
+            raise DesktopOperationError("OWNER_UNVERIFIED", "store-issued Desktop claim is required", safe_retry=False)
+        record = self.store.get_operation(context.operation_id)
+        job = self.store.operation_job(context.operation_id)
+        if (not isinstance(record, Mapping) or not isinstance(job, Mapping)
+                or record.get("status") != "RUNNING" or job.get("status") != "RUNNING"
+                or job.get("job_id") != context.job_id or job.get("operation_id") != context.operation_id
+                or any(record.get(k) != getattr(context, k) for k in
+                       ("operation_id", "operation", "request_id", "idempotency_key", "request_hash"))
+                or record.get("metadata", {}).get("project_id") != context.project_id):
+            raise DesktopOperationError("OWNER_UNVERIFIED", "exact Desktop operation/job claim is not active", safe_retry=False)
+        record = {**record, "job_id": job["job_id"]}
+        if migration:
+            scope = self._desktop_request_scope.get()
+            if (scope is None or context.operation != "desktop.migrate_standalone"
+                    or scope["hash"] != context.request_hash or scope["operation"] != context.operation):
+                raise DesktopOperationError("OWNER_UNVERIFIED", "no matching private migration request scope", safe_retry=False)
+            with self.desktop._operation_lock:
+                if context.operation_id not in self.desktop._active_operations:
+                    raise DesktopOperationError("OWNER_UNVERIFIED", "migration is not locally owned", safe_retry=False)
+        return record
+
+    def _desktop_capture_backend(self, project_id, session_id, *, load=False):
+        try:
+            runtime = self.session_registry.get(project_id, session_id)
+        except SessionContextMissing:
+            runtime = None
+        if runtime is None:
+            # Only an explicit original default READ may use the legacy lane.
+            backend = self._default_backend
+            service = backend.service
+            if (load or (project_id, session_id) in self._session_backends
+                    or self.session_lifecycle.get(project_id, session_id) is not None
+                    or service is None or service.ledger.session_id != session_id):
+                raise DesktopOperationError("MODEL_BINDING_UNKNOWN", "existing registered target is required", safe_retry=False)
+            return {"runtime": None, "backend": backend, "service": service,
+                    "worker": backend.worker, "project": project_id, "session": session_id,
+                    "server": service.ledger.server_instance_id, "endpoint": backend.endpoint_key}
+        backend, service, worker = runtime.backend, runtime.service, runtime.worker
+        capture = {"runtime": runtime, "backend": backend, "service": service, "worker": worker,
+                   "client": runtime.client, "project": project_id, "session": session_id,
+                   "epoch": runtime.worker_epoch, "instance": runtime.worker_instance_id,
+                   "server": getattr(getattr(service, "ledger", None), "server_instance_id", None),
+                   "endpoint": getattr(backend, "endpoint_key", None)}
+        with self.session_registry._lock:
+            capture["selected_pointers"] = [(ctx, ctx.current_model, ctx.current_model_origin, ctx.current_model_path)
+                    for ctx in self.session_registry._contexts.values()]
+        from . import _server
+        capture["legacy_pointer"] = (_server._current_model, _server._current_model_origin, _server._current_model_path)
+        self._desktop_recheck_backend(capture)
+        return capture
+
+    @staticmethod
+    def _desktop_check_pointers(capture):
+        from . import _server
+        pointers = capture.get("selected_pointers") or []
+        legacy = capture.get("legacy_pointer")
+        if (any(ctx.current_model is not ptr or ctx.current_model_origin != origin or ctx.current_model_path != path
+                for ctx, ptr, origin, path in pointers)
+                or (legacy is not None and (legacy[0] is not _server._current_model
+                    or legacy[1:] != (_server._current_model_origin, _server._current_model_path)))):
+            raise DesktopOperationError("EXECUTION_STATE_UNKNOWN", "managed selected pointer changed", safe_retry=False)
+
+    def _desktop_recheck_backend(self, capture, *, health=False):
+        runtime, backend, service = capture["runtime"], capture["backend"], capture["service"]
+        if runtime is None:
+            if (backend is not self._default_backend or backend.service is not service
+                    or service is None or service.ledger.session_id != capture["session"]
+                    or service.ledger.server_instance_id != capture["server"]
+                    or backend.endpoint_key != capture["endpoint"]):
+                raise DesktopOperationError("MODEL_BINDING_UNKNOWN", "legacy read binding changed", safe_retry=False)
+            return
+        key = (capture["project"], capture["session"])
+        try:
+            registered = self.session_registry.get(*key)
+            lifecycle = self.session_lifecycle.get(*key)
+        except Exception as exc:
+            raise DesktopOperationError("MODEL_BINDING_UNKNOWN", "registered binding is unavailable", safe_retry=False) from exc
+        identity = getattr(backend, "worker_identity", None)
+        if (registered is not runtime or runtime.backend is not backend or runtime.service is not service
+                or runtime.worker is not capture["worker"] or runtime.client is not capture["client"]
+                or backend is None or service is None or capture["worker"] is None or capture["client"] is None
+                or self._session_backends.get(key) is not backend
+                or self._session_worker_handles.get(key) is not capture["worker"]
+                or backend.worker is not capture["worker"] or backend.service is not service
+                or runtime.worker_epoch != capture["epoch"] or runtime.worker_instance_id != capture["instance"]
+                or runtime.client_retired or not runtime.client_connected
+                or runtime.project_root.resolve() != backend.project_root.resolve()
+                or service.ledger.session_id != capture["session"] or service.ledger.server_instance_id != capture["server"]
+                or backend.endpoint_key != capture["endpoint"]
+                or not isinstance(identity, Mapping)
+                or identity.get("worker_instance_id") != capture["instance"]
+                or identity.get("connection_epoch") != capture["epoch"]
+                or identity.get("server_instance_id") != capture["server"]
+                or not isinstance(lifecycle, Mapping) or lifecycle.get("state") != "CONNECTED"
+                or lifecycle.get("client_state") != "CONNECTED"
+                or lifecycle.get("worker_instance_id") != capture["instance"]
+                or lifecycle.get("worker_epoch") != capture["epoch"]
+                or lifecycle.get("server_instance_id") != capture["server"]):
+            raise DesktopOperationError("MODEL_BINDING_UNKNOWN", "captured registered Worker binding changed or is unknown", safe_retry=False)
+        if health:
+            observed = capture["worker"].health()
+            if (not isinstance(observed, Mapping) or observed.get("connected") is not True
+                    or observed.get("instance_id") != capture["instance"]
+                    or observed.get("generation") != capture["epoch"]
+                    or observed.get("server") != capture["endpoint"]):
+                raise DesktopOperationError("MODEL_BINDING_UNKNOWN", "actual existing Worker health differs", safe_retry=False)
+
+    def _desktop_attempt_rows(self, project):
+        offset = 0
+        while True:
+            page = self.store.list_jobs(offset=offset, limit=100, project_id=project)
+            for job in page:
+                attempt = job.get("metadata", {}).get("desktop_copy_load")
+                if isinstance(attempt, Mapping):
+                    yield job, attempt
+            offset += len(page)
+            if not page or offset >= page.total:
+                break
+
+    def _desktop_save_attempt(self, record, attempt):
+        job = self.store.job(record["job_id"])
+        if not job or job.get("operation_id") != record["operation_id"]:
+            raise DesktopOperationError("OWNER_UNVERIFIED", "attempt parent job disappeared", safe_retry=False)
+        self.store.update_job(record["job_id"], job["status"], {"desktop_copy_load": json.loads(json.dumps(attempt))})
+        if self.store.job(record["job_id"]).get("metadata", {}).get("desktop_copy_load") != attempt:
+            raise DesktopOperationError("EXECUTION_STATE_UNKNOWN", "attempt persistence readback disagrees", safe_retry=False)
+
+    def _desktop_file_witness(self, project, path):
+        from ._artifact_store import ArtifactStore
+        workspace = self.project_authority.authorize_operation(project, "project_write")["workspace"]
+        actual = ArtifactStore(Path(workspace)).resolve_safe_path(str(path), allow_overwrite=True)
+        if not Path(path).is_absolute() or actual != Path(path) or actual.is_symlink() or not actual.is_file():
+            raise DesktopOperationError("SAVE_COPY_UNVERIFIED", "copy must be an exact confined regular file", safe_retry=False)
+        st = actual.stat(follow_symlinks=False)
+        return {"path": str(actual), "size": st.st_size, "sha256": hashlib.sha256(actual.read_bytes()).hexdigest(),
+                "dev": st.st_dev, "ino": st.st_ino, "mtime_ns": st.st_mtime_ns}
+
+    def _desktop_owned_ref_guard(self, capture, raw_ref=None, operation=None, *, ignore_parent=None):
+        # Durable attempt state is independent of a possibly stale clean revision row.
+        attempts = [a for _j, a in self._desktop_attempt_rows(capture["project"])]
+        attempts += list(self._desktop_unpersisted_attempts.values())
+        for a in attempts:
+            if a.get("session") != capture["session"] or a.get("parent_id") == ignore_parent:
+                continue
+            if a.get("state") == "READY":
+                continue
+            tag = (a.get("model_ref") or {}).get("model_tag") or a.get("planned_tag")
+            # The registered receiver server is authoritative. A forged server
+            # or generation in a ref must not reach legacy tag selection first.
+            target = (isinstance(raw_ref, Mapping) and capture["server"] == a.get("server")
+                      and raw_ref.get("model_tag") == tag)
+            unbound_selection = operation in {"model_load", "model.load", "model_adopt", "model.adopt", "load_visible_main_model", "load_current_main_model"}
+            if (raw_ref is None and operation is None) or target or unbound_selection:
+                raise DesktopOperationError("EXECUTION_STATE_UNKNOWN", "owned copy-load attempt is unresolved; no alias, adoption or new-key retry", safe_retry=False)
+
+    def _desktop_ref_readiness(self, capture, attempt, *, provisional=False):
+        from ._execution_contract import model_ref_from_mapping
+        self._desktop_recheck_backend(capture, health=True)
+        self._desktop_check_pointers(capture)
+        ref = model_ref_from_mapping(attempt["model_ref"])
+        service, backend = capture["service"], capture["backend"]
+        state = service.ledger._state_for(ref)
+        key = backend._model_project_key(ref.as_dict())
+        row = self.store.get_metadata("revisions", key)
+        session = self.store.get_metadata("sessions", ref.session_id) or {}
+        saved = session.get("models", {}).get(ref.model_tag)
+        identity = session.get("worker_identity") or {}
+        active = attempt["parent_id"] if provisional else None
+        if (ref.session_id != capture["session"] or ref.server_instance_id != capture["server"]
+                or state.dirty or state.active_operation_id != active or state.revision != attempt["revision"]
+                or state.fingerprint != attempt["fingerprint"] or not state.fingerprint
+                or service.ledger.model_ownership.get(ref.model_tag) != "mcp_owned"
+                or backend.model_project_binding(ref.as_dict()) != {"attribution": "PROJECT_BOUND", "project_id": capture["project"]}
+                or not isinstance(row, Mapping) or row.get("model_ref") != ref.as_dict()
+                or row.get("dirty") is not False or row.get("active_operation_id") != active
+                or row.get("revision") != state.revision or row.get("fingerprint") != state.fingerprint
+                or not isinstance(saved, Mapping) or saved.get("ref") != ref.as_dict()
+                or saved.get("dirty") is not False or saved.get("active_operation_id") != active
+                or saved.get("ownership") != "mcp_owned" or saved.get("retired") is not False
+                or saved.get("revision") != state.revision or saved.get("fingerprint") != state.fingerprint
+                or session.get("server_instance_id") != capture["server"]
+                or identity.get("server_instance_id") != capture["server"]
+                or identity.get("worker_instance_id") != capture["instance"]
+                or identity.get("connection_epoch") != capture["epoch"]):
+            raise DesktopOperationError("EXECUTION_STATE_UNKNOWN", "exact owned target readiness is not established", safe_retry=False)
+        return state
+
+    def _desktop_freeze_owned_attempt(self, capture, record, attempt, cause):
+        errors = list(attempt.get("secondary_errors") or [])
+        observed = {"type": type(cause).__name__, "message": str(cause)}
+        if attempt.get("cause"):
+            errors.append({"stage": "subsequent_tail", **observed})
+        else:
+            attempt["cause"] = observed
+        attempt.update(state="NON_READY", durable_guard="UNVERIFIED")
+        ledger = capture["service"].ledger
+        tag = attempt.get("planned_tag")
+        state = ledger._models.get(tag) if tag else None
+        if (state is not None and state.ref.as_dict() == attempt.get("model_ref")
+                and (ledger.model_ownership.get(tag) == "mcp_owned"
+                     or attempt.get("actual_owned_tag_verified") is True)):
+            state.dirty, state.fingerprint, state.active_operation_id = True, None, record["operation_id"]
+        try:
+            self._desktop_recheck_backend(capture)
+            capture["backend"].persist()
+        except Exception as exc:
+            errors.append({"stage": "fence_persist", "type": type(exc).__name__, "message": str(exc)})
+        try:
+            # Even when revision persistence fails, the separate admitted attempt guards writes/restart.
+            attempt["secondary_errors"] = errors
+            self._desktop_save_attempt(record, attempt)
+            attempt["durable_guard"] = "ATTEMPT_NON_READY_RECORDED"
+            self._desktop_save_attempt(record, attempt)
+        except Exception as exc:
+            errors.append({"stage": "attempt_persist", "type": type(exc).__name__, "message": str(exc)})
+            self._desktop_unpersisted_attempts[record["operation_id"]] = json.loads(json.dumps(attempt))
+        attempt["secondary_errors"] = errors
+
+    def _desktop_queued_load_copy(self, arguments, parent, capture, scope, witness):
+        from ._execution_contract import model_ref_from_mapping
+        self._desktop_recheck_backend(capture, health=True)
+        self._desktop_parent_claim(parent)
+        original = json.loads(scope["arguments_json"])
+        if (scope["hash"] != parent.request_hash or scope["operation"] != parent.operation
+                or arguments.get("project_id") != parent.project_id
+                or arguments.get("target_session_id") != capture["session"]
+                or arguments.get("target_session_id") != original.get("target_session_id")
+                or arguments.get("load_mode") != "save_copy"
+                or arguments.get("model_path") != witness["path"]
+                or arguments.get("source_sha256") != witness["sha256"]):
+            raise DesktopOperationError("OWNER_UNVERIFIED", "queued load provenance differs from exact parent request", safe_retry=False)
+        with self.desktop._operation_lock:
+            if parent.operation_id not in self.desktop._active_operations:
+                raise DesktopOperationError("OWNER_UNVERIFIED", "queued migration owner disappeared", safe_retry=False)
+        self._desktop_owned_ref_guard(capture, ignore_parent=parent.operation_id)
+        if self._desktop_file_witness(parent.project_id, arguments["model_path"]) != witness:
+            raise DesktopOperationError("SAVE_COPY_UNVERIFIED", "copy changed while queued", safe_retry=False)
+        backend, service, client = capture["backend"], capture["service"], capture["client"]
+        record = {**self.store.get_operation(parent.operation_id), "job_id": parent.job_id}
+        attempt = {"parent_id": parent.operation_id, "job_id": parent.job_id, "request_hash": parent.request_hash,
+                   "project": parent.project_id, "session": capture["session"], "server": capture["server"],
+                   "worker_instance": capture["instance"], "epoch": capture["epoch"], "copy": witness,
+                   "state": "ADMITTED", "planned_tag": None, "model_ref": None}
+        self._desktop_save_attempt(record, attempt)
+        scope["attempt"], scope["capture"], scope["record"] = attempt, capture, record
+        pre_models = dict(service.ledger._models)
+        try:
+            with backend.context(parent.operation_id, self._session_worker_event_callback(record)):
+                before = client.tags()
+                if not isinstance(before, (list, tuple)) or any(not isinstance(t, str) or not t for t in before) or len(set(before)) != len(before):
+                    raise ValueError("native tag inventory is malformed")
+                tag = client.uniquetag("w25copy")
+                if not isinstance(tag, str) or not tag or tag in before or tag in service.ledger._models or tag in service.ledger._generations or tag in capture["runtime"].owned_model_tags:
+                    raise ValueError("unique tag is not actual fresh")
+                persisted = self.store.get_metadata("sessions", capture["session"]) or {}
+                if tag in persisted.get("models", {}) or any((row.get("model_ref") or {}).get("model_tag") == tag
+                        and (row.get("model_ref") or {}).get("server_instance_id") == capture["server"]
+                        for row in self.store.list_metadata("revisions")):
+                    raise ValueError("unique tag has a persisted prior identity")
+                attempt.update(planned_tag=tag, state="LOADING", native_tags_before=list(before))
+                self._desktop_save_attempt(record, attempt)
+                loaded = client.load(witness["path"], tag=tag)
+                returned = loaded.java.tag()
+                after = client.tags()
+                attempt["returned_tag"], attempt["native_tags_after"] = returned, list(after)
+                if returned != tag or len(set(after)) != len(after) or set(after) != set(before) | {tag}:
+                    raise ValueError("returned tag or exact native delta differs")
+                attempt["actual_owned_tag_verified"] = True
+                bound = service.bind_model(tag, ownership="mcp_owned")
+                raw = bound.get("execution", {}).get("model_ref")
+                ref = model_ref_from_mapping(raw)
+                state = service.ledger._state_for(ref)
+                if ref.session_id != capture["session"] or ref.server_instance_id != capture["server"] or ref.model_tag != tag or state.dirty or state.revision != 0:
+                    raise ValueError("bound identity or initial state differs")
+                attempt.update(model_ref=ref.as_dict(), revision=state.revision, fingerprint=state.fingerprint, state="PROVISIONAL")
+                state.active_operation_id = parent.operation_id
+                backend._bind_model_project(ref.as_dict(), parent.project_id)
+                capture["runtime"].owned_model_tags.add(tag)
+                backend.persist()
+                self._desktop_ref_readiness(capture, attempt, provisional=True)
+                self._desktop_save_attempt(record, attempt)
+                if self._desktop_file_witness(parent.project_id, witness["path"]) != witness:
+                    raise ValueError("copy changed after load")
+                self._desktop_check_pointers(capture)
+                return {"success": True, "data": {"model_ref": ref.as_dict(), "model_tag": tag,
+                        "server_endpoint": capture["endpoint"], "fingerprint": state.fingerprint,
+                        "revision": state.revision, "Desktop_model_binding": "UNVERIFIED_BY_MANAGED_INSPECTION_ALONE",
+                        "fingerprint_coverage": "parameters+shallow_tree_identity", "cas_guarantee": "NONE"}}
+        except Exception as exc:
+            # bind_model may have inserted its exact state before inspect/_emit raises.
+            tag = attempt.get("planned_tag")
+            state = service.ledger._models.get(tag) if tag else None
+            if state is not None and tag not in pre_models:
+                attempt["model_ref"] = state.ref.as_dict()
+            elif attempt.get("actual_owned_tag_verified") and tag not in pre_models:
+                ref = service.ledger.bind_model(tag, ownership="mcp_owned", fingerprint=None)
+                attempt["model_ref"] = ref.as_dict()
+            self._desktop_freeze_owned_attempt(capture, record, attempt, exc)
+            raise DesktopOperationError("EXECUTION_STATE_UNKNOWN", "copy-load has owned partial or unobserved effects; original cause: " + str(exc), side_effect_started=True, safe_retry=False) from exc
+
+    def _desktop_finish_attempt(self, result, scope):
+        attempt, capture, record = scope.get("attempt"), scope.get("capture"), scope.get("record")
+        if attempt is None and isinstance(result, Mapping) and isinstance(result.get("data"), Mapping) and result["data"].get("target_model_ref"):
+            identifier = result.get("execution", {}).get("operation_id")
+            record = self.store.get_operation(identifier) if identifier else None
+            job = self.store.operation_job(identifier) if identifier else None
+            if record and job:
+                record = {**record, "job_id": job["job_id"]}
+                attempt = job.get("metadata", {}).get("desktop_copy_load")
+                if not isinstance(attempt, Mapping):
+                    # This is a new incomplete-readiness observation, not a
+                    # reconstruction of the missing original admission record.
+                    raw = result["data"]["target_model_ref"]
+                    attempt = {"parent_id": identifier, "job_id": job["job_id"], "request_hash": record["request_hash"],
+                               "project": record["metadata"]["project_id"], "session": raw["session_id"],
+                               "server": raw["server_instance_id"], "planned_tag": raw["model_tag"], "model_ref": raw,
+                               "state": "NON_READY", "cause": {"type": "MissingAttemptProvenance", "message": "stored admitted copy-load provenance is absent"},
+                               "provenance_scope": "STORED_TERMINAL_TARGET_ONLY_ORIGINAL_ATTEMPT_NOT_RECONSTRUCTED"}
+                if attempt:
+                    try:
+                        capture = self._desktop_capture_backend(record["metadata"]["project_id"], attempt["session"], load=True)
+                    except Exception as exc:
+                        observed = {"type": type(exc).__name__, "message": str(exc)}
+                        attempt = json.loads(json.dumps(attempt))
+                        if not attempt.get("cause"):
+                            attempt["cause"] = observed
+                        else:
+                            attempt.setdefault("secondary_errors", []).append({"stage": "replay_capture", **observed})
+                        attempt.update(state="NON_READY", durable_guard="UNVERIFIED")
+                        try:
+                            self._desktop_save_attempt(record, attempt)
+                            attempt["durable_guard"] = "ATTEMPT_NON_READY_RECORDED"
+                            self._desktop_save_attempt(record, attempt)
+                        except Exception as secondary:
+                            attempt.setdefault("secondary_errors", []).append({"stage": "replay_attempt_persist", "type": type(secondary).__name__, "message": str(secondary)})
+                            self._desktop_unpersisted_attempts[record["operation_id"]] = attempt
+                        return self._desktop_non_ready_result(result, str(exc), record.get("status"), attempt)
+                    if attempt.get("model_ref") != result["data"]["target_model_ref"]:
+                        return self._desktop_non_ready_result(result, "stored exact targetref differs", record.get("status"))
+            else:
+                return self._desktop_non_ready_result(result, "stored parent operation/job proof is absent",
+                                                      record.get("status") if record else "UNOBSERVED")
+        if attempt is None:
+            return result
+        try:
+            return self.session_scheduler.submit(capture["runtime"], self._desktop_finalize_owned, result, capture, record, attempt).result()
+        except Exception as exc:
+            # The callback fences ordinary finalization failures before it releases the
+            # session lane. This fallback covers admission/submission failures before it ran.
+            if not attempt.pop("_finalization_fenced_in_lane", False):
+                self._desktop_freeze_owned_attempt(capture, record, attempt, exc)
+            try:
+                parent = self.store.get_operation(record["operation_id"])
+                parent_status = parent.get("status") if parent else "UNOBSERVED"
+            except Exception:
+                parent_status = "UNOBSERVED"
+            return self._desktop_non_ready_result(result, str(exc), parent_status, attempt)
+
+    def _desktop_finalize_owned(self, result, capture, record, attempt):
+        try:
+            self._desktop_recheck_backend(capture)
+            parent = self.store.get_operation(record["operation_id"])
+            job = self.store.operation_job(record["operation_id"])
+            if not parent or not job or parent.get("status") != "SUCCEEDED" or job.get("status") != "SUCCEEDED" or result.get("success") is not True:
+                raise ValueError("actual parent terminal/witness is not SUCCEEDED")
+            if attempt.get("state") == "READY":
+                self._desktop_ref_readiness(capture, attempt)
+                return result
+            if attempt.get("state") != "PROVISIONAL":
+                raise ValueError("owned attempt remains non-ready")
+            state = self._desktop_ref_readiness(capture, attempt, provisional=True)
+            state.active_operation_id = None
+            capture["backend"].persist()
+            self._desktop_ref_readiness(capture, attempt)
+            attempt["state"] = "READY"
+            self._desktop_save_attempt(record, attempt)
+            return result
+        except Exception as exc:
+            # READY publication, its readback and any final recheck share this serial
+            # callback. Persist NON_READY while the same session lane is still held.
+            self._desktop_freeze_owned_attempt(capture, record, attempt, exc)
+            attempt["_finalization_fenced_in_lane"] = True
+            raise
+
+    @staticmethod
+    def _desktop_non_ready_result(original, cause, parent_status, attempt=None):
+        return {"success": False, "data": {"target_readiness": "NON_READY", "parent_persisted_status": parent_status,
+                "original_parent_result": original, "owned_attempt": attempt},
+                "error": {"code": "EXECUTION_STATE_UNKNOWN", "message": cause, "safe_retry": False}}
+
     def _desktop_engine_queue(self, operation, arguments, model_ref, context):
-        """Serialize any future managed API substep and fail closed today."""
-        future = self.queue.submit(self._reject_unavailable_desktop_engine_route, operation)
-        return future.result()
+        from ._execution_contract import model_ref_from_mapping
+        if operation == "model.load":
+            if context is None or self._desktop_request_scope.get() is None:
+                return self._reject_unavailable_desktop_engine_route(operation)
+            self._desktop_parent_claim(context, migration=True)
+            scope = self._desktop_request_scope.get()
+            original = json.loads(scope["arguments_json"])
+            if (model_ref is not None or arguments.get("load_mode") != "save_copy"
+                    or arguments.get("project_id") != context.project_id
+                    or arguments.get("target_session_id") != original.get("target_session_id")
+                    or Path(arguments.get("model_path", "")) != Path(original["save_policy"]["destination_path"]).expanduser().resolve()
+                    or original["save_policy"].get("mode") != "save_copy" or original["save_policy"].get("overwrite") is not False):
+                raise DesktopOperationError("OWNER_UNVERIFIED", "copy-load differs from original migration request", safe_retry=False)
+            capture = self._desktop_capture_backend(context.project_id, arguments["target_session_id"], load=True)
+            self._desktop_owned_ref_guard(capture, ignore_parent=context.operation_id)
+            witness = self._desktop_file_witness(context.project_id, arguments["model_path"])
+            if witness["sha256"] != arguments.get("source_sha256"):
+                raise DesktopOperationError("SAVE_COPY_UNVERIFIED", "copy SHA differs from Coordinator receipt", safe_retry=False)
+            return self.session_scheduler.submit(capture["runtime"], self._desktop_queued_load_copy, dict(arguments), context, capture, scope, witness).result()
+        if operation not in {"desktop.binding.resolve", "desktop.binding.inspect"}:
+            return self._reject_unavailable_desktop_engine_route(operation)
+        if operation == "desktop.binding.resolve":
+            try:
+                model_ref = model_ref_from_mapping(json.loads(arguments["model_ref_id"]))
+            except (ValueError, TypeError, KeyError):
+                return self._reject_unavailable_desktop_engine_route(operation)
+        if model_ref is None:
+            raise DesktopOperationError("MODEL_BINDING_UNKNOWN", "typed ModelRef is required", safe_retry=True)
+        self._desktop_parent_claim(context)
+        capture = self._desktop_capture_backend(context.project_id, model_ref.session_id)
+        scope = self._desktop_request_scope.get()
+        try:
+            return self.session_scheduler.submit(capture["runtime"], self._desktop_queued_read, operation, arguments, model_ref, context, capture, scope).result()
+        except Exception as exc:
+            attempt = scope.get("attempt") if scope is not None else None
+            if (context.operation == "desktop.migrate_standalone" and attempt is not None
+                    and attempt.get("parent_id") == context.operation_id
+                    and attempt.get("model_ref") == model_ref.as_dict()):
+                self.session_scheduler.submit(scope["capture"]["runtime"], self._desktop_freeze_owned_attempt,
+                                              scope["capture"], scope["record"], attempt, exc).result()
+                raise DesktopOperationError("EXECUTION_STATE_UNKNOWN", "post-load private inspection failed: " + str(exc),
+                                            side_effect_started=True, safe_retry=False) from exc
+            raise
+
+    def _desktop_before_model_dispatch(self, operation, execution, arguments):
+        context = active_session_context()
+        if context is None:
+            return
+        attempts = [a for _j, a in self._desktop_attempt_rows(context.project_id)
+                    if a.get("session") == context.session_id and a.get("state") != "READY"]
+        attempts += [a for a in self._desktop_unpersisted_attempts.values() if a.get("session") == context.session_id]
+        if not attempts:
+            return
+        capture = self._desktop_capture_backend(context.project_id, context.session_id, load=True)
+        self._desktop_owned_ref_guard(capture, execution.get("model_ref") or arguments.get("model_ref"), operation)
+
+    def _desktop_queued_read(self, operation, arguments, model_ref, context, capture, request_scope):
+        self._desktop_recheck_backend(capture, health=capture["runtime"] is not None)
+        backend = capture["backend"]
+        # A native save/load or Shell provider still needs an approved single-
+        # claim substep. Never substitute generic model.load/Java dispatch.
+        if operation not in {"desktop.binding.resolve", "desktop.binding.inspect"}:
+            return self._reject_unavailable_desktop_engine_route(operation)
+        from ._execution_contract import model_ref_from_mapping
+        if operation == "desktop.binding.resolve":
+            try:
+                raw = json.loads(arguments["model_ref_id"])
+            except (ValueError, TypeError, KeyError):
+                return self._reject_unavailable_desktop_engine_route(operation)
+            if not isinstance(raw, dict):
+                return self._reject_unavailable_desktop_engine_route(operation)
+            model_ref = model_ref_from_mapping(raw)
+        if model_ref is None:
+            raise DesktopOperationError("MODEL_BINDING_UNKNOWN", "current typed ModelRef is required", safe_retry=True)
+        project_id = arguments.get("project_id")
+        if context.project_id != project_id:
+            raise DesktopOperationError("PROJECT_IDENTITY_MISMATCH", "Desktop claim project differs", safe_retry=True)
+        record = self._desktop_parent_claim(context)
+        if (not isinstance(record, Mapping) or record.get("status") != "RUNNING"
+                or record.get("idempotency_key") != context.idempotency_key
+                or record.get("request_hash") != context.request_hash
+                or record.get("request_id") != context.request_id
+                or record.get("operation") != context.operation
+                or record.get("metadata", {}).get("project_id") != project_id):
+            raise DesktopOperationError("OWNER_UNVERIFIED", "Desktop callback has no exact active durable claim", safe_retry=True)
+        service = backend.service
+        if service is None or not backend.endpoint_key:
+            return self._reject_unavailable_desktop_engine_route(operation)
+        self.project_authority.authorize_operation(project_id, "inspect")
+        attributed = backend.model_project_binding(model_ref.as_dict())
+        if attributed.get("attribution") != "PROJECT_BOUND" or attributed.get("project_id") != project_id:
+            raise DesktopOperationError("MODEL_IDENTITY_MISMATCH", "typed model is not attributed to this project", safe_retry=True)
+        state = service.ledger._state_for(model_ref)
+        same_parent = (context.operation == "desktop.migrate_standalone" and request_scope is not None
+                       and request_scope.get("hash") == context.request_hash
+                       and (request_scope.get("attempt") or {}).get("state") == "PROVISIONAL"
+                       and (request_scope.get("attempt") or {}).get("model_ref") == model_ref.as_dict()
+                       and state.active_operation_id == context.operation_id)
+        if same_parent:
+            with self.desktop._operation_lock:
+                same_parent = context.operation_id in self.desktop._active_operations
+        if state.dirty or (state.active_operation_id is not None and not same_parent):
+            raise DesktopOperationError("EXECUTION_STATE_UNKNOWN", "managed model requires reconciliation or has an active operation", safe_retry=False)
+        # inspect_evidence validates epoch and freshly reads the adapter's
+        # documented parameters+shallow-tree fingerprint and external counter.
+        # It neither creates a Desktop binding nor proves complete model/dirty
+        # state preservation. Keep that bounded witness explicit in the result.
+        with backend.context(context.operation_id, self._session_worker_event_callback(record)):
+            evidence = service.inspect_evidence(model_ref)
+        if service.ledger._state_for(model_ref).dirty:
+            raise DesktopOperationError("EXECUTION_STATE_UNKNOWN", "external model change requires explicit reconciliation", safe_retry=False)
+        snapshot = evidence.get("model_snapshot", {})
+        actual_ref = evidence.get("execution", {}).get("model_ref")
+        if (actual_ref != model_ref.as_dict() or snapshot.get("model_tag") != model_ref.model_tag
+                or snapshot.get("server_instance_id") != model_ref.server_instance_id
+                or not isinstance(snapshot.get("fingerprint"), str) or not snapshot["fingerprint"]):
+            raise DesktopOperationError("MODEL_IDENTITY_MISMATCH", "fresh managed snapshot differs from typed reference", safe_retry=True)
+        return {"success": True, "data": {
+            "model_ref": actual_ref, "server_endpoint": backend.endpoint_key,
+            "model_tag": model_ref.model_tag, "fingerprint": snapshot["fingerprint"],
+            "revision": evidence["execution"].get("revision"),
+            "fingerprint_coverage": snapshot.get("coverage"),
+            "cas_guarantee": snapshot.get("cas_guarantee"),
+            "Desktop_model_binding": "UNVERIFIED_BY_MANAGED_INSPECTION_ALONE",
+        }}
 
     @staticmethod
     def _reject_unavailable_desktop_engine_route(operation: str) -> dict[str, Any]:
-        # desktop.binding.resolve/inspect and Desktop Shell execution do not
-        # yet have a trusted current-window binding API in ManagedBackend.
-        # Keeping the rejection inside the existing queue ensures that a
-        # future approved implementation cannot silently bypass serialization.
-        return {
-            "success": False,
-            "data": {"engine_dispatched": False},
-            "error": {
-                "code": "UNSUPPORTED_CONTROL",
-                "message": f"managed Desktop engine route is unavailable: {operation}",
-                "stage": "validation",
-                "safe_retry": True,
-            },
-        }
+        return {"success": False, "data": {"engine_dispatched": False}, "error": {
+            "code": "UNSUPPORTED_CONTROL", "message": f"managed Desktop engine route is unavailable: {operation}",
+            "stage": "validation", "safe_retry": True,
+        }}
 
     @staticmethod
     def _resolve_desktop_action(project_id, action):
-        raise DesktopOperationError(
-            "UNSUPPORTED_CONTROL", "no versioned trusted Desktop action resolver is configured",
-            safe_retry=True,
-        )
+        raise DesktopOperationError("UNSUPPORTED_CONTROL", "no observed versioned COMSOL action selector profile", safe_retry=True)
 
-    @staticmethod
-    def _resolve_desktop_artifact(project_id, artifact_id):
-        raise DesktopOperationError(
-            "UNSUPPORTED_CONTROL", "no trusted Desktop Shell artifact resolver is configured",
-            safe_retry=True,
+    def _resolve_desktop_artifact(self, project_id, artifact_id):
+        from ._artifact_store import resolve_registered_artifact, local_artifact_host_identity, local_engine_host_identity
+        from ._desktop_service import TrustedSourceArtifact
+        project = self.project_authority.authorize_operation(project_id, "trusted_code")
+        service = self.backend.service
+        if service is None or not self.backend.endpoint_key:
+            raise DesktopOperationError("UNSUPPORTED_CONTROL", "no exact managed endpoint for registered source provenance", safe_retry=True)
+        record = resolve_registered_artifact(
+            project["workspace"], self.store, artifact_id, project_id=project_id,
+            current_host_identity=local_artifact_host_identity(),
+            current_engine_host_identity=local_engine_host_identity(self.backend.endpoint_key),
+            current_server_instance_id=service.ledger.server_instance_id,
         )
+        return TrustedSourceArtifact(record["artifact_id"], record["sha256"], record["size"],
+                                     "registered-project-artifact:" + project_id)
 
-    @staticmethod
-    def _authorize_desktop_save_copy(project_id, destination):
-        return False
+    def _authorize_desktop_save_copy(self, project_id, destination):
+        from ._artifact_store import ArtifactStore
+        try:
+            project = self.project_authority.authorize_operation(project_id, "project_write")
+            path = ArtifactStore(Path(project["workspace"])).resolve_safe_path(str(destination), allow_overwrite=False)
+            return path == destination and destination.is_absolute() and not destination.exists()
+        except (ExecutionContractError, OSError, ValueError, TypeError):
+            return False
 
     def _dispatch_catalog_job_control(self, inner_operation: str, inner_arguments: dict[str, Any], *, execution: dict[str, Any]) -> dict[str, Any]:
         return self._dispatch_catalog_job_control_impl(
@@ -4904,6 +5477,7 @@ class ControlDaemon:
                     session_peer_observer=self.session_peer_observer,
                     host_permission_ceiling=self._default_backend.host_permission_ceiling,
                 )
+                backend.project_authorizer = self.project_authority.authorize_operation
                 self._session_backends[(project_id, session_id)] = backend
 
                 def worker_event(event):
@@ -10307,6 +10881,16 @@ class ControlDaemon:
                 "INVALID_REQUEST",
                 f"{inner_operation} identity belongs in the outer execution envelope: {', '.join(present_identity)}",
             )
+        if entry.operation_id == "solver.log_read":
+            project_id = execution.get("project_id")
+            if not isinstance(project_id, str) or not project_id:
+                raise ExecutionContractError("PROJECT_IDENTITY_REQUIRED", "solver.log_read requires outer execution.project_id")
+            self.project_authority.authorize_operation(project_id, "inspect")
+            if inner_arguments.get("project_id") != project_id:
+                raise ExecutionContractError("PROJECT_IDENTITY_MISMATCH", "solver.log_read project_id differs from the execution envelope")
+            from ._g3_solver_ops import solver_log_read
+            body = {key: value for key, value in inner_arguments.items() if key != "project_id"}
+            return {"success": True, "data": solver_log_read(self.store, project_id, body)}
         if "project_id" in inner_arguments and inner_operation != "job.list":
             raise ExecutionContractError("INVALID_REQUEST", f"project_id is not an argument for {inner_operation}")
 
@@ -10845,6 +11429,7 @@ class ControlDaemon:
                 from contextlib import nullcontext
                 project_scope = nullcontext()
             with project_scope:
+                self._desktop_before_model_dispatch(operation, execution, arguments)
                 if resume_context is None:
                     result = self.backend.invoke(operation, arguments, execution, operation_id, worker_event)
                 else:

@@ -1,0 +1,204 @@
+{
+  "format": "solver-routes-source-freeze/1",
+  "candidate_id": "solver-routes-20261011-r17",
+  "created_at": "2026-10-11T15:19:44.931414+00:00",
+  "git_head": "60464c85b429e649f4f80484473999e5365ad96a",
+  "status": "CANDIDATE_FROZEN_FOR_ROOT_REVIEW",
+  "scope": "Five model-bound solver/study/result routes and project-scoped solver.log_read; software route integration only.",
+  "supersedes": "solver-routes-20261011-r16 for current source freeze; r16 receipt remains preserved alongside this manifest.",
+  "shared_source_note": "The shared integration files below include concurrent W25/model-delivery changes present at freeze. Hashes bind exact combined bytes; this receipt does not claim ownership of all file deltas.",
+  "source_files": [
+    {
+      "path": "comsol_mcp/_g3_solver_ops.py",
+      "size_bytes": 46525,
+      "sha256": "11ed2ee0da05d4a47f07cbd4024c8f809a5a1a2d0e0fd6a5642f7058016a9e7d"
+    },
+    {
+      "path": "tests/test_g3_solver_ops.py",
+      "size_bytes": 25727,
+      "sha256": "24c381759beadb0b74f3cc61340ff790563cbba6c130e4f4e7cee73f4da734d4"
+    },
+    {
+      "path": "tests/test_w26_solver_action_routes.py",
+      "size_bytes": 15112,
+      "sha256": "405b75bc280495e4d8c55de8f0f24e3ab6b0d91b3efa55c4db232bffb725f68e"
+    },
+    {
+      "path": "comsol_mcp/_domain_outcome.py",
+      "size_bytes": 49748,
+      "sha256": "2969fdd429bf63a0d02b190bfe80a1a6f97c96e5abe34a09ed74125e0adf4767"
+    },
+    {
+      "path": "tests/test_g3_domain_outcome.py",
+      "size_bytes": 33899,
+      "sha256": "bca83c094bb280ffe5e908dbb55eddbd6a73ea2686a32aa7356ed8544c04dba2"
+    },
+    {
+      "path": "comsol_mcp/_g3_ops.py",
+      "size_bytes": 10246,
+      "sha256": "f8d8235ed6957ffa6a277d0b4faf3712bf81c9e907962e6c9a1635a3a9676947"
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "size_bytes": 128064,
+      "sha256": "4444fca20485d56d5a543c229dce6916c382a2e77187fabfe0a6ff15060ddba3"
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "size_bytes": 771112,
+      "sha256": "1bc3569e6d8d3d418f113f2bd12c070fd08951195bc9b800e44c41c5e9bb13fe"
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "size_bytes": 207892,
+      "sha256": "29cd407da41dfd6b194d5f4cf1e2b63fbe0259d0594c8a5c777fc1858ad00d02"
+    },
+    {
+      "path": "comsol_mcp/_execution_service.py",
+      "size_bytes": 26145,
+      "sha256": "c111d25d1e34f6462aa0af9192cfa930252008ad1f9421199d952ecd065dd527"
+    },
+    {
+      "path": "comsol_mcp/_g3_results.py",
+      "size_bytes": 378335,
+      "sha256": "0ba862600c124b2139a1de41135440c9c3492ad4514817c00d0ece9aeb247785"
+    },
+    {
+      "path": "tests/test_g3_results.py",
+      "size_bytes": 71186,
+      "sha256": "34c611d6d5400714459d50a20a463ae5cafd3fca1b09d1a52b28cd2cfb63bbb3"
+    },
+    {
+      "path": "tests/test_g3_w17.py",
+      "size_bytes": 75996,
+      "sha256": "9cb0da538f0d806c42a1e585f76f72dc42c8b316581309b42a7129a47d5d977c"
+    },
+    {
+      "path": "comsol_mcp/worker_java/PersistentComsolWorker.java",
+      "size_bytes": 121989,
+      "sha256": "5251d0b713017aeb82daa9999439d264dee18bb6d653a5daa901724f660b31b0"
+    },
+    {
+      "path": "comsol_mcp/_g2_artifact_verify.py",
+      "size_bytes": 101052,
+      "sha256": "ea050a723b67b06ff8ef3ad2b12d317669c3393ed2b8af545d3ba449c04676db"
+    },
+    {
+      "path": "tests/test_artifact_verify.py",
+      "size_bytes": 28367,
+      "sha256": "e633be9d6d8e92526ce66d84f63eee7697d867aa3b38167d7cdffb2f547e2276"
+    },
+    {
+      "path": "tests/test_g2_registry_packaging.py",
+      "size_bytes": 3575,
+      "sha256": "7391d746001cc338054cbb78501f6992c64c16449ebcb07ec59feae681a061d1"
+    },
+    {
+      "path": "tests/test_artifact_registration_import.py",
+      "size_bytes": 87069,
+      "sha256": "d40d2b1363d6535098fcc8755778aefc4493e42b086b2a4ae124ab853e31c5db"
+    }
+  ],
+  "route_coverage": [
+    {
+      "operation": "solver.solution_inspect",
+      "entrypoint": "ControlDaemon direct dispatch",
+      "coverage": "Exact time/unit pair selection through managed Worker route; synthetic engine fixture."
+    },
+    {
+      "operation": "solver.solution_clear",
+      "entrypoint": "ControlDaemon direct dispatch",
+      "coverage": "Exact sequence clear; successful isEmpty readback; isInitialized may remain true. Incomplete/no-op readback and post-dispatch exception both remain UNKNOWN."
+    },
+    {
+      "operation": "solver.resource_configure",
+      "entrypoint": "registry_call through ControlDaemon",
+      "coverage": "Direct solver model-scoped settings with setter/readback on synthetic engine fixture; process core/RAM unchanged."
+    },
+    {
+      "operation": "study.initial_solution_set",
+      "entrypoint": "ControlDaemon direct dispatch",
+      "coverage": "Bound SolutionInfo tuple configured/read back on target StudyFeature, no solve. Prewrite checks enumerate model.sol tags/get.study and require the source study to have one solver, exactly the selected source solution."
+    },
+    {
+      "operation": "result.sample_grid",
+      "entrypoint": "operation_call through ControlDaemon",
+      "coverage": "Managed result adapter integration and Cartesian grid shape; route-level adapter response substituted with fixture; no scientific acceptance."
+    },
+    {
+      "operation": "solver.log_read",
+      "entrypoint": "ControlDaemon direct and registry_call",
+      "coverage": "OperationStore-backed job paging, schema validation, identity binding, permission and foreign-job negative controls; no Worker."
+    }
+  ],
+  "software_tests": {
+    "status": "PASS",
+    "command_scope": [
+      "tests/test_g3_solver_ops.py",
+      "tests/test_w26_solver_action_routes.py",
+      "tests/test_g3_domain_outcome.py",
+      "tests/test_g3_w17.py",
+      "tests/test_g3_results.py"
+    ],
+    "passed": 232,
+    "skipped": 0,
+    "failures": 0,
+    "evidence": {
+      "path": "docs/full_project_continuation_v2/evidence/solver_routes/junit-r17.xml",
+      "size_bytes": 31206,
+      "sha256": "160bf6c297f06c3bc7d7f88ae94c89b0fd82d2f960ec65da2b9378b3a3a78885"
+    },
+    "strict_network_guard": {
+      "evidence": {
+        "path": "docs/full_project_continuation_v2/evidence/solver_routes/network-guard-r17.jsonl",
+        "size_bytes": 239,
+        "sha256": "410c9090a65afa287b7be4b941a7fae0cf52b50c0332a6b176e4ca62c3581e87"
+      },
+      "raw_records": [
+        "{\"detail\": \"None\", \"event\": \"GUARD_ACTIVE_BEFORE_CHILD_ENTRYPOINT\", \"label\": \"solver-routes-regression-r17\", \"operation\": \"sitecustomize\", \"pid\": 76659, \"ppid\": 2496, \"run_id\": \"solver-routes-r17-20261011\", \"time_ns\": 1791731916866426000}"
+      ],
+      "blocked_network_events": 0
+    }
+  },
+  "supporting_sibling_evidence": [
+    {
+      "scope": "Java Worker persistent loopback software test; no COMSOL Server/solve/model call.",
+      "summary": "41 passed, 1 skipped in 6.29s",
+      "evidence": [
+        {
+          "path": "docs/full_project_continuation_v2/evidence/model_delivery/java-worker-loopback/invocation.json",
+          "size_bytes": 1234,
+          "sha256": "8e90ee6d443c6ea59283974bf17a18847b16e5e7106abb080a1480e72b1014b7"
+        },
+        {
+          "path": "docs/full_project_continuation_v2/evidence/model_delivery/java-worker-loopback/junit.xml",
+          "size_bytes": 6428,
+          "sha256": "d0f27b5a773c9bd713fabf3f9e07cf321172bed9b9243f8a0a2aec07ca39748e"
+        }
+      ]
+    },
+    {
+      "scope": "Model-delivery and verifier affected regression; sibling-owned source.",
+      "summary": "249 passed, 10 skipped, 20 subtests passed in 1.96s",
+      "evidence": [
+        {
+          "path": "docs/full_project_continuation_v2/evidence/model_delivery/affected-regressions/invocation.json",
+          "size_bytes": 1102,
+          "sha256": "6fa9e5b09a5926e9fdd874e07fd13d7ce1335e821a2d6e0eb9ef404f7f1d51ce"
+        },
+        {
+          "path": "docs/full_project_continuation_v2/evidence/model_delivery/affected-regressions/junit.xml",
+          "size_bytes": 38692,
+          "sha256": "a763218f29b5507299687e61893b8d8a1efcc091f9718c9e1d90f3b5a38ff71d"
+        }
+      ]
+    }
+  ],
+  "acceptance": {
+    "native_comsol": "NOT_RUN",
+    "gui": "NOT_RUN",
+    "windows_native": "NOT_RUN_BLOCKED_CONNECTIVITY",
+    "scientific_acceptance": "NOT_EVALUATED",
+    "independent_reviewer": "PENDING"
+  }
+}

@@ -139,6 +139,10 @@ public final class PersistentComsolWorker {
       // verified by the local 6.4 API docs and javap of apiplugins/
       // com.comsol.api_1.0.0.jar (sha256 9bdc47a9e320be5721956336f44f5afa4cb06a20cfa887bc7d32d1a837483a67).
       "getFileResourceTags",
+      // Model delivery uses the public FileResource.archive() member only;
+      // resource() exposes an ephemeral extraction path and is deliberately
+      // not called by this typed inventory adapter.
+      "getFileResourceInventory", "saveModelPackage",
       // W17: result, numerical and table API methods javap-verified
       // TableBaseFeature.setColumnHeaders(String[]) is present in the local
       // COMSOL 6.4 API probe; keep the setter reachable with its readback
@@ -155,7 +159,11 @@ public final class PersistentComsolWorker {
       //   SolutionInfo.getLevelNames() -> java.lang.String[]
       // Published here so dataset.solution_indices reads the outer/inner axes
       // from the engine instead of fabricating outer_indices=[1].
-      "getSolutioninfo", "getOuterSolnum", "getMaxInner", "getLevelNames",
+      // SolverSequence.clearSolutionData() is the only clear route used by
+      // solver.solution_clear; the adapter requires exactly one sol:<tag>
+      // NodePath and verifies isEmpty()/isInitialized() after dispatch.
+      // COMSOL 6.4 API reference: SolverSequence.clearSolutionData().
+      "getSolutioninfo", "getOuterSolnum", "getMaxInner", "getLevelNames", "clearSolutionData",
       // G3.3 independent 6.4 javap verification: native geometry and per-solution metadata.
       "isAxisymmetric", "getSolnum", "getSolnums", "getPvals", "getUnits", "getUnit",
       "getPNamesOuter", "getPUnitsOuter", "getSolverSequence",
@@ -659,6 +667,13 @@ public final class PersistentComsolWorker {
       if (!args.isEmpty()) throw new IllegalArgumentException("getFileResourceTags takes no arguments");
       return getFileResourceTags(target);
     }
+    if ("getFileResourceInventory".equals(method)) {
+      if (!args.isEmpty()) throw new IllegalArgumentException("getFileResourceInventory takes no arguments");
+      return getFileResourceInventory(target);
+    }
+    if ("saveModelPackage".equals(method)) {
+      return saveModelPackage(target, args);
+    }
     if (isMeshBlockGetter(method)) {
       if (!(target instanceof MeshSequence)) throw new SecurityException("METHOD_REJECTED");
       validateMeshBlockArguments(method, args);
@@ -788,6 +803,163 @@ public final class PersistentComsolWorker {
     }
     String[] tags = ((Model) target).file().tags();
     return tags == null ? Collections.emptyList() : new ArrayList<String>(Arrays.asList(tags));
+  }
+
+  /** Return COMSOL-owned FileResource tags and exact MPH archive member names. */
+  private Object getFileResourceInventory(Object target) throws Exception {
+    if (!(target instanceof Model)) {
+      throw new WorkerFailure("FILE_RESOURCE_INVENTORY_TARGET_INVALID",
+          "getFileResourceInventory is only valid for a Model handle");
+    }
+    Model model = (Model) target;
+    String[] tags = model.file().tags();
+    List<Object> rows = new ArrayList<Object>();
+    if (tags == null) return rows;
+    if (tags.length > 512) {
+      throw new WorkerFailure("FILE_RESOURCE_INVENTORY_LIMIT",
+          "Model.FileResourceList exceeds the bounded 512-tag inventory");
+    }
+    Set<String> seen = new HashSet<String>();
+    for (String tag : tags) {
+      if (tag == null || tag.isEmpty() || !seen.add(tag)) {
+        throw new WorkerFailure("FILE_RESOURCE_INVENTORY_INVALID",
+            "Model.FileResourceList returned an empty or duplicate tag");
+      }
+      // archive() returns the model-internal archive path. Never use
+      // FileResource.resource(), which is a temporary extracted filesystem path.
+      String archive = model.file(tag).archive();
+      rows.add(map("tag", tag, "archive", archive));
+    }
+    return rows;
+  }
+
+  /**
+   * Save one actual MPH copy without changing the bound model's live filepath.
+   * includeSolution is implemented only through the documented
+   * excludeComputedDataInMph(boolean) getter/setter, with exact readback and
+   * finally restoration. An uncertain restoration is reported as UNKNOWN.
+   */
+  private Object saveModelPackage(Object target, List<Object> args) throws Exception {
+    if (!(target instanceof Model)) {
+      throw new WorkerFailure("MODEL_PACKAGE_TARGET_INVALID",
+          "saveModelPackage is only valid for a Model handle",
+          map("save_dispatched", false, "execution_state_unknown", false));
+    }
+    if (args.size() != 2 || !(args.get(0) instanceof String) || ((String) args.get(0)).trim().isEmpty()
+        || !(args.get(1) instanceof Boolean)) {
+      throw new WorkerFailure("INVALID_REQUEST",
+          "saveModelPackage requires an absolute scratch path and an includeSolution boolean",
+          map("save_dispatched", false, "execution_state_unknown", false));
+    }
+    Model model = (Model) target;
+    Path destination = Paths.get((String) args.get(0)).toAbsolutePath().normalize();
+    if (Files.exists(destination, LinkOption.NOFOLLOW_LINKS)) {
+      throw new WorkerFailure("MODEL_PACKAGE_DESTINATION_EXISTS",
+          "typed package scratch destination already exists",
+          map("save_dispatched", false, "execution_state_unknown", false));
+    }
+    if (!Files.isDirectory(destination.getParent(), LinkOption.NOFOLLOW_LINKS)
+        || Files.isSymbolicLink(destination.getParent())) {
+      throw new WorkerFailure("MODEL_PACKAGE_DESTINATION_INVALID",
+          "typed package scratch parent must be an existing non-symlink directory",
+          map("save_dispatched", false, "execution_state_unknown", false));
+    }
+    String originalPath;
+    boolean originalExclude;
+    try {
+      originalPath = model.getFilePath();
+      originalExclude = model.excludeComputedDataInMph();
+    } catch (Throwable failure) {
+      throw new WorkerFailure("MODEL_PACKAGE_PRECHECK_FAILED",
+          "model package getter precheck failed before changing the bound model",
+          map("save_dispatched", false, "execution_state_unknown", false,
+              "cause_type", failure.getClass().getName()), failure);
+    }
+    boolean includeSolution = ((Boolean) args.get(1)).booleanValue();
+    boolean desiredExclude = !includeSolution;
+    boolean setterAttempted = false;
+    boolean saveDispatched = false;
+    Throwable saveFailure = null;
+    Throwable restoreFailure = null;
+    boolean restored = false;
+    Boolean temporaryReadback = null;
+    Boolean restoredReadback = null;
+    try {
+      if (originalExclude != desiredExclude) {
+        setterAttempted = true;
+        model.excludeComputedDataInMph(desiredExclude);
+        temporaryReadback = Boolean.valueOf(model.excludeComputedDataInMph());
+        if (temporaryReadback.booleanValue() != desiredExclude) {
+          throw new WorkerFailure("MODEL_PACKAGE_OPTION_READBACK_MISMATCH",
+              "excludeComputedDataInMph did not read back the requested package option",
+              map("save_dispatched", false, "execution_state_unknown", true,
+                  "setter_attempted", true, "temporary_option_readback", temporaryReadback));
+        }
+      } else {
+        temporaryReadback = Boolean.valueOf(originalExclude);
+      }
+      saveDispatched = true;
+      model.save(destination.toString(), true);
+    } catch (Throwable failure) {
+      saveFailure = failure;
+    } finally {
+      if (setterAttempted) {
+        try {
+          model.excludeComputedDataInMph(originalExclude);
+          restoredReadback = Boolean.valueOf(model.excludeComputedDataInMph());
+          restored = restoredReadback.booleanValue() == originalExclude;
+          if (!restored) {
+            restoreFailure = new IllegalStateException("excludeComputedDataInMph restoration readback mismatch");
+          }
+        } catch (Throwable failure) {
+          restoreFailure = failure;
+        }
+      } else {
+        restored = true;
+        restoredReadback = Boolean.valueOf(originalExclude);
+      }
+    }
+    String finalPath = null;
+    try { finalPath = model.getFilePath(); } catch (Throwable failure) {
+      if (restoreFailure == null) restoreFailure = failure;
+    }
+    boolean livePathPreserved = Objects.equals(originalPath, finalPath);
+    if (saveFailure != null || restoreFailure != null || !restored || !livePathPreserved) {
+      Map<String,Object> details = map(
+          "save_dispatched", saveDispatched,
+          "execution_state_unknown", saveDispatched || setterAttempted,
+          "post_dispatch", saveDispatched || setterAttempted,
+          "setter_attempted", setterAttempted,
+          "restore_verified", restored,
+          "original_exclude_computed_data", originalExclude,
+          "temporary_option_readback", temporaryReadback,
+          "restored_option_readback", restoredReadback,
+          "live_filepath_preserved", livePathPreserved,
+          "save_failure_type", saveFailure == null ? null : saveFailure.getClass().getName(),
+          "restore_failure_type", restoreFailure == null ? null : restoreFailure.getClass().getName());
+      String message = restoreFailure != null || !restored
+          ? "model package option restoration could not be verified"
+          : (!livePathPreserved ? "saveCopy changed the bound model's live filepath" :
+              "COMSOL saveCopy failed after the typed package dispatch");
+      throw new WorkerFailure("EXECUTION_STATE_UNKNOWN", message, details,
+          restoreFailure != null ? restoreFailure : saveFailure);
+    }
+    if (!Files.isRegularFile(destination, LinkOption.NOFOLLOW_LINKS)
+        || Files.isSymbolicLink(destination) || Files.size(destination) <= 0) {
+      throw new WorkerFailure("EXECUTION_STATE_UNKNOWN",
+          "saveCopy completed without a verified nonempty regular MPH file",
+          map("save_dispatched", true, "execution_state_unknown", true,
+              "post_dispatch", true, "restore_verified", true,
+              "live_filepath_preserved", livePathPreserved,
+              "include_solution", includeSolution));
+    }
+    return map("status", "SAVED_COPY", "include_solution", includeSolution,
+        "original_exclude_computed_data", originalExclude,
+        "temporary_option_readback", temporaryReadback,
+        "restored_option_readback", restoredReadback,
+        "restore_verified", restored,
+        "live_filepath_preserved", livePathPreserved,
+        "mph_size_bytes", Files.size(destination));
   }
 
   /**

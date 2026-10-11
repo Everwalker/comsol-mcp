@@ -441,6 +441,21 @@ def validate_cure_law_v2_contract_readback(readback: Mapping[str, Any]) -> dict[
                                           f"solver_readbacks.{stage}.solver_field_contract")
         descriptor = _require_mapping(field_contract.get("physics_field_descriptor"),
                                       f"solver_readbacks.{stage}.solver_field_contract.physics_field_descriptor")
+        modes = _require_mapping(field_contract.get("axisymmetric_mode_readbacks"),
+                                 f"solver_readbacks.{stage}.axisymmetric_mode_readbacks")
+        if (set(modes) != {"physics_tag", "property_node", "includeTwist", "ModeExtension"} or
+                modes.get("physics_tag") != "solid" or modes.get("property_node") != "Mode2Daxi"):
+            raise CaptureError(f"loaded model axisymmetric mode getter provenance is incomplete for {stage}")
+        mode_signature = []
+        for property_name in ("includeTwist", "ModeExtension"):
+            observed_mode = _require_mapping(modes.get(property_name), f"solver_readbacks.{stage}.{property_name}")
+            if (set(observed_mode) != {"getter", "value"} or observed_mode.get("getter") != "getBoolean" or
+                    observed_mode.get("value") is not False):
+                raise CaptureError(f"loaded model configured u/w binding lacks observed disabled {property_name} for {stage}")
+            mode_signature.append((property_name, observed_mode["getter"], observed_mode["value"]))
+        if (field_contract.get("configured_logical_components") != ["u", "w"] or
+                field_contract.get("effective_solved_dof_validation") != "UNVERIFIED"):
+            raise CaptureError(f"loaded model configured/effective DOF scope is incomplete for {stage}")
         components = descriptor.get("components")
         component_bindings = field_contract.get("component_solver_entry_bindings")
         inventory = field_contract.get("physics_field_descriptors")
@@ -474,15 +489,16 @@ def validate_cure_law_v2_contract_readback(readback: Mapping[str, Any]) -> dict[
                 field_contract.get("selected_displacement_field_count") != 1 or
                 isinstance(descriptor.get("physics_field_count"), bool) or
                 not isinstance(descriptor.get("physics_field_count"), int) or descriptor != displacement[0] or
-                not isinstance(components, list) or len(components) != 2 or set(components) != {"u", "w"} or
+                not isinstance(components, list) or set(components) not in ({"u", "w"}, {"u", "v", "w"}) or
                 component_bindings != {"u": "comp1_u", "w": "comp1_u"}):
             raise CaptureError(f"loaded model solver field descriptor or observed u/w binding is incomplete for {stage}")
-        if any(set(observed["components"]) & {"u", "w"}
+        if any(set(observed["components"]) & set(components)
                for observed in inventory if observed["field"] != "u"):
-            raise CaptureError(f"loaded model nonselected descriptor aliases selected u/w component ownership for {stage}")
+            raise CaptureError(f"loaded model nonselected descriptor aliases selected raw component ownership for {stage}")
         signature = (field_contract.get("geometry_dimension"), field_contract.get("geometry_axisymmetric"),
                      count, tuple(inventory_signature), descriptor.get("field_tag"), descriptor.get("field"),
-                     tuple(components), tuple(sorted(component_bindings.items())))
+                     tuple(components), tuple(sorted(component_bindings.items())), tuple(mode_signature),
+                     tuple(field_contract["configured_logical_components"]), field_contract["effective_solved_dof_validation"])
         if field_contract_signature is None:
             field_contract_signature = signature
         elif signature != field_contract_signature:

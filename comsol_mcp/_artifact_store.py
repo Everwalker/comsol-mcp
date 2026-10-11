@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import base64
 import csv
+import ctypes
 import errno
 import hashlib
 import ipaddress
@@ -184,6 +185,9 @@ def register_project_artifact(
     engine_host_identity: str,
     request_id: str,
     registering_operation_id: str,
+    artifact_type: str | None = None,
+    format_version: str | None = None,
+    provenance_fields: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Copy and register a project-local ordinary file without widening access."""
     if not isinstance(project_id, str) or not project_id.strip():
@@ -194,6 +198,22 @@ def register_project_artifact(
         raise _contract_error("INVALID_REQUEST", "classification must be a non-empty string of at most 96 characters")
     if not isinstance(source_relative_path, str) or not source_relative_path.strip():
         raise _contract_error("INVALID_REQUEST", "path must be a project-relative file path")
+    for field, value in (("artifact_type", artifact_type), ("format_version", format_version)):
+        if value is not None and (not isinstance(value, str) or not value.strip() or len(value) > 128):
+            raise _contract_error("INVALID_REQUEST", f"{field} must be a bounded non-empty string")
+    if provenance_fields is None:
+        provenance_fields = {}
+    if not isinstance(provenance_fields, Mapping):
+        raise _contract_error("INVALID_REQUEST", "provenance_fields must be an object")
+    reserved_provenance = {"source_project_relative_path", "request_id", "registering_operation_id", "source_sha256"}
+    if set(provenance_fields) & reserved_provenance:
+        raise _contract_error("INVALID_REQUEST", "provenance_fields cannot replace registration identity")
+    try:
+        extra_provenance = json.loads(json.dumps(dict(provenance_fields), allow_nan=False))
+        if len(json.dumps(extra_provenance, ensure_ascii=False).encode("utf-8")) > 16 * 1024:
+            raise ValueError("oversized provenance")
+    except (TypeError, ValueError, UnicodeEncodeError) as exc:
+        raise _contract_error("INVALID_REQUEST", "provenance_fields must be bounded JSON data") from exc
     source_lexical = Path(source_relative_path)
     if source_lexical.is_absolute() or any(part == ".." for part in source_lexical.parts):
         raise _contract_error("ACCESS_VIOLATION", "artifact.register accepts only project-relative paths without traversal")
@@ -227,6 +247,10 @@ def register_project_artifact(
             "role": role,
             "classification": classification,
         }
+        if artifact_type is not None:
+            expected_origin["artifact_type"] = artifact_type
+        if format_version is not None:
+            expected_origin["format_version"] = format_version
         if not isinstance(existing, Mapping) or any(existing.get(key) != value for key, value in expected_origin.items()):
             raise _contract_error("ARTIFACT_REGISTRATION_CONFLICT", "this digest is already registered with different identity or classification")
         provenance = existing.get("provenance")
@@ -323,8 +347,13 @@ def register_project_artifact(
             "request_id": request_id,
             "registering_operation_id": registering_operation_id,
             "source_sha256": digest,
+            **extra_provenance,
         },
     }
+    if artifact_type is not None:
+        record["artifact_type"] = artifact_type
+    if format_version is not None:
+        record["format_version"] = format_version
     # Insert without upsert.  The hash-addressed data file may be shared by a
     # simultaneous registration; leaving an unreferenced immutable file after
     # a database error is safer than unlinking a file another successful row
@@ -343,6 +372,10 @@ def register_project_artifact(
             "role": role,
             "classification": classification,
         }
+        if artifact_type is not None:
+            expected_origin["artifact_type"] = artifact_type
+        if format_version is not None:
+            expected_origin["format_version"] = format_version
         if not isinstance(prior, Mapping) or any(prior.get(key) != value for key, value in expected_origin.items()):
             raise _contract_error("ARTIFACT_REGISTRATION_CONFLICT", "this digest was concurrently registered with different identity or classification")
         prior_provenance = prior.get("provenance")
@@ -357,6 +390,430 @@ def register_project_artifact(
     return {**record, "resolved_path": destination, "reused": not created_destination}
 
 
+def publish_parameter_table_bytes_no_clobber(
+    project_root: str | Path,
+    destination_relative_path: Any,
+    payload: bytes,
+) -> dict[str, Any]:
+    """Publish bounded bytes inside a project using a no-clobber atomic name."""
+    if not isinstance(payload, bytes) or not payload:
+        raise _contract_error("INVALID_REQUEST", "published artifact bytes must be non-empty")
+    return _publish_project_chunks_no_clobber(
+        project_root, destination_relative_path, (payload,),
+        expected_sha256=hashlib.sha256(payload).hexdigest(), expected_size=len(payload),
+    )
+
+
+def publish_project_file_no_clobber(
+    project_root: str | Path,
+    destination_relative_path: Any,
+    owned_source_path: str | Path,
+    *,
+    expected_sha256: str,
+    expected_size: int,
+) -> dict[str, Any]:
+    """Pin a backend-owned project file and stream-publish it atomically.
+
+    ``owned_source_path`` is an internal backend capability, never a request
+    argument. It must name a regular, non-symlink file within the trusted
+    project. Source bytes are consumed once and verified against the supplied
+    digest and size before the destination name is committed.
+    """
+    store = ArtifactStore(project_root)
+    if (not isinstance(expected_sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_sha256)
+            or isinstance(expected_size, bool) or not isinstance(expected_size, int) or expected_size <= 0):
+        raise _contract_error("INVALID_REQUEST", "file publication requires a SHA-256 and positive byte size")
+    try:
+        source_lexical = Path(owned_source_path).expanduser()
+    except (TypeError, ValueError) as exc:
+        raise _contract_error("INVALID_REQUEST", "owned source path is invalid") from exc
+    source = source_lexical if source_lexical.is_absolute() else store.project_root / source_lexical
+    source = Path(os.path.abspath(os.fspath(source)))
+    try:
+        source.relative_to(store.project_root)
+    except ValueError as exc:
+        raise _contract_error("ACCESS_VIOLATION", "owned source must be inside the trusted project root") from exc
+    _assert_no_symlink_components(source, field="owned package source")
+
+    if sys.platform == "win32":
+        from ._windows_parameter_publish import PublishError, _API, pinned_parent, validate_paths
+        try:
+            source_relative = source.relative_to(store.project_root).as_posix()
+            validate_paths(project_root, source_relative)
+            validate_paths(project_root, destination_relative_path)
+            store.resolve_safe_path(destination_relative_path, allow_overwrite=False)
+
+            def windows_chunks() -> Iterator[bytes]:
+                with pinned_parent(project_root, source_relative, add_file=False, _api=_API()) as (api, parent, parts, binding):
+                    handle = api.open_source(parent, parts[-1])
+                    try:
+                        before = api.source_fingerprint(handle)
+                        if before[1] != expected_size:
+                            raise _contract_error("ARTIFACT_CHANGED", "owned source size differs from its pinned metadata")
+                        read_size = 0
+                        while True:
+                            block = api.read_chunk(handle, 1024 * 1024)
+                            if not block:
+                                break
+                            read_size += len(block)
+                            if read_size > expected_size:
+                                raise _contract_error("ARTIFACT_CHANGED", "owned source grew while being streamed")
+                            yield block
+                        if (read_size != expected_size or api.source_fingerprint(handle) != before
+                                or api.child_identity(parent, parts[-1]) != before[0]):
+                            raise _contract_error("ARTIFACT_CHANGED", "owned source changed during pinned streaming")
+                        api.verify_named_binding(binding)
+                    finally:
+                        api.close(handle)
+
+            from ._windows_parameter_publish import publish_chunks
+            try:
+                return publish_chunks(project_root, destination_relative_path, windows_chunks(),
+                                      expected_sha256=expected_sha256, expected_size=expected_size)
+            except PublishError as exc:
+                raise _contract_error(exc.code, str(exc), stage=exc.stage, details=exc.details) from exc
+        except PublishError as exc:
+            raise _contract_error(exc.code, str(exc), stage=exc.stage, details=exc.details) from exc
+
+    def source_chunks() -> Iterator[bytes]:
+        handle, before = _open_pinned_artifact(source)
+        try:
+            if int(before.st_size) != expected_size:
+                raise _contract_error("ARTIFACT_CHANGED", "owned source size differs from its pinned metadata")
+            read_size = 0
+            for block in iter(lambda: handle.read(1024 * 1024), b""):
+                read_size += len(block)
+                if read_size > expected_size:
+                    raise _artifact_changed(source, "file grew while being streamed")
+                yield block
+            _assert_pinned_artifact_stable(source, before, os.fstat(handle.fileno()))
+            if read_size != expected_size:
+                raise _artifact_changed(source, "file size changed while being streamed")
+        finally:
+            handle.close()
+
+    return _publish_project_chunks_no_clobber(
+        store.project_root, destination_relative_path, source_chunks(),
+        expected_sha256=expected_sha256, expected_size=expected_size,
+    )
+
+
+def _publish_project_chunks_no_clobber(
+    project_root: str | Path,
+    destination_relative_path: Any,
+    chunks: Iterator[bytes],
+    *,
+    expected_sha256: str,
+    expected_size: int,
+) -> dict[str, Any]:
+    """Stream bytes to a pinned project parent and commit without replacement.
+
+    Every directory component is opened without following symlinks. The
+    project-root-to-parent binding is checked immediately before and after the
+    descriptor-relative commit.
+    """
+    if (not isinstance(expected_sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_sha256)
+            or isinstance(expected_size, bool) or not isinstance(expected_size, int) or expected_size <= 0):
+        raise _contract_error("INVALID_REQUEST", "stream publication requires a SHA-256 and positive byte size")
+    try:
+        chunks = iter(chunks)
+    except TypeError as exc:
+        raise _contract_error("INVALID_REQUEST", "stream publication requires byte chunks") from exc
+    if sys.platform == "win32":
+        from ._windows_parameter_publish import PublishError, publish_chunks, validate_paths
+        try:
+            validate_paths(project_root, destination_relative_path)
+            # Preserve the production protected/private destination policy.
+            # The publisher still receives the original lexical root and pins
+            # its ancestor chain before creating bytes.
+            ArtifactStore(project_root).resolve_safe_path(destination_relative_path, allow_overwrite=False)
+            return publish_chunks(project_root, destination_relative_path, chunks,
+                                  expected_sha256=expected_sha256, expected_size=expected_size)
+        except PublishError as exc:
+            raise _contract_error(exc.code, str(exc), stage=exc.stage, details=exc.details) from exc
+    if not isinstance(destination_relative_path, str) or not destination_relative_path.strip():
+        raise _contract_error("INVALID_DESTINATION", "destination must be a project-relative file path")
+    lexical = Path(destination_relative_path)
+    if lexical.is_absolute() or any(part in {"", ".", ".."} for part in lexical.parts):
+        raise _contract_error("ACCESS_VIOLATION", "destination must be a canonical project-relative path")
+    if not (sys.platform == "darwin" or sys.platform.startswith("linux")):
+        raise _contract_error(
+            "NOT_IMPLEMENTED",
+            "descriptor-relative protected parameter publication is not implemented on this platform",
+            details={"platform": sys.platform, "capability": "parameter_export_descriptor_relative_publish"},
+        )
+    try:
+        root = Path(project_root).expanduser().resolve(strict=True)
+    except (OSError, TypeError, ValueError) as exc:
+        raise _contract_error("RUNTIME_CONFIGURATION_REQUIRED", "trusted project root could not be resolved") from exc
+    store = ArtifactStore(root)
+    destination = store.resolve_safe_path(destination_relative_path, allow_overwrite=False)
+    if destination.exists():
+        raise _contract_error("DESTINATION_EXISTS", "export destination already exists")
+    if not destination.parent.is_dir():
+        raise _contract_error("INVALID_DESTINATION", "export destination directory must already exist")
+    parent_parts = tuple(lexical.parts[:-1])
+    leaf_name = lexical.parts[-1]
+    directory_fds, directory_identity = _open_directory_binding(root, parent_parts)
+    parent_fd = directory_fds[-1]
+    temporary_name = f".parameter-export.{os.urandom(16).hex()}.partial"
+    file_fd: int | None = None
+    expected_file_identity: tuple[int, int] | None = None
+    digest = expected_sha256
+
+    def current_binding_matches() -> bool:
+        return _directory_binding_matches(root, parent_parts, directory_identity)
+
+    def cleanup_owned_publication() -> bool:
+        """Remove only our still-named inode and prove that its name is gone."""
+        if expected_file_identity is None:
+            return False
+        try:
+            current = os.stat(leaf_name, dir_fd=parent_fd, follow_symlinks=False)
+        except FileNotFoundError:
+            return True
+        except OSError:
+            return False
+        if not stat.S_ISREG(current.st_mode) or (current.st_dev, current.st_ino) != expected_file_identity:
+            return False
+        try:
+            os.unlink(leaf_name, dir_fd=parent_fd)
+            os.fsync(parent_fd)
+        except OSError:
+            return False
+        try:
+            os.stat(leaf_name, dir_fd=parent_fd, follow_symlinks=False)
+        except FileNotFoundError:
+            return True
+        except OSError:
+            return False
+        return False
+
+    def receipt_details(*, cleanup_verified: bool, cause_code: str) -> dict[str, Any]:
+        identity = expected_file_identity
+        return {
+            "partial_change": True,
+            "publication_committed": True,
+            "cleanup_verified": cleanup_verified,
+            "final_state": "ROLLED_BACK" if cleanup_verified else "UNKNOWN",
+            "residual_status": "ABSENT" if cleanup_verified else "UNKNOWN",
+            "cause_code": cause_code,
+            "relative_path": PurePosixPath(*lexical.parts).as_posix(),
+            "sha256": digest,
+            "size_bytes": expected_size,
+            "file_identity": ({"device": identity[0], "inode": identity[1]} if identity else None),
+        }
+
+    def rollback_or_unknown(code: str, message: str) -> None:
+        cleanup_verified = cleanup_owned_publication()
+        details = receipt_details(cleanup_verified=cleanup_verified, cause_code=code)
+        if cleanup_verified:
+            raise _contract_error(code, message, details=details)
+        raise _contract_error("ARTIFACT_PUBLISH_UNKNOWN", message, stage="post_dispatch", details=details)
+
+    try:
+        if not current_binding_matches():
+            raise _contract_error("ACCESS_VIOLATION", "project directory binding changed before export preparation")
+        try:
+            os.stat(leaf_name, dir_fd=parent_fd, follow_symlinks=False)
+        except FileNotFoundError:
+            pass
+        else:
+            raise _contract_error("DESTINATION_EXISTS", "export destination appeared before preparation")
+
+        flags = os.O_RDWR | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0)
+        file_fd = os.open(temporary_name, flags, 0o600, dir_fd=parent_fd)
+        before = os.fstat(file_fd)
+        expected_file_identity = (before.st_dev, before.st_ino)
+        source_digest = hashlib.sha256()
+        source_size = 0
+        with os.fdopen(os.dup(file_fd), "wb", closefd=True) as output:
+            for block in chunks:
+                if not isinstance(block, bytes):
+                    raise _contract_error("INVALID_REQUEST", "stream source yielded a non-byte chunk")
+                if not block:
+                    continue
+                source_size += len(block)
+                if source_size > expected_size:
+                    raise _contract_error("ARTIFACT_SIZE_MISMATCH", "stream source exceeded its expected byte size")
+                source_digest.update(block)
+                output.write(block)
+            if source_size != expected_size:
+                raise _contract_error("ARTIFACT_SIZE_MISMATCH", "stream source did not match its expected byte size")
+            if source_digest.hexdigest() != expected_sha256:
+                raise _contract_error("ARTIFACT_HASH_MISMATCH", "stream source did not match its expected SHA-256")
+            output.flush()
+            os.fsync(output.fileno())
+        if not current_binding_matches():
+            raise _contract_error("ACCESS_VIOLATION", "project directory binding changed before export commit")
+        try:
+            os.stat(leaf_name, dir_fd=parent_fd, follow_symlinks=False)
+        except FileNotFoundError:
+            pass
+        else:
+            raise _contract_error("DESTINATION_EXISTS", "export destination appeared before publication")
+
+        try:
+            os.link(temporary_name, leaf_name, src_dir_fd=parent_fd, dst_dir_fd=parent_fd, follow_symlinks=False)
+        except FileExistsError as exc:
+            raise _contract_error("DESTINATION_EXISTS", "export destination appeared before publication") from exc
+        except OSError as link_error:
+            # Some project filesystems refuse hard links. An exclusive rename
+            # keeps the compatibility fallback atomic and no-clobber. Native
+            # rename calls use the same pinned directory descriptor.
+            try:
+                _rename_no_clobber_at(parent_fd, temporary_name, leaf_name)
+            except FileExistsError as exc:
+                raise _contract_error("DESTINATION_EXISTS", "export destination appeared before publication") from exc
+            except OSError as exc:
+                if exc.errno == errno.EEXIST:
+                    raise _contract_error("DESTINATION_EXISTS", "export destination appeared before publication") from exc
+                if link_error.errno not in {errno.EPERM, errno.EOPNOTSUPP, errno.ENOTSUP, errno.EXDEV, errno.EMLINK}:
+                    raise _contract_error(
+                        "ARTIFACT_PUBLISH_FAILED", "filesystem could not commit an atomic no-clobber export",
+                    ) from link_error
+                raise _contract_error(
+                    "ARTIFACT_PUBLISH_FAILED",
+                    "filesystem could not commit an atomic no-clobber export",
+                ) from exc
+
+        try:
+            published_stat = os.stat(leaf_name, dir_fd=parent_fd, follow_symlinks=False)
+        except OSError as exc:
+            rollback_or_unknown("ARTIFACT_PUBLISH_UNKNOWN", "published name could not be inspected safely")
+        if (not stat.S_ISREG(published_stat.st_mode)
+                or (published_stat.st_dev, published_stat.st_ino) != expected_file_identity):
+            rollback_or_unknown("ARTIFACT_PUBLISH_UNKNOWN", "published name no longer identifies the owned temporary")
+        try:
+            os.fsync(parent_fd)
+            os.lseek(file_fd, 0, os.SEEK_SET)
+            observed_digest = hashlib.sha256()
+            observed_size = 0
+            for block in iter(lambda: os.read(file_fd, 1024 * 1024), b""):
+                observed_digest.update(block)
+                observed_size += len(block)
+            after = os.fstat(file_fd)
+        except OSError as exc:
+            rollback_or_unknown("ARTIFACT_PUBLISH_UNKNOWN", "published bytes could not be durably verified")
+        if ((after.st_dev, after.st_ino) != expected_file_identity
+                or observed_digest.hexdigest() != digest or observed_size != expected_size):
+            rollback_or_unknown("ARTIFACT_HASH_MISMATCH", "published bytes failed digest and size readback")
+
+        if not current_binding_matches():
+            rollback_or_unknown(
+                "ACCESS_VIOLATION", "project directory moved during export; the owned publication was rolled back",
+            )
+
+        # A second binding check follows readback and directory synchronization
+        # immediately before returning the publication receipt.
+        if not current_binding_matches():
+            rollback_or_unknown(
+                "ACCESS_VIOLATION", "project directory moved before export receipt; publication rollback was attempted",
+            )
+        return {
+            "relative_path": PurePosixPath(*lexical.parts).as_posix(),
+            "sha256": digest,
+            "size_bytes": observed_size,
+            "file_identity": {"device": after.st_dev, "inode": after.st_ino},
+        }
+    finally:
+        try:
+            if file_fd is not None:
+                # In the hard-link path this removes only the random temporary
+                # name. In the rename path it is already absent.
+                try:
+                    current_temp = os.stat(temporary_name, dir_fd=parent_fd, follow_symlinks=False)
+                    if expected_file_identity == (current_temp.st_dev, current_temp.st_ino):
+                        os.unlink(temporary_name, dir_fd=parent_fd)
+                except FileNotFoundError:
+                    pass
+                except OSError:
+                    pass
+        except OSError:
+            pass
+        if file_fd is not None:
+            os.close(file_fd)
+        for directory_fd in reversed(directory_fds):
+            os.close(directory_fd)
+
+
+def _directory_identity(fd: int) -> tuple[int, int]:
+    info = os.fstat(fd)
+    if not stat.S_ISDIR(info.st_mode):
+        raise _contract_error("ACCESS_VIOLATION", "an export path component is not a directory")
+    return info.st_dev, info.st_ino
+
+
+def _open_directory_binding(root: Path, relative_parts: Sequence[str]) -> tuple[list[int], tuple[tuple[int, int], ...]]:
+    """Open every root and export-parent component without following links."""
+    flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0)
+    descriptors: list[int] = [os.open(os.fspath(Path(root.anchor or "/")), flags)]
+    identities: list[tuple[int, int]] = [_directory_identity(descriptors[0])]
+    try:
+        parts = (*root.parts[1:], *relative_parts)
+        for part in parts:
+            parent_fd = descriptors[-1]
+            child_fd = os.open(part, flags, dir_fd=parent_fd)
+            try:
+                child_identity = _directory_identity(child_fd)
+                named = os.stat(part, dir_fd=parent_fd, follow_symlinks=False)
+                if not stat.S_ISDIR(named.st_mode) or child_identity != (named.st_dev, named.st_ino):
+                    raise _contract_error("ACCESS_VIOLATION", "an export directory component changed while opening")
+            except BaseException:
+                os.close(child_fd)
+                raise
+            descriptors.append(child_fd)
+            identities.append(child_identity)
+        return descriptors, tuple(identities)
+    except BaseException:
+        for fd in reversed(descriptors):
+            os.close(fd)
+        raise
+
+
+def _directory_binding_matches(
+    root: Path,
+    relative_parts: Sequence[str],
+    expected: tuple[tuple[int, int], ...],
+) -> bool:
+    try:
+        descriptors, actual = _open_directory_binding(root, relative_parts)
+    except (OSError, ExecutionContractError, ValueError):
+        return False
+    try:
+        return actual == expected
+    finally:
+        for fd in reversed(descriptors):
+            os.close(fd)
+
+
+def _rename_no_clobber_at(directory_fd: int, source_name: str, destination_name: str) -> None:
+    """Atomically rename two names in a pinned directory without replacement."""
+    if sys.platform == "darwin":
+        rename_exclusive = getattr(ctypes.CDLL(None, use_errno=True), "renameatx_np", None)
+        if rename_exclusive is None:
+            raise OSError(errno.ENOTSUP, "descriptor-relative exclusive rename is unavailable")
+        rename_exclusive.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint]
+        rename_exclusive.restype = ctypes.c_int
+        result = rename_exclusive(
+            directory_fd, os.fsencode(source_name), directory_fd, os.fsencode(destination_name), 0x00000004,
+        )
+    elif sys.platform.startswith("linux"):
+        rename_exclusive = getattr(ctypes.CDLL(None, use_errno=True), "renameat2", None)
+        if rename_exclusive is None:
+            raise OSError(errno.ENOTSUP, "descriptor-relative exclusive rename is unavailable")
+        rename_exclusive.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint]
+        rename_exclusive.restype = ctypes.c_int
+        result = rename_exclusive(
+            directory_fd, os.fsencode(source_name), directory_fd, os.fsencode(destination_name), 0x00000001,
+        )
+    else:
+        raise OSError(errno.ENOTSUP, "descriptor-relative exclusive rename is unavailable on this platform")
+    if result != 0:
+        error = ctypes.get_errno() or errno.EIO
+        raise OSError(error, os.strerror(error), destination_name)
+
+
 def resolve_registered_artifact(
     project_root: str | Path,
     operation_store: Any,
@@ -366,6 +823,7 @@ def resolve_registered_artifact(
     current_host_identity: str,
     current_engine_host_identity: str,
     current_server_instance_id: str,
+    max_size_bytes: int | None = None,
 ) -> dict[str, Any]:
     """Resolve and verify one project-scoped artifact registration.
 
@@ -379,6 +837,10 @@ def resolve_registered_artifact(
         raise _contract_error("ARTIFACT_NOT_FOUND", "artifact_id must be a registered lowercase SHA-256 identifier")
     if not isinstance(project_id, str) or not project_id.strip():
         raise _contract_error("PROJECT_IDENTITY_MISMATCH", "a project_id is required to resolve an artifact")
+    if max_size_bytes is not None and (
+        isinstance(max_size_bytes, bool) or not isinstance(max_size_bytes, int) or max_size_bytes < 0
+    ):
+        raise _contract_error("INVALID_REQUEST", "max_size_bytes must be a non-negative integer")
     try:
         root = Path(project_root).expanduser().resolve(strict=True)
     except (OSError, TypeError, ValueError) as exc:
@@ -435,8 +897,15 @@ def resolve_registered_artifact(
     except ExecutionContractError:
         raise
     digest = hashlib.sha256()
+    if max_size_bytes is not None and before.st_size > max_size_bytes:
+        handle.close()
+        raise _contract_error("ARTIFACT_TOO_LARGE", "registered artifact exceeds the caller's bounded read limit")
+    streamed_size = 0
     try:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+        for chunk in iter(lambda: handle.read(64 * 1024 if max_size_bytes is not None else 1024 * 1024), b""):
+            streamed_size += len(chunk)
+            if max_size_bytes is not None and streamed_size > max_size_bytes:
+                raise _contract_error("ARTIFACT_TOO_LARGE", "registered artifact exceeds the caller's bounded read limit")
             digest.update(chunk)
         after = os.fstat(handle.fileno())
         _assert_pinned_artifact_stable(path, before, after)
@@ -757,6 +1226,38 @@ def _assert_no_symlink_components(path: Path, *, field: str) -> None:
                 "ACCESS_VIOLATION",
                 f"{field} could not be inspected safely: {current}",
             ) from exc
+
+
+def _rename_no_clobber(source: Path, destination: Path) -> None:
+    """Atomically move a same-directory temporary without replacing a name."""
+    if os.name == "nt":
+        # Windows rename refuses to replace an existing destination.
+        os.rename(source, destination)
+        return
+    library = ctypes.CDLL(None, use_errno=True)
+    if sys.platform == "darwin":
+        rename_exclusive = getattr(library, "renamex_np", None)
+        if rename_exclusive is None:
+            raise OSError(errno.ENOTSUP, "exclusive rename is unavailable")
+        rename_exclusive.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_uint]
+        rename_exclusive.restype = ctypes.c_int
+        result = rename_exclusive(os.fsencode(source), os.fsencode(destination), 0x00000004)
+    elif sys.platform.startswith("linux"):
+        rename_exclusive = getattr(library, "renameat2", None)
+        if rename_exclusive is None:
+            raise OSError(errno.ENOTSUP, "exclusive rename is unavailable")
+        rename_exclusive.argtypes = [
+            ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint,
+        ]
+        rename_exclusive.restype = ctypes.c_int
+        result = rename_exclusive(
+            -100, os.fsencode(source), -100, os.fsencode(destination), 0x00000001,
+        )
+    else:
+        raise OSError(errno.ENOTSUP, "exclusive rename is unavailable on this platform")
+    if result != 0:
+        error = ctypes.get_errno() or errno.EIO
+        raise OSError(error, os.strerror(error), os.fspath(destination))
 
 
 def _stream_file_hash(path: Path, *, block_size: int = 1024 * 1024) -> tuple[int, str]:

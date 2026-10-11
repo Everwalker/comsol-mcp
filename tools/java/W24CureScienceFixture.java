@@ -194,6 +194,7 @@ public final class W24CureScienceFixture {
             mesh.feature("size").set("custom", "on");
             mesh.feature("size").set("hmax", 10e-6);
             mesh.feature("size").set("hmin", 1e-6);
+            mesh.create("ftri1", "FreeTri");
             mesh.run();
 
             Study study = model.study().create("stdMech");
@@ -447,11 +448,11 @@ public final class W24CureScienceFixture {
                 absoluteExpressions[i] = "abs(" + expressions[i] + ")";
             }
             NumericalValues mean = mechanicsNumerical(model, datasetTag, numericalTags,
-                "AvVolume", "stress_mean", expressions, stressUnits, domainIds);
+                "AvSurface", "stress_mean", expressions, stressUnits, domainIds);
             NumericalValues stressMaximum = mechanicsNumerical(model, datasetTag, numericalTags,
-                "MaxVolume", "stress_abs_max", absoluteExpressions, stressUnits, domainIds);
+                "MaxSurface", "stress_abs_max", absoluteExpressions, stressUnits, domainIds);
             NumericalValues displacementMaximum = mechanicsNumerical(model, datasetTag, numericalTags,
-                "MaxVolume", "displacement_abs_max", new String[]{"abs(u)", "abs(w)"},
+                "MaxSurface", "displacement_abs_max", new String[]{"abs(u)", "abs(w)"},
                 new String[]{"m", "m"}, domainIds);
 
             String interpTag = "w24mi" + Long.toUnsignedString(System.nanoTime(), 36);
@@ -465,7 +466,8 @@ public final class W24CureScienceFixture {
             interp.set("coorderr", "on");
             interp.set("matherr", "on");
             interp.setInterpolationCoordinates(coordinates);
-            if (!datasetTag.equals(interp.getString("data")) ||
+            String interpType = interp.getType();
+            if (!"Interp".equals(interpType) || !datasetTag.equals(interp.getString("data")) ||
                 !Arrays.equals(new String[]{"u", "w"}, interp.getStringArray("expr")) ||
                 !Arrays.equals(new String[]{"m", "m"}, interp.getStringArray("unit")) ||
                 !"all".equals(interp.getString("solnum")) ||
@@ -493,7 +495,7 @@ public final class W24CureScienceFixture {
             readbacks.put("stress_abs_max", stressMaximum.readback);
             readbacks.put("displacement_abs_max", displacementMaximum.readback);
             Map<String, Object> interpReadback = new LinkedHashMap<>();
-            interpReadback.put("type", "Interp");
+            interpReadback.put("type", interpType);
             interpReadback.put("dataset", interp.getString("data"));
             interpReadback.put("expression", Arrays.asList(interp.getStringArray("expr")));
             interpReadback.put("unit", Arrays.asList(interp.getStringArray("unit")));
@@ -577,8 +579,9 @@ public final class W24CureScienceFixture {
         feature.set("expr", expressions);
         feature.set("unit", units);
         feature.set("solnum", "all");
-        if ("AvVolume".equals(type)) feature.set("intvolume", "on");
-        if (!datasetTag.equals(feature.getString("data")) ||
+        if ("AvSurface".equals(type)) feature.set("intvolume", "on");
+        String actualType = feature.getType();
+        if (!type.equals(actualType) || !datasetTag.equals(feature.getString("data")) ||
             !Arrays.equals(expressions, feature.getStringArray("expr")) ||
             !Arrays.equals(units, feature.getStringArray("unit")) ||
             !"all".equals(feature.getString("solnum")) ||
@@ -586,7 +589,7 @@ public final class W24CureScienceFixture {
             !sameEntitySet(domainIds, feature.selection().entities())) {
             throw new IllegalStateException("mechanics numerical readback mismatch for " + role);
         }
-        if ("AvVolume".equals(type) && !"on".equals(feature.getString("intvolume"))) {
+        if ("AvSurface".equals(type) && !"on".equals(feature.getString("intvolume"))) {
             throw new IllegalStateException("mechanics stress mean lacks axisymmetric physical measure");
         }
         feature.run();
@@ -594,7 +597,7 @@ public final class W24CureScienceFixture {
         verifyMatrix(values, expressions.length, 1, role);
         Map<String, Object> readback = new LinkedHashMap<>();
         readback.put("native_tag", tag);
-        readback.put("type", type);
+        readback.put("type", actualType);
         readback.put("dataset", feature.getString("data"));
         readback.put("expression", Arrays.asList(feature.getStringArray("expr")));
         readback.put("unit", Arrays.asList(feature.getStringArray("unit")));
@@ -602,8 +605,8 @@ public final class W24CureScienceFixture {
         readback.put("geometry", feature.selection().geom());
         readback.put("entity_dimension", feature.selection().dim());
         readback.put("entity_ids", boxed(feature.selection().entities()));
-        readback.put("axisymmetric_measure_property", "AvVolume".equals(type) ? "intvolume" : null);
-        readback.put("axisymmetric_measure_value", "AvVolume".equals(type) ? feature.getString("intvolume") : null);
+        readback.put("axisymmetric_measure_property", "AvSurface".equals(type) ? "intvolume" : null);
+        readback.put("axisymmetric_measure_value", "AvSurface".equals(type) ? feature.getString("intvolume") : null);
         readback.put("shape", Arrays.asList(values.length, values[0].length));
         return new NumericalValues(values, readback);
     }
@@ -643,7 +646,7 @@ public final class W24CureScienceFixture {
             }
 
             NumericalValues means = evaluateNumerical(model, datasetTag, numericalTags,
-                "AvVolume", "alpha", new String[]{"alpha_iso", "alpha", "qpost"},
+                "AvSurface", "alpha", new String[]{"alpha_iso", "alpha", "qpost"},
                 new String[]{"1", "1", "1"}, 2,
                 model.component(COMPONENT).selection("sel_adhesive").entities(2),
                 "on", times.length);
@@ -657,7 +660,7 @@ public final class W24CureScienceFixture {
             double[] storedEnergy = new double[times.length];
             for (int i = 0; i < domainSelections.length; i++) {
                 NumericalValues energy = evaluateNumerical(model, datasetTag, numericalTags,
-                    "IntVolume", "energy_" + domainLabels[i],
+                    "IntSurface", "energy_" + domainLabels[i],
                     new String[]{sensibleHeatExpressions[i]}, new String[]{"J"}, 2,
                     model.component(COMPONENT).selection(domainSelections[i]).entities(2),
                     "on", times.length);
@@ -668,13 +671,13 @@ public final class W24CureScienceFixture {
                 }
             }
             NumericalValues reaction = evaluateNumerical(model, datasetTag, numericalTags,
-                "IntVolume", "reaction_power", new String[]{"Qrxn"}, new String[]{"W"}, 2,
+                "IntSurface", "reaction_power", new String[]{"Qrxn"}, new String[]{"W"}, 2,
                 model.component(COMPONENT).selection("sel_adhesive").entities(2), "on", times.length);
             energyReadbacks.put("reaction_power", reaction.readback);
 
             int[] externalEdges = uniqueExternalEdges(model);
             NumericalValues outward = evaluateNumerical(model, datasetTag, numericalTags,
-                "IntSurface", "outward_power", new String[]{"hconv*(T-Tenv)"}, new String[]{"W"}, 1,
+                "IntLine", "outward_power", new String[]{"hconv*(T-Tenv)"}, new String[]{"W"}, 1,
                 externalEdges, "on", times.length);
             energyReadbacks.put("outward_power", outward.readback);
             featureReadbacks.putAll(energyReadbacks);
@@ -688,7 +691,7 @@ public final class W24CureScienceFixture {
                 stressUnits[i] = descriptor.get("unit");
             }
             NumericalValues stressMean = evaluateNumerical(model, datasetTag, numericalTags,
-                "AvVolume", "adhesive_mean_stress", stressExpressions, stressUnits, 2,
+                "AvSurface", "adhesive_mean_stress", stressExpressions, stressUnits, 2,
                 model.component(COMPONENT).selection("sel_adhesive").entities(2), "on", times.length);
             featureReadbacks.put("adhesive_mean_stress", stressMean.readback);
 
@@ -771,7 +774,7 @@ public final class W24CureScienceFixture {
             artifact.put("feature_readbacks", featureReadbacks);
             artifact.put("material_heat_capacity_readback", nativeThermalCapacityReadback(model));
             artifact.put("numerical_shape_contract",
-                "IntVolume/IntSurface/AvVolume getReal[expr][stored_solution]; Interp getData[expr][stored_solution][point]");
+                "IntSurface/IntLine/AvSurface getReal[expr][stored_solution]; Interp getData[expr][stored_solution][point]");
             artifact.put("axisymmetric_physical_measure_readback", "intvolume=on; intsurface=on");
 
             Path output = Path.of(pathText);
@@ -981,12 +984,13 @@ public final class W24CureScienceFixture {
         feature.set("solnum", "all");
         String measureKey = dimension == 2 ? "intvolume" : "intsurface";
         feature.set(measureKey, axisymmetricFlag);
-        if (!datasetTag.equals(feature.getString("data")) ||
+        String actualType = feature.getType();
+        if (!type.equals(actualType) || !datasetTag.equals(feature.getString("data")) ||
             !Arrays.equals(expressions, feature.getStringArray("expr")) ||
             !Arrays.equals(units, feature.getStringArray("unit")) ||
             !"all".equals(feature.getString("solnum")) ||
             !axisymmetricFlag.equals(feature.getString(measureKey)) ||
-            feature.selection().dim() != dimension ||
+            !GEOMETRY.equals(feature.selection().geom()) || feature.selection().dim() != dimension ||
             !sameEntitySet(entities, feature.selection().entities())) {
             throw new IllegalStateException("native numerical configuration readback mismatch for " + role);
         }
@@ -996,7 +1000,7 @@ public final class W24CureScienceFixture {
         Map<String, Object> readback = new LinkedHashMap<>();
         readback.put("role", role);
         readback.put("native_tag", tag);
-        readback.put("type", type);
+        readback.put("type", actualType);
         readback.put("dataset", feature.getString("data"));
         readback.put("expression", Arrays.asList(feature.getStringArray("expr")));
         readback.put("unit", Arrays.asList(feature.getStringArray("unit")));
@@ -1023,7 +1027,8 @@ public final class W24CureScienceFixture {
         feature.set("coorderr", "on");
         feature.set("matherr", "on");
         feature.setInterpolationCoordinates(coordinates);
-        if (!datasetTag.equals(feature.getString("data")) ||
+        String actualType = feature.getType();
+        if (!"Interp".equals(actualType) || !datasetTag.equals(feature.getString("data")) ||
             !Arrays.equals(expressions, feature.getStringArray("expr")) ||
             !Arrays.equals(units, feature.getStringArray("unit")) ||
             !"all".equals(feature.getString("solnum")) ||
@@ -1061,7 +1066,7 @@ public final class W24CureScienceFixture {
         Map<String, Object> readback = new LinkedHashMap<>();
         readback.put("role", role);
         readback.put("native_tag", tag);
-        readback.put("type", "Interp");
+        readback.put("type", actualType);
         readback.put("dataset", feature.getString("data"));
         readback.put("expression", Arrays.asList(feature.getStringArray("expr")));
         readback.put("unit", Arrays.asList(feature.getStringArray("unit")));
@@ -1432,9 +1437,15 @@ public final class W24CureScienceFixture {
 
     /** Pure fail-closed field/entry mapping gate, also exercised by the offline proxy harness. */
     static Map<String, Object> validateSolverFieldContract(int geometryDimension, boolean axisymmetric,
+            Boolean includeTwist, Boolean modeExtension,
             String[] fieldTags, String[] fieldNames, String[][] fieldComponents, String[] actualEntryKeys) {
         if (geometryDimension != 2 || !axisymmetric) {
             throw new IllegalStateException("W24 displacement tolerance mapping requires 2-D axisymmetric geometry");
+        }
+        if (!Boolean.FALSE.equals(includeTwist) || !Boolean.FALSE.equals(modeExtension)) {
+            throw new IllegalStateException("W24 configured u/w binding requires observed disabled Mode2Daxi " +
+                "includeTwist and ModeExtension; actual_includeTwist=" + includeTwist +
+                "; actual_ModeExtension=" + modeExtension);
         }
         if (fieldTags == null || fieldNames == null || fieldComponents == null || fieldTags.length == 0 ||
             fieldNames.length != fieldTags.length || fieldComponents.length != fieldTags.length) {
@@ -1458,8 +1469,9 @@ public final class W24CureScienceFixture {
             if ("u".equals(fieldNames[i])) {
                 displacementCount++;
                 selected = i;
-                if (components.size() != 2 || !components.contains("u") || !components.contains("w")) {
-                    throw physicsFieldContractFailure("validate:field=u components must be exactly {u,w}", fieldTags, fieldNames, fieldComponents, null);
+                if (!(components.equals(new LinkedHashSet<>(Arrays.asList("u", "w"))) ||
+                      components.equals(new LinkedHashSet<>(Arrays.asList("u", "v", "w"))))) {
+                    throw physicsFieldContractFailure("validate:field=u components must be exactly {u,w} or {u,v,w}", fieldTags, fieldNames, fieldComponents, null);
                 }
             }
             Map<String, Object> observed = new LinkedHashMap<>();
@@ -1477,8 +1489,8 @@ public final class W24CureScienceFixture {
         for (int i = 0; i < fieldTags.length; i++) {
             if (i == selected) continue;
             for (String component : fieldComponents[i]) {
-                if ("u".equals(component) || "w".equals(component)) {
-                    throw physicsFieldContractFailure("validate:nonselected descriptor aliases selected u/w component ownership",
+                if (Arrays.asList(fieldComponents[selected]).contains(component)) {
+                    throw physicsFieldContractFailure("validate:nonselected descriptor aliases selected raw component ownership",
                         fieldTags, fieldNames, fieldComponents, null);
                 }
             }
@@ -1507,6 +1519,20 @@ public final class W24CureScienceFixture {
         Map<String, Object> contract = new LinkedHashMap<>();
         contract.put("geometry_dimension", geometryDimension);
         contract.put("geometry_axisymmetric", axisymmetric);
+        Map<String, Object> modes = new LinkedHashMap<>();
+        modes.put("physics_tag", "solid");
+        modes.put("property_node", "Mode2Daxi");
+        Map<String, Object> twist = new LinkedHashMap<>();
+        twist.put("getter", "getBoolean");
+        twist.put("value", includeTwist);
+        Map<String, Object> extension = new LinkedHashMap<>();
+        extension.put("getter", "getBoolean");
+        extension.put("value", modeExtension);
+        modes.put("includeTwist", twist);
+        modes.put("ModeExtension", extension);
+        contract.put("axisymmetric_mode_readbacks", modes);
+        contract.put("configured_logical_components", Arrays.asList("u", "w"));
+        contract.put("effective_solved_dof_validation", "UNVERIFIED");
         contract.put("physics_field_count", fieldTags.length);
         contract.put("physics_field_descriptors", descriptors);
         contract.put("selected_displacement_field_count", displacementCount);
@@ -1529,20 +1555,25 @@ public final class W24CureScienceFixture {
         String[] fieldTags = null;
         String[] fieldNames = null;
         String[][] components = null;
+        Integer dimension = null;
+        Boolean axisymmetric = null;
+        String[] entryKeys = null;
+        boolean entryKeysObserved = false;
+        boolean fieldTagsObserved = false;
+        Boolean includeTwist = null;
+        Boolean modeExtension = null;
         String getterStage = "geometry";
         try {
             GeomSequence geom = model.component(COMPONENT).geom(GEOMETRY);
             getterStage = "geometry.getSDim";
-            int dimension = geom.getSDim();
+            dimension = geom.getSDim();
             getterStage = "geometry.isAxisymmetric";
-            boolean axisymmetric = geom.isAxisymmetric();
-            if (dimension != 2 || !axisymmetric) {
-                throw new IllegalStateException("W24 displacement tolerance mapping requires 2-D axisymmetric geometry");
-            }
+            axisymmetric = geom.isAxisymmetric();
             getterStage = "model.physics(solid)";
             Physics solid = model.physics("solid");
             getterStage = "solid.field().tags()";
             fieldTags = solid.field().tags();
+            fieldTagsObserved = true;
             if (fieldTags == null || fieldTags.length == 0) {
                 throw new IllegalStateException("field=u descriptor list is null or empty");
             }
@@ -1563,11 +1594,26 @@ public final class W24CureScienceFixture {
                 components[i] = field.component();
             }
             getterStage = "time.getEntryKeys(atolmethod)";
-            String[] entryKeys = time.getEntryKeys("atolmethod");
+            entryKeys = time.getEntryKeys("atolmethod");
+            entryKeysObserved = true;
+            getterStage = "solid.prop(Mode2Daxi)";
+            com.comsol.model.physics.PhysicsProp modes = solid.prop("Mode2Daxi");
+            if (modes == null) throw new IllegalStateException("Mode2Daxi property node getter returned null");
+            getterStage = "solid.prop(Mode2Daxi).getBoolean(includeTwist)";
+            includeTwist = modes.getBoolean("includeTwist");
+            getterStage = "solid.prop(Mode2Daxi).getBoolean(ModeExtension)";
+            modeExtension = modes.getBoolean("ModeExtension");
             getterStage = "validateSolverFieldContract";
-            return validateSolverFieldContract(dimension, axisymmetric, fieldTags, fieldNames, components, entryKeys);
+            return validateSolverFieldContract(dimension, axisymmetric, includeTwist, modeExtension, fieldTags, fieldNames, components, entryKeys);
         } catch (RuntimeException cause) {
-            throw physicsFieldContractFailure(getterStage, fieldTags, fieldNames, components, cause);
+            String message = physicsFieldContractFailure(getterStage, fieldTags, fieldNames, components, cause).getMessage() +
+                "; actual_tags_observed=" + fieldTagsObserved +
+                "; actual_geometry_dimension=" + (dimension == null ? "UNOBSERVED" : dimension) +
+                "; actual_geometry_axisymmetric=" + (axisymmetric == null ? "UNOBSERVED" : axisymmetric) +
+                "; actual_Time_atolmethod_entry_keys=" + (!entryKeysObserved ? "UNOBSERVED" : Arrays.toString(entryKeys)) +
+                "; actual_Mode2Daxi_includeTwist=" + (includeTwist == null ? "UNOBSERVED" : includeTwist) +
+                "; actual_Mode2Daxi_ModeExtension=" + (modeExtension == null ? "UNOBSERVED" : modeExtension);
+            throw new IllegalStateException(message, cause);
         }
     }
 

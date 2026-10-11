@@ -292,21 +292,34 @@ with `atolglobalmethod="unscaled"`, `atolglobal=1e-8`, and logical absolute
 component-input values
 `"T 1e-4 alpha 1e-8 alpha_iso 1e-8 qpost 1e-8 u 1e-12 w 1e-12"`.
 Before mapping the logical displacement inputs, read back a two-dimensional
-axisymmetric geometry and the unique Solid Mechanics `PhysicsField` with
-`field()="u"` and distinct `component()` values exactly `{u,w}`. Enumerate the
-complete `solid.field().tags()` list and read every field name and component
-array; uniqueness applies to the `field()="u"` selection, not the total list
-length. Retain the full descriptor inventory, actual total count, unique
-selected-displacement count and exact selected row across all stages. Other
-descriptors are observed metadata without an active/inactive claim. No
-nonselected descriptor may share component `u` or `w` with the selected
-displacement row; other auxiliary components are not given a global uniqueness
-constraint. Missing,
-duplicate, incomplete or failed getters remain fail-closed and include the
-getter stage plus actual tags/count/names/components in the failure. Current06
-reported a missing-or-ambiguous list failure but did not retain its raw tags or
-count; candidate18 is a software contract correction, not native root-cause
-closure or runtime acceptance. The generated
+axisymmetric geometry and both actual boolean getters
+`solid.prop("Mode2Daxi").getBoolean("includeTwist")` and
+`solid.prop("Mode2Daxi").getBoolean("ModeExtension")`. Both must be false,
+without setters, defaults or fallback. Preserve their exact property/getter
+provenance across all stages. The unique Solid Mechanics `PhysicsField` with
+`field()="u"` may have distinct raw `component()` values exactly `{u,w}` or
+`{u,v,w}`; retain its original names, length and order. Raw descriptor metadata
+does not establish active solved DOFs. The configured no-twist/no-mode-extension
+formulation maps only logical `u,w` to the actual `comp1_u` Time entry.
+Effective solved-DOF validation and tolerance conversion remain `UNVERIFIED`.
+Enumerate the complete `solid.field().tags()` list and read every field name
+and component array; uniqueness applies to the `field()="u"` selection, not
+the total list length. Retain full inventory/count and exact selected row.
+Other descriptors are observed metadata without an active/inactive claim.
+No nonselected descriptor may share any selected raw component, including
+`v` when present; unrelated auxiliary sharing has no global uniqueness rule.
+Missing, duplicate, incomplete or failed getters remain fail-closed. Sequential
+geometry, full fields, Time keys and mode getter returns are saved before
+validation; failure diagnostics retain all actual earlier observations and
+mark unobserved later returns explicitly.
+Current07 retained seven descriptors and selected raw `[u,v,w]`, but did not
+read either mode value: its actual configuration remains `UNOBSERVED`.
+Current06 raw tags/count were not retained. Official shipped build257 XML/UI
+history establishes the property mapping and boolean setters; the official
+6.4 API and installed JAR confirm the typed getter. These are mapping evidence,
+not build293 model-mode readback or scientific acceptance. Candidate19 is a
+software configuration/inventory correction; no new native attempt is accepted.
+The generated
 Time solver has the actual native keys `comp1_T`, `comp1_alpha`,
 `comp1_alpha_iso`, `comp1_qpost`, and `comp1_u`; both logical displacement
 inputs `u` and `w` bind to the observed `comp1_u` entry. Apply setters only to
@@ -509,3 +522,88 @@ real glue calibration, imperfect fiber/gold/ceramic interfaces, or complete
 device geometry. These remain explicit W24 implementation and validation
 work; neither a module-availability result nor this synthetic fixture can
 close those requirements.
+
+
+## Candidate20 software physical-volume observation correction
+
+Current08 failed before a successful build readback: native geometry
+`getVolume()` on its 2-D domain returned an observed cross-section area,
+`1.2500000823638413e-7 m^2`. It was compared with the frozen physical
+volume `9.81747704247e-11 m^3`; that observation is not an accepted volume.
+All UNKNOWN requests and raw evidence remain protected.
+
+The coupon preserves this native area as `cross_section_area_m2` and observes
+`volume_m3` through a temporary Mesh dataset bound explicitly to already-built
+`mesh1`, with IntSurface, `data` bound to that dataset, geom1 dimension 2 and
+the exact singleton domain, expression `1`, unit `m^3`, and `intvolume=on`.
+Actual geometry, mesh, dataset type/binding, numerical type/data, selection,
+expression/unit/axisymmetric integration getters must match before `getReal()`.
+Only an exact 1x1 finite positive result is eligible for the unchanged four
+expected volumes and relative tolerance `1e-6`. There is no solution dataset,
+solnum, default dataset, mesh rebuild, analytical multiplier, or fallback.
+Only newly owned temporary numerical/dataset nodes are removed, in that order;
+actual post-cleanup tags must preserve the preexisting inventory. Getter,
+evaluation and cleanup failures retain actual partial observations and fail
+closed; cleanup failure cannot hide the primary failure.
+
+The COMSOL 6.4 primary evidence is preserved in current08's
+`physical-volume-readonly-diagnosis001/candidate20-readonly-evidence-and-minimal-plan001.json`
+(SHA256 `18dd78f136521dda7e3a1f9d96135e8805b3ddb64d35601c94b27f8330c171ce`):
+Mesh API doc4508/chunk17341, Mesh UI doc5995/chunk19453, official mesh
+visualization example doc11792/chunk34338, IntSurface integration properties
+doc4487/chunks17297-17299, and GeomMeasureBase doc7588/chunk22875.
+The documented Mesh/IntSurface composition is runtime UNVERIFIED until a
+separately authorized fresh setup attempt. Proxy controls prove software
+getter, binding, shape, threshold and owned-cleanup policy only. Candidate19
+mode/field/Time/tolerance contracts and Science source remain unchanged;
+effective solved DOF and numerical/scientific acceptance remain UNVERIFIED/NOT_RUN.
+
+
+## Candidate21 software mesh-generation composition repair
+
+Current09 setup failed before area/integral observation: its actual retained
+failure reports geom1 dimension 2 and axisymmetric, domain [1], mesh1 bound to
+geom1 with dimension 2, `isEmpty=true`, and `getNumElem=0`. The retained build
+readback is empty; full field/mode/Time readback, Equation View, save/reopen and
+science were not reached. Eight UNKNOWN attempts remain protected, without replay.
+
+The coupon's existing mesh sequence had a default Size and four local Size
+attributes, followed by `mesh.run()`, but no element-generating feature.
+Candidate21 adds only `mesh.create("ftri1", "FreeTri")` after those attributes
+and immediately before that existing run. COMSOL 6.4 FreeTri doc4379/chunk17131,
+SHA256 `a47a086e293788556ca136312089ba1aee148566543a316ef7e4c55cd5809b7b`,
+documents triangular generation in 2D and default selection of remaining entities.
+All four domain selections and sizes, geometry, physics, studies, field/mode
+checks, physical-volume getter, four expected volumes and `1e-6` tolerance remain
+unchanged. No meshing or mode setter was added to an observation getter.
+
+The existing Java proxy invokes the production mesh builder, checks frozen
+size/selection inputs and generator/run order, and contrasts a synthetic
+Size-only empty sequence with default remaining-domain generation. These are
+software composition controls, not actual COMSOL meshing or accepted volume.
+Actual FreeTri execution and Mesh/IntSurface physical-volume integration remain
+UNVERIFIED; science and effective solved DOF are NOT_RUN/UNVERIFIED. This repair
+does not modify the separately deferred Science/mechanics mesh configuration.
+
+## 2026-10-02 candidate22 successor: documented spatial-frame physical measurement
+
+Current10 remains an immutable failed setup attempt (terminal exit 2, one Server/Worker, zero RUN). The retained failure observed a nonempty 660-element mesh and positive cross-section area, but IntSurface/intvolume=on failed at getReal with undefined material-coordinate R in 2*pi*R. This is no accepted physical volume; the raw geometry/mesh/node bindings and owned temporary-node cleanup were observed only in the failure inventory. Nine UNKNOWN attempts remain protected against replay.
+
+Candidate22 changes only the existing coupon physical-measure configuration to documented MeasureSurface with Mesh/mesh1, frametype=spatial, intvolume=on and unit m^3. Its actual type and spatial-frame getters must pass before getReal; the undocumented expr setter/getter is removed. The physical source is recorded as NATIVE_MESH_MEASURESURFACE_SPATIAL_INTVOLUME_ON. Exact geometry dimension/axisymmetry/domain selection, positive already-built mesh, 1x1 finite-positive result, four expected volumes, relative tolerance 1e-6, unique owned temporary nodes and fail-closed cleanup are unchanged. FreeTri, all dimensions, materials, modes, raw fields, Time/tolerances and physics are unchanged. There is no analytic Jacobian, area multiplication, fallback, Solution dataset, solnum, rebuild or solve.
+
+Primary evidence: current10/root-measurement-frame-primary-read001.json (SHA256 e200837105573090675070f673ed37be6bd8a3cf6602fd35858e92dc7251a5ef); root-candidate22-measurement-frame-repair-plan001.md (SHA256 d478c2cbada3e5ab8cd6d15fe828afb253e6bf8b60bef98f30fe1a99a6a5ef47). Same-version Measurement4506/ch17336–17338 documents MeasureSurface/data/frametype/spatial/intvolume/unit/getReal; Mesh4508/ch17341 documents spatial coordinates; Frames5160/ch18291 distinguishes r from R. Documentation and proxy checks support software configuration only; this composition on the actual Mesh dataset remains runtime UNVERIFIED. Science applicability repair is deferred to a separate unit; effective solved DOF UNVERIFIED, native GO false, Science NOT_RUN. Existing production-helper proxy controls additionally reject old IntSurface type, type-getter failure, material-frame mismatch and frame-getter failure, enforce only documented setters and no expr, and retain previous binding/matrix/threshold/cleanup negative controls. Actual counts and immutable execution evidence belong to the candidate22 software handoff.
+
+## 2026-10-02 candidate23 successor: Science measure applicability (software only)
+
+After candidate22 root SOFTWARE_ONLY acceptance, the separately deferred Science unit corrects dimension-bound numerical types: IntSurface/intvolume for 2D-domain integrals, IntLine/intsurface for 1D boundary integrals, AvSurface/intvolume for 2D revolved-volume averages, and pointwise MaxSurface for 2D maxima without integration flags. Both numerical helpers and both Interp readback sites verify actual getType before evaluation and record that observed type. Mechanics mesh1 adds documented FreeTri immediately before its existing run, retaining Size hmax/hmin and all model selections/settings. Python consumers accept these types and reject obsolete 3D types, wrong bindings/dimensions/physical flags/units and pointwise maxima that claim integration weighting.
+
+Primary scope is root-candidate23-science-implementation-unit001.md (SHA256 e82a568f6929f57a8d48cd421cf98c60ecf8d4b838f0a95985a9d12d33c2a5f0), the preserved deferred plans and their same-version Int/Av/Max/2D example evidence. Expressions, units, Solution data/solnum=all, sampling times, geometry, physical/material/constitutive/stress mappings, acceptance thresholds and existing temporary-result cleanup remain unchanged. Candidate22 Coupon Java and setup runner are unchanged. Nine historical UNKNOWNs and all prior artifacts are preserved. Existing Java private-helper proxies plus focused Python positive/negative consumers are software fixtures only; actual native/scientific execution and effective solved DOF remain NOT_RUN/UNVERIFIED. No new native GO or engine birth belongs to this unit. Actual frozen test counts and hashes are recorded separately in the candidate23 handoff.
+
+
+### Candidate24 revision001 — actual measurement unit value-type dispatch (software only)
+
+Current11 retained the native MeasureSurface type, frametype=spatial, mesh1 with 660 elements and two-dimensional cross-section area. Its numerical unit getter failed because the unit property could not convert to a string array. getReal was not reached, no physical volume was accepted, and the actual unit value type/representation was unobserved. The failed attempt and its new UNKNOWN job remain immutable; no replay or native GO is implied.
+
+The Coupon physical-volume helper now reads getValueType("unit") first, retaining the actual type. Only exact String dispatches to getString("unit") and exact StringArray dispatches to getStringArray("unit"). The actual scalar or vector is retained as unit_raw, and a single scalar is normalized to one entry solely for the unchanged exact singleton m^3 acceptance check. Unknown/null types, null/empty/wrong values, extra vector entries and getter errors fail closed before getReal; there is no catch-based getter fallback. Same-version PropFeature documentation explicitly maps these two types to these getters; the MeasureSurface table's String array label is not a runtime type observation.
+
+The unit setter, MeasureSurface/spatial frame, Mesh/mesh1 bindings, selections, four frozen expected volumes, 1e-6 tolerance, positive 1x1 getReal contract, FreeTri, physics and owned-node finally cleanup are unchanged. Science and production setup runner are byte unchanged. Existing getter proxies exercise scalar/vector positives and type/shape/unit/getter negatives with partial-observation and no-fallback assertions; affected Coupon tests plus the original twelve required regressions are the bounded software selection. Native and scientific acceptance remain NOT_RUN/UNVERIFIED until a separately authorized fresh attempt; ten UNKNOWN histories are protected.

@@ -31,6 +31,12 @@ classifiers = [
 
 [project.optional-dependencies]
 dev = ["pytest"]
+desktop = [
+  "psutil; sys_platform == 'darwin'",
+  "pyobjc-framework-ApplicationServices>=12.2.2; sys_platform == 'darwin'",
+  "pyobjc-framework-Quartz>=12.2.2; sys_platform == 'darwin'",
+  "pyobjc-framework-Cocoa>=12.2.2; sys_platform == 'darwin'"
+]
 
 [project.scripts]
 comsol-mcp = "comsol_mcp.mcp_server:main"

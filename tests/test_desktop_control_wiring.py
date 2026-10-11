@@ -211,3 +211,138 @@ def test_desktop_registry_metadata_does_not_advertise_unimplemented_native_contr
         _g2_registry.validate_call("desktop.bind", {
             "project_id": "p", "idempotency_key": "key", "window_ref": "w", "model_ref": "m",
         })
+
+
+def _desktop_claim(daemon, project='p'):
+    from comsol_mcp._desktop_service import DesktopDispatchContext
+    record, reused=daemon.store.begin(request_id='desktop-r',idempotency_key='desktop-k',request_hash='desktop-h',
+                                     operation='desktop.bind',metadata={'project_id':project})
+    daemon.store.update_job(record['job_id'],'RUNNING')
+    return DesktopDispatchContext('desktop.bind',record['request_id'],record['operation_id'],record['job_id'],
+                                  record['idempotency_key'],record['request_hash'],project)
+
+
+def _desktop_read_fixture(tmp_path):
+    service=_service(tmp_path)
+    service.ledger.permissions.add('host_control')
+    ref=service.bind_model('m')['execution']['model_ref']
+    daemon=ControlDaemon(tmp_path/'daemon',service=service)
+    daemon.backend.endpoint_key='127.0.0.1:2036'
+    daemon.backend._bind_model_project(ref,'p')
+    daemon.store.put_metadata('revisions',daemon.backend._model_project_key(ref),{'model_ref':ref,'project_id':'p','revision':0})
+    # Project authorization is host-injected software fixture; no GUI/process exists.
+    daemon.project_authority.authorize_operation=lambda project,permission: {'workspace':str(tmp_path)} if project=='p' else (_ for _ in ()).throw(RuntimeError('foreign project'))
+    return daemon,service,ref
+
+
+def test_desktop_queued_identity_uses_fresh_scoped_witness_without_second_claim(tmp_path, monkeypatch):
+    import json
+    daemon,service,ref=_desktop_read_fixture(tmp_path)
+    queued = []
+    submit = daemon.session_scheduler.submit
+    def scoped_submit(context, callback, *args, **kwargs):
+        queued.append(context)
+        return submit(context, callback, *args, **kwargs)
+    monkeypatch.setattr(daemon.session_scheduler, 'submit', scoped_submit)
+    monkeypatch.setattr(daemon.queue, 'submit', lambda *a, **kw: (_ for _ in ()).throw(AssertionError('legacy Desktop READ must use explicit None session scheduler')))
+    try:
+        context=_desktop_claim(daemon)
+        before=_operation_count(daemon)
+        result=daemon._desktop_engine_queue('desktop.binding.resolve',{'project_id':'p','model_ref_id':json.dumps(ref)},None,context)
+        assert result['success'] is True and result['data']['model_ref']==ref
+        assert result['data']['fingerprint_coverage']=='parameters+shallow_tree_identity'
+        assert result['data']['cas_guarantee']=='NONE'
+        assert result['data']['Desktop_model_binding']=='UNVERIFIED_BY_MANAGED_INSPECTION_ALONE'
+        assert _operation_count(daemon)==before==1
+        assert daemon.store.get_operation(context.operation_id)['status']=='RUNNING'
+        assert queued == [None]
+    finally:daemon.close()
+
+
+@pytest.mark.parametrize('case',['no_claim','wrong_project','wrong_epoch','unattributed','dirty','active','external_change'])
+def test_desktop_identity_refuses_unproven_or_unsafe_model_before_binding(tmp_path,case):
+    import json
+    from comsol_mcp._execution_contract import model_ref_from_mapping
+    daemon,service,ref=_desktop_read_fixture(tmp_path)
+    try:
+        context=_desktop_claim(daemon)
+        if case=='no_claim':daemon.store.update_job(context.job_id,'FAILED')
+        if case=='wrong_epoch':ref['generation']+=1
+        if case=='unattributed':daemon.backend.model_project_binding=lambda _: {'attribution':'UNATTRIBUTED'}
+        if case=='dirty':service.ledger._state_for(model_ref_from_mapping(ref)).dirty=True
+        if case=='active':service.ledger._state_for(model_ref_from_mapping(ref)).active_operation_id='other'
+        if case=='external_change':service.adapter.model_snapshot=lambda tag:{'model_tag':tag,'server_instance_id':'server','fingerprint':'changed','external_event_counter':1}
+        args={'project_id':'foreign' if case=='wrong_project' else 'p','model_ref_id':json.dumps(ref)}
+        expected={'no_claim':'OWNER_UNVERIFIED','wrong_project':'PROJECT_IDENTITY_MISMATCH','wrong_epoch':'MODEL_IDENTITY_MISMATCH','unattributed':'MODEL_IDENTITY_MISMATCH','dirty':'EXECUTION_STATE_UNKNOWN','active':'EXECUTION_STATE_UNKNOWN','external_change':'EXECUTION_STATE_UNKNOWN'}[case]
+        with pytest.raises(Exception) as caught:daemon._desktop_engine_queue('desktop.binding.resolve',args,None,context)
+        assert caught.value.code==expected
+        assert _operation_count(daemon)==1
+    finally:daemon.close()
+
+
+@pytest.mark.parametrize('operation',['desktop.shell_execute','model.load'])
+def test_native_shell_load_still_refuse_without_single_claim_provider(tmp_path,operation):
+    daemon=ControlDaemon(tmp_path/'daemon')
+    try:
+        result=daemon._desktop_engine_queue(operation,{},None,None)
+        assert result['success'] is False and result['data']['engine_dispatched'] is False
+        assert _operation_count(daemon)==0
+    finally:daemon.close()
+
+
+def test_save_copy_authorizer_reuses_project_path_policy_no_overwrite(tmp_path):
+    from pathlib import Path
+    daemon=ControlDaemon(tmp_path/'daemon')
+    daemon.project_authority.authorize_operation=lambda p,e: {'workspace':str(tmp_path)}
+    try:
+        new=tmp_path/'copy.mph'
+        assert daemon._authorize_desktop_save_copy('p',new) is True
+        new.write_bytes(b'protected')
+        assert daemon._authorize_desktop_save_copy('p',new) is False
+        assert daemon._authorize_desktop_save_copy('p',tmp_path.parent/'escape.mph') is False
+        assert daemon._authorize_desktop_save_copy('p',tmp_path/'.git'/'copy.mph') is False
+        link=tmp_path/'linked';link.symlink_to(tmp_path)
+        assert daemon._authorize_desktop_save_copy('p',link/'new.mph') is False
+        assert new.read_bytes()==b'protected'
+    finally:daemon.close()
+
+
+def test_registered_desktop_source_reuses_actual_artifact_integrity_and_project_scope(tmp_path):
+    from comsol_mcp._artifact_store import register_project_artifact,local_artifact_host_identity,local_engine_host_identity
+    from comsol_mcp._desktop_service import TrustedSourceArtifact
+    daemon,service,ref=_desktop_read_fixture(tmp_path)
+    try:
+        original=tmp_path/'trusted.java';original.write_bytes(b'// synthetic trusted source')
+        record=register_project_artifact(tmp_path,daemon.store,'trusted.java',project_id='p',role='java-source',
+                classification='synthetic',host_identity=local_artifact_host_identity(),
+                engine_host_identity=local_engine_host_identity(daemon.backend.endpoint_key),request_id='register-r',registering_operation_id='register-o')
+        artifact=daemon._resolve_desktop_artifact('p',record['artifact_id'])
+        assert isinstance(artifact,TrustedSourceArtifact) and artifact.sha256==record['artifact_id']
+        assert artifact.size==len(b'// synthetic trusted source')
+        with pytest.raises(Exception):daemon._resolve_desktop_artifact('foreign',record['artifact_id'])
+        # Alter the immutable registered copy rather than the retained input.
+        from pathlib import Path
+        (tmp_path/record['path']).write_bytes(b'changed')
+        with pytest.raises(Exception):daemon._resolve_desktop_artifact('p',record['artifact_id'])
+        assert _operation_count(daemon)==0
+    finally:daemon.close()
+
+
+def test_coordinator_bind_uses_single_claim_and_queue_inspect_with_fake_window_only(tmp_path):
+    import json
+    from comsol_mcp._desktop_service import DesktopModelObservation
+    daemon,service,ref=_desktop_read_fixture(tmp_path)
+    adapter=AvailableWindowAdapter()
+    adapter.observe_model=lambda _: DesktopModelObservation('SERVER','127.0.0.1:2036','m',fingerprint='f'*64)
+    daemon.desktop.adapter=adapter
+    try:
+        status=daemon.dispatch({'operation':'desktop.status','arguments':{'project_id':'p'},'execution':{}})
+        token=status['data']['windows'][0]['window_ref']
+        request={'operation':'desktop.bind','arguments':{'project_id':'p','idempotency_key':'real-queue-fixture',
+                 'window_ref':token,'model_ref':json.dumps(ref)},'execution':{}}
+        result=daemon.dispatch(request)
+        assert result['success'] is True and result['execution']['status']=='SUCCEEDED'
+        assert _operation_count(daemon)==1
+        assert daemon.dispatch(request)==result
+        assert _operation_count(daemon)==1
+    finally:daemon.close()

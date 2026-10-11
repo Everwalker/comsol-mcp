@@ -34,7 +34,7 @@ REPO = Path(__file__).resolve().parents[1]
 INSTALL_ROOT = Path("/Applications/COMSOL64/Multiphysics")
 JAVA11 = Path("/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home")
 PYTHON_FOR_PIP = Path("/opt/homebrew/opt/python@3.12/bin/python3.12")
-EXPECTED_PYTHON = Path("/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python")
+EXPECTED_PYTHON = Path("/private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python")
 FIXTURE = REPO / "tools/java/NativeW23TEScienceFixture.java"
 PERSISTENT_WORKER_CLASS = "comsol_mcp.worker_java.PersistentComsolWorker"
 PROTOCOL = REPO / "tools/w23_te_science_protocol.py"
@@ -77,6 +77,7 @@ EXPLICIT_SOURCE_PATHS = (
     Path(__file__).resolve(), FIXTURE, PROTOCOL, MANAGED_PREFLIGHT,
     RESUME_HELPERS, PLAN,
     REPO / "docs/full_project_execution/W23_MAIN_MODEL_PLAN.md",
+    REPO / "tools/phase4_run_mcp.py",
     REPO / "tests/test_native_w23_te_science_runner.py",
     REPO / "tests/test_native_w23_te_science_protocol.py",
     REPO / "tests/test_w23_native_results.py",

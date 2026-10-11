@@ -84,10 +84,11 @@ IMPLEMENTED_OPERATIONS = frozenset({
 CONTROL_IMPLEMENTED_OPERATIONS = frozenset({
     "job.list", "job.status", "job.log", "job.result", "job.reconcile",
     "job.wait", "job.cancel", "job.cleanup",
-    "artifact.list", "artifact.inspect", "artifact.verify",
+    "artifact.list", "artifact.inspect", "artifact.verify", "artifact.preview",
     "project.create", "project.inspect", "project.contract_set",
     "project.policy_set", "project.permissions", "project.state_export",
     "experiment.inspect", "experiment.case_result", "experiment.stage_define", "experiment.stage_run",
+    "solver.log_read",
     # Durable project-scoped lifecycle snapshots and process-birth fenced
     # owned Server lifecycle.
     "session.list", "session.inspect", "session.health", "session.connect",
@@ -292,6 +293,40 @@ class ActionEntry:
             "notes": self.notes,
             "executable": is_implemented(self.operation_id) or self.operation_id in LEGACY_FALLBACK_NAMES,
         }
+        if self.operation_id in {"parameter.import", "parameter.export"}:
+            result["data_schema"] = _parameter_io_data_schema(self.operation_id)
+            result["runtime_dispatch_contract"] = {
+                "handler": "serial ManagedBackend G3 parameter-table adapter through the existing ExecutionService",
+                "entrypoints": [self.operation_id, self.mcp_tool_name, "registry_call", "operation_call"],
+                "effect": "WRITE" if self.operation_id == "parameter.import" else "FILE_WRITE",
+                "source_artifact": (
+                    "schema-v2 project registration with exact digest/project/root/host/engine scope and parameter_source or parameter_table role"
+                    if self.operation_id == "parameter.import" else None
+                ),
+                "formats": ["json", "csv"],
+                "format_version": "comsol-mcp-parameter-table/1",
+                "csv_null_encoding": "group and unit columns use one JSON scalar; unit null is null and differs from an empty string",
+                "verification": "raw expression and descr text readback; evaluateUnit is checked after the complete import batch; exports require complete stable double-read projection",
+                "atomicity": "export destination is project-scoped, no-clobber, fsync-backed, then registered as a schema-v2 parameter_source",
+                "outcomes": "setter, readback, unit, publication and registration failures retain applied/failed/not_executed and partial or unknown state",
+                "limits": "8 MiB file, 4096 rows, bounded groups and text; no local expression evaluation or unit conversion",
+                "verification_scope": "managed software path only; no COMSOL native success is implied",
+            }
+        if self.operation_id in {"model.dependencies", "model.package", "model.rebuild_target"}:
+            result["data_schema"] = _model_delivery_data_schema(self.operation_id)
+            result["runtime_dispatch_contract"] = {
+                "handler": "single bound-model ManagedBackend callback through the existing ExecutionService/Worker queue",
+                "entrypoints": [self.operation_id, self.mcp_tool_name, "registry_call", "operation_call"],
+                "identity": "outer project/session/ModelRef/request identity plus exact expected_revision; caller private context is ignored",
+                "worker_scope": "typed Model.file().archive() inventory and saveCopy package route; no resource() temporary path",
+                "recipe": ("registered schema-v2 role=model_recipe artifact with strict version/runtime/products/steps; full model-scope READ/WRITE/EVALUATE/COMPUTE admission is prevalidated before dispatch"
+                           if self.operation_id == "model.rebuild_target" else None),
+                "publication": ("actual MPH plus manifest.json, streamed no-clobber project publication, SHA-256 and schema-v2 registration receipt"
+                                if self.operation_id == "model.package" else None),
+                "verification_scope": "software implementation; native COMSOL package/readback/solve acceptance remains separate",
+                "limitations": ["external libraries/services/code are explicitly UNVERIFIED unless separately enumerated",
+                                "file-backed recipe steps without a registered artifact resolver are rejected before engine dispatch"],
+            }
         if self.operation_id in NODE_ACTIONS | {"api.describe", "api.invoke"}:
             result["data_schema"] = _unit_a_data_schema(self.operation_id)
             result["runtime_dispatch_contract"] = {
@@ -361,7 +396,34 @@ class ActionEntry:
                 "nested_identity": "model/session/revision/idempotency/request identifiers are not nested action fields and are never copied from the outer execution envelope",
                 "verification_scope": "control-plane software behavior only; no COMSOL solver capability implied",
             }
-        if self.operation_id in {"artifact.list", "artifact.inspect", "artifact.verify"}:
+        if self.operation_id == "solver.log_read":
+            result["runtime_dispatch_contract"] = {
+                "handler": "ControlDaemon project-authorized stable OperationStore job-event snapshot",
+                "entrypoints": [self.operation_id, self.mcp_tool_name, "registry_call", "operation_call"],
+                "permissions": "inspect is checked before job or event lookup",
+                "project_binding": "requested project_id must equal the outer execution project; both job and producer operation metadata must bind to it",
+                "engine_queue": "bypassed; no Worker, COMSOL stdout/stderr stream, or native solver call",
+                "paging": "opaque cursor binds the exact project/job, captured event prefix, snapshot count, digest, offset, and page limit",
+                "solver_output_log": "NOT_CAPTURED because OperationStore persists job events rather than COMSOL stdout/stderr",
+                "verification_scope": "durable control-plane event records only; not native solver-log acceptance",
+            }
+            result["data_schema"] = {
+                "type": "object",
+                "required": ["job_id", "project_id", "events", "event_count", "next_cursor", "snapshot",
+                             "solver_output_log", "exception_chain"],
+                "properties": {
+                    "job_id": {"type": "string"}, "project_id": {"type": "string"},
+                    "job_status": {"type": ["string", "null"]},
+                    "events": {"type": "array", "items": {"type": "object"}},
+                    "event_count": {"type": "integer", "minimum": 0},
+                    "next_cursor": {"type": ["string", "null"]},
+                    "snapshot": {"type": "object"},
+                    "solver_output_log": {"type": "object"},
+                    "exception_chain": {"type": "object"},
+                },
+                "additionalProperties": False,
+            }
+        if self.operation_id in {"artifact.list", "artifact.inspect", "artifact.verify", "artifact.preview"}:
             result["data_schema"] = (
                 _artifact_verify_data_schema() if self.operation_id == "artifact.verify"
                 else _artifact_read_data_schema(self.operation_id)
@@ -383,6 +445,21 @@ class ActionEntry:
                 "limits": "resource ceilings are explicit; unsupported formats/marker semantics or budget hits cannot produce VERIFIED_DECLARED_PACKAGE_CONTENT",
                 "verification_scope": "declared software package content only; producer trust and native compatibility remain unverified/not run",
             }
+            if self.operation_id == "artifact.preview":
+                result["runtime_dispatch_contract"] = {
+                    "handler": "ControlDaemon ProjectAuthority, scoped schema-v2 OperationStore lookup, one pinned local file descriptor, and stdlib PNG/CSV/JSON preview codec",
+                    "entrypoints": ["artifact.preview", "artifact_preview", "registry_call", "operation_call"],
+                    "permissions": "inspect is checked before scoped artifact metadata lookup and file access",
+                    "project_binding": "exact persisted project_id/workspace/root, local host, and configured loopback engine identity",
+                    "engine_queue": "bypassed; no Worker/JVM request, native call, subprocess, or network access",
+                    "store_effects": "read-only request; registration metadata, source bytes, and OperationStore rows are not modified",
+                    "formats": "content-validated non-interlaced 8-bit PNG and strict UTF-8 comma CSV or JSON scalar tables; HTML/SVG/XML and other formats are unsupported",
+                    "sampling": "nearest source-pixel center for images; deterministic first or endpoint-inclusive uniform rows and first columns for data; exact zero-based selected indices are returned",
+                    "limits": "source 16 MiB; PNG side 8192, 16M pixels and 64 MiB expanded bytes; JSON depth 64 and 250000 nodes; data 100000 rows, 4096 columns and 250000 cells; preview JSON 2 MiB; options image sides 1-1024, data rows 1-500 and columns 1-128",
+                    "provenance": "source SHA-256 and schema-v2 identity are checked on one pinned descriptor before and after full content parsing; absolute host paths are omitted",
+                    "typed_failures": ["INVALID_REQUEST", "PERMISSION_DENIED", "ARTIFACT_NOT_FOUND", "ARTIFACT_READ_FAILED", "ACCESS_VIOLATION", "ARTIFACT_SCOPE_MISMATCH", "ARTIFACT_IDENTITY_MISMATCH", "ARTIFACT_HASH_MISMATCH", "ARTIFACT_CHANGED", "ARTIFACT_FORMAT_INVALID", "ARTIFACT_FORMAT_MISMATCH", "UNSUPPORTED_FORMAT", "INCOMPLETE"],
+                    "verification_scope": "bounded software control-plane behavior only; no package completeness, native compatibility, or scientific acceptance is implied",
+                }
         if self.operation_id in {"experiment.inspect", "experiment.case_result"}:
             result["runtime_dispatch_contract"] = {
                 "handler": "ControlDaemon project-authorized W21 OperationStore snapshot",
@@ -680,6 +757,13 @@ def _effective_input_schema(catalog_schema: Mapping[str, Any], operation_id: str
     if operation_id in {"checkpoint.branch", "api.probe"}:
         from ._g2_checkpoint_ops import input_schema
         return input_schema(operation_id)
+    if operation_id == "artifact.preview":
+        effective = json.loads(json.dumps(dict(catalog_schema), ensure_ascii=False))
+        properties = effective.get("properties")
+        if isinstance(properties, dict):
+            properties["options"] = _artifact_preview_options_schema()
+            properties["artifact_id"] = {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        return effective
     if operation_id in {"metric.define", "metric.list", "metric.evaluate", "metric.remove", "metric.compare"}:
         from ._metric_contract import input_schema
         return input_schema(operation_id)
@@ -709,6 +793,17 @@ def _effective_input_schema(catalog_schema: Mapping[str, Any], operation_id: str
         effective["oneOf"] = [{"required": ["before"], "not": {"required": ["after"]}}, {"required": ["after"], "not": {"required": ["before"]}}]
     elif operation_id == "api.invoke":
         properties["declared_effect"] = {"type": "string", "enum": ["READ", "WRITE"], "description": "Assertion only; the server determines actual effect from the reviewed exact capability."}
+    if operation_id in {"model.dependencies", "model.rebuild_target"} and isinstance(properties, dict):
+        # Additive managed-wire revision binding. The historical catalog copy
+        # and its 272-action source contract are intentionally unchanged.
+        properties["expected_revision"] = {"type": "integer", "minimum": 0}
+        if operation_id == "model.dependencies":
+            properties["verify_hashes"].setdefault("default", False)
+            effective["required"] = list(dict.fromkeys([*effective.get("required", []), "expected_revision"]))
+    if operation_id == "model.package" and isinstance(properties, dict):
+        properties["include_solution"].setdefault("default", True)
+    if operation_id == "model.rebuild_target" and isinstance(properties, dict):
+        effective["required"] = list(dict.fromkeys([*effective.get("required", []), "expected_revision"]))
     # The offline index adapter accepts optional provenance selectors when it
     # writes a source.  Older catalog snapshots omitted them even though the
     # production control path has always carried these fields.
@@ -779,6 +874,12 @@ def _effective_input_schema(catalog_schema: Mapping[str, Any], operation_id: str
             "type": "string", "pattern": "^(0|[1-9][0-9]*)$",
             "description": "Zero-based decimal event offset cursor.",
         }
+    if operation_id == "solver.log_read" and isinstance(properties, dict):
+        properties["cursor"] = {
+            "type": "string", "maxLength": 4096,
+            "description": "Opaque versioned cursor bound to the project, job, and exact captured event prefix.",
+        }
+        properties["limit"] = {"type": "integer", "minimum": 1, "maximum": 1000}
     if operation_id == "job.cleanup" and isinstance(properties, dict):
         properties["job_ids"] = {
             "type": "array", "minItems": 1,
@@ -824,6 +925,11 @@ def _effective_input_schema(catalog_schema: Mapping[str, Any], operation_id: str
         required = effective.get("required")
         if isinstance(required, list):
             effective["required"] = [name for name in required if name != "tag"]
+        if isinstance(properties, dict):
+            properties["source_tag"] = {
+                "type": "string", "minLength": 1,
+                "description": "Existing component tag to copy; required only when action is copy.",
+            }
         effective["allOf"] = [
             {"if": {"properties": {"action": {"const": "list"}}, "required": ["action"]},
              "then": {"not": {"required": ["tag"]}},
@@ -831,6 +937,9 @@ def _effective_input_schema(catalog_schema: Mapping[str, Any], operation_id: str
                  "properties": {"action": {"enum": list(COMPONENT_MANAGE_TAGGED_ACTIONS)}},
                  "required": ["tag"],
              }},
+            {"if": {"properties": {"action": {"const": "copy"}}, "required": ["action"]},
+             "then": {"required": ["source_tag"]},
+             "else": {"not": {"required": ["source_tag"]}}},
         ]
     return effective
 
@@ -919,6 +1028,8 @@ def _artifact_read_data_schema(operation_id: str) -> dict[str, Any]:
                 "package_status": {"type": "string", "const": "NOT_VERIFIED"},
             },
         }
+    if operation_id == "artifact.preview":
+        return _artifact_preview_data_schema()
     raise ValueError("unsupported artifact read action")
 
 
@@ -948,7 +1059,8 @@ def _artifact_verify_data_schema() -> dict[str, Any]:
         "required": [
             "data_schema_version", "project_id", "artifact_id", "format", "format_schema",
             "format_verdict", "member_integrity", "dependency_closure", "target_format",
-            "declared_target", "declared_python", "producer_trust", "native_compatibility",
+            "declared_target", "declared_python", "declared_comsol_version",
+            "target_runtime_compatibility", "portability_status", "producer_trust", "native_compatibility",
             "native_components", "findings", "source_note", "resource_budget_note",
         ],
         "additionalProperties": False,
@@ -967,6 +1079,9 @@ def _artifact_verify_data_schema() -> dict[str, Any]:
             "target_format": {"type": "string", "enum": ["PASS_STATIC_TAGS", "FAIL", "INCOMPLETE"]},
             "declared_target": {"type": ["string", "null"]},
             "declared_python": {"type": ["string", "null"]},
+            "declared_comsol_version": {"type": ["string", "null"]},
+            "target_runtime_compatibility": {"type": "string", "enum": ["UNVERIFIED", "NOT_APPLICABLE"]},
+            "portability_status": {"type": "string", "enum": ["UNVERIFIED", "NOT_APPLICABLE"]},
             "producer_trust": {"type": "string", "const": "UNVERIFIED_UNLESS_EXISTING_AUTHORITATIVE_PRODUCER_PROOF"},
             "native_compatibility": {"type": "string", "const": "NOT_RUN"},
             "native_components": {"type": "array", "items": native_component},
@@ -975,6 +1090,450 @@ def _artifact_verify_data_schema() -> dict[str, Any]:
             "resource_budget_note": {"type": "string"},
         },
     }
+
+def _parameter_io_data_schema(operation_id: str) -> dict[str, Any]:
+    registration = {
+        "type": ["object", "null"],
+        "properties": {
+            "schema_version": {"type": "integer", "const": 2},
+            "role": {"type": "string"},
+            "classification": {"type": "string"},
+            "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "size": {"type": "integer", "minimum": 0},
+            "relative_path": {"type": "string"},
+        },
+        "additionalProperties": False,
+    }
+    properties: dict[str, Any] = {
+        "data_schema_version": {"type": "integer", "const": 1},
+        "operation": {"type": "string", "const": operation_id},
+        "status": {"type": "string", "enum": ["APPLIED", "PARTIAL_FAILURE", "EXECUTION_STATE_UNKNOWN"]},
+        "ok": {"type": "boolean"},
+        "partial_change": {"type": "boolean"},
+        "execution_state_unknown": {"type": "boolean"},
+        "format": {"type": "string", "enum": ["json", "csv"]},
+        "format_version": {"type": "string", "const": "comsol-mcp-parameter-table/1"},
+        "destination": {"type": "string"},
+        "artifact_id": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+        "source_artifact_id": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "source_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "size_bytes": {"type": "integer", "minimum": 0},
+        "relative_path": {"type": "string"},
+        "source_format": {"type": "string", "enum": ["json", "csv"]},
+        "source_revision": {"type": "integer", "minimum": 0},
+        "source_groups": {"type": "array", "items": {"type": "string"}},
+        "groups": {"type": "array", "items": {"type": "string"}},
+        "group_override": {"type": ["string", "null"]},
+        "row_count": {"type": "integer", "minimum": 0},
+        "artifact_registration": registration,
+        "applied": {"type": "array", "items": {"type": "object"}},
+        "failed": {"type": "array", "items": {"type": "object"}},
+        "not_executed": {"type": "array", "items": {"type": "object"}},
+        "unit_semantics": {"type": "string"},
+        "description_semantics": {"type": "string"},
+        "isolation_proof": {"type": "object"},
+        "domain_state": {"type": "string", "enum": ["succeeded", "failed", "partial", "unknown"]},
+        "verification_status": {"type": "string"},
+        "cleanup_failed": {"type": "boolean"},
+        "dispatch_stage": {"type": "string"},
+        "domain_outcome": {"type": "object"},
+        "effect": {"type": "string"},
+    }
+    required = [
+        "data_schema_version", "operation", "status", "ok", "partial_change",
+        "execution_state_unknown", "source_revision", "row_count", "applied",
+        "failed", "not_executed", "unit_semantics",
+    ]
+    if operation_id == "parameter.import":
+        required.extend(["source_artifact_id", "source_sha256", "source_format", "source_groups", "group_override"])
+    else:
+        required.extend(["format", "format_version", "destination", "artifact_id", "sha256",
+                         "size_bytes", "relative_path", "groups", "artifact_registration",
+                         "description_semantics"])
+    return {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": f"https://comsol-mcp.local/schemas/{operation_id.replace('.', '-')}-data/1",
+        "type": "object",
+        "required": required,
+        "properties": properties,
+        "additionalProperties": False,
+    }
+
+
+def _model_delivery_data_schema(operation_id: str) -> dict[str, Any]:
+    """Closed top-level response contracts for the three managed delivery actions."""
+    sha = {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+    revision = {"type": "integer", "minimum": 0}
+    model_ref = {
+        "type": "object",
+        "required": ["schema_version", "session_id", "server_instance_id", "model_tag", "generation"],
+        "properties": {
+            "schema_version": {"type": "integer", "minimum": 1},
+            "session_id": {"type": "string", "minLength": 1},
+            "server_instance_id": {"type": "string", "minLength": 1},
+            "model_tag": {"type": "string", "minLength": 1},
+            "generation": {"type": "integer", "minimum": 1},
+        },
+        "additionalProperties": False,
+    }
+    common = {
+        "domain_state": {"type": "string", "enum": ["succeeded", "failed", "partial", "unknown"]},
+        "verification_status": {"type": "string"},
+        "execution_state_unknown": {"type": "boolean"},
+        "partial_change": {"type": "boolean"},
+        "cleanup_failed": {"type": "boolean"},
+        "dispatch_stage": {"type": "string"},
+        "domain_outcome": {"type": "object"},
+        "effect": {"type": "string"},
+        "isolation_proof": {"type": "object"},
+        "verified_outcome": {"type": "string"},
+        "requires_model_reconciliation": {"type": "boolean"},
+    }
+    source_reference = {
+        "type": "object",
+        "required": ["state", "project_relative_path"],
+        "properties": {
+            "state": {"type": "string", "enum": ["VERIFIED", "AUTHORIZED_PROJECT_LOCAL", "MISSING", "UNVERIFIED"]},
+            "project_relative_path": {"type": ["string", "null"]},
+            "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "size_bytes": {"type": "integer", "minimum": 0},
+            "reason": {"type": "string"},
+        },
+        "additionalProperties": False,
+    }
+    function_reference = {
+        "type": "object", "required": ["kind", "tag", "function_type", "authorized_source", "verification"],
+        "properties": {"kind": {"const": "function_data"}, "tag": {"type": ["string", "null"]},
+            "function_type": {"type": "string"}, "authorized_source": source_reference,
+            "verification": {"type": "string"}, "package_path": {"type": "string"}},
+        "additionalProperties": False,
+    }
+    cad_reference = {
+        "type": "object", "required": ["kind", "component", "geometry", "feature", "authorized_source", "verification"],
+        "properties": {"kind": {"const": "cad_geometry"}, "component": {"type": "string"},
+            "geometry": {"type": "string"}, "feature": {"type": "string"},
+            "authorized_source": source_reference, "verification": {"type": "string"},
+            "package_path": {"type": "string"}},
+        "additionalProperties": False,
+    }
+    resolved_dependency = {
+        "type": "object", "required": ["project_relative_path", "package_path", "sha256", "size_bytes"],
+        "properties": {"project_relative_path": {"type": "string"}, "package_path": {"type": "string"},
+            "sha256": sha, "size_bytes": {"type": "integer", "minimum": 0}},
+        "additionalProperties": False,
+    }
+    published_file_identity = {
+        "type": "object", "required": ["device", "inode"],
+        "properties": {"device": {"type": "integer", "minimum": 0},
+            "inode": {"type": "integer", "minimum": 0}},
+        "additionalProperties": False,
+    }
+    registered_file_identity = {
+        "type": "object", "required": ["device", "inode", "size", "mtime_ns"],
+        "properties": {"device": {"type": "integer", "minimum": 0},
+            "inode": {"type": "integer", "minimum": 0}, "size": {"type": "integer", "minimum": 0},
+            "mtime_ns": {"type": "integer", "minimum": 0}},
+        "additionalProperties": False,
+    }
+    registration = {
+        "type": "object",
+        "required": ["schema_version", "artifact_id", "sha256", "path", "size", "file_identity",
+                     "project_id", "project_root_identity", "host_identity", "engine_host_identity",
+                     "role", "classification", "provenance", "reused"],
+        "properties": {
+            "schema_version": {"type": "integer", "const": 2}, "artifact_id": sha, "sha256": sha,
+            "path": {"type": "string"}, "size": {"type": "integer", "minimum": 1},
+            "file_identity": registered_file_identity, "project_id": {"type": "string"},
+            "project_root_identity": sha, "host_identity": sha, "engine_host_identity": sha,
+            "role": {"type": "string", "const": "model_package"},
+            "classification": {"type": "string", "const": "project_local"},
+            "provenance": {"type": "object", "required": ["source_project_relative_path", "request_id",
+                "registering_operation_id", "source_sha256", "source_model_ref", "source_revision", "include_solution"],
+                "properties": {"source_project_relative_path": {"type": "string"}, "request_id": {"type": "string"},
+                    "registering_operation_id": {"type": "string", "const": "model.package"}, "source_sha256": sha,
+                    "source_model_ref": model_ref, "source_revision": revision, "include_solution": {"type": "boolean"}},
+                "additionalProperties": False},
+            "artifact_type": {"type": "string", "const": "application/zip"},
+            "format_version": {"type": "string", "const": "comsol-mcp-model-package/1"},
+            "reused": {"type": "boolean"},
+        },
+        "additionalProperties": False,
+    }
+    publication_receipt = {
+        "type": "object", "required": ["relative_path", "sha256", "size_bytes", "file_identity"],
+        "properties": {"relative_path": {"type": "string"}, "sha256": sha,
+            "size_bytes": {"type": "integer", "minimum": 1}, "file_identity": published_file_identity},
+        "additionalProperties": False,
+    }
+    manifest_resource_verified = {
+        "type": "object", "required": ["resource_tag", "archive_member", "sha256", "size_bytes", "resolution"],
+        "properties": {"resource_tag": {"type": "string"}, "archive_member": {"type": "string"},
+            "sha256": sha, "size_bytes": {"type": "integer", "minimum": 0},
+            "resolution": {"type": "string", "const": "VERIFIED_EMBEDDED_MPH_MEMBER"}},
+        "additionalProperties": False,
+    }
+    manifest_resource_unverified = {
+        "type": "object", "required": ["resource_tag", "state", "archive_members", "reason"],
+        "properties": {"resource_tag": {"type": "string"}, "state": {"type": "string", "const": "UNVERIFIED"},
+            "archive_members": {"type": "array", "items": {"type": "string"}}, "reason": {"type": "string"}},
+        "additionalProperties": False,
+    }
+    manifest_unresolved = {
+        "type": "object", "required": ["kind", "state", "reason"],
+        "properties": {"kind": {"type": "string"}, "state": {"type": "string"}, "reason": {"type": "string"},
+            "tag": {"type": ["string", "null"]}, "resource_tag": {"type": "string"},
+            "component": {"type": ["string", "null"]}, "geometry": {"type": ["string", "null"]},
+            "feature": {"type": ["string", "null"]},
+            "archive_members": {"type": "array", "items": {"type": "string"}}},
+        "additionalProperties": False,
+    }
+    package_manifest = {
+        "type": "object", "required": ["schema", "version", "format_version", "model", "contents",
+            "embedded_dependencies", "resolved_project_dependencies", "file_references", "dependency_coverage",
+            "unresolved_items", "external_code", "external_libraries_services", "portability_status",
+            "absolute_paths_in_manifest", "save_semantics"],
+        "properties": {
+            "schema": {"type": "string", "const": "comsol-mcp-model-package"},
+            "version": {"type": "integer", "const": 1},
+            "format_version": {"type": "string", "const": "comsol-mcp-model-package/1"},
+            "model": {"type": "object", "required": ["model_ref", "source_revision", "comsol_version", "include_solution"],
+                "properties": {"model_ref": model_ref, "source_revision": revision,
+                    "comsol_version": {"type": "string"}, "include_solution": {"type": "boolean"}},
+                "additionalProperties": False},
+            "contents": {"type": "object", "required": ["model.mph"], "properties": {
+                "model.mph": {"type": "object", "required": ["sha256", "size_bytes"],
+                    "properties": {"sha256": sha, "size_bytes": {"type": "integer", "minimum": 1}},
+                    "additionalProperties": False}}, "additionalProperties": False},
+            "embedded_dependencies": {"type": "array", "items": {"oneOf": [manifest_resource_verified, manifest_resource_unverified]}},
+            "resolved_project_dependencies": {"type": "array", "items": resolved_dependency},
+            "file_references": {"type": "array", "items": {"oneOf": [function_reference, cad_reference]}},
+            "dependency_coverage": {"type": "object", "required": ["model_file_resource_api", "functions",
+                "geometry_import_features", "external_code", "external_libraries_services"],
+                "properties": {name: {"type": "string", "enum": ["PASS_SCOPED", "PARTIAL", "UNVERIFIED"]}
+                    for name in ("model_file_resource_api", "functions", "geometry_import_features", "external_code",
+                                 "external_libraries_services")}, "additionalProperties": False},
+            "unresolved_items": {"type": "array", "items": manifest_unresolved},
+            "external_code": {"type": "object", "required": ["status", "reason"],
+                "properties": {"status": {"type": "string", "const": "UNVERIFIED"}, "reason": {"type": "string"}},
+                "additionalProperties": False},
+            "external_libraries_services": {"type": "object", "required": ["status", "reason"],
+                "properties": {"status": {"type": "string", "const": "UNVERIFIED"}, "reason": {"type": "string"}},
+                "additionalProperties": False},
+            "portability_status": {"type": "string", "const": "UNVERIFIED"},
+            "absolute_paths_in_manifest": {"type": "boolean", "const": False},
+            "save_semantics": {"type": "string"},
+        },
+        "additionalProperties": False,
+    }
+    properties: dict[str, Any]
+    required: list[str]
+    if operation_id == "model.dependencies":
+        coverage_value = {"type": "string", "enum": ["PASS_SCOPED", "PARTIAL", "UNVERIFIED"]}
+        properties = {
+            "data_schema_version": {"type": "integer", "const": 1}, "operation": {"const": operation_id},
+            "status": {"type": "string", "const": "INCOMPLETE"}, "verify_hashes": {"type": "boolean"},
+            "model_ref": model_ref, "source_revision": revision, "final_revision": revision,
+            "coverage": {"type": "object", "required": ["model_file_resource_api", "functions", "geometry_import_features", "external_code", "external_libraries_services"],
+                         "properties": {name: coverage_value for name in ("model_file_resource_api", "functions", "geometry_import_features", "external_code", "external_libraries_services")},
+                         "additionalProperties": False},
+            "file_resources": {"type": "array", "items": {"type": "object", "required": ["tag", "archive_members", "archive_status", "embedded_sha256", "embedded_size_bytes", "verification"],
+                "properties": {"tag": {"type": "string"}, "archive_members": {"type": "array", "items": {"type": "string"}},
+                    "archive_status": {"type": "string", "enum": ["ENUMERATED", "UNAVAILABLE"]}, "embedded_sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+                    "embedded_size_bytes": {"type": ["integer", "null"], "minimum": 0}, "verification": {"type": "string", "enum": ["UNVERIFIED", "VERIFIED_IN_SAVED_MPH", "UNVERIFIED_ARCHIVE_MEMBER_NOT_FOUND", "UNVERIFIED_MPH_READ_FAILED", "UNVERIFIED_MODEL_MPH_NOT_AUTHORIZED"]}}, "additionalProperties": False}},
+            "file_references": {"type": "array", "items": {"oneOf": [function_reference, cad_reference]}},
+            "unresolved_items": {"type": "array", "items": {"type": "object", "required": ["kind", "state", "reason"],
+                "properties": {"kind": {"type": "string"}, "state": {"type": "string"}, "reason": {"type": "string"},
+                    "tag": {"type": ["string", "null"]}, "component": {"type": ["string", "null"]}, "geometry": {"type": ["string", "null"]},
+                    "feature": {"type": ["string", "null"]}, "resource_tag": {"type": "string"},
+                    "archive_members": {"type": "array", "items": {"type": "string"}}}, "additionalProperties": False}},
+            "inventory_errors": {"type": "array", "items": {"type": "string"}},
+            "scope_note": {"type": "string"}, **common,
+        }
+        required = ["data_schema_version", "operation", "status", "verify_hashes", "model_ref", "source_revision", "final_revision", "coverage", "file_resources", "file_references", "unresolved_items", "inventory_errors", "scope_note"]
+    elif operation_id == "model.package":
+        properties = {
+            "data_schema_version": {"type": "integer", "const": 1}, "operation": {"const": operation_id},
+            "status": {"type": "string", "const": "APPLIED"}, "ok": {"type": "boolean", "const": True},
+            "source_revision": revision, "final_revision": revision, "destination": {"type": "string"},
+            "sha256": sha, "size_bytes": {"type": "integer", "minimum": 1}, "mph_sha256": sha,
+            "mph_size_bytes": {"type": "integer", "minimum": 1}, "include_solution": {"type": "boolean"},
+            "artifact_registration": registration, "publication_receipt": publication_receipt,
+            "resolved_project_dependencies": {"type": "array", "items": resolved_dependency},
+            "manifest": package_manifest, "portability_status": {"type": "string", "const": "UNVERIFIED"},
+            "safe_retry": {"type": "boolean", "const": False}, **common,
+        }
+        required = ["data_schema_version", "operation", "status", "ok", "source_revision", "final_revision", "destination", "sha256", "size_bytes", "mph_sha256", "mph_size_bytes", "include_solution", "resolved_project_dependencies", "artifact_registration", "publication_receipt", "manifest", "portability_status", "safe_retry"]
+    else:
+        properties = {
+            "data_schema_version": {"type": "integer", "const": 1}, "operation": {"const": operation_id},
+            "status": {"type": "string", "enum": ["APPLIED", "EXECUTION_STATE_UNKNOWN"]},
+            "ok": {"type": "boolean"}, "partial_change": {"type": "boolean"},
+            "execution_state_unknown": {"type": "boolean"}, "safe_retry": {"type": "boolean", "const": False},
+            "completed_steps": {"type": "integer", "minimum": 0, "maximum": 128},
+            "attempted_steps": {"type": "integer", "minimum": 1, "maximum": 128},
+            "step_readbacks": {"type": "array", "items": {"type": "object"}},
+            "failed_step": {"type": "object", "required": ["index", "operation_id", "failure_type"],
+                "properties": {"index": {"type": "integer", "minimum": 0, "maximum": 127},
+                    "operation_id": {"type": "string"}, "failure_type": {"type": "string"}},
+                "additionalProperties": False}, "not_executed_steps": {"type": "string"},
+            "source_revision": revision, "final_revision": revision,
+            "runtime": {"type": "object", "required": ["runtime_id", "worker_install_identity", "endpoint", "server_instance_id", "comsol_version", "attachment"],
+                "properties": {"runtime_id": {"type": "string"}, "worker_install_identity": {"type": "string"},
+                    "endpoint": {"type": "string"}, "server_instance_id": {"type": "string"}, "comsol_version": {"type": "string"},
+                    "attachment": {"type": "string", "const": "EXACT_CURRENT_WORKER"}}, "additionalProperties": False},
+            "recipe_artifact": {"type": "object", "required": ["artifact_id", "sha256", "size_bytes"],
+                "properties": {"artifact_id": sha, "sha256": sha, "size_bytes": {"type": "integer", "minimum": 1}, "role": {"type": "string"}}, "additionalProperties": False},
+            "products": {"type": "array", "items": {"type": "object"}}, "model_ref": model_ref, **common,
+        }
+        required = ["data_schema_version", "operation", "status", "ok", "partial_change", "execution_state_unknown", "safe_retry", "completed_steps", "step_readbacks", "source_revision", "final_revision", "runtime", "recipe_artifact", "products", "model_ref"]
+    return {"$schema": "https://json-schema.org/draft/2020-12/schema",
+            "$id": f"https://comsol-mcp.local/schemas/{operation_id.replace('.', '-')}-data/1",
+            "type": "object", "required": required, "properties": properties,
+            "additionalProperties": False}
+
+def _artifact_preview_options_schema() -> dict[str, Any]:
+    image_fields = {"max_width", "max_height"}
+    data_fields = {"max_rows", "max_columns", "row_selection"}
+    properties = {
+        "schema_version": {"type": "integer", "const": 1, "description": "Closed artifact.preview options schema."},
+        "kind": {"type": "string", "enum": ["auto", "image", "data"], "default": "auto"},
+        "max_width": {"type": "integer", "minimum": 1, "maximum": 1024, "default": 512},
+        "max_height": {"type": "integer", "minimum": 1, "maximum": 1024, "default": 512},
+        "max_rows": {"type": "integer", "minimum": 1, "maximum": 500, "default": 100},
+        "max_columns": {"type": "integer", "minimum": 1, "maximum": 128, "default": 32},
+        "row_selection": {"type": "string", "enum": ["first", "uniform"], "default": "first"},
+    }
+    no_data_options = {"not": {"anyOf": [{"required": [name]} for name in sorted(data_fields)]}}
+    no_image_options = {"not": {"anyOf": [{"required": [name]} for name in sorted(image_fields)]}}
+    return {
+        "type": "object",
+        "properties": properties,
+        "additionalProperties": False,
+        "allOf": [
+            {"if": {"properties": {"kind": {"const": "image"}}, "required": ["kind"]}, "then": no_data_options},
+            {"if": {"properties": {"kind": {"const": "data"}}, "required": ["kind"]}, "then": no_image_options},
+        ],
+        "description": "Closed v1 options. Omit options for auto detection and the defaults; unknown keys are refused before artifact metadata access.",
+    }
+
+def _artifact_preview_data_schema() -> dict[str, Any]:
+    provenance = {
+        "type": "object",
+        "required": ["project_id", "artifact_id", "source_sha256", "source_size_bytes",
+                     "registration_schema_version", "project_root_host_engine_scope_verified",
+                     "pinned_descriptor_sha256_verified_before_and_after"],
+        "additionalProperties": False,
+        "properties": {
+            "project_id": {"type": "string"},
+            "artifact_id": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "source_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "source_size_bytes": {"type": "integer", "minimum": 0, "maximum": 16777216},
+            "registration_schema_version": {"type": "integer", "const": 2},
+            "project_root_host_engine_scope_verified": {"type": "boolean", "const": True},
+            "pinned_descriptor_sha256_verified_before_and_after": {"type": "boolean", "const": True},
+        },
+    }
+    common = {
+        "preview_schema_version": {"type": "integer", "const": 1},
+        "project_id": {"type": "string"},
+        "artifact_id": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "source_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "source_size_bytes": {"type": "integer", "minimum": 0, "maximum": 16777216},
+        "role": {"type": "string"},
+        "classification": {"type": "string"},
+        "registration_schema_version": {"type": "integer", "const": 2},
+        "provenance": provenance,
+        "downsampled": {"type": "boolean"},
+    }
+    options_image = {
+        "type": "object", "required": ["schema_version", "kind", "max_width", "max_height"],
+        "additionalProperties": False,
+        "properties": {
+            "schema_version": {"type": "integer", "const": 1},
+            "kind": {"type": "string", "const": "image"},
+            "max_width": {"type": "integer", "minimum": 1, "maximum": 1024},
+            "max_height": {"type": "integer", "minimum": 1, "maximum": 1024},
+        },
+    }
+    options_data = {
+        "type": "object", "required": ["schema_version", "kind", "max_rows", "max_columns", "row_selection"],
+        "additionalProperties": False,
+        "properties": {
+            "schema_version": {"type": "integer", "const": 1},
+            "kind": {"type": "string", "const": "data"},
+            "max_rows": {"type": "integer", "minimum": 1, "maximum": 500},
+            "max_columns": {"type": "integer", "minimum": 1, "maximum": 128},
+            "row_selection": {"type": "string", "enum": ["first", "uniform"]},
+        },
+    }
+    image_schema = {
+        "type": "object",
+        "required": ["preview_schema_version", "kind", "project_id", "artifact_id", "source_sha256",
+                     "source_size_bytes", "media_type", "role", "classification", "registration_schema_version",
+                     "provenance", "options_applied", "preview_media_type", "original_width", "original_height",
+                     "preview_width", "preview_height", "downsampled", "sampling_method", "encoded_bytes_unchanged",
+                     "preview_sha256", "preview_size_bytes", "preview_png_base64"],
+        "additionalProperties": False,
+        "properties": {
+            **common,
+            "kind": {"type": "string", "const": "image"},
+            "media_type": {"type": "string", "const": "image/png"},
+            "request_id": {"type": "string"},
+            "options_applied": options_image,
+            "preview_media_type": {"type": "string", "const": "image/png"},
+            "original_width": {"type": "integer", "minimum": 1, "maximum": 8192},
+            "original_height": {"type": "integer", "minimum": 1, "maximum": 8192},
+            "preview_width": {"type": "integer", "minimum": 1, "maximum": 1024},
+            "preview_height": {"type": "integer", "minimum": 1, "maximum": 1024},
+            "sampling_method": {"type": "string", "const": "nearest_source_pixel_center"},
+            "encoded_bytes_unchanged": {"type": "boolean"},
+            "preview_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "preview_size_bytes": {"type": "integer", "minimum": 1, "maximum": 2097152},
+            "preview_png_base64": {"type": "string", "contentEncoding": "base64", "contentMediaType": "image/png"},
+        },
+    }
+    data_schema = {
+        "type": "object",
+        "required": ["preview_schema_version", "kind", "project_id", "artifact_id", "source_sha256",
+                     "source_size_bytes", "media_type", "role", "classification", "registration_schema_version",
+                     "provenance", "options_applied", "columns_origin", "columns", "units", "rows",
+                     "sampling", "downsampled", "formula_strings_are_data"],
+        "additionalProperties": False,
+        "properties": {
+            **common,
+            "kind": {"type": "string", "const": "data"},
+            "media_type": {"type": "string", "enum": ["text/csv", "application/json"]},
+            "request_id": {"type": "string"},
+            "options_applied": options_data,
+            "columns_origin": {"type": "string", "enum": ["csv_header", "declared_columns", "object_keys", "zero_based_positions"]},
+            "columns": {"type": "array", "items": {"type": "string"}, "maxItems": 128},
+            "units": {"type": "array", "items": {"type": ["string", "null"]}, "maxItems": 128},
+            "rows": {"type": "array", "maxItems": 500, "items": {"type": "array", "maxItems": 128,
+                "items": {"type": ["string", "integer", "number", "boolean", "null"]}}},
+            "sampling": {
+                "type": "object",
+                "required": ["row_selection", "column_selection", "total_rows", "total_columns",
+                             "selected_row_indices", "selected_column_indices", "truncated"],
+                "additionalProperties": False,
+                "properties": {
+                    "row_selection": {"type": "string", "enum": ["first", "uniform"]},
+                    "column_selection": {"type": "string", "const": "first"},
+                    "total_rows": {"type": "integer", "minimum": 0, "maximum": 100000},
+                    "total_columns": {"type": "integer", "minimum": 1, "maximum": 4096},
+                    "selected_row_indices": {"type": "array", "items": {"type": "integer", "minimum": 0}, "maxItems": 500},
+                    "selected_column_indices": {"type": "array", "items": {"type": "integer", "minimum": 0}, "maxItems": 128},
+                    "truncated": {"type": "boolean"},
+                },
+            },
+            "formula_strings_are_data": {"type": "boolean", "const": True},
+        },
+    }
+    return {
+        "oneOf": [image_schema, data_schema],
+        "description": "Validated actual schema-v2 artifact content. Data values are sampled verbatim; source totals and selected zero-based indices are explicit.",
+    }
+
 
 
 def _catalog_entries() -> tuple[ActionEntry, ...]:
@@ -1271,6 +1830,10 @@ def _validate_operation_shape(operation_id: str, arguments: Mapping[str, Any]) -
         from ._g2_model_compare import normalize
         normalize(arguments)
         return
+    if operation_id == "artifact.preview":
+        from ._g2_artifact_preview import normalize_options
+        normalize_options(arguments.get("options"))
+        return
     if operation_id in {"checkpoint.branch", "api.probe"}:
         from ._g2_checkpoint_ops import normalize
         normalize(operation_id, arguments)
@@ -1380,6 +1943,12 @@ def _validate_operation_shape(operation_id: str, arguments: Mapping[str, Any]) -
                 "INVALID_REQUEST",
                 f"tag is required for action {action!r} (only 'list' enumerates the component container "
                 "without naming one)")
+        if action == "copy":
+            source_tag = arguments.get("source_tag")
+            if not isinstance(source_tag, str) or not source_tag:
+                raise ExecutionContractError("INVALID_REQUEST", "source_tag is required for action 'copy'")
+        elif "source_tag" in arguments:
+            raise ExecutionContractError("INVALID_REQUEST", "source_tag is accepted only for action 'copy'")
     if operation_id in {"node.children", "node.find"}:
         budget = arguments.get("budget")
         if budget is not None:

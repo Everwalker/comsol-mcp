@@ -333,6 +333,19 @@ def dispatch(daemon: Any, operation: str, arguments: dict[str, Any], execution: 
         raise ExecutionContractError("ARTIFACT_NOT_FOUND", "artifact_id is not registered in the current managed project")
     role, classification, _artifact_type, format_version = _validate_read_metadata(record)
     _validate_inspect_record(record, artifact_id)
+    if operation == "artifact.preview":
+        from ._artifact_preview_io import preview_registered_artifact
+        from ._g2_artifact_preview import normalize_options
+
+        data = preview_registered_artifact(
+            project_root,
+            record,
+            artifact_id=artifact_id,
+            project_id=project_id,
+            options=normalize_options(arguments.get("options")),
+            request_id=request_id,
+        )
+        return {"success": True, "data": data}
     if operation == "artifact.verify":
         from ._g2_artifact_verify import verify_registered_bundle
 

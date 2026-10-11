@@ -1,0 +1,109 @@
+{
+  "created_utc": "2026-10-11T15:02:29.193119+00:00",
+  "status": "ROOT_ACCEPTED_SCOPED_SOFTWARE_IMPLEMENTATION",
+  "scope": [
+    "model.dependencies",
+    "model.package",
+    "model.rebuild_target",
+    "model-package artifact.verify",
+    "W14 component.copy guard and readback"
+  ],
+  "source_freeze_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/model_delivery/SOURCE_FREEZE.json",
+  "source_freeze_sha256": "7e5156f483a6c6121afb6bd1b40ba544e96853699429a6de075bdc97945a4e4c",
+  "owned_source_files_verified": [
+    {
+      "path": "comsol_mcp/_g3_model_delivery.py",
+      "sha256": "7e219ee66e1c8eb9799083818575790d3225344109150643bce5bf91b5196713",
+      "size_bytes": 67896
+    },
+    {
+      "path": "comsol_mcp/_g2_artifact_verify.py",
+      "sha256": "ea050a723b67b06ff8ef3ad2b12d317669c3393ed2b8af545d3ba449c04676db",
+      "size_bytes": 101052
+    },
+    {
+      "path": "comsol_mcp/_g3_w14.py",
+      "sha256": "7e8ab82e40841357f16e9b30f8f75095d62ea282c95fb143e4f4fc1c309df5e7",
+      "size_bytes": 154170
+    },
+    {
+      "path": "tests/test_g3_model_delivery.py",
+      "sha256": "b5f9fa90e7a5b66345bec4f702bd78b707d305c97b95d47a21766cf2291a321b",
+      "size_bytes": 46541
+    },
+    {
+      "path": "tests/test_g3_w14.py",
+      "sha256": "f15176a18a541bc9204edc794a49052994592b209da775432a2059dcbb0d2eda",
+      "size_bytes": 136895
+    }
+  ],
+  "test_evidence_verified": {
+    "affected-regressions": {
+      "junit_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/model_delivery/affected-regressions/junit.xml",
+      "sha256": "a763218f29b5507299687e61893b8d8a1efcc091f9718c9e1d90f3b5a38ff71d",
+      "testcases": 259,
+      "skipped": [
+        {
+          "test": "test_artifact_verify_real_accepted_dev1_bundles_through_registration",
+          "reason": "accepted dev1 archive paths were not supplied for this environment"
+        },
+        {
+          "test": "test_junction_rejected_without_touching_target",
+          "reason": "requires actual Windows kernel/filesystem"
+        },
+        {
+          "test": "test_parent_and_project_rename_blocked_while_pinned",
+          "reason": "requires actual Windows kernel/filesystem"
+        },
+        {
+          "test": "test_pinned_parent_reparse_race_never_writes_outside",
+          "reason": "requires actual Windows kernel/filesystem"
+        },
+        {
+          "test": "test_postcommit_cleanup_failure_preserves_unknown_receipt",
+          "reason": "requires actual Windows kernel/filesystem"
+        },
+        {
+          "test": "test_postcommit_read_failure_rolls_back_and_reports_unknown",
+          "reason": "requires actual Windows kernel/filesystem"
+        },
+        {
+          "test": "test_stream_reader_exception_cleans_temp_and_keeps_typed_receipt",
+          "reason": "requires actual Windows kernel/filesystem"
+        },
+        {
+          "test": "test_streaming_publish_checks_chunks_digest_and_size_before_rename",
+          "reason": "requires actual Windows kernel/filesystem"
+        },
+        {
+          "test": "test_unicode_publish_and_no_clobber",
+          "reason": "requires actual Windows kernel/filesystem"
+        },
+        {
+          "test": "test_write_failure_removes_only_owned_temp",
+          "reason": "requires actual Windows kernel/filesystem"
+        }
+      ],
+      "failures_or_errors": [],
+      "invocation_sha256": "6fa9e5b09a5926e9fdd874e07fd13d7ce1335e821a2d6e0eb9ef404f7f1d51ce"
+    },
+    "java-worker-loopback": {
+      "junit_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/model_delivery/java-worker-loopback/junit.xml",
+      "sha256": "d0f27b5a773c9bd713fabf3f9e07cf321172bed9b9243f8a0a2aec07ca39748e",
+      "testcases": 42,
+      "skipped": [
+        {
+          "test": "test_windows_existing_foreign_lock_root_is_rejected_without_takeover",
+          "reason": "Windows owner semantics only"
+        }
+      ],
+      "failures_or_errors": [],
+      "invocation_sha256": "8e90ee6d443c6ea59283974bf17a18847b16e5e7106abb080a1480e72b1014b7"
+    }
+  },
+  "review_findings": "Production ControlDaemon/ManagedBackend route, exact outer identity/revision/runtime binding, registered/pinned recipe and package dependencies, project permissions, single serial Worker dispatch, package verification and retained UNKNOWN recovery bytes reviewed. W14 genuine component copy readback reviewed. No blocking finding in this software scope. Shared route files are still being changed by solver executor; merged acceptance will bind to the later combined source freeze.",
+  "native_comsol_execution": "NOT_RUN_FOR_THIS_MODULE",
+  "target_runtime_portability": "UNVERIFIED",
+  "independent_final_review": "NOT_PERFORMED",
+  "project_acceptance": "OPEN"
+}

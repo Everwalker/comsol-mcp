@@ -1,0 +1,45 @@
+{
+  "schema": "root-w25-integration-review-v1",
+  "status": "ROOT_ACCEPTED_SCOPED_SOURCE_AND_SOFTWARE",
+  "checked_at_utc": "2026-10-11T12:36:35.683216+00:00",
+  "source_freeze_sha256": "36e0b7601a401552882cf61f77ccff0704f24f3987ca2296aa31875550ce487f",
+  "source_scope_fingerprint": "fa08aba05763822b3515abab3403bee791e8b0fb4da9b2181c7064412ff7303b",
+  "source_files_checked": 16,
+  "patch_sha256": "21693229a47b89631d7ce6158efe391ccd416087abcce1b64f4345dc784c50aa",
+  "verified_tests": [
+    {
+      "invocation": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w25_integration/desktop-software-suite/attempt004/INVOCATION.json",
+      "invocation_sha256": "8963d8f5efdaab98170e05dfd8b1b7f08eee8dde691e8dd74688e600fdcb3050",
+      "counts": {
+        "tests": 188,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "native_acceptance": false
+    },
+    {
+      "invocation": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w25_integration/w24-dispatch-guard-regression/attempt002/INVOCATION.json",
+      "invocation_sha256": "2ccf3b7c2cdecffd05791d1c638c87dc8dc3f86dffb111c8894b2f3fe418f236",
+      "counts": {
+        "tests": 259,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "native_acceptance": false
+    }
+  ],
+  "review_findings": [
+    "READY publication exceptions persist NON_READY and target dirty/active state within the same serial callback before release.",
+    "The write control now uses registered set_parameters schema, typed ModelRef/revision and durable OperationStore with explicit software authorizer/backend seams; it does not prove public native admission.",
+    "Non-W25 ControlDaemon/P0/G3 changes remain outside the W25 scoped patch.",
+    "Official local COMSOL 6.4 evidence restricts Java Shell to Windows; macOS Desktop active model/endpoint/dirty/save-copy remain UNOBSERVED."
+  ],
+  "not_accepted": [
+    "Native Desktop controls and W25 action/test acceptance",
+    "Windows/macOS provider/runtime permissions",
+    "W23/W24 scientific results",
+    "Full MASTER goal and unified independent Reviewer"
+  ]
+}

@@ -77,9 +77,11 @@ geometry.validate
 definition.component_manage
     ``model.component().create(<tag>[,<type>])`` with the documented type
     vocabulary Component|ExtraDim|MeshComponent, ``remove(<tag>)``,
-    ``getType()`` (Programming Reference ``model.component()``).  ``copy`` is
-    refused: the Programming Reference page does not document a component copy
-    call sequence and the worker allow-list has no ``copy``/``duplicate``.
+    ``getType()`` and ``copy(<newTag>,<tag>)``.  The COMSOL 6.4 API reference
+    declares ``ModelNodeList`` as a ``ModelEntityList`` and documents its
+    inherited copy signature; installed javap and the Worker allow-list confirm
+    that the component-list receiver can dispatch it. ``duplicate`` remains
+    unavailable because it is not in the Worker allow-list.
 definition.coordinate_manage
     ``coordSystem().create(<tag>,<gtag>,<type>)`` with the documented type
     vocabulary (Mapping, VectorBase, Rotated, Boundary, Scaling, Cylindrical,
@@ -105,8 +107,8 @@ definition.coupling_manage
 Known, reported gaps (refused before the first write, never guessed):
 ``axisymmetric`` geometry sequences (the documented setter
 ``GeomSequence.axisymmetric(boolean)`` is not in the worker allow-list),
-component ``copy``/``duplicate``, pair source/destination binding, coordinate
-system ``coord()``/``isLinear()``/``isOrthonormal()``/``masterSystem()``
+component ``duplicate`` (not in the worker allow-list), pair source/destination
+binding, coordinate system ``coord()``/``isLinear()``/``isOrthonormal()``/``masterSystem()``
 readback, geometry ``object()``/``objectNames()``/``problems()``/
 ``isBuilt()``/``current()``/``angularUnit()`` readback, per-feature properties
 of a type whose documented table was not retrieved offline (the engine's own
@@ -121,7 +123,7 @@ never edits Java): ``axisymmetric``, ``isAxisymmetric``, ``angularUnit``,
 ``objectNames``, ``coord``, ``isLinear``, ``isOrthonormal``, ``masterSystem``,
 ``source``, ``destination``, ``type``, ``pairName``, ``swap``,
 ``hasAutoSelection``, ``manualSelection``, ``searchMethod``, ``searchDist``,
-``copy``, ``duplicate``.
+``duplicate``.
 
 ``isAxisymmetric`` is now in the worker allow-list (the C07 axisymmetric
 measure needs the native flag), so the geometry readback probes it for real
@@ -475,6 +477,9 @@ COMPONENT_TYPE_IDS = frozenset({"Component", "ExtraDim", "MeshComponent"})
 #: Repaired 2026-09-20: ``current``, ``problems``, ``problem``, ``hasError`` and
 #: ``type`` were added to the worker allow-list for the W15/W16 surface and were
 #: removed here so this table keeps meaning "still absent from the worker".
+#: ``copy`` was verified for the component-list receiver from
+#: ``ModelNodeList extends ModelEntityList`` (COMSOL 6.4 API docs; installed
+#: javap) and removed from this set in W14 repair work.
 WORKER_UNAVAILABLE_METHODS = frozenset(
     {
         "axisymmetric", "angularUnit", "isBuilt",
@@ -482,7 +487,7 @@ WORKER_UNAVAILABLE_METHODS = frozenset(
         "warnings", "obj", "objectNames", "coord",
         "isLinear", "isOrthonormal", "masterSystem", "source", "destination",
         "pairName", "swap", "hasAutoSelection", "manualSelection",
-        "searchMethod", "searchDist", "copy", "duplicate",
+        "searchMethod", "searchDist", "duplicate",
     }
 )
 
@@ -2458,8 +2463,48 @@ def _split_definition_path(path: Any, collection: str, *, label: str = "path") -
 
 
 def definition_component_manage(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
-    args = operation_arguments(arguments, ("action", "tag", "definition"), ("action",))
+    args = operation_arguments(arguments, ("action", "tag", "source_tag", "definition"), ("action",))
     action = require_string(args["action"], "action", max_length=32)
+    if action != "copy" and "source_tag" in args:
+        raise ExecutionContractError("INVALID_REQUEST", "source_tag is accepted only for action 'copy'")
+    if action == "copy":
+        source_tag = validate_tag(args.get("source_tag"), "source_tag")
+        new_tag = validate_tag(args.get("tag"), "tag")
+        if source_tag == new_tag:
+            raise tag_conflict("source_tag and tag must identify different components")
+        container = _definition_list(worker, model_tag, "", "component")
+        before = _definition_tags(container)
+        if source_tag not in before:
+            raise node_not_found(f"component {source_tag!r} does not exist")
+        if new_tag in before:
+            raise tag_conflict(f"component {new_tag!r} already exists")
+        source_node = _call(container, "get", source_tag)
+        source_type = _node_kind(source_node)
+        _call(container, "copy", new_tag, source_tag)
+        after = _definition_tags(container)
+        if source_tag not in after or new_tag not in after:
+            raise ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN",
+                "component copy was dispatched but source/target tag readback is incomplete",
+            )
+        copied_node = _call(container, "get", new_tag)
+        copied_type = _node_kind(copied_node)
+        if source_type is not None and copied_type is not None and copied_type != source_type:
+            raise ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN",
+                "component copy target type readback differs from the source",
+            )
+        return {
+            "action": action,
+            "source_tag": source_tag,
+            "tag": new_tag,
+            "copy_method": "ModelEntityList.copy(newTag,tag)",
+            "source_type_id": source_type,
+            "type_readback": copied_type,
+            "copied": True,
+            "readback": {"tags": after, "source_preserved": source_tag in after,
+                         "target_present": new_tag in after},
+        }
     definition = require_mapping(args.get("definition") or {}, "definition")
     reject_unknown_keys(definition, ("type",), "definition")
     if action == "list":
@@ -2483,9 +2528,9 @@ def definition_component_manage(worker: Any, model_tag: str, arguments: Mapping[
             "components": rows,
             "readback": {"tags": [row["tag"] for row in rows]},
             "notes": [
-                "component(), create(<tag>), create(<tag>,<type>) with the documented type vocabulary and "
-                "remove(<tag>) are the verified surface; component copy/duplicate is refused because the "
-                "Programming Reference page does not document a call sequence for it",
+                "component(), create(<tag>), create(<tag>,<type>), remove(<tag>) and "
+                "copy(<newTag>,<tag>) are verified through the COMSOL 6.4 ModelEntityList surface; "
+                "duplicate remains unavailable in the Worker allow-list",
             ],
         }
     if action == "create":
@@ -2543,8 +2588,6 @@ def definition_component_manage(worker: Any, model_tag: str, arguments: Mapping[
         removed = _definition_remove(worker, model_tag, "", "component", tag, display="component")
         removed.pop("path", None)
         return {"action": action, **removed}
-    if action == "copy":
-        raise _refuse_unavailable("copy", "copying a model component")
     raise ExecutionContractError(
         "INVALID_REQUEST", "action must be one of list/create/inspect/remove/copy"
     )

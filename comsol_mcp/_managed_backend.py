@@ -252,6 +252,10 @@ class ManagedBackend:
         self.docs_index = OfflineDocsIndex(self.home / "docs_index.sqlite3", allowed_roots=help_roots)
         self.transactions = TransactionStore(self.home / "transactions.json")
         self.service, self.worker = service, worker
+        # Set by ControlDaemon after its project authority is initialized. This
+        # trusted callable lets one admitted recipe pre-authorize every inner
+        # step at the project boundary before its first model mutation.
+        self.project_authorizer = None
         self.session_worker_factory = session_worker_factory
         self.session_peer_observer = session_peer_observer
         self.registry = dict(registry) if registry is not None else collect_legacy_registry()
@@ -923,6 +927,15 @@ class ManagedBackend:
                     )
             if inner in {"model.adopt", "model.inspect"}:
                 nested_identity = {"project_id", "session_id", "model_ref", "expected_revision", "idempotency_key", "request_id"}
+                present = sorted(nested_identity.intersection(supplied_args))
+                if present:
+                    raise ExecutionContractError(
+                        "INVALID_REQUEST",
+                        f"{inner} identity belongs in the outer execution envelope: {', '.join(present)}",
+                    )
+            if inner in {"model.dependencies", "model.package", "model.rebuild_target"}:
+                nested_identity = {"project_id", "session_id", "model_ref", "expected_revision",
+                                   "idempotency_key", "request_id"}
                 present = sorted(nested_identity.intersection(supplied_args))
                 if present:
                     raise ExecutionContractError(
@@ -2426,6 +2439,35 @@ class ManagedBackend:
         function = DISPATCH.get(operation)
         if function is None:
             raise ExecutionContractError("UNSUPPORTED_OPERATION", f"G3 operation is not executable: {operation}")
+        delivery_action = operation in {"model.dependencies", "model.package", "model.rebuild_target"}
+        runtime_identity = None
+        if delivery_action:
+            # These production routes are always bound to the actual outer
+            # project/session/ModelRef and an explicit observed model revision.
+            missing = [name for name in ("project_id", "session_id", "model_ref", "request_id", "expected_revision")
+                       if execution.get(name) is None]
+            if missing:
+                raise ExecutionContractError("MODEL_IDENTITY_MISMATCH",
+                                             "model delivery requires outer managed identity: " + ", ".join(missing),
+                                             stage="validation")
+            if ref is None or not isinstance(execution.get("project_id"), str) or not execution["project_id"]:
+                raise ExecutionContractError("PROJECT_IDENTITY_REQUIRED", "model delivery requires a bound project ModelRef",
+                                             stage="validation")
+            revision = execution.get("expected_revision")
+            if isinstance(revision, bool) or not isinstance(revision, int) or revision < 0:
+                raise ExecutionContractError("REVISION_CONFLICT", "model delivery requires a non-negative expected_revision",
+                                             stage="validation")
+            if operation in {"model.package", "model.rebuild_target"} and not (
+                    isinstance(execution.get("idempotency_key"), str) and execution.get("idempotency_key")):
+                raise ExecutionContractError("INVALID_REQUEST", f"{operation} requires outer idempotency_key",
+                                             stage="validation")
+            if operation == "model.rebuild_target":
+                target_runtime_id = body.get("target_runtime_id")
+                if not isinstance(target_runtime_id, str) or not target_runtime_id:
+                    raise ExecutionContractError("INVALID_REQUEST", "target_runtime_id must be a nonempty exact runtime id",
+                                                 stage="validation")
+                from ._runtime_control import _validate_bound_runtime
+                runtime_identity = _validate_bound_runtime(self.worker, self, target_runtime_id)
         native_ticket_context = self._stage_native_context.get(None)
         catalog_effect = str(EFFECTS.get(operation, "")).upper()
         private_xmesh_ticket = False
@@ -2454,7 +2496,14 @@ class ManagedBackend:
             raise ExecutionContractError("PERMISSION_DENIED", f"unclassified G3 effect for operation {operation}")
         isolation = (
             self._require_g2_isolation()
-            if (operation in REQUIRES_ISOLATION and effect in {"evaluate", "project_write", "compute", "state_write", "trusted_code"})
+            if ((operation in REQUIRES_ISOLATION
+                 and effect in {"evaluate", "project_write", "compute", "state_write", "trusted_code"})
+                # include_solution=false temporarily changes the bound Model's
+                # documented excludeComputedDataInMph option and verifies its
+                # restoration around saveCopy. Keep every package call inside
+                # the owned-server isolation gate because the precheck cannot
+                # prove whether the getter already matches before dispatch.
+                or operation == "model.package")
             else None
         )
         alias = ("w21_initial_variables_xmesh" if private_xmesh_ticket
@@ -2508,6 +2557,91 @@ class ManagedBackend:
             def invoke_domain():
                 domain_body = dict(body)
                 checkpoint_info = None
+                if delivery_action:
+                    from ._artifact_store import local_artifact_host_identity, local_engine_host_identity
+                    project_id = execution.get("project_id")
+                    managed_context = {
+                        "project_root": str(self.project_root),
+                        "project_id": project_id,
+                        "operation_id": str(operation_id),
+                        "request_id": str(execution.get("request_id")),
+                        "idempotency_key": execution.get("idempotency_key"),
+                        "model_ref": ref.as_dict(),
+                        "source_revision": expected_rev,
+                        "host_identity": local_artifact_host_identity(),
+                        "engine_host_identity": local_engine_host_identity(self.endpoint_key),
+                        "operation_store": self.store,
+                        "_model_ref_object": ref,
+                        "execution_service": self.service,
+                        "_execution_service": self.service,
+                        "backend": self,
+                        "project_authorizer": self.project_authorizer,
+                    }
+                    if runtime_identity is not None:
+                        managed_context["runtime_identity"] = runtime_identity
+                        managed_context["target_runtime_id"] = body.get("target_runtime_id")
+                    # Always replace a private field; callers never supply or
+                    # inherit capabilities from an earlier request.
+                    domain_body["_managed_context"] = managed_context
+                if operation in {"parameter.import", "parameter.export"}:
+                    from ._artifact_store import (
+                        local_artifact_host_identity,
+                        local_engine_host_identity,
+                        resolve_registered_artifact,
+                    )
+                    project_id = execution.get("project_id")
+                    if not isinstance(project_id, str) or not project_id:
+                        raise ExecutionContractError(
+                            "PROJECT_IDENTITY_MISMATCH",
+                            "parameter I/O requires an outer managed project identity",
+                            stage="pre_dispatch",
+                        )
+                    try:
+                        parameter_context = {
+                            "project_root": str(self.project_root),
+                            "project_id": project_id,
+                            "operation_id": str(operation_id),
+                            "request_id": str(execution.get("request_id") or operation_id),
+                            "model_ref": ref.as_dict(),
+                            "source_revision": expected_rev,
+                            "host_identity": local_artifact_host_identity(),
+                            "engine_host_identity": local_engine_host_identity(self.endpoint_key),
+                            "operation_store": self.store,
+                            "job_id": str(operation_id),
+                            "_model_ref_object": ref,
+                            "_execution_service": self.service,
+                        }
+                    except ExecutionContractError as exc:
+                        raise ExecutionContractError(
+                            exc.code, str(exc), stage="validation", details=exc.details,
+                        ) from exc
+                    domain_body["_managed_context"] = parameter_context
+                    if operation == "parameter.import":
+                        source_record = self.store.get_metadata("artifacts", body.get("artifact_id"))
+                        if (isinstance(source_record, Mapping)
+                                and (source_record.get("schema_version") != 2
+                                     or source_record.get("role") not in {"parameter_source", "parameter_table"})):
+                            raise ExecutionContractError(
+                                "ARTIFACT_ROLE_MISMATCH",
+                                "parameter.import requires a schema-v2 parameter_source or parameter_table registration",
+                                stage="validation",
+                            )
+                        try:
+                            resolved_source = resolve_registered_artifact(
+                                self.project_root,
+                                self.store,
+                                body.get("artifact_id"),
+                                project_id=project_id,
+                                current_host_identity=parameter_context["host_identity"],
+                                current_engine_host_identity=parameter_context["engine_host_identity"],
+                                current_server_instance_id=ref.server_instance_id,
+                                max_size_bytes=8 * 1024 * 1024,
+                            )
+                        except ExecutionContractError as exc:
+                            raise ExecutionContractError(
+                                exc.code, str(exc), stage="validation", details=exc.details,
+                            ) from exc
+                        domain_body["_registered_artifact"] = resolved_source
                 if resume_preflight is not None:
                     checkpoint_info = self._commit_study_resume_snapshot(
                         ref, domain_body, operation_id, resume_preflight,
@@ -2608,11 +2742,14 @@ class ManagedBackend:
                     state = self.service.ledger._state_for(ref)
                     if state.dirty or state.external_event_counter != state.observed_external_event_counter:
                         raise ExecutionContractError("REVISION_CONFLICT", "model has external changes or is dirty; reconcile before evaluating")
-                    expected_rev = current_rev
+                expected_rev = current_rev
         else:
             if supplied_rev is not None:
                 raise ExecutionContractError("INVALID_REQUEST", "unbound operation cannot carry expected_revision")
             expected_rev = None
+        if delivery_action and (expected_rev is None or expected_rev != current_rev):
+            raise ExecutionContractError("REVISION_CONFLICT", "model delivery expected_revision must exactly match the bound model",
+                                         stage="validation")
         result = self.service.execute_legacy(alias, callback, body, model_ref=ref,
                 expected_revision=expected_rev,
                 request_id=execution.get("request_id"), session_id=session, effect=effect)
@@ -2625,6 +2762,11 @@ class ManagedBackend:
                     record["sample_revision"] = record["revision"]
                     record["revision"] = final_revision
                     self.store.persist_artifact(record["observation_id"], record)
+        if delivery_action and ref is not None:
+            data = result.get("data") if isinstance(result, Mapping) else None
+            if isinstance(data, dict):
+                data.setdefault("source_revision", expected_rev)
+                data["final_revision"] = self.service.ledger._state_for(ref).revision
         if isolation is not None:
             result.setdefault("data", {})["isolation_proof"] = isolation
         return result

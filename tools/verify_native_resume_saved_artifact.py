@@ -12,6 +12,7 @@ import hashlib
 import json
 import math
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -48,13 +49,12 @@ from tools.run_native_resume_smoke import (  # noqa: E402
 
 RUN08_EVIDENCE = REPO / "docs/full_project_execution/evidence/luna_native_resume_smoke/run_20260926T070024Z_08"
 RUN08_RECEIPT = RUN08_EVIDENCE / "solved_child_immediate_save.json"
-PROJECT_ID = "native-resume-saved-artifact-supplement"
 TERMINAL = {"SUCCEEDED", "FAILED", "EXPIRED", "LOST", "CANCELLED"}
 SOLVER_EXECUTION_METHODS = {"run", "runAll", "runFromTo", "runNoGen", "runFromToNoGen"}
 
 
-def write_resume_progress(supplement: dict[str, Any], active: bool) -> None:
-    path = REPO / "docs/full_project_execution/state/RESUME.json"
+def write_resume_progress(supplement: dict[str, Any], active: bool, *, path: Path | None = None) -> None:
+    path = path or REPO / "docs/full_project_execution/state/RESUME.json"
     state = json.loads(path.read_text(encoding="utf-8"))
     state["updated_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     state["native_resume_saved_artifact_supplement"] = supplement
@@ -225,22 +225,129 @@ def _execution_revision(sample: dict[str, Any], daemon: Any, model_ref: dict[str
     return public_revision, ledger_revision
 
 
-def _connect_daemon(server: NativeLoopbackServer, home: Path) -> tuple[Any, dict[str, Any]]:
+def _connect_daemon(server: NativeLoopbackServer, home: Path, *,
+                    phase_state: dict[str, Any]) -> tuple[Any, dict[str, Any], str]:
     from comsol_mcp._control_daemon import ControlDaemon
 
     daemon = ControlDaemon(home, worker=server.worker, project_root=server.project)
-    connection = _dispatch(
-        daemon,
-        "server_connect",
-        {"host": "127.0.0.1", "port": server.port},
-        project_id=PROJECT_ID,
-        idempotency_key=f"supplement-connect-{uuid4()}",
+    try:
+        created = daemon.dispatch({
+            "operation": "project.create",
+            "arguments": {"label": "Saved MPH readback", "workspace": f"saved-readback-{uuid4().hex}",
+                          "policy": {"permissions": ["inspect", "project_write"]}},
+            "execution": {"idempotency_key": f"supplement-project-{uuid4()}",
+                          "rpc_timeout_s": 30.0, "execution_timeout_s": None, "queue_timeout_s": 60.0},
+        })
+        require_success(created, "supplement project.create")
+        project = created.get("data", {}).get("project", {})
+        project_id = project.get("project_id")
+        if not isinstance(project_id, str) or not project_id:
+            raise AssertionError("supplement project.create omitted project_id")
+        phase_state["registered_project"] = project
+        connection = _dispatch(
+            daemon, "server_connect", {"host": "127.0.0.1", "port": server.port},
+            project_id=project_id, idempotency_key=f"supplement-connect-{uuid4()}",
+        )
+        require_success(connection, "supplement managed server_connect")
+        endpoint = connection.get("data", {}).get("endpoint")
+        if endpoint != f"127.0.0.1:{server.port}":
+            raise AssertionError(f"managed service connected to unexpected endpoint {endpoint!r}")
+        return daemon, connection, project_id
+    except BaseException:
+        # The caller has not received daemon yet. Capture its real durable
+        # terminal state here before closing, including connect failures.
+        try:
+            phase_state["nonterminal_jobs"] = [row for row in _db_job_statuses(daemon) if row["status"] not in TERMINAL]
+            phase_state["operation_rows"] = _db_operation_rows(daemon)
+        except Exception as exc:
+            phase_state["nonterminal_jobs"] = [{"status": "UNKNOWN", "error": str(exc)}]
+        try:
+            daemon.close()
+        except Exception as exc:
+            phase_state["daemon_close_error"] = f"{type(exc).__name__}: {exc}"
+        raise
+
+
+def _stage_project_readback_input(server: NativeLoopbackServer, project: Mapping[str, Any],
+                                  source: Path) -> tuple[Path, dict[str, Any]]:
+    """Copy the preserved input into the exact workspace registered to this project."""
+    raw_workspace = project.get("workspace")
+    if not isinstance(raw_workspace, str) or not raw_workspace:
+        raise RuntimeError("project.create response omitted its registered workspace")
+    project_root = server.project.resolve(strict=True)
+    workspace = Path(raw_workspace).resolve(strict=True)
+    try:
+        relative = workspace.relative_to(project_root)
+    except ValueError as exc:
+        raise RuntimeError("project.create workspace is outside the private project root") from exc
+    if not relative.parts or not workspace.is_dir():
+        raise RuntimeError("project.create workspace is not a child directory")
+
+    source_before = sha256(source)
+    source_size = source.stat().st_size
+    staged_dir = workspace / "inputs"
+    staged_dir.mkdir(exist_ok=False)
+    staged = staged_dir / "saved_resume_input.mph"
+    shutil.copyfile(source, staged)
+    staged_sha = sha256(staged)
+    source_after = sha256(source)
+    if source_before != source_after or staged_sha != source_before:
+        raise RuntimeError("project input staging changed or mismatched the preserved saved MPH")
+    if staged.stat().st_size != source_size:
+        raise RuntimeError("staged project input size differs from the preserved saved MPH")
+    return staged, {
+        "status": "PASS_EXACT_BYTES_STAGED_IN_REGISTERED_PROJECT_WORKSPACE",
+        "source_path": str(source),
+        "source_sha256_before": source_before,
+        "source_sha256_after": source_after,
+        "source_size_bytes": source_size,
+        "staged_path": str(staged),
+        "staged_sha256": staged_sha,
+        "staged_size_bytes": staged.stat().st_size,
+        "project_id": project.get("project_id"),
+        "registered_workspace": str(workspace),
+        "project_root": str(project_root),
+        "staging_is_input_preparation_not_engine_write": True,
+    }
+
+
+def _load_project_bound_model(daemon: Any, artifact: Path, project_id: str) -> dict[str, Any]:
+    """Use the production managed model_load route and retain its authoritative identity."""
+    idempotency_key = f"native-readback-model-load-{uuid4()}"
+    request_id = f"native-readback-model-load-{uuid4()}"
+    response = _dispatch(
+        daemon, "model_load", {"path": str(artifact)}, project_id=project_id,
+        idempotency_key=idempotency_key, request_id=request_id, rpc_timeout_s=120.0,
     )
-    require_success(connection, "supplement managed server_connect")
-    endpoint = connection.get("data", {}).get("endpoint")
-    if endpoint != f"127.0.0.1:{server.port}":
-        raise AssertionError(f"managed service connected to unexpected endpoint {endpoint!r}")
-    return daemon, connection
+    require_success(response, "managed project-bound model_load")
+    execution = response.get("execution")
+    data = response.get("data")
+    if not isinstance(execution, Mapping) or not isinstance(data, Mapping):
+        raise RuntimeError("managed model_load response omitted data or execution identity")
+    model_ref = execution.get("model_ref")
+    revision = execution.get("revision")
+    if (not isinstance(model_ref, Mapping) or isinstance(revision, bool)
+            or not isinstance(revision, int) or revision < 0):
+        raise RuntimeError("managed model_load response omitted ModelRef/revision")
+    model_tag = str(data.get("model_tag") or model_ref.get("model_tag") or "")
+    if not model_tag or (model_ref.get("model_tag") and model_ref.get("model_tag") != model_tag):
+        raise RuntimeError("managed model_load response omitted or disagreed on the actual model tag")
+    binding = daemon.backend.model_project_binding(model_ref)
+    if (not isinstance(binding, Mapping) or binding.get("attribution") != "PROJECT_BOUND"
+            or binding.get("project_id") != project_id):
+        raise RuntimeError("managed model_load did not persist the authoritative project binding")
+    return {
+        "status": "PASS_MANAGED_MODEL_LOAD_PROJECT_BOUND",
+        "route": "ControlDaemon.dispatch:model_load",
+        "project_id": project_id,
+        "idempotency_key": idempotency_key,
+        "request_id": request_id,
+        "model_ref": dict(model_ref),
+        "revision": revision,
+        "model_tag": model_tag,
+        "binding": dict(binding),
+        "response": response,
+    }
 
 
 def _reopen_and_sample(server: NativeLoopbackServer, *, worker: Any, worker_runtime: dict[str, Any],
@@ -254,14 +361,17 @@ def _reopen_and_sample(server: NativeLoopbackServer, *, worker: Any, worker_runt
     phase_states.append(phase_state)
     daemon = None
     try:
-        daemon, connection = _connect_daemon(server, server.work / f"control-{phase}")
-        loaded_tag = f"supp{phase[:1]}_{uuid4().hex[:12]}"
-        loaded = worker.client().load(str(artifact), tag=loaded_tag)
-        loaded_tag = str(loaded.java.tag())
-        binding = daemon.service.bind_model(loaded_tag, ownership="mcp_owned")
-        daemon.backend.persist()
-        model_ref = binding["execution"]["model_ref"]
-        revision = int(binding["execution"]["revision"])
+        daemon, connection, project_id = _connect_daemon(server, server.work / f"control-{phase}", phase_state=phase_state)
+        registered_project = phase_state.get("registered_project")
+        if not isinstance(registered_project, Mapping):
+            raise RuntimeError("managed project.create receipt is missing before model input preparation")
+        staged_artifact, staged_input = _stage_project_readback_input(server, registered_project, artifact)
+        phase_state["staged_input"] = staged_input
+        model_load = _load_project_bound_model(daemon, staged_artifact, project_id)
+        phase_state["model_load"] = model_load
+        loaded_tag = model_load["model_tag"]
+        model_ref = model_load["model_ref"]
+        revision = model_load["revision"]
         readback = daemon.backend._resume_model_readback(worker.client().model(loaded_tag))
         state = readback.get("state", {})
         datasets = sorted(str(item) for item in state.get("datasets", []))
@@ -282,7 +392,7 @@ def _reopen_and_sample(server: NativeLoopbackServer, *, worker: Any, worker_runt
         append_event(event_path, "zero_solver_guard_armed", phase=phase, **protected)
         dataset = datasets[0]
         points = [[x, y] for x in POINT_AXIS for y in POINT_AXIS]
-        real = _sample(daemon, model_ref, revision, dataset, points, "real", PROJECT_ID, f"{phase}-real")
+        real = _sample(daemon, model_ref, revision, dataset, points, "real", project_id, f"{phase}-real")
         real_revision, real_ledger_revision = _execution_revision(real, daemon, model_ref)
         phase_state["sample_revisions"].append({"sample": "real", "expected_revision": revision,
                                                  "public_revision": real_revision,
@@ -290,7 +400,7 @@ def _reopen_and_sample(server: NativeLoopbackServer, *, worker: Any, worker_runt
         readback_after_real = daemon.backend._resume_model_readback(worker.client().model(loaded_tag))
         if readback_after_real.get("signature") != readback.get("signature"):
             raise AssertionError(f"{phase} model structure/parameter/solution readback changed after real sampling")
-        imaginary = _sample(daemon, model_ref, real_revision, dataset, points, "imag", PROJECT_ID, f"{phase}-imag")
+        imaginary = _sample(daemon, model_ref, real_revision, dataset, points, "imag", project_id, f"{phase}-imag")
         imaginary_revision, imaginary_ledger_revision = _execution_revision(imaginary, daemon, model_ref)
         phase_state["sample_revisions"].append({"sample": "imaginary", "expected_revision": real_revision,
                                                   "public_revision": imaginary_revision,
@@ -340,10 +450,12 @@ def _reopen_and_sample(server: NativeLoopbackServer, *, worker: Any, worker_runt
         phase_state["operation_rows"] = operations
         unexpected_operations = [row for row in operations if not (
             row["operation"] == "server_connect"
+            or row["operation"] == "project.create"
+            or row["operation"] == "model_load"
             or (row["operation"] == "operation_call" and row["inner_operation"] == "result.at_points")
         )]
         if unexpected_operations:
-            raise AssertionError(f"{phase} dispatched an operation outside server_connect/result.at_points: {unexpected_operations!r}")
+            raise AssertionError(f"{phase} dispatched an operation outside project.create/server_connect/model_load/result.at_points: {unexpected_operations!r}")
         if any(row.get("protected_node") is not None for row in guard.method_run_events):
             raise AssertionError(f"{phase} attempted study/solver execution on a protected Java handle")
         guard.remove()
@@ -353,6 +465,9 @@ def _reopen_and_sample(server: NativeLoopbackServer, *, worker: Any, worker_runt
             "saved_artifact_path": str(artifact),
             "worker_runtime": worker_runtime,
             "managed_connection": connection,
+            "registered_project": phase_state.get("registered_project"),
+            "staged_input": staged_input,
+            "managed_model_load": model_load,
             "loaded_model_tag": loaded_tag,
             "model_ref": model_ref,
             "revision": revision,
@@ -392,6 +507,27 @@ def _reopen_and_sample(server: NativeLoopbackServer, *, worker: Any, worker_runt
         guard.remove()
 
 
+def _verify_restored_input(artifact: Path, receipt_path: Path, receipt: Mapping[str, Any],
+                           expected_hash: str, manifest_path: Path | None) -> dict[str, Any] | None:
+    """Bind a moved saved artifact to its unchanged original save receipt."""
+    if expected_hash != receipt.get("saved_sha256"):
+        raise RuntimeError("saved model hash differs from the original immediate-save receipt")
+    if artifact == Path(receipt["saved_path"]).resolve():
+        return None
+    if manifest_path is None:
+        raise RuntimeError("a moved saved model requires an explicit restoration manifest")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if (manifest.get("source_receipt_sha256") != sha256(receipt_path)
+            or manifest.get("source_run_id") != receipt.get("run_id")
+            or manifest.get("source_saved_path") != receipt.get("saved_path")
+            or manifest.get("restored_path") != str(artifact)
+            or manifest.get("sha256") != expected_hash
+            or manifest.get("size_bytes") != receipt.get("saved_size_bytes")
+            or artifact.stat().st_size != receipt.get("saved_size_bytes")):
+        raise RuntimeError("restoration manifest does not bind the original save receipt and restored model")
+    return manifest
+
+
 def run(args: argparse.Namespace) -> dict[str, Any]:
     started = time.monotonic()
     evidence = Path(args.evidence).resolve()
@@ -400,11 +536,15 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     evidence.mkdir(parents=True, exist_ok=False)
     work.mkdir(parents=True, exist_ok=False)
     events = evidence / "events.jsonl"
-    receipt = json.loads(RUN08_RECEIPT.read_text(encoding="utf-8"))
+    receipt_path = Path(getattr(args, "source_receipt", RUN08_RECEIPT)).resolve()
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
     expected_hash = args.expected_sha256 or receipt["saved_sha256"]
-    expected_path = Path(receipt["saved_path"]).resolve()
-    if artifact != expected_path or str(expected_hash) != receipt.get("saved_sha256"):
-        raise RuntimeError("read-only supplement input path/hash must match the immutable run08 immediate-save receipt")
+    restoration = _verify_restored_input(artifact, receipt_path, receipt, str(expected_hash),
+                                         getattr(args, "restoration_manifest", None))
+    resume_path = Path(getattr(args, "resume_state", REPO / "docs/full_project_execution/state/RESUME.json"))
+
+    def write_progress(value: dict[str, Any], active: bool) -> None:
+        write_resume_progress(value, active, path=resume_path)
     before_hash = sha256(artifact)
     if before_hash != expected_hash:
         raise RuntimeError(f"saved artifact integrity mismatch: {before_hash} != {expected_hash}")
@@ -445,11 +585,13 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 "result_adapter": REPO / "comsol_mcp/_g3_results.py",
             }.items()
         },
-        "inputs": {"artifact_path": str(artifact), "sha256_before": before_hash, "size_bytes": artifact.stat().st_size},
+        "inputs": {"artifact_path": str(artifact), "sha256_before": before_hash, "size_bytes": artifact.stat().st_size,
+                   "source_receipt": str(receipt_path), "source_receipt_sha256": sha256(receipt_path),
+                   "restoration": restoration},
         "original_wall_clock_budget_applies": False,
         "native_solver_calls_allowed": 0,
     })
-    write_resume_progress(progress, active=True)
+    write_progress(progress, active=True)
     server: NativeLoopbackServer | None = None
     daemon: Any = None
     safe_to_stop = False
@@ -461,13 +603,13 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         listener = server.start_and_verify_listener()
         progress.update({"status": "PRIVATE_LOOPBACK_SERVER_VERIFIED", "server_pid": listener["pid"],
                          "port": listener["port"], "listener_verified": True})
-        write_resume_progress(progress, active=True)
+        write_progress(progress, active=True)
         first_runtime = server.start_worker()
         if not first_runtime.get("engine_version_identity", {}).get("matches_frozen_target"):
             raise RuntimeError(f"first Worker runtime does not match frozen COMSOL 6.4.0.293: {first_runtime.get('engine_version_identity')!r}")
         progress.update({"status": "WORKER_A_CONNECTED", "worker_a_pid": first_runtime["worker_runtime"].get("pid"),
                          "engine_version_identity": first_runtime.get("engine_version_identity")})
-        write_resume_progress(progress, active=True)
+        write_progress(progress, active=True)
         os.environ["COMSOL_ROOT"] = str(server.shadow_root)
         os.environ["COMSOL_JAVA_HOME"] = str(JAVA11)
         os.environ["COMSOL_PREFS_DIR"] = str(server.prefs)
@@ -482,7 +624,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         progress.update({"status": "WORKER_A_SAVED_MPH_READBACK_COMPLETE",
                          "worker_a_readback_signature": first["readback"]["signature"],
                          "solution_dataset_identity": first["solution_dataset_identity"]})
-        write_resume_progress(progress, active=True)
+        write_progress(progress, active=True)
 
         old_pid = first_runtime["worker_runtime"].get("pid")
         server.close_worker()
@@ -508,7 +650,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             raise RuntimeError(f"second Worker runtime does not match frozen COMSOL 6.4.0.293: {second_identity!r}")
         progress.update({"status": "WORKER_B_CONNECTED", "worker_b_pid": second_runtime.get("pid"),
                          "engine_version_identity": second_identity})
-        write_resume_progress(progress, active=True)
+        write_progress(progress, active=True)
         second = _reopen_and_sample(server, worker=second_worker,
                                     worker_runtime={**second_runtime, "engine_version": second_version,
                                                    "engine_version_identity": second_identity,
@@ -522,7 +664,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         workers.append({"phase": "worker_b", "runtime": second_runtime})
         progress.update({"status": "WORKER_B_SAVED_MPH_READBACK_COMPLETE",
                          "worker_b_readback_signature": second["readback"]["signature"]})
-        write_resume_progress(progress, active=True)
+        write_progress(progress, active=True)
         if second["readback"]["signature"] != first["readback"]["signature"]:
             raise AssertionError("distinct Worker reopen changed the saved model identity signature")
         if second["solution_dataset_identity"] != first["solution_dataset_identity"]:
@@ -561,7 +703,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "worker_b": second,
             "artifact": {"path": str(artifact), "sha256_before": before_hash,
                          "sha256_after": final_hash, "size_bytes": artifact.stat().st_size,
-                         "source_receipt": str(RUN08_RECEIPT)},
+                         "source_receipt": str(receipt_path), "source_receipt_sha256": sha256(receipt_path),
+                         "restoration": restoration},
             "cross_worker_max_abs_real_delta": max(real_deltas),
             "cross_worker_max_abs_imaginary_delta": max(imag_deltas),
             "cross_worker_tolerance": REOPEN_TOL,
@@ -573,7 +716,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                          "worker_pids": [row["runtime"].get("pid") for row in workers],
                          "artifact_sha256_after": final_hash, "solve_calls_observed": 0,
                          "summary": str(evidence / "supplement_summary.json")})
-        write_resume_progress(progress, active=False)
+        write_progress(progress, active=False)
         return result
     except BaseException as exc:
         safe_to_stop = bool(phase_states) and all(
@@ -604,7 +747,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         progress.update({"status": "FAIL_OR_INCOMPLETE_READ_ONLY_SUPPLEMENT",
                          "last_error": {"type": type(exc).__name__, "message": str(exc)},
                          "elapsed_s": round(time.monotonic() - started, 3)})
-        write_resume_progress(progress, active=not safe_to_stop)
+        write_progress(progress, active=not safe_to_stop)
         raise
     finally:
         if server is not None and safe_to_stop:
@@ -633,13 +776,19 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             })
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--saved-model", default=str(json.loads(RUN08_RECEIPT.read_text(encoding="utf-8"))["saved_path"]))
+    parser.add_argument("--source-receipt", type=Path, default=RUN08_RECEIPT)
+    parser.add_argument("--saved-model")
+    parser.add_argument("--restoration-manifest", type=Path)
+    parser.add_argument("--resume-state", type=Path, default=REPO / "docs/full_project_execution/state/RESUME.json")
     parser.add_argument("--expected-sha256")
     parser.add_argument("--work", required=True)
     parser.add_argument("--evidence", required=True)
-    return parser.parse_args()
+    args = parser.parse_args(argv)
+    if args.saved_model is None:
+        args.saved_model = str(json.loads(args.source_receipt.read_text(encoding="utf-8"))["saved_path"])
+    return args
 
 
 if __name__ == "__main__":

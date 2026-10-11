@@ -27,6 +27,7 @@ import pytest
 
 from comsol_mcp._execution_contract import ExecutionContractError
 from comsol_mcp import _g3_results as results
+from comsol_mcp import _g3_solver_ops as solver_ops
 from comsol_mcp._g3_ops import (
     DISPATCH,
     EFFECTS,
@@ -692,6 +693,18 @@ def test_dataset_solution_indices() -> None:
     assert data["study"] == "std1"
     assert data["inner_indices"] == [1, 2, 3]
     assert "p1" in data["parameters"]
+    # W26 consumes the exact per-pair SolutionInfo metadata.  Verify that the
+    # production producer keeps transient time names and units through its
+    # wire payload instead of relying on the legacy getPVals time vector.
+    assert data["parameters"]["by_pair"]["1:2"] == {
+        "names": ["p1", "p2", "t"], "values": [1.0, 2.0, 0.1],
+        "units": ["1", "1", "s"], "solnum": 2,
+    }
+    inspected = solver_ops.solver_solution_inspect(tree.worker, "Model", {
+        "solution": {"dataset": "dset1", "time": [{"value": 0.1, "unit": "s"}]},
+    })
+    assert inspected["selection_status"] == "MATCHED"
+    assert inspected["selected_pairs"] == [{"outer": 1, "inner": 2, "solnum": 2}]
 
     # The associated study is read through the engine's ``study()`` method; a
     # solution that only publishes that method must still yield its stored times.
@@ -705,6 +718,21 @@ def test_dataset_solution_indices() -> None:
     assert unbound_res["binding_complete"] is False
     assert unbound_res["solution"] is None
     assert any(error["code"] == "SOLUTION_NOT_FOUND" for error in unbound_res["read_errors"])
+
+
+def test_solution_inspect_does_not_infer_time_unit_from_unitted_solutioninfo_rows() -> None:
+    tree = FWiredTree()
+    tree.solution_info.getUnits = lambda pairs: (
+        tree.solution_info._guard("getUnits", (pairs,))
+        or [["1", "1", None] for _ in pairs]
+    )
+    inspected = solver_ops.solver_solution_inspect(tree.worker, "Model", {
+        "solution": {"dataset": "dset1", "time": [{"value": 0.1, "unit": "s"}]},
+    })
+    assert inspected["selection_status"] == "UNVERIFIED"
+    assert inspected["selected_pairs"] == []
+    assert any("exact named, unit-bearing SolutionInfo value" in reason
+               for reason in inspected["selection_unresolved"])
 
 
 def test_solution_indices_never_invents_an_axis_when_the_engine_refuses_it() -> None:

@@ -38,6 +38,9 @@ Thumbs.db
 
 # G3 task-owned runtime state (private control homes and worker sandboxes).
 .g3-private/
+
+# Resumable local control databases are retained privately, outside public Git.
+docs/full_project_continuation_v2/evidence/**/private-control-store/
 mcp-home/
 
 # Result artifacts published at run time (the ledger pins them by path + digest).
@@ -151,3 +154,6 @@ evidence/g3_10_windows_w20/**/*.lock
 
 # macOS AppleDouble metadata on exFAT is not source or wheel content.
 ._*
+
+# Private exact source snapshots retained for local review and resume.
+/local-preservation/

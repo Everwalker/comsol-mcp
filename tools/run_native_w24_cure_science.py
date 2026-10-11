@@ -5143,20 +5143,20 @@ def verify_native_metrics_receipt(receipt: Any, evidence: Path, *,
                 raise CampaignError(f"native numerical feature {key} lacks its axisymmetric physical measure flag")
         return row
 
-    require_feature("adhesive_cure_averages", feature_type="AvVolume", units=("1", "1", "1"),
+    require_feature("adhesive_cure_averages", feature_type="AvSurface", units=("1", "1", "1"),
                     dimension=2, axisymmetric="on", entities_count=1,
                     expressions=("alpha_iso", "alpha", "qpost"), shape=(3, len(times)))
     for label in ("alumina", "gold", "adhesive", "fiber"):
-        require_feature(f"energy_{label}", feature_type="IntVolume", units=("J",),
+        require_feature(f"energy_{label}", feature_type="IntSurface", units=("J",),
                         dimension=2, axisymmetric="on", entities_count=1, shape=(1, len(times)))
-    require_feature("reaction_power", feature_type="IntVolume", units=("W",),
+    require_feature("reaction_power", feature_type="IntSurface", units=("W",),
                     dimension=2, axisymmetric="on", entities_count=1,
                     expressions=("Qrxn",), shape=(1, len(times)))
-    require_feature("outward_power", feature_type="IntSurface", units=("W",),
+    require_feature("outward_power", feature_type="IntLine", units=("W",),
                     dimension=1, axisymmetric="on", entities_count=8,
                     expressions=("hconv*(T-Tenv)",), shape=(1, len(times)))
     expected_stress_expressions = tuple(stress_components[role]["expression"] for role in STRESS_ROLES)
-    require_feature("adhesive_mean_stress", feature_type="AvVolume",
+    require_feature("adhesive_mean_stress", feature_type="AvSurface",
                     units=tuple("Pa" for _ in STRESS_ROLES), dimension=2, axisymmetric="on",
                     entities_count=1, expressions=expected_stress_expressions,
                     shape=(4, len(times)))
@@ -5286,16 +5286,20 @@ def verify_native_mechanics_receipt(receipt: Any, evidence: Path, *,
         return row
 
     expected_stress = [stress_components[role]["expression"] for role in STRESS_ROLES]
-    mean_row = require_feature("stress_mean", kind="AvVolume", units=("Pa",) * 4,
+    mean_row = require_feature("stress_mean", kind="AvSurface", units=("Pa",) * 4,
                                expressions=expected_stress, shape=(4, 1), dimension=2)
     if (mean_row.get("axisymmetric_measure_property") != "intvolume" or
             mean_row.get("axisymmetric_measure_value") != "on"):
         raise CampaignError("native mechanics volume stress mean lacks axisymmetric physical weighting")
-    require_feature("stress_abs_max", kind="MaxVolume", units=("Pa",) * 4,
+    stress_max_row = require_feature("stress_abs_max", kind="MaxSurface", units=("Pa",) * 4,
                     expressions=tuple(f"abs({expr})" for expr in expected_stress),
                     shape=(4, 1), dimension=2)
-    require_feature("displacement_abs_max", kind="MaxVolume", units=("m", "m"),
+    displacement_max_row = require_feature("displacement_abs_max", kind="MaxSurface", units=("m", "m"),
                     expressions=("abs(u)", "abs(w)"), shape=(2, 1), dimension=2)
+    for row in (stress_max_row, displacement_max_row):
+        if (row.get("axisymmetric_measure_property") is not None or
+                row.get("axisymmetric_measure_value") is not None):
+            raise CampaignError("native mechanics pointwise maxima must not claim physical integration weighting")
     interp = readbacks.get("displacement_probe")
     if (not isinstance(interp, Mapping) or interp.get("type") != "Interp" or
             interp.get("dataset") != dataset or interp.get("expression") != ["u", "w"] or

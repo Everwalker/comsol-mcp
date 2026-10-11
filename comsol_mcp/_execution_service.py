@@ -407,6 +407,14 @@ class ExecutionService:
         preserved = dict(preserved_detail) if isinstance(preserved_detail, Mapping) else {}
         for name, value in data.items():
             if name not in {"success", "data", "error"}:
+                # A domain adapter can know that work partially applied even
+                # when the shared ledger can only classify the final ticket as
+                # UNKNOWN. Preserve that stronger danger signal; the ledger's
+                # outcome boolean must not downgrade domain evidence.
+                if (name in {"partial_change", "execution_state_unknown"}
+                        and (preserved.get(name) is True or value is True)):
+                    preserved[name] = True
+                    continue
                 preserved[name] = value
         return {
             "success": result["outcome"] == "succeeded",

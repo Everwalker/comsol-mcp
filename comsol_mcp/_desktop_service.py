@@ -485,17 +485,31 @@ class DesktopCoordinator:
                                      execution={**self._execution(record), "status": "FAILED"})
                 self.store.finish(record["operation_id"], status="FAILED", result=failed)
                 return failed
+        effects_started = False
+
+        def mark_effect() -> None:
+            nonlocal effects_started
+            self._mark_effect(record["operation_id"])
+            effects_started = True
+
         try:
-            result = self._execute_operation(operation, args, record, lambda: self._mark_effect(record["operation_id"]))
+            result = self._execute_operation(operation, args, record, mark_effect)
             if result.get("success") is True:
                 status = "SUCCEEDED"
+            elif effects_started:
+                execution = result.get("execution")
+                error = result.get("error")
+                result = {**result,
+                          "execution": {**(execution if isinstance(execution, Mapping) else {}), "status": "UNKNOWN"},
+                          "error": {**(error if isinstance(error, Mapping) else {}), "safe_retry": False}}
+                status = "UNKNOWN"
             elif result.get("execution", {}).get("status") == "UNKNOWN":
                 status = "UNKNOWN"
             else:
                 status = "FAILED"
         except DesktopOperationError as exc:
-            status = "UNKNOWN" if exc.side_effect_started else "FAILED"
-            result = self._error(exc.code, str(exc), category=exc.category, safe_retry=exc.safe_retry,
+            status = "UNKNOWN" if effects_started or exc.side_effect_started else "FAILED"
+            result = self._error(exc.code, str(exc), category=exc.category, safe_retry=False if status == "UNKNOWN" else exc.safe_retry,
                                  execution={**self._execution(record), "status": status})
         except Exception as exc:
             status = "UNKNOWN"

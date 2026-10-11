@@ -38,6 +38,7 @@ from ._g2_registry import BY_ID
 #: infrastructure.
 _MODULES = (
     "_g3_w13",
+    "_g3_parameter_io",
     "_g3_w14",
     "_g3_w15",
     "_g3_w16",
@@ -48,9 +49,11 @@ _MODULES = (
     "_g3_w18",
     "_g3_w20_validation",
     "_g3_w21",
+    "_g3_solver_ops",
     "_w23_results",
     "_w23_basis_v2_results",
     "_g3_metrics",
+    "_g3_model_delivery",
 )
 
 #: Effects for operations the design catalogue does not (yet) describe.  Every

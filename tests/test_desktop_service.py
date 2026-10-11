@@ -765,7 +765,11 @@ def test_second_live_coordinator_does_not_reconcile_another_owners_running_claim
         harness.close()
 
 
-def test_native_factory_is_not_a_fixture_and_keeps_control_capability_unsupported():
+def test_native_factory_is_not_a_fixture_and_keeps_control_capability_unsupported(monkeypatch):
+    # Software fixture only: do not query actual observer Accessibility trust.
+    import sys
+    from types import SimpleNamespace
+    monkeypatch.setitem(sys.modules, "ApplicationServices", SimpleNamespace(AXIsProcessTrusted=lambda: False))
     adapter = create_native_metadata_adapter()
     assert not isinstance(adapter, FixtureDesktopAdapter)
     assert isinstance(adapter, MetadataOnlyDesktopAdapter)

@@ -605,6 +605,20 @@ def test_an_unrecognised_status_token_is_never_a_success():
     assert outcome.details["unrecognised_status_token"] == "SOMETHING_NEW"
 
 
+@pytest.mark.parametrize("token", ["CLEARED", "SAMPLED"])
+def test_solver_route_terminal_statuses_are_successful_outcomes(token):
+    outcome = classify("solver-route", {"status": token})
+    assert outcome.state == STATE_SUCCEEDED
+
+
+def test_solver_route_unknown_clear_readback_stays_unknown():
+    outcome = classify("solver.solution_clear", {
+        "status": "EXECUTION_STATE_UNKNOWN",
+        "execution_state_unknown": True,
+    })
+    assert outcome.state == STATE_UNKNOWN
+
+
 # ---------------------------------------------------------------------------
 # the job layer: terminal state, preserved evidence, no replay
 # ---------------------------------------------------------------------------

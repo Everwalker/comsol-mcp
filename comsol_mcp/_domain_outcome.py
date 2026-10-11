@@ -111,7 +111,7 @@ PARTIAL_STATUS_TOKENS = frozenset({"PARTIAL_FAILURE", "PARTIAL", "PARTIALLY_APPL
 #: ``status`` tokens that mean "the operation applied / answered".
 SUCCEEDED_STATUS_TOKENS = frozenset({
     "APPLIED", "OK", "COMPLETE", "VERIFIED", "OBSERVED", "PASS", "PASSED",
-    "SUCCEEDED", "READY", "AVAILABLE", "REFRESHED", "INCOMPLETE",
+    "SUCCEEDED", "READY", "AVAILABLE", "REFRESHED", "INCOMPLETE", "CLEARED", "SAMPLED",
 })
 
 #: Verification tokens as the transaction/mesh/physics validators publish them.

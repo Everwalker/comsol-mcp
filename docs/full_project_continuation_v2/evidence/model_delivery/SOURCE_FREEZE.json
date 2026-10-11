@@ -1,0 +1,49 @@
+{
+  "created_at": "2026-10-11T22:48:14.006089+08:00",
+  "format": "model-delivery-source-freeze/1",
+  "native_comsol_execution": "NOT_RUN",
+  "scope": [
+    "model.dependencies",
+    "model.package",
+    "model.rebuild_target",
+    "model-package artifact.verify",
+    "W14 component.copy guard and readback"
+  ],
+  "software_validation": {
+    "java_worker_loopback": {
+      "junit": "java-worker-loopback/junit.xml",
+      "result": "41 passed, 1 skipped",
+      "skip_reason": "Windows-only owner semantics test is skipped on macOS; see java-worker-loopback/SKIPPED_TESTS.json"
+    },
+    "pytest": "249 passed, 10 skipped, 20 subtests passed",
+    "suite": "affected-regressions/junit.xml"
+  },
+  "source_files": [
+    {
+      "path": "comsol_mcp/_g3_model_delivery.py",
+      "sha256": "7e219ee66e1c8eb9799083818575790d3225344109150643bce5bf91b5196713",
+      "size_bytes": 67896
+    },
+    {
+      "path": "comsol_mcp/_g2_artifact_verify.py",
+      "sha256": "ea050a723b67b06ff8ef3ad2b12d317669c3393ed2b8af545d3ba449c04676db",
+      "size_bytes": 101052
+    },
+    {
+      "path": "comsol_mcp/_g3_w14.py",
+      "sha256": "7e8ab82e40841357f16e9b30f8f75095d62ea282c95fb143e4f4fc1c309df5e7",
+      "size_bytes": 154170
+    },
+    {
+      "path": "tests/test_g3_model_delivery.py",
+      "sha256": "b5f9fa90e7a5b66345bec4f702bd78b707d305c97b95d47a21766cf2291a321b",
+      "size_bytes": 46541
+    },
+    {
+      "path": "tests/test_g3_w14.py",
+      "sha256": "f15176a18a541bc9204edc794a49052994592b209da775432a2059dcbb0d2eda",
+      "size_bytes": 136895
+    }
+  ],
+  "source_patch": "MODEL_DELIVERY_SOURCE.patch"
+}

@@ -9,6 +9,216 @@ from tools.run_native_resume_smoke import (
 from tools.verify_native_resume_saved_artifact import ZeroSolverCallGuard
 
 
+def test_saved_readback_requires_exact_restoration_provenance(tmp_path) -> None:
+    import hashlib
+    import json
+    import pytest
+    from tools.verify_native_resume_saved_artifact import _verify_restored_input
+
+    model = tmp_path / "restored.mph"
+    model.write_bytes(b"saved fixture")
+    digest = hashlib.sha256(model.read_bytes()).hexdigest()
+    receipt = {"run_id": "original", "saved_path": str(tmp_path / "former.mph"),
+               "saved_sha256": digest, "saved_size_bytes": model.stat().st_size}
+    original = tmp_path / "original.json"
+    original.write_text(json.dumps(receipt))
+    manifest = {"source_receipt_sha256": hashlib.sha256(original.read_bytes()).hexdigest(),
+                "source_run_id": "original", "source_saved_path": receipt["saved_path"],
+                "restored_path": str(model), "sha256": digest, "size_bytes": model.stat().st_size}
+    mapping = tmp_path / "mapping.json"
+    mapping.write_text(json.dumps(manifest))
+    assert _verify_restored_input(model, original, receipt, digest, mapping) == manifest
+    with pytest.raises(RuntimeError, match="explicit restoration manifest"):
+        _verify_restored_input(model, original, receipt, digest, None)
+    for field in manifest:
+        changed = {**manifest, field: "wrong"}
+        mapping.write_text(json.dumps(changed))
+        with pytest.raises(RuntimeError, match="does not bind"):
+            _verify_restored_input(model, original, receipt, digest, mapping)
+
+
+def test_saved_readback_explicit_cli_does_not_open_missing_legacy_receipt(tmp_path) -> None:
+    from tools.verify_native_resume_saved_artifact import parse_args
+
+    args = parse_args(["--source-receipt", str(tmp_path / "missing.json"),
+                       "--saved-model", str(tmp_path / "restored.mph"),
+                       "--work", str(tmp_path / "work"), "--evidence", str(tmp_path / "evidence")])
+    assert args.saved_model == str(tmp_path / "restored.mph")
+
+
+def test_saved_readback_stages_exact_input_inside_registered_project(tmp_path) -> None:
+    import hashlib
+    from types import SimpleNamespace
+    from tools.verify_native_resume_saved_artifact import _stage_project_readback_input
+
+    project_root = tmp_path / "private-project-root"
+    workspace = project_root / "saved-readback-project"
+    workspace.mkdir(parents=True)
+    source = tmp_path / "preserved.mph"
+    source.write_bytes(b"unchanged saved model bytes")
+    source_hash = hashlib.sha256(source.read_bytes()).hexdigest()
+
+    staged, receipt = _stage_project_readback_input(
+        SimpleNamespace(project=project_root),
+        {"project_id": "project-1", "workspace": str(workspace)},
+        source,
+    )
+
+    assert staged.read_bytes() == source.read_bytes()
+    assert staged.is_relative_to(workspace)
+    assert receipt["source_sha256_before"] == source_hash
+    assert receipt["source_sha256_after"] == source_hash
+    assert receipt["staged_sha256"] == source_hash
+    assert receipt["staging_is_input_preparation_not_engine_write"] is True
+
+
+def test_saved_readback_uses_managed_project_bound_model_load() -> None:
+    from pathlib import Path
+    from tools.verify_native_resume_saved_artifact import _load_project_bound_model
+
+    expected_ref = {"session_id": "session-1", "model_tag": "loaded_1", "model_id": "model-1"}
+
+    class Backend:
+        def model_project_binding(self, model_ref):
+            assert dict(model_ref) == expected_ref
+            return {"attribution": "PROJECT_BOUND", "project_id": "project-1"}
+
+        def bind_model(self, *args, **kwargs):
+            raise AssertionError("saved readback must not manually bind an unattributed model")
+
+    class Daemon:
+        backend = Backend()
+
+        def __init__(self):
+            self.requests = []
+
+        def dispatch(self, request):
+            self.requests.append(request)
+            return {"success": True,
+                    "data": {"model_tag": "loaded_1"},
+                    "execution": {"model_ref": expected_ref, "revision": 4}}
+
+    daemon = Daemon()
+    result = _load_project_bound_model(daemon, Path("/project/input.mph"), "project-1")
+
+    assert result["status"] == "PASS_MANAGED_MODEL_LOAD_PROJECT_BOUND"
+    assert result["route"] == "ControlDaemon.dispatch:model_load"
+    assert result["model_ref"] == expected_ref
+    assert result["revision"] == 4
+    assert result["binding"]["project_id"] == "project-1"
+    assert len(daemon.requests) == 1
+    request = daemon.requests[0]
+    assert request["operation"] == "model_load"
+    assert request["arguments"] == {"path": "/project/input.mph"}
+    assert request["execution"]["project_id"] == "project-1"
+    assert request["execution"]["idempotency_key"].startswith("native-readback-model-load-")
+    assert request["execution"]["request_id"].startswith("native-readback-model-load-")
+
+
+def test_saved_readback_project_create_uses_default_host_grants(tmp_path, monkeypatch) -> None:
+    from pathlib import Path
+    from comsol_mcp._control_daemon import ControlDaemon
+    from tools.verify_native_resume_saved_artifact import _connect_daemon
+
+    monkeypatch.delenv("COMSOL_MCP_HOST_CONTROL", raising=False)
+    monkeypatch.delenv("COMSOL_MCP_TRUSTED_CODE", raising=False)
+    project_root = tmp_path / "private-project-root"
+    project_root.mkdir()
+
+    class Server:
+        project = project_root
+        port = 51234
+        worker = object()
+
+    original_dispatch = ControlDaemon.dispatch
+    observed = {"project_create": [], "server_connect": []}
+
+    def dispatch_with_connected_server(daemon, request):
+        operation = request["operation"]
+        if operation == "server_connect":
+            observed["server_connect"].append(request)
+            return {
+                "success": True,
+                "data": {"endpoint": f"127.0.0.1:{Server.port}"},
+                "execution": {"project_id": request["execution"]["project_id"]},
+            }
+        response = original_dispatch(daemon, request)
+        if operation == "project.create":
+            observed["project_create"].append((request, response))
+        return response
+
+    monkeypatch.setattr(ControlDaemon, "dispatch", dispatch_with_connected_server)
+    phase_state = {}
+    daemon, connection, project_id = _connect_daemon(
+        Server(), tmp_path / "control", phase_state=phase_state,
+    )
+    try:
+        assert daemon.backend.host_permission_ceiling == {"inspect", "project_write", "compute"}
+        assert len(observed["project_create"]) == 1
+        request, response = observed["project_create"][0]
+        assert request["arguments"]["policy"]["permissions"] == ["inspect", "project_write"]
+        assert response["success"] is True
+        project = response["data"]["project"]
+        assert project["project_id"] == project_id
+        assert project["policy"]["permissions"] == ["inspect", "project_write"]
+        assert Path(project["workspace"]).is_relative_to(project_root)
+        job = daemon.store.job(response["execution"]["job_id"])
+        assert job["status"] == "SUCCEEDED"
+        assert job["metadata"]["engine_dispatched"] is False
+        assert len(observed["server_connect"]) == 1
+        assert observed["server_connect"][0]["execution"]["project_id"] == project_id
+        assert connection["data"]["endpoint"] == f"127.0.0.1:{Server.port}"
+        assert phase_state["registered_project"] == project
+    finally:
+        daemon.close()
+
+
+def test_saved_readback_project_create_rejects_ungranted_host_control(tmp_path, monkeypatch) -> None:
+    from comsol_mcp._control_daemon import ControlDaemon
+
+    monkeypatch.delenv("COMSOL_MCP_HOST_CONTROL", raising=False)
+    monkeypatch.delenv("COMSOL_MCP_TRUSTED_CODE", raising=False)
+    project_root = tmp_path / "private-project-root"
+    project_root.mkdir()
+    daemon = ControlDaemon(tmp_path / "control", project_root=project_root, registry={})
+    try:
+        assert "host_control" not in daemon.backend.host_permission_ceiling
+        response = daemon.dispatch({
+            "operation": "project.create",
+            "arguments": {
+                "label": "must refuse host control",
+                "workspace": "host-control-project",
+                "policy": {"permissions": ["inspect", "project_write", "host_control"]},
+            },
+            "execution": {"request_id": "host-control-request", "idempotency_key": "host-control-key"},
+        })
+        assert response["success"] is False
+        assert response["error"]["code"] == "POLICY_ESCALATION_REFUSED"
+        job = daemon.store.job(response["execution"]["job_id"])
+        assert job["status"] == "FAILED"
+        assert job["metadata"]["engine_dispatched"] is False
+        assert daemon.store.db.execute("SELECT COUNT(*) FROM projects").fetchone()[0] == 0
+        assert not (project_root / "host-control-project").exists()
+    finally:
+        daemon.close()
+
+
+def test_saved_readback_progress_updates_only_selected_overlay(tmp_path) -> None:
+    import json
+    from tools.verify_native_resume_saved_artifact import write_resume_progress
+
+    historical = tmp_path / "original.json"
+    historical.write_text('{"status":"UNKNOWN","safe_retry":false}')
+    before = historical.read_bytes()
+    overlay = tmp_path / "overlay.json"
+    overlay.write_text('{"status":"RESUMED","historical_unknown_policy":"DO_NOT_REPLAY"}')
+    write_resume_progress({"supplement_id": "new-readback", "status": "PREPARED"}, True, path=overlay)
+    assert historical.read_bytes() == before
+    result = json.loads(overlay.read_text())
+    assert result["historical_unknown_policy"] == "DO_NOT_REPLAY"
+    assert result["active_jobs"][0]["solve_calls_allowed"] == 0
+
+
 def _event(*, phase: str = "submitted", kind: str = "call", operation: str = "study.run",
            worker_type: str = "call", method: str = "run") -> dict:
     return {

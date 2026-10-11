@@ -453,12 +453,12 @@ class _FakeScienceAdapter:
                 "displacement_probe_m": displacement_probe,
                 "displacement_probe_coordinate_m": [100e-6, 200e-6],
                 "feature_readbacks": {
-                    "stress_mean": mechanics_row("AvVolume", ["Pa"] * 4, expressions,
+                    "stress_mean": mechanics_row("AvSurface", ["Pa"] * 4, expressions,
                                                   [4, 1], dimension=2, measure="intvolume"),
-                    "stress_abs_max": mechanics_row("MaxVolume", ["Pa"] * 4,
+                    "stress_abs_max": mechanics_row("MaxSurface", ["Pa"] * 4,
                                                      [f"abs({expr})" for expr in expressions],
                                                      [4, 1], dimension=2),
-                    "displacement_abs_max": mechanics_row("MaxVolume", ["m", "m"],
+                    "displacement_abs_max": mechanics_row("MaxSurface", ["m", "m"],
                                                            ["abs(u)", "abs(w)"], [2, 1], dimension=2),
                     "displacement_probe": {
                         "type": "Interp", "dataset": dataset, "expression": ["u", "w"],
@@ -478,18 +478,18 @@ class _FakeScienceAdapter:
             metrics_path = output_dir / "native_metrics.json"
             readbacks = {
                 "adhesive_cure_averages": _metric_readback(
-                    "AvVolume", ["1", "1", "1"], 2, "intvolume",
+                    "AvSurface", ["1", "1", "1"], 2, "intvolume",
                     expression=("alpha_iso", "alpha", "qpost")),
-                "energy_alumina": _metric_readback("IntVolume", ["J"], 2, "intvolume"),
-                "energy_gold": _metric_readback("IntVolume", ["J"], 2, "intvolume"),
-                "energy_adhesive": _metric_readback("IntVolume", ["J"], 2, "intvolume"),
-                "energy_fiber": _metric_readback("IntVolume", ["J"], 2, "intvolume"),
-                "reaction_power": _metric_readback("IntVolume", ["W"], 2, "intvolume",
+                "energy_alumina": _metric_readback("IntSurface", ["J"], 2, "intvolume"),
+                "energy_gold": _metric_readback("IntSurface", ["J"], 2, "intvolume"),
+                "energy_adhesive": _metric_readback("IntSurface", ["J"], 2, "intvolume"),
+                "energy_fiber": _metric_readback("IntSurface", ["J"], 2, "intvolume"),
+                "reaction_power": _metric_readback("IntSurface", ["W"], 2, "intvolume",
                                                    expression=("Qrxn",)),
-                "outward_power": _metric_readback("IntSurface", ["W"], 1, "intsurface",
+                "outward_power": _metric_readback("IntLine", ["W"], 1, "intsurface",
                                                    expression=("hconv*(T-Tenv)",), entity_count=8),
                 "adhesive_mean_stress": _metric_readback(
-                    "AvVolume", ["Pa"] * 4, 2, "intvolume",
+                    "AvSurface", ["Pa"] * 4, 2, "intvolume",
                     expression=tuple(self.stress_components[role]["expression"] for role in runner.STRESS_ROLES)),
                 "stress_probes": {**_metric_readback(
                     "Interp", ["Pa"] * 4, None, None,
@@ -1127,3 +1127,84 @@ def test_template_receipt_rejects_a_solved_or_non_native_candidate(tmp_path):
     path.write_text(json.dumps({"status": "BUILT_NOT_SOLVED"}), encoding="utf-8")
     with pytest.raises(runner.CampaignError, match="successful unsolved native template"):
         runner.validate_template_receipt(path)
+
+
+def _applicability_fixture(tmp_path, case_id):
+    evidence, stresses, cure = _native_metric_fixture(tmp_path)
+    if case_id == "cure":
+        return evidence, stresses, cure["native_metrics"], "native_metrics"
+    adapter = _FakeScienceAdapter(evidence)
+    adapter.stress_components = stresses
+    capture = adapter.capture_solution(
+        runner.SolveSlot(case_id, "stdMech", "software applicability fixture"),
+        output_dir=evidence / case_id, timeout_s=5.0)
+    return evidence, stresses, capture["mechanics_metrics"], "mechanics_metrics"
+
+
+def _verify_applicability(receipt, evidence, stresses, case_id):
+    if case_id == "cure":
+        return runner.verify_native_metrics_receipt(
+            receipt, evidence, expected_times=[0.0, 1500.0], stress_components=stresses)
+    return runner.verify_native_mechanics_receipt(
+        receipt, evidence, case_id=case_id, stress_components=stresses)
+
+
+@pytest.mark.parametrize("case_id", ["cure", "mechanics_free_expansion", "mechanics_fully_fixed"])
+def test_documented_science_types_accept_complete_synthetic_histories(tmp_path, case_id):
+    evidence, stresses, receipt, _ = _applicability_fixture(tmp_path, case_id)
+    result = _verify_applicability(receipt, evidence, stresses, case_id)
+    rows = result["artifact"]["feature_readbacks"]
+    if case_id == "cure":
+        assert rows["energy_alumina"]["type"] == "IntSurface"
+        assert rows["outward_power"]["type"] == "IntLine"
+        assert rows["adhesive_cure_averages"]["type"] == "AvSurface"
+    else:
+        assert rows["stress_mean"]["type"] == "AvSurface"
+        assert rows["stress_abs_max"]["type"] == rows["displacement_abs_max"]["type"] == "MaxSurface"
+
+
+@pytest.mark.parametrize("case_id,key,field,wrong", [
+    *[(case, key, field, wrong)
+      for case, key, oldtype in [
+          ("cure", "adhesive_cure_averages", "AvVolume"),
+          ("cure", "energy_alumina", "IntVolume"),
+          ("cure", "outward_power", "IntSurface"),
+          ("mechanics_free_expansion", "stress_mean", "AvVolume"),
+          ("mechanics_free_expansion", "stress_abs_max", "MaxVolume"),
+          ("mechanics_fully_fixed", "displacement_abs_max", "MaxVolume")]
+      for field, wrong in [
+          ("type", oldtype), ("entity_dimension", 3),
+          ("axisymmetric_measure_value", "off" if "max" not in key else "on"),
+          ("unit", ["badunit"]), ("dataset", "foreign_solution"), ("geometry", "wronggeom")]],
+    ("cure", "stress_probes", "type", "Eval"),
+    ("cure", "stress_probes", "dataset", "foreign_solution"),
+    ("mechanics_free_expansion", "displacement_probe", "type", "Eval"),
+    ("mechanics_free_expansion", "displacement_probe", "dataset", "foreign_solution"),
+])
+def test_science_consumers_reject_obsolete_types_and_wrong_readbacks(tmp_path, case_id, key, field, wrong):
+    evidence, stresses, receipt, _ = _applicability_fixture(tmp_path, case_id)
+    path = Path(receipt["path"])
+    artifact = json.loads(path.read_text(encoding="utf-8"))
+    artifact["feature_readbacks"][key][field] = wrong
+    path.write_text(json.dumps(artifact), encoding="utf-8")
+    receipt.update(size_bytes=path.stat().st_size, sha256=runner.sha256(path))
+    with pytest.raises(runner.CampaignError):
+        _verify_applicability(receipt, evidence, stresses, case_id)
+
+
+def test_science_creation_calls_use_documented_dimensions_and_actual_type_getters():
+    source = (Path(__file__).parents[1] / "tools/java/W24CureScienceFixture.java").read_text()
+    assert '"IntVolume"' not in source and '"AvVolume"' not in source and '"MaxVolume"' not in source
+    for signature, successor in [
+            ("mechanicsNumerical", "/** Capture native averages"),
+            ("evaluateNumerical", "private static NumericalValues evaluateInterpolation"),
+            ("evaluateInterpolation", "private static Map<String, Map<String, String>> readStressDescriptors")]:
+        helper = source.split("private static NumericalValues " + signature, 1)[1].split(successor, 1)[0]
+        assert helper.index("String actualType = feature.getType()") < helper.index("feature.run()")
+        assert 'readback.put("type", actualType)' in helper
+    inline = source.split('String interpType = interp.getType();', 1)[1]
+    assert inline.index('!"Interp".equals(interpType)') < inline.index("interp.run()")
+    assert 'interpReadback.put("type", interpType)' in inline
+    assert 'mesh.feature("size").set("hmax", 10e-6);\n            mesh.feature("size").set("hmin", 1e-6);\n            mesh.create("ftri1", "FreeTri");\n            mesh.run();' in source
+    assert '"IntLine", "outward_power", new String[]{"hconv*(T-Tenv)"}, new String[]{"W"}, 1,' in source
+    assert '"IntSurface", "reaction_power", new String[]{"Qrxn"}, new String[]{"W"}, 2,' in source
