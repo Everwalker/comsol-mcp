@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from tools import native_runtime_binding as fresh_runtime
 import hashlib
 import importlib
 import json
@@ -23,7 +24,7 @@ from uuid import uuid4
 REPO = Path(__file__).resolve().parents[1]
 BASE_COMMIT = "a365420814b9159230364ad953ee13e8db9cc9be"
 EVIDENCE_ROOT = REPO / "docs/full_project_execution/w24/evidence"
-EXPECTED_PYTHON = Path("/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python")
+EXPECTED_PYTHON = Path("/private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python")
 EXPLICIT_SITE_PACKAGES = (EXPECTED_PYTHON.parent.parent / "lib" /
                           f"python{sys.version_info.major}.{sys.version_info.minor}" / "site-packages")
 INSTALL_ROOT = Path("/Applications/COMSOL64/Multiphysics")
@@ -290,7 +291,17 @@ def _source_inventory(repo: Path) -> dict[str, Any]:
     }
 
 
+def _fresh_source_inventory(repo: Path, binding: Mapping[str, Any]) -> dict[str, Any]:
+    current = fresh_runtime.source_inventory(repo)
+    if current != binding["source"]:
+        raise CandidateError("fresh source closure differs from host authority")
+    return {"checkout_kind": "fresh_host_source_closure", "source_files": current["files"],
+            "source_closure_sha256": current["sha256"], "runtime_binding_sha256": binding["binding_sha256"]}
+
+
 CAMPAIGN_DEPENDENCIES = {
+    "tools.w24_native_epoch_capability": ("_capture_live_worker_binding", "_verify_live_worker_binding"),
+    "tools.run_w21_stage_native": ("_resolve_remote_comsol_identity",),
     "comsol_mcp._control_daemon": ("ControlDaemon",),
     "comsol_mcp._g2_isolation": ("_process_snapshot",),
     "comsol_mcp._platform_process": ("process_identity",),
@@ -306,7 +317,7 @@ CAMPAIGN_DEPENDENCIES = {
 }
 
 
-def preflight_campaign_dependencies(repo: Path, *, importer: Callable[[str], Any] | None = None
+def preflight_campaign_dependencies(repo: Path, *, binding: Mapping[str, Any] | None = None, importer: Callable[[str], Any] | None = None
                                     ) -> dict[str, Any]:
     """Resolve every late-bound setup/cleanup module before any native birth.
 
@@ -314,7 +325,7 @@ def preflight_campaign_dependencies(repo: Path, *, importer: Callable[[str], Any
     closure. This keeps an absent helper from surfacing only after a Worker
     has been created and makes the dependency check repeatable at execution.
     """
-    source = _source_inventory(repo)
+    source = _fresh_source_inventory(repo, binding) if binding else _source_inventory(repo)
     source_rows = source["source_files"]
     root = repo.resolve(strict=True)
     load = importer or importlib.import_module
@@ -395,18 +406,23 @@ def _compile_sources(repo: Path, output: Path, install: Path, jdk: Path) -> dict
 
 
 def prepare_candidate(*, repo: Path, evidence: Path,
-                      install: Path = INSTALL_ROOT, jdk: Path = JAVA11) -> dict[str, Any]:
-    if (Path(sys.executable).resolve(strict=True) != EXPECTED_PYTHON.resolve(strict=True) or
+                      install: Path = INSTALL_ROOT, jdk: Path = JAVA11,
+                      runtime_authority: Path | None = None) -> dict[str, Any]:
+    binding = (fresh_runtime.load(runtime_authority, repo=repo, budget=SETUP_BUDGET, install=install, jdk=jdk)
+               if runtime_authority is not None else None)
+    if binding is None and (Path(sys.executable).resolve(strict=True) != EXPECTED_PYTHON.resolve(strict=True) or
             sys.version_info[:2] != (3, 12)):
         raise CandidateError(f"offline candidate preparation requires exact Python 3.12 at {EXPECTED_PYTHON}")
-    python_isolation = configure_archive_python(repo)
-    if evidence.exists() or evidence.is_symlink() or not evidence.resolve().is_relative_to(EVIDENCE_ROOT.resolve()):
+    python_isolation = configure_archive_python(repo, binding=binding) if binding else configure_archive_python(repo)
+    if binding:
+        fresh_runtime.scoped_path(binding, evidence, absent=True)
+    if evidence.exists() or evidence.is_symlink() or (binding is None and not evidence.resolve().is_relative_to(EVIDENCE_ROOT.resolve())):
         raise CandidateError("offline candidate evidence path must be new below W24 evidence")
-    dependency_preflight = preflight_campaign_dependencies(repo)
-    source_before = _source_inventory(repo)
+    dependency_preflight = preflight_campaign_dependencies(repo, binding=binding) if binding else preflight_campaign_dependencies(repo)
+    source_before = _fresh_source_inventory(repo, binding) if binding else _source_inventory(repo)
     evidence.mkdir(parents=True, exist_ok=False)
     compiled = _compile_sources(repo, evidence / "offline_compile/classes", install, jdk)
-    source_after = _source_inventory(repo)
+    source_after = _fresh_source_inventory(repo, binding) if binding else _source_inventory(repo)
     if source_before != source_after or compiled["status"] != "COMPILE_PASS":
         raise CandidateError("source changed or offline Java compilation failed")
     freeze_body = {
@@ -435,6 +451,8 @@ def prepare_candidate(*, repo: Path, evidence: Path,
         "cross_epoch_binding_warning": SETUP_BUDGET["future_science_binding_policy"],
         "candidate_evidence_dir": str(evidence.resolve()),
     }
+    if binding:
+        freeze_body["fresh_runtime_binding"] = binding
     freeze = {**freeze_body, "candidate_sha256": _json_hash(freeze_body)}
     _write_new(evidence / FREEZE_FILE, freeze)
     _write_new(evidence / "offline_compile.json", compiled)
@@ -453,10 +471,15 @@ def verify_candidate(*, repo: Path, evidence: Path,
             freeze.get("candidate_sha256") != _json_hash(body) or
             reviewed_sha256 != freeze.get("candidate_sha256")):
         raise CandidateError("reviewed SHA does not match the frozen candidate")
-    if (_source_inventory(repo) != freeze.get("source") or
+    binding = freeze.get("fresh_runtime_binding")
+    if binding is not None:
+        fresh_runtime.validate(binding, repo=repo, budget=SETUP_BUDGET)
+        fresh_runtime.scoped_path(binding, evidence)
+    source = _fresh_source_inventory(repo, binding) if binding is not None else _source_inventory(repo)
+    if (source != freeze.get("source") or
             freeze.get("budget") != SETUP_BUDGET or freeze.get("routes") != ROUTES):
         raise CandidateError("source closure, route allowlist, or budget changed after review")
-    current_dependencies = preflight_campaign_dependencies(repo)
+    current_dependencies = preflight_campaign_dependencies(repo, binding=binding) if binding else preflight_campaign_dependencies(repo)
     if current_dependencies != freeze.get("dependency_preflight"):
         raise CandidateError("pre-birth dependency closure differs from the reviewed candidate")
     return freeze
@@ -567,12 +590,12 @@ def _assert_no_editable_fallback() -> None:
         raise CandidateError("editable Python finder/path hook is present; run the candidate with -S")
 
 
-def configure_archive_python(repo: Path) -> dict[str, Any]:
+def configure_archive_python(repo: Path, *, binding: Mapping[str, Any] | None = None) -> dict[str, Any]:
     """Bind imports to the exact source archive without running .pth files."""
     if not getattr(sys.flags, "no_site", False) or "site" in sys.modules:
         raise CandidateError("isolated candidate Python must start with -S; site/.pth processing is forbidden")
     root = repo.resolve(strict=True)
-    packages = EXPLICIT_SITE_PACKAGES.resolve(strict=True)
+    packages = (Path(binding["python"]["site_packages"]) if binding else EXPLICIT_SITE_PACKAGES).resolve(strict=True)
     if not packages.is_dir():
         raise CandidateError("the exact venv site-packages directory is unavailable")
     _assert_no_editable_fallback()
@@ -676,15 +699,198 @@ def _process_start_epoch_for_identity(identity: Mapping[str, Any], worker: Any) 
     return birth
 
 
-def _hold_forever_with_handles(monitor: Any, *, stop_event: threading.Event | None = None) -> None:
-    """Fail closed without closing a daemon, Worker, or server after uncertain state."""
-    while stop_event is None or not stop_event.is_set():
-        if isinstance(monitor, SampledRssMonitor):
-            thread = monitor._thread
-            if thread is None or not thread.is_alive():
-                monitor.sample_once()
-        time.sleep(2.0)
+def _hold_text(value: Any) -> str:
+    try:
+        return str(value)[:512]
+    except BaseException:
+        return "<" + type(value).__name__ + ": text unavailable>"
 
+
+def _hold_diagnostic(state: dict[str, Any], phase: str, exc: BaseException) -> None:
+    if len(state["diagnostics"]) < 32:
+        state["diagnostics"].append({"phase": phase, "type": type(exc).__name__, "error": _hold_text(exc)})
+
+
+def _capture_hold_handles(server: Any, daemon: Any, first_cause: BaseException | None = None) -> dict[str, Any]:
+    """Keep actual receivers before cleanup/diagnostics; never reconstruct PIDs."""
+    state = getattr(server, "_unknown_hold_state", None)
+    if state is None:
+        state = {"server": server, "daemon": daemon, "server_process": getattr(server, "_original_server_popen", None), "server_pid": getattr(server, "_original_server_pid", None),
+                 "workers": {}, "backends": {}, "collections": {}, "diagnostics": [],
+                 "first_cause": first_cause, "complete": False, "graph_changed": False,
+                 "default_backend": getattr(daemon, "_default_backend", None), "services": {}}
+        server._unknown_hold_state = state
+    if state["first_cause"] is None:
+        state["first_cause"] = first_cause
+    if state["server"] is not server or state["daemon"] is not daemon:
+        state["graph_changed"] = True
+        _hold_diagnostic(state, "owner_replacement", CandidateError("original hold receiver changed"))
+        return state
+    try:
+        if daemon is not None:
+            if daemon._default_backend is not state["default_backend"]:
+                raise CandidateError("original default backend changed")
+            if not daemon._session_connect_lock.acquire(blocking=False):
+                state["complete"] = False
+                _hold_diagnostic(state, "capture_lock_busy", CandidateError("original session registry lock busy; proof incomplete"))
+                return state
+            try:
+                for name in ("_session_worker_handles", "_session_backends", "_session_worker_child_identities", "_session_server_handles"):
+                    collection = getattr(daemon, name)
+                    state["collections"].setdefault(name, collection)
+                    if state["collections"][name] is not collection:
+                        raise CandidateError("original registered owner collection changed")
+                workers = dict(daemon._session_worker_handles)
+                for key, backend in daemon._session_backends.items():
+                    state["backends"].setdefault(key, backend)
+                    if state["backends"][key] is not backend:
+                        raise CandidateError("original registered backend changed")
+                    state["services"].setdefault(key, getattr(backend, "service", None))
+                    if state["services"][key] is not getattr(backend, "service", None):
+                        raise CandidateError("original registered ExecutionService changed")
+                    worker = getattr(backend, "worker", None)
+                    if worker is not None:
+                        if key in workers and workers[key] is not worker:
+                            raise CandidateError("registered backend/Worker receivers differ")
+                        workers[key] = worker
+                for key, worker in workers.items():
+                    process = getattr(worker, "_process", None)
+                    saved = state["workers"].get(key)
+                    proof = daemon._session_worker_child_identities.get(key)
+                    if saved is None:
+                        state["workers"][key] = (worker, process, proof, getattr(process, "pid", None))
+                    elif saved[0] is not worker or saved[1] is not process:
+                        raise CandidateError("original registered Worker/Popen changed")
+                complete = (not daemon._control_dispatch_inflight and not daemon._worker_admission_inflight
+                            and not daemon.running and not daemon._session_server_handles)
+                for worker, process, proof, original_pid in state["workers"].values():
+                    complete = complete and process is not None and isinstance(proof, Mapping) and proof.get("worker") is worker and proof.get("process") is process and proof.get("pid") == original_pid and type(proof.get("start_epoch_ms")) is int and proof["start_epoch_ms"] > 0
+                for key, backend in state["backends"].items():
+                    complete = complete and key in state["workers"]
+            finally:
+                daemon._session_connect_lock.release()
+        else:
+            complete = True
+        original = getattr(server, "_original_server_popen", None)
+        if state["server_process"] is None and original is not None:
+            state["server_process"] = original
+            state["server_pid"] = getattr(server, "_original_server_pid", None)
+        if original is not state["server_process"] or getattr(server, "proc", None) is not state["server_process"] or (original is not None and (original.pid != state["server_pid"] or getattr(server, "_original_server_pid", None) != state["server_pid"])):
+            raise CandidateError("original server Popen changed or was never captured")
+        complete = complete and (original is not None or getattr(server, "_server_birth_attempted", True) is False)
+        state["complete"] = bool(complete) and not state["graph_changed"]
+    except BaseException as exc:
+        state["complete"] = False
+        state["graph_changed"] = True
+        _hold_diagnostic(state, "original_object_proof", exc)
+    return state
+
+
+def _fence_hold_handles(state: dict[str, Any], monitor: Any) -> None:
+    def forbidden(*_args, **_kwargs):
+        raise CandidateError("original UNKNOWN owner is fenced; no SDK/lifecycle/admission effect")
+    daemon = state["daemon"]
+    # Admission/monitor fencing cannot wait for an original in-flight SDK owner.
+    if daemon is not None:
+        try:
+            daemon._closing = True
+            daemon._worker_retirement_state = "CLOSED"
+            daemon.dispatch = forbidden
+            daemon._dispatch_session_control = forbidden
+            daemon.close = forbidden
+            daemon.closed.set()
+            acquired = daemon._admission_lock.acquire(blocking=False)
+            if acquired:
+                daemon._admission_lock.release()
+            else:
+                state["complete"] = False
+                _hold_diagnostic(state, "admission_lock_busy", CandidateError("original admission lock busy; proof incomplete"))
+        except BaseException as exc:
+            state["complete"] = False
+            _hold_diagnostic(state, "fence_admission", exc)
+    observed_backends = list(state["backends"].values()) + ([state["default_backend"]] if state["default_backend"] is not None else [])
+    observed_workers = [row[0] for row in state["workers"].values()]
+    if daemon is not None:
+        try:
+            acquired = daemon._session_connect_lock.acquire(blocking=False)
+            if acquired:
+                try:
+                    observed_backends += list(daemon._session_backends.values())
+                    observed_backends += [daemon._default_backend]
+                    observed_workers += list(daemon._session_worker_handles.values())
+                finally:
+                    daemon._session_connect_lock.release()
+            else:
+                state["complete"] = False
+                _hold_diagnostic(state, "fence_registry_lock_busy", CandidateError("original session registry lock busy; proof incomplete"))
+        except BaseException as exc:
+            state["complete"] = False
+            _hold_diagnostic(state, "fence_registry_snapshot", exc)
+    observed_workers += [getattr(b, "worker", None) for b in observed_backends]
+    for receiver, names in [(b, ("execute", "connect", "connect_session", "close")) for b in observed_backends] + [(w, ("_request", "start", "close", "health", "client")) for w in observed_workers if w is not None]:
+        try:
+            for name in names:
+                if callable(getattr(receiver, name, None)):
+                    setattr(receiver, name, forbidden)
+        except BaseException as exc:
+            state["complete"] = False
+            _hold_diagnostic(state, "fence_original_receivers", exc)
+    if monitor is not None:
+        try:
+            monitor._stop.set()
+        except BaseException as exc:
+            state["complete"] = False
+            _hold_diagnostic(state, "fence_monitor", exc)
+
+
+def _hold_forever_with_handles(monitor: Any, *, server: Any = None, daemon: Any = None,
+                               first_cause: BaseException | None = None, run_dir: Path | None = None,
+                               stop_event: threading.Event | None = None) -> dict[str, Any] | None:
+    """Poll only original Popen objects. Diagnostics cannot discard the owner."""
+    if server is None:
+        while stop_event is None or not stop_event.is_set():
+            try: time.sleep(0.25)
+            except BaseException: pass
+        return None
+    state = _capture_hold_handles(server, daemon, first_cause)
+    while stop_event is None or not stop_event.is_set():
+        try:
+            state = _capture_hold_handles(server, daemon, first_cause)
+            _fence_hold_handles(state, monitor)
+            rows = []; terminal = state["complete"]
+            processes = [("server", state["server_process"], state["server_pid"])] + [("worker:" + _hold_text(key), row[1], row[3]) for key, row in state["workers"].items()]
+            for label, process, original_pid in processes:
+                if process is None:
+                    continue
+                try:
+                    if process.pid != original_pid:
+                        raise CandidateError("original Popen PID field changed; no poll of rewritten identity")
+                    code = process.poll()
+                    rows.append({"label": label, "pid": process.pid, "returncode": code})
+                    terminal = terminal and type(code) is int
+                except BaseException as exc:
+                    terminal = False
+                    _hold_diagnostic(state, "original_popen_poll", exc)
+            receipt = {"status": "FAIL_UNKNOWN_PRESERVED_ORIGINAL_CHILDREN_TERMINAL" if terminal else "UNKNOWN_RETAINED_ORIGINAL_OWNER",
+                       "original_proof_complete": state["complete"], "children": rows,
+                       "safe_retry": False, "signals_sent": False, "new_sdk_calls": False,
+                       "action_budget": "UNRESOLVED_WHILE_ORIGINAL_CHILDREN_LIVE_OR_PROOF_INCOMPLETE",
+                       "first_cause": None if state["first_cause"] is None else _hold_text(state["first_cause"]),
+                       "secondary_diagnostics": state["diagnostics"]}
+            if run_dir is not None:
+                try:
+                    target = run_dir / "original_owner_observation.json"
+                    _replace(target, receipt) if target.exists() else _write_new(target, receipt)
+                except BaseException as exc:
+                    _hold_diagnostic(state, "hold_evidence_write", exc)
+            if terminal:
+                return receipt
+        except BaseException as exc:
+            state["complete"] = False
+            _hold_diagnostic(state, "hold_observation", exc)
+        try: time.sleep(0.25)
+        except BaseException as exc: _hold_diagnostic(state, "hold_yield", exc)
+    return None
 
 class SampledRssMonitor:
     """One-second, exact-PID sampled admission stop for this candidate only."""
@@ -694,7 +900,10 @@ class SampledRssMonitor:
                  threshold_bytes: int = RSS_STOP_BYTES,
                  interval_seconds: float = SAMPLE_INTERVAL_SECONDS,
                  ps_runner: Callable[..., Any] = subprocess.run,
-                 identity_reader: Callable[[int], Mapping[str, Any]] | None = None):
+                 identity_reader: Callable[[int], Mapping[str, Any]] | None = None,
+                 probe_timeout_reader: Callable[[float], float] | None = None,
+                 include_owned_descendants: bool = False,
+                 session_reader: Callable[[int], int] | None = None):
         from comsol_mcp._platform_process import process_identity
 
         if type(server_pid) is not int or server_pid <= 1 or type(server_birth_ms) is not int or server_birth_ms <= 0:
@@ -708,6 +917,12 @@ class SampledRssMonitor:
         self.threshold_bytes = int(threshold_bytes)
         self.interval_seconds = float(interval_seconds)
         self.ps_runner = ps_runner
+        self.probe_timeout_reader = probe_timeout_reader
+        self.include_owned_descendants = include_owned_descendants
+        self.owned_children = {}
+        self.owned_groups = {server_pid: server_birth_ms} if include_owned_descendants else {}
+        self.retired_owned_leaders = set()
+        self.session_reader = session_reader or os.getsid
         self.identity_reader = identity_reader or process_identity
         self.worker_required_live = False
         self.expected_worker_pid: int | None = None
@@ -743,6 +958,24 @@ class SampledRssMonitor:
             self.expected_worker_pid = pid
             self.expected_worker_birth_ms = birth_ms
             self.worker_required_live = True
+            if self.include_owned_descendants:self.owned_groups[pid]=birth_ms
+
+    def bind_owned_child(self, process: Any, birth_ms: int) -> None:
+        if type(getattr(process,"pid",None)) is not int or type(birth_ms) is not int or birth_ms<=0:
+            raise CandidateError("owned RSS child requires its actual Popen/birth")
+        with self._lock:
+            self.owned_children[process.pid]=(process,birth_ms)
+            if self.include_owned_descendants:self.owned_groups[process.pid]=birth_ms
+
+    def retire_owned_child(self, process: Any) -> None:
+        with self._lock:
+            saved=self.owned_children.get(process.pid)
+            if saved is None or saved[0] is not process or process.poll() is None:
+                raise CandidateError("RSS child cannot retire without its exact terminal Popen")
+            # A reaped leader does not retire its original private process group.
+            # Fresh complete group absence in sample_once is the only RSS release.
+            if self.include_owned_descendants:self.retired_owned_leaders.add(process.pid)
+            else:del self.owned_children[process.pid]
 
     def _record(self, payload: Mapping[str, Any]) -> None:
         _append(self.events_path, {"event": "rss_sample", **dict(payload)})
@@ -756,21 +989,32 @@ class SampledRssMonitor:
         actual_interval = (None if self.last_sample_monotonic is None else
                            max(0.0, sample_started - self.last_sample_monotonic))
         self.last_sample_monotonic = sample_started
-        command = ["/bin/ps", "-axo", "pid=,ppid=,rss=,command="]
+        command = ["/bin/ps", "-axo", "pid=,ppid=,pgid=,rss=,command=" if self.include_owned_descendants else "pid=,ppid=,rss=,command="]
         try:
             result = self.ps_runner(command, capture_output=True, text=True,
-                                    check=False, timeout=10)
+                                    check=False, timeout=(10 if self.probe_timeout_reader is None else self.probe_timeout_reader(10.0)))
             if result.returncode != 0 or result.stderr.strip():
                 raise CandidateError("scoped RSS ps probe failed")
             rows: dict[int, dict[str, Any]] = {}
+            all_rows = {}
             worker_pids: list[int] = []
             worker_prefix = str(self.worker_search_root).lower()
+            observer_seen = False
             for line in result.stdout.splitlines():
-                fields = line.strip().split(None, 3)
-                if len(fields) < 4 or not fields[0].isdigit() or not fields[1].isdigit() or not fields[2].isdigit():
+                fields = line.strip().split(None, 4 if self.include_owned_descendants else 3)
+                required = 5 if self.include_owned_descendants else 4
+                numeric = 4 if self.include_owned_descendants else 3
+                if len(fields)<required or not all(x.isdigit() for x in fields[:numeric]):
+                    if self.include_owned_descendants and line.strip():
+                        raise CandidateError("complete owned-group RSS process row is malformed")
                     continue
-                pid, ppid, rss_kib = int(fields[0]), int(fields[1]), int(fields[2])
-                command_text = fields[3]
+                pid,ppid=int(fields[0]),int(fields[1])
+                pgid=int(fields[2]) if self.include_owned_descendants else None
+                rss_kib=int(fields[3] if self.include_owned_descendants else fields[2])
+                command_text=fields[4] if self.include_owned_descendants else fields[3]
+                if pid==os.getpid():observer_seen=True
+                all_rows[pid]={"pid":pid,"ppid":ppid,"rss_bytes":rss_kib*1024,
+                               **({"pgid":pgid} if self.include_owned_descendants else {})}
                 if pid == self.server_pid:
                     rows[pid] = {"kind": "server", "pid": pid, "ppid": ppid,
                                  "rss_bytes": rss_kib * 1024}
@@ -801,6 +1045,51 @@ class SampledRssMonitor:
                     raise CandidateError("RSS sample does not match the exact connected Worker Popen birth")
                 rows[pid]["start_epoch_ms"] = identity["start_epoch_ms"]
             server_row["start_epoch_ms"] = self.server_birth_ms
+            if self.include_owned_descendants:
+                if not observer_seen:raise CandidateError("complete group RSS sample omitted observing CLI")
+                for pid,row in all_rows.items():
+                    if pid<=1:continue
+                    try:row['sid']=self.session_reader(pid)
+                    except ProcessLookupError:
+                        if self.identity_reader(pid).get('alive') is not False:
+                            raise CandidateError("live process session identity unavailable in complete owned RSS sample")
+                        row['sid']=None
+                    if type(row.get('sid')) is not int and row.get('sid') is not None:
+                        raise CandidateError("native RSS session identity is not a typed integer")
+                if all_rows[self.server_pid].get('pgid')!=self.server_pid or all_rows[self.server_pid].get('sid')!=self.server_pid:
+                    raise CandidateError("original Server private PGID/SID changed")
+                for pid in worker_pids:
+                    if all_rows[pid].get('pgid')!=pid or all_rows[pid].get('sid')!=pid:
+                        raise CandidateError("original Worker private PGID/SID changed")
+                with self._lock:
+                    children=dict(self.owned_children);groups=dict(self.owned_groups)
+                for pid,(process,birth_ms) in children.items():
+                    if process.poll() is not None:continue
+                    ident=self.identity_reader(pid)
+                    if (pid not in all_rows or ident.get("alive") is not True or
+                            ident.get("start_epoch_ms")!=birth_ms or all_rows[pid].get("pgid")!=pid):
+                        raise CandidateError("owned child RSS Popen/birth/private group unavailable or changed")
+                    rows[pid]={**all_rows[pid],"kind":"owned_child","start_epoch_ms":birth_ms}
+                for pgid,birth_ms in groups.items():
+                    members=[row for row in all_rows.values() if row.get("pgid")==pgid or row.get("sid")==pgid]
+                    for member in members:
+                        pid=member["pid"];ident=self.identity_reader(pid)
+                        if (ident.get("alive") is not True or type(ident.get("start_epoch_ms")) is not int
+                                or ident["start_epoch_ms"]<birth_ms):
+                            raise CandidateError("original owned-group member RSS birth identity unavailable or predates group")
+                        rows[pid]={**member,"kind":rows.get(pid,{}).get("kind","owned_group_descendant"),
+                                   "start_epoch_ms":ident["start_epoch_ms"],"original_owned_pgid":pgid,"original_owned_sid":pgid}
+                    if not members and pgid in children and children[pgid][0].poll() is not None:
+                        with self._lock:
+                            self.owned_children.pop(pgid,None);self.owned_groups.pop(pgid,None)
+                            self.retired_owned_leaders.discard(pgid)
+                owned=set(rows)
+                changed=True
+                while changed:
+                    changed=False
+                    for pid,row in all_rows.items():
+                        if pid not in owned and row["ppid"] in owned:
+                            owned.add(pid);rows[pid]={**row,"kind":"owned_descendant"};changed=True
             total = sum(int(row["rss_bytes"]) for row in rows.values())
             status = "RSS_THRESHOLD_REACHED" if total >= self.threshold_bytes else "SAMPLED_WITHIN_THRESHOLD"
             sample = {"schema": "W24_SETUP_RSS_SAMPLE_V1",
@@ -839,11 +1128,11 @@ class SampledRssMonitor:
         while not self._stop.wait(self.interval_seconds):
             self.sample_once()
 
-    def stop(self) -> None:
+    def stop(self, *, timeout_seconds: float | None = None) -> None:
         self._stop.set()
         thread = self._thread
         if thread is not None:
-            thread.join(timeout=max(12.0, self.interval_seconds * 12))
+            thread.join(timeout=(max(12.0, self.interval_seconds * 12) if timeout_seconds is None else timeout_seconds))
             if thread.is_alive():
                 with self._lock:
                     self.stop_reason = self.stop_reason or "RSS_MONITOR_THREAD_DID_NOT_STOP"
@@ -862,6 +1151,9 @@ class W24StaticShapeSetupServer:
         self.on_birth = on_birth
         self.birth_monotonic: float | None = None
         self.server_snapshot: dict[str, Any] | None = None
+        self._server_birth_attempted = False
+        self._original_server_popen = None
+        self._original_server_pid = None
 
     def prepare_shadow(self) -> dict[str, Any]:
         return self._base.prepare_shadow()
@@ -880,10 +1172,13 @@ class W24StaticShapeSetupServer:
                    "-silent", "-multi", "on"]
         log_handle = self.server_log.open("ab", buffering=0)
         self._server_log_handle = log_handle
+        self._server_birth_attempted = True
         self.proc = subprocess.Popen(command, cwd=str(self.work), env=dict(os.environ),
                                      stdin=subprocess.DEVNULL, stdout=log_handle,
                                      stderr=subprocess.STDOUT, text=True,
                                      start_new_session=True)
+        self._original_server_popen = self.proc
+        self._original_server_pid = self.proc.pid
         self.birth_monotonic = time.monotonic()
         identity = _process_snapshot(self.proc.pid)
         if not isinstance(identity, Mapping) or identity.get("pid") != self.proc.pid:
@@ -967,7 +1262,11 @@ class BudgetedSetupDaemon:
 
     def __init__(self, daemon: Any, *, monitor: SampledRssMonitor,
                  deadline_monotonic: float, events_path: Path,
-                 workspace: Path, project_id: str):
+                 workspace: Path, project_id: str, native_epoch_capability: Any = None):
+        self.native_epoch_capability = native_epoch_capability
+        if native_epoch_capability is not None:
+            from tools.w24_native_epoch_capability import require_native_epoch_capability
+            require_native_epoch_capability(native_epoch_capability)
         self._daemon = daemon
         self.monitor = monitor
         self.deadline_monotonic = deadline_monotonic
@@ -1119,6 +1418,9 @@ class BudgetedSetupDaemon:
             "SUCCEEDED", "FAILED", "CANCELLED", "EXPIRED", "LOST"}
 
     def dispatch(self, request: Mapping[str, Any]) -> dict[str, Any]:
+        if self.native_epoch_capability is not None:
+            from tools.w24_native_epoch_capability import require_native_epoch_capability
+            require_native_epoch_capability(self.native_epoch_capability)
         if not isinstance(request, Mapping):
             raise CandidateError("setup dispatch request must be a mapping")
         operation = request.get("operation")
@@ -1244,6 +1546,17 @@ class BudgetedSetupDaemon:
                 self.unknown = True
                 raise CandidateError("Worker-backed setup route lacks terminal SUCCEEDED status")
 
+        if self.native_epoch_capability is not None and operation == "operation_call" and arguments.get("operation_id") == "code.execute_java":
+            try:
+                self.native_epoch_capability.verify(response,
+                    model_ref=dict(execution["model_ref"]), revision=response.get("execution", {}).get("revision"))
+            except BaseException as exc:
+                self.unknown = True
+                _append(self.events_path, {"event": "actual_native_epoch_guard_failed",
+                    "request_id": request_id, "operation": operation, "error": str(exc),
+                    "durable_operation_state_rewritten": False, "stop_all_follow_on_routes": True})
+                raise CandidateError("actual Java epoch/origin guard failed; no follow-on route") from exc
+
         if operation == "model.adopt":
             execution = response.get("execution")
             ref = execution.get("model_ref") if isinstance(execution, Mapping) else None
@@ -1300,21 +1613,35 @@ class BudgetedSetupDaemon:
 
 def validate_current_epoch_binding(binding: Any, *, project_id: str,
                                    session_id: str, server_instance_id: str,
-                                   worker_epoch: int) -> dict[str, Any]:
+                                   worker_epoch: int, worker_instance_id: str | None = None,
+                                   receiver_anchor: Any = None, backend: Any = None) -> dict[str, Any]:
     """Reject all cross-session/epoch ModelRefs before accepting a setup receipt."""
     if not isinstance(binding, Mapping):
         raise CandidateError("setup receipt omitted its ModelRef binding record")
+    from copy import deepcopy
+    captured_binding=deepcopy(dict(binding))
     ref = binding.get("model_ref")
     if not isinstance(ref, Mapping):
         raise CandidateError("setup receipt omitted its current ModelRef")
     if (type(worker_epoch) is not int or worker_epoch < 1 or
             binding.get("project_id") != project_id or binding.get("session_id") != session_id or
             ref.get("session_id") != session_id or ref.get("server_instance_id") != server_instance_id or
-            type(ref.get("generation")) is not int or ref.get("generation") != worker_epoch or
+            type(ref.get("generation")) is not int or ref.get("generation") < 1 or
             not isinstance(ref.get("model_tag"), str) or not ref.get("model_tag") or
             isinstance(binding.get("revision"), bool) or
             not isinstance(binding.get("revision"), int) or binding["revision"] < 0):
         raise CandidateError("ModelRef belongs to a prior project/session/Worker epoch or has invalid revision")
+    from tools.run_native_w24_cure_science import ManagedModelBinding
+    from tools.w24_native_epoch_capability import _verify_live_worker_binding
+    try:
+        observed = _verify_live_worker_binding(receiver_anchor,
+            ManagedModelBinding(project_id,session_id,dict(ref),binding["revision"]),backend)
+        if observed["worker_epoch"] != worker_epoch or observed["worker_instance_id"] != worker_instance_id:
+            raise ValueError("original Worker instance/epoch differs")
+    except Exception as exc:
+        raise CandidateError("ModelRef belongs to a prior project/session/Worker epoch or has invalid revision") from exc
+    if dict(binding)!=captured_binding:
+        raise CandidateError("ModelRef record changed during original Worker binding validation")
     return dict(binding)
 
 
@@ -1329,6 +1656,11 @@ def _session_identity(response: Mapping[str, Any], *, project_id: str,
     endpoint = data.get("endpoint") if isinstance(data, Mapping) else None
     version = data.get("remote_engine_version") if isinstance(data, Mapping) else None
     build = data.get("remote_engine_build") if isinstance(data, Mapping) else None
+    from tools.run_w21_stage_native import _resolve_remote_comsol_identity, RunnerError
+    try:
+        observed_engine = _resolve_remote_comsol_identity(data or {}, {"version":"6.4.0", "build":"293"})
+    except (RunnerError, TypeError, AttributeError) as exc:
+        raise CandidateError("session.connect did not bind the exact loopback endpoint and COMSOL 6.4.0.293 identity") from exc
     if (response.get("success") is not True or not isinstance(data, Mapping) or
             data.get("project_id") != project_id or
             endpoint not in (f"127.0.0.1:{expected_port}",
@@ -1336,15 +1668,14 @@ def _session_identity(response: Mapping[str, Any], *, project_id: str,
             not isinstance(peer, Mapping) or peer.get("address") != "127.0.0.1" or
             peer.get("port") != expected_port or
             not all(isinstance(item, str) and item for item in (session_id, server_id, worker_id)) or
-            type(epoch) is not int or epoch < 1 or
-            not isinstance(version, str) or "6.4" not in version or
-            not isinstance(build, str) or "293" not in build):
+            type(epoch) is not int or epoch < 1):
         raise CandidateError("session.connect did not bind the exact loopback endpoint and COMSOL 6.4.0.293 identity")
     return {"project_id": project_id, "session_id": session_id,
             "server_instance_id": server_id, "worker_instance_id": worker_id,
             "worker_epoch": epoch, "endpoint": endpoint,
             "observed_peer": dict(peer), "remote_engine_version": version,
-            "remote_engine_build": build}
+            "remote_engine_build": build, "remote_engine_build_source": data.get("remote_engine_build_source"),
+            "observed_engine_identity": observed_engine}
 
 
 def _require_connected_inspect(response: Mapping[str, Any], session: Mapping[str, Any]) -> dict[str, Any]:
@@ -1556,7 +1887,7 @@ def _verify_worker_java_options(worker_state: Path) -> dict[str, Any]:
 
 
 def _model_create_binding(response: Mapping[str, Any], *, project_id: str,
-                          session: Mapping[str, Any]) -> Any:
+                          session: Mapping[str, Any], receiver_anchor: Any = None, backend: Any = None) -> Any:
     from tools.run_native_w24_cure_science import ManagedModelBinding
 
     execution = response.get("execution")
@@ -1568,7 +1899,7 @@ def _model_create_binding(response: Mapping[str, Any], *, project_id: str,
             not isinstance(ref, Mapping) or
             ref.get("session_id") != session.get("session_id") or
             ref.get("server_instance_id") != session.get("server_instance_id") or
-            ref.get("generation") != session.get("worker_epoch") or
+            type(ref.get("generation")) is not int or ref.get("generation") < 1 or
             not isinstance(ref.get("model_tag"), str) or not ref.get("model_tag") or
             isinstance(revision, bool) or not isinstance(revision, int) or revision < 0):
         raise CandidateError("production model_create did not return the exact current session/server Worker epoch")
@@ -1576,7 +1907,8 @@ def _model_create_binding(response: Mapping[str, Any], *, project_id: str,
     validate_current_epoch_binding(binding.as_record(),
         project_id=project_id, session_id=str(session["session_id"]),
         server_instance_id=str(session["server_instance_id"]),
-        worker_epoch=int(session["worker_epoch"]))
+        worker_epoch=int(session["worker_epoch"]), worker_instance_id=session["worker_instance_id"],
+        receiver_anchor=receiver_anchor, backend=backend)
     return binding
 
 
@@ -1647,7 +1979,8 @@ def _stop_exact_server(server: Any, expected: Mapping[str, Any], port: int,
 
 def _validate_slot_receipt(result: Mapping[str, Any], *, slot: Mapping[str, Any],
                            project_id: str, session: Mapping[str, Any],
-                           workspace: Path, expected_sources: Mapping[str, Any]) -> dict[str, Any]:
+                           workspace: Path, expected_sources: Mapping[str, Any],
+                           receiver_anchor: Any = None, backend: Any = None) -> dict[str, Any]:
     from tools.run_native_w24_static_shape_setup import CampaignError
 
     config, case = slot["configuration_id"], slot["case_id"]
@@ -1666,7 +1999,8 @@ def _validate_slot_receipt(result: Mapping[str, Any], *, slot: Mapping[str, Any]
             result.get(key), project_id=project_id,
             session_id=str(session["session_id"]),
             server_instance_id=str(session["server_instance_id"]),
-            worker_epoch=int(session["worker_epoch"]))
+            worker_epoch=int(session["worker_epoch"]), worker_instance_id=session["worker_instance_id"],
+            receiver_anchor=receiver_anchor, backend=backend)
         checked_bindings.append(binding)
     if (checked_bindings[2]["model_ref"] != checked_bindings[3]["model_ref"] or
             checked_bindings[3]["revision"] > checked_bindings[2]["revision"]):
@@ -1703,12 +2037,12 @@ def _validate_slot_receipt(result: Mapping[str, Any], *, slot: Mapping[str, Any]
             "binding_validity_after_worker_retirement": "HISTORICAL_ONLY_REQUIRES_NEW_WORKER_RE_ADMISSION"}
 
 
-def _expected_child_environment(work: Path, repo: Path) -> dict[str, str]:
-    site_packages = EXPLICIT_SITE_PACKAGES.resolve(strict=True)
+def _expected_child_environment(work: Path, repo: Path, binding: Mapping[str, Any] | None = None) -> dict[str, str]:
+    site_packages = (Path(binding["python"]["site_packages"]) if binding else EXPLICIT_SITE_PACKAGES).resolve(strict=True)
     return {
         "COMSOL_ROOT": str(work / "comsol-shadow"),
-        "COMSOL_JAVA_HOME": str(JAVA11.resolve(strict=True)),
-        "JAVA_HOME": str(JAVA11.resolve(strict=True)),
+        "COMSOL_JAVA_HOME": str((Path(binding["jdk"]["home"]) if binding else JAVA11).resolve(strict=True)),
+        "JAVA_HOME": str((Path(binding["jdk"]["home"]) if binding else JAVA11).resolve(strict=True)),
         "COMSOL_PREFS_DIR": str(work / "runtime/prefs"),
         "COMSOL_PROJECT_ROOT": str(work / "project"),
         "COMSOL_SERVER_MCP_HOME": str(work / "mcp-home"),
@@ -1720,8 +2054,8 @@ def _expected_child_environment(work: Path, repo: Path) -> dict[str, str]:
     }
 
 
-def _verify_execution_environment(work: Path, repo: Path) -> dict[str, Any]:
-    expected = _expected_child_environment(work, repo)
+def _verify_execution_environment(work: Path, repo: Path, binding: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    expected = _expected_child_environment(work, repo, binding) if binding else _expected_child_environment(work, repo)
     mismatches = {key: {"expected": value, "observed": os.environ.get(key)}
                   for key, value in expected.items()
                   if os.environ.get(key) != value}
@@ -1756,7 +2090,18 @@ def _verify_frozen_runtime(repo: Path, freeze: Mapping[str, Any],
         raise CandidateError("COMSOL install root differs from the frozen candidate")
     if runtime.get("external_jdk_home") != str(jdk.resolve(strict=True)):
         raise CandidateError("external JDK differs from the frozen candidate")
-    if Path(sys.executable).resolve(strict=True) != EXPECTED_PYTHON.resolve(strict=True):
+    binding = freeze.get("fresh_runtime_binding")
+    if binding is not None:
+        fresh_runtime.validate(binding, repo=repo, budget=SETUP_BUDGET, install=install, jdk=jdk)
+        compiled_root = Path(freeze["candidate_evidence_dir"]) / "offline_compile/classes"
+        actual_classes = {}
+        for path in sorted(compiled_root.rglob("*.class")):
+            raw = fresh_runtime.read_owned(path)
+            actual_classes[path.relative_to(compiled_root).as_posix()] = {"bytes": len(raw), "sha256": _sha_bytes(raw)}
+        expected_classes = {row["path"]: {"bytes": row["bytes"], "sha256": row["sha256"]} for row in recorded.get("classes", [])}
+        if not expected_classes or actual_classes != expected_classes:
+            raise CandidateError("fresh frozen Java compile classes changed or closure incomplete")
+    if binding is None and Path(sys.executable).resolve(strict=True) != EXPECTED_PYTHON.resolve(strict=True):
         raise CandidateError(f"candidate must use the exact Python executable {EXPECTED_PYTHON}")
     if sys.version_info[:2] != (3, 12):
         raise CandidateError(f"candidate requires Python 3.12, got {sys.version.split()[0]}")
@@ -1926,8 +2271,11 @@ def _retire_worker_and_server(*, daemon: Any, server: Any,
 def _unknown_hold(*, daemon: Any, server: Any, monitor: SampledRssMonitor | None,
                   run_dir: Path, work: Path, project_id: str | None,
                   session: Mapping[str, Any] | None, candidate_sha256: str,
-                  reason: str, stop_event: threading.Event | None = None) -> None:
-    """Persist UNKNOWN identity and retain all process/runtime handles indefinitely."""
+                  reason: str, stop_event: threading.Event | None = None,
+                  first_cause: BaseException | None = None) -> dict[str, Any] | None:
+    """Retain/fence original objects before diagnostics, without native cleanup."""
+    state = _capture_hold_handles(server, daemon, first_cause)
+    _fence_hold_handles(state, monitor)
     lifecycle = (_safe_session_from_lifecycle(daemon, project_id,
                   int(server.port) if type(server.port) is int else -1)
                  if daemon is not None and isinstance(project_id, str) else None)
@@ -1962,11 +2310,15 @@ def _unknown_hold(*, daemon: Any, server: Any, monitor: SampledRssMonitor | None
                                 else "RSS_MONITOR_HANDLE_UNAVAILABLE"),
             "reason": reason,
             "policy": "No automatic retry, Worker retirement, daemon close, server stop, or restart while UNKNOWN. Reconcile the original durable operation and process handles outside this run before any future action."}
-    _write_new(run_dir / "unknown_handle_hold.json", hold)
-    _append(run_dir / "events.jsonl", {"event": "unknown_handle_hold_entered",
+    try:
+        _write_new(run_dir / "unknown_handle_hold.json", hold)
+        _append(run_dir / "events.jsonl", {"event": "unknown_handle_hold_entered",
                                         "at_utc": datetime.now(timezone.utc).isoformat(),
                                         "receipt": str(run_dir / "unknown_handle_hold.json")})
-    _hold_forever_with_handles(monitor, stop_event=stop_event)
+    except BaseException as exc:
+        _hold_diagnostic(state, "unknown_hold_receipt", exc)
+    return _hold_forever_with_handles(monitor, server=server, daemon=daemon,
+        first_cause=first_cause, run_dir=run_dir, stop_event=stop_event)
 
 
 def execute_candidate(*, repo: Path, evidence: Path, work: Path,
@@ -1978,10 +2330,19 @@ def execute_candidate(*, repo: Path, evidence: Path, work: Path,
     It requires an explicit candidate SHA, a new private work path, the exact
     environment contract, a fresh scoped inventory, and zero-solve route guards.
     """
-    python_isolation = configure_archive_python(repo)
+    # Validate authority/source before isolation and before any native process birth.
+    freeze_raw = json.loads(fresh_runtime.read_owned(evidence / FREEZE_FILE), object_pairs_hook=fresh_runtime._pairs)
+    binding = freeze_raw.get("fresh_runtime_binding")
+    if binding is not None:
+        fresh_runtime.validate(binding, repo=repo, budget=SETUP_BUDGET, install=install, jdk=jdk)
+        fresh_runtime.scoped_path(binding, evidence)
+        fresh_runtime.scoped_path(binding, work, absent=True)
+        if work != Path(binding["namespace"])/"work":
+            raise CandidateError("fresh work must equal immutable namespace/work")
+    python_isolation = configure_archive_python(repo, binding=binding) if binding else configure_archive_python(repo)
     freeze = verify_candidate(repo=repo, evidence=evidence,
                               reviewed_sha256=reviewed_sha256)
-    if freeze.get("source", {}).get("checkout_kind") != "git_archive_plus_explicit_overlay":
+    if freeze.get("source", {}).get("checkout_kind") != ("fresh_host_source_closure" if binding else "git_archive_plus_explicit_overlay"):
         raise CandidateError("native setup may execute only from the frozen published git archive plus overlay")
     if Path.cwd().resolve(strict=True) != repo.resolve(strict=True):
         raise CandidateError("native setup cwd must be the exact isolated source archive root")
@@ -1993,11 +2354,11 @@ def execute_candidate(*, repo: Path, evidence: Path, work: Path,
     if evidence.exists() is False or evidence.is_symlink():
         raise CandidateError("reviewed candidate evidence directory is missing or aliased")
     if (work.exists() or work.is_symlink() or
-            not str(work).startswith(WORK_PREFIX) or
+            (binding is None and not str(work).startswith(WORK_PREFIX)) or
             not work.resolve().is_relative_to(Path("/private/tmp"))):
         raise CandidateError("candidate work path must be new and below the frozen private temporary prefix")
-    environment_receipt = _verify_execution_environment(work, repo)
-    if work.parent.resolve(strict=True) != Path("/private/tmp").resolve(strict=True):
+    environment_receipt = _verify_execution_environment(work, repo, binding) if binding else _verify_execution_environment(work, repo)
+    if binding is None and work.parent.resolve(strict=True) != Path("/private/tmp").resolve(strict=True):
         raise CandidateError("candidate work directory must be a direct private /private/tmp child")
     work.mkdir(mode=0o700, parents=False, exist_ok=False)
     run_dir = evidence / "native-setup-run"
@@ -2033,13 +2394,16 @@ def execute_candidate(*, repo: Path, evidence: Path, work: Path,
     total_outputs = 0
     status = "FAILED_BEFORE_NATIVE_BIRTH"
     error: dict[str, Any] | None = None
+    first_cause: BaseException | None = None
     cleanup: dict[str, Any] | None = None
     slots = build_setup_slots()
     receipt_base: dict[str, Any] = {
         "schema": "W24_STATIC_SHAPE_SETUP_CAMPAIGN_RUN_V1",
         "status": "RUNNING_SETUP_ONLY",
         "candidate_sha256": reviewed_sha256,
-        "base_commit": BASE_COMMIT,
+        "base_commit": None if binding else BASE_COMMIT,
+        "activity_id": binding["activity_id"] if binding else None,
+        "runtime_binding_sha256": binding["binding_sha256"] if binding else None,
         "source_closure_sha256": freeze["source"]["source_closure_sha256"],
         "evidence_dir": str(run_dir.resolve()), "work_dir": str(work.resolve()),
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -2084,7 +2448,7 @@ def execute_candidate(*, repo: Path, evidence: Path, work: Path,
     try:
         if len(slots) != 14 or len({row["configuration_id"] for row in slots}) != 7:
             raise CandidateError("frozen variant-aware setup matrix must contain exactly seven configs by two cases")
-        if work.resolve() != work or work.parent.resolve(strict=True) != Path("/private/tmp").resolve(strict=True):
+        if work.resolve() != work or (binding is None and work.parent.resolve(strict=True) != Path("/private/tmp").resolve(strict=True)):
             raise CandidateError("candidate work path is not canonical private temporary storage")
         shadow_receipt = server.prepare_shadow()
         _append(events_path, {"event": "private_shadow_prepared",
@@ -2196,6 +2560,7 @@ def execute_candidate(*, repo: Path, evidence: Path, work: Path,
         worker_state = "CONNECTED_UNVERIFIED"
         context, worker, worker_identity, worker_state_dir = _worker_identity_from_context(
             daemon, project_id, session)
+        _capture_hold_handles(server, daemon)
         worker_birth_ms = _process_start_epoch_for_identity(worker_identity, worker)
         monitor.bind_worker(int(worker_identity["pid"]), worker_birth_ms)
         _write_new(run_dir / "worker_popen_identity.json", {
@@ -2230,6 +2595,10 @@ def execute_candidate(*, repo: Path, evidence: Path, work: Path,
             status = "STOPPED_RSS_OR_MONITOR_ADMISSION_BEFORE_MODEL_CREATE"
             raise CandidateError(f"resource watchdog blocked model_create: {monitor.stop_reason}")
 
+        from tools.w24_native_epoch_capability import _capture_live_worker_binding
+        receiver_backend = context.backend
+        receiver_anchor = _capture_live_worker_binding(receiver_backend, project_id=project_id,
+            session_id=session["session_id"])
         gate = BudgetedSetupDaemon(daemon, monitor=monitor,
             deadline_monotonic=deadline, events_path=events_path,
             workspace=workspace, project_id=project_id)
@@ -2247,7 +2616,7 @@ def execute_candidate(*, repo: Path, evidence: Path, work: Path,
         _write_new(run_dir / "registered_parent_model_create.json", model_create)
         try:
             parent_binding = _model_create_binding(model_create, project_id=project_id,
-                                                   session=session)
+                                                   session=session, receiver_anchor=receiver_anchor, backend=receiver_backend)
         except CandidateError:
             gate.unknown = True
             status = "STOPPED_UNKNOWN"
@@ -2283,7 +2652,8 @@ def execute_candidate(*, repo: Path, evidence: Path, work: Path,
                     raise CandidateError("slot returned without the complete staged build/save/reopen/readback route")
                 validation = _validate_slot_receipt(
                     result, slot=slot, project_id=project_id, session=session,
-                    workspace=workspace, expected_sources=source_manifest.get("sources", {}))
+                    workspace=workspace, expected_sources=source_manifest.get("sources", {}),
+                    receiver_anchor=receiver_anchor, backend=receiver_backend)
                 if any(tag in model_tags for tag in validation["model_tags"]):
                     raise CandidateError("two preregistered setup slots resolved to a duplicate native model tag")
                 model_tags.update(validation["model_tags"])
@@ -2336,7 +2706,8 @@ def execute_candidate(*, repo: Path, evidence: Path, work: Path,
         elif status == "RUNNING_SETUP_ONLY":
             status = "STOPPED_BEFORE_14_OF_14"
     except BaseException as exc:
-        error = {"type": type(exc).__name__, "message": str(exc),
+        first_cause = first_cause or exc
+        error = {"type": type(exc).__name__, "message": _hold_text(exc),
                  "traceback": traceback.format_exc(limit=20)}
         if status == "RUNNING_SETUP_ONLY":
             status = "FAILED_SETUP_ONLY"
@@ -2351,14 +2722,16 @@ def execute_candidate(*, repo: Path, evidence: Path, work: Path,
                           monitor=monitor,
                           run_dir=run_dir, work=work, project_id=project_id,
                           session=session, candidate_sha256=reviewed_sha256,
-                          reason=(error or {}).get("message", status))
+                          reason=(error or {}).get("message", status), first_cause=first_cause)
+            status = "FAIL_UNKNOWN_PRESERVED_ORIGINAL_CHILDREN_TERMINAL"
         except BaseException as exc:
             error = {**(error or {}), "unknown_hold_error":
-                     f"{type(exc).__name__}: {exc}"}
+                     f"{type(exc).__name__}: {_hold_text(exc)}"}
             status = "UNKNOWN_PRESERVED_CLEANUP_NOT_AUTHORIZED_OR_UNPROVEN"
             # Preserve all in-process handles; an UNKNOWN result must not fall
             # through to daemon.close() or server termination.
-            _hold_forever_with_handles(monitor)
+            _hold_forever_with_handles(monitor, server=server, daemon=daemon, first_cause=first_cause, run_dir=run_dir)
+            status = "FAIL_UNKNOWN_PRESERVED_ORIGINAL_CHILDREN_TERMINAL"
     elif daemon is not None and worker_state == "CONNECTED" and session is not None:
         try:
             if monitor is None:
@@ -2368,12 +2741,19 @@ def execute_candidate(*, repo: Path, evidence: Path, work: Path,
                 project_id=str(project_id), session=session, run_dir=run_dir,
                 deadline_monotonic=(server.birth_monotonic or time.monotonic()) + MAX_WALL_SECONDS)
         except BaseException as exc:
-            error = {**(error or {}), "cleanup_error": f"{type(exc).__name__}: {exc}"}
+            error = {**(error or {}), "cleanup_error": f"{type(exc).__name__}: {_hold_text(exc)}"}
             status = "CONNECTED_STATE_PRESERVED_CLEANUP_BLOCKED"
-            _unknown_hold(daemon=daemon, server=server, monitor=monitor,
-                          run_dir=run_dir, work=work, project_id=str(project_id),
-                          session=session, candidate_sha256=reviewed_sha256,
-                          reason=error["cleanup_error"])
+            first_cause = first_cause or exc
+            try:
+                _unknown_hold(daemon=daemon, server=server, monitor=monitor,
+                              run_dir=run_dir, work=work, project_id=str(project_id),
+                              session=session, candidate_sha256=reviewed_sha256,
+                              reason=error["cleanup_error"], first_cause=first_cause)
+            except BaseException as hold_exc:
+                error = {**error, "unknown_hold_error": f"{type(hold_exc).__name__}: {_hold_text(hold_exc)}"}
+                _hold_forever_with_handles(monitor, server=server, daemon=daemon,
+                    first_cause=first_cause, run_dir=run_dir)
+            status = "FAIL_UNKNOWN_PRESERVED_ORIGINAL_CHILDREN_TERMINAL"
     else:
         if daemon is not None:
             try:
@@ -2390,7 +2770,7 @@ def execute_candidate(*, repo: Path, evidence: Path, work: Path,
                 error = {**(error or {}), "server_stop_error": f"{type(exc).__name__}: {exc}"}
                 status = "SERVER_HANDLE_PRESERVED_CLEANUP_BLOCKED"
                 if daemon is not None and project_id is not None:
-                    _hold_forever_with_handles(monitor)
+                    _hold_forever_with_handles(monitor, server=server, daemon=daemon, first_cause=first_cause, run_dir=run_dir)
 
     receipt = {**receipt_base,
                "status": status,
@@ -2423,6 +2803,25 @@ def execute_candidate(*, repo: Path, evidence: Path, work: Path,
     return receipt
 
 
+def fresh_exact_execute_plan(*, repo: Path, evidence: Path, work: Path,
+                             reviewed_sha256: str) -> dict[str, Any]:
+    """No native action; Main binds these bytes to a new external once wrapper."""
+    freeze = verify_candidate(repo=repo, evidence=evidence, reviewed_sha256=reviewed_sha256)
+    binding = freeze.get("fresh_runtime_binding")
+    if binding is None:
+        raise CandidateError("fresh exact entry requires a fresh host runtime binding")
+    fresh_runtime.scoped_path(binding, work, absent=True)
+    if work != Path(binding["namespace"])/"work":
+        raise CandidateError("fresh work must equal immutable namespace/work")
+    argv = [binding["python"]["entry"], "-S", "-m", "tools.run_native_w24_static_shape_setup_campaign", "execute",
+            "--evidence", str(evidence), "--work", str(work), "--reviewed-candidate-sha256", reviewed_sha256,
+            "--comsol-root", binding["comsol"]["root"], "--jdk11", binding["jdk"]["home"]]
+    return {"argv": argv, "argv_sha256": _json_hash(argv), "cwd": str(repo.resolve(strict=True)),
+            "environment": _expected_child_environment(work, repo, binding), "candidate_sha256": reviewed_sha256,
+            "runtime_binding_sha256": binding["binding_sha256"], "activity_id": binding["activity_id"],
+            "require_new_external_root_approval_and_once": True, "native": "NOT_RUN"}
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -2430,6 +2829,7 @@ def _parser() -> argparse.ArgumentParser:
     archive.add_argument("--destination", required=True, type=Path)
     prepare = sub.add_parser("prepare", help="offline source audit and Java compile; starts no process")
     prepare.add_argument("--evidence", required=True, type=Path)
+    prepare.add_argument("--runtime-authority", type=Path)
     prepare.add_argument("--comsol-root", type=Path, default=INSTALL_ROOT)
     prepare.add_argument("--jdk11", type=Path, default=JAVA11)
     execute = sub.add_parser("execute", help="run only the separately reviewed setup-only candidate")
@@ -2450,7 +2850,7 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         if args.command == "prepare":
             result = prepare_candidate(repo=REPO, evidence=args.evidence,
-                install=args.comsol_root, jdk=args.jdk11)
+                install=args.comsol_root, jdk=args.jdk11, runtime_authority=args.runtime_authority)
             print(json.dumps({"status": result["status"],
                               "candidate_sha256": result["candidate_sha256"],
                               "evidence_dir": result["candidate_evidence_dir"],

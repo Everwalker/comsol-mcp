@@ -1,13 +1,14 @@
-# V3 当前续跑 — 2026-10-14
+# V3 当前续跑 — 2026-10-13T20:04:51.998193+00:00
 
 Goal ACTIVE / INCOMPLETE / NOT_ACCEPTED。权威续跑指针：`docs/full_project_continuation_v3/state/RESUME.json`。以下原检查点及暂停文字保留为历史。
 
-- 由固定 0644ea970688e02beda4be7069f67144b4bcf59e / tree 2b477e5d7c11dfb59b84994a54da114c7584e0e1 恢复 19,877 文件并校验；原 26/272/60/6 合同、历史 UNKNOWN/safe_retry=false 与两 Mac COMSOL6.3 USER_REQUESTED_SKIP 未改。
-- Windows R19 与 W23 r15 逐文件接入，保留较新的 owner、Job、SCM、WFP、Desktop 与交付安全路径；W24 专属改动尚待选择合并，完整 0.1.10 候选尚未形成。
-- runtime observation 在真实 attach 路径绑定原 Worker/service/安装/build/UUID/epoch/server/endpoint，分离安装身份和连接标签。相关负控纳入冻结 r7。
-- 冻结软件 r7 指纹 `21257f60ac18d47081c61cd0492b5c3b612178ed93c57d9cbdc88ed14780e156`：1,490 项整合 + 3 项注册回归 PASS，0 FAIL/ERROR/SKIP，前后指纹一致。证据 `docs/full_project_continuation_v3/state/SOFTWARE_INTEGRATION_R7.json`。先前失败和日志保留。
-- 19 class 经本机 COMSOL6.4.0.293 SDK / Java11 实际编译与 javap；此为编译证据。当前新原生链、W23/W24 数值与科学、其他目标机器、W25 实机、W26 完整安装/升级/回退/恢复和统一独立 Reviewer 仍待完成，不用软件 PASS 代替。
-- 下一步：同步本阶段、完成新建 normal MCP 原生链、W24 选择合并，持续执行原 W01–W26，最后冻结最终候选交独立 Reviewer，按实质问题循环整改。
+- 唯一生产树 `repository/` 从固定 `0644ea970688e02beda4be7069f67144b4bcf59e` 恢复；原 26/272/60/6、四状态表、Activity020 UNKNOWN/no-replay、两 Mac COMSOL6.3 USER_REQUESTED_SKIP 保持。
+- 第一整合软件阶段 `6b52c63cdbf04f344e1587c907592831a80206c5` 已普通推送 GitHub main 并读回；R7 为1490+3 PASS。第二整合阶段 R8 正在刷新显式提交清单，各受影响组绑定其确切源码，所有首败保留。原并发 artifact 注册 ctime 竞争已真实重现、复用既有原子独占 rename 窄修，409受影响测试 PASS。
+- P0 R6 实际 COMSOL6.4.0.293 公开 MCP 链17次调用 PASS，覆盖参数 JSON 导出/修改/导入/数值与 MPH 保存，0 Study/solver/GUI，原 Worker/Server 精确收尾。CSV/实际 runtime observation/recipe、package/rebuild/preview 新原生仍 NOT_RUN。Main 已审查 controller 保留修复，106原组、65当前受影响组及7数字地址 fixture 控制分别 PASS。
+- W23 r2 本地日志初始化首败、model_load UNKNOWN/safe_retry=false、八槽未派发均保留。原 runner 已退出，两个 task 子进程的例外 SIGTERM 收尾仍等待明确用户恢复授权，未发信号。未来导入前 HOME 修复与原 owner 保留已接入；Main 接受 latest51软件控制，旧125及其精确源码保全，native NOT_RUN。
+- W24 专属源码选择集成、实际 SDK 编译和连接/模型身份修复证据保持限定范围；Main 接受当前非阻塞 UNKNOWN owner 保留/异常诊断修复，100受影响测试 PASS，663声明源前后一致；旧 r2 snapshot/freeze 保留但 stale，14槽与科学链 NOT_RUN。
+- W26 已恢复43锁定 wheel；final4全部41实际步骤、ARM完整required profile、禁止读取原安装目录的迁移验证及fat字节检查 PASS，9份原合格源码保全。当前43依赖源外离线实际8/8命令 PASS，Main核对两环境当前profile、原consumer全字节、8samePID OS拒网及8原进程组退出；212受影响软件 PASS。deps2诊断边界、deps3 module token首败与deps4初始fixture失败保留，修复后的deps4b资格与实际8证据分别绑定当前源。实际 Intel/Windows、application bundle/install、升级回退/非空卸载/全数据恢复和三领域 recipe 尚未完成。
+- Windows/Intel实机、W22–W24科学链、W25、W26完整交付及最终独立 Reviewer 均未完成；当前继续不依赖遗留 UNKNOWN 的可安全执行工作。
 
 ---
 

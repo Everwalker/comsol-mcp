@@ -1,0 +1,165 @@
+{
+  "after_fix_proof": [
+    {
+      "actual_observed": {
+        "published_nlink": 1,
+        "reader_after": {
+          "ctime_ns": 1791917739248119064,
+          "inode": 31669169,
+          "nlink": 1
+        },
+        "reader_before": {
+          "ctime_ns": 1791917739248119064,
+          "inode": 31669169,
+          "nlink": 1
+        }
+      },
+      "path": "/private/tmp/cv3t-r8/atomic-registration-after-r2/test_publication_window_is_sin0/PUBLISH_WINDOW.json",
+      "results": {
+        "observer": "REGISTERED",
+        "publisher": "REGISTERED"
+      },
+      "sha256": "60b9a363db44774e66a1d6d44d40c70a7268d61e38507eef4af1deb553b5fb84"
+    },
+    {
+      "actual_observed": {
+        "published_nlink": 1,
+        "reader_after": {
+          "ctime_ns": 1791917739257551072,
+          "inode": 31669185,
+          "nlink": 1
+        },
+        "reader_before": {
+          "ctime_ns": 1791917739257551072,
+          "inode": 31669185,
+          "nlink": 1
+        }
+      },
+      "path": "/private/tmp/cv3t-r8/atomic-registration-after-r2/test_publication_window_is_sin1/PUBLISH_WINDOW.json",
+      "results": {
+        "observer": "ARTIFACT_REGISTRATION_CONFLICT",
+        "publisher": "REGISTERED"
+      },
+      "sha256": "598b4eb9a0f274b6e200129146f7c38c5bc6e9ad7832670a0e65555f1c08e35e"
+    }
+  ],
+  "before_fix_proof": [
+    {
+      "actual_observed": {
+        "published_nlink": 2,
+        "reader_after": {
+          "ctime_ns": 1791917644026296589,
+          "inode": 31660695,
+          "nlink": 1
+        },
+        "reader_before": {
+          "ctime_ns": 1791917644025301458,
+          "inode": 31660695,
+          "nlink": 2
+        }
+      },
+      "path": "/private/tmp/cv3t-r8/atomic-registration-before-r2/test_publication_window_is_sin0/PUBLISH_WINDOW.json",
+      "results": {
+        "observer": "ARTIFACT_CHANGED",
+        "publisher": "REGISTERED"
+      },
+      "sha256": "8ee55bfc2dd52a6d82334a5fad68c759d700a51fe0923ac2ca7f030bb0ad1442"
+    },
+    {
+      "actual_observed": {
+        "published_nlink": 2,
+        "reader_after": {
+          "ctime_ns": 1791917644047482950,
+          "inode": 31660722,
+          "nlink": 1
+        },
+        "reader_before": {
+          "ctime_ns": 1791917644046537404,
+          "inode": 31660722,
+          "nlink": 2
+        }
+      },
+      "path": "/private/tmp/cv3t-r8/atomic-registration-before-r2/test_publication_window_is_sin1/PUBLISH_WINDOW.json",
+      "results": {
+        "observer": "ARTIFACT_CHANGED",
+        "publisher": "REGISTERED"
+      },
+      "sha256": "967ccce6980ada98465fda2f4347685466b7f46e7e21a4e557de966c42d92bbc"
+    }
+  ],
+  "diff": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/software-r8-preparation/ARTIFACT_ATOMIC_PUBLICATION_REPAIR.patch",
+  "final_review": "Main pending, no self final approval or commit/push",
+  "fix": "Reuse existing platform _rename_no_clobber for same-directory temp->destination atomic exclusive rename. Published complete bytes have one link immediately; competitors only hash final complete files. Remove hardlink and empty-placeholder/replace path. FileExistsError still hashes/conflicts; any other atomic-publication OSError failcloses as ACCESS_VIOLATION. No change to caller permissions, metadata acceptance, membership, sameFD, source hash, ctime, record compare-and-insert or consumer validation.",
+  "initial_fixture_error": "First proof fixture omitted required request_id/registering_operation_id; setup refusal preserved, corrected before reproducing source bug.",
+  "native": "NOT_RUN",
+  "negative_controls": [
+    "typed metadata conflict remains refused",
+    "competing same-digest different bytes retained and refused",
+    "competing destination symlink not followed or clobbered",
+    "source changes during actual pinned copy refused",
+    "unsupported exclusive rename cannot call link/replace/create placeholder; no destination or metadata left"
+  ],
+  "original_failure": {
+    "actual_error": "ARTIFACT_CHANGED",
+    "expected": "ARTIFACT_REGISTRATION_CONFLICT",
+    "isolated_initial_attempts": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/software-r8-preparation/concurrency-repro.json",
+    "note": "The 40 unscheduled isolated PASS trials did not establish a root-cause repair. Controlled threads later reproduce the exact sameFD/ctime publication defect.",
+    "run_id": "20261013T183859Z-938ea313",
+    "test": "tests/test_artifact_registration_import.py::test_concurrent_same_digest_registration_is_compare_and_insert"
+  },
+  "platform_scope": "Actual APFS/macOS execution; existing Darwin/Linux/Windows atomic helper implementations untouched. Unsupported filesystem atomic rename deliberately refuses; no weaker fallback. Windows/Linux native filesystem verification NOT_RUN here.",
+  "preserved_attempts": [
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/software-r8-preparation/atomic-registration-before.junit.xml",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/software-r8-preparation/atomic-registration-before.stdout.txt",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/software-r8-preparation/atomic-registration-before-r2.junit.xml",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/software-r8-preparation/atomic-registration-before-r2.stdout.txt",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/software-r8-preparation/atomic-registration-after-r1.junit.xml",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/software-r8-preparation/atomic-registration-after-r1.stdout.txt",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/software-r8-preparation/atomic-registration-after-r2.junit.xml",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/software-r8-preparation/atomic-registration-after-r2.stdout.txt"
+  ],
+  "root_cause": "register_project_artifact linked private temp to visible destination before deleting temp. Another registrar could pin the published inode at nlink2; temp unlink changes same inode ctime and nlink during its strict pinned read. Old unsupported-link placeholder/replace also exposed an incomplete destination. ctime is correctly strict and remains unchanged.",
+  "schema": "ARTIFACT_ATOMIC_PUBLICATION_REPAIR_V1",
+  "source_manifest": {
+    "comsol_mcp/_artifact_store.py": {
+      "bytes": 98678,
+      "sha256": "c7ee8c61036176dad499769fa3274f610d956e34d53d8a6bffd61e3afff253bd"
+    },
+    "tests/test_artifact_atomic_registration.py": {
+      "bytes": 9229,
+      "sha256": "6fbe5a3398c7ef6cd7f12e8f11da159ef09f27abdefec4f19cc5b385096d43db"
+    }
+  },
+  "status": "SOFTWARE_REPAIR_READY_MAIN_REVIEW_PENDING",
+  "tests": {
+    "actual_owned_filesystem_threads": true,
+    "affected_bounded_pass": 409,
+    "affected_modules": [
+      "tests/test_artifact_atomic_registration.py",
+      "tests/test_artifact_registration_import.py",
+      "tests/test_public_artifact_format_metadata.py",
+      "tests/test_g3_model_delivery.py",
+      "tests/test_g3_artifact_hardening.py",
+      "tests/test_g3_r02_artifact_security.py",
+      "tests/test_g3_d17_artifact_service.py",
+      "tests/test_g3_r04_artifact_budget.py",
+      "tests/test_g3_w13.py",
+      "tests/test_g3_common.py"
+    ],
+    "bound_manifest": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/tools/test_efficiency_v3_integration_r8_atomic.json",
+    "bound_manifest_sha256": "726621b2d50ba8128cd6c97e5a47426b192cda32dc013de7ef29c5a6b1582a36",
+    "candidate_fingerprint": "784f0a6fb54e58d63f2451cc5af7c730deb865a6f1cdbaac2aa233fb778c1fd4",
+    "new_tests": 7,
+    "p0_repeat_pass": 20,
+    "p0_repeat_report": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/software-r8-preparation/p0-atomic-run.json",
+    "p0_repeat_report_sha256": "b9da8119a2f3d1ef305cb3879632124160675440540c0cbf320e7be1136aed0d",
+    "p0_source_before_after": "PASS",
+    "scope": "Software actual store/actual owned filesystem and real public routes/parser/pre-step guards. No successful COMSOL/native rebuild/science acceptance.",
+    "source_before_after": "PASS",
+    "source_closure_files": 643,
+    "summary": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/test-efficiency/20261013T185657Z-60c92fe7.summary.json",
+    "summary_sha256": "e25a2acf779005445ba13076868c7fb2ba4374b1d4ee5f2ae2fcb2f1711ca75c"
+  },
+  "w23_holding_source": "NOT_EDITED_NOT_BOUND",
+  "w26_exact_locked_nine_source": "UNCHANGED"
+}

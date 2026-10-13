@@ -808,13 +808,13 @@ def test_w24_reopened_template_readback_requires_every_field_to_match():
     before = {"geometry": {"domains": 4}, "solver": {"rtol": 1e-5},
               "status": "BUILT_NOT_SOLVED", "native_study_run_calls": 0}
 
-    matching = runner._compare_reopened_readback(
+    matching = runner._compare_configuration_values(
         before, {"geometry": {"domains": 4}, "solver": {"rtol": 1e-5}})
-    changed = runner._compare_reopened_readback(
+    changed = runner._compare_configuration_values(
         before, {"geometry": {"domains": 3}, "solver": {"rtol": 1e-5}})
-    missing = runner._compare_reopened_readback(
+    missing = runner._compare_configuration_values(
         before, {"geometry": {"domains": 4}})
-    added = runner._compare_reopened_readback(
+    added = runner._compare_configuration_values(
         before, {"geometry": {"domains": 4}, "solver": {"rtol": 1e-5}, "extra": True})
 
     assert matching["matches"] is True

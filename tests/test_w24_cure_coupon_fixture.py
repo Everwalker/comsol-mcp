@@ -70,11 +70,13 @@ def test_w24_fixture_is_build_only_and_uses_correct_cure_rates():
 
 def test_w24_fixture_gates_exact_axisymmetric_domain_and_external_edge_geometry():
     source = FIXTURE.read_text(encoding="utf-8")
+    runner_source = (REPO / "tools/run_native_w24_cure_preflight.py").read_text(encoding="utf-8")
 
     assert "geom.axisymmetric(true)" in source
     assert 'geom.feature().create("uni1", "Union")' in source
     assert "if (geom.getNDomains() != 4)" in source
-    assert "relativeError > 1.0e-6" in source
+    assert "MESH_VOLUME_RELATIVE_TOLERANCE = 1.0e-6" in runner_source
+    assert "relative_error > MESH_VOLUME_RELATIVE_TOLERANCE" in runner_source
     assert "selection must identify one edge" in source
     assert "assertBoundingBox(tag, boundingBox, EXTERNAL_EDGE_BOXES[i])" in source
     assert "axis-of-symmetry edge selected for convection" in source
@@ -187,7 +189,7 @@ def test_w24_ode_equations_are_resolved_by_unique_feature_type_and_reported_tag(
     )
     for main_class, expected_stdout in (
         ("W24DistributedODEResolverHarness", "W24 DistributedODE resolver proxy checks: PASS (3 cases)"),
-        ("W24SolverSequenceDiagnosticsHarness", "W24 solver-sequence diagnostics proxy checks: PASS (318 cases)"),
+        ("W24SolverSequenceDiagnosticsHarness", "W24 solver-sequence diagnostics proxy checks: PASS (269 cases)"),
     ):
         result = run_results[main_class]
         assert result["returncode"] == 0 and not result["timed_out"], (
@@ -197,7 +199,7 @@ def test_w24_ode_equations_are_resolved_by_unique_feature_type_and_reported_tag(
         if main_class == "W24SolverSequenceDiagnosticsHarness":
             assert result["stdout_text"].strip().splitlines()[:-1] == [
                 "W24 coupon mesh-generation composition proxy checks: PASS (2 cases; software only)",
-                "W24 mesh-only physical-volume proxy checks: PASS (79 cases; software only)",
+                "W24 actual triangle-mesh axisymmetric volume proxy checks: PASS (30 cases; software only)",
                 "W24 Science measurement applicability proxy checks: PASS (63 cases; software only)",
             ]
     assert all(value["major_version"] == 55 for value in class_artifacts.values()), (
@@ -205,32 +207,33 @@ def test_w24_ode_equations_are_resolved_by_unique_feature_type_and_reported_tag(
     )
 
 
-def test_coupon_physical_measure_keeps_native_area_separate_from_mesh_integral():
+def test_coupon_volume_uses_raw_native_triangles_and_keeps_native_area_separate():
     source = FIXTURE.read_text(encoding="utf-8")
-    helper = source.split("private static Map<String, Object> observeAxisymmetricPhysicalVolume(", 1)[1].split(
+    helper = source.split("private static Map<String, Object> captureAxisymmetricMesh(", 1)[1].split(
+        "private static Map<String, Object> observeAxisymmetricDomainArea(", 1)[0]
+    assert 'mesh.getVertex(offset, blockCount)' in helper
+    assert 'mesh.getElem("tri", offset, blockCount)' in helper
+    assert 'mesh.getElemEntity("tri", offset, blockCount)' in helper
+    assert '"triangle_index_base", 0' in helper
+    assert '"vertex_coordinate_axes", Arrays.asList("r_m", "z_m")' in helper
+    assert 'raw.put("vertex_coordinates", vertices)' in helper
+    assert 'raw.put("triangle_connectivity", triangles)' in helper
+    assert 'raw.put("triangle_geometric_entities", triangleEntities)' in helper
+    assert '"capture_atomic", false' in helper
+    assert 'int noArgElementCount = mesh.getNumElem();' in helper
+    assert 'raw.put("mesh_num_elem_noarg", noArgElementCount)' in helper
+    assert 'mesh.getNumElem() != noArgElementCount' in helper
+    assert 'mesh.getNumElem(row.getKey()) != row.getValue()' in helper
+    assert 'countSum' not in helper
+    assert 'triangleCount <= 0' in helper and 'noArgElementCount <= 0' in helper
+    assert 'Arrays.toString(types)' in helper and 'element_counts=" + typeCounts' in helper
+    assert 'mesh.run(' not in helper and 'study.run(' not in helper and '.compute(' not in helper
+    assert 'numerical().create(numericalTag, "MeasureSurface")' not in source
+    assert "2*pi*R" not in source
+    area_helper = source.split("private static Map<String, Object> observeAxisymmetricDomainArea(", 1)[1].split(
         "private static Map<String, Object> readback(Model model)", 1)[0]
-    assert '"cross_section_area_m2", area' in helper
-    assert '"volume_m3", volume' in helper
-    assert '"NATIVE_MESH_MEASURESURFACE_SPATIAL_INTVOLUME_ON"' in helper
-    assert 'numerical().create(numericalTag, "MeasureSurface")' in helper
-    assert 'integral.set("frametype", "spatial")' in helper
-    assert 'String frameType = integral.getString("frametype")' in helper
-    assert '!"spatial".equals(frameType)' in helper
-    assert '!"MeasureSurface".equals(numericalType)' in helper
-    assert helper.index('integral.getString("frametype")') < helper.index('integral.getReal()')
-    assert helper.index('integral.getType()') < helper.index('integral.getReal()')
-    assert '"expr"' not in helper and '"integrand"' not in helper
-    assert 'integral.set("unit", new String[]{"m^3"})' in helper
-    assert 'String unitValueType = integral.getValueType("unit")' in helper
-    assert '"String".equals(unitValueType)' in helper and '"StringArray".equals(unitValueType)' in helper
-    assert 'observed.put("unit_value_type", unitValueType)' in helper
-    assert 'observed.put("unit_raw", scalarUnit)' in helper
-    assert 'observed.put("unit_raw", units == null ? null : Arrays.asList(units))' in helper
-    assert helper.index('integral.getValueType("unit")') < helper.index('integral.getString("unit")')
-    assert helper.index('integral.getValueType("unit")') < helper.index('integral.getStringArray("unit")')
-    assert '!Arrays.equals(new String[]{"m^3"}, units)' in helper
-    assert 'integral.set("intvolume", "on")' in helper
-    for forbidden in ('"Solution"', '"solnum"', '.run(', '2*pi*r', '* expectedVolume', '* area'):
-        assert forbidden not in helper
-    assert 'double volume = values[0][0]' in helper
-    assert 'relativeError > 1.0e-6' in helper
+    assert '"cross_section_area_m2", area' in area_helper
+    assert '"NATIVE_GEOMETRY_MEASURE_GETVOLUME_2D"' in area_helper
+    assert 'getVolume()' in area_helper
+    assert '"expected_volume_m3", expectedVolume' in area_helper
+    assert 'nativeMesh = captureAxisymmetricMesh(model)' in source

@@ -1,0 +1,196 @@
+{
+  "schema": "p0-original-controller-retention-repair/1",
+  "status": "SOFTWARE_READY_FOR_MAIN_SOURCE_REVIEW_NATIVE_NOT_RUN",
+  "native": "NOT_RUN",
+  "old_r2": "UNTOUCHED_NO_ADOPTION_SIGNAL_REPLAY_OR_STATUS_CHANGE",
+  "source_manifest": [
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "sha256": "221da9ce999c3fb859e24d2c9d539e6d30ac37cea9f337b758bab48e4ad4235c"
+    },
+    {
+      "path": "tools/run_v3_public_mcp_smoke.py",
+      "sha256": "dc3671bf2b66cfe5552217e48b6a3583806fca67d294aedea4e6bcb8dce70675"
+    },
+    {
+      "path": "tools/p0_original_controller_hold.py",
+      "sha256": "2514073cde043fccb88674dc28bd7faab2352dbce63ae46d3aa37127512033aa"
+    },
+    {
+      "path": "tools/p0_owned_control_entry.py",
+      "sha256": "c13e6af0814aec071ef9744c80aec9b681ec1f1af44dfe27e61564f328bad0a7"
+    },
+    {
+      "path": "tools/test_p0_original_controller_hold.py",
+      "sha256": "e8998eb4811f20a92ef7c80bfc8e42028d5c97b00d207110ea4a30189387af41"
+    },
+    {
+      "path": "tests/test_session_server_control.py",
+      "sha256": "9420cc2243e850386572e3fb8574e7a20981bbba9782ead4e80750cbe2a6a8d2"
+    }
+  ],
+  "production_delta": "Only serve private optional _owner_observer defaultNone signature field plus two callback lines immediately after real daemon constructed and before original _serve_control_listener. Existing metadata changes in full sharedtree diff are other owned work, not this task. No Worker/Service production source changes.",
+  "software": {
+    "result": "106 PASS in1.65s",
+    "new_holder_entry_cases": 42,
+    "existing_p0_client_cases": 20,
+    "affected_no_endpoint_cases": 44,
+    "argv": [
+      "../work/dev-python312/bin/python",
+      "-m",
+      "pytest",
+      "-q",
+      "--junitxml=_state/p0-controller-retention-20261014/tests.xml",
+      "tools/test_p0_original_controller_hold.py",
+      "tools/test_v3_public_mcp_smoke.py",
+      "tools/test_p0_package_cycle.py",
+      "tests/test_session_context.py",
+      "tests/test_control_daemon.py",
+      "tests/test_control_queue.py"
+    ],
+    "junit": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/p0-controller-retention-20261014/tests.xml",
+    "stdout": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/p0-controller-retention-20261014/tests.stdout.txt",
+    "initial_failures": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/p0-controller-retention-20261014/development-failures.txt"
+  },
+  "legacy_seven_case_recheck": {
+    "result": "FAIL:7 failed in35.40s",
+    "elevated_once": "Main explicitly authorized numeric127.0.0.1 harmless Python HTTP software child, no Java/COMSOL/SDK/GUI. No repeat after this evidence.",
+    "source_unchanged": true,
+    "reason": "Original5s launcher deadline reports STARTUP_TIMEOUT/STARTUP_UNKNOWN; initial sandboxEPERM no longer occurs. Finalportfile exists; readiness timing/fixture needs Main decision. These cases construct ControlDaemon directly and never invoke new serve callback.",
+    "initial_evidence": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/p0-controller-retention-20261014/endpoint-bound-initial-failures.xml",
+    "final_evidence": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/p0-controller-retention-20261014/seven-tests-summary.json",
+    "ownership_caveat": "Existing test failure finally retains UNKNOWN server through production close but does not retain test originalPopen at pytest exit; possible lingering harmless HTTPchildren reported Main for read-only check/recovery decision. No savedPID signaling performed by this task.",
+    "final_corrected_fixture": {
+      "result": "7 PASS in2.28s",
+      "source_unchanged": true,
+      "rootcause": "actual stdlib HTTPServer.server_bind calls socket.getfqdn even for numeric127.0.0.1. Patched only harmless fixture class directTCPServer numericbind + explicit server_name/server_port; originalproduction startup5s/identity/listener gates unchanged.",
+      "rootcause_control": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/p0-controller-retention-20261014/numeric-bind-rootcause-control.json",
+      "source": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/tests/test_session_server_control.py",
+      "sha256": "9420cc2243e850386572e3fb8574e7a20981bbba9782ead4e80750cbe2a6a8d2",
+      "summary": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/p0-controller-retention-20261014/numeric-fixture-r1/seven-tests-summary.json",
+      "cleanup": {
+        "observed_original_children": [
+          {
+            "original_popen_reaped": true,
+            "pid": 86048,
+            "returncode": -15
+          },
+          {
+            "original_popen_reaped": true,
+            "pid": 86049,
+            "returncode": -15
+          },
+          {
+            "original_popen_reaped": true,
+            "pid": 86066,
+            "returncode": -15
+          },
+          {
+            "original_popen_reaped": true,
+            "pid": 86078,
+            "returncode": -15
+          },
+          {
+            "original_popen_reaped": true,
+            "pid": 86085,
+            "returncode": -15
+          },
+          {
+            "original_popen_reaped": true,
+            "pid": 86094,
+            "returncode": -15
+          },
+          {
+            "original_popen_reaped": true,
+            "pid": 86095,
+            "returncode": -15
+          },
+          {
+            "original_popen_reaped": true,
+            "pid": 86108,
+            "returncode": -15
+          },
+          {
+            "original_popen_reaped": true,
+            "pid": 86115,
+            "returncode": -15
+          }
+        ],
+        "all_reaped": true
+      },
+      "cleanup_evidence": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/p0-controller-retention-20261014/numeric-fixture-r1/original-popen-cleanup.json",
+      "scope": "One newly authorized sourcebound7case run, no повтор other106, no Java/COMSOL/SDK/GUI; all this fresh run ownedPythonchildren exactPopen terminated/waited in finalizer.",
+      "warnings": "7 pytest record_property/xunit2 compatibility warnings; XMLproperties emitted and independently parsed into all-reaped receipt."
+    }
+  },
+  "implementation": [
+    "Normal public ClientSession->stdio gateway->production operation_call routes and24/37 call budgets unchanged. Controller uses isolated task entry invoking original production serve with private observer only.",
+    "Observer immediately latches actual daemon and original registered containers. Thin isolated-process wrappers delegate original production class/function/parameters while unfenced; capture normal Worker self, actual returned Popen before diagnostics, launcher error original handle; no replacement Worker/Service/backend.",
+    "Strict owned0700 nofollow namespace and owned0600 ordinary singlelink bounded closedJSON hold-only notice bind source/activity/nonce; duplicate/malformed/wrongsource/nonce/symlink/mode refused; consumed once in live originalowner.",
+    "On uncertainty close admission/monitor and originalWorker nextrequest/start/close plus launchernewbirth; current accepted/inflight SDK effect remains UNKNOWN and retained, no forced idle. Busy ownedlane fence only, never quiescencebinding fence.",
+    "Firstcause before diagnostic work, immediate holder receipt, bounded diagnostics. Graph or namespace swaps make proof unavailable and fence; exactoriginal handles continue observed, no native stop/signal/kill/retry/reclassification.",
+    "Client uncertain/result pending stops all nextpubliccalls, publishes hold before stdio teardown, preserves samecontroller Popen through observation/poll/write errors; budget lifetimeUNRESOLVED while alive.",
+    "Original children all observedterminal plus no in-flight acceptedwork and no objectproofgap allows controller to exitFAIL; UNKNOWN acceptance never becomesPASS. Listener errors retain owner under samehold loop."
+  ],
+  "budget": {
+    "normal_public_calls": 24,
+    "package_public_calls": 37,
+    "normal_action_s": 180,
+    "package_action_s": 300,
+    "cleanup_s": 90,
+    "hold_new_public_RPC": 0,
+    "hold_native_signals": 0,
+    "explicit_Study_solver_GUI": 0,
+    "actual_child_lifetime_during_hold": "UNRESOLVED; deadline never authorizes new effect or owner exit"
+  },
+  "review_notes": [
+    "Seven corrected numeric softwarefixture cases PASS after exact DNS-fixture repair. Both priorFAIL evidence retained. Past originalPopenlost harmlessfixturechildren recovery remains Main decision; no savedPID signaling by this task.",
+    "No SIGTERM exception protocol added to P0; current r2 authorization cannot be reused.",
+    "Default serve/CLI/SCM hookNone follows original behavior; client R6 normal successful operation recipe/calls unchanged.",
+    "Class thin guards affect only isolated taskowned entry process; production callback default does not install them. Software tests restore original classes and exercise default production paths."
+  ],
+  "prep_reports": [
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/docs/full_project_continuation_v3/state/P0_NEXT_NATIVE_PREP_REPORT.json",
+      "sha256": "bde6203a9b10dfc7f65342f10592ce09a24564bf70caf9035b217dbf76182462"
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/docs/full_project_continuation_v3/state/P0_PACKAGE_NATIVE_PREP_REPORT.json",
+      "sha256": "6bf0240c666bac4b2c1f00562722d3057b405cb6e92fc96ddc2a2fd09e730e1f"
+    }
+  ],
+  "past_fixture_child_evidence": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/p0-controller-retention-20261014/past-seven-child-evidence.json",
+  "secondary_failure_repair": {
+    "result": "65 PASS in3.97s",
+    "exact_argv": [
+      "../work/dev-python312/bin/python",
+      "-m",
+      "pytest",
+      "-q",
+      "--junitxml=_state/p0-controller-retention-20261014/secondary-failure-r1/tests.xml",
+      "tools/test_p0_original_controller_hold.py",
+      "tools/test_v3_public_mcp_smoke.py"
+    ],
+    "junit": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/p0-controller-retention-20261014/secondary-failure-r1/tests.xml",
+    "stdout": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/p0-controller-retention-20261014/secondary-failure-r1/tests.stdout.txt",
+    "changes": [
+      "fenced flag and admission/monitor guards established before fallible graph/receipt operations; secondary fence/receipt errors cannot escape watch fallback",
+      "Clock is diagnostic only; errors or throttle arithmetic do not invalidate proven original-child terminal. Inflight proof errors remain unknown until genuinely observable.",
+      "Startup config uses same full signature as hold notice (dev/ino/mode/uid/nlink/size/mtime/ctime) across before/opened/read-after/name, pinned private nofollow directory identity, complete bounded raw length."
+    ],
+    "new_tests": [
+      "actual harmless original child clock always raises; fence diagnostic once/always raises: owner thread remains alive/no nextWorker request, original child natural exit returns failed receipt",
+      "original inflight proof observation error rejects terminal until observable",
+      "startup config replacement/hardlink/mode/size/ctime/UID after-read mutations reject before native birth"
+    ],
+    "unaffected_inherited": "Previous44daemon/queue/context +7package +7numeric fixture retain unchanged scope; no repeated106 or7case runs",
+    "native": "NOT_RUN"
+  },
+  "past_fixture_child_recovery_independent_scope": {
+    "evidence": "_state/harmless-six-cleanup-result.json",
+    "provided_by": "Main independently verified full known software script+uid/birth/cmd/taskpath and SIGTERM6remaining harmlessHTTPfixtures; allkernelABSENT",
+    "not_original_popen_cleanup": true,
+    "no_rewrite_of_prior_failures_or_six_missing_original_births": true,
+    "W23_r2": "Never signaled/touched by this task; this software recovery is separate from native acceptance"
+  }
+}

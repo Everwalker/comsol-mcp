@@ -27,6 +27,8 @@ from pathlib import Path
 from typing import Any, Mapping
 from uuid import uuid4
 
+from tools import native_runtime_binding as fresh_runtime
+from tools.w23_original_owner_hold import W23OriginalOwnerHold
 from tools import run_native_w23_te_science as science
 from tools import w23_te_science_protocol as protocol
 
@@ -60,6 +62,17 @@ STUDY_SEQUENCE_TYPES = (
     "All", "None", "SolverSequence", "CopySolution",
     "ParametricStore", "Stored", "Parametric",
 )
+def fresh_budget() -> dict[str, Any]:
+    return {"max_owned_server_processes": 1, "max_worker_sessions": 1,
+            "max_gui_processes": 0, "max_study_run_calls": 0, "max_solver_run_calls": 0,
+            "max_seconds_from_server_birth": int(MAX_BIRTH_SECONDS),
+            "cleanup_reserve_seconds": int(CLEANUP_RESERVE_SECONDS), "diagnostic_only": True}
+
+def _activity(freeze: Mapping[str, Any]) -> str:
+    binding = freeze.get("fresh_runtime_binding")
+    return ("w23-saved-mph-zero-solve-readback-" + binding["activity_id"]) if binding else ACTIVITY_ID
+
+
 def plane_field_expressions(port: str) -> tuple[str, ...]:
     if port not in {"1", "2"}:raise ValueError("field plane must bind port1 orport2")
     return tuple([f"down(emw.{kind}{axis})" for kind in ("E", "H") for axis in "xyz"]
@@ -132,7 +145,11 @@ def _source_files() -> dict[str, dict[str, Any]]:
         rows[path.relative_to(REPO).as_posix()] = {"path": str(path.resolve()), "bytes": path.stat().st_size, "sha256": sha256_file(path)}
     additional = (
         Path(__file__).resolve(),
+        (REPO / "tools/native_runtime_binding.py").resolve(),
         (REPO / "tests/test_native_w23_saved_mph_diagnostic.py").resolve(),
+        (REPO / "tests/test_w23_fresh_import_home.py").resolve(),
+        (REPO / "tools/w23_original_owner_hold.py").resolve(),
+        (REPO / "tests/test_w23_original_owner_hold.py").resolve(),
         (REPO / "tests/test_native_w23_te_science_protocol.py").resolve(),
         (REPO / "tests/test_native_w23_te_science_runner.py").resolve(),
         (REPO / "tests/test_g3_results.py").resolve(),
@@ -196,17 +213,73 @@ def _assert_source_inputs() -> dict[str, Any]:
 
 
 def _native_argv(freeze_path: Path, freeze_sha256: str, approval_path: Path,
-                 input_path: Path, work: Path, evidence: Path) -> list[str]:
+                 input_path: Path, work: Path, evidence: Path,
+                 binding: Mapping[str, Any] | None = None) -> list[str]:
     return [
         "env", "-u", "CODEX_NETWORK_GUARD_LOG",
         "-u", "CODEX_NETWORK_GUARD_LABEL",
         "-u", "CODEX_NETWORK_GUARD_RUN_ID",
         "TMPDIR=/private/tmp", f"PYTHONPATH={REPO}",
-        str(EXPECTED_PYTHON), "-m", "tools.run_native_w23_saved_mph_diagnostic", "execute",
+        *([f"COMSOL_SERVER_MCP_HOME={Path(binding['namespace']) / 'work/mcp-home'}"] if binding else []),
+        str(binding["python"]["entry"] if binding else EXPECTED_PYTHON), "-m", "tools.run_native_w23_saved_mph_diagnostic", "execute",
         "--freeze", str(freeze_path), "--freeze-sha256", freeze_sha256,
         "--approval", str(approval_path), "--saved-model", str(input_path),
         "--work", str(work), "--evidence", str(evidence),
     ]
+
+
+def _native_environment(binding: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    environment = {"TMPDIR": "/private/tmp", "PYTHONPATH": str(REPO),
+                   "CODEX_NETWORK_GUARD_LOG": None, "CODEX_NETWORK_GUARD_LABEL": None,
+                   "CODEX_NETWORK_GUARD_RUN_ID": None}
+    if binding:
+        environment["COMSOL_SERVER_MCP_HOME"] = str(Path(binding["namespace"]) / "work/mcp-home")
+    return environment
+
+
+def _validate_fresh_import_home(binding: Mapping[str, Any], work: Path) -> dict[str, Any]:
+    """Inspect actual legacy import roots before any native birth; never rebind globals."""
+    namespace = Path(binding["namespace"])
+    fresh_runtime.namespace(namespace)
+    expected = namespace / "work/mcp-home"
+    if work != namespace / "work" or os.environ.get("COMSOL_SERVER_MCP_HOME") != str(expected):
+        raise RuntimeError("fresh import home must be exact owned namespace/work/mcp-home before Python import")
+    if namespace.stat().st_dev != Path("/private/tmp").stat().st_dev:
+        raise RuntimeError("fresh import home must remain on the private task filesystem")
+    if sys.platform != "darwin":
+        raise RuntimeError("fresh import home APFS verification requires macOS")
+    mounted = subprocess.run(["/sbin/mount"], capture_output=True, text=True, timeout=10, check=True)
+    apfs_mounts = []
+    for line in mounted.stdout.splitlines():
+        if " on " not in line or " (apfs," not in line:
+            continue
+        mountpoint = Path(line.split(" on ", 1)[1].rsplit(" (", 1)[0])
+        try:
+            if mountpoint.stat().st_dev == namespace.stat().st_dev:
+                apfs_mounts.append(str(mountpoint))
+        except OSError:
+            continue
+    if not apfs_mounts:
+        raise RuntimeError("fresh import home filesystem is not observed as APFS")
+    for path in (work, expected, expected / "logs", expected / "outputs"):
+        if path.is_symlink() or path.resolve(strict=False) != path:
+            raise RuntimeError("fresh import home ancestry must not contain symlinks")
+        if path.exists():
+            st = path.stat()
+            if not path.is_dir() or st.st_uid != os.getuid() or stat.S_IMODE(st.st_mode) & 0o077:
+                raise RuntimeError("fresh import home directories must be owner-private")
+    server = importlib.import_module("comsol_mcp._server")
+    if server.active_runtime_context() is not None:
+        raise RuntimeError("fresh prebirth legacy import must not inherit a selected runtime context")
+    roots = {"COMSOL_SERVER_MCP_HOME": expected, "LOGS_DIR": expected / "logs",
+             "OUTPUTS_DIR": expected / "outputs", "STATUS_FILE": expected / "status.json",
+             "WORKFLOW_FILE": expected / "workflow_state.json", "OPERATIONS_FILE": expected / "logs/operations.jsonl",
+             "SERVER_LOG": expected / "logs/server.log"}
+    actual = {name: str(server.runtime_setting(name)) for name in roots}
+    if any(actual[name] != str(path) for name, path in roots.items()):
+        raise RuntimeError("actual imported legacy runtime write roots differ from fresh owned home (import occurred too early)")
+    return {"status": "PASS_ACTUAL_IMPORTED_LEGACY_WRITE_ROOTS_BEFOREBIRTH", "paths": actual,
+            "filesystem": {"type": "apfs", "device": namespace.stat().st_dev, "observed_mountpoints": apfs_mounts}}
 
 
 def _validate_literal_capture_entry(script_path: Path, metadata: Mapping[str, Any], approval: Mapping[str, Any], freeze: Mapping[str, Any], freeze_sha256: str) -> dict[str, Any]:
@@ -247,7 +320,7 @@ def _strict_test_environment(evidence: Path) -> dict[str, str]:
     return env
 
 
-def _compile_and_test(evidence: Path) -> dict[str, Any]:
+def _compile_and_test(evidence: Path, *, binding: Mapping[str, Any] | None = None) -> dict[str, Any]:
     offline = evidence / "offline_gates"
     offline.mkdir(parents=True, exist_ok=False)
     imports = science._runtime_helper_imports()
@@ -258,13 +331,24 @@ def _compile_and_test(evidence: Path) -> dict[str, Any]:
         "python_version": sys.version,
     }
     write_json(offline / "runtime_imports.json", import_receipt)
-    dependency = science._pip_dependency_check()
+    if binding:
+        fresh_runtime.validate(binding, repo=REPO, budget=fresh_budget(), install=science.INSTALL_ROOT, jdk=science.JAVA11)
+        command = [binding["python"]["entry"], "-m", "pip", "check"]
+        result = subprocess.run(command, cwd=REPO, text=True, capture_output=True, timeout=60, check=False)
+        dependency = {"status": "PASS_FRESH_DEV_RUNTIME_PIP_CHECK_NOT_W26_PRODUCT", "command": command,
+                      "returncode": result.returncode, "stdout": result.stdout, "stderr": result.stderr}
+        if result.returncode:
+            raise RuntimeError("fresh dev runtime dependency check failed")
+    else:
+        dependency = science._pip_dependency_check()
     write_json(offline / "pip_dependency_check.json", dependency)
     compile_output = offline / "compile"
     compile_receipt = science._compile_sources(compile_output)
     write_json(offline / "compile.json", compile_receipt)
     test_paths = [
         REPO / "tests/test_native_w23_saved_mph_diagnostic.py",
+        REPO / "tests/test_w23_fresh_import_home.py",
+        REPO / "tests/test_w23_original_owner_hold.py",
         REPO / "tests/test_native_w23_te_science_protocol.py",
         REPO / "tests/test_native_w23_te_science_runner.py",
         REPO / "tests/test_g3_results.py",
@@ -283,13 +367,17 @@ def _compile_and_test(evidence: Path) -> dict[str, Any]:
         REPO / "tests/test_g3_3_remediation.py",
         REPO / "tests/test_g3_metrics.py",
     ]
-    command = [str(EXPECTED_PYTHON), "-m", "pytest", "-q",
+    if binding:
+        test_paths.append(REPO / "tests/test_native_runtime_binding.py")
+    command = [str(binding["python"]["entry"] if binding else EXPECTED_PYTHON), "-m", "pytest", "-q",
                *(str(path) for path in test_paths),
                "--junitxml", str(offline / f"activity{ACTIVITY_ID.rsplit('-',1)[1]}_focused_junit.xml")]
     env = _strict_test_environment(offline)
     env["W23_OFFLINE_CLASS_TEST_SEED"] = str(compile_output)
     env["W23_OFFLINE_CLASS_TEST_RECEIPT"] = str(offline / "compile.json")
-    env["W23_OFFLINE_CLASS_TEST_EVIDENCE"] = str(evidence / "materialization-controls")
+    # These two legacy-mode materialization controls intentionally exercise
+    # the preserved historical preparation path policy, even during fresh prep.
+    env["W23_OFFLINE_CLASS_TEST_EVIDENCE"] = str(EVIDENCE_ROOT / "fresh-runtime-materialization-controls" / binding["activity_id"] if binding else evidence / "materialization-controls")
     env["W23_ACTIVITY022_SELECTION_CAPTURE"] = str(offline / "selection_child_private_audit_controls")
     env["W23_ACTIVITY021_METADATA_CAPTURE"] = str(offline / "actual020_and_metadata_source_controls")
     env["W23_ACTIVITY020_TICKET_CAPTURE"] = str(offline / "actual019_private_ticket_controls")
@@ -340,24 +428,35 @@ def _compile_and_test(evidence: Path) -> dict[str, Any]:
             "status": "PASS_ALL_OFFLINE_GATES"}
 
 
-def prepare(evidence: Path, *, work: Path, execution_evidence: Path) -> dict[str, Any]:
-    if not evidence.as_posix().startswith(str(EVIDENCE_ROOT.resolve()) + "/"):
+def prepare(evidence: Path, *, work: Path, execution_evidence: Path,
+            runtime_authority: Path | None = None) -> dict[str, Any]:
+    binding = (fresh_runtime.load(runtime_authority, repo=REPO, budget=fresh_budget(),
+               install=science.INSTALL_ROOT, jdk=science.JAVA11) if runtime_authority else None)
+    if binding:
+        if binding["python"]["no_site"]:
+            raise RuntimeError("W23 focused guard requires normal site startup")
+        for path in (evidence, work, execution_evidence):
+            fresh_runtime.scoped_path(binding, path, absent=True)
+        if len({evidence,work,execution_evidence}) != 3 or work != Path(binding["namespace"])/"work":
+            raise RuntimeError("fresh W23 paths must be distinct and work exactly namespace/work")
+    activity_id = "w23-saved-mph-zero-solve-readback-" + binding["activity_id"] if binding else ACTIVITY_ID
+    if binding is None and not evidence.as_posix().startswith(str(EVIDENCE_ROOT.resolve()) + "/"):
         raise ValueError("--evidence must be a new directory below the candidate W23 evidence root")
     if evidence.exists():
         raise FileExistsError(f"candidate evidence already exists: {evidence}")
     evidence.mkdir(parents=True, exist_ok=False)
     input_refs = _assert_source_inputs()
     source_before = _source_files()
-    gates = _compile_and_test(evidence)
+    gates = _compile_and_test(evidence, binding=binding) if binding else _compile_and_test(evidence)
     source_after = _source_files()
     if source_before != source_after:
         raise RuntimeError("frozen W23 source closure changed during offline gates")
     manifest_artifact = science._write_source_manifest_artifact(evidence, source_after)
     freeze_path = evidence / "freeze.json"
-    approval_path = evidence / f"ROOT_APPROVAL_ACTIVITY{ACTIVITY_ID.rsplit('-',1)[1]}.json"
+    approval_path = evidence / f"ROOT_APPROVAL_ACTIVITY{activity_id.rsplit('-',1)[1]}.json"
     freeze: dict[str, Any] = {
         "schema_version": 1,
-        "activity_id": ACTIVITY_ID,
+        "activity_id": activity_id,
         "candidate_id": CANDIDATE_ID,
         "candidate_revision": CANDIDATE_REVISION,
         "status": "FROZEN_AWAITING_ROOT_APPROVAL",
@@ -484,23 +583,25 @@ def prepare(evidence: Path, *, work: Path, execution_evidence: Path) -> dict[str
         "execution_evidence_path": str(execution_evidence),
         "approval_path_expected": str(approval_path),
         "native_invocation_argv": _native_argv(freeze_path, "<freeze-sha256>", approval_path,
-                                                SOURCE_MODEL, work, execution_evidence),
+                                                SOURCE_MODEL, work, execution_evidence, binding),
         "source_files": source_after,
         "source_manifest_sha256": _source_digest(source_after),
         "source_manifest_artifact": manifest_artifact,
         "offline_preflight": gates,
         "native_acceptance": "NOT_RUN",
     }
+    if binding:
+        freeze["fresh_runtime_binding"] = binding
     # A freeze is publishable only when its own relative compiler tree exists.
     material = science._check_offline_receipts(freeze_path, freeze)
     write_json(evidence / "executable_offline_material_check.json", material)
     write_json(freeze_path, freeze)
     freeze_sha = sha256_file(freeze_path)
     argv = _native_argv(freeze_path, freeze_sha, approval_path,
-                        SOURCE_MODEL, work, execution_evidence)
+                        SOURCE_MODEL, work, execution_evidence, binding)
     packet = {
         "schema_version": 1,
-        "activity_id": ACTIVITY_ID,
+        "activity_id": activity_id,
         "candidate_id": CANDIDATE_ID,
         "candidate_revision": CANDIDATE_REVISION,
         "status": "PREPARED_AWAITING_ROOT_REVIEW_AND_EXACT_ADMISSION",
@@ -526,10 +627,7 @@ def prepare(evidence: Path, *, work: Path, execution_evidence: Path) -> dict[str
         "native_invocation": {
             "argv": argv, "argv_sha256": sha256_json(argv),
             "cwd": str(REPO),
-            "environment": {"TMPDIR": "/private/tmp", "PYTHONPATH": str(REPO),
-                             "CODEX_NETWORK_GUARD_LOG": None,
-                             "CODEX_NETWORK_GUARD_LABEL": None,
-                             "CODEX_NETWORK_GUARD_RUN_ID": None},
+            "environment": _native_environment(binding),
             "strict_test_network_guard": "NOT_SET_FOR_NATIVE",
             "tool_sandbox_permissions": "require_escalated",
             "work_path_expected_absent": str(work),
@@ -540,14 +638,14 @@ def prepare(evidence: Path, *, work: Path, execution_evidence: Path) -> dict[str
         "native_scientific_acceptance": "NOT_RUN; diagnostic readback only",
         "prior_activity009": "FAIL_OR_INCOMPLETE; one durable Study.run SUCCEEDED then postprocessing failed; no replay",
     }
-    write_json(evidence / f"ACTIVITY{ACTIVITY_ID.rsplit('-',1)[1]}_REVIEW_PACKET.json", packet)
+    write_json(evidence / f"ACTIVITY{activity_id.rsplit('-',1)[1]}_REVIEW_PACKET.json", packet)
     receipt = {
         "status": "PREPARED_AWAITING_ROOT_REVIEW_AND_EXACT_ADMISSION",
-        "activity_id": ACTIVITY_ID, "candidate_id": CANDIDATE_ID,
+        "activity_id": activity_id, "candidate_id": CANDIDATE_ID,
         "candidate_revision": CANDIDATE_REVISION,
         "freeze_path": str(freeze_path), "freeze_sha256": freeze_sha,
-        "packet_path": str(evidence / f"ACTIVITY{ACTIVITY_ID.rsplit('-',1)[1]}_REVIEW_PACKET.json"),
-        "packet_sha256": sha256_file(evidence / f"ACTIVITY{ACTIVITY_ID.rsplit('-',1)[1]}_REVIEW_PACKET.json"),
+        "packet_path": str(evidence / f"ACTIVITY{activity_id.rsplit('-',1)[1]}_REVIEW_PACKET.json"),
+        "packet_sha256": sha256_file(evidence / f"ACTIVITY{activity_id.rsplit('-',1)[1]}_REVIEW_PACKET.json"),
         "source_count": len(source_after),
         "study_run_dispatches_allowed": 0, "solver_run_dispatches_allowed": 0,
         "native_process_started": False,
@@ -562,11 +660,15 @@ def _validate_freeze(freeze_path: Path, expected_sha256: str) -> dict[str, Any]:
         raise RuntimeError("freeze path is absent or its SHA-256 does not match the exact reviewed candidate")
     freeze = json.loads(freeze_path.read_text(encoding="utf-8"))
     if (freeze.get("status") != "FROZEN_AWAITING_ROOT_APPROVAL"
-            or freeze.get("activity_id") != ACTIVITY_ID
+            or freeze.get("activity_id") != _activity(freeze)
             or freeze.get("candidate_id") != CANDIDATE_ID
             or freeze.get("candidate_revision") != CANDIDATE_REVISION
             or freeze.get("source_manifest_sha256") != _source_digest(freeze.get("source_files", {}))):
         raise RuntimeError("freeze identity/status/source-map digest is invalid")
+    binding = freeze.get("fresh_runtime_binding")
+    if binding is not None:
+        fresh_runtime.validate(binding, repo=REPO, budget=fresh_budget(), install=science.INSTALL_ROOT, jdk=science.JAVA11)
+        fresh_runtime.scoped_path(binding, freeze_path.parent)
     if _source_files() != freeze.get("source_files"):
         raise RuntimeError("candidate source closure changed after freeze")
     science._validate_source_manifest_artifact(freeze_path, freeze)
@@ -579,7 +681,7 @@ def _validate_approval(approval: Mapping[str, Any], freeze: Mapping[str, Any],
                        freeze_sha256: str, argv: list[str]) -> None:
     expected = {
         "status": "ROOT_APPROVED_FOR_EXACT_FROZEN_CANDIDATE",
-        "activity_id": ACTIVITY_ID,
+        "activity_id": _activity(freeze),
         "candidate_id": CANDIDATE_ID,
         "candidate_revision": CANDIDATE_REVISION,
         "freeze_sha256": freeze_sha256,
@@ -593,6 +695,8 @@ def _validate_approval(approval: Mapping[str, Any], freeze: Mapping[str, Any],
         "retry_unknown_or_nonterminal_worker_request": False,
         "read_only_call_plan_sha256": sha256_json(freeze["read_only_call_plan"]),
     }
+    if freeze.get("fresh_runtime_binding") is not None:
+        expected["runtime_binding_sha256"] = freeze["fresh_runtime_binding"]["binding_sha256"]
     mismatches = {key: {"expected": value, "observed": approval.get(key)}
                   for key, value in expected.items() if approval.get(key) != value}
     invocation = approval.get("exact_native_invocation")
@@ -601,12 +705,7 @@ def _validate_approval(approval: Mapping[str, Any], freeze: Mapping[str, Any],
             mismatches["exact_native_invocation.argv"] = {"expected": argv, "observed": invocation.get("argv")}
         if invocation.get("cwd") != str(REPO):
             mismatches["exact_native_invocation.cwd"] = {"expected": str(REPO), "observed": invocation.get("cwd")}
-        expected_environment = {
-            "TMPDIR": "/private/tmp", "PYTHONPATH": str(REPO),
-            "CODEX_NETWORK_GUARD_LOG": None,
-            "CODEX_NETWORK_GUARD_LABEL": None,
-            "CODEX_NETWORK_GUARD_RUN_ID": None,
-        }
+        expected_environment = _native_environment(freeze.get("fresh_runtime_binding"))
         if invocation.get("environment") != expected_environment:
             mismatches["exact_native_invocation.environment"] = {
                 "expected": expected_environment,
@@ -619,8 +718,8 @@ def _validate_approval(approval: Mapping[str, Any], freeze: Mapping[str, Any],
 
 
 def _bind_project_create(response: Mapping[str, Any], helpers: Mapping[str, Any],
-                         expected_workspace: Path) -> dict[str, Any]:
-    science.PROJECT_LABEL = PROJECT_LABEL
+                         expected_workspace: Path, *, label: str = PROJECT_LABEL) -> dict[str, Any]:
+    science.PROJECT_LABEL = label
     return science._bind_authoritative_project(response, helpers,
                                                expected_workspace=expected_workspace)
 
@@ -1155,11 +1254,15 @@ def _expected_work_path() -> Path:
 
 
 def _validate_fresh_execution_paths(freeze: Mapping[str, Any], work: Path, evidence: Path) -> None:
-    expected_work = _expected_work_path()
+    binding = freeze.get("fresh_runtime_binding")
+    expected_work = Path(binding["namespace"])/"work" if binding else _expected_work_path()
     expected_evidence = Path(freeze["execution_evidence_path"])
     if Path(freeze["work_path"]) != expected_work or work != expected_work:
         raise ValueError("--work must equal the exact frozen activity/revision canonical path")
-    if evidence != expected_evidence or not evidence.is_absolute() or REPO not in evidence.parents:
+    if binding:
+        fresh_runtime.scoped_path(binding, work, absent=True)
+        fresh_runtime.scoped_path(binding, evidence, absent=True)
+    if evidence != expected_evidence or not evidence.is_absolute() or (binding is None and REPO not in evidence.parents):
         raise ValueError("--evidence must equal the exact frozen private-candidate path")
     for label,path in (("work",work),("evidence",evidence)):
         if (path.resolve(strict=False) != path or any(part in (".","..") for part in path.parts)
@@ -1178,18 +1281,30 @@ def _validate_fresh_execution_paths(freeze: Mapping[str, Any], work: Path, evide
 
 def execute(freeze_path: Path, freeze_sha256: str, approval_path: Path,
             saved_model: Path, work: Path, evidence: Path) -> dict[str, Any]:
-    _validate_private_read_input(freeze_path,"freeze",candidate_only=True)
-    _validate_private_read_input(approval_path,"approval",candidate_only=True)
+    _validate_private_read_input(freeze_path, "freeze", candidate_only=False)
+    initial = json.loads(fresh_runtime.read_owned(freeze_path), object_pairs_hook=fresh_runtime._pairs)
+    binding = initial.get("fresh_runtime_binding")
+    if binding is not None:
+        fresh_runtime.validate(binding, repo=REPO, budget=fresh_budget(), install=science.INSTALL_ROOT, jdk=science.JAVA11)
+        fresh_runtime.scoped_path(binding, freeze_path.parent)
+        if approval_path.parent != freeze_path.parent or approval_path != Path(initial["approval_path_expected"]):
+            raise RuntimeError("fresh Root approval outside exact frozen candidate")
+        fresh_runtime.read_owned(approval_path)
+    else:
+        _validate_private_read_input(freeze_path,"freeze",candidate_only=True)
+        _validate_private_read_input(approval_path,"approval",candidate_only=True)
     _validate_private_read_input(saved_model,"saved model",candidate_only=False)
+    if binding is not None:
+        _validate_fresh_import_home(binding, work)
     helpers = science._load_helper_refs()
     freeze = _validate_freeze(freeze_path, freeze_sha256)
-    approval = json.loads(approval_path.read_text(encoding="utf-8"))
+    approval = json.loads(fresh_runtime.read_owned(approval_path), object_pairs_hook=fresh_runtime._pairs) if binding else json.loads(approval_path.read_text(encoding="utf-8"))
     planned_argv = _native_argv(freeze_path, freeze_sha256, approval_path,
-                                saved_model, work, evidence)
+                                saved_model, work, evidence, binding)
     if not isinstance(approval, Mapping):
         raise RuntimeError("root approval receipt must be a JSON object")
     _validate_approval(approval, freeze, freeze_sha256, planned_argv)
-    if Path(sys.executable).resolve() != EXPECTED_PYTHON.resolve():
+    if binding is None and Path(sys.executable).resolve() != EXPECTED_PYTHON.resolve():
         raise RuntimeError("native diagnostic interpreter differs from frozen Python 3.12 runtime")
     if os.environ.get("PYTHONPATH") != str(REPO) or os.environ.get("TMPDIR") != "/private/tmp":
         raise RuntimeError("native environment must use candidate-only PYTHONPATH and TMPDIR=/private/tmp")
@@ -1207,6 +1322,8 @@ def execute(freeze_path: Path, freeze_sha256: str, approval_path: Path,
     _assert_source_inputs()
     if _source_files() != freeze["source_files"]:
         raise RuntimeError("frozen source closure changed immediately before prebirth inventory")
+    if binding is not None:
+        _validate_fresh_import_home(binding, work)
     return _execute_native_campaign(helpers, freeze_path, freeze_sha256, approval,
                                     saved_model, work, evidence, freeze)
 
@@ -1215,11 +1332,59 @@ def _execute_native_campaign(helpers: Mapping[str, Any], freeze_path: Path,
                              freeze_sha256: str, approval: Mapping[str, Any],
                              saved_model: Path, work: Path, evidence: Path,
                              freeze: Mapping[str, Any]) -> dict[str, Any]:
-    """Native-effect handoff; execute has completed all immutable CLI guards."""
+    """Keep original native owners alive even if cleanup diagnostics fail."""
+    owner = W23OriginalOwnerHold(binding=freeze.get("fresh_runtime_binding"),
+        freeze_sha256=freeze_sha256, source_sha256=freeze["source_manifest_sha256"],
+        evidence=evidence, writer=write_json)
+    failure = None
+    try:
+        result = _execute_native_campaign_body(helpers, freeze_path, freeze_sha256, approval,
+                                               saved_model, work, evidence, freeze, owner)
+    except BaseException as exc:
+        owner.cause(exc)
+        failure = exc
+        result = owner.summary
+    observed = owner.observe()
+    unsafe = result.get("cleanup_status") in {"LEFT_RUNNING_ACTIVE_OR_UNKNOWN", "CLEANUP_UNVERIFIED"}
+    if not owner.terminal(observed) and result.get("cleanup_status") == "CLEANUP_VERIFIED_EXACT_OWNED_PIDS_AND_PORTS_ABSENT":
+        owner.cause(RuntimeError("normal cleanup receipt contradicts original child Popen observation"))
+        result["cleanup_status"] = "CLEANUP_UNVERIFIED"
+        unsafe = True
+    if unsafe or (failure is not None and not owner.terminal(observed)):
+        result = owner.run()  # Never returns while an original child is alive/unobservable.
+        try:
+            finished = time.time()
+            budget = result.get("birth_inclusive_budget", {})
+            birth = budget.get("birth_epoch")
+            if isinstance(birth, (int, float)):
+                budget.update({"finished_epoch_includes_cleanup": None,
+                    "observed_original_children_exit_epoch": finished,
+                    "elapsed_seconds_until_children_observed_exited": max(0.0, finished-birth),
+                    "budget_exceeded": finished-birth > MAX_BIRTH_SECONDS,
+                    "standard_cleanup_complete": False, "child_lifetime_resolved": True})
+            result["finished_at_utc"] = utc_now()
+        except BaseException as exc:
+            owner.diagnostic("terminal_budget_or_timestamp", exc)
+            result["finished_at_utc"] = None
+            result["terminal_time_diagnostic"] = "UNAVAILABLE_NOT_NATIVE_ACCEPTANCE"
+        try: write_json(evidence / "summary.json", result)
+        except BaseException as exc: owner.diagnostic("final_summary", exc)
+        return result
+    if failure is not None:
+        raise failure
+    return result
+
+
+def _execute_native_campaign_body(helpers: Mapping[str, Any], freeze_path: Path,
+                             freeze_sha256: str, approval: Mapping[str, Any],
+                             saved_model: Path, work: Path, evidence: Path,
+                             freeze: Mapping[str, Any], owner: W23OriginalOwnerHold) -> dict[str, Any]:
+    """Native-effect handoff after immutable CLI guards, under original owner."""
+    label = f"W23 fresh saved-MPH diagnostic {_activity(freeze)} {CANDIDATE_REVISION}" if freeze.get("fresh_runtime_binding") else PROJECT_LABEL
     evidence.mkdir(parents=True, exist_ok=False)
     write_json(evidence / "root_approval.json", dict(approval))
     summary: dict[str, Any] = {
-        "activity_id": ACTIVITY_ID, "candidate_id": CANDIDATE_ID,
+        "activity_id": _activity(freeze), "candidate_id": CANDIDATE_ID,
         "candidate_revision": CANDIDATE_REVISION,
         "status": "PREBIRTH_NOT_STARTED",
         "native_scientific_acceptance": "NOT_ACCEPTED_DIAGNOSTIC_READBACK_ONLY",
@@ -1229,6 +1394,7 @@ def _execute_native_campaign(helpers: Mapping[str, Any], freeze_path: Path,
         "server_birth": None, "server_pid": None, "worker_pid": None,
         "cleanup_status": "NOT_STARTED", "native_calls": [],
     }
+    owner.summary = summary
     write_json(evidence / "summary.json", summary)
     preflight = helpers["preflight_module"]
     server = None
@@ -1259,6 +1425,7 @@ def _execute_native_campaign(helpers: Mapping[str, Any], freeze_path: Path,
             raise RuntimeError("fresh prelaunch inventory is not quiescent; no COMSOL server started")
         server = helpers["NativeLoopbackServer"](work, evidence,
                                                   event_log=evidence / "events.jsonl")
+        owner.bind_server(server)
         shadow = server.prepare_shadow()
         write_json(evidence / "private_shadow_receipt.json", shadow)
         if _source_files() != freeze["source_files"]:
@@ -1267,13 +1434,13 @@ def _execute_native_campaign(helpers: Mapping[str, Any], freeze_path: Path,
         write_json(evidence / "prebirth_inventory.json", prebirth)
         if not prebirth.get("quiescent"):
             raise RuntimeError("fresh pre-birth inventory is not quiescent")
-        science.PROJECT_LABEL = PROJECT_LABEL
+        science.PROJECT_LABEL = label
         science._set_prebirth_project_authority_opt_in()
         authority_daemon = helpers["ControlDaemon"](work / "control", worker=None,
                                                      project_root=server.project)
         create_request = {
             "operation": "project.create",
-            "arguments": {"label": PROJECT_LABEL, "workspace": "science",
+            "arguments": {"label": label, "workspace": "science",
                           "policy": {"permissions": ["inspect", "project_write", "trusted_code"]}},
             "execution": {"request_id": f"w23-diagnostic-project-create-{uuid4()}",
                           "idempotency_key": f"w23-diagnostic-project-create-{uuid4()}",
@@ -1283,7 +1450,7 @@ def _execute_native_campaign(helpers: Mapping[str, Any], freeze_path: Path,
         write_json(evidence / "project_create_request.json", create_request)
         write_json(evidence / "project_create_response.json", project_response)
         project_receipt = _bind_project_create(project_response, helpers,
-                                               server.project / "science")
+                                               server.project / "science", label=label)
         policy = project_receipt["project_record"].get("policy", {}).get("permissions", [])
         if sorted(policy) != ["inspect", "project_write", "trusted_code"]:
             raise RuntimeError("registered diagnostic project permissions exceed or differ from frozen read-only scope")
@@ -1301,13 +1468,17 @@ def _execute_native_campaign(helpers: Mapping[str, Any], freeze_path: Path,
             raise RuntimeError("fresh process/listener inventory changed before server birth")
         if _source_files() != freeze["source_files"]:
             raise RuntimeError("frozen source closure changed before server birth")
-        listener = server.start_and_verify_listener()
+        try:
+            listener = server.start_and_verify_listener()
+        finally:
+            owner.capture_server()
         server_identity = dict(server.process_identity or {})
         birth_text = server_identity.get("birth")
         if not isinstance(birth_text, str):
             raise RuntimeError("owned COMSOL server birth identity was not captured")
         birth_epoch = preflight._mac_birth_epoch(birth_text)
         deadline_epoch = birth_epoch + MAX_BIRTH_SECONDS
+        owner.deadline_epoch = deadline_epoch
         summary.update({"status": "NATIVE_DIAGNOSTIC_RUNNING",
                         "server_birth": birth_text,
                         "server_pid": server.proc.pid if server.proc else None,
@@ -1325,9 +1496,21 @@ def _execute_native_campaign(helpers: Mapping[str, Any], freeze_path: Path,
         if time.time() >= deadline_epoch - CLEANUP_RESERVE_SECONDS:
             raise TimeoutError("birth budget entered cleanup reserve before Worker startup")
         worker_identity_sink: dict[str, Any] = {}
-        worker_info = science._start_worker_with_journal(server, direct_journal,
-                                                         helpers, worker_identity_sink)
+        original_worker_type = server.worker_type
+        def retained_worker_type(*args, **kwargs):
+            kwargs["process_factory"] = owner.worker_process_factory
+            worker = original_worker_type(*args, **kwargs)
+            owner.bind_worker(worker)
+            return worker
+        server.worker_type = retained_worker_type
+        try:
+            worker_info = science._start_worker_with_journal(server, direct_journal,
+                                                             helpers, worker_identity_sink)
+        finally:
+            server.worker_type = original_worker_type
+            owner.capture_worker(worker_identity_sink.get("identity"))
         worker_identity = dict(worker_info.get("worker_process_identity", {}))
+        owner.capture_worker(worker_identity)
         runtime = worker_info.get("worker_runtime", {})
         worker_port = runtime.get("port") if isinstance(runtime, Mapping) else None
         if type(worker_port) is not int:
@@ -1337,6 +1520,7 @@ def _execute_native_campaign(helpers: Mapping[str, Any], freeze_path: Path,
         science._set_runtime_environment(server)
         daemon = helpers["ControlDaemon"](work / "control", worker=server.worker,
                                           project_root=server.project)
+        owner.bind_daemon(daemon)
         _set_native_dispatch_guard(daemon, managed_dispatch_journal)
         connection = science._dispatch(daemon, "server_connect",
                                        {"host": "127.0.0.1", "port": server.port},
@@ -1345,6 +1529,7 @@ def _execute_native_campaign(helpers: Mapping[str, Any], freeze_path: Path,
         if (connection.get("success") is not True
                 or connection.get("data", {}).get("endpoint") != f"127.0.0.1:{server.port}"):
             raise RuntimeError("managed server_connect failed exact task-owned loopback binding")
+        owner.capture_attach()
         project_workspace = science._project_science_workspace(project_receipt)
         staged_fixture = project_workspace / FIXTURE.name
         if staged_fixture.exists():
@@ -1572,6 +1757,7 @@ def _execute_native_campaign(helpers: Mapping[str, Any], freeze_path: Path,
                         "actual_internal_solver_execution_count": "UNKNOWN_NOT_INFERRED_FROM_READBACK",
                         "native_scientific_acceptance": "NOT_ACCEPTED_SAVED_ARTIFACT_READBACK_ONLY"})
     except BaseException as exc:
+        owner.cause(exc)
         summary.update({"status": "FAIL_OR_INCOMPLETE",
                         "error": f"{type(exc).__name__}: {exc}",
                         "traceback": traceback.format_exc(),
@@ -1680,11 +1866,14 @@ def _execute_native_campaign(helpers: Mapping[str, Any], freeze_path: Path,
                         cleanup = {"status": "LEFT_RUNNING_ACTIVE_OR_UNKNOWN",
                                    "reason": "Worker disconnect/health/ledger proof did not pass",
                                    "durable_unknown_preserved": True}
+                        owner.fence(cleanup)
                         write_json(evidence / "exact_owned_cleanup_receipt.json", cleanup)
                 except BaseException as exc:
+                    owner.cause(exc)
                     cleanup = {"status": "CLEANUP_UNVERIFIED",
                                "error": f"{type(exc).__name__}: {exc}",
                                "durable_unknown_preserved": True}
+                    owner.fence(cleanup)
                     write_json(evidence / "exact_owned_cleanup_receipt.json", cleanup)
             else:
                 cleanup = {"status": "LEFT_RUNNING_ACTIVE_OR_UNKNOWN",
@@ -1693,14 +1882,18 @@ def _execute_native_campaign(helpers: Mapping[str, Any], freeze_path: Path,
                            "endpoint_identity_gate": endpoint_gate,
                            "durable_unknown_preserved": True,
                            "action": "No signal; exact ownership, terminality, or idle proof is incomplete"}
+                owner.fence(cleanup)
                 write_json(evidence / "exact_owned_cleanup_receipt.json", cleanup)
-            try:
-                postinventory = preflight._process_inventory()
-                write_json(evidence / "postcleanup_inventory.json", postinventory)
-            except BaseException as exc:
-                write_json(evidence / "postcleanup_inventory_error.json", {
-                    "error": f"{type(exc).__name__}: {exc}"})
-                summary["status"] = "FAIL_OR_INCOMPLETE"
+            if cleanup.get("status") in {"LEFT_RUNNING_ACTIVE_OR_UNKNOWN", "CLEANUP_UNVERIFIED"}:
+                owner.fence(cleanup)
+            if not owner.fenced:
+                try:
+                    postinventory = preflight._process_inventory()
+                    write_json(evidence / "postcleanup_inventory.json", postinventory)
+                except BaseException as exc:
+                    write_json(evidence / "postcleanup_inventory_error.json", {
+                        "error": f"{type(exc).__name__}: {exc}"})
+                    summary["status"] = "FAIL_OR_INCOMPLETE"
         if daemon is not None and (server is None or server.proc is None
                                    or cleanup.get("status") == "CLEANUP_VERIFIED_EXACT_OWNED_PIDS_AND_PORTS_ABSENT"):
             try:
@@ -1708,7 +1901,7 @@ def _execute_native_campaign(helpers: Mapping[str, Any], freeze_path: Path,
             except BaseException as exc:
                 summary["daemon_close_error"] = f"{type(exc).__name__}: {exc}"
                 summary["status"] = "FAIL_OR_INCOMPLETE"
-        if authority_daemon is not None:
+        if authority_daemon is not None and not owner.fenced:
             try:
                 authority_daemon.close()
             except BaseException as exc:
@@ -1735,9 +1928,14 @@ def _execute_native_campaign(helpers: Mapping[str, Any], freeze_path: Path,
                 "budget_exceeded": elapsed > MAX_BIRTH_SECONDS,
                 "deadline_was_not_reset": True,
             }
+            if owner.fenced:
+                summary["birth_inclusive_budget"].update({"finished_epoch_includes_cleanup": None,
+                    "elapsed_seconds_includes_cleanup": None, "elapsed_seconds_at_hold": elapsed,
+                    "standard_cleanup_complete": False, "child_lifetime_resolved": False,
+                    "native_lifetime_within_budget": "UNRESOLVED_WHILE_ORIGINAL_CHILDREN_ALIVE"})
             if elapsed > MAX_BIRTH_SECONDS:
                 summary["status"] = "FAIL_OR_INCOMPLETE_OVER_BUDGET"
-        summary["finished_at_utc"] = utc_now()
+        summary["finished_at_utc"] = None if owner.fenced else utc_now()
         write_json(evidence / "summary.json", summary)
     return summary
 
@@ -1779,6 +1977,7 @@ def main(argv: list[str] | None = None) -> int:
     commands = parser.add_subparsers(dest="command", required=True)
     prepare_parser = commands.add_parser("prepare")
     prepare_parser.add_argument("--evidence", type=Path, required=True)
+    prepare_parser.add_argument("--runtime-authority", type=Path)
     prepare_parser.add_argument("--work", type=Path, required=True)
     prepare_parser.add_argument("--execution-evidence", type=Path, required=True)
     execute_parser = commands.add_parser("execute")
@@ -1791,7 +1990,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.command == "prepare":
         receipt = prepare(args.evidence, work=args.work,
-                          execution_evidence=args.execution_evidence)
+                          execution_evidence=args.execution_evidence, runtime_authority=args.runtime_authority)
         print(json.dumps(receipt, ensure_ascii=False, indent=2, default=str))
         return 0
     return _execute_with_cli_capture(args)

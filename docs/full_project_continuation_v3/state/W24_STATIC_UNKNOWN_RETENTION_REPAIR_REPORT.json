@@ -1,0 +1,238 @@
+{
+  "GUI_JVM_SDK": "NOT_RUN",
+  "Main_progress_original_ledgers": "NOT_EDITED",
+  "commit_push": "NOT_RUN",
+  "current_software_qualification": "100 affected PASS on exact declared 663-file before/after fingerprint; not whole-tree acceptance",
+  "independent_review": "NOT_PERFORMED",
+  "logging_actual_noengine": {
+    "cases": [
+      {
+        "active_context_during_gate": false,
+        "all_positive_write_paths_private": true,
+        "error": null,
+        "helper_import_count": 34,
+        "import_frozen_home": "/private/tmp/cv3-w24-audit-a1f3d17648/snapshot-exact-env/mcp-home",
+        "mode": "snapshot-exact-env",
+        "native_births": [],
+        "status": "ACTUAL_LOGGING_PASS_NO_ENGINE"
+      },
+      {
+        "active_context_during_gate": false,
+        "all_positive_write_paths_private": null,
+        "error": "[Errno 13] Permission denied: '/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/w24-current-execution-snapshot-20261014-r2/comsol-server-home'",
+        "helper_import_count": 34,
+        "import_frozen_home": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/w24-current-execution-snapshot-20261014-r2/comsol-server-home",
+        "mode": "snapshot-home-omitted-negative",
+        "native_births": [],
+        "status": "ACTUAL_LOGGING_REFUSED_NO_ENGINE"
+      },
+      {
+        "active_context_during_gate": false,
+        "all_positive_write_paths_private": true,
+        "error": null,
+        "helper_import_count": 34,
+        "import_frozen_home": "/private/tmp/cv3-w24-audit-a1f3d17648/current-exact-env/mcp-home",
+        "mode": "current-exact-env",
+        "native_births": [],
+        "status": "ACTUAL_LOGGING_PASS_NO_ENGINE"
+      }
+    ],
+    "negative": "Omitting MCP_HOME in readonly snapshot actually raises PermissionError at snapshot/comsol-server-home; exact-env snapshot/current cases PASS. No W23 HOME patch repeated.",
+    "primitive": "Actual production _state._run_tool/_server._setup_logging and pure callback, same first logging gate as real model_create; no mock, no Worker or COMSOL request. Module imports and real private log/status writes verified. Not a native model_create proof.",
+    "proof": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-prebirth-noengine-20261014/ACTUAL_LOGGING_PROBE_SUMMARY_R2.json",
+    "proof_sha256": "b51bc41b8982ab282504a2528f6085fcd862fb6107e1872c1a6f20be096ec040"
+  },
+  "native": "NOT_RUN",
+  "nonblocking_secondary_diagnostic_revision": {
+    "commit_push": "NOT_RUN",
+    "incremental_changes": [
+      "Nonblocking original daemon admission/session lock attempts; closing/closed/dispatch fencing before lock attempts",
+      "Lock contention makes original proof incomplete without sticky graph_changed; already captured strongrefs retained",
+      "Safe exception text, bounded diagnostics, outer observation catch; original firstcause remains same object",
+      "Both UNKNOWN and connected cleanup failure branches retain same primitive"
+    ],
+    "native_JVM_SDK_GUI": "NOT_RUN",
+    "prepared_r2": "STALE_FOR_FUTURE_EXECUTION; frozen original snapshot/freeze/once unchanged, fresh snapshot and Root approval required",
+    "preserved_previous_qualification": {
+      "affected": 97,
+      "previous_report_sha256": "7a17e4e65e5eb5dfdbd91d9aa0901ae236b39e7a52badb0b83bf16696d00ded2",
+      "source_snapshot": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/w24-prebirth-noengine-20261014/nonblocking-r1/previous-source.py.txt",
+      "test_snapshot": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/w24-prebirth-noengine-20261014/nonblocking-r1/previous-test.py.txt"
+    },
+    "review": "NOT_FINAL_REVIEW",
+    "source": {
+      "tests/test_w24_static_unknown_retention.py": {
+        "bytes": 17496,
+        "sha256": "7108f01c15d480c342bc8ef899776eaf8d4e98aad6e0755aa8e69279a6c4bb9e"
+      },
+      "tools/run_native_w24_static_shape_setup_campaign.py": {
+        "bytes": 167218,
+        "sha256": "c1772c09229e8bd9e75ce37cc10641f439f51c33ce78d8068568bb5edb9bbac6"
+      }
+    },
+    "status": "SOFTWARE_READY_PENDING_MAIN_REVIEW",
+    "tests": {
+      "affected": 100,
+      "hold_controls": 25,
+      "new_actual_controls": 3,
+      "result": "PASS",
+      "source_fingerprint": {
+        "changed": [],
+        "exit_code": 0,
+        "native": "NOT_RUN",
+        "scope": [
+          "tests/test_w24_static_unknown_retention.py",
+          "tests/test_run_native_w24_static_shape_setup_campaign.py",
+          "tests/test_w24_model_connection_identity.py",
+          "tests/test_w24_static_shape_managed.py"
+        ],
+        "source_count": 663,
+        "unchanged": true
+      },
+      "stdout": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/w24-prebirth-noengine-20261014/nonblocking-r1/affected.stdout.txt",
+      "xml": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/w24-prebirth-noengine-20261014/nonblocking-r1/affected.xml"
+    }
+  },
+  "old_r2_preservation": {
+    "all633_source_bytes_unchanged": true,
+    "future_status": "STALE_AFTER_SOURCE_REPAIR; must new source snapshot/freeze/exact-entry/Rootreview/once. No old approval inheritance.",
+    "once_and_native_execution": "NOT_TOUCHED_NOT_RUN",
+    "original_freeze_sha256": "59d01e970ff86c20d5a951d404e601181adbd5ef5c3e4cf09d8b21f9ebb92776",
+    "original_namespace_work_still_absent": true
+  },
+  "patch": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-prebirth-noengine-20261014/W24_STATIC_UNKNOWN_REPAIR_VS_FROZEN_R2.patch",
+  "prepared_entry": {
+    "MCP_HOME_environment": "/private/tmp/cv3-w24-current-20261014-r2/work/mcp-home",
+    "argv": [
+      "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/dev-python312/bin/python",
+      "-S",
+      "-m",
+      "tools.run_native_w24_static_shape_setup_campaign",
+      "execute",
+      "--evidence",
+      "/private/tmp/cv3-w24-current-20261014-r2/prepare",
+      "--work",
+      "/private/tmp/cv3-w24-current-20261014-r2/work",
+      "--reviewed-candidate-sha256",
+      "680fc99a397f7a976dc832f925042bc280593dda4f7d46867d629c9bfc0b517c",
+      "--comsol-root",
+      "/Applications/COMSOL64/Multiphysics",
+      "--jdk11",
+      "/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home"
+    ],
+    "cwd": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/w24-current-execution-snapshot-20261014-r2",
+    "environment_order": "External exactenv contains COMSOL_SERVER_MCP_HOME before process/module import. execute validates _expected_child_environment before work/native birth; audit imports happen prebirth. Later model_create uses project/session_id to select actual registered runtime via production SessionScheduler/use_session_context and context.backend.",
+    "mode": "StaticShapeSetupCampaign, not coupled cure-preflight; NativeAdmissionOwner/retain_unknown_owner_until_terminal is not on this actual path."
+  },
+  "preserved_evidence": [
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-prebirth-noengine-20261014/ACTUAL_LOGGING_PROBE_SUMMARY.json",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-prebirth-noengine-20261014/ACTUAL_LOGGING_PROBE_SUMMARY_R2.json",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-prebirth-noengine-20261014/ACTUAL_UNKNOWN_DIAGNOSTIC_COLLISION.json",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-prebirth-noengine-20261014/ACTUAL_UNKNOWN_DIAGNOSTIC_COLLISION.stderr.txt",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-prebirth-noengine-20261014/ACTUAL_UNKNOWN_DIAGNOSTIC_COLLISION_R2.json",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-prebirth-noengine-20261014/ACTUAL_UNKNOWN_DIAGNOSTIC_COLLISION_R2.stderr.txt",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-prebirth-noengine-20261014/BOUNDED_SCOPE_SOURCE.json",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-prebirth-noengine-20261014/current-exact-env-r2.stderr.txt",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-prebirth-noengine-20261014/current-exact-env-r2.stdout.json",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-prebirth-noengine-20261014/current-exact-env.stderr.txt",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-prebirth-noengine-20261014/current-exact-env.stdout.json",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-prebirth-noengine-20261014/hold-tests-r1.stdout.txt",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-prebirth-noengine-20261014/hold-tests-r1.xml",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-prebirth-noengine-20261014/hold-tests-r2.stdout.txt",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-prebirth-noengine-20261014/hold-tests-r2.xml",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-prebirth-noengine-20261014/hold-tests-r3.stdout.txt",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-prebirth-noengine-20261014/hold-tests-r3.xml",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-prebirth-noengine-20261014/hold-tests-r4.stdout.txt",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-prebirth-noengine-20261014/hold-tests-r4.xml",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-prebirth-noengine-20261014/hold_functions.txt",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-prebirth-noengine-20261014/initial-existing-static-tests.stdout.txt",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-prebirth-noengine-20261014/initial-existing-static-tests.xml",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-prebirth-noengine-20261014/snapshot-exact-env-r2.stderr.txt",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-prebirth-noengine-20261014/snapshot-exact-env-r2.stdout.json",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-prebirth-noengine-20261014/snapshot-exact-env.stderr.txt",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-prebirth-noengine-20261014/snapshot-exact-env.stdout.json",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-prebirth-noengine-20261014/snapshot-home-omitted-negative-r2.stderr.txt",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-prebirth-noengine-20261014/snapshot-home-omitted-negative-r2.stdout.json",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-prebirth-noengine-20261014/snapshot-home-omitted-negative.stderr.txt",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-prebirth-noengine-20261014/snapshot-home-omitted-negative.stdout.json"
+  ],
+  "repair": {
+    "branches": "Both principal UNKNOWN and CONNECTED cleanup failure share same primitive and BaseException fallback.",
+    "fence": "Same actual daemon admission/automaticmonitor closed flag, public/private lifecycle and default/registered backend/Worker SDK methods fenced. daemon.close never called by hold, so no native retirement. Replacement objects additionally fenced without being adopted; graph changes latch incomplete proof.",
+    "first_cause": "Original BaseException is captured once and retained by object; secondary diagnostics bounded to32 rows/512 chars and never replace it.",
+    "observation": "Only original Popen.poll and bounded private evidence/sleep; no new PS/JVM/COMSOL/SDK/wait/terminate/signal. Clock unused. poll types must be exact int before terminal acceptance. Diagnostic write/poll/sleep/monitor failure cannot lose the owner.",
+    "original_receivers": "Existing function primitive keeps actual server, server-returned Popen immediately before any birth diagnostic, original registered _session_* dictionaries, Worker/backend/ExecutionService and original child witness/Popen references before identity readbacks/cleanup. No saved PID reconstruction, no new holder class/execution framework or human exception-stop feature.",
+    "termination": "Return FAIL_UNKNOWN_PRESERVED_ORIGINAL_CHILDREN_TERMINAL only after original complete witness set and exact original children terminal. Partialbirth, absent witness, active in-flight dispatch, unexpected extra server, changed graph/PID fields keep owner. DomainUNKNOWN/safe_retryfalse never rewritten. Whilelive/proofincomplete action budget is UNRESOLVED, no <=deadline claim."
+  },
+  "root_cause": {
+    "actual_noengine_failure": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-prebirth-noengine-20261014/ACTUAL_UNKNOWN_DIAGNOSTIC_COLLISION_R2.json",
+    "other_gaps": "Old primitive had uncaught sleep/monitor attribute errors, continued RSS PS sampling and no complete-original-child terminal rule.",
+    "scope": "Actual W24StaticShapeSetupServer/ControlDaemon constructed without any process/session; actual owned-FS FileExistsError escaped old _unknown_hold before its retention loop. Original connectedcleanup branch lacked the main UNKNOWN branch catch.",
+    "sha256": "b5be43b4381b11753011f98531ebe42004af945040fe283d2becdc36a90d5ece"
+  },
+  "schema": "W24_STATIC_FRESH_PREBIRTH_AND_UNKNOWN_REPAIR_V1",
+  "scope": "Narrow prepared W24r2 fourteen-slot static-shape actual entry; not independent final review, not wholeW24/science/native acceptance.",
+  "source_after_nonblocking_revision": {
+    "tests/test_w24_static_unknown_retention.py": {
+      "bytes": 17496,
+      "sha256": "7108f01c15d480c342bc8ef899776eaf8d4e98aad6e0755aa8e69279a6c4bb9e"
+    },
+    "tools/run_native_w24_static_shape_setup_campaign.py": {
+      "bytes": 167218,
+      "sha256": "c1772c09229e8bd9e75ce37cc10641f439f51c33ce78d8068568bb5edb9bbac6"
+    }
+  },
+  "source_manifest": {
+    "tests/test_w24_static_unknown_retention.py": {
+      "bytes": 14362,
+      "old_r2_snapshot_sha256": null,
+      "sha256": "03c4d4f9c2fcd9a0c5d092d245f1825e45b8d0d3b6c83bdff4a6594068e00f59"
+    },
+    "tools/run_native_w24_static_shape_setup_campaign.py": {
+      "bytes": 165483,
+      "old_r2_snapshot_sha256": "13e1dda3f8c2e50ad8a91e752086561699528c07bb4be0c50c76ac3ad6c8e710",
+      "sha256": "fea90ea165e40eecd54b30edb681e91f3658b2bd85d44db1abf9ab0df697782c"
+    }
+  },
+  "status": "SOFTWARE_REPAIR_READY_MAIN_REVIEW_PENDING_NEW_NATIVE_SNAPSHOT_REQUIRED",
+  "tests": {
+    "actual": "Actual production ControlDaemon/staticserver/PersistentJavaWorker/ManagedBackend classes; only harmless own Python children. Hold emits no signals; test fixture explicitly terminates its own children for error/replacement cases, natural exit separately covered. Durable actual OperationStore UNKNOWN compared before/after.",
+    "affected_modules": [
+      "tests/test_w24_static_unknown_retention.py",
+      "tests/test_run_native_w24_static_shape_setup_campaign.py",
+      "tests/test_w24_model_connection_identity.py",
+      "tests/test_w24_static_shape_managed.py"
+    ],
+    "affected_pass": 97,
+    "bound_manifest": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/tools/test_efficiency_v3_w24_static_retention.json",
+    "bound_manifest_sha256": "d19f6efc55950c17db6ec5145dd628de44677ce50a96779a3328ccfb7c9289c2",
+    "branch_boundary": "Two tests execute exact production execute-tail AST with real receivers/children and true owned-FS diagnostic exception injection; no claim full native/prepare route executed.",
+    "candidate_fingerprint": "dfa188b1a062d3f8926e024bb5bd1bbc5eb9e03a2b00142ff87dfca66aa8e42f",
+    "failure_r1": "Two new negative controls revealed nullable Worker Popen and mutable saved server PID witness gaps; fixed, original2FAIL evidence retained.",
+    "later_other_agent_dependency_drift": [
+      "tests/test_w23_original_owner_hold.py",
+      "tests/test_w26_dependency_unit.py",
+      "tools/full_project_release.py",
+      "tools/run_native_w23_saved_mph_diagnostic.py",
+      "tools/w23_original_owner_hold.py",
+      "tools/w26_dependency_unit.py"
+    ],
+    "negative_controls": [
+      "unknown receipt truefilecollision",
+      "poll/sleep/write/monitor/clock diagnostics",
+      "Worker/backend/service/collection/server/Worker Popen replacement",
+      "PID witness rewrite",
+      "missing child witness/partial connect/partial server birth",
+      "default backend replacement",
+      "all effects fenced",
+      "actual natural child exit",
+      "verified never-born vs partialbirth distinction"
+    ],
+    "new_control_count": 22,
+    "qualification": "Own W24 source/tests still exact run bytes; unrelated later source changes invalidate whole current663 closure but do not retroactively alter recorded bounded result. New native prepare requires wholly fresh inventory.",
+    "source_before_after": "PASS_AT_BOUNDED_RUN_END",
+    "source_closure_files": 663,
+    "summary": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/test-efficiency/20261013T194704Z-fe7c81bd.summary.json",
+    "summary_sha256": "6f9d7cefe42c9c8e664b93caebaa83d280a80962e46c5dc7f9af6b69e0c55f68"
+  }
+}

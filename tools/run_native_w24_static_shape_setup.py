@@ -109,9 +109,14 @@ class StaticShapeManagedRunner:
     def __init__(self, *, daemon: Any, project_id: str, project_workspace: Path,
                  project_create_response: Mapping[str, Any],
                  parent_binding: ManagedModelBinding, source_manifest: Mapping[str, Any],
-                 setup_runner: Any, evidence_dir: Path, timeout_s: float = 300.0):
+                 setup_runner: Any, evidence_dir: Path, timeout_s: float = 300.0,
+                 native_epoch_capability: Any = None):
         if not isinstance(project_id, str) or not project_id:
             raise CampaignError("static-shape runner requires the authoritative registered project id")
+        self.native_epoch_capability = native_epoch_capability
+        if native_epoch_capability is not None:
+            from tools.w24_native_epoch_capability import require_native_epoch_capability
+            require_native_epoch_capability(native_epoch_capability)
         self.daemon = daemon
         self.project_id = project_id
         self.workspace = project_workspace.resolve(strict=True)
@@ -141,6 +146,7 @@ class StaticShapeManagedRunner:
         self.rpc_journal = self.evidence_dir / "managed_action_journal.jsonl"
         self._model_tag = parent_binding.model_tag
         self._binding = parent_binding
+        self._worker_binding_anchor = None
         self._verify_persisted_binding(parent_binding)
 
     def _verify_sources(self, source_manifest: Mapping[str, Any]) -> dict[str, Path]:
@@ -160,30 +166,39 @@ class StaticShapeManagedRunner:
         return paths
 
     def _verify_persisted_binding(self, binding: ManagedModelBinding) -> Mapping[str, Any]:
-        registry = getattr(self.daemon, "session_registry", None)
-        get_context = getattr(registry, "get", None)
-        if not callable(get_context):
-            raise CampaignError("ControlDaemon cannot resolve the exact registered project/session context")
-        try:
-            context = get_context(self.project_id, binding.session_id)
-        except Exception as exc:
-            raise CampaignError("the bound ModelRef session has no exact live registered runtime context") from exc
-        if (getattr(context, "project_id", None) != self.project_id or
-                getattr(context, "session_id", None) != binding.session_id):
-            raise CampaignError("registered runtime context differs from the exact ModelRef project/session")
-        backend = getattr(context, "backend", None)
-        if backend is None:
-            raise CampaignError("registered runtime context has no session-bound backend")
+        if self.native_epoch_capability is not None:
+            backend = self.native_epoch_capability.backend_for_binding(binding)
+        else:
+            registry = getattr(self.daemon, "session_registry", None)
+            get_context = getattr(registry, "get", None)
+            if not callable(get_context):
+                raise CampaignError("ControlDaemon cannot resolve the exact registered project/session context")
+            try:
+                context = get_context(self.project_id, binding.session_id)
+            except Exception as exc:
+                raise CampaignError("the bound ModelRef session has no exact live registered runtime context") from exc
+            if (getattr(context, "project_id", None) != self.project_id or
+                    getattr(context, "session_id", None) != binding.session_id):
+                raise CampaignError("registered runtime context differs from the exact ModelRef project/session")
+            backend = getattr(context, "backend", None)
+            if backend is None:
+                raise CampaignError("registered runtime context has no session-bound backend")
         reader = getattr(backend, "model_project_binding", None)
         if not callable(reader):
             raise CampaignError("ControlDaemon cannot read the persisted ModelRef/project association")
         worker_identity = getattr(backend, "worker_identity", None)
-        if not _model_ref_matches_worker_epoch(binding, worker_identity):
+        from tools.w24_native_epoch_capability import _capture_live_worker_binding
+        if self._worker_binding_anchor is None:
+            self._worker_binding_anchor = _capture_live_worker_binding(backend, project_id=self.project_id,
+                session_id=self.parent_binding.session_id)
+        if not _model_ref_matches_worker_epoch(binding, worker_identity, anchor=self._worker_binding_anchor, backend=backend):
             raise CampaignError("ModelRef does not belong to the exact active Worker server instance")
         persisted = reader(dict(binding.model_ref))
         if (not isinstance(persisted, Mapping) or persisted.get("attribution") != "PROJECT_BOUND" or
                 persisted.get("project_id") != self.project_id):
             raise CampaignError("ModelRef is not persistently associated with the exact registered project")
+        if not _model_ref_matches_worker_epoch(binding, worker_identity, anchor=self._worker_binding_anchor, backend=backend):
+            raise CampaignError("original Worker identity changed during persisted binding read")
         return dict(persisted)
 
     def _study_run_ledger(self) -> list[dict[str, Any]]:
@@ -259,6 +274,8 @@ class StaticShapeManagedRunner:
                 _write_json_fsynced(Path(request_capture_path), capture_payload)
             elif request_capture_metadata is not None:
                 raise CampaignError("request capture metadata cannot be supplied without a durable capture path")
+            if self.native_epoch_capability is not None:
+                self.native_epoch_capability.as_evidence()
             response = self.daemon.dispatch(request)
         except BaseException as exc:
             _append_jsonl_fsynced(self.rpc_journal, {
@@ -271,6 +288,10 @@ class StaticShapeManagedRunner:
                 "response_type": type(response).__name__})
             raise CampaignError(f"{operation} returned a non-object managed response; no retry")
         self._record_response(call_id, response)
+        if self.native_epoch_capability is not None and operation == "operation_call" and arguments.get("operation_id") == "code.execute_java":
+            execution_response = response.get("execution", {})
+            self.native_epoch_capability.verify(response, model_ref=dict(binding.model_ref),
+                                                revision=execution_response.get("revision"))
         worker_data = response.get("data", {}).get("worker") if isinstance(response.get("data"), Mapping) else None
         terminal = (self.setup_runner._worker_request_terminal(response)
                     if worker_required else response.get("success") is True)

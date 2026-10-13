@@ -127,10 +127,20 @@ def _mac_birth_epoch(raw: str) -> float:
     return parsed.replace(tzinfo=ZoneInfo("Asia/Shanghai")).timestamp()
 
 
-def _process_inventory() -> dict[str, Any]:
+def _cleanup_timeout(admission_owner: Any, preferred: float) -> float:
+    """Original cleanup effect budget; never an observe-only/retry exemption."""
+    if admission_owner is None:return preferred
+    from tools.w24_coupled_admission import require_admission_owner
+    owner=require_admission_owner(admission_owner)
+    try:return owner.wait_cap(preferred,cleanup=True)
+    except BaseException as exc:owner.fail("exact_cleanup_original_deadline_failed",exc);raise
+
+
+def _process_inventory(*, admission_owner: Any = None) -> dict[str, Any]:
     """Fresh macOS COMSOL/Worker/listener inventory; failed probes block startup."""
     ps_command = ["/bin/ps", "-axo", "pid=,ppid=,comm=,args="]
-    ps = subprocess.run(ps_command, capture_output=True, text=True, check=False, timeout=15)
+    ps = subprocess.run(ps_command, capture_output=True, text=True, check=False, timeout=_cleanup_timeout(admission_owner,15.0))
+    if admission_owner is not None:_cleanup_timeout(admission_owner,1.01)
     engines: list[dict[str, Any]] = []
     workers: list[dict[str, Any]] = []
     processes: list[dict[str, Any]] = []
@@ -149,7 +159,8 @@ def _process_inventory() -> dict[str, Any]:
         if "persistentcomsolworker" in lowered or "comsolworker" in lowered:
             workers.append({"pid": pid, "ppid": ppid, "comm": comm, "argv": argv})
     lsof_command = ["/usr/sbin/lsof", "-nP", "-iTCP", "-sTCP:LISTEN"]
-    lsof = subprocess.run(lsof_command, capture_output=True, text=True, check=False, timeout=15)
+    lsof = subprocess.run(lsof_command, capture_output=True, text=True, check=False, timeout=_cleanup_timeout(admission_owner,15.0))
+    if admission_owner is not None:_cleanup_timeout(admission_owner,1.01)
     listeners = [line.strip() for line in lsof.stdout.splitlines()[1:]
                  if line.strip() and ("mphserver" in line.lower() or "comsol" in line.lower())]
     probes_ok = (ps.returncode == 0 and lsof.returncode == 0
@@ -832,12 +843,13 @@ def _parse_lsof_listener(stdout: str) -> tuple[int | None, str]:
     return pid, endpoint
 
 
-def _listener_matches(server: Any) -> dict[str, Any]:
+def _listener_matches(server: Any, *, admission_owner: Any = None) -> dict[str, Any]:
     if server.proc is None or server.port is None:
         return {"matches": False, "reason": "server process or port missing"}
     command = ["/usr/sbin/lsof", "-nP", "-a", "-p", str(server.proc.pid),
                f"-iTCP:{server.port}", "-sTCP:LISTEN"]
-    probe = subprocess.run(command, capture_output=True, text=True, timeout=10, check=False)
+    probe = subprocess.run(command, capture_output=True, text=True, timeout=_cleanup_timeout(admission_owner,10.0), check=False)
+    if admission_owner is not None:_cleanup_timeout(admission_owner,1.01)
     rows = [line for line in probe.stdout.splitlines()[1:] if line.strip()]
     pid, endpoint = _parse_lsof_listener(probe.stdout)
     return {"matches": probe.returncode == 0 and len(rows) == 1 and pid == server.proc.pid
@@ -878,7 +890,7 @@ def _parse_numeric_tcp_endpoint(endpoint: str) -> dict[str, Any]:
             "ipv4_mapped_loopback": bool(mapped is not None and mapped.is_loopback)}
 
 
-def _port_socket_owners(port: int | None) -> dict[str, Any]:
+def _port_socket_owners(port: int | None, *, admission_owner: Any = None) -> dict[str, Any]:
     """Require every live socket endpoint to parse numerically as loopback.
 
     lsof can retain a task-owned ``(CLOSED)`` row after disconnect. Such a row
@@ -888,7 +900,8 @@ def _port_socket_owners(port: int | None) -> dict[str, Any]:
     if type(port) is not int or not 1 <= port <= 65535:
         return {"safe": False, "reason": "port unavailable", "port": port, "pids": [], "rows": []}
     command = ["/usr/sbin/lsof", "-nP", f"-iTCP:{port}"]
-    probe = subprocess.run(command, capture_output=True, text=True, timeout=10, check=False)
+    probe = subprocess.run(command, capture_output=True, text=True, timeout=_cleanup_timeout(admission_owner,10.0), check=False)
+    if admission_owner is not None:_cleanup_timeout(admission_owner,1.01)
     rows = [line for line in probe.stdout.splitlines()
             if line.strip() and not line.lstrip().startswith("COMMAND")]
     parsed: list[dict[str, Any]] = []
@@ -961,12 +974,13 @@ def _port_socket_owners(port: int | None) -> dict[str, Any]:
             "no_socket_rows": not parsed}
 
 
-def _listener_for_pid(port: int | None, pid: int | None) -> dict[str, Any]:
+def _listener_for_pid(port: int | None, pid: int | None, *, admission_owner: Any = None) -> dict[str, Any]:
     if type(port) is not int or type(pid) is not int:
         return {"matches": False, "reason": "port or PID unavailable"}
     command = ["/usr/sbin/lsof", "-nP", "-a", "-p", str(pid),
                f"-iTCP:{port}", "-sTCP:LISTEN"]
-    probe = subprocess.run(command, capture_output=True, text=True, timeout=10, check=False)
+    probe = subprocess.run(command, capture_output=True, text=True, timeout=_cleanup_timeout(admission_owner,10.0), check=False)
+    if admission_owner is not None:_cleanup_timeout(admission_owner,1.01)
     rows = [line for line in probe.stdout.splitlines()
             if line.strip() and not line.lstrip().startswith("COMMAND")]
     owners = []
@@ -989,7 +1003,7 @@ def _task_endpoint_identity_gate(server: Any, *, server_identity: dict[str, Any]
                                  worker_identity: dict[str, Any] | None,
                                  worker_port: int | None,
                                  process_snapshot: Callable[[int], Any],
-                                 require_worker_peer: bool = False) -> dict[str, Any]:
+                                 require_worker_peer: bool = False, admission_owner: Any = None) -> dict[str, Any]:
     """Require exact live children, their loopback listeners, and no foreign client."""
     if server.proc is None or server.worker is None or worker_identity is None:
         return {"safe": False, "reason": "owned server, Worker, or identity missing"}
@@ -998,9 +1012,9 @@ def _task_endpoint_identity_gate(server: Any, *, server_identity: dict[str, Any]
         return {"safe": False, "reason": "Worker has no task-owned child process"}
     server_current = process_snapshot(server.proc.pid)
     worker_current = process_snapshot(worker_proc.pid)
-    server_listener = _listener_matches(server)
-    worker_listener = _listener_for_pid(worker_port, worker_proc.pid)
-    server_sockets = _port_socket_owners(server.port)
+    server_listener = _listener_matches(server,admission_owner=admission_owner) if admission_owner is not None else _listener_matches(server)
+    worker_listener = _listener_for_pid(worker_port,worker_proc.pid,admission_owner=admission_owner) if admission_owner is not None else _listener_for_pid(worker_port,worker_proc.pid)
+    server_sockets = _port_socket_owners(server.port,admission_owner=admission_owner) if admission_owner is not None else _port_socket_owners(server.port)
     expected_pids = {server.proc.pid, worker_proc.pid}
     foreign_pids = sorted(set(server_sockets.get("pids", [])) - expected_pids)
     worker_peer_seen = worker_proc.pid in server_sockets.get("pids", [])
@@ -1124,11 +1138,12 @@ def _task_engine_descendants(inventory: dict[str, Any], root_pid: int,
     return descendants, ambiguous
 
 
-def _port_listener_probe(port: int | None) -> dict[str, Any]:
+def _port_listener_probe(port: int | None, *, admission_owner: Any = None) -> dict[str, Any]:
     if type(port) is not int or not 1 <= port <= 65535:
         return {"absent": False, "reason": "port unavailable", "port": port}
     command = ["/usr/sbin/lsof", "-nP", "-iTCP:" + str(port), "-sTCP:LISTEN"]
-    probe = subprocess.run(command, capture_output=True, text=True, check=False, timeout=10)
+    probe = subprocess.run(command, capture_output=True, text=True, check=False, timeout=_cleanup_timeout(admission_owner,10.0))
+    if admission_owner is not None:_cleanup_timeout(admission_owner,1.01)
     rows = [line.strip() for line in probe.stdout.splitlines()[1:] if line.strip()]
     absent = probe.returncode == 1 and not rows and not probe.stderr.strip()
     return {"port": port, "command": command, "returncode": probe.returncode,
@@ -1137,8 +1152,9 @@ def _port_listener_probe(port: int | None) -> dict[str, Any]:
 
 
 def _wait_identity_absent(pid: int, expected: dict[str, Any],
-                          process_snapshot: Callable[[int], Any], deadline: float) -> dict[str, Any]:
+                          process_snapshot: Callable[[int], Any], deadline: float, *, admission_owner: Any = None) -> dict[str, Any]:
     while True:
+        if admission_owner is not None:_cleanup_timeout(admission_owner,1.01)
         current = process_snapshot(pid)
         if current is None:
             return {"pid": pid, "original_identity_absent": True, "current_identity": None}
@@ -1148,7 +1164,7 @@ def _wait_identity_absent(pid: int, expected: dict[str, Any],
         if time.monotonic() >= deadline:
             return {"pid": pid, "original_identity_absent": False,
                     "current_identity": current}
-        time.sleep(0.2)
+        time.sleep(0.2 if admission_owner is None else _cleanup_timeout(admission_owner,0.2))
 
 
 def _exact_owned_cleanup(server: Any, *, server_identity: dict[str, Any],
@@ -1156,7 +1172,7 @@ def _exact_owned_cleanup(server: Any, *, server_identity: dict[str, Any],
                          worker_port: int | None,
                          process_snapshot: Callable[[int], Any],
                          reconciliation: dict[str, Any], evidence: Path,
-                         require_fixture_terminal: bool = False) -> dict[str, Any]:
+                         require_fixture_terminal: bool = False, admission_owner: Any = None) -> dict[str, Any]:
     """TERM only freshly matched task-owned identities after full ledger proof.
 
     This deliberately never escalates to SIGKILL. An unresolved request,
@@ -1181,7 +1197,17 @@ def _exact_owned_cleanup(server: Any, *, server_identity: dict[str, Any],
         write_json(evidence / "exact_owned_cleanup_receipt.json", receipt)
         return receipt
 
-    inventory = _process_inventory()
+    if admission_owner is not None:
+        from tools.w24_coupled_admission import require_admission_owner
+        require_admission_owner(admission_owner,server)
+        _cleanup_timeout(admission_owner,1.01)
+        original_snapshot=process_snapshot
+        def bounded_snapshot(pid):
+            value=original_snapshot(pid,timeout_s=_cleanup_timeout(admission_owner,10.0))
+            _cleanup_timeout(admission_owner,1.01)
+            return value
+        process_snapshot=bounded_snapshot
+    inventory = _process_inventory() if admission_owner is None else _process_inventory(admission_owner=admission_owner)
     receipt["precleanup_inventory"] = inventory
     if not inventory.get("probes_ok"):
         receipt["reason"] = "fresh process/listener inventory failed"
@@ -1190,7 +1216,8 @@ def _exact_owned_cleanup(server: Any, *, server_identity: dict[str, Any],
 
     endpoint_gate = _task_endpoint_identity_gate(
         server, server_identity=server_identity, worker_identity=worker_identity,
-        worker_port=worker_port, process_snapshot=process_snapshot)
+        worker_port=worker_port, process_snapshot=process_snapshot,
+        **({"admission_owner":admission_owner} if admission_owner is not None else {}))
     receipt["fresh_endpoint_identity_gate"] = endpoint_gate
     if not endpoint_gate.get("safe"):
         receipt["reason"] = "fresh exact process/listener/client ownership gate failed"
@@ -1200,7 +1227,7 @@ def _exact_owned_cleanup(server: Any, *, server_identity: dict[str, Any],
     server_pid = server.proc.pid
     server_current = process_snapshot(server_pid)
     server_alive = server.proc.poll() is None
-    listener = _listener_matches(server)
+    listener = _listener_matches(server) if admission_owner is None else _listener_matches(server,admission_owner=admission_owner)
     receipt["identities"] = {"server_expected": server_identity,
                              "server_current": server_current,
                              "server_listener": listener}
@@ -1249,14 +1276,17 @@ def _exact_owned_cleanup(server: Any, *, server_identity: dict[str, Any],
     receipt["status"] = "TERM_INTENT_RECORDED"
     write_json(evidence / "exact_owned_cleanup_receipt.json", receipt)
     cleanup_deadline = time.monotonic() + EXACT_CLEANUP_GRACE_S
+    if admission_owner is not None:cleanup_deadline=min(cleanup_deadline,admission_owner.deadline_monotonic)
 
     def term_exact(pid: int, expected: dict[str, Any], *, popen: Any = None, role: str) -> dict[str, Any]:
+        if admission_owner is not None:_cleanup_timeout(admission_owner,1.01)
         current = process_snapshot(pid)
         if current is None:
             return {"pid": pid, "role": role, "status": "ALREADY_ABSENT"}
         if not _process_identity_matches(expected, current):
             return {"pid": pid, "role": role, "status": "IDENTITY_CHANGED_NO_SIGNAL",
                     "current_identity": current}
+        if admission_owner is not None:_cleanup_timeout(admission_owner,1.01)
         try:
             if popen is not None:
                 if popen.poll() is not None:
@@ -1289,7 +1319,7 @@ def _exact_owned_cleanup(server: Any, *, server_identity: dict[str, Any],
     for proc in (worker_proc, server.proc):
         if proc is not None and proc.poll() is None:
             try:
-                proc.wait(timeout=max(0.0, min(10.0, cleanup_deadline - time.monotonic())))
+                proc.wait(timeout=max(0.0,min(10.0,cleanup_deadline-time.monotonic())) if admission_owner is None else _cleanup_timeout(admission_owner,min(10.0,cleanup_deadline-time.monotonic())))
             except subprocess.TimeoutExpired:
                 pass
     absent: dict[str, Any] = {}
@@ -1299,7 +1329,7 @@ def _exact_owned_cleanup(server: Any, *, server_identity: dict[str, Any],
     expected_processes.extend((identity["pid"], identity, f"descendant_{index}")
                               for index, identity in enumerate(descendant_identities))
     for pid, identity, label in expected_processes:
-        absent[label] = _wait_identity_absent(pid, identity, process_snapshot, cleanup_deadline)
+        absent[label] = _wait_identity_absent(pid,identity,process_snapshot,cleanup_deadline,**({"admission_owner":admission_owner} if admission_owner is not None else {}))
 
     if worker_proc is not None and worker_proc.poll() is not None:
         try:
@@ -1312,10 +1342,10 @@ def _exact_owned_cleanup(server: Any, *, server_identity: dict[str, Any],
     except BaseException as exc:
         receipt["server_log_close_error"] = f"{type(exc).__name__}: {exc}"
 
-    server_port = _port_listener_probe(server.port)
+    server_port = _port_listener_probe(server.port) if admission_owner is None else _port_listener_probe(server.port,admission_owner=admission_owner)
     worker_port_probe = ({"port": None, "absent": True, "not_started": True}
-                         if worker_port is None else _port_listener_probe(worker_port))
-    post_inventory = _process_inventory()
+                         if worker_port is None else (_port_listener_probe(worker_port) if admission_owner is None else _port_listener_probe(worker_port,admission_owner=admission_owner)))
+    post_inventory = _process_inventory() if admission_owner is None else _process_inventory(admission_owner=admission_owner)
     try:
         write_json(evidence / "postcleanup_inventory.json", post_inventory)
     except BaseException as exc:

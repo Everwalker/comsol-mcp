@@ -306,7 +306,7 @@ def _identity_same(expected: Any, current: Any) -> bool:
 
 
 def _model_ref_epoch(binding: ManagedModelBinding) -> tuple[str, str, int]:
-    """Return the logical session plus exact Worker/model generation identity."""
+    """Return session/server plus model incarnation, independent of connection epoch."""
     ref = binding.model_ref
     session_id = ref.get("session_id")
     server_instance_id = ref.get("server_instance_id")
@@ -314,19 +314,25 @@ def _model_ref_epoch(binding: ManagedModelBinding) -> tuple[str, str, int]:
     if (not isinstance(session_id, str) or not session_id or session_id != binding.session_id or
             not isinstance(server_instance_id, str) or not server_instance_id or
             isinstance(generation, bool) or not isinstance(generation, int) or generation < 1):
-        raise CampaignError("managed ModelRef lacks a complete Worker epoch identity")
+        raise CampaignError("managed ModelRef lacks a complete session/server/model incarnation identity")
     return session_id, server_instance_id, generation
 
 
 def _model_ref_matches_worker_epoch(binding: ManagedModelBinding,
-                                    worker_identity: Any) -> bool:
+                                    worker_identity: Any, *, anchor: Any = None, backend: Any = None) -> bool:
     """Check the Worker epoch while allowing a stable logical session id."""
     try:
         _, server_instance_id, _ = _model_ref_epoch(binding)
     except CampaignError:
         return False
-    return (isinstance(worker_identity, Mapping) and
-            worker_identity.get("server_instance_id") == server_instance_id)
+    if not isinstance(worker_identity, Mapping) or worker_identity.get("server_instance_id") != server_instance_id:
+        return False
+    try:
+        from tools.w24_native_epoch_capability import _verify_live_worker_binding
+        _verify_live_worker_binding(anchor, binding, backend)
+    except Exception:
+        return False
+    return True
 
 
 def _observe_worker_birth(server: Any, *, attempt_index: int) -> dict[str, Any]:
@@ -1556,6 +1562,10 @@ class NativeScienceCampaignAdapter:
         self._retired_worker_server_instance_ids: set[str] = set()
         self._worker_object = getattr(server, "worker", None)
         self._worker_process_identity = _capture_worker_process_identity(server)
+        from tools.w24_native_epoch_capability import _capture_live_worker_binding
+        backend = self.daemon.backend
+        self._worker_binding_anchor = _capture_live_worker_binding(backend, project_id=project_id,
+            session_id=backend.service.ledger.session_id)
         self.staged_baseline_configuration_readback: dict[str, Any] | None = None
         self.action_log = self.evidence / "managed_native_actions.jsonl"
         self.direct_rpc_journal = self.evidence / "direct_rpc_journal.jsonl"
@@ -1683,7 +1693,7 @@ class NativeScienceCampaignAdapter:
             epoch_checks.append(
                 ref_epoch not in self._retired_model_ref_epochs and
                 ref_epoch[1] not in self._retired_worker_server_instance_ids and
-                _model_ref_matches_worker_epoch(binding, backend_identity))
+                _model_ref_matches_worker_epoch(binding, backend_identity, anchor=getattr(self,"_worker_binding_anchor",None), backend=self.daemon.backend))
         binding_safe = bool(bindings) and all(
             binding.project_id == self._immutable_project_id and
             binding.model_ref.get("session_id") == binding.session_id
@@ -1840,7 +1850,7 @@ class NativeScienceCampaignAdapter:
                 epoch[1] in self._retired_worker_server_instance_ids):
             raise CampaignError(f"managed model_load for {name} returned a retired Worker epoch")
         backend_identity = getattr(getattr(self.daemon, "backend", None), "worker_identity", None)
-        if not _model_ref_matches_worker_epoch(binding, backend_identity):
+        if not _model_ref_matches_worker_epoch(binding, backend_identity, anchor=getattr(self,"_worker_binding_anchor",None), backend=self.daemon.backend):
             raise CampaignError(f"managed model_load for {name} does not match the active Worker server_instance_id")
         return epoch
 
@@ -3949,6 +3959,10 @@ class NativeScienceCampaignAdapter:
         if (connect.get("success") is not True or
                 connect.get("data", {}).get("endpoint") != f"127.0.0.1:{self.server.port}"):
             raise CampaignError("second managed Worker connection did not verify the owned listener")
+        from tools.w24_native_epoch_capability import _capture_live_worker_binding
+        backend = self.daemon.backend
+        self._worker_binding_anchor = _capture_live_worker_binding(backend, project_id=self._immutable_project_id,
+            session_id=backend.service.ledger.session_id)
         self.models.clear()
         self.mechanics_models.clear()
         reopened = self._load_registered_copy("staged_baseline", path,
@@ -4296,7 +4310,7 @@ def _validated_setup_cure_v2_claim(build: Mapping[str, Any]) -> dict[str, Any]:
             "validation": validated}
 
 
-def validate_template_receipt(receipt_path: Path) -> dict[str, Any]:
+def validate_template_receipt(receipt_path: Path, *, attachment_manifest: Path | None = None) -> dict[str, Any]:
     """Verify an immutable configured native template without touching COMSOL."""
     receipt_path = receipt_path.expanduser().resolve(strict=True)
     receipt = _read_json(receipt_path, "configured template receipt")
@@ -4335,7 +4349,11 @@ def validate_template_receipt(receipt_path: Path) -> dict[str, Any]:
     if template_path.stat().st_size != expected_size or sha256(template_path) != expected_sha:
         raise CampaignError("configured template bytes no longer match their native receipt")
 
-    build = _as_mapping(receipt.get("fixture_readback"), "fixture_readback")
+    attachment = None
+    if attachment_manifest is not None:
+        from tools.w24_setup_input_attachment import validate_attachment
+        attachment = validate_attachment(attachment_manifest, receipt_path)
+    build = _as_mapping(attachment["fixture_readback"] if attachment else receipt.get("fixture_readback"), "fixture_readback")
     if (build.get("status") != "BUILT_NOT_SOLVED" or
             build.get("geometry_dimension") != 2 or
             build.get("geometry_axisymmetric") is not True or
@@ -4377,6 +4395,7 @@ def validate_template_receipt(receipt_path: Path) -> dict[str, Any]:
     except RuntimeError as exc:
         raise CampaignError(f"registered project artifact validation failed: {exc}") from exc
     return {
+        "input_attachment": attachment,
         "receipt_path": str(receipt_path),
         "receipt_sha256": sha256(receipt_path),
         "template_path": str(template_path),
@@ -4405,6 +4424,10 @@ def runtime_source_manifest() -> dict[str, dict[str, str]]:
     paths.extend([
         Path(__file__).resolve(), SCIENCE_FIXTURE, V2_CONTROL_FIXTURE,
         COUPON_FIXTURE, PLAN, SETUP_RUNNER,
+        REPO / "tools/w24_setup_input_attachment.py",
+        REPO / "tools/w24_witnessed_stress.py",
+        REPO / "tools/w24_v2_setup_readback.py",
+        REPO / "tools/w24_stable_shape_transfer.py",
         REPO / "tools/w24_cure_law_v2.py",
         REPO / "tools/w24_maxwell_branch_state.py",
         REPO / "tools/w24_cure_v2_capture.py",
@@ -4413,6 +4436,10 @@ def runtime_source_manifest() -> dict[str, dict[str, str]]:
         REPO / "tools/run_native_w23_te_managed_preflight.py",
         REPO / "tools/run_native_artifact_geometry.py",
         REPO / "tests/test_w24_cure_science_runner.py",
+        REPO / "tests/test_w24_setup_input_attachment.py",
+        REPO / "tests/test_w24_witnessed_stress.py",
+        REPO / "tests/test_w24_v2_setup_readback.py",
+        REPO / "tests/test_w24_stable_shape_transfer.py",
         REPO / "tests/test_w24_cure_law_v2.py",
         REPO / "tests/test_w24_cure_v2_capture.py",
         REPO / "tests/test_w24_cure_capture_link.py",
@@ -4457,11 +4484,16 @@ def _write_new_json(path: Path, value: Mapping[str, Any]) -> None:
         os.close(directory_fd)
 
 
-def prepare_campaign_candidate(template_receipt_path: Path, output_path: Path) -> dict[str, Any]:
+def prepare_campaign_candidate(template_receipt_path: Path, output_path: Path, *, attachment_manifest: Path | None = None) -> dict[str, Any]:
     """Freeze a complete, unsolved setup input for later independent approval."""
-    setup = validate_template_receipt(template_receipt_path)
+    setup = validate_template_receipt(template_receipt_path, attachment_manifest=attachment_manifest)
     source_manifest = runtime_source_manifest()
-    stress_components = map_stress_components(setup["equation_view_inventory"])
+    readiness_only = bool(setup.get("input_attachment")) and not setup["cure_law_v2_capture"]["enabled"]
+    if readiness_only:
+        from tools.w24_witnessed_stress import authenticate_current11_mapping
+        stress_components = authenticate_current11_mapping(attachment_manifest, template_receipt_path)
+    else:
+        stress_components = map_stress_components(setup["equation_view_inventory"])
     candidate = freeze_campaign(
         {"path": setup["template_path"], "size_bytes": setup["template_size_bytes"],
          "sha256": setup["template_sha256"], "freeze_sha256": setup["setup_freeze_sha256"],
@@ -4502,13 +4534,20 @@ def prepare_campaign_candidate(template_receipt_path: Path, output_path: Path) -
             "native_outputs_inside_workspace": True,
         },
     })
+    if setup.get("input_attachment"):
+        from tools.w24_stable_shape_transfer import stable_shape_transfer_requirements
+        candidate["stable_gel_shape_transfer"] = stable_shape_transfer_requirements()
+        candidate["input_attachment"] = setup["input_attachment"]
+        candidate["readiness"] = "NEEDS_NATIVE_V2_CONFIGURATION_AND_STABLE_GEL_SHAPE_TRANSFER"
+        candidate["status"] = "NEEDS_NATIVE_V2_CONFIGURATION_AND_STABLE_GEL_SHAPE_TRANSFER"
+        candidate["native_admission"] = "REFUSED_READINESS_ONLY_NO_ENGINE_BIRTH"
     candidate.pop("freeze_sha256", None)
     candidate["freeze_sha256"] = _canonical_json_sha256(candidate)
     _write_new_json(output_path, candidate)
     return {"status": candidate["status"], "path": str(output_path.resolve()),
             "freeze_sha256": candidate["freeze_sha256"],
             "file_sha256": sha256(output_path), "source_count": len(source_manifest),
-            "study_run_submissions_authorized_by_candidate": MAX_STUDY_RUN_SUBMISSIONS,
+            "study_run_submissions_authorized_by_candidate": 0 if readiness_only else MAX_STUDY_RUN_SUBMISSIONS,
             "approval_status": "NOT_APPROVED"}
 
 
@@ -6003,6 +6042,7 @@ def main() -> int:
     prepare = commands.add_parser("prepare", help="freeze the unsolved setup receipt for root review")
     prepare.add_argument("--template-receipt", required=True)
     prepare.add_argument("--candidate-out", required=True)
+    prepare.add_argument("--input-attachment-manifest")
     execute = commands.add_parser("execute", help="execute one exact root-approved frozen campaign")
     execute.add_argument("--template-receipt", required=True)
     execute.add_argument("--candidate-freeze", required=True)
@@ -6014,7 +6054,7 @@ def main() -> int:
     try:
         if args.command == "prepare":
             try:
-                result = prepare_campaign_candidate(Path(args.template_receipt), Path(args.candidate_out))
+                result = prepare_campaign_candidate(Path(args.template_receipt), Path(args.candidate_out), attachment_manifest=Path(args.input_attachment_manifest) if args.input_attachment_manifest else None)
             except Exception as exc:
                 raise PrebirthRefusal(f"candidate preparation refused before native execution: {type(exc).__name__}: {exc}") from exc
         else:

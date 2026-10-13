@@ -1,0 +1,77 @@
+{
+  "schema": "V3_NATIVE_FAILURE_PRESERVED_V1",
+  "activity_id": "w23-saved-mph-zero-solve-readback-8b25f276-060e-4144-9c4c-b382d717ef5e",
+  "summary": {
+    "activity_id": "w23-saved-mph-zero-solve-readback-8b25f276-060e-4144-9c4c-b382d717ef5e",
+    "actual_internal_solver_execution_count": "UNKNOWN_NOT_INFERRED_FROM_READBACK",
+    "birth_epoch": 1791912910.0,
+    "birth_inclusive_budget": {
+      "birth_epoch": 1791912910.0,
+      "budget_exceeded": false,
+      "cleanup_reserve_seconds": 120.0,
+      "deadline_epoch": 1791914710.0,
+      "deadline_was_not_reset": true,
+      "elapsed_seconds_includes_cleanup": 4.605195045471191,
+      "finished_epoch_includes_cleanup": 1791912914.605195,
+      "max_seconds": 1800.0
+    },
+    "candidate_id": "W23-TE-SAVED-MPH-ZERO-SOLVE-READBACK-20",
+    "candidate_revision": "candidate20-r15",
+    "cleanup_authorization": {
+      "combined_ledger_gate_safe": true,
+      "daemon_idle": false,
+      "project_scope": {
+        "cleanup_allowed": true,
+        "expected_project_id": "8fda6d83-4160-460b-a450-b264c46dc821",
+        "ledger_filter_project_id": "8fda6d83-4160-460b-a450-b264c46dc821",
+        "project_create_receipt_id": "8fda6d83-4160-460b-a450-b264c46dc821",
+        "reconciliation_project_id": "8fda6d83-4160-460b-a450-b264c46dc821",
+        "source": "immutable successful project.create receipt",
+        "status": "PASS_AUTHORITATIVE_PROJECT_LEDGER_SCOPE"
+      },
+      "safe_for_owned_cleanup": false,
+      "status": "BLOCKED_PROJECT_OR_TERMINAL_IDLE_GATE"
+    },
+    "cleanup_gates": {
+      "direct_rpc_journal_safe": true,
+      "managed_domain_unknown_preserved": {
+        "domain_outcome": "UNKNOWN",
+        "domain_state_was_not_rewritten": true,
+        "execution_state_unknown": true,
+        "safe_retry": false
+      },
+      "managed_sqlite_ledger_safe": true,
+      "safe_for_owned_cleanup": true,
+      "status": "PASS_BOTH_RPC_JOURNALS_QUIESCENT"
+    },
+    "cleanup_status": "LEFT_RUNNING_ACTIVE_OR_UNKNOWN",
+    "deadline_epoch": 1791914710.0,
+    "direct_rpc_reconciliation_status": "PASS_ALL_DIRECT_RPCS_TERMINAL",
+    "error": "RuntimeError: managed model_load failed: {\"data\": {}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"message\": \"backend execution failed; inspect worker evidence\", \"safe_retry\": false, \"type\": \"PermissionError\"}, \"execution\": {\"idempotency_key\": \"w23-science-idem-efd6f16f-6608-42dd-90cf-55d402ad61aa\", \"job_id\": \"878eecc4-c490-48dc-a57e-57ea736546d0\", \"operation_id\": \"e861d1d7-47a2-42d8-8abf-0feccd462596\", \"request_hash\": \"dfff881329027e609429593cc2d855de85b0fe060971bbc1b2635cd47863d4d1\", \"request_id\": \"w23-science-req-fc497404-528f-4530-b0f1-05d0a6b93256\"}, \"success\": false}",
+    "explicit_study_or_solver_execution_allowed": false,
+    "finished_at_utc": "2026-10-13T17:35:14.605201+00:00",
+    "input_model_sha256": "cba0c1d404003c4e60a20b04316cb1456c38cc2b45596dc2dc29bbed62674a8c",
+    "managed_ledger_safe_for_owned_cleanup": true,
+    "managed_ledger_status": "PASS_TERMINAL_WORKER_LEDGER_RECONCILED_DURABLE_DOMAIN_UNKNOWN_RETAINED",
+    "native_calls": [],
+    "native_scientific_acceptance": "NOT_ACCEPTED_DIAGNOSTIC_READBACK_ONLY",
+    "observed_internal_solver_count": "UNKNOWN_NOT_INFERRED_FROM_READBACK",
+    "server_birth": "Wed Oct 14 01:35:10 2026",
+    "server_pid": 63818,
+    "server_port": 58054,
+    "solver_run_dispatch_count": 0,
+    "status": "FAIL_OR_INCOMPLETE",
+    "study_run_dispatch_count": 0,
+    "traceback": "Traceback (most recent call last):\n  File \"/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/w23-current-execution-snapshot-20261014-r2/tools/run_native_w23_saved_mph_diagnostic.py\", line 1423, in _execute_native_campaign\n    ref, revision, model_tag = _load_saved_model_once(daemon, staged_model,\n                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/w23-current-execution-snapshot-20261014-r2/tools/run_native_w23_saved_mph_diagnostic.py\", line 849, in _load_saved_model_once\n    raise RuntimeError(\"managed model_load failed: \" + json.dumps(response, ensure_ascii=False, default=str)[:8000])\nRuntimeError: managed model_load failed: {\"data\": {}, \"error\": {\"code\": \"EXECUTION_STATE_UNKNOWN\", \"message\": \"backend execution failed; inspect worker evidence\", \"safe_retry\": false, \"type\": \"PermissionError\"}, \"execution\": {\"idempotency_key\": \"w23-science-idem-efd6f16f-6608-42dd-90cf-55d402ad61aa\", \"job_id\": \"878eecc4-c490-48dc-a57e-57ea736546d0\", \"operation_id\": \"e861d1d7-47a2-42d8-8abf-0feccd462596\", \"request_hash\": \"dfff881329027e609429593cc2d855de85b0fe060971bbc1b2635cd47863d4d1\", \"request_id\": \"w23-science-req-fc497404-528f-4530-b0f1-05d0a6b93256\"}, \"success\": false}\n",
+    "worker_disconnect": {
+      "status": "NOT_ATTEMPTED"
+    },
+    "worker_pid": 63909
+  },
+  "raw_summary_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/evidence/w23-current-native-r2/summary.json",
+  "raw_summary_sha256": "27c696081050ae3327cb9f05e069eeece3bc46bd84330b080291b391e9862ba2",
+  "control_error_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/evidence/w23-current-native-r2/control-errors.log",
+  "safe_retry": false,
+  "historical_activity020": "UNCHANGED_NO_REPLAY",
+  "scope": "new current task, failed before field slots; original UNKNOWN kept; source preserved; no cleanup based on saved PIDs"
+}

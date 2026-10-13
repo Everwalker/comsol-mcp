@@ -210,6 +210,9 @@ class FNode:
 
     def evaluateUnit(self, name: str) -> str | None:
         self.calls.append(("evaluateUnit", (name,)))
+        return self._unit_readback(name)
+
+    def _unit_readback(self, name: str) -> str | None:
         if "evaluateUnit" in self.unavailable:
             raise FakeEngineError("SecurityException: METHOD_REJECTED", code="METHOD_REJECTED")
         if name not in self.expressions:
@@ -654,6 +657,26 @@ class FParamCollection(FNode):
             raise FakeEngineError("SecurityException: METHOD_REJECTED (group)", code="METHOD_REJECTED")
         return self.groups if tag is None else self.groups.items[tag]
 
+    def _parameter_owner(self, name: str) -> FNode:
+        for group in self.groups.items.values():
+            if name in group.expressions:
+                return group
+        raise FakeEngineError(f"no such name {name}")
+
+    def evaluateUnit(self, name: str) -> str | None:
+        self.calls.append(("evaluateUnit", (name,)))
+        if "evaluateUnit" in self.unavailable:
+            raise FakeEngineError("SecurityException: METHOD_REJECTED", code="METHOD_REJECTED")
+        return self._parameter_owner(name)._unit_readback(name)
+
+    def evaluate(self, name: str) -> float:
+        self.calls.append(("evaluate", (name,)))
+        return float(self._parameter_owner(name).evaluations[name])
+
+    def evaluateComplex(self, name: str) -> list[float]:
+        self.calls.append(("evaluateComplex", (name,)))
+        return [float(self._parameter_owner(name).evaluations[name]), 0.0]
+
     def get(self, name: str) -> str:
         """``model.param(<ptag>)`` (group node) or an expression value.
 
@@ -866,6 +889,22 @@ class TestParameterList:
 
 
 class TestParameterGet:
+    def test_group_without_parambase_methods_is_evaluated_by_global_modelparam(self):
+        model, collection = param_model(groups={
+            "phys": {"L": {"expression": "2.5[mm]", "description": "length", "unit": "m"}}})
+        group = collection.groups.items["phys"]
+        group.evaluations["L"] = 0.0025
+
+        def invalid_group_receiver(*_args):
+            raise AssertionError("COMSOL ModelParamGroup does not implement ParamBase")
+
+        group.evaluateUnit = group.evaluate = group.evaluateComplex = invalid_group_receiver
+        listed = w13.parameter_list(worker_for(model), "Model", {"group": "phys"})
+        assert listed["groups"][0]["parameters"][0]["unit"] == "m"
+        result = w13.parameter_get(worker_for(model), "Model", {"names": ["L"], "evaluate": True})
+        assert result["parameters"][0]["unit_error"] is None
+        assert result["parameters"][0]["evaluated"]["data"] == 0.0025
+
     def test_reads_value_description_and_unit_per_group(self):
         model, _ = param_model(default=rows(a="1[mm]"), groups={
             "phys": {"T0": {"expression": "293.15[K]", "description": "ambient", "unit": "K"}}})

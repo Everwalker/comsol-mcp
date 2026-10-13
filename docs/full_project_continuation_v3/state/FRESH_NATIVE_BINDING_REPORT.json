@@ -1,0 +1,155 @@
+{
+  "prepare_command_template": {
+    "authority": "PYTHONPATH=<repo>:<dev-site-packages> <dev-python> [-S only W24] -m tools.native_runtime_binding --repo <repo> --authority <new-owned0700-direct-private-tmp-namespace>/runtime.json --activity-id <new-canonical-UUID> --python <dev-python-absolute-entry> --site-packages <dev-site-packages> --comsol-root /Applications/COMSOL64/Multiphysics --jdk11 /Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home --phase <w23-readback|w24-setup>",
+    "w23": "<dev-python> -m tools.run_native_w23_saved_mph_diagnostic prepare --runtime-authority <namespace>/runtime.json --evidence <namespace>/prepare --work <namespace>/work --execution-evidence <namespace>/native",
+    "w24": "PYTHONPATH=<repo>:<dev-site-packages> <dev-python> -S -m tools.run_native_w24_static_shape_setup_campaign prepare --runtime-authority <namespace>/runtime.json --evidence <namespace>/prepare --comsol-root /Applications/COMSOL64/Multiphysics --jdk11 /Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home"
+  },
+  "preserved_failures": [
+    {
+      "cause": "Legacy materialization test intentionally requires original EVIDENCE_ROOT; fresh prepare originally supplied short namespace to those two legacy-mode controls. Fixed orchestration to keep only those legacy-mode controls under fresh UUID original evidence scope, real fresh preparation remains short namespace.",
+      "path": "/private/tmp/cv3-fresh-w23-prep-20261014-01/prepare/offline_gates/diagnostic_pytest.stdout.txt",
+      "result": "763PASS 2FAIL"
+    },
+    {
+      "cause": "Earlier loop135PASS 1FAIL because symlink rejection diagnostic changed; restored existing production diagnostic and reran.",
+      "path": "/private/tmp/cv3-fresh-binding-check-20261014/focused.xml",
+      "result": "136PASS after correction"
+    }
+  ],
+  "required_next_admission": [
+    "Main review current source inventory and actual source/runtime/input closure; any source change invalidates current prepared candidate and needs fresh prepare.",
+    "W23 real Root approval must match current freeze SHA/source manifest/current UUID/runtime_binding_sha256/read_only_call_plan/complete exact argv,cwd,environment; never use historical Root approval. Main must generate literal exact-entry and fresh external once wrapper.",
+    "W24 Main must generate new exact-entry/external Root once wrapper from exact_execute_plan; internal reviewed candidate SHA check remains mandatory and this helper grants no Root approval.",
+    "Fresh W24 raw input packet is NOT available: obtain actual new native build/save/reopen full21field/domain mesh raw operation responses, immutable OperationStore database, preserved saved MPH, complete EquationView inventory and complete byte closure; Root source/input review must bind all references by actual immutable SHA.",
+    "validate_fresh_attachment is a host-side verification interface only, with runtime_binding/repo/budget/root_review_path/root_review_sha256 explicitly supplied from trusted review. It does not trust metadata paths. Later science still requires LOAD/ADOPT plus new actual Worker epoch/ModelRef/revision/current-origin readbacks; synthetic positive tests and historical refs do not satisfy that gate."
+  ],
+  "runtime_observation": "/private/tmp/cv3-fresh-binding-check-20261014/current-runtime-observation.json",
+  "schema": "FRESH_NATIVE_BINDING_IMPLEMENTATION_REPORT_V1",
+  "scope": {
+    "W26_product_runtime_acceptance": "NOT_RUN",
+    "engine_births": 0,
+    "final_reviewer": false,
+    "git_commit_push": false,
+    "gui_births": 0,
+    "root_approval_issued": false,
+    "solver_calls": 0,
+    "study_run_calls": 0
+  },
+  "source_manifest": {
+    "tests/test_native_runtime_binding.py": {
+      "bytes": 10432,
+      "sha256": "48bb44e3fe11d1240a7415eb5e3a1a3de27620d7ed2128eb343c42bfd1b8643f"
+    },
+    "tests/test_w24_fresh_input_attachment.py": {
+      "bytes": 3683,
+      "sha256": "8e472cf2d33be3a6c0e40772846b3ce0dac7c895fdbe44ce99b266b999267a9f"
+    },
+    "tools/native_runtime_binding.py": {
+      "bytes": 9294,
+      "sha256": "90416ece1730689fa550a189d909eff8ef8f8457805bfb952168fe83768d769e"
+    },
+    "tools/run_native_w23_saved_mph_diagnostic.py": {
+      "bytes": 122274,
+      "sha256": "d60c14e69c90f7451992040c3d5100af5147258e5a8228b7f162596f57bc27c0"
+    },
+    "tools/run_native_w24_static_shape_setup_campaign.py": {
+      "bytes": 152225,
+      "sha256": "e31786d3e1583e3272d8fd23e89071222ec61d865fc8df8e62921922bd5a0659"
+    },
+    "tools/w24_setup_input_attachment.py": {
+      "bytes": 12230,
+      "sha256": "a86e37cb123f409a4ece9f000c7ed95f0731d2e24862295c79df6e33115a5847"
+    }
+  },
+  "source_manifest_sha256": "b39a4c9b966e132b61edee4c8016187c98427f01ff9c7a1a0455f8405938c97e",
+  "status": "SOFTWARE_AND_SDK_PREPARATION_PASS_NATIVE_NOT_RUN",
+  "tests": [
+    {
+      "count": 137,
+      "junit": "/private/tmp/cv3-fresh-binding-check-20261014/final-focused.xml",
+      "scope": "W23 old/fresh production prebirth plus literal, W24 original/fresh runtime and attachment synthetic controls",
+      "status": "PASS"
+    },
+    {
+      "count": 780,
+      "junit": "/private/tmp/cv3-fresh-w23-final-20261014/prepare/offline_gates/activity022_focused_junit.xml",
+      "scope": "W23 strict network guarded actual production offline materialization and fresh-binding controls; fixture artifact naming retains historical Activity022 name, actual freeze activity is a new UUID",
+      "status": "PASS"
+    },
+    {
+      "receipt": "/private/tmp/cv3-fresh-binding-check-20261014/compile.json",
+      "scope": "javac/javap actual COMSOL6.4 SDK classes; no engine",
+      "status": "PASS"
+    },
+    {
+      "candidate_sha256": "3177c9b08fc3dab2e14af67015818c576dae86a25a41718730d9a7c14b27b9a8",
+      "scope": "actual W24 CLI-equivalent -S fresh prepare, compile, verify and exact plan; 14 slots,0Study,0solver",
+      "status": "PASS"
+    },
+    {
+      "receipt": "/private/tmp/cv3-fresh-w24-final-20261014/PREBIRTH_FROZEN_RUNTIME_RECHECK.json",
+      "scope": "actual W24 prebirth frozen runtime/JAR/compile .class closure same-FD recheck, no engine",
+      "status": "PASS"
+    }
+  ],
+  "w23": {
+    "activity_id": "w23-saved-mph-zero-solve-readback-59cbb089-0a29-4899-b51f-2cf0f91748c6",
+    "candidate_id": "W23-TE-SAVED-MPH-ZERO-SOLVE-READBACK-20",
+    "candidate_revision": "candidate20-r15",
+    "freeze_path": "/private/tmp/cv3-fresh-w23-final-20261014/prepare/freeze.json",
+    "freeze_sha256": "6cd2aef7a0a782bb6556098b9020f023d3e7fe1c395fe8fc4867b00a2553d978",
+    "native_process_started": false,
+    "native_scientific_acceptance": "NOT_RUN",
+    "packet_path": "/private/tmp/cv3-fresh-w23-final-20261014/prepare/ACTIVITY2cf0f91748c6_REVIEW_PACKET.json",
+    "packet_sha256": "3d7d94c4a2a71623380cac0c9c58229a5e0c7a7a7236658273679e4a8cb0ee24",
+    "solver_run_dispatches_allowed": 0,
+    "source_count": 435,
+    "status": "PREPARED_AWAITING_ROOT_REVIEW_AND_EXACT_ADMISSION",
+    "study_run_dispatches_allowed": 0
+  },
+  "w24": {
+    "candidate_sha256": "3177c9b08fc3dab2e14af67015818c576dae86a25a41718730d9a7c14b27b9a8",
+    "evidence": "/private/tmp/cv3-fresh-w24-final-20261014/prepare",
+    "exact_execute_plan": {
+      "activity_id": "0ca08d47-3e6f-4d8f-ba9a-3d57fbb35b92",
+      "argv": [
+        "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/dev-python312/bin/python",
+        "-S",
+        "-m",
+        "tools.run_native_w24_static_shape_setup_campaign",
+        "execute",
+        "--evidence",
+        "/private/tmp/cv3-fresh-w24-final-20261014/prepare",
+        "--work",
+        "/private/tmp/cv3-fresh-w24-final-20261014/work",
+        "--reviewed-candidate-sha256",
+        "3177c9b08fc3dab2e14af67015818c576dae86a25a41718730d9a7c14b27b9a8",
+        "--comsol-root",
+        "/Applications/COMSOL64/Multiphysics",
+        "--jdk11",
+        "/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home"
+      ],
+      "argv_sha256": "cd21d2c28eea19fa7dd179e121ca288cf3b57a23a704130455de49c12cd545be",
+      "candidate_sha256": "3177c9b08fc3dab2e14af67015818c576dae86a25a41718730d9a7c14b27b9a8",
+      "cwd": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository",
+      "environment": {
+        "COMSOL_JAVA_HOME": "/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home",
+        "COMSOL_MCP_ISOLATION_RECEIPT": "/private/tmp/cv3-fresh-w24-final-20261014/work/isolation_receipt.json",
+        "COMSOL_MCP_TRUSTED_CODE": "1",
+        "COMSOL_PREFS_DIR": "/private/tmp/cv3-fresh-w24-final-20261014/work/runtime/prefs",
+        "COMSOL_PROJECT_ROOT": "/private/tmp/cv3-fresh-w24-final-20261014/work/project",
+        "COMSOL_ROOT": "/private/tmp/cv3-fresh-w24-final-20261014/work/comsol-shadow",
+        "COMSOL_SERVER_MCP_HOME": "/private/tmp/cv3-fresh-w24-final-20261014/work/mcp-home",
+        "COMSOL_SERVER_VERSION": "6.4.0.293",
+        "JAVA_HOME": "/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home",
+        "JAVA_TOOL_OPTIONS": "-XX:ActiveProcessorCount=2 -Xms128m -Xmx1024m",
+        "PYTHONPATH": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository:/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/dev-python312/lib/python3.12/site-packages"
+      },
+      "native": "NOT_RUN",
+      "require_new_external_root_approval_and_once": true,
+      "runtime_binding_sha256": "f1eba191cba956d6475bd9f55bc8328a9af2d66fa7260621e39a1fc5316c6c12"
+    },
+    "exact_execute_plan_path": "/private/tmp/cv3-fresh-w24-final-20261014/EXACT_EXECUTE_PLAN_NO_APPROVAL.json",
+    "freeze_source_sha256": "1d37a62b8f4861a15a74c2d6307d9bf922607aef8a9cc06fbbeda8117d36396f"
+  }
+}

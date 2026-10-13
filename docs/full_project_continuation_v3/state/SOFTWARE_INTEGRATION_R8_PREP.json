@@ -1,0 +1,817 @@
+{
+  "active_ignored_changes": [],
+  "atomic_publication_repair": {
+    "current_affected_pass": 409,
+    "current_declared_source_before_after": "PASS",
+    "current_p0_pass": 20,
+    "new_store_sha256": "c7ee8c61036176dad499769fa3274f610d956e34d53d8a6bffd61e3afff253bd",
+    "p0_qualification": "Post-store-repair client20PASS on then-exact643source; keep this evidence but do not apply it to later P0 controller repair.",
+    "prior_core_and_w26_full_fingerprints_are_before_store_repair": true,
+    "report": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/docs/full_project_continuation_v3/state/ARTIFACT_ATOMIC_PUBLICATION_REPAIR_REPORT.json",
+    "sha256": "eb518178b2ed82dbe68d7c2392fbfb4aeda222fae2414b56b525e1becfdfa298",
+    "unchanged_scope": "All 641 other previous W26 closure files and exact final4 nine sources unchanged; unaffected earlier results inherited, not asserted whole current tree."
+  },
+  "baseline_commit": "6b52c63cdbf04f344e1587c907592831a80206c5",
+  "contract_preservation": {
+    "action_ids_order_unchanged": true,
+    "catalog_bytes_changed": true,
+    "catalog_entry_count": 273,
+    "changed_action_ids": [
+      "artifact.register"
+    ],
+    "logical_action_count": 272,
+    "note": "Existing artifact.register optional caller-declared metadata repair; no new action. Original 4 ledger bytes preserved; catalog bytes deliberately differ and require Main contract review.",
+    "original_four_tables": {
+      "docs/full_project_execution/state/ACCEPTANCE_MATRIX.json": {
+        "identical_to_baseline": true,
+        "sha256": "e51cf517d55c9af9797d8bbeaa0615048167af0bad0ed80a3e5888578aa7b3a4"
+      },
+      "docs/full_project_execution/state/ACTION_COVERAGE.json": {
+        "identical_to_baseline": true,
+        "sha256": "7767bea658ffe76b6f6513c608c38d711e8c00d24b19104d037fb89f2e42b236"
+      },
+      "docs/full_project_execution/state/RESUME.json": {
+        "identical_to_baseline": true,
+        "sha256": "a7ef60b826570f9a42da0e62f18dc50475efd5838a53dcd1555cb7417d5460e1"
+      },
+      "docs/full_project_execution/state/TASKS.json": {
+        "identical_to_baseline": true,
+        "sha256": "c09bdd533c6c2160cac6ca1194358e41b3903b818ff01ad40066df0c177af8b2"
+      }
+    },
+    "original_test_count": 60,
+    "targets": [
+      "windows-x64/comsol6.3",
+      "windows-x64/comsol6.4",
+      "macos-arm64/comsol6.3",
+      "macos-arm64/comsol6.4",
+      "macos-x86_64/comsol6.3",
+      "macos-x86_64/comsol6.4"
+    ],
+    "work_package_count": 26
+  },
+  "core_bound_manifest": {
+    "candidate_fingerprint": "4aa67b35e11c7d548144f94dd37f9520522e06f0f267b507256985ee11ad4388",
+    "declared_scope": "Stable production/control/provider/parameters/registration/metadata, W24 and stable Java-worker/isolation controls. Explicit ignored changes; not whole current tree.",
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/tools/test_efficiency_v3_integration_r8_core.json",
+    "sha256": "44320e5bb537fe375cb11cbb93fd3ed9cde485ea42e33b808a233ed6da9d484d",
+    "source_files": 624
+  },
+  "core_tests": {
+    "command": [
+      "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/dev-python312/bin/python",
+      "-m",
+      "pytest",
+      "-q",
+      "-s",
+      "-p",
+      "no:cacheprovider",
+      "--junitxml",
+      "/private/tmp/cv3t-r8/test-efficiency/runs/20261013T184055Z-da3ca7aa/focus.junit.xml",
+      "tests/test_control_daemon.py",
+      "tests/test_control_daemon_projects.py",
+      "tests/test_control_listener_binding.py",
+      "tests/test_execution_service.py",
+      "tests/test_managed_backend.py",
+      "tests/test_host_scoped_provider.py",
+      "tests/test_runtime_observation_binding.py",
+      "tests/test_g3_common.py",
+      "tests/test_g3_w13.py",
+      "tests/test_artifact_registration_import.py",
+      "tests/test_public_artifact_format_metadata.py",
+      "tests/test_g3_model_delivery.py",
+      "tests/test_g3_artifact_hardening.py",
+      "tests/test_g3_r02_artifact_security.py",
+      "tests/test_g2_registry_packaging.py",
+      "tests/test_run_native_w24_static_shape_science.py",
+      "tests/test_run_native_w24_static_shape_setup_campaign.py",
+      "tests/test_w24_actual_default_epoch_capability.py",
+      "tests/test_w24_coupled_admission.py",
+      "tests/test_w24_coupled_lifecycle_residuals.py",
+      "tests/test_w24_coupled_probe_propagation.py",
+      "tests/test_w24_coupled_setup_unit.py",
+      "tests/test_w24_cure_coupon_fixture.py",
+      "tests/test_w24_cure_preflight_runner.py",
+      "tests/test_w24_current11_config_projection.py",
+      "tests/test_w24_fresh_input_attachment.py",
+      "tests/test_w24_model_connection_identity.py",
+      "tests/test_w24_native_mesh_volume.py",
+      "tests/test_w24_setup_input_attachment.py",
+      "tests/test_w24_stable_shape_transfer.py",
+      "tests/test_w24_static_shape_managed.py",
+      "tests/test_w24_v2_setup_readback.py",
+      "tests/test_w24_witnessed_stress.py",
+      "tests/test_w24_worker_transition.py",
+      "tests/test_w24_cure_science_runner.py",
+      "tests/test_g2_remote_isolation.py",
+      "tests/test_g3_phase4_isolation_and_causes.py",
+      "tests/test_java_worker.py::test_java_worker_is_loopback_authenticated_and_reports_health",
+      "tests/test_java_worker.py::test_java_worker_keeps_original_request_queryable_after_nonblocking_submit",
+      "tests/test_java_worker.py::test_socket_worker_rejects_uncorrelated_task_replies_without_replay[wrong_id-False]",
+      "tests/test_java_worker.py::test_socket_worker_rejects_uncorrelated_task_replies_without_replay[missing_id-False]",
+      "tests/test_java_worker.py::test_socket_worker_rejects_uncorrelated_task_replies_without_replay[wrong_id-True]",
+      "tests/test_java_worker.py::test_socket_worker_accepts_exact_request_id_and_caches_task_reply",
+      "tests/test_java_worker.py::test_socket_worker_preserves_idless_protocol_rejection_diagnostics[status-missing-status-control-REQUEST_NOT_FOUND]",
+      "tests/test_java_worker.py::test_socket_worker_preserves_idless_protocol_rejection_diagnostics[submit-conflict-control-IDEMPOTENCY_KEY_CONFLICT]",
+      "tests/test_java_worker.py::test_socket_worker_preserves_idless_protocol_rejection_diagnostics[unknown-unknown-command-control-UNKNOWN_COMMAND]",
+      "tests/test_java_worker.py::test_java_worker_persists_private_endpoint_metadata",
+      "tests/test_java_worker.py::test_windows_acl_owner_rights_is_resolved_to_verified_owner",
+      "tests/test_java_worker.py::test_windows_acl_metadata_rejects_foreign_owner_and_broad_allow[foreign-owner]",
+      "tests/test_java_worker.py::test_windows_acl_metadata_rejects_foreign_owner_and_broad_allow[everyone-allow]",
+      "tests/test_java_worker.py::test_windows_jdk_executables_keep_space_containing_paths",
+      "tests/test_java_worker.py::test_windows_compile_uses_exe_semicolon_classpath_and_utf8_decoding",
+      "tests/test_java_worker.py::test_windows_classpath_prefers_complete_apiplugins_without_scanning_plugins",
+      "tests/test_java_worker.py::test_windows_classpath_uses_complete_plugins_only_when_apiplugins_is_incomplete",
+      "tests/test_java_worker.py::test_windows_classpath_rejects_partial_roots_instead_of_mixing",
+      "tests/test_java_worker.py::test_windows_classpath_missing_manifest_entry_fails_precisely",
+      "tests/test_java_worker.py::test_reused_worker_pid_with_different_creation_time_is_stale",
+      "tests/test_java_worker.py::test_windows_unverifiable_live_worker_never_starts_replacement",
+      "tests/test_java_worker.py::test_java_worker_reconnects_existing_endpoint_without_spawning_or_replaying",
+      "tests/test_java_worker.py::test_dead_owned_worker_increments_generation_before_replacement",
+      "tests/test_java_worker.py::test_same_request_id_with_different_body_is_rejected_without_replay",
+      "tests/test_java_worker.py::test_unknown_command_is_rejected_and_parallel_control_queries_remain_responsive",
+      "tests/test_java_worker.py::test_operation_context_publishes_request_linkage_and_redacts_credentials",
+      "tests/test_java_worker.py::test_generation_sync_updates_private_reconnect_record",
+      "tests/test_java_worker.py::test_remote_model_save_never_uses_empty_path_as_in_place_bypass",
+      "tests/test_java_worker.py::test_remote_model_save_rejects_paths_outside_configured_project_root",
+      "tests/test_java_worker.py::test_remote_model_save_case_copy_uses_no_clobber_python_policy_and_java_save_copy_true",
+      "tests/test_java_worker.py::test_atomic_source_export_fsync_uses_windows_writable_handle_and_retains_failed_source",
+      "tests/test_java_worker.py::test_remote_client_load_serializes_path_objects_as_strings",
+      "tests/test_java_worker.py::test_two_workers_cannot_own_the_same_global_endpoint_lock",
+      "tests/test_java_worker.py::TestWorkerAllowlist::test_every_dispatched_engine_method_is_allowlisted",
+      "tests/test_java_worker.py::TestWorkerAllowlist::test_progress_log_uses_a_private_typed_command_and_documented_modelutil_methods",
+      "tests/test_java_worker.py::test_remote_progress_sink_command_is_redacted_and_not_a_model_mutation",
+      "tests/test_java_worker.py::test_production_json_integer_parser_and_overload_dispatch"
+    ],
+    "focus_pass": 1035,
+    "native_acceptance": "NOT_RUN",
+    "post_run_declared_source_hashes": "PASS",
+    "registration_pass": 3,
+    "source_before_after_fingerprint": "PASS",
+    "status": "PASS",
+    "summary": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/test-efficiency/20261013T184055Z-da3ca7aa.summary.json",
+    "summary_sha256": "c7642f99fe6c8d8baffcb853984d24341d1a5a6ec4b91bb4ce103277490dbaf2"
+  },
+  "current43_deps4_qualified": {
+    "actual_scope": {
+      "listener_positive": true,
+      "owned_groups_absent": 8,
+      "runtime_JVM_before_after": [
+        false,
+        false
+      ],
+      "samePID_network_EPERM_probes": 8,
+      "stages": 8,
+      "unknown": false,
+      "wheel_bytes": 29913882,
+      "wheel_count_union": 43,
+      "wheel_network_GET": 0
+    },
+    "implementation_report": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/docs/full_project_continuation_v3/state/W26_CURRENT43_IMPLEMENTATION_REPORT.json",
+      "sha256": "559c81fdf61659d94a0e8d4d3744f2aa014f7b99743a48abceffc55a527e54c6"
+    },
+    "limits": "No current application wheel install/upgrade/rollback/recipe/native science/Intel/Windows acceptance; final4 remains bound to old exact9 source.",
+    "qualification": "MAIN_ACCEPTED_CURRENT43_DEPS4_212_SOFTWARE_AND_ACTUAL8_SCOPED_PASS",
+    "software_junit": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w26-dependency-bridge-tests-deps4b.junit.xml",
+      "sha256": "c21f5f430a46e44986d1a6c55c7328369ee1c10efc3b8636afe612328289e82b"
+    },
+    "source_manifest": {
+      "path": "/private/tmp/cvw26-dependencies-2cd91a47/CURRENT_ACTOR_SOURCE_deps4.json",
+      "sha256": "9b7a521fd0729f7c66b754bc8c28b394473b06942d65e6e1e9c0db8612b142fa"
+    }
+  },
+  "final_stable_refresh": {
+    "allowlist": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/software-r8-preparation/final-refresh-r5/stage-allowlist.json",
+    "contract_audit": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/software-r8-preparation/final-refresh-r5/contract-audit.json",
+    "current43": {
+      "actual_scope": {
+        "listener_positive": true,
+        "owned_groups_absent": 8,
+        "runtime_JVM_before_after": [
+          false,
+          false
+        ],
+        "samePID_network_EPERM_probes": 8,
+        "stages": 8,
+        "unknown": false,
+        "wheel_bytes": 29913882,
+        "wheel_count_union": 43,
+        "wheel_network_GET": 0
+      },
+      "implementation_report": {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/docs/full_project_continuation_v3/state/W26_CURRENT43_IMPLEMENTATION_REPORT.json",
+        "sha256": "559c81fdf61659d94a0e8d4d3744f2aa014f7b99743a48abceffc55a527e54c6"
+      },
+      "limits": "No current application wheel install/upgrade/rollback/recipe/native science/Intel/Windows acceptance; final4 remains bound to old exact9 source.",
+      "qualification": "MAIN_ACCEPTED_CURRENT43_DEPS4_212_SOFTWARE_AND_ACTUAL8_SCOPED_PASS",
+      "software_junit": {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w26-dependency-bridge-tests-deps4b.junit.xml",
+        "sha256": "c21f5f430a46e44986d1a6c55c7328369ee1c10efc3b8636afe612328289e82b"
+      },
+      "source_manifest": {
+        "path": "/private/tmp/cvw26-dependencies-2cd91a47/CURRENT_ACTOR_SOURCE_deps4.json",
+        "sha256": "9b7a521fd0729f7c66b754bc8c28b394473b06942d65e6e1e9c0db8612b142fa"
+      }
+    },
+    "documentation_revision": "R5 one trailing-space cosmetic test correction; AST equal; original staged byte/SHA and cached check first failure retained. Exact official alls ans PEM whitespace exception only, original fixture unchanged.",
+    "evidence_mapping": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/software-r8-preparation/final-refresh-r5/qualification-map.json",
+    "manifest": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/software-r8-preparation/final-refresh-r5/per-file-stage-manifest.json",
+    "new_engine_JVM_GUI": "NOT_RUN_BY_REFRESH_EXECUTOR",
+    "prior_groups": "P0 latest65+unchanged106/7, W23latest51, W24latest100, atomic409 exact revision evidence retained. core1035 and212 not rerun. No whole current-tree PASS.",
+    "stage_commit_push": "NOT_RUN",
+    "status": "STABLE_FINAL_ALLOWLIST_READY_PENDING_MAIN_SELECTION",
+    "version": "0.1.9 unchanged"
+  },
+  "final_stage_subset": {
+    "closed_subset_import_check": "No imports/references to excluded P0 harness/helper/tests/Java fixtures in production comsol_mcp, tests/ or stable W23/W26 runtime tools; native_runtime_binding inventory is broader, so any later prepare must freshly bind actual inventory, not inherit this software result as runtime approval.",
+    "compact_docs_review_paths": 24,
+    "excluded_pending_p0": [
+      "tools/run_v3_public_mcp_smoke.py",
+      "tools/p0_package_cycle.py",
+      "tools/test_p0_package_cycle.py",
+      "tools/test_v3_public_mcp_smoke.py",
+      "tools/java/P0ExportJava.java",
+      "tools/java/P0ParameterReadback.java",
+      "docs/full_project_continuation_v3/state/P0_NEXT_NATIVE_PREP_REPORT.json",
+      "docs/full_project_continuation_v3/state/P0_PACKAGE_NATIVE_PREP_REPORT.json"
+    ],
+    "source_doc_overlap_paths": [
+      "docs/comsol_mcp_design_v1/00_FULL_SPEC.md",
+      "docs/comsol_mcp_design_v1/02_ACTION_CATALOG.json",
+      "docs/comsol_mcp_design_v1/02_ACTION_CATALOG.md"
+    ],
+    "source_doc_paths": 110,
+    "stable_closure_hashes_after_all_groups": "PASS_NO_DRIFT",
+    "stable_current_closure_hashes": 644,
+    "stage_source_scope": "Separate qualifying groups/core inheritance; no claim that all650 files were exercised as one suite on newstore, no wholeGoal/native acceptance.",
+    "unchanged_closure_only_not_staged": [
+      "tests/test_activity022_r15_measure_all_and_literal_entry.py",
+      "tests/test_native_w23_saved_mph_diagnostic.py"
+    ],
+    "verified_source_test_and_provenance_paths": 89
+  },
+  "fixture_repairs": [
+    {
+      "change": "Synthetic original Worker now declares actual endpoint and runtime_metadata matching its unchanged identity; real SessionLedger/production anchor/persisted gates remain active. No native Worker.",
+      "path": "tests/test_run_native_w24_static_shape_science.py"
+    },
+    {
+      "change": "Synthetic ps birth timestamp explicitly uses original frozen Asia/Shanghai parser timezone, independent of bounded UTC environment. Original birth/deadline/late-probe gates remain active.",
+      "path": "tests/test_w24_coupled_probe_propagation.py"
+    }
+  ],
+  "future_ignored_changes": [
+    "tools/p0_*hold*.py",
+    "tools/p0_owned_control_entry.py",
+    "corresponding new P0 test files"
+  ],
+  "goal_acceptance": "NOT_COMPLETE",
+  "ignored_changes": {
+    "ignored_paths": [
+      "tests/test_activity022_r15_measure_all_and_literal_entry.py",
+      "tests/test_native_runtime_binding.py",
+      "tests/test_native_w23_saved_mph_diagnostic.py",
+      "tests/test_w23_fresh_import_home.py",
+      "tests/test_w23_managed_preflight.py",
+      "tests/test_w23_original_owner_hold.py",
+      "tests/test_w26_memory_resources.py",
+      "tests/test_w26_os_resources.py",
+      "tests/test_w26_prepare_current_inputs.py",
+      "tests/test_w26_release_negative_controls.py",
+      "tests/test_w26_runtime_rebuild_actor.py",
+      "tests/test_w26_solver_action_routes.py",
+      "tools/_w26_original_binary.py",
+      "tools/_w26_original_process.py",
+      "tools/run_native_w23_saved_mph_diagnostic.py",
+      "tools/test_efficiency_v3_integration_r8.json",
+      "tools/w23_original_owner_hold.py",
+      "tools/w26_current_runtime_profile.py",
+      "tools/w26_hold_exec.py",
+      "tools/w26_prepare_current_inputs.py",
+      "tools/w26_rebuild_current_runtime.py",
+      "tools/w26_runtime_actor.py",
+      "tools/w26_runtime_sources.lock.json"
+    ],
+    "reason": "Main requested stable-group scope; W23 holding and W26 candidate repair still changing. No whole-tree PASS claimed."
+  },
+  "inherited_evidence": [
+    {
+      "report": "docs/full_project_continuation_v3/state/SOFTWARE_INTEGRATION_R7.json",
+      "scope": "1490+3 PASS prior WindowsR19/W23r15 baseline only; not rerun unchanged broad suite"
+    },
+    {
+      "report": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json",
+      "scope": "988 PASS+1 Windows-only skip; unchanged selective groups retained"
+    },
+    {
+      "report": "docs/full_project_continuation_v3/state/W24_CURRENT_NATIVE_PREP.json",
+      "scope": "Actual SDK-only compile/import/source checks on read-only snapshot"
+    },
+    {
+      "report": "docs/full_project_continuation_v3/state/W23_CURRENT_NATIVE_PREP.json",
+      "scope": "r2 exact-source/JAR/classes seed, original receipts preserved; native activity UNKNOWN never replayed"
+    }
+  ],
+  "intermittent_concurrency": {
+    "final_manifest_same_as_failed_r3": true,
+    "observation": "One r3 run returned ARTIFACT_CHANGED instead of expected conflict. Test assertion/store unchanged; isolated original test PASS, 40 direct original actual-store trials PASS, repeated exact r3 manifest PASS. Do not call root cause repaired.",
+    "repair_report": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/docs/full_project_continuation_v3/state/ARTIFACT_ATOMIC_PUBLICATION_REPAIR_REPORT.json",
+    "reproduction": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/software-r8-preparation/concurrency-repro.json",
+    "status": "ROOT_CAUSE_PROVEN_AND_NARROW_REPAIR_TESTED_MAIN_REVIEW_PENDING",
+    "test": "tests/test_artifact_registration_import.py::test_concurrent_same_digest_registration_is_compare_and_insert"
+  },
+  "main_readonly_reports": [
+    {
+      "path": "docs/full_project_continuation_v3/state/PLATFORM_RESOURCE_DISCOVERY.json",
+      "scope": "Read-only prerequisites/resource discovery only; NOT_DISCOVERED/permissionUNKNOWN is not native acceptance",
+      "sha256": "9bca9e2fe9eef13874fed0005717bbaa32d5b2368f114da1de26969a990e3032"
+    },
+    {
+      "path": "docs/full_project_continuation_v3/state/W25_CURRENT_READONLY_PREREQUISITES.json",
+      "scope": "Read-only prerequisites/resource discovery only; NOT_DISCOVERED/permissionUNKNOWN is not native acceptance",
+      "sha256": "cf9375ff25717d007da23980467ae7fe72bd455c94a6cf61dffce96d7f447738"
+    }
+  ],
+  "main_review": "PENDING; mechanical selftest preparation is not independent final acceptance",
+  "native_cpp_runtime_build": "Separate W26 activity; not Python software evidence",
+  "p0_tests": {
+    "deferred_unstable": [
+      "tools/run_native_w23_saved_mph_diagnostic.py",
+      "tools/w23_original_owner_hold.py",
+      "tests/test_w23_original_owner_hold.py"
+    ],
+    "junit": "/private/tmp/cv3t-r8/p0-software-r8/p0.junit.xml",
+    "pass": 20,
+    "qualification": "Old exact pre-atomic source client20PASS; source kept in previous report/manifest; current P0 source is excluded from this stage.",
+    "report": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/software-r8-preparation/p0-run.json",
+    "scope": "20 actual P0 software client/production recipe parser/strict pre-step controls; no successful native rebuild is claimed",
+    "sha256": "c7d4eb2edd96170df83f128e7f53ce6e909cbc74222cfe5ea3c94c84cbe793e4",
+    "source_before_after": "PASS",
+    "status": "PASS"
+  },
+  "pending_groups": [
+    "P0 original-controller retention/fence harness repair and fresh prep refresh; excluded from stage until Main review/new READY"
+  ],
+  "platform_not_run": {
+    "excluded_execution_nodes": [
+      {
+        "class": "tests.test_java_worker",
+        "name": "test_windows_existing_foreign_lock_root_is_rejected_without_takeover",
+        "reason": "Windows owner semantics only"
+      }
+    ],
+    "reason": "Existing Windows OS owner semantics cannot be verified on macOS; no test gate modified.",
+    "source_remains_fingerprint_bound": true,
+    "status": "NOT_RUN_MACOS"
+  },
+  "preserved_attempts": [
+    {
+      "errors": [],
+      "failures": [
+        {
+          "error": "ValueError: live Worker identity lacks endpoint tmp_path = PosixPath('/private/tmp/cv3t-r8/pytest-of-everwalker/pytest-1/test_real_control_daemon_rejec0') monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1092b8ec0> fault = 'swapped_readback_request_key' error_match = 'saved request key/ID/project/ModelRef/revision changed' @pytest.mark.parametrize(",
+          "kind": "failure",
+          "nodeid": "tests.test_run_native_w24_static_shape_science::test_real_control_daemon_rejects_readmission_evidence_tampering_before_first_solve[swapped_readback_request_key-saved request key/ID/project/ModelRef/revision changed]"
+        },
+        {
+          "error": "ValueError: live Worker identity lacks endpoint tmp_path = PosixPath('/private/tmp/cv3t-r8/pytest-of-everwalker/pytest-1/test_real_control_daemon_rejec1') monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1094189b0> fault = 'foreign_model_load_response' error_match = 'saved model_load response identifies another current ModelRef/revision' @pytest.ma",
+          "kind": "failure",
+          "nodeid": "tests.test_run_native_w24_static_shape_science::test_real_control_daemon_rejects_readmission_evidence_tampering_before_first_solve[foreign_model_load_response-saved model_load response identifies another current ModelRef/revision]"
+        },
+        {
+          "error": "ValueError: live Worker identity lacks endpoint tmp_path = PosixPath('/private/tmp/cv3t-r8/pytest-of-everwalker/pytest-1/test_real_control_daemon_rejec2') monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1093d61b0> fault = 'foreign_model_load_source_response' error_match = 'public model_load response identifies a different source MPH' @pytest.mark.",
+          "kind": "failure",
+          "nodeid": "tests.test_run_native_w24_static_shape_science::test_real_control_daemon_rejects_readmission_evidence_tampering_before_first_solve[foreign_model_load_source_response-public model_load response identifies a different source MPH]"
+        },
+        {
+          "error": "ValueError: live Worker identity lacks endpoint tmp_path = PosixPath('/private/tmp/cv3t-r8/pytest-of-everwalker/pytest-1/test_real_control_daemon_rejec3') monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1095d0980> fault = 'missing_model_load_response' error_match = 'native project path could not be inspected' @pytest.mark.parametrize(\"fault,error_",
+          "kind": "failure",
+          "nodeid": "tests.test_run_native_w24_static_shape_science::test_real_control_daemon_rejects_readmission_evidence_tampering_before_first_solve[missing_model_load_response-native project path could not be inspected]"
+        },
+        {
+          "error": "ValueError: live Worker identity lacks endpoint tmp_path = PosixPath('/private/tmp/cv3t-r8/pytest-of-everwalker/pytest-1/test_real_control_daemon_rejec4') monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1093d6ed0> fault = 'model_load_response_hash_mismatch' error_match = 'public response is missing or differs from its pinned SHA-256' @pytest.mark.",
+          "kind": "failure",
+          "nodeid": "tests.test_run_native_w24_static_shape_science::test_real_control_daemon_rejects_readmission_evidence_tampering_before_first_solve[model_load_response_hash_mismatch-public response is missing or differs from its pinned SHA-256]"
+        },
+        {
+          "error": "ValueError: live Worker identity lacks endpoint tmp_path = PosixPath('/private/tmp/cv3t-r8/pytest-of-everwalker/pytest-1/test_real_control_daemon_rejec5') monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1095fb710> fault = 'model_load_source_path_hash_mismatch' error_match = 'source artifact or stable public slot identity is not approved' @pytest.m",
+          "kind": "failure",
+          "nodeid": "tests.test_run_native_w24_static_shape_science::test_real_control_daemon_rejects_readmission_evidence_tampering_before_first_solve[model_load_source_path_hash_mismatch-source artifact or stable public slot identity is not approved]"
+        },
+        {
+          "error": "ValueError: live Worker identity lacks endpoint tmp_path = PosixPath('/private/tmp/cv3t-r8/pytest-of-everwalker/pytest-1/test_real_control_daemon_rejec6') monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109597a10> fault = 'model_load_request_source_mismatch' error_match = 'request evidence changed its slot, source, or transition binding' @pytest.m",
+          "kind": "failure",
+          "nodeid": "tests.test_run_native_w24_static_shape_science::test_real_control_daemon_rejects_readmission_evidence_tampering_before_first_solve[model_load_request_source_mismatch-request evidence changed its slot, source, or transition binding]"
+        },
+        {
+          "error": "ValueError: live Worker identity lacks endpoint tmp_path = PosixPath('/private/tmp/cv3t-r8/pytest-of-everwalker/pytest-1/test_real_control_daemon_rejec7') monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109526e40> fault = 'foreign_operation_store_job' error_match = 'saved OperationStore operation/job is foreign or nonterminal' @pytest.mark.paramet",
+          "kind": "failure",
+          "nodeid": "tests.test_run_native_w24_static_shape_science::test_real_control_daemon_rejects_readmission_evidence_tampering_before_first_solve[foreign_operation_store_job-saved OperationStore operation/job is foreign or nonterminal]"
+        },
+        {
+          "error": "ValueError: live Worker identity lacks endpoint tmp_path = PosixPath('/private/tmp/cv3t-r8/pytest-of-everwalker/pytest-1/test_real_control_daemon_rejec8') monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1095e73e0> fault = 'operation_store_canonical_hash_mismatch' error_match = 'canonical request hash is not bound to its saved request' @pytest.mark",
+          "kind": "failure",
+          "nodeid": "tests.test_run_native_w24_static_shape_science::test_real_control_daemon_rejects_readmission_evidence_tampering_before_first_solve[operation_store_canonical_hash_mismatch-canonical request hash is not bound to its saved request]"
+        },
+        {
+          "error": "ValueError: live Worker identity lacks endpoint tmp_path = PosixPath('/private/tmp/cv3t-r8/pytest-of-everwalker/pytest-1/test_real_control_daemon_pins_0') monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1096238f0> fault = 'replacement_birth' @pytest.mark.parametrize(\"fault\", [ \"replacement_birth\", \"extended_deadline\", \"reduced_cleanup_reserve\", \"c",
+          "kind": "failure",
+          "nodeid": "tests.test_run_native_w24_static_shape_science::test_real_control_daemon_pins_readmission_birth_budget_through_first_solve[replacement_birth]"
+        },
+        {
+          "error": "ValueError: live Worker identity lacks endpoint tmp_path = PosixPath('/private/tmp/cv3t-r8/pytest-of-everwalker/pytest-1/test_real_control_daemon_pins_1') monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1093d4800> fault = 'extended_deadline' @pytest.mark.parametrize(\"fault\", [ \"replacement_birth\", \"extended_deadline\", \"reduced_cleanup_reserve\", \"c",
+          "kind": "failure",
+          "nodeid": "tests.test_run_native_w24_static_shape_science::test_real_control_daemon_pins_readmission_birth_budget_through_first_solve[extended_deadline]"
+        },
+        {
+          "error": "ValueError: live Worker identity lacks endpoint tmp_path = PosixPath('/private/tmp/cv3t-r8/pytest-of-everwalker/pytest-1/test_real_control_daemon_pins_2') monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10965eb40> fault = 'reduced_cleanup_reserve' @pytest.mark.parametrize(\"fault\", [ \"replacement_birth\", \"extended_deadline\", \"reduced_cleanup_reserv",
+          "kind": "failure",
+          "nodeid": "tests.test_run_native_w24_static_shape_science::test_real_control_daemon_pins_readmission_birth_budget_through_first_solve[reduced_cleanup_reserve]"
+        },
+        {
+          "error": "ValueError: live Worker identity lacks endpoint tmp_path = PosixPath('/private/tmp/cv3t-r8/pytest-of-everwalker/pytest-1/test_real_control_daemon_pins_3') monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10962eea0> fault = 'cross_epoch_manifest' @pytest.mark.parametrize(\"fault\", [ \"replacement_birth\", \"extended_deadline\", \"reduced_cleanup_reserve\",",
+          "kind": "failure",
+          "nodeid": "tests.test_run_native_w24_static_shape_science::test_real_control_daemon_pins_readmission_birth_budget_through_first_solve[cross_epoch_manifest]"
+        },
+        {
+          "error": "ValueError: live Worker identity lacks endpoint tmp_path = PosixPath('/private/tmp/cv3t-r8/pytest-of-everwalker/pytest-1/test_real_control_daemon_pins_4') monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1095e7110> fault = 'missing_budget_history' @pytest.mark.parametrize(\"fault\", [ \"replacement_birth\", \"extended_deadline\", \"reduced_cleanup_reserve",
+          "kind": "failure",
+          "nodeid": "tests.test_run_native_w24_static_shape_science::test_real_control_daemon_pins_readmission_birth_budget_through_first_solve[missing_budget_history]"
+        },
+        {
+          "error": "ValueError: live Worker identity lacks endpoint tmp_path = PosixPath('/private/tmp/cv3t-r8/pytest-of-everwalker/pytest-1/test_real_control_daemon_pins_5') monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109706b10> fault = 'inconsistent_budget_history' @pytest.mark.parametrize(\"fault\", [ \"replacement_birth\", \"extended_deadline\", \"reduced_cleanup_re",
+          "kind": "failure",
+          "nodeid": "tests.test_run_native_w24_static_shape_science::test_real_control_daemon_pins_readmission_birth_budget_through_first_solve[inconsistent_budget_history]"
+        },
+        {
+          "error": "ValueError: live Worker identity lacks endpoint tmp_path = PosixPath('/private/tmp/cv3t-r8/pytest-of-everwalker/pytest-1/test_real_control_daemon_pins_6') monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109666cf0> fault = 'slot_budget_changed' @pytest.mark.parametrize(\"fault\", [ \"replacement_birth\", \"extended_deadline\", \"reduced_cleanup_reserve\", ",
+          "kind": "failure",
+          "nodeid": "tests.test_run_native_w24_static_shape_science::test_real_control_daemon_pins_readmission_birth_budget_through_first_solve[slot_budget_changed]"
+        },
+        {
+          "error": "ValueError: live Worker identity lacks endpoint tmp_path = PosixPath('/private/tmp/cv3t-r8/pytest-of-everwalker/pytest-1/test_real_control_daemon_pins_7') monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1093b6c30> fault = 'expired_original_budget' @pytest.mark.parametrize(\"fault\", [ \"replacement_birth\", \"extended_deadline\", \"reduced_cleanup_reserv",
+          "kind": "failure",
+          "nodeid": "tests.test_run_native_w24_static_shape_science::test_real_control_daemon_pins_readmission_birth_budget_through_first_solve[expired_original_budget]"
+        },
+        {
+          "error": "ValueError: live Worker identity lacks endpoint tmp_path = PosixPath('/private/tmp/cv3t-r8/pytest-of-everwalker/pytest-1/test_real_control_daemon_pins_8') monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10929dee0> fault = 'replacement_budget_after_deadline' @pytest.mark.parametrize(\"fault\", [ \"replacement_birth\", \"extended_deadline\", \"reduced_clea",
+          "kind": "failure",
+          "nodeid": "tests.test_run_native_w24_static_shape_science::test_real_control_daemon_pins_readmission_birth_budget_through_first_solve[replacement_budget_after_deadline]"
+        },
+        {
+          "error": "ValueError: live Worker identity lacks endpoint tmp_path = PosixPath('/private/tmp/cv3t-r8/pytest-of-everwalker/pytest-1/test_real_control_daemon_model0') monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10941a090> def test_real_control_daemon_model_inspect_uses_synchronous_public_response_contract( tmp_path, monkeypatch): > context = _real_sensiti",
+          "kind": "failure",
+          "nodeid": "tests.test_run_native_w24_static_shape_science::test_real_control_daemon_model_inspect_uses_synchronous_public_response_contract"
+        },
+        {
+          "error": "ValueError: live Worker identity lacks endpoint tmp_path = PosixPath('/private/tmp/cv3t-r8/pytest-of-everwalker/pytest-1/test_real_control_daemon_readm0') monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1097061e0> fault = 'artifact_changed', expected_loads = 0, expected_readbacks = 0 error_match = 'no longer matches its receipt' @pytest.mark.param",
+          "kind": "failure",
+          "nodeid": "tests.test_run_native_w24_static_shape_science::test_real_control_daemon_readmission_stops_on_artifact_configuration_or_revision_mismatch[artifact_changed-0-0-no longer matches its receipt]"
+        }
+      ],
+      "run_id": "20261013T183624Z-6a4c67b0",
+      "sha256": "fca4cc72b794ea67a558e4e0ea8e01584cd756a005d821bf25fa4f6db3e08c4a",
+      "stages": [
+        {
+          "errors": [
+            "test process exit was 1",
+            "1 tests skipped; 28 failures and 0 errors"
+          ],
+          "junit": {
+            "error_count": 0,
+            "executed": 1035,
+            "failure_count": 28,
+            "failures": [
+              {
+                "error": "ValueError: live Worker identity lacks endpoint tmp_path = PosixPath('/private/tmp/cv3t-r8/pytest-of-everwalker/pytest-1/test_real_control_daemon_rejec0') monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1092b8ec0> fault = 'swapped_readback_request_key' error_match = 'saved request key/ID/project/ModelRef/revision changed' @pytest.mark.parametrize(",
+                "kind": "failure",
+                "nodeid": "tests.test_run_native_w24_static_shape_science::test_real_control_daemon_rejects_readmission_evidence_tampering_before_first_solve[swapped_readback_request_key-saved request key/ID/project/ModelRef/revision changed]"
+              },
+              {
+                "error": "ValueError: live Worker identity lacks endpoint tmp_path = PosixPath('/private/tmp/cv3t-r8/pytest-of-everwalker/pytest-1/test_real_control_daemon_rejec1') monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1094189b0> fault = 'foreign_model_load_response' error_match = 'saved model_load response identifies another current ModelRef/revision' @pytest.ma",
+                "kind": "failure",
+                "nodeid": "tests.test_run_native_w24_static_shape_science::test_real_control_daemon_rejects_readmission_evidence_tampering_before_first_solve[foreign_model_load_response-saved model_load response identifies another current ModelRef/revision]"
+              },
+              {
+                "error": "ValueError: live Worker identity lacks endpoint tmp_path = PosixPath('/private/tmp/cv3t-r8/pytest-of-everwalker/pytest-1/test_real_control_daemon_rejec2') monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1093d61b0> fault = 'foreign_model_load_source_response' error_match = 'public model_load response identifies a different source MPH' @pytest.mark.",
+                "kind": "failure",
+                "nodeid": "tests.test_run_native_w24_static_shape_science::test_real_control_daemon_rejects_readmission_evidence_tampering_before_first_solve[foreign_model_load_source_response-public model_load response identifies a different source MPH]"
+              },
+              {
+                "error": "ValueError: live Worker identity lacks endpoint tmp_path = PosixPath('/private/tmp/cv3t-r8/pytest-of-everwalker/pytest-1/test_real_control_daemon_rejec3') monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1095d0980> fault = 'missing_model_load_response' error_match = 'native project path could not be inspected' @pytest.mark.parametrize(\"fault,error_",
+                "kind": "failure",
+                "nodeid": "tests.test_run_native_w24_static_shape_science::test_real_control_daemon_rejects_readmission_evidence_tampering_before_first_solve[missing_model_load_response-native project path could not be inspected]"
+              },
+              {
+                "error": "ValueError: live Worker identity lacks endpoint tmp_path = PosixPath('/private/tmp/cv3t-r8/pytest-of-everwalker/pytest-1/test_real_control_daemon_rejec4') monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1093d6ed0> fault = 'model_load_response_hash_mismatch' error_match = 'public response is missing or differs from its pinned SHA-256' @pytest.mark.",
+                "kind": "failure",
+                "nodeid": "tests.test_run_native_w24_static_shape_science::test_real_control_daemon_rejects_readmission_evidence_tampering_before_first_solve[model_load_response_hash_mismatch-public response is missing or differs from its pinned SHA-256]"
+              },
+              {
+                "error": "ValueError: live Worker identity lacks endpoint tmp_path = PosixPath('/private/tmp/cv3t-r8/pytest-of-everwalker/pytest-1/test_real_control_daemon_rejec5') monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1095fb710> fault = 'model_load_source_path_hash_mismatch' error_match = 'source artifact or stable public slot identity is not approved' @pytest.m",
+                "kind": "failure",
+                "nodeid": "tests.test_run_native_w24_static_shape_science::test_real_control_daemon_rejects_readmission_evidence_tampering_before_first_solve[model_load_source_path_hash_mismatch-source artifact or stable public slot identity is not approved]"
+              },
+              {
+                "error": "ValueError: live Worker identity lacks endpoint tmp_path = PosixPath('/private/tmp/cv3t-r8/pytest-of-everwalker/pytest-1/test_real_control_daemon_rejec6') monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109597a10> fault = 'model_load_request_source_mismatch' error_match = 'request evidence changed its slot, source, or transition binding' @pytest.m",
+                "kind": "failure",
+                "nodeid": "tests.test_run_native_w24_static_shape_science::test_real_control_daemon_rejects_readmission_evidence_tampering_before_first_solve[model_load_request_source_mismatch-request evidence changed its slot, source, or transition binding]"
+              },
+              {
+                "error": "ValueError: live Worker identity lacks endpoint tmp_path = PosixPath('/private/tmp/cv3t-r8/pytest-of-everwalker/pytest-1/test_real_control_daemon_rejec7') monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109526e40> fault = 'foreign_operation_store_job' error_match = 'saved OperationStore operation/job is foreign or nonterminal' @pytest.mark.paramet",
+                "kind": "failure",
+                "nodeid": "tests.test_run_native_w24_static_shape_science::test_real_control_daemon_rejects_readmission_evidence_tampering_before_first_solve[foreign_operation_store_job-saved OperationStore operation/job is foreign or nonterminal]"
+              },
+              {
+                "error": "ValueError: live Worker identity lacks endpoint tmp_path = PosixPath('/private/tmp/cv3t-r8/pytest-of-everwalker/pytest-1/test_real_control_daemon_rejec8') monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1095e73e0> fault = 'operation_store_canonical_hash_mismatch' error_match = 'canonical request hash is not bound to its saved request' @pytest.mark",
+                "kind": "failure",
+                "nodeid": "tests.test_run_native_w24_static_shape_science::test_real_control_daemon_rejects_readmission_evidence_tampering_before_first_solve[operation_store_canonical_hash_mismatch-canonical request hash is not bound to its saved request]"
+              },
+              {
+                "error": "ValueError: live Worker identity lacks endpoint tmp_path = PosixPath('/private/tmp/cv3t-r8/pytest-of-everwalker/pytest-1/test_real_control_daemon_pins_0') monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1096238f0> fault = 'replacement_birth' @pytest.mark.parametrize(\"fault\", [ \"replacement_birth\", \"extended_deadline\", \"reduced_cleanup_reserve\", \"c",
+                "kind": "failure",
+                "nodeid": "tests.test_run_native_w24_static_shape_science::test_real_control_daemon_pins_readmission_birth_budget_through_first_solve[replacement_birth]"
+              },
+              {
+                "error": "ValueError: live Worker identity lacks endpoint tmp_path = PosixPath('/private/tmp/cv3t-r8/pytest-of-everwalker/pytest-1/test_real_control_daemon_pins_1') monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1093d4800> fault = 'extended_deadline' @pytest.mark.parametrize(\"fault\", [ \"replacement_birth\", \"extended_deadline\", \"reduced_cleanup_reserve\", \"c",
+                "kind": "failure",
+                "nodeid": "tests.test_run_native_w24_static_shape_science::test_real_control_daemon_pins_readmission_birth_budget_through_first_solve[extended_deadline]"
+              },
+              {
+                "error": "ValueError: live Worker identity lacks endpoint tmp_path = PosixPath('/private/tmp/cv3t-r8/pytest-of-everwalker/pytest-1/test_real_control_daemon_pins_2') monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10965eb40> fault = 'reduced_cleanup_reserve' @pytest.mark.parametrize(\"fault\", [ \"replacement_birth\", \"extended_deadline\", \"reduced_cleanup_reserv",
+                "kind": "failure",
+                "nodeid": "tests.test_run_native_w24_static_shape_science::test_real_control_daemon_pins_readmission_birth_budget_through_first_solve[reduced_cleanup_reserve]"
+              },
+              {
+                "error": "ValueError: live Worker identity lacks endpoint tmp_path = PosixPath('/private/tmp/cv3t-r8/pytest-of-everwalker/pytest-1/test_real_control_daemon_pins_3') monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10962eea0> fault = 'cross_epoch_manifest' @pytest.mark.parametrize(\"fault\", [ \"replacement_birth\", \"extended_deadline\", \"reduced_cleanup_reserve\",",
+                "kind": "failure",
+                "nodeid": "tests.test_run_native_w24_static_shape_science::test_real_control_daemon_pins_readmission_birth_budget_through_first_solve[cross_epoch_manifest]"
+              },
+              {
+                "error": "ValueError: live Worker identity lacks endpoint tmp_path = PosixPath('/private/tmp/cv3t-r8/pytest-of-everwalker/pytest-1/test_real_control_daemon_pins_4') monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1095e7110> fault = 'missing_budget_history' @pytest.mark.parametrize(\"fault\", [ \"replacement_birth\", \"extended_deadline\", \"reduced_cleanup_reserve",
+                "kind": "failure",
+                "nodeid": "tests.test_run_native_w24_static_shape_science::test_real_control_daemon_pins_readmission_birth_budget_through_first_solve[missing_budget_history]"
+              },
+              {
+                "error": "ValueError: live Worker identity lacks endpoint tmp_path = PosixPath('/private/tmp/cv3t-r8/pytest-of-everwalker/pytest-1/test_real_control_daemon_pins_5') monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109706b10> fault = 'inconsistent_budget_history' @pytest.mark.parametrize(\"fault\", [ \"replacement_birth\", \"extended_deadline\", \"reduced_cleanup_re",
+                "kind": "failure",
+                "nodeid": "tests.test_run_native_w24_static_shape_science::test_real_control_daemon_pins_readmission_birth_budget_through_first_solve[inconsistent_budget_history]"
+              },
+              {
+                "error": "ValueError: live Worker identity lacks endpoint tmp_path = PosixPath('/private/tmp/cv3t-r8/pytest-of-everwalker/pytest-1/test_real_control_daemon_pins_6') monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109666cf0> fault = 'slot_budget_changed' @pytest.mark.parametrize(\"fault\", [ \"replacement_birth\", \"extended_deadline\", \"reduced_cleanup_reserve\", ",
+                "kind": "failure",
+                "nodeid": "tests.test_run_native_w24_static_shape_science::test_real_control_daemon_pins_readmission_birth_budget_through_first_solve[slot_budget_changed]"
+              },
+              {
+                "error": "ValueError: live Worker identity lacks endpoint tmp_path = PosixPath('/private/tmp/cv3t-r8/pytest-of-everwalker/pytest-1/test_real_control_daemon_pins_7') monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1093b6c30> fault = 'expired_original_budget' @pytest.mark.parametrize(\"fault\", [ \"replacement_birth\", \"extended_deadline\", \"reduced_cleanup_reserv",
+                "kind": "failure",
+                "nodeid": "tests.test_run_native_w24_static_shape_science::test_real_control_daemon_pins_readmission_birth_budget_through_first_solve[expired_original_budget]"
+              },
+              {
+                "error": "ValueError: live Worker identity lacks endpoint tmp_path = PosixPath('/private/tmp/cv3t-r8/pytest-of-everwalker/pytest-1/test_real_control_daemon_pins_8') monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10929dee0> fault = 'replacement_budget_after_deadline' @pytest.mark.parametrize(\"fault\", [ \"replacement_birth\", \"extended_deadline\", \"reduced_clea",
+                "kind": "failure",
+                "nodeid": "tests.test_run_native_w24_static_shape_science::test_real_control_daemon_pins_readmission_birth_budget_through_first_solve[replacement_budget_after_deadline]"
+              },
+              {
+                "error": "ValueError: live Worker identity lacks endpoint tmp_path = PosixPath('/private/tmp/cv3t-r8/pytest-of-everwalker/pytest-1/test_real_control_daemon_model0') monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10941a090> def test_real_control_daemon_model_inspect_uses_synchronous_public_response_contract( tmp_path, monkeypatch): > context = _real_sensiti",
+                "kind": "failure",
+                "nodeid": "tests.test_run_native_w24_static_shape_science::test_real_control_daemon_model_inspect_uses_synchronous_public_response_contract"
+              },
+              {
+                "error": "ValueError: live Worker identity lacks endpoint tmp_path = PosixPath('/private/tmp/cv3t-r8/pytest-of-everwalker/pytest-1/test_real_control_daemon_readm0') monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1097061e0> fault = 'artifact_changed', expected_loads = 0, expected_readbacks = 0 error_match = 'no longer matches its receipt' @pytest.mark.param",
+                "kind": "failure",
+                "nodeid": "tests.test_run_native_w24_static_shape_science::test_real_control_daemon_readmission_stops_on_artifact_configuration_or_revision_mismatch[artifact_changed-0-0-no longer matches its receipt]"
+              }
+            ],
+            "reason": "1 tests skipped; 28 failures and 0 errors",
+            "skipped": 1,
+            "status": "FAIL",
+            "tests": 1036
+          },
+          "name": "focus",
+          "status": "FAIL"
+        }
+      ],
+      "status": "FAIL",
+      "summary": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/test-efficiency/20261013T183624Z-6a4c67b0.summary.json"
+    },
+    {
+      "errors": [],
+      "failures": [],
+      "run_id": "20261013T183813Z-2df7e94c",
+      "sha256": "d5d89a14b31818ac49e7178e5adf45b1cce776dbbb179738e3cce42178730981",
+      "stages": [
+        {
+          "errors": [
+            "1 tests skipped"
+          ],
+          "junit": {
+            "error_count": 0,
+            "executed": 1035,
+            "failure_count": 0,
+            "failures": [],
+            "reason": "1 tests skipped",
+            "skipped": 1,
+            "status": "FAIL",
+            "tests": 1036
+          },
+          "name": "focus",
+          "status": "FAIL"
+        }
+      ],
+      "status": "FAIL",
+      "summary": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/test-efficiency/20261013T183813Z-2df7e94c.summary.json"
+    },
+    {
+      "errors": [],
+      "failures": [
+        {
+          "error": "AssertionError: assert ['ARTIFACT_CHANGED'] == ['ARTIFACT_RE...ION_CONFLICT']\n  \n  At index 0 diff: 'ARTIFACT_CHANGED' != 'ARTIFACT_REGISTRATION_CONFLICT'\n  Use -v to get more diff tmp_path = PosixPath('/private/tmp/cv3t-r8/pytest-of-everwalker/pytest-3/test_concurrent_same_digest_re0') def test_concurrent_same_digest_registration_is_compare_and_insert(tmp_p",
+          "kind": "failure",
+          "nodeid": "tests.test_artifact_registration_import::test_concurrent_same_digest_registration_is_compare_and_insert"
+        }
+      ],
+      "run_id": "20261013T183859Z-938ea313",
+      "sha256": "5fb20c0404b378cb70ff8931886f82320293315f3a3a0ef4705a0990560b2cc5",
+      "stages": [
+        {
+          "errors": [
+            "test process exit was 1",
+            "1 failures and 0 errors"
+          ],
+          "junit": {
+            "error_count": 0,
+            "executed": 1035,
+            "failure_count": 1,
+            "failures": [
+              {
+                "error": "AssertionError: assert ['ARTIFACT_CHANGED'] == ['ARTIFACT_RE...ION_CONFLICT']\n  \n  At index 0 diff: 'ARTIFACT_CHANGED' != 'ARTIFACT_REGISTRATION_CONFLICT'\n  Use -v to get more diff tmp_path = PosixPath('/private/tmp/cv3t-r8/pytest-of-everwalker/pytest-3/test_concurrent_same_digest_re0') def test_concurrent_same_digest_registration_is_compare_and_insert(tmp_p",
+                "kind": "failure",
+                "nodeid": "tests.test_artifact_registration_import::test_concurrent_same_digest_registration_is_compare_and_insert"
+              }
+            ],
+            "reason": "1 failures and 0 errors",
+            "skipped": 0,
+            "status": "FAIL",
+            "tests": 1035
+          },
+          "name": "focus",
+          "status": "FAIL"
+        }
+      ],
+      "status": "FAIL",
+      "summary": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/test-efficiency/20261013T183859Z-938ea313.summary.json"
+    },
+    {
+      "errors": [],
+      "failures": [],
+      "run_id": "20261013T184055Z-da3ca7aa",
+      "sha256": "c7642f99fe6c8d8baffcb853984d24341d1a5a6ec4b91bb4ce103277490dbaf2",
+      "stages": [
+        {
+          "errors": [],
+          "junit": {
+            "error_count": 0,
+            "executed": 1035,
+            "failure_count": 0,
+            "failures": [],
+            "reason": null,
+            "skipped": 0,
+            "status": "PASS",
+            "tests": 1035
+          },
+          "name": "focus",
+          "status": "PASS"
+        },
+        {
+          "errors": [],
+          "junit": {
+            "error_count": 0,
+            "executed": 3,
+            "failure_count": 0,
+            "failures": [],
+            "reason": null,
+            "skipped": 0,
+            "status": "PASS",
+            "tests": 3
+          },
+          "name": "required_regression",
+          "status": "PASS"
+        }
+      ],
+      "status": "PASS",
+      "summary": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/test-efficiency/20261013T184055Z-da3ca7aa.summary.json"
+    }
+  ],
+  "schema": "SOFTWARE_INTEGRATION_R8_PREPARATION_V1",
+  "stage_plan": {
+    "compact_main_docs_review_subset": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/software-r8-preparation/stage-paths-final-main-docs.json",
+    "exclusions": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/software-r8-preparation/excluded-paths.json",
+    "pending_source_subset": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/software-r8-preparation/stage-paths-final-p0-pending.json",
+    "per_file_manifest": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/software-r8-preparation/per-file-stage-manifest-final.json",
+    "policy": "No git add -A; no git add/commit/push performed. Source/doc/test/specified portable fixtures only; no JAR/class/MPH/private DB/venv/generated spools/old continuation trees/nonce or run token. Root admission records excluded.",
+    "provisional_full_allowlist": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/software-r8-preparation/stage-paths-final-stable-subset.json",
+    "public_tls_fixture_scope": "7 exact locked CPython 3.12.13 public synthetic test fixtures+PSF license/readme; keycert.pem is public test material, not a runtime key. SHA verified against final4 report; no secret/private inputs staged.",
+    "stable_verified_source_subset": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/software-r8-preparation/stage-paths-final-source-test-subset.json"
+  },
+  "stage_whitespace_first_failure_and_cosmetic_repair": {
+    "AST_equal": true,
+    "AST_sha256": "34113be74856324449b41ae1979b08041ef2589a79f1873c4add54207f0e2472",
+    "change": "remove exactly one trailing ASCII space from line180, outside literal",
+    "cosmetic_no_behavioral_change": true,
+    "first_failure": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/software-r8-preparation/final-refresh-r5/staged-whitespace-first-failure.txt",
+      "sha256": "fce3ccf55a1cc09515b66429ad705ba87b752a76b9ffb18f94498baab4705fe5"
+    },
+    "index_not_modified": true,
+    "new_sha256": "e1b9b73eef0f19c67fa63349cc3361e75d8de991abcb023d9ee2441799d78dd0",
+    "original_index_source": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/software-r8-preparation/final-refresh-r5/original-staged-test.py.txt",
+      "sha256": "05be03899700f9d214ff36ba9da73b311a706864701cf22c87b8e79b8060545a"
+    },
+    "public_fixture_exception": {
+      "exact_original_bytes_unchanged": true,
+      "path": "tests/fixtures/w26_public_tls/allsans.pem",
+      "scope": "Only this fixed official upstream fixture whitespace bytes accepted; no global whitespace suppression",
+      "sha256": "b6e7f6eeef758dd9f2f3f2645029471f09b8a8eb25670045d9d91fd24c597629"
+    },
+    "removed_bytes": 1,
+    "software_evidence": "Inherited exact prior bounded W24 controls with AST-preserving cosmetic delta; no new tests run"
+  },
+  "status": "SECOND_SOFTWARE_STAGE_FINAL_STABLE_ALLOWLIST_READY_MAIN_SELECTION",
+  "w23_ready_tests": {
+    "bound_manifest": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/tools/test_efficiency_v3_integration_r8_w23.json",
+    "bound_manifest_sha256": "98d62214c720678166c9343759e8d6c3ac17ea26e42ce7c4b6eeb9477416cac5",
+    "bound_source_files": 650,
+    "candidate_fingerprint": "d2ebf8313b245fc840463743d345231322e83e557774e6318f3ccc3163bada1a",
+    "exact_ready": {
+      "tests/test_w23_original_owner_hold.py": "489f99b438b28a81dee1d32bb75be1706de902a5597a0e2f7167ac381657de74",
+      "tools/run_native_w23_saved_mph_diagnostic.py": "a33a1e20b109bbfae81bef0b126a4d7f5b459c13720a10e9e2b8ab434da3a93a",
+      "tools/w23_original_owner_hold.py": "e5eaacf8753c7b5aff468532c4c4cae2176df4af608e29bf7cdc2b86a45d5c86"
+    },
+    "pass": 125,
+    "preserved_preflight_failure": "20261013T190005Z-f2fdb5c8: own overlay included two unchanged tracked strict tests; corrected overlay only, both tests remain hashed. No source/test/gate alteration.",
+    "sdk_input_files": 20,
+    "sdk_scope": "Read-only original r2 actual source/JAR/compiler/class receipts; no new JVM/compiler/COMSOL invocation, no UNKNOWN replay or Root once reuse",
+    "source_before_after": "PASS",
+    "status": "PASS",
+    "summary": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/test-efficiency/20261013T190030Z-204b3a90.summary.json",
+    "summary_sha256": "d994df5f339b3a6b8174a4fbe7d6c9dc3df73b66910d881e3d4f9c2fb300dad0"
+  },
+  "w26_final4_tests": {
+    "actor_native_birth": "NOT_RUN",
+    "bound_manifest": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/tools/test_efficiency_v3_integration_r8_w26.json",
+    "bound_manifest_sha256": "c1e9d712deb842fabe5f68f74f0c039f00333265a3c0ccf67150b30d45b53220",
+    "candidate_fingerprint": "5ff9e982dd65feae2de1966a6beb5deb36cf5bb08b39438d47fddee2a1cb077b",
+    "core624_rechecked": "PASS_NO_DRIFT",
+    "current_source_applicability": "Historical exact9 source and original94software/41build qualification only; current deps4 tools differ. Preserved historical result, not current whole-tree PASS.",
+    "declared_source_files": 642,
+    "first_attempt_sandbox_apfs_probe": {
+      "status": "BLOCKED_BEFORE_TESTS",
+      "summary": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/test-efficiency/20261013T184839Z-ffd2e804.summary.json"
+    },
+    "pass": 94,
+    "source_before_after": "PASS",
+    "source_binding": {
+      "candidate_sha256": "5b9b11e1cb872a76a2d44b0806c9f20013baf352b085c2e9bebe8b269d1d83be",
+      "core_current_hashes_unchanged": true,
+      "final4_manifest": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w26-runtime-final4-source.json",
+      "final4_manifest_sha256": "e0f2a83428da1545f5b454ef57a4a6f57c00623ddd0b0ed94056046d3935c11e",
+      "ignored_changes": [
+        "tools/run_native_w23_saved_mph_diagnostic.py",
+        "tools/w23_original_owner_hold.py",
+        "tests/test_w23_original_owner_hold.py"
+      ],
+      "inherited_core_files": 624,
+      "locked_files": {
+        "tests/fixtures/w26_public_tls/LICENSE": "3b2f81fe21d181c499c59a256c8e1968455d6689d269aa85373bfb6af41da3bf",
+        "tests/fixtures/w26_public_tls/README.txt": "31b4f0e1250544676c120bf885ef7aefcad32e5477883b56d889078638deb213",
+        "tests/fixtures/w26_public_tls/allsans.pem": "b6e7f6eeef758dd9f2f3f2645029471f09b8a8eb25670045d9d91fd24c597629",
+        "tests/fixtures/w26_public_tls/badcert.pem": "262a107916641c7f211ac5898c0177535cd0bdc5aa872cc6e883842694d8f521",
+        "tests/fixtures/w26_public_tls/keycert.pem": "cfd723672e8205a30f93aa14e24ef5b0264c41db367b50cfa0b6fcb83d881947",
+        "tests/fixtures/w26_public_tls/nokia.pem": "b34d31d2e3c349a6b90c727f0b0ce5561837395749e3b7f8ce0a9075dd1201f4",
+        "tests/fixtures/w26_public_tls/nullbytecert.pem": "3454585a198ffea4f78c67d58d1ebe89a0be1107612058e25ed4cb37964f2a71",
+        "tests/test_w26_prepare_current_inputs.py": "ba4a435b5208cd5e67f165a0ee0cdea715128f68435551cfa03169f1b80faf33",
+        "tests/test_w26_runtime_rebuild_actor.py": "072478cd5eb0e0578a61d7c3660f97b7e17232de378c7362efe6e89c7c5bc1be",
+        "tools/_w26_original_binary.py": "eeaa220b40844b04b71c52c87c311499fcac4cc19e5e3cb0f4d2db4bc7b15c6e",
+        "tools/_w26_original_process.py": "368d5403191a870f12e1d6d899c51e158de9078ca0c7b7841b878ba7ad68c8a2",
+        "tools/_w26_original_tls.py": "cc0dd12a6ca613f06d9780d7989d69145aa5b140a2cbd1f3fc02fb3baf0c8847",
+        "tools/w26_current_runtime_profile.py": "9213b2cc1eb9da4820fdb101e7b92a91dcd628625f6d91297eb852bdd4ceef08",
+        "tools/w26_hold_exec.py": "a2256087068cb68436c03c3dba53aa887b45042a66ac86020f8ac5f31d187090",
+        "tools/w26_prepare_current_inputs.py": "d06c535888443ccc92e1f573ba44db281b4c20fbc895e6584564be074ad5be5c",
+        "tools/w26_rebuild_current_runtime.py": "9daa69390f6d5851a81fa9c2bc4cec2c3be0186cb2e3177286404c5b545131e3",
+        "tools/w26_runtime_actor.py": "4d2f72feb382fd5d16825552a981bc42914b3d4f99e4cd5c8f9f0fd23d30163b",
+        "tools/w26_runtime_sources.lock.json": "f6e3e3cb8e30b2db9bf677df3008b3ab456510c492ccd4fd2c17ba228c5f68d7"
+      },
+      "native_actor_execute": "FORBIDDEN",
+      "status": "FROZEN_FOR_SOFTWARE_ONLY",
+      "target_runtime_acceptance": "NOT_RUN; DEV host Python and ssl are software test host only"
+    },
+    "status": "PASS",
+    "summary": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/test-efficiency/20261013T184849Z-76f33a07.summary.json",
+    "summary_sha256": "86dc50bb372d2140f9a0e51e0aabde7ce9a2621fac5764e4fdda256e203eb7b1",
+    "target_runtime": "NOT_RUN; DEV-host SSL/certificate/MemoryBIO behavior is a software control, no actual target runtime/provider/release claim"
+  }
+}

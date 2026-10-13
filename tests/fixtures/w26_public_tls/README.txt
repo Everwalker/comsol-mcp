@@ -1,0 +1,1 @@
+Public synthetic CPython 3.12.13 Lib/test/certdata fixtures; preserved exact official locked archive bytes. Not user credentials; no external trust-store/network tests. PSF Python license applies; archive source locked by tools/w26_runtime_sources.lock.json.

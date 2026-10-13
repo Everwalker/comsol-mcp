@@ -15,6 +15,7 @@ import hashlib
 import importlib
 import importlib.metadata
 import json
+import math
 import os
 import re
 import shutil
@@ -41,6 +42,13 @@ FIXTURE = REPO / "tools/java/W24CureCouponFixture.java"
 PLAN = REPO / "docs/full_project_execution/w24/W24_CURE_FIXTURE_PROPOSAL.md"
 MAX_BIRTH_BUDGET_S = 900.0
 CLEANUP_RESERVE_S = 45.0
+EXPECTED_DOMAIN_VOLUMES_M3 = {
+    "alumina": 9.81747704247e-11,
+    "gold": 3.14159265359e-13,
+    "adhesive": 1.25663706144e-12,
+    "fiber": 6.13592315154e-12,
+}
+MESH_VOLUME_RELATIVE_TOLERANCE = 1.0e-6
 DEFAULT_PIP_CHECK_PYTHON = Path("/opt/homebrew/opt/python@3.12/bin/python3.12")
 PROJECT_WORKSPACE_NAME = "science"
 TRUSTED_CODE_STARTUP_ENV = "COMSOL_MCP_TRUSTED_CODE"
@@ -54,6 +62,18 @@ EXPRESSION_CANDIDATE_RULE = (
     "hoop/radial/circumferential/azimuthal; full raw rows are preserved; discovery only"
 )
 SOURCE_PATHS = {
+    "coupled_admission_owner": REPO / "tools/w24_coupled_admission.py",
+    "native_epoch_capability": REPO / "tools/w24_native_epoch_capability.py",
+    "coupled_setup_unit": REPO / "tools/w24_coupled_setup_unit.py",
+    "coupled_setup_unit_tests": REPO / "tests/test_w24_coupled_setup_unit.py",
+    "v2_setup_readback": REPO / "tools/w24_v2_setup_readback.py",
+    "static_setup_runner": REPO / "tools/run_native_w24_static_shape_setup.py",
+    "static_setup_campaign_guard": REPO / "tools/run_native_w24_static_shape_setup_campaign.py",
+    "static_sensitivity_plan": REPO / "tools/w24_static_shape_sensitivity.py",
+    "static_fixture": REPO / "tools/java/W24StaticShapeFixture.java",
+    "static_readback": REPO / "tools/java/W24StaticShapeReadback.java",
+    "static_managed_tests": REPO / "tests/test_w24_static_shape_managed.py",
+    "v2_readback_tests": REPO / "tests/test_w24_v2_setup_readback.py",
     "runner": Path(__file__).resolve(),
     "java_fixture": FIXTURE,
     "proposal": PLAN,
@@ -73,6 +93,11 @@ SOURCE_PATHS = {
     "science_java_fixture": REPO / "tools/java/W24CureScienceFixture.java",
     "science_runner_tests": REPO / "tests/test_w24_cure_science_runner.py",
     "fixture_acceptance": REPO / "tests/test_w24_cure_coupon_fixture.py",
+    "mesh_volume_acceptance": REPO / "tests/test_w24_native_mesh_volume.py",
+    "current11_actual_replay_tests": REPO / "tests/test_w24_current11_config_projection.py",
+    "current10_raw_build_fixture": REPO / "tests/fixtures/w24_current10/build_operation_result.json",
+    "current10_raw_reopen_fixture": REPO / "tests/fixtures/w24_current10/reopen_operation_result.json",
+    "current10_raw_replay_provenance": REPO / "tests/fixtures/w24_current10/PROVENANCE.json",
     "worker_transition_tests": REPO / "tests/test_w24_worker_transition.py",
     "preflight_runner_tests": REPO / "tests/test_w24_cure_preflight_runner.py",
     "science_acceptance": REPO / "tools/w24_science_acceptance.py",
@@ -626,11 +651,22 @@ def _probe_output_summary(value: str) -> dict[str, Any]:
     return {"bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()}
 
 
-def _process_inventory() -> dict[str, Any]:
+def _process_inventory(*, admission_owner: Any = None, observation_only: bool = False) -> dict[str, Any]:
     """Classify native processes transiently and return only privacy-safe evidence."""
+    if observation_only and admission_owner is None:
+        raise ValueError("short observation requires the same original internal owner")
+    def cap(label,preferred):
+        if admission_owner is None:return preferred
+        from tools.w24_coupled_admission import require_admission_owner
+        owner=require_admission_owner(admission_owner)
+        if observation_only:return min(float(preferred),5.0)
+        return owner.before_effect(label,preferred)
+    def recheck():
+        if admission_owner is not None and not observation_only:admission_owner.wait_cap(1.01)
     ps_command = ["/bin/ps", "-axo", "pid=,ppid=,comm=,args="]
     lsof_command = ["/usr/sbin/lsof", "-nP", "-iTCP", "-sTCP:LISTEN"]
-    ps = subprocess.run(ps_command, capture_output=True, text=True, check=False, timeout=15)
+    ps = subprocess.run(ps_command, capture_output=True, text=True, check=False, timeout=cap("W24_inventory_ps",15.0))
+    recheck()
     rows: list[dict[str, Any]] = []
     worker_rows: list[dict[str, Any]] = []
     ps_failures: list[dict[str, str]] = []
@@ -675,7 +711,8 @@ def _process_inventory() -> dict[str, Any]:
     if not observer_present:
         ps_failures.append({"code": "observer_pid_missing"})
 
-    lsof = subprocess.run(lsof_command, capture_output=True, text=True, check=False, timeout=15)
+    lsof = subprocess.run(lsof_command, capture_output=True, text=True, check=False, timeout=cap("W24_inventory_lsof",15.0))
+    recheck()
     listener_rows: list[dict[str, Any]] = []
     lsof_failures: list[dict[str, str]] = []
     parsed_listener_rows = 0
@@ -782,7 +819,9 @@ def _all_source_paths() -> dict[str, Path]:
     """Freeze the explicit runner closure plus runtime code and data resources."""
     paths = dict(SOURCE_PATHS)
     explicit = {path.resolve() for path in paths.values()}
-    runtime_roots = (REPO / "comsol_mcp",)
+    # Freeze transitive task tool modules too: the coupled runner imports the
+    # managed static runner/science helpers, not just the old v1 explicit roots.
+    runtime_roots = (REPO / "comsol_mcp", REPO / "tools")
     for root in runtime_roots:
         for path in sorted(path for path in root.rglob("*")
                             if path.is_file() and path.suffix in {".py", ".json"}):
@@ -790,8 +829,8 @@ def _all_source_paths() -> dict[str, Path]:
                 continue
             kind = "runtime" if path.suffix == ".py" else "runtime_data"
             paths[f"{kind}:{path.relative_to(REPO).as_posix()}"] = path
-    worker_root = REPO / "comsol_mcp/worker_java"
-    for path in sorted(worker_root.rglob("*.java")):
+    worker_roots = (REPO / "comsol_mcp/worker_java", REPO / "tools/java")
+    for path in sorted(path for root in worker_roots for path in root.rglob("*.java")):
         if path.name.startswith("._") or path.resolve() in explicit:
             continue
         paths[f"worker_java:{path.relative_to(REPO).as_posix()}"] = path
@@ -817,11 +856,19 @@ def _verify_offline_candidate_freeze(path: Path, expected_sha256: str) -> dict[s
         candidate = json.loads(resolved.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise RuntimeError(f"offline W24 candidate freeze is malformed: {exc}") from exc
+    coupled = (isinstance(candidate, dict) and candidate.get("schema") == "W24_COUPLED_ZERO_SOLVE_SETUP_OFFLINE_FREEZE_V1")
     if (not isinstance(candidate, dict) or
-            candidate.get("schema") != "W24_SETUP_CANDIDATE_OFFLINE_FREEZE_V1" or
             candidate.get("status") != "FROZEN_OFFLINE_CANDIDATE_AWAITING_ROOT_NATIVE_SLOT" or
-            candidate.get("candidate_id") != "W24-CURE-HIST-AXISYM-01"):
+            (coupled and candidate.get("candidate_id") != "W24-COUPLED-SETUP-05") or
+            (not coupled and (candidate.get("schema") != "W24_SETUP_CANDIDATE_OFFLINE_FREEZE_V1" or candidate.get("candidate_id") != "W24-CURE-HIST-AXISYM-01"))):
         raise RuntimeError("offline W24 candidate freeze has an unknown schema/status/candidate")
+    setup_contract = None
+    budget_s, reserve_s = MAX_BIRTH_BUDGET_S, CLEANUP_RESERVE_S
+    if coupled:
+        from tools.w24_coupled_setup_unit import validate_setup_contract
+        setup_contract = validate_setup_contract(candidate.get("setup_contract"))
+        budget_s = setup_contract["server_birth_budget_seconds_including_cleanup"]
+        reserve_s = setup_contract["cleanup_reserve_seconds"]
     native = candidate.get("native_execution")
     if (not isinstance(native, dict) or native.get("status") != "NOT_RUN" or
             native.get("engine_births_this_candidate") != 0 or
@@ -832,8 +879,8 @@ def _verify_offline_candidate_freeze(path: Path, expected_sha256: str) -> dict[s
     limits = candidate.get("independent_native_budget")
     required_limits = {
         "owned_server_processes": 1,
-        "max_seconds_from_exact_birth_including_setup_reopen_and_cleanup": MAX_BIRTH_BUDGET_S,
-        "cleanup_reserve_seconds": CLEANUP_RESERVE_S,
+        "max_seconds_from_exact_birth_including_setup_reopen_and_cleanup": budget_s,
+        "cleanup_reserve_seconds": reserve_s,
         "worker_sessions_sequential": 1,
         "study_or_solver_submissions": 0,
     }
@@ -889,7 +936,8 @@ def _verify_offline_candidate_freeze(path: Path, expected_sha256: str) -> dict[s
     return {"path": str(resolved), "sha256": expected_sha256,
             "candidate_id": candidate["candidate_id"],
             "source_count": len(current_sources), "status": candidate["status"],
-            "runtime_environment": runtime_environment}
+            "runtime_environment": runtime_environment, "setup_contract": setup_contract,
+            "birth_budget_s": budget_s, "cleanup_reserve_s": reserve_s}
 
 
 def _java_action_readback(response: dict[str, Any], label: str) -> dict[str, Any]:
@@ -908,6 +956,363 @@ def _java_action_readback(response: dict[str, Any], label: str) -> dict[str, Any
     if worker.get("result", {}).get("readback") != nested:
         raise AssertionError(f"{label} Worker result and operation readback differ")
     return nested
+
+
+def _mesh_fail(code: str, detail: str) -> None:
+    raise ValueError(f"{code}: {detail}")
+
+
+def _mesh_int(value: Any, label: str, *, minimum: int = 0) -> int:
+    if type(value) is not int or value < minimum:
+        _mesh_fail("MESH_METADATA_INVALID", f"{label} must be an integer >= {minimum}")
+    return value
+
+
+def _mesh_json_number(value: Any, label: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        _mesh_fail("MESH_NUMERIC_INVALID", f"{label} must be a JSON number")
+    result = float(value)
+    if not math.isfinite(result):
+        _mesh_fail("MESH_NUMERIC_INVALID", f"{label} must be finite")
+    return result
+
+
+def _canonical_mesh_bytes(value: Any) -> bytes:
+    try:
+        return json.dumps(value, sort_keys=True, separators=(",", ":"),
+                          ensure_ascii=False, allow_nan=False).encode("utf-8")
+    except (TypeError, ValueError, UnicodeError) as exc:
+        raise ValueError("MESH_RAW_NOT_CANONICAL: raw mesh is not finite JSON data") from exc
+
+
+def _write_new_mesh_artifact(path: Path, payload: dict[str, Any]) -> tuple[str, int]:
+    """Create an immutable native mesh evidence file without overwriting a prior artifact."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    raw = _canonical_mesh_bytes(payload) + b"\n"
+    with path.open("xb") as stream:
+        stream.write(raw)
+        stream.flush()
+        os.fsync(stream.fileno())
+    digest = hashlib.sha256(raw).hexdigest()
+    if path.stat().st_size != len(raw) or sha256(path) != digest:
+        raise OSError("native mesh artifact write did not preserve the exact serialized bytes")
+    return digest, len(raw)
+
+
+def _mesh_volume_rows(native_readback: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any], str]:
+    """Validate native MeshSequence getters and compute the frozen initial coupon volumes."""
+    raw = native_readback.get("native_mesh_raw")
+    if not isinstance(raw, dict):
+        _mesh_fail("MESH_RAW_MISSING", "Java readback omitted the direct MeshSequence getter payload")
+    exact_fields = {
+        "geometry", "geometry_dimension", "geometry_axisymmetric", "geometry_length_unit",
+        "mesh_tag", "mesh_geometry", "mesh_dimension", "mesh_empty", "mesh_num_elem_noarg",
+        "vertex_count", "element_types", "element_counts", "triangle_count", "triangle_index_base",
+        "vertex_coordinate_axes", "vertex_coordinates", "triangle_connectivity",
+        "triangle_geometric_entities", "capture_methods", "capture_block_size_max",
+        "capture_numeric_scalar_count", "capture_atomic",
+    }
+    if set(raw) != exact_fields:
+        _mesh_fail("MESH_RAW_FIELDS_INVALID", f"getter payload fields differ: missing={sorted(exact_fields-set(raw))}, extra={sorted(set(raw)-exact_fields)}")
+    if (raw["geometry"] != "geom1" or raw["geometry_dimension"] != 2 or
+            raw["geometry_axisymmetric"] is not True or raw["geometry_length_unit"] != "m" or
+            raw["mesh_tag"] != "mesh1" or raw["mesh_geometry"] != "geom1" or
+            raw["mesh_dimension"] != 2 or raw["mesh_empty"] is not False or
+            raw["triangle_index_base"] != 0 or raw["vertex_coordinate_axes"] != ["r_m", "z_m"] or
+            raw["capture_atomic"] is not False or raw["capture_block_size_max"] != 1024):
+        _mesh_fail("MESH_BINDING_OR_UNIT_INVALID", "geometry, axisymmetric meter coordinate, mesh, or index convention differs")
+    required_methods = ["getTypes", "getNumElem", "getNumVertex", "getVertex(position,count)",
+                        "getElem(tri,position,count)", "getElemEntity(tri,position,count)"]
+    if raw["capture_methods"] != required_methods:
+        _mesh_fail("MESH_GETTER_PROVENANCE_INVALID", "native getter inventory differs from the frozen read-only API set")
+    vertex_count = _mesh_int(raw["vertex_count"], "vertex_count", minimum=3)
+    noarg_count = _mesh_int(raw["mesh_num_elem_noarg"], "mesh_num_elem_noarg", minimum=1)
+    tri_count = _mesh_int(raw["triangle_count"], "triangle_count", minimum=1)
+    types = raw["element_types"]
+    counts = raw["element_counts"]
+    if (not isinstance(types, list) or not types or any(not isinstance(t, str) or not t for t in types) or
+            len(types) != len(set(types)) or not isinstance(counts, dict) or set(counts) != set(types)):
+        _mesh_fail("MESH_TYPES_INVALID", "actual element type list/count map is malformed")
+    if set(types) - {"vtx", "edg", "tri"}:
+        _mesh_fail("MESH_ELEMENT_TYPE_UNSUPPORTED", "unsupported element type was reported by actual getTypes")
+    normalized_counts = {t: _mesh_int(counts[t], f"element_counts.{t}") for t in types}
+    if normalized_counts.get("tri") != tri_count:
+        _mesh_fail("MESH_ELEMENT_COUNTS_MISMATCH", "actual getNumElem(\"tri\") count differs from the captured triangle arrays")
+    # COMSOL documents getNumElem() and getNumElem(type) as separate queries;
+    # no cross-dimension sum relationship is asserted here.
+    if noarg_count <= 0 or tri_count <= 0:
+        _mesh_fail("MESH_ELEMENT_COUNTS_MISMATCH", "no-argument count and actual tri count must both be positive")
+    numeric_count = _mesh_int(raw["capture_numeric_scalar_count"], "capture_numeric_scalar_count")
+    if numeric_count != 2 * vertex_count + 4 * tri_count or numeric_count > 65536:
+        _mesh_fail("MESH_SCALAR_COUNT_INVALID", "raw array scalar count is inconsistent or exceeds the fixed evidence cap")
+    vertices = raw["vertex_coordinates"]
+    triangles = raw["triangle_connectivity"]
+    entities = raw["triangle_geometric_entities"]
+    if (not isinstance(vertices, list) or len(vertices) != 2 or
+            any(not isinstance(row, list) or len(row) != vertex_count for row in vertices) or
+            not isinstance(triangles, list) or len(triangles) != 3 or
+            any(not isinstance(row, list) or len(row) != tri_count for row in triangles) or
+            not isinstance(entities, list) or len(entities) != tri_count):
+        _mesh_fail("MESH_ARRAY_SHAPE_INVALID", "vertices, triangle columns, or geometric entity vector has an invalid shape")
+    r_values = [_mesh_json_number(value, f"vertex_coordinates[0][{i}]") for i, value in enumerate(vertices[0])]
+    z_values = [_mesh_json_number(value, f"vertex_coordinates[1][{i}]") for i, value in enumerate(vertices[1])]
+    if any(radius < 0.0 for radius in r_values):
+        _mesh_fail("MESH_NEGATIVE_RADIUS", "axisymmetric radial coordinate must be nonnegative")
+    normalized_triangles: list[list[int]] = []
+    for row_index, row in enumerate(triangles):
+        normalized_triangles.append([
+            _mesh_int(value, f"triangle_connectivity[{row_index}][{column}]", minimum=0)
+            for column, value in enumerate(row)
+        ])
+    for column in range(tri_count):
+        if any(normalized_triangles[row][column] >= vertex_count for row in range(3)):
+            _mesh_fail("MESH_CONNECTIVITY_INVALID", f"triangle {column} contains an out-of-range zero-based vertex index")
+    normalized_entities = [_mesh_int(value, f"triangle_geometric_entities[{i}]", minimum=1)
+                           for i, value in enumerate(entities)]
+    domains = native_readback.get("domain_readbacks")
+    if not isinstance(domains, dict) or set(domains) != set(EXPECTED_DOMAIN_VOLUMES_M3):
+        _mesh_fail("MESH_DOMAIN_READBACKS_INVALID", "native domain selections must contain exactly the four frozen coupon domains")
+    domain_ids: dict[str, int] = {}
+    for label, expected in EXPECTED_DOMAIN_VOLUMES_M3.items():
+        row = domains[label]
+        if not isinstance(row, dict) or row.get("selection") != f"sel_{label}":
+            _mesh_fail("MESH_DOMAIN_BINDING_INVALID", f"selection tag mismatch for {label}")
+        selected = row.get("entities")
+        if not isinstance(selected, list) or len(selected) != 1:
+            _mesh_fail("MESH_DOMAIN_SELECTION_INVALID", f"{label} must bind to one actual geometric entity")
+        entity = _mesh_int(selected[0], f"{label}.entities[0]", minimum=1)
+        if entity in domain_ids.values():
+            _mesh_fail("MESH_DOMAIN_SELECTION_DUPLICATE", "two material selections resolved to the same geometry entity")
+        domain_ids[label] = entity
+        actual_expected = _mesh_json_number(row.get("expected_volume_m3"), f"{label}.expected_volume_m3")
+        area = _mesh_json_number(row.get("cross_section_area_m2"), f"{label}.cross_section_area_m2")
+        if actual_expected != expected or area <= 0.0 or row.get("area_source") != "NATIVE_GEOMETRY_MEASURE_GETVOLUME_2D":
+            _mesh_fail("MESH_DOMAIN_AREA_OR_COMPARATOR_INVALID", f"native 2-D area/comparator evidence mismatch for {label}")
+    if set(normalized_entities) != set(domain_ids.values()):
+        _mesh_fail("MESH_DOMAIN_ENTITY_COVERAGE_INVALID", "actual triangle entities do not equal the four native selected domain IDs")
+    computed: dict[str, Any] = {}
+    domain_columns: dict[str, list[int]] = {}
+    for label, entity in domain_ids.items():
+        columns = [index for index, actual_entity in enumerate(normalized_entities) if actual_entity == entity]
+        if not columns:
+            _mesh_fail("MESH_DOMAIN_TRIANGLES_MISSING", f"no actual triangles are assigned to selected domain {label}")
+        volume = 0.0
+        subset_triangles: list[list[int]] = [[], [], []]
+        for column in columns:
+            indexes = [normalized_triangles[row][column] for row in range(3)]
+            r0, r1, r2 = (r_values[index] for index in indexes)
+            z0, z1, z2 = (z_values[index] for index in indexes)
+            twice_area = (r1 - r0) * (z2 - z0) - (r2 - r0) * (z1 - z0)
+            triangle_area = abs(twice_area) * 0.5
+            if not math.isfinite(triangle_area) or triangle_area <= 0.0:
+                _mesh_fail("MESH_DEGENERATE_TRIANGLE", f"triangle {column} has nonpositive/nonfinite planar area")
+            radius_centroid = (r0 + r1 + r2) / 3.0
+            if not math.isfinite(radius_centroid) or radius_centroid < 0.0:
+                _mesh_fail("MESH_CENTROID_RADIUS_INVALID", f"triangle {column} has invalid centroid radius")
+            volume += 2.0 * math.pi * triangle_area * radius_centroid
+            for row in range(3):
+                subset_triangles[row].append(indexes[row])
+        expected = EXPECTED_DOMAIN_VOLUMES_M3[label]
+        relative_error = abs(volume - expected) / expected
+        if not math.isfinite(volume) or volume <= 0.0 or not math.isfinite(relative_error) or relative_error > MESH_VOLUME_RELATIVE_TOLERANCE:
+            _mesh_fail("MESH_VOLUME_THRESHOLD_FAILED", f"{label} actual mesh integral={volume!r}, comparator={expected!r}, relative_error={relative_error!r}")
+        subset_payload = {
+            "domain_entity": entity,
+            "triangle_columns": columns,
+            "triangle_connectivity": subset_triangles,
+            "triangle_geometric_entities": [normalized_entities[index] for index in columns],
+        }
+        subset_sha = hashlib.sha256(_canonical_mesh_bytes(subset_payload)).hexdigest()
+        domain_columns[label] = columns
+        computed[label] = {
+            "selection": f"sel_{label}", "entities": [entity],
+            "cross_section_area_m2": domains[label]["cross_section_area_m2"],
+            "volume_m3": volume, "expected_volume_m3": expected,
+            "relative_volume_error": relative_error,
+            "volume_source": "NATIVE_MESH_TRIANGLE_AXISYMMETRIC_INTEGRAL",
+            "triangle_count": len(columns), "triangle_columns": columns,
+            "triangle_subset_sha256": subset_sha,
+            "radial_unit": "m", "axial_unit": "m", "volume_unit": "m^3",
+        }
+    mesh_digest = hashlib.sha256(_canonical_mesh_bytes(raw)).hexdigest()
+    proof = {
+        "schema": "W24_NATIVE_MESH_VOLUME_WITNESS_V1",
+        "raw_mesh_sha256": mesh_digest,
+        "domain_triangle_columns": domain_columns,
+        "domain_readbacks": computed,
+        "integration": "sum(2*pi*triangle_area*triangle_centroid_radius) over actual straight-edged triangles assigned by getElemEntity",
+        "native_observation": "COMSOL 6.4 MeshSequence read-only getVertex/getElem/getElemEntity blocks; independent Python arithmetic is not a second native observation",
+        "relative_tolerance": MESH_VOLUME_RELATIVE_TOLERANCE,
+        "scope": "initial undeformed straight coupon mesh only; not post-cure deformation or material-history acceptance",
+    }
+    return raw, proof, mesh_digest
+
+
+def _native_mesh_response_worker_epoch(
+    response: dict[str, Any], *, project_id: str, model_ref: dict[str, Any], revision: int,
+) -> dict[str, Any]:
+    """Use the actual managed response's pre/post Worker audit; no inferred epoch."""
+    _java_action_readback(response, "mesh witness source")
+    execution = response.get("execution")
+    data = response.get("data")
+    if (not isinstance(execution, dict) or execution.get("project_id") != project_id
+            or execution.get("model_ref") != model_ref or execution.get("revision") != revision
+            or not isinstance(data, dict)):
+        _mesh_fail("MESH_NATIVE_RESPONSE_BINDING_INVALID", "mesh source response project/ModelRef/revision mismatch")
+    epochs = []
+    for stage in ("before", "after"):
+        audit = data.get(stage)
+        if (not isinstance(audit, dict) or audit.get("model_tag") != model_ref.get("model_tag")
+                or not isinstance(audit.get("worker_instance_id"), str) or not audit["worker_instance_id"]
+                or audit.get("instance_id") != audit["worker_instance_id"]
+                or type(audit.get("generation")) is not int or audit["generation"] <= 0
+                or not isinstance(audit.get("server_instance_id"), str) or not audit["server_instance_id"]):
+            _mesh_fail("MESH_NATIVE_WORKER_EPOCH_INVALID", "mesh source lacks exact actual Worker audit")
+        epochs.append({"instance_id": audit["worker_instance_id"], "generation": audit["generation"],
+                       "server": audit["server_instance_id"]})
+    if epochs[0] != epochs[1]:
+        _mesh_fail("MESH_NATIVE_WORKER_EPOCH_CHANGED", "mesh source Worker epoch changed during native readback")
+    return epochs[0]
+
+
+def _valid_mesh_model_ref(ref: Any) -> bool:
+    return (isinstance(ref, dict) and ref.get("schema_version") == 1
+            and type(ref.get("generation")) is int and ref["generation"] > 0
+            and all(isinstance(ref.get(key), str) and ref[key]
+                    for key in ("model_tag", "session_id", "server_instance_id")))
+
+
+def _valid_mesh_worker_epoch(epoch: Any) -> bool:
+    return (isinstance(epoch, dict) and set(epoch) == {"instance_id", "generation", "server"}
+            and isinstance(epoch.get("instance_id"), str) and bool(epoch["instance_id"])
+            and type(epoch.get("generation")) is int and epoch["generation"] > 0
+            and isinstance(epoch.get("server"), str) and bool(epoch["server"]))
+
+
+def _attach_mesh_volume_evidence(
+    readback: dict[str, Any], *, project_id: str, model_ref: dict[str, Any], revision: int,
+    stage: str, project_workspace: Path, evidence: Path, worker_epoch: dict[str, Any],
+    source_response: dict[str, Any],
+) -> dict[str, Any]:
+    if stage not in {"build", "reopen"}:
+        raise ValueError("mesh volume evidence stage must be build or reopen")
+    if (not _valid_mesh_model_ref(model_ref) or not isinstance(project_id, str) or not project_id
+            or type(revision) is not int or revision < 0 or not _valid_mesh_worker_epoch(worker_epoch)):
+        _mesh_fail("MESH_MODEL_BINDING_INVALID", "actual project, ModelRef, and revision are required")
+    source_snapshot = json.loads(json.dumps(source_response, allow_nan=False))
+    source_epoch = _native_mesh_response_worker_epoch(source_snapshot, project_id=project_id,
+        model_ref=model_ref, revision=revision)
+    source_readback = _java_action_readback(source_snapshot, "native mesh artifact origin")
+    if source_epoch != worker_epoch or source_readback != readback:
+        _mesh_fail("MESH_NATIVE_RESPONSE_BINDING_INVALID", "actual origin response and mesh readback/Worker epoch differ")
+    source_digest = hashlib.sha256(_canonical_mesh_bytes(source_snapshot)).hexdigest()
+    raw, proof, mesh_digest = _mesh_volume_rows(readback)
+    binding = {"project_id": project_id, "model_ref": model_ref, "revision": revision,
+               "stage": stage, "component": "comp1", "geometry": "geom1", "mesh": "mesh1",
+               "worker_epoch": worker_epoch}
+    artifact_schema = "W24_NATIVE_MESH_VOLUME_ARTIFACT_V2"
+    artifact = {"schema": artifact_schema, "binding": binding, "proof": proof, "raw_mesh": raw,
+                "native_domain_readbacks": readback["domain_readbacks"], "native_response": source_snapshot}
+    project_path = project_workspace / f"native_mesh_volume_{stage}.json"
+    evidence_path = evidence / f"native_mesh_volume_{stage}.json"
+    project_sha, project_bytes = _write_new_mesh_artifact(project_path, artifact)
+    evidence_sha, evidence_bytes = _write_new_mesh_artifact(evidence_path, artifact)
+    if project_sha != evidence_sha or project_bytes != evidence_bytes:
+        _mesh_fail("MESH_ARTIFACT_COPY_MISMATCH", "project and evidence native mesh artifacts differ")
+    readback.pop("native_mesh_raw", None)
+    readback["domain_readbacks"] = proof["domain_readbacks"]
+    readback["mesh_volume_observation"] = {
+        "schema": artifact_schema, "stage": stage, "project_id": project_id,
+        "model_ref": model_ref, "revision": revision, "worker_epoch": worker_epoch,
+        "raw_mesh_sha256": mesh_digest, "native_response_sha256": source_digest,
+        "project_artifact_path": str(project_path), "evidence_artifact_path": str(evidence_path),
+        "artifact_sha256": project_sha, "artifact_size_bytes": project_bytes,
+        "domain_triangle_columns": proof["domain_triangle_columns"],
+        "relative_tolerance": proof["relative_tolerance"], "scope": proof["scope"],
+    }
+    return readback
+
+
+def _verified_mesh_volume_observation(readback: dict[str, Any], *, stage: str) -> dict[str, Any]:
+    observation = readback.get("mesh_volume_observation")
+    expected_keys = {"schema", "stage", "project_id", "model_ref", "revision", "worker_epoch", "raw_mesh_sha256",
+                     "project_artifact_path", "evidence_artifact_path", "artifact_sha256", "artifact_size_bytes", "native_response_sha256",
+                     "domain_triangle_columns", "relative_tolerance", "scope"}
+    if (not isinstance(observation, dict) or set(observation) != expected_keys
+            or observation.get("schema") != "W24_NATIVE_MESH_VOLUME_ARTIFACT_V2"
+            or observation.get("stage") != stage
+            or not isinstance(observation.get("project_id"), str) or not observation["project_id"]
+            or not _valid_mesh_model_ref(observation.get("model_ref"))
+            or not _valid_mesh_worker_epoch(observation.get("worker_epoch"))
+            or type(observation.get("revision")) is not int or observation["revision"] < 0
+            or observation.get("relative_tolerance") != MESH_VOLUME_RELATIVE_TOLERANCE
+            or type(observation.get("artifact_size_bytes")) is not int or observation["artifact_size_bytes"] <= 0
+            or any(not isinstance(observation.get(key), str) or not re.fullmatch(r"[0-9a-f]{64}", observation[key])
+                   for key in ("artifact_sha256", "raw_mesh_sha256", "native_response_sha256"))):
+        _mesh_fail("MESH_OBSERVATION_METADATA_INVALID", "derived mesh witness metadata missing, extra, or invalid")
+    artifacts = []
+    for key in ("project_artifact_path", "evidence_artifact_path"):
+        value = observation.get(key)
+        if not isinstance(value, str):
+            _mesh_fail("MESH_ARTIFACT_BINDING_INVALID", "native mesh artifact path is missing")
+        path = Path(value)
+        if (not path.is_absolute() or path.is_symlink() or not path.is_file()
+                or path.name != f"native_mesh_volume_{stage}.json"
+                or path.stat().st_size != observation["artifact_size_bytes"]
+                or sha256(path) != observation["artifact_sha256"]):
+            _mesh_fail("MESH_ARTIFACT_BYTES_INVALID", "native mesh artifact path/size/SHA differs from observed metadata")
+        artifacts.append(path.read_bytes())
+    if artifacts[0] != artifacts[1]:
+        _mesh_fail("MESH_ARTIFACT_COPY_MISMATCH", "project/evidence mesh bytes differ")
+    artifact = json.loads(artifacts[0])
+    if (not isinstance(artifact, dict) or set(artifact) != {"schema", "binding", "proof", "raw_mesh", "native_domain_readbacks", "native_response"}
+            or artifact["schema"] != observation["schema"]):
+        _mesh_fail("MESH_ARTIFACT_SCHEMA_INVALID", "native mesh artifact schema or fields differ")
+    expected_binding = {key: observation[key] for key in ("project_id", "model_ref", "revision", "stage", "worker_epoch")}
+    expected_binding.update(component="comp1", geometry="geom1", mesh="mesh1")
+    if artifact.get("binding") != expected_binding:
+        _mesh_fail("MESH_ARTIFACT_BINDING_INVALID", "artifact actual model/Worker/revision/stage binding differs")
+    origin = artifact["native_response"]
+    origin_epoch = _native_mesh_response_worker_epoch(origin, project_id=observation["project_id"],
+        model_ref=observation["model_ref"], revision=observation["revision"])
+    origin_readback = _java_action_readback(origin, "native mesh artifact origin")
+    if (hashlib.sha256(_canonical_mesh_bytes(origin)).hexdigest() != observation["native_response_sha256"]
+            or origin_epoch != observation["worker_epoch"]
+            or origin_readback.get("native_mesh_raw") != artifact["raw_mesh"]
+            or origin_readback.get("domain_readbacks") != artifact["native_domain_readbacks"]):
+        _mesh_fail("MESH_NATIVE_RESPONSE_BINDING_INVALID", "raw mesh/domain/Worker metadata differs from actual origin response")
+    _, recomputed, digest = _mesh_volume_rows({"native_mesh_raw": artifact["raw_mesh"],
+                                             "domain_readbacks": artifact["native_domain_readbacks"]})
+    if (digest != observation["raw_mesh_sha256"] or artifact.get("proof") != recomputed
+            or observation["domain_triangle_columns"] != recomputed["domain_triangle_columns"]
+            or observation["scope"] != recomputed["scope"]
+            or readback.get("domain_readbacks") != recomputed["domain_readbacks"]):
+        _mesh_fail("MESH_PROOF_BINDING_INVALID", "derived mesh hash/domain proof does not match actual raw mesh and native domains")
+    return observation
+
+
+def _compare_mesh_volume_reopen(before: dict[str, Any], after: dict[str, Any]) -> dict[str, Any]:
+    try:
+        first = _verified_mesh_volume_observation(before, stage="build")
+        second = _verified_mesh_volume_observation(after, stage="reopen")
+    except (ValueError, OSError, RuntimeError, json.JSONDecodeError) as exc:
+        return {"matches": False, "checks": {"strict_derived_evidence_verified": False},
+                "error": f"{type(exc).__name__}: {exc}"}
+    first_ref, second_ref = first["model_ref"], second["model_ref"]
+    checks = {
+        "strict_derived_evidence_verified": True,
+        "same_project": first["project_id"] == second["project_id"],
+        "same_worker_epoch": first["worker_epoch"] == second["worker_epoch"],
+        "same_model_identity": all(first_ref[key] == second_ref[key] for key in
+                                   ("model_tag", "session_id", "server_instance_id")),
+        "exact_reopened_model_generation": second_ref["generation"] == first_ref["generation"] + 1,
+        "same_raw_mesh_sha256": first["raw_mesh_sha256"] == second["raw_mesh_sha256"],
+        "same_domain_triangle_columns": first["domain_triangle_columns"] == second["domain_triangle_columns"],
+        "same_domain_volume_readbacks": before.get("domain_readbacks") == after.get("domain_readbacks"),
+        "stages_are_build_then_reopen": first["stage"] == "build" and second["stage"] == "reopen",
+    }
+    return {"matches": all(checks.values()), "checks": checks,
+            "build_raw_mesh_sha256": first["raw_mesh_sha256"], "reopen_raw_mesh_sha256": second["raw_mesh_sha256"]}
 
 
 def _stress_candidate_cues(row: list[Any]) -> list[str]:
@@ -1146,10 +1551,13 @@ def _worker_request_terminal(response: Any) -> bool:
     return isinstance(worker, dict) and worker.get("status") in TERMINAL
 
 
-def _bounded_rpc_timeout(deadline_epoch: float, preferred_s: float, *, now: float | None = None) -> float:
+def _bounded_rpc_timeout(deadline_epoch: float, preferred_s: float, *, now: float | None = None, cleanup_reserve_s: float = CLEANUP_RESERVE_S, admission_owner: Any = None) -> float:
     """Return an RPC timeout that leaves the full cleanup reserve, or fail closed."""
+    if admission_owner is not None:
+        from tools.w24_coupled_admission import require_admission_owner
+        return require_admission_owner(admission_owner).wait_cap(preferred_s)
     current = time.time() if now is None else now
-    usable = deadline_epoch - current - CLEANUP_RESERVE_S
+    usable = deadline_epoch - current - cleanup_reserve_s
     if usable <= 1.0:
         raise TimeoutError("W24 setup-only birth budget is inside its cleanup reserve; no Worker request dispatched")
     return min(preferred_s, usable)
@@ -1308,16 +1716,43 @@ def _cleanup_reconciliation(job_inventory: dict[str, Any],
     }
 
 
-def _compare_reopened_readback(before: dict[str, Any], after: dict[str, Any]) -> dict[str, Any]:
-    """Require every configured geometry/physics/solver readback to survive MPH reload."""
-    ignored = {"status", "native_study_run_calls"}
-    expected = {key: value for key, value in before.items() if key not in ignored}
+def _compare_configuration_values(before: dict[str, Any], after: dict[str, Any]) -> dict[str, Any]:
+    """Keep every unknown/missing/added physical field fail-closed."""
+    expected = {key: value for key, value in before.items() if key not in {"status", "native_study_run_calls"}}
     missing = sorted(set(expected) - set(after))
     added = sorted(set(after) - set(expected))
     changed = sorted(key for key in set(expected) & set(after) if expected[key] != after[key])
     return {"matches": not (missing or added or changed),
             "missing_keys": missing, "added_keys": added, "changed_keys": changed,
             "compared_keys": sorted(expected)}
+
+
+def _compare_reopened_readback(before: dict[str, Any], after: dict[str, Any]) -> dict[str, Any]:
+    """Separate only strictly verified derived mesh evidence, symmetrically."""
+    mesh = _compare_mesh_volume_reopen(before, after)
+    if mesh["matches"]:
+        before_config = {key: value for key, value in before.items() if key != "mesh_volume_observation"}
+        after_config = {key: value for key, value in after.items() if key != "mesh_volume_observation"}
+    else:
+        # Unverified metadata must never disappear from configuration comparison.
+        before_config, after_config = before, after
+    physical_keys = {"axis_entity_ids", "domain_readbacks", "external_boundary_entity_count",
+                     "external_boundary_readbacks", "external_strain_readbacks", "geometry_axisymmetric",
+                     "geometry_bounding_box", "geometry_dimension", "geometry_domain_count", "geometry_entity_counts",
+                     "geometry_length_unit", "heat_readbacks", "material_tags", "mesh_tags", "ode_field_readbacks",
+                     "physics_tags", "solid_quasistatic_readback", "solver_readbacks", "solver_submissions",
+                     "study_tags", "study_time_readbacks"}
+    before_keys = set(before_config) - {"status", "native_study_run_calls"}
+    after_keys = set(after_config)
+    schema_checks = {
+        "missing_before": sorted(physical_keys - before_keys), "unknown_before": sorted(before_keys - physical_keys),
+        "missing_after": sorted(physical_keys - after_keys), "unknown_after": sorted(after_keys - physical_keys),
+    }
+    comparison = _compare_configuration_values(before_config, after_config)
+    comparison["mesh_volume"] = mesh
+    comparison["physical_field_schema"] = schema_checks
+    comparison["matches"] = comparison["matches"] and mesh["matches"] and not any(schema_checks.values())
+    return comparison
 
 
 def _actual_study_run_submissions(daemon: Any, project_id: str) -> list[dict[str, Any]]:
@@ -1358,6 +1793,18 @@ def _verify_cleanup(server: Any) -> dict[str, Any]:
     }
 
 
+def _finalize_coupled_owned_lifecycle_before_cli_return(admission_owner, summary, evidence):
+    """Single production finally boundary; no native dispatch or ownership disposal."""
+    if admission_owner is not None:
+        admission_owner.retain_unknown_owner_until_terminal(summary)
+        admission_owner.diagnostic_write(Path(evidence) / "summary.json", summary)
+        if admission_owner.diagnostic_errors:
+            summary['status']='FAIL_OR_INCOMPLETE';summary['diagnostic_errors']=admission_owner.diagnostic_errors
+    else:
+        write_json(Path(evidence) / "summary.json", summary)
+    return summary
+
+
 def run(args: argparse.Namespace) -> dict[str, Any]:
     from tools.run_native_resume_smoke import NativeLoopbackServer, _dispatch, _engine_build_identity
     from comsol_mcp._g2_isolation import _process_snapshot
@@ -1372,6 +1819,11 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         raise ValueError("native setup requires --candidate-freeze and --expected-candidate-sha256")
     offline_candidate = _verify_offline_candidate_freeze(
         Path(args.candidate_freeze), args.expected_candidate_sha256)
+    setup_contract = offline_candidate.get("setup_contract")
+    birth_budget_s = offline_candidate.get("birth_budget_s", MAX_BIRTH_BUDGET_S)
+    cleanup_reserve_s = offline_candidate.get("cleanup_reserve_s", CLEANUP_RESERVE_S)
+    build_phase = "build_v2" if setup_contract else "build"
+    reopen_phase = "readback_v2" if setup_contract else "readback"
     work.mkdir(parents=True, exist_ok=False)
     evidence.mkdir(parents=True, exist_ok=False)
     events = evidence / "events.jsonl"
@@ -1392,6 +1844,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     worker_process_identity: dict[str, Any] | None = None
     worker_port: int | None = None
     cleanup: dict[str, Any] | None = None
+    admission_owner = None
     summary: dict[str, Any] = {
         "status": "FAIL_OR_INCOMPLETE",
         "scope": "W24 setup-only native 6.4 model build/readback/Equation View/template save-reopen; zero study/solver submissions",
@@ -1449,11 +1902,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         freeze = {
             "status": "FROZEN_BEFORE_NATIVE_BIRTH",
             "frozen_at_utc": utc_now(),
-            "candidate_id": "W24-CURE-HIST-AXISYM-01",
+            "candidate_id": offline_candidate["candidate_id"],
+            "setup_contract": setup_contract,
             "scope": "setup-only native model/physics/mesh/solver construction, complete Equation View capture, MPH save/reopen readback; no study.run",
             "limits": {"max_owned_engine_processes": 1,
-                       "max_wall_seconds_from_process_birth": MAX_BIRTH_BUDGET_S,
-                       "cleanup_reserve_seconds": CLEANUP_RESERVE_S,
+                       "max_wall_seconds_from_process_birth": birth_budget_s,
+                       "cleanup_reserve_seconds": cleanup_reserve_s,
                        "solver_submissions_this_preflight": 0,
                        "max_worker_sessions_this_preflight": 1,
                        "cleanup_policy": "W23 exact PID/birth/command/port reconciliation; SIGTERM only; no SIGKILL fallback",
@@ -1502,14 +1956,25 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         write_json(evidence / "prebirth_inventory.json", birth_inventory)
         if not birth_inventory["quiescent"]:
             raise RuntimeError("fresh pre-birth process/listener inventory is unavailable or not quiescent")
-        listener = server.start_and_verify_listener()
+        if setup_contract:
+            from tools.w24_coupled_admission import _new_coupled_admission
+            admission_owner=_new_coupled_admission(server,evidence)
+            listener=server.start_and_verify_listener(admission_owner=admission_owner)
+        else:
+            listener = server.start_and_verify_listener()
         process = server.process_identity or {}
         original_process_identity = process
         birth_value = process.get("birth")
         if not isinstance(birth_value, str):
             raise RuntimeError("owned COMSOL process birth identity is missing")
         engine_birth_epoch = _mac_birth_epoch(birth_value)
-        deadline_epoch = engine_birth_epoch + MAX_BIRTH_BUDGET_S
+        if admission_owner is not None:
+            if abs(admission_owner.birth_epoch-engine_birth_epoch)>=1.0:
+                raise ValueError('owned Popen birth differs from its whole-unit admission origin')
+            engine_birth_epoch=admission_owner.birth_epoch
+            deadline_epoch=admission_owner.deadline_epoch
+        else:
+            deadline_epoch = engine_birth_epoch + birth_budget_s
         summary.update({"server_pid": server.proc.pid if server.proc else None,
                         "server_birth": birth_value, "server_command": process.get("command"),
                         "port": server.port, "engine_birth_epoch": engine_birth_epoch,
@@ -1525,22 +1990,23 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "listener": listener,
             "birth_epoch": engine_birth_epoch,
             "budget_deadline_epoch": deadline_epoch,
-            "budget_s": MAX_BIRTH_BUDGET_S,
+            "budget_s": birth_budget_s,
         })
         append_event(events, "owned_server_birth_and_loopback_verified", process=process,
                      port=server.port, deadline_epoch=deadline_epoch)
-        if time.time() >= deadline_epoch - CLEANUP_RESERVE_S:
+        if ((admission_owner is None and time.time() >= deadline_epoch-cleanup_reserve_s) or
+                (admission_owner is not None and time.monotonic() >= admission_owner.deadline_monotonic-cleanup_reserve_s)):
             raise TimeoutError("setup-only 15-minute birth budget entered its reserved cleanup window before Worker startup")
         worker_info = _guarded_direct_native_call(
             direct_native_call_guard, evidence, "start_worker/connect_and_version_readback",
-            server.start_worker)
+            (server.start_worker if admission_owner is None else lambda:server.start_worker(admission_owner=admission_owner)))
         worker_connected = True
         worker_runtime = worker_info.get("worker_runtime", {})
         worker_pid = worker_runtime.get("pid") if isinstance(worker_runtime, dict) else None
         worker_port_value = worker_runtime.get("port") if isinstance(worker_runtime, dict) else None
         if type(worker_pid) is not int or type(worker_port_value) is not int:
             raise RuntimeError("Worker PID/port identity is missing from the owned runtime receipt")
-        worker_process_identity = _process_snapshot(worker_pid)
+        worker_process_identity = _process_snapshot(worker_pid) if admission_owner is None else _process_snapshot(worker_pid,admission_owner=admission_owner)
         worker_port = worker_port_value
         if not isinstance(worker_process_identity, dict):
             raise RuntimeError("Worker PID/birth/command identity could not be captured")
@@ -1559,6 +2025,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             raise RuntimeError("trusted_code startup grant changed before managed Worker connection")
         os.environ["COMSOL_MCP_ISOLATION_RECEIPT"] = str(server.receipt_path)
         daemon = ControlDaemon(work / "control", worker=server.worker, project_root=server.project)
+        if admission_owner is not None:
+            from tools.w24_coupled_admission import _AdmissionBoundDaemon
+            daemon=_AdmissionBoundDaemon(daemon,admission_owner)
+            admission_owner.before_effect("post_Worker_startup_before_managed_connect",30.0)
         actual_host_grants = _require_trusted_code_host_grant(daemon)
         if actual_host_grants != prebirth_host_grants:
             raise RuntimeError("post-Worker trusted_code host grant differs from the prebirth ceiling")
@@ -1591,20 +2061,41 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "binding": binding, "persisted_project_binding": initial_project_binding,
             "prebuild_readback": "NOT_REQUIRED_EMPTY_MANAGED_MODEL; fixture build/readback is the native configuration gate",
         })
-        if time.time() >= deadline_epoch - CLEANUP_RESERVE_S:
+        if ((admission_owner is None and time.time() >= deadline_epoch-cleanup_reserve_s) or
+                (admission_owner is not None and time.monotonic() >= admission_owner.deadline_monotonic-cleanup_reserve_s)):
             raise TimeoutError("setup-only birth budget entered cleanup reserve before fixture build")
 
         request_terminal = False
+        original_cure_receiver = None
+        if setup_contract:
+            from tools.w24_native_epoch_capability import _capture_original_cure_receiver
+            original_cure_receiver = _capture_original_cure_receiver(daemon,project_id=project_id,model_ref=model_ref)
         build_response = _dispatch(daemon, "operation_call", {
             "operation_id": "code.execute_java",
             "arguments": {"source_artifact": FIXTURE.name,
                           "entrypoint": "W24CureCouponFixture#run",
-                          "arguments": {"phase": "build"}, "mode": "trusted"},
+                          "arguments": ({"phase": build_phase, "mu_scale": setup_contract["mu_scale"]} if setup_contract else {"phase": build_phase}), "mode": "trusted"},
         }, project_id=project_id, ref=model_ref, revision=revision,
            idempotency_key=f"w24-build-{uuid4()}", request_id=f"w24-build-request-{uuid4()}",
-           rpc_timeout_s=_bounded_rpc_timeout(deadline_epoch, 600.0))
+           rpc_timeout_s=_bounded_rpc_timeout(deadline_epoch, 600.0, cleanup_reserve_s=cleanup_reserve_s,admission_owner=admission_owner))
         request_terminal = _worker_request_terminal(build_response)
+        native_epoch_capability = None
+        if setup_contract:
+            from tools.w24_native_epoch_capability import _mint_from_actual_cure_response
+            _write_new_mesh_artifact(evidence / "coupled_cure_build_actual_response.json", build_response)
+            native_epoch_capability = _mint_from_actual_cure_response(daemon, build_response,
+                project_id=project_id, model_ref=dict(model_ref), revision=build_response.get("execution", {}).get("revision"), original_receiver=original_cure_receiver)
         build_readback = _java_action_readback(build_response, "native W24 fixture build")
+        model_ref = build_response["execution"]["model_ref"]
+        revision = int(build_response["execution"]["revision"])
+        build_readback = _attach_mesh_volume_evidence(
+            build_readback, project_id=project_id, model_ref=model_ref, revision=revision,
+            stage="build", project_workspace=project_workspace, evidence=evidence,
+            worker_epoch=_native_mesh_response_worker_epoch(build_response, project_id=project_id,
+                model_ref=model_ref, revision=revision), source_response=build_response)
+        if setup_contract:
+            from tools.w24_v2_setup_readback import _validate_v2
+            _validate_v2(build_readback)
         if build_readback.get("status") != "BUILT_NOT_SOLVED" or build_readback.get("solver_submissions") != 0:
             raise AssertionError("native W24 fixture did not return its explicit no-solve build status")
         if not (build_readback.get("geometry_axisymmetric") is True and
@@ -1613,8 +2104,6 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 len(build_readback.get("domain_readbacks", {})) == 4 and
                 len(build_readback.get("solver_readbacks", {})) == 3):
             raise AssertionError("native W24 geometry/domain/solver readback gates are incomplete")
-        model_ref = build_response["execution"]["model_ref"]
-        revision = int(build_response["execution"]["revision"])
         write_json(evidence / "native_build_readback.json", {
             "build_response": build_response,
             "fixture_readback": build_readback,
@@ -1622,11 +2111,14 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "model_revision": revision,
             "study_run_submissions_so_far": _actual_study_run_submissions(daemon, project_id),
         })
-        if time.time() >= deadline_epoch - CLEANUP_RESERVE_S:
+        if ((admission_owner is None and time.time() >= deadline_epoch-cleanup_reserve_s) or
+                (admission_owner is not None and time.monotonic() >= admission_owner.deadline_monotonic-cleanup_reserve_s)):
             raise TimeoutError("setup-only birth budget entered cleanup reserve before immutable template save")
 
         expression_inventory_path = project_workspace / "solid_equation_view_expression_inventory.json"
         request_terminal = False
+        if setup_contract:
+            native_epoch_capability.as_evidence()
         expression_response = _dispatch(daemon, "operation_call", {
             "operation_id": "code.execute_java",
             "arguments": {"source_artifact": FIXTURE.name,
@@ -1637,8 +2129,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         }, project_id=project_id, ref=model_ref, revision=revision,
            idempotency_key=f"w24-expression-inventory-{uuid4()}",
            request_id=f"w24-expression-inventory-request-{uuid4()}",
-           rpc_timeout_s=_bounded_rpc_timeout(deadline_epoch, 240.0))
+           rpc_timeout_s=_bounded_rpc_timeout(deadline_epoch, 240.0, cleanup_reserve_s=cleanup_reserve_s,admission_owner=admission_owner))
         request_terminal = _worker_request_terminal(expression_response)
+        if setup_contract:
+            _write_new_mesh_artifact(evidence / "coupled_expression_response_actual_response.json", expression_response)
+            native_epoch_capability.verify(expression_response, model_ref=dict(model_ref),
+                revision=expression_response.get("execution", {}).get("revision"))
         expression_receipt = _java_action_readback(
             expression_response, "native Solid Mechanics Equation View inventory")
         expression_inventory = _verify_expression_inventory(
@@ -1668,11 +2164,14 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                      expression_rows=expression_inventory["expression_row_count"],
                      candidate_rows=expression_inventory["stress_candidate_row_count"],
                      solver_submissions=0)
-        if time.time() >= deadline_epoch - CLEANUP_RESERVE_S:
+        if ((admission_owner is None and time.time() >= deadline_epoch-cleanup_reserve_s) or
+                (admission_owner is not None and time.monotonic() >= admission_owner.deadline_monotonic-cleanup_reserve_s)):
             raise TimeoutError("setup-only birth budget entered cleanup reserve before immutable template save")
 
         template_path = project_workspace / "cure_template.mph"
         request_terminal = False
+        if setup_contract:
+            native_epoch_capability.as_evidence()
         save_response = _dispatch(daemon, "operation_call", {
             "operation_id": "code.execute_java",
             "arguments": {"source_artifact": FIXTURE.name,
@@ -1680,8 +2179,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                           "arguments": {"phase": "save", "path": str(template_path)}, "mode": "trusted"},
         }, project_id=project_id, ref=model_ref, revision=revision,
            idempotency_key=f"w24-template-save-{uuid4()}", request_id=f"w24-template-save-request-{uuid4()}",
-           rpc_timeout_s=_bounded_rpc_timeout(deadline_epoch, 300.0))
+           rpc_timeout_s=_bounded_rpc_timeout(deadline_epoch, 300.0, cleanup_reserve_s=cleanup_reserve_s,admission_owner=admission_owner))
         request_terminal = _worker_request_terminal(save_response)
+        if setup_contract:
+            _write_new_mesh_artifact(evidence / "coupled_save_response_actual_response.json", save_response)
+            native_epoch_capability.verify(save_response, model_ref=dict(model_ref),
+                revision=save_response.get("execution", {}).get("revision"))
         save_readback = _java_action_readback(save_response, "native W24 template save")
         if save_readback.get("status") != "SAVED" or not template_path.is_file() or template_path.stat().st_size <= 0:
             raise AssertionError("native W24 configured template MPH was not saved as a non-empty file")
@@ -1716,35 +2219,57 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         # Reload the immutable MPH in the same sequential Worker session: the
         # setup preflight is frozen to one Worker, while the later science
         # campaign separately allows its staged-baseline reopen in Worker 2.
-        if time.time() >= deadline_epoch - CLEANUP_RESERVE_S:
+        if ((admission_owner is None and time.time() >= deadline_epoch-cleanup_reserve_s) or
+                (admission_owner is not None and time.monotonic() >= admission_owner.deadline_monotonic-cleanup_reserve_s)):
             raise TimeoutError("setup-only birth budget entered cleanup reserve before template reopen")
+        if setup_contract:
+            native_epoch_capability.as_evidence()
         reopen_binding = _load_saved_template_managed(
             daemon, project_id=project_id, project_workspace=project_workspace,
             path=template_path,
             idempotency_key=f"w24-template-managed-load-{uuid4()}",
             request_id=f"w24-template-managed-load-request-{uuid4()}",
-            timeout_s=_bounded_rpc_timeout(deadline_epoch, 120.0))
+            timeout_s=_bounded_rpc_timeout(deadline_epoch, 120.0, cleanup_reserve_s=cleanup_reserve_s,admission_owner=admission_owner))
         request_terminal = _worker_request_terminal(reopen_binding["load_response"])
         loaded_tag = reopen_binding["model_tag"]
         reopen_ref = reopen_binding["model_ref"]
         reopen_revision = int(reopen_binding["revision"])
         write_json(evidence / "template_reopen_binding.json", reopen_binding)
 
-        if time.time() >= deadline_epoch - CLEANUP_RESERVE_S:
+        if ((admission_owner is None and time.time() >= deadline_epoch-cleanup_reserve_s) or
+                (admission_owner is not None and time.monotonic() >= admission_owner.deadline_monotonic-cleanup_reserve_s)):
             raise TimeoutError("setup-only birth budget entered cleanup reserve before reopened readback")
         request_terminal = False
+        if setup_contract:
+            native_epoch_capability.as_evidence()
         reopen_response = _dispatch(daemon, "operation_call", {
             "operation_id": "code.execute_java",
             "arguments": {"source_artifact": FIXTURE.name,
                           "entrypoint": "W24CureCouponFixture#run",
-                          "arguments": {"phase": "readback"}, "mode": "trusted"},
+                          "arguments": {"phase": reopen_phase}, "mode": "trusted"},
         }, project_id=project_id, ref=reopen_ref, revision=reopen_revision,
            idempotency_key=f"w24-template-reopen-readback-{uuid4()}",
            request_id=f"w24-template-reopen-readback-request-{uuid4()}",
-           rpc_timeout_s=_bounded_rpc_timeout(deadline_epoch, 300.0))
+           rpc_timeout_s=_bounded_rpc_timeout(deadline_epoch, 300.0, cleanup_reserve_s=cleanup_reserve_s,admission_owner=admission_owner))
         request_terminal = _worker_request_terminal(reopen_response)
+        if setup_contract:
+            _write_new_mesh_artifact(evidence / "coupled_reopen_response_actual_response.json", reopen_response)
+            native_epoch_capability.verify(reopen_response, model_ref=dict(reopen_ref),
+                revision=reopen_response.get("execution", {}).get("revision"))
         reopened_readback = _java_action_readback(reopen_response, "native W24 reloaded template readback")
-        reopen_comparison = _compare_reopened_readback(build_readback, reopened_readback)
+        reopen_ref = reopen_response["execution"]["model_ref"]
+        reopen_revision = int(reopen_response["execution"]["revision"])
+        reopened_readback = _attach_mesh_volume_evidence(
+            reopened_readback, project_id=project_id, model_ref=reopen_ref, revision=reopen_revision,
+            stage="reopen", project_workspace=project_workspace, evidence=evidence,
+            worker_epoch=_native_mesh_response_worker_epoch(reopen_response, project_id=project_id,
+                model_ref=reopen_ref, revision=reopen_revision), source_response=reopen_response)
+        if setup_contract:
+            from tools.w24_v2_setup_readback import compare_v2_save_reopen
+            reopen_comparison = compare_v2_save_reopen(build_readback, reopened_readback)
+        else:
+            reopen_comparison = _compare_reopened_readback(build_readback, reopened_readback)
+        mesh_volume_comparison = reopen_comparison["mesh_volume"]
         if not reopen_comparison["matches"]:
             raise AssertionError("saved/reopened MPH configuration readbacks differ: " +
                                  json.dumps(reopen_comparison, ensure_ascii=False))
@@ -1753,6 +2278,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
 
         reopened_inventory_path = project_workspace / "solid_equation_view_expression_inventory_reopened.json"
         request_terminal = False
+        if setup_contract:
+            native_epoch_capability.as_evidence()
         reopened_expression_response = _dispatch(daemon, "operation_call", {
             "operation_id": "code.execute_java",
             "arguments": {"source_artifact": FIXTURE.name,
@@ -1763,8 +2290,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         }, project_id=project_id, ref=model_ref, revision=revision,
            idempotency_key=f"w24-template-reopen-expression-inventory-{uuid4()}",
            request_id=f"w24-template-reopen-expression-inventory-request-{uuid4()}",
-           rpc_timeout_s=_bounded_rpc_timeout(deadline_epoch, 240.0))
+           rpc_timeout_s=_bounded_rpc_timeout(deadline_epoch, 240.0, cleanup_reserve_s=cleanup_reserve_s,admission_owner=admission_owner))
         request_terminal = _worker_request_terminal(reopened_expression_response)
+        if setup_contract:
+            _write_new_mesh_artifact(evidence / "coupled_reopened_expression_response_actual_response.json", reopened_expression_response)
+            native_epoch_capability.verify(reopened_expression_response, model_ref=dict(model_ref),
+                revision=reopened_expression_response.get("execution", {}).get("revision"))
         reopened_expression_java_receipt = _java_action_readback(
             reopened_expression_response, "reopened W24 Solid Mechanics Equation View inventory")
         reopened_expression_inventory = _verify_expression_inventory(
@@ -1826,6 +2357,22 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         template_receipt["reopened_equation_view_inventory"] = reopened_expression_inventory
         write_json(evidence / "configured_template_receipt.json", template_receipt)
 
+        static_baselines = None
+        if setup_contract:
+            from tools.w24_coupled_setup_unit import build_static_baseline_setups
+            from tools.run_native_w24_cure_science import ManagedModelBinding
+            parent_binding = ManagedModelBinding(project_id, model_ref["session_id"], dict(model_ref), revision)
+            static_baselines = build_static_baseline_setups(daemon=daemon, project_id=project_id,
+                workspace=project_workspace, project_response=project_creation["response"],
+                parent_binding=parent_binding, evidence=evidence / "static_baseline_setups",
+                server_pid=server.proc.pid, worker_pid=worker_process_identity["pid"],
+                server_birth_epoch=engine_birth_epoch, deadline_epoch=deadline_epoch,
+                native_epoch_capability=native_epoch_capability, admission_owner=admission_owner)
+            write_json(evidence / "coupled_static_baseline_setups.json", static_baselines)
+            if _actual_study_run_submissions(daemon, project_id):
+                raise AssertionError("unexpected Study/solver submission during coupled zero-solve setup")
+        summary["coupled_static_baseline_setups"] = static_baselines
+        summary["setup_contract"] = setup_contract
         summary.update({"status": "NATIVE_SETUP_PREFLIGHT_PASS_NOT_SOLVED",
                         "template_path": str(template_path),
                         "template_size_bytes": template_path.stat().st_size,
@@ -1844,6 +2391,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         append_event(events, "native_build_readback_and_template_saved", template_sha256=template_receipt["sha256"],
                      solver_submissions=0)
     except Exception as exc:
+        if admission_owner is not None:admission_owner.fail("coupled_stage_first_failure",exc)
         status = "FAIL_OR_INCOMPLETE"
         summary.update({"status": status, "error": f"{type(exc).__name__}: {exc}",
                         "traceback": traceback.format_exc(),
@@ -1860,114 +2408,133 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         append_event(events, "preflight_failed_or_incomplete", error=summary["error"],
                      solver_submissions=summary["native_solve_submissions"])
     finally:
-        summary["at_utc_end"] = utc_now()
-        cleanup_reconciliation: dict[str, Any] | None = None
-        # Full paged ledger reconciliation supersedes a stale local RPC flag.
-        # A durable UNKNOWN job/result remains in the receipt, while cleanup
-        # depends on every submitted Worker request being observed terminal and
-        # there being no queued/running project job.
-        if daemon is not None:
-            try:
-                job_inventory = _project_job_inventory(daemon, project_id)
-                worker_inventory = _worker_request_activity_inventory(daemon.store, project_id)
-                write_json(evidence / "precleanup_job_inventory.json", job_inventory)
-                write_json(evidence / "precleanup_worker_request_inventory.json", worker_inventory)
-                summary["project_jobs"] = job_inventory["jobs"]
-                summary["active_project_jobs"] = job_inventory["active"]
-                summary["unknown_project_jobs"] = job_inventory["unknown"]
-                summary["worker_request_inventory"] = worker_inventory
-                cleanup_reconciliation = _cleanup_reconciliation(
-                    job_inventory, worker_inventory,
-                    direct_native_calls_safe=(direct_native_call_guard.get("all_returned") is True and
-                                              all(row.get("status") == "RETURNED"
-                                                  for row in direct_native_call_guard.get("calls", []))))
-                cleanup_reconciliation["durable_result"]["prior_local_terminal_flag"] = request_terminal
-                cleanup_reconciliation["durable_result"]["direct_native_call_guard_status"] = direct_native_call_guard.get("status")
-                write_json(evidence / "worker_ledger_reconciliation.json", cleanup_reconciliation)
-                request_terminal = cleanup_reconciliation["safe_for_owned_cleanup"] is True
-            except Exception as exc:
-                summary["precleanup_inventory_error"] = f"{type(exc).__name__}: {exc}"
-                request_terminal = False
-        else:
-            # Before ControlDaemon creation, no managed Worker request can have
-            # been dispatched. The synchronous owned Worker startup must still
-            # have returned successfully before its process may be stopped.
-            checks = {
-                "all_submissions_observed_once": True,
-                "all_observed_workers_terminal": True,
-                "no_orphan_observations": True,
-                "no_ambiguous_worker_ids": True,
-                "no_queued_or_running_jobs": True,
-                "all_direct_native_calls_returned": (
-                    direct_native_call_guard.get("all_returned") is True and
-                    all(row.get("status") == "RETURNED"
-                        for row in direct_native_call_guard.get("calls", []))),
-            }
-            cleanup_reconciliation = {
-                "status": "NO_MANAGED_REQUESTS_DISPATCHED",
-                "safe_for_owned_cleanup": all(checks.values()),
-                "durable_result": {"project_jobs_unknown_preserved": [],
-                                    "execution_state_unknown_request_ids": []},
-                "checks": checks,
-            }
-            write_json(evidence / "worker_ledger_reconciliation.json", cleanup_reconciliation)
-            request_terminal = cleanup_reconciliation["safe_for_owned_cleanup"] is True
-        if server is not None:
-            if server.proc is None:
-                cleanup = {"status": "NOT_STARTED", "reason": "owned COMSOL process was never created"}
-            elif request_terminal and isinstance(original_process_identity, dict):
-                try:
-                    from tools.run_native_w23_te_managed_preflight import _exact_owned_cleanup
-                    cleanup = _exact_owned_cleanup(
-                        server, server_identity=original_process_identity,
-                        worker_identity=worker_process_identity, worker_port=worker_port,
-                        process_snapshot=_process_snapshot,
-                        reconciliation=cleanup_reconciliation or {}, evidence=evidence,
-                        require_fixture_terminal=False)
-                except Exception as exc:
-                    cleanup = {"status": "CLEANUP_UNVERIFIED", "error": f"{type(exc).__name__}: {exc}"}
-            else:
-                cleanup = {"status": "LEFT_RUNNING_ACTIVE_OR_UNKNOWN",
-                           "pid": server.proc.pid if server.proc else None,
-                           "port": server.port,
-                           "action": "preserved because full terminal ledger or exact process identity proof is incomplete",
-                           "worker_ledger_reconciliation": cleanup_reconciliation,
-                           "server_identity": original_process_identity,
-                           "worker_identity": worker_process_identity}
-        summary["cleanup"] = cleanup
-        if cleanup and cleanup.get("status") not in {
-                "CLEANUP_VERIFIED_EXACT_OWNED_PIDS_AND_PORTS_ABSENT", "NOT_STARTED"}:
-            summary["status"] = "FAIL_OR_INCOMPLETE"
         try:
-            summary["native_solve_submissions"] = (len(_actual_study_run_submissions(daemon, project_id))
-                                                    if daemon and project_id else 0)
-        except Exception as exc:
-            summary["native_solve_submissions"] = None
-            summary["study_submission_inventory_error"] = f"{type(exc).__name__}: {exc}"
-            summary["status"] = "LEFT_RUNNING_ACTIVE_OR_UNKNOWN"
-        if summary.get("active_project_jobs") or summary.get("precleanup_inventory_error"):
-            summary["status"] = "LEFT_RUNNING_ACTIVE_OR_UNKNOWN"
-        if summary.get("unknown_project_jobs"):
-            summary["durable_unknown_jobs_preserved"] = True
-            if summary.get("status") not in {"LEFT_RUNNING_ACTIVE_OR_UNKNOWN"}:
-                summary["status"] = "FAIL_OR_INCOMPLETE"
-        if cleanup and cleanup.get("status") == "CLEANUP_VERIFIED_EXACT_OWNED_PIDS_AND_PORTS_ABSENT":
-            try:
-                post_inventory = _process_inventory()
-                write_json(evidence / "postcleanup_inventory.json", post_inventory)
-                summary["postcleanup_inventory_quiescent"] = post_inventory["quiescent"]
-                if not post_inventory["quiescent"]:
-                    summary["status"] = "FAIL_OR_INCOMPLETE"
-            except Exception as exc:
-                summary["postcleanup_inventory_error"] = f"{type(exc).__name__}: {exc}"
-                summary["status"] = "FAIL_OR_INCOMPLETE"
+            if admission_owner is not None:
+                try:
+                    admission_owner.stop_monitor_before_cleanup()
+                    summary['coupled_admission_monitor_stop']='RETURNED_ORIGINAL_OWNER_AND_HANDLES_RETAINED'
+                except BaseException as exc:
+                    summary['coupled_admission_monitor_stop_error']=str(exc)
+                    summary['status']='FAIL_OR_INCOMPLETE'
+                summary['coupled_admission']={'birth_epoch':admission_owner.birth_epoch,
+                    'deadline_epoch':admission_owner.deadline_epoch,'stop_reason':admission_owner.stop_reason,
+                    'original_handle_pids':{k:getattr(v,'pid',None) for k,v in admission_owner.handles.items()},
+                    'sampled_RSS_hard_cap':False}
+            summary["at_utc_end"] = utc_now()
+            cleanup_reconciliation: dict[str, Any] | None = None
+            # Full paged ledger reconciliation supersedes a stale local RPC flag.
+            # A durable UNKNOWN job/result remains in the receipt, while cleanup
+            # depends on every submitted Worker request being observed terminal and
+            # there being no queued/running project job.
             if daemon is not None:
                 try:
-                    daemon.close()
+                    job_inventory = _project_job_inventory(daemon, project_id)
+                    worker_inventory = _worker_request_activity_inventory(daemon.store, project_id)
+                    write_json(evidence / "precleanup_job_inventory.json", job_inventory)
+                    write_json(evidence / "precleanup_worker_request_inventory.json", worker_inventory)
+                    summary["project_jobs"] = job_inventory["jobs"]
+                    summary["active_project_jobs"] = job_inventory["active"]
+                    summary["unknown_project_jobs"] = job_inventory["unknown"]
+                    summary["worker_request_inventory"] = worker_inventory
+                    cleanup_reconciliation = _cleanup_reconciliation(
+                        job_inventory, worker_inventory,
+                        direct_native_calls_safe=(direct_native_call_guard.get("all_returned") is True and
+                                                  all(row.get("status") == "RETURNED"
+                                                      for row in direct_native_call_guard.get("calls", []))))
+                    cleanup_reconciliation["durable_result"]["prior_local_terminal_flag"] = request_terminal
+                    cleanup_reconciliation["durable_result"]["direct_native_call_guard_status"] = direct_native_call_guard.get("status")
+                    write_json(evidence / "worker_ledger_reconciliation.json", cleanup_reconciliation)
+                    request_terminal = cleanup_reconciliation["safe_for_owned_cleanup"] is True
                 except Exception as exc:
-                    summary["daemon_close_error"] = f"{type(exc).__name__}: {exc}"
+                    summary["precleanup_inventory_error"] = f"{type(exc).__name__}: {exc}"
+                    request_terminal = False
+            else:
+                # Before ControlDaemon creation, no managed Worker request can have
+                # been dispatched. The synchronous owned Worker startup must still
+                # have returned successfully before its process may be stopped.
+                checks = {
+                    "all_submissions_observed_once": True,
+                    "all_observed_workers_terminal": True,
+                    "no_orphan_observations": True,
+                    "no_ambiguous_worker_ids": True,
+                    "no_queued_or_running_jobs": True,
+                    "all_direct_native_calls_returned": (
+                        direct_native_call_guard.get("all_returned") is True and
+                        all(row.get("status") == "RETURNED"
+                            for row in direct_native_call_guard.get("calls", []))),
+                }
+                cleanup_reconciliation = {
+                    "status": "NO_MANAGED_REQUESTS_DISPATCHED",
+                    "safe_for_owned_cleanup": all(checks.values()),
+                    "durable_result": {"project_jobs_unknown_preserved": [],
+                                        "execution_state_unknown_request_ids": []},
+                    "checks": checks,
+                }
+                write_json(evidence / "worker_ledger_reconciliation.json", cleanup_reconciliation)
+                request_terminal = cleanup_reconciliation["safe_for_owned_cleanup"] is True
+            if server is not None:
+                if server.proc is None:
+                    cleanup = {"status": "NOT_STARTED", "reason": "owned COMSOL process was never created"}
+                elif request_terminal and isinstance(original_process_identity, dict):
+                    try:
+                        from tools.run_native_w23_te_managed_preflight import _exact_owned_cleanup
+                        if admission_owner is not None:
+                            admission_owner.allow_exact_cleanup_transport()
+                        cleanup = _exact_owned_cleanup(
+                            server, server_identity=original_process_identity,
+                            worker_identity=worker_process_identity, worker_port=worker_port,
+                            process_snapshot=_process_snapshot,
+                            reconciliation=cleanup_reconciliation or {}, evidence=evidence,
+                            require_fixture_terminal=False,admission_owner=admission_owner)
+                    except Exception as exc:
+                        cleanup = {"status": "CLEANUP_UNVERIFIED", "error": f"{type(exc).__name__}: {exc}"}
+                else:
+                    cleanup = {"status": "LEFT_RUNNING_ACTIVE_OR_UNKNOWN",
+                               "pid": server.proc.pid if server.proc else None,
+                               "port": server.port,
+                               "action": "preserved because full terminal ledger or exact process identity proof is incomplete",
+                               "worker_ledger_reconciliation": cleanup_reconciliation,
+                               "server_identity": original_process_identity,
+                               "worker_identity": worker_process_identity}
+            summary["cleanup"] = cleanup
+            if cleanup and cleanup.get("status") not in {
+                    "CLEANUP_VERIFIED_EXACT_OWNED_PIDS_AND_PORTS_ABSENT", "NOT_STARTED"}:
+                summary["status"] = "FAIL_OR_INCOMPLETE"
+            try:
+                summary["native_solve_submissions"] = (len(_actual_study_run_submissions(daemon, project_id))
+                                                        if daemon and project_id else 0)
+            except Exception as exc:
+                summary["native_solve_submissions"] = None
+                summary["study_submission_inventory_error"] = f"{type(exc).__name__}: {exc}"
+                summary["status"] = "LEFT_RUNNING_ACTIVE_OR_UNKNOWN"
+            if summary.get("active_project_jobs") or summary.get("precleanup_inventory_error"):
+                summary["status"] = "LEFT_RUNNING_ACTIVE_OR_UNKNOWN"
+            if summary.get("unknown_project_jobs"):
+                summary["durable_unknown_jobs_preserved"] = True
+                if summary.get("status") not in {"LEFT_RUNNING_ACTIVE_OR_UNKNOWN"}:
                     summary["status"] = "FAIL_OR_INCOMPLETE"
-        write_json(evidence / "summary.json", summary)
+            if cleanup and cleanup.get("status") == "CLEANUP_VERIFIED_EXACT_OWNED_PIDS_AND_PORTS_ABSENT":
+                try:
+                    post_inventory = _process_inventory() if admission_owner is None else _process_inventory(admission_owner=admission_owner,observation_only=True)
+                    write_json(evidence / "postcleanup_inventory.json", post_inventory)
+                    summary["postcleanup_inventory_quiescent"] = post_inventory["quiescent"]
+                    if not post_inventory["quiescent"]:
+                        summary["status"] = "FAIL_OR_INCOMPLETE"
+                except Exception as exc:
+                    summary["postcleanup_inventory_error"] = f"{type(exc).__name__}: {exc}"
+                    summary["status"] = "FAIL_OR_INCOMPLETE"
+                if daemon is not None:
+                    try:
+                        daemon.close()
+                    except Exception as exc:
+                        summary["daemon_close_error"] = f"{type(exc).__name__}: {exc}"
+                        summary["status"] = "FAIL_OR_INCOMPLETE"
+        except BaseException as exc:
+            if admission_owner is None:raise
+            admission_owner.diagnostic_failure('cleanup_or_ledger_finally',exc)
+            summary['status']='FAIL_OR_INCOMPLETE'
+        finally:
+            _finalize_coupled_owned_lifecycle_before_cli_return(admission_owner,summary,evidence)
     return summary
 
 

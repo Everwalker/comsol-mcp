@@ -301,6 +301,9 @@ def test_real_control_daemon_fences_w24_worker_transition_across_projects(tmp_pa
             self._process = process
             self.closed = False
 
+        def runtime_metadata(self):
+            return {"instance_id":"worker-live","generation":3,"server":"127.0.0.1:12345","connected":True}
+
         def client(self):
             return _Client()
 
@@ -330,7 +333,7 @@ def test_real_control_daemon_fences_w24_worker_transition_across_projects(tmp_pa
         registry={"legacy_test": lambda _args: {"success": True, "data": {"reached": True}}},
         worker=worker)
     backend_identity = {"runtime_id": "test-runtime", "worker_instance_id": "worker-live",
-                        "connection_epoch": 3, "server_instance_id": "server-epoch-live"}
+                        "connection_epoch": 3, "endpoint":"127.0.0.1:12345", "server_instance_id": "server-epoch-live"}
     daemon.backend.worker_identity = backend_identity
     science_project = create_project(daemon, project_root, "science")
     other_project = create_project(daemon, project_root, "other")
@@ -356,6 +359,10 @@ def test_real_control_daemon_fences_w24_worker_transition_across_projects(tmp_pa
     adapter.worker_sessions = 1
     adapter._worker_object = worker
     adapter._worker_process_identity = WORKER_IDENTITY
+    ref=service.ledger.bind_model("staged")
+    daemon.store.put_metadata("revisions",daemon.backend._model_project_key(ref.as_dict()),{"project_id":science_project["project_id"],"revision":0})
+    from tools.w24_native_epoch_capability import _capture_live_worker_binding
+    adapter._worker_binding_anchor=_capture_live_worker_binding(daemon.backend,project_id=science_project["project_id"],session_id=session_id)
     adapter.models = {"staged_baseline": runner.ManagedModelBinding(
         science_project["project_id"], session_id,
         {"session_id": session_id, "server_instance_id": "server-epoch-live",
@@ -603,6 +610,11 @@ def test_worker_epoch_allows_stable_logical_session_on_new_worker():
     adapter._retired_worker_server_instance_ids = {"server-epoch-1"}
     binding = _binding("session-fixed-endpoint", "server-epoch-2")
 
+    from tests.w24_live_binding_fixture import configure_backend,bind_ledger
+    from tools.w24_native_epoch_capability import _capture_live_worker_binding
+    configure_backend(adapter.daemon.backend,project_id=PROJECT_ID,session_id=binding.session_id,server_id="server-epoch-2",epoch=8)
+    bind_ledger(adapter.daemon.backend,binding.model_ref)
+    adapter._worker_binding_anchor=_capture_live_worker_binding(adapter.daemon.backend,project_id=PROJECT_ID,session_id=binding.session_id)
     epoch = adapter._validate_current_worker_binding(binding, name="staged_baseline")
 
     assert epoch == ("session-fixed-endpoint", "server-epoch-2", 1)

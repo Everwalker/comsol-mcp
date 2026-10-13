@@ -13,6 +13,7 @@ import os
 import secrets
 import socket
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -373,8 +374,14 @@ class PersistentJavaWorker:
             raise JavaWorkerError("worker is not started")
         return "127.0.0.1", self._port
 
-    def start(self, *, startup_timeout_s: float = 20.0) -> dict[str, Any]:
+    def start(self, *, startup_timeout_s: float = 20.0, admission_owner: Any = None) -> dict[str, Any]:
         with self._lock:
+            if admission_owner is not None:
+                from tools.w24_coupled_admission import require_admission_owner
+                require_admission_owner(admission_owner)
+                self._coupled_admission_owner = admission_owner
+                if self._process is not None:
+                    raise JavaWorkerError('coupled startup cannot attach or replay an existing Worker handle')
             preflight = getattr(self._process_factory, "preflight", None)
             if callable(preflight):
                 # Do not run javac or touch the endpoint cache until the
@@ -395,16 +402,24 @@ class PersistentJavaWorker:
             receipt_file = classes / "cache_receipt.json"
             if not marker.is_file() or not receipt_file.is_file():
                 classes.mkdir(parents=True, exist_ok=True)
-                compile_result = subprocess.run(
-                    [str(self.paths.executable("javac")), "-cp", classpath, "-encoding", "UTF-8", "-d", str(classes), str(source)],
-                    text=True, encoding="utf-8", errors="replace", stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
-                )
+                command = [str(self.paths.executable("javac")), "-cp", classpath, "-encoding", "UTF-8", "-d", str(classes), str(source)]
+                if admission_owner is None:
+                    compile_result = subprocess.run(command,
+                        text=True, encoding="utf-8", errors="replace", stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+                else:
+                    admission_owner.before_effect("Worker_javac_birth", 60.0)
+                    compile_process = subprocess.Popen(command, text=True, encoding="utf-8", errors="replace",
+                        stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True)
+                    stdout, stderr = admission_owner.wait_child(compile_process, "worker_javac", 60.0)
+                    compile_result = subprocess.CompletedProcess(command, compile_process.returncode, stdout, stderr)
                 if compile_result.returncode:
                     raise JavaWorkerError(f"worker compilation failed: {compile_result.stderr[-2000:]}")
                 receipt_file.write_text(json.dumps(cache_receipt, indent=2, sort_keys=True), encoding="utf-8")
                 marker.write_text(cache_key + "\n", encoding="ascii")
             self._classes_dir = classes
             endpoint = self.state_dir / "worker_endpoint.json"
+            if admission_owner is not None and (endpoint.exists() or endpoint.is_symlink()):
+                raise JavaWorkerError("coupled startup cannot adopt an existing Worker endpoint")
             existing = self._attach_existing(endpoint)
             if existing is not None:
                 return existing
@@ -419,8 +434,13 @@ class PersistentJavaWorker:
             log = (self.state_dir / "worker.stderr.log").open("a", encoding="utf-8")
             factory = self._process_factory or subprocess.Popen
             try:
+                if admission_owner is not None:
+                    admission_owner.before_effect("Worker_Popen_birth", startup_timeout_s)
                 self._process = factory(command, text=True, stdout=subprocess.DEVNULL, stderr=log,
                                         env=environment, start_new_session=True)
+                if admission_owner is not None:
+                    # Retain the actual factory/Popen object before any diagnostic.
+                    admission_owner.bind_child(self._process, "worker")
             except Exception as exc:
                 from ._windows_t037 import NativeSuspendedChildLaunchError
                 if type(exc) is NativeSuspendedChildLaunchError:
@@ -431,10 +451,22 @@ class PersistentJavaWorker:
                     raise unknown from exc
                 raise
             finally:
-                log.close()
+                pending_failure = sys.exc_info()[1]
+                try:
+                    log.close()
+                except BaseException as exc:
+                    if admission_owner is not None:
+                        if pending_failure is not None:
+                            admission_owner.diagnostic_failure("worker_log_close_after_birth_binding_failure", exc)
+                        else:
+                            admission_owner.fail("worker_log_close_failed_original_handle_retained", exc)
+                    if admission_owner is None or pending_failure is None:
+                        raise
             deadline = time.monotonic() + startup_timeout_s
             ready: dict[str, Any] | None = None
             while time.monotonic() < deadline:
+                if admission_owner is not None:
+                    admission_owner.before_effect("Worker_ready_probe", 0.02)
                 if endpoint.is_file():
                     try:
                         candidate = json.loads(endpoint.read_text(encoding="utf-8"))
@@ -443,12 +475,12 @@ class PersistentJavaWorker:
                 if self._process.poll() is not None:
                     detail = (self.state_dir / "worker.stderr.log").read_text(errors="replace")[-2000:]
                     raise JavaWorkerError(f"worker exited during startup: {detail}")
-                time.sleep(0.02)
+                time.sleep(0.02 if admission_owner is None else admission_owner.before_effect("Worker_ready_wait", 0.02))
             if ready is None:
                 raise JavaWorkerTimeout("worker did not publish a ready endpoint; do not assume it stopped")
             self._port, self._generation, self._token = int(ready["port"]), int(ready["generation"]), str(ready["token"])
             self._write_endpoint({**ready, "classpath_sha256": classpath_hash, "jar_count": jar_count, "state": "STARTED"})
-            return self.health(timeout_s=1.0)
+            return self.health(timeout_s=(1.0 if admission_owner is None else admission_owner.before_effect("Worker_ready_health", 1.0)))
 
     def _write_endpoint(self, state: Mapping[str, Any]) -> None:
         if self.state_dir is None:
@@ -497,6 +529,9 @@ class PersistentJavaWorker:
         if self._port is None:
             raise JavaWorkerError("worker is not started")
         request_id = data.get("request_id")
+        owner = getattr(self, "_coupled_admission_owner", None)
+        if owner is not None:
+            timeout_s = owner.worker_transport_cap(str(data.get("type")), 30.0 if timeout_s is None else timeout_s)
         try:
             with socket.create_connection(("127.0.0.1", self._port), timeout=5.0 if timeout_s is None else timeout_s) as conn:
                 conn.settimeout(timeout_s)
@@ -637,6 +672,11 @@ class PersistentJavaWorker:
                queue_timeout_s: float | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
         if kind not in {"connect", "disconnect", "model", "modelutil", "progress_log", "license_checkout", "model_snapshot", "call", "children", "walk", "public_describe", "lock_selftest", "code_compile", "code_execute", "g2_entity_identity", "g2_nodegroup_read", "g2_nodegroup_ungroup"}:
             raise JavaWorkerError("unknown private worker command")
+        owner = getattr(self, "_coupled_admission_owner", None)
+        if owner is not None:
+            cap = owner.worker_transport_cap(kind, 30.0 if rpc_timeout_s is None else rpc_timeout_s)
+            rpc_timeout_s = cap
+            queue_timeout_s = min(cap, cap if queue_timeout_s is None else queue_timeout_s)
         body = dict(payload); body["type"] = kind; body["request_id"] = request_id or f"wrk-{uuid.uuid4()}"
         if queue_timeout_s is not None:
             body["queue_timeout_ms"] = max(0, int(queue_timeout_s * 1000))
@@ -678,9 +718,10 @@ class PersistentJavaWorker:
         return reply
 
     def connect(self, host: str, port: int, *, encrypted: bool = False, user: str = "", password: str = "",
-                request_id: str | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
+                request_id: str | None = None, rpc_timeout_s: float | None = None,
+                queue_timeout_s: float | None = None) -> dict[str, Any]:
         return self.submit("connect", {"host": host, "port": port, "encrypted": encrypted, "user": user, "password": password},
-                           request_id=request_id, rpc_timeout_s=rpc_timeout_s)
+                           request_id=request_id, rpc_timeout_s=rpc_timeout_s, queue_timeout_s=queue_timeout_s)
 
     def checkout_license(self, products: list[str], *, request_id: str,
                          queue_timeout_s: float, rpc_timeout_s: float) -> dict[str, Any]:

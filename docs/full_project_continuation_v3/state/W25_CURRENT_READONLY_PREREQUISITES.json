@@ -1,0 +1,52 @@
+{
+  "schema": "V3_W25_CURRENT_DEV_DEPENDENCY_READONLY_PROBE_V1",
+  "observed_at": "2026-10-13T18:55:36.956320+00:00",
+  "status": "OBSERVED_DEVELOPMENT_CALLER_PREREQUISITES_ONLY",
+  "caller_executable": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/dev-python312/bin/python",
+  "platform": "arm64",
+  "production_source": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/comsol_mcp/_desktop_macos.py",
+  "source_sha256": "d968c5ca9dc04728a28f8c626c46ab7a2a335384264738cef78285fb04dedc74",
+  "result": {
+    "platform": "macos",
+    "permission_status": "UNKNOWN",
+    "control_status": "UNSUPPORTED_CONTROL",
+    "metadata_status": "UNAVAILABLE",
+    "accessibility_trusted": null,
+    "permission_scope": "ACTUAL_PRODUCT_CALLER_ONLY_NOT_CUA_CERTIFICATION",
+    "metadata_qualification": "API availability only; process/window inventory not queried by status",
+    "control_note": "metadata observer only; no Accessibility control or screen capture is implemented",
+    "profile_id": "comsol-mcp.macos-desktop-adapter/v2",
+    "platform_api": "Quartz window inventory + psutil process birth/session + Accessibility selector profile + ScreenCaptureKit exact-window capture",
+    "comsol_version_policy": "report app bundle version only; no COMSOL 6.3/6.4 build is native-certified by this profile",
+    "source_capabilities": {
+      "desktop.status": "PROCESS_WINDOW_IDENTITY_SOURCE_IMPLEMENTED"
+    },
+    "operation_gaps": {
+      "desktop.bind": "MODEL_BINDING_UNKNOWN: no observed Desktop endpoint/current-model provider",
+      "desktop.show_model": "UNSUPPORTED_CONTROL: no verified current-window model selector",
+      "desktop.select_node": "UNSUPPORTED_CONTROL: no observed COMSOL tree selector or NodePath readback",
+      "desktop.capture": "UNSUPPORTED_CONTROL: capture requires an exact target-window adapter and trusted artifact sink",
+      "desktop.action": "UNSUPPORTED_CONTROL: no observed, versioned COMSOL control selectors",
+      "desktop.shell_execute": "UNSUPPORTED_CONTROL: Java Shell is available only through an observed Windows UIA profile; macOS COMSOL documentation does not expose this Shell",
+      "desktop.migrate_standalone": "UNSUPPORTED_CONTROL: no current standalone identity/dirty-state/save-copy UI provider"
+    },
+    "native_evidence": "NOT_RUN",
+    "metadata_error": {
+      "stage": "dependency_import",
+      "type": "ModuleNotFoundError",
+      "message": "No module named 'ApplicationServices'"
+    }
+  },
+  "zero_effect_scope": {
+    "permission_prompt": false,
+    "window_inventory": false,
+    "pixels": false,
+    "GUI_launch": false,
+    "COMSOL_Server_or_Worker_birth": false,
+    "SDK_calls": false
+  },
+  "W25_native_actions": "NOT_RUN",
+  "product_runtime_probe": "NOT_RUN",
+  "model_window_binding": "UNVERIFIED",
+  "CUA_permission": "UNVERIFIED"
+}

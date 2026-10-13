@@ -1695,8 +1695,16 @@ class ManagedBackend:
             raise ExecutionContractError("ISOLATION_PROOF_REQUIRED", "this G2 model mutation requires a configured owned-server isolation receipt")
         if not self.endpoint_key:
             raise ExecutionContractError("ISOLATION_PROOF_REQUIRED", "current COMSOL endpoint is not bound")
+        owner = getattr(self.worker, "_coupled_admission_owner", None) if self.worker is not None else None
+        if owner is not None:
+            from tools.w24_coupled_admission import require_admission_owner
+            owner = require_admission_owner(owner)
+            if owner.server.worker is not self.worker:
+                raise ExecutionContractError("ISOLATION_PROOF_REQUIRED", "coupled G2 backend Worker receiver changed")
+            owner.before_effect("managed_G2_runtime_metadata", 10.0)
         runtime = self.worker.runtime_metadata() if self.worker is not None else {}
-        return verify_owned_server(receipt, endpoint=self.endpoint_key, worker_pid=runtime.get("pid"))
+        return verify_owned_server(receipt, endpoint=self.endpoint_key, worker_pid=runtime.get("pid"),
+            **({"admission_owner": owner} if owner is not None else {}))
 
     def _invoke_runtime_scoped(self, operation, arguments, execution, operation_id, event_callback=None):
         """Route a runtime-scoped G3 operation without a model or a revision (C05).
@@ -1936,11 +1944,14 @@ class ManagedBackend:
             engine_host_identity=engine_host_identity,
             request_id=request_id,
             registering_operation_id=operation_id,
+            artifact_type=arguments.get("artifact_type"),
+            format_version=arguments.get("format_version"),
         )
         return {
             "success": True,
             "data": {
                 "artifact_id": record["artifact_id"],
+                **{key: record[key] for key in ("artifact_type", "format_version") if key in record},
                 "sha256": record["sha256"],
                 "path": record["path"],
                 "size": record["size"],
@@ -3028,6 +3039,13 @@ class ManagedBackend:
                         resolve_registered_artifact,
                     )
                     project_id = execution.get("project_id")
+                    parameter_session = active_session_context()
+                    if (parameter_session is not None
+                            and (parameter_session.backend is not self
+                                 or parameter_session.worker is not self.worker
+                                 or parameter_session.service is not self.service)):
+                        raise ExecutionContractError("WORKER_BINDING_MISMATCH", "parameter I/O session receiver changed",
+                                                     stage="pre_dispatch")
                     if not isinstance(project_id, str) or not project_id:
                         raise ExecutionContractError(
                             "PROJECT_IDENTITY_MISMATCH",
@@ -3048,6 +3066,13 @@ class ManagedBackend:
                             "job_id": str(operation_id),
                             "_model_ref_object": ref,
                             "_execution_service": self.service,
+                            "_source_worker": self.worker,
+                            "_source_worker_epoch": (
+                                parameter_session.worker_epoch if parameter_session is not None else
+                                self._runtime_observation_binding.connection_epoch
+                                if self._runtime_observation_binding is not None else
+                                (self.worker_identity or {}).get("connection_epoch")
+                            ),
                         }
                     except ExecutionContractError as exc:
                         raise ExecutionContractError(

@@ -992,14 +992,14 @@ class _ParameterNode:
         if self.fail_after_set_name == name:
             raise RuntimeError("synthetic setter failure after mutation")
 
-    def evaluateUnit(self, name):
+    def _unit_readback(self, name):
         if self.unit_error_name == name:
             raise RuntimeError("synthetic unit readback failure")
         expression = self.values[name]["expression"]
         if expression == "3[m]":
             return "m"
         if expression == "B+1":
-            return self.evaluateUnit("B")
+            return self._unit_readback("B")
         return None
 
 
@@ -1022,6 +1022,14 @@ class _ParameterCollection:
                 "B": {"expression": "3[m]", "description": ""},
             }),
         }
+
+    def evaluateUnit(self, name):
+        # The public COMSOL 6.4 ParamBase evaluator belongs to ModelParam;
+        # group setters/getters implement ExpressionBase only.
+        for group in self.groups.values():
+            if name in group.values:
+                return group._unit_readback(name)
+        raise KeyError(name)
 
     def group(self, tag=None):
         return _ParameterGroupList(self.groups) if tag is None else self.groups[tag]
@@ -1121,6 +1129,52 @@ def _enable_synthetic_parameter_isolation(monkeypatch):
             "status": "VERIFIED_TEST_ONLY", "endpoint": endpoint, "worker_pid": worker_pid,
         },
     )
+
+
+def test_parameter_io_connection_epoch_two_accepts_model_incarnation_one(tmp_path, monkeypatch):
+    daemon, project_root, model_execution = _make_daemon(tmp_path, with_model=True)
+    worker = _ParameterWorker()
+    worker.generation = 2
+    daemon.backend.worker = worker
+    daemon.backend.worker_identity["connection_epoch"] = 2
+    _enable_synthetic_parameter_isolation(monkeypatch)
+    try:
+        assert model_execution["model_ref"]["generation"] == 1
+        result = _parameter_action(daemon, "parameter.export", model_execution,
+                                  {"format": "json", "destination": "epoch-two.json"},
+                                  key="export-epoch-two", request_id="export-epoch-two")
+        assert result["success"] is True, result
+        assert result["data"]["artifact_id"] == hashlib.sha256((project_root / "epoch-two.json").read_bytes()).hexdigest()
+    finally:
+        daemon.close()
+
+
+def test_parameter_io_epoch_change_during_native_getters_refuses_publication(tmp_path, monkeypatch):
+    daemon, project_root, model_execution = _make_daemon(tmp_path, with_model=True)
+    worker = _ParameterWorker()
+    worker.generation = 2
+    daemon.backend.worker = worker
+    daemon.backend.worker_identity["connection_epoch"] = 2
+    _enable_synthetic_parameter_isolation(monkeypatch)
+    original = worker.model._parameters.evaluateUnit
+
+    def epoch_changed(name):
+        value = original(name)
+        worker.generation = 3
+        # Coordinated changes to the mutable dictionary cannot change the
+        # private epoch already captured for this production callback.
+        daemon.backend.worker_identity["connection_epoch"] = 3
+        return value
+
+    monkeypatch.setattr(worker.model._parameters, "evaluateUnit", epoch_changed)
+    try:
+        result = _parameter_action(daemon, "parameter.export", model_execution,
+                                  {"format": "json", "destination": "epoch-changed.json"},
+                                  key="export-epoch-change", request_id="export-epoch-change")
+        assert result["success"] is False and _error_code(result) == "EXECUTION_STATE_UNKNOWN"
+        assert not (project_root / "epoch-changed.json").exists()
+    finally:
+        daemon.close()
 
 
 def test_parameter_io_uses_managed_roundtrip_for_all_groups_json_csv_and_units(tmp_path, monkeypatch):

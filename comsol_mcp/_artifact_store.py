@@ -298,25 +298,18 @@ def register_project_artifact(
                 raise _contract_error("ARTIFACT_CHANGED", "project source changed between hash and copy")
             _assert_no_symlink_components(destination.parent, field="registered artifact directory")
             try:
-                os.link(temp_path, destination)
+                # Publish complete single-link bytes once. A hard-link followed
+                # by temp unlink changes ctime while another registrar may own
+                # a pinned read of the published inode.
+                _rename_no_clobber(temp_path, destination)
             except FileExistsError:
                 raced_digest, _ = _hash_regular_artifact(destination)
                 if raced_digest != digest:
                     raise _contract_error("ARTIFACT_REGISTRATION_CONFLICT", "content-addressed destination appeared with different bytes")
-            except OSError:
-                # Some supported project volumes do not implement hard links.
-                # Reserve the name exclusively, then atomically replace only
-                # our own placeholder with the already verified temporary file.
-                try:
-                    placeholder_fd = os.open(os.fspath(destination), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
-                except FileExistsError as exc:
-                    raced_digest, _ = _hash_regular_artifact(destination)
-                    if raced_digest != digest:
-                        raise _contract_error("ARTIFACT_REGISTRATION_CONFLICT", "content-addressed destination appeared with different bytes") from exc
-                else:
-                    os.close(placeholder_fd)
-                    os.replace(temp_path, destination)
-                    created_destination = True
+            except OSError as exc:
+                # No placeholder/replace fallback: readers must never observe
+                # a partial destination when atomic exclusive rename is absent.
+                raise _contract_error("ACCESS_VIOLATION", "atomic no-clobber artifact publication is unavailable") from exc
             else:
                 created_destination = True
         finally:

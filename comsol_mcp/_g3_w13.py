@@ -303,7 +303,9 @@ def parameter_list(worker: Any, model_tag: str, arguments: Mapping[str, Any]) ->
         errors = []
         for name in names:
             try:
-                entries.append(expression_read(node, name))
+                # ModelParamGroup implements ExpressionBase, not ParamBase.
+                # COMSOL 6.4 evaluates grouped parameters through ModelParam.
+                entries.append(expression_read(node, name, unit_node=container))
             except ExecutionContractError as exc:
                 errors.append({**describe_engine_failure(exc, "get/descr/evaluateUnit"), "name": name})
         total += len(entries)
@@ -364,9 +366,9 @@ def parameter_get(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> 
     rows = []
     for name in names:
         node, group_tag = _find_parameter_group(container, spec, _validate_name(name, "names[]"))
-        row: dict[str, Any] = {"name": name, "group": group_tag, **expression_read(node, name)}
+        row: dict[str, Any] = {"name": name, "group": group_tag, **expression_read(node, name, unit_node=container)}
         if evaluate:
-            value, errors = _evaluate_parameter(node, name)
+            value, errors = _evaluate_parameter(container, name)
             row["evaluated"] = value
             row["evaluate_errors"] = errors
         rows.append(row)
@@ -441,7 +443,7 @@ def parameter_set(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> 
     for index, item in enumerate(items):
         name = item["name"]
         try:
-            pre = call_probe(target, "evaluateUnit", name)
+            pre = call_probe(container, "evaluateUnit", name)
             if item["unit"] is not None and pre["ok"] and not _declared_unit_matches(item["unit"], pre["value"]):
                 raise ExecutionContractError(
                     "PROPERTY_TYPE_MISMATCH",
@@ -449,7 +451,7 @@ def parameter_set(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> 
                     f"declared unit {item['unit']!r}; this layer never converts units, so the write is refused",
                 )
             recorded = expression_write(target, name, item["expression"], item["description"],
-                                        label="parameter expression")
+                                        label="parameter expression", unit_node=container)
             if item["unit"] is not None and not _declared_unit_matches(item["unit"], recorded.get("unit")):
                 applied.append({**recorded, "unit_requested": item["unit"], "unit_verified": False})
                 failed.append({

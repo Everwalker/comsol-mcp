@@ -1,0 +1,418 @@
+{
+  "candidate": {
+    "activity_id": "ed296828-dbb3-4553-8c3f-02b9e352aa2a",
+    "argv_sha256": "f42ab97fc80862a4d230492609aded117a5e648fa99e0625ec96dc1514624e29",
+    "budget": {
+      "case_order": [
+        "flat",
+        "step"
+      ],
+      "child_jvm_options": "-XX:ActiveProcessorCount=2 -Xms128m -Xmx1024m",
+      "cleanup_reserve_seconds": 600,
+      "configuration_order": [
+        "baseline",
+        "mesh_ratio_1_3",
+        "mesh_ratio_1_1",
+        "epsilon_6um",
+        "epsilon_10um",
+        "step_0_05Tc",
+        "step_0_20Tc"
+      ],
+      "future_science_binding_policy": "these refs are historical and invalid after Worker retirement; a later science campaign must load every SHA-bound MPH on its new Worker, repeat full parameter/mesh/max-step/getSize readback, issue new current-epoch receipts, and include that setup cost in budget",
+      "managed_rpc_cap_seconds": 120,
+      "max_gui_processes": 0,
+      "max_managed_workers": 1,
+      "max_single_unsolved_mph_bytes": 1073741824,
+      "max_solver_threads": 2,
+      "max_task_owned_comsol_servers": 1,
+      "max_total_project_output_bytes": 10737418240,
+      "planned_setup_receipts": 14,
+      "rss_limit_semantics": "sampled stop threshold, not an OS hard cap; active or UNKNOWN operations are retained and can exceed the threshold",
+      "rss_sample_interval_seconds": 1.0,
+      "rss_sampled_admission_stop_threshold_bytes": 6442450944,
+      "schema_version": 1,
+      "server_np_argv": [
+        "-np",
+        "2"
+      ],
+      "solver_calls": 0,
+      "study_run_submissions": 0,
+      "unknown_policy": "no retry; retain original durable operation, ControlDaemon, Worker handle, exact Popen and evidence while active or UNKNOWN",
+      "wall_seconds_from_server_birth_including_cleanup": 14400
+    },
+    "candidate_sha256": "680fc99a397f7a976dc832f925042bc280593dda4f7d46867d629c9bfc0b517c",
+    "cwd": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/w24-current-execution-snapshot-20261014-r2",
+    "environment": {
+      "COMSOL_JAVA_HOME": "/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home",
+      "COMSOL_MCP_ISOLATION_RECEIPT": "/private/tmp/cv3-w24-current-20261014-r2/work/isolation_receipt.json",
+      "COMSOL_MCP_TRUSTED_CODE": "1",
+      "COMSOL_PREFS_DIR": "/private/tmp/cv3-w24-current-20261014-r2/work/runtime/prefs",
+      "COMSOL_PROJECT_ROOT": "/private/tmp/cv3-w24-current-20261014-r2/work/project",
+      "COMSOL_ROOT": "/private/tmp/cv3-w24-current-20261014-r2/work/comsol-shadow",
+      "COMSOL_SERVER_MCP_HOME": "/private/tmp/cv3-w24-current-20261014-r2/work/mcp-home",
+      "COMSOL_SERVER_VERSION": "6.4.0.293",
+      "JAVA_HOME": "/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home",
+      "JAVA_TOOL_OPTIONS": "-XX:ActiveProcessorCount=2 -Xms128m -Xmx1024m",
+      "PYTHONPATH": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/w24-current-execution-snapshot-20261014-r2:/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/dev-python312/lib/python3.12/site-packages"
+    },
+    "exact_argv": [
+      "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/dev-python312/bin/python",
+      "-S",
+      "-m",
+      "tools.run_native_w24_static_shape_setup_campaign",
+      "execute",
+      "--evidence",
+      "/private/tmp/cv3-w24-current-20261014-r2/prepare",
+      "--work",
+      "/private/tmp/cv3-w24-current-20261014-r2/work",
+      "--reviewed-candidate-sha256",
+      "680fc99a397f7a976dc832f925042bc280593dda4f7d46867d629c9bfc0b517c",
+      "--comsol-root",
+      "/Applications/COMSOL64/Multiphysics",
+      "--jdk11",
+      "/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home"
+    ],
+    "exact_execute_plan": "/private/tmp/cv3-w24-current-20261014-r2/EXACT_EXECUTE_PLAN_REFERENCE_ONLY.json",
+    "freeze_file_sha256": "59d01e970ff86c20d5a951d404e601181adbd5ef5c3e4cf09d8b21f9ebb92776",
+    "freeze_path": "/private/tmp/cv3-w24-current-20261014-r2/prepare/candidate_freeze.json",
+    "import_count": 35,
+    "import_origins": "/private/tmp/cv3-w24-current-20261014-r2/PYTHON_NO_SITE_IMPORT_ORIGINS.json",
+    "literal_reference": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-current-native-prep-20261014-r2/LITERAL_NATIVE_ENTRY_REFERENCE_ONLY.zsh.txt",
+    "root_once_reference": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-current-native-prep-20261014-r2/ROOT_EXTERNAL_ONCE_REFERENCE_ONLY.json",
+    "runtime": {
+      "activity_id": "ed296828-dbb3-4553-8c3f-02b9e352aa2a",
+      "binding_sha256": "6bd8794e42dd35a352aeb9ae292cac281293d588d135d0232c02d7cccdcf3b12",
+      "budget": {
+        "case_order": [
+          "flat",
+          "step"
+        ],
+        "child_jvm_options": "-XX:ActiveProcessorCount=2 -Xms128m -Xmx1024m",
+        "cleanup_reserve_seconds": 600,
+        "configuration_order": [
+          "baseline",
+          "mesh_ratio_1_3",
+          "mesh_ratio_1_1",
+          "epsilon_6um",
+          "epsilon_10um",
+          "step_0_05Tc",
+          "step_0_20Tc"
+        ],
+        "future_science_binding_policy": "these refs are historical and invalid after Worker retirement; a later science campaign must load every SHA-bound MPH on its new Worker, repeat full parameter/mesh/max-step/getSize readback, issue new current-epoch receipts, and include that setup cost in budget",
+        "managed_rpc_cap_seconds": 120,
+        "max_gui_processes": 0,
+        "max_managed_workers": 1,
+        "max_single_unsolved_mph_bytes": 1073741824,
+        "max_solver_threads": 2,
+        "max_task_owned_comsol_servers": 1,
+        "max_total_project_output_bytes": 10737418240,
+        "planned_setup_receipts": 14,
+        "rss_limit_semantics": "sampled stop threshold, not an OS hard cap; active or UNKNOWN operations are retained and can exceed the threshold",
+        "rss_sample_interval_seconds": 1.0,
+        "rss_sampled_admission_stop_threshold_bytes": 6442450944,
+        "schema_version": 1,
+        "server_np_argv": [
+          "-np",
+          "2"
+        ],
+        "solver_calls": 0,
+        "study_run_submissions": 0,
+        "unknown_policy": "no retry; retain original durable operation, ControlDaemon, Worker handle, exact Popen and evidence while active or UNKNOWN",
+        "wall_seconds_from_server_birth_including_cleanup": 14400
+      },
+      "comsol": {
+        "classpath_manifest_sha256": "ef9ccdd4b236aa56465e155860ed88465c89f63f86982898cc7b15f188ad0574",
+        "exact_build": "6.4.0.293",
+        "jar_content_sha256": "c942b5e0fb93525bbd109028390bf15d27c1f702677149bca1b9f47aba7932b3",
+        "jar_count": 25,
+        "readme_sha256": "d64b0e7c979429ee10368f6b1b162738acc4c82f4a3b9821243d8dd1e59f81eb",
+        "root": "/Applications/COMSOL64/Multiphysics",
+        "version": {
+          "root_name": "Multiphysics",
+          "version_text": "6.4"
+        }
+      },
+      "jdk": {
+        "home": "/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home",
+        "version": {
+          "arch": "aarch64",
+          "vendor": "Amazon.com Inc.",
+          "version": "11.0.31"
+        }
+      },
+      "namespace": "/private/tmp/cv3-w24-current-20261014-r2",
+      "python": {
+        "distribution_metadata_sha256": "6837359519b0f86bff238c5351de665a16a7d72cc9c5b881cd09ad990aaf0fe7",
+        "entry": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/dev-python312/bin/python",
+        "executable_sha256": "fe46716a94d8efa4514feb3c39ba3e270deee2187556986f6ddcff54aba7bb9a",
+        "no_site": true,
+        "observed_prefix": "/opt/homebrew/Cellar/python@3.12/3.12.13_2/Frameworks/Python.framework/Versions/3.12",
+        "prefix": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/dev-python312",
+        "resolved": "/opt/homebrew/Cellar/python@3.12/3.12.13_2/Frameworks/Python.framework/Versions/3.12/bin/python3.12",
+        "site_packages": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/dev-python312/lib/python3.12/site-packages",
+        "version": "3.12.13"
+      },
+      "schema": "FRESH_NATIVE_RUNTIME_SOURCE_V1"
+    },
+    "runtime_authority": "/private/tmp/cv3-w24-current-20261014-r2/runtime.json",
+    "runtime_binding_sha256": "6bd8794e42dd35a352aeb9ae292cac281293d588d135d0232c02d7cccdcf3b12",
+    "slots": [
+      {
+        "case_id": "flat",
+        "configuration_id": "baseline",
+        "phase_initialization_executed": false,
+        "study_run_calls": 0,
+        "submission_index": 1
+      },
+      {
+        "case_id": "step",
+        "configuration_id": "baseline",
+        "phase_initialization_executed": false,
+        "study_run_calls": 0,
+        "submission_index": 2
+      },
+      {
+        "case_id": "flat",
+        "configuration_id": "mesh_ratio_1_3",
+        "phase_initialization_executed": false,
+        "study_run_calls": 0,
+        "submission_index": 3
+      },
+      {
+        "case_id": "step",
+        "configuration_id": "mesh_ratio_1_3",
+        "phase_initialization_executed": false,
+        "study_run_calls": 0,
+        "submission_index": 4
+      },
+      {
+        "case_id": "flat",
+        "configuration_id": "mesh_ratio_1_1",
+        "phase_initialization_executed": false,
+        "study_run_calls": 0,
+        "submission_index": 5
+      },
+      {
+        "case_id": "step",
+        "configuration_id": "mesh_ratio_1_1",
+        "phase_initialization_executed": false,
+        "study_run_calls": 0,
+        "submission_index": 6
+      },
+      {
+        "case_id": "flat",
+        "configuration_id": "epsilon_6um",
+        "phase_initialization_executed": false,
+        "study_run_calls": 0,
+        "submission_index": 7
+      },
+      {
+        "case_id": "step",
+        "configuration_id": "epsilon_6um",
+        "phase_initialization_executed": false,
+        "study_run_calls": 0,
+        "submission_index": 8
+      },
+      {
+        "case_id": "flat",
+        "configuration_id": "epsilon_10um",
+        "phase_initialization_executed": false,
+        "study_run_calls": 0,
+        "submission_index": 9
+      },
+      {
+        "case_id": "step",
+        "configuration_id": "epsilon_10um",
+        "phase_initialization_executed": false,
+        "study_run_calls": 0,
+        "submission_index": 10
+      },
+      {
+        "case_id": "flat",
+        "configuration_id": "step_0_05Tc",
+        "phase_initialization_executed": false,
+        "study_run_calls": 0,
+        "submission_index": 11
+      },
+      {
+        "case_id": "step",
+        "configuration_id": "step_0_05Tc",
+        "phase_initialization_executed": false,
+        "study_run_calls": 0,
+        "submission_index": 12
+      },
+      {
+        "case_id": "flat",
+        "configuration_id": "step_0_20Tc",
+        "phase_initialization_executed": false,
+        "study_run_calls": 0,
+        "submission_index": 13
+      },
+      {
+        "case_id": "step",
+        "configuration_id": "step_0_20Tc",
+        "phase_initialization_executed": false,
+        "study_run_calls": 0,
+        "submission_index": 14
+      }
+    ],
+    "source_closure_sha256": "d28e27dcea61ae6bdc575e49dd6f55d4eabc2d8df597ecd252145116bc6aec7c"
+  },
+  "identity_repairs": {
+    "actual_R6_reproduction": "Original raw R6 ref.generation1/Worker epoch2 and remote_engine_build=null/NOT_REPORTED now pass production validators with original version text. Original bytes not rewritten. Physical Worker for this test is synthetic and real SessionLedger; this is software evidence, not new native evidence.",
+    "engine_identity_parser": "Existing run_w21_stage_native._resolve_remote_comsol_identity; exact same observed raw remote_engine_version resolves explicit localized build293, raw remote_engine_build remains null/NOT_REPORTED. Wrong/missing/conflicting family/build rejected.",
+    "model_generation": "Exact model incarnation validated by original SessionLedger before/after; never compared to connection epoch. Captured incarnation per tag rejects coordinated rebind after first acceptance.",
+    "patch": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-current-native-prep-20261014-r2/W24_IDENTITY_REPAIR_VS_W23_R2_FROZEN_BASELINE.patch",
+    "source": {
+      "tests/test_run_native_w24_static_shape_setup_campaign.py": {
+        "baseline_sha256": "4a6273930ad998ebba65d603b3c759f65348d31fdd720e3be862962c0af8eb43",
+        "bytes": 37960,
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/w24-current-execution-snapshot-20261014-r2/tests/test_run_native_w24_static_shape_setup_campaign.py",
+        "sha256": "80d4278c73aa3b9a07889ca2d06db6bc74846a6d1dafc6de22793d1cc8786bd3"
+      },
+      "tests/test_w24_coupled_setup_unit.py": {
+        "baseline_sha256": "7a368d06f2f094e0eb74fb5da129e849f7cce00ec8fc5d3fc2b1e2f210721819",
+        "bytes": 13115,
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/w24-current-execution-snapshot-20261014-r2/tests/test_w24_coupled_setup_unit.py",
+        "sha256": "e7b1780b48f57300991862e2f57200330b096929e0b60db5812da9efbb066be2"
+      },
+      "tests/test_w24_model_connection_identity.py": {
+        "baseline_sha256": null,
+        "bytes": 7149,
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/w24-current-execution-snapshot-20261014-r2/tests/test_w24_model_connection_identity.py",
+        "sha256": "6450ff6a3812ec50cd275046a933ee567458c2e4cf71b01e0f1584c16ffa5cfd"
+      },
+      "tests/test_w24_static_shape_managed.py": {
+        "baseline_sha256": "4b5adb2e05d84ce2c6009fe98da6f4f6524a04efdb7d05d5becc915d1f2672bf",
+        "bytes": 29575,
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/w24-current-execution-snapshot-20261014-r2/tests/test_w24_static_shape_managed.py",
+        "sha256": "3f46760f501786b231e98b6c5633e93976cb4a72a00125f6f60ac9a784184c8d"
+      },
+      "tests/test_w24_worker_transition.py": {
+        "baseline_sha256": "1e9cc96217ec175c3b3f058fcda9b2a6c2bb43c21577d50a64233420d4d200a3",
+        "bytes": 31241,
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/w24-current-execution-snapshot-20261014-r2/tests/test_w24_worker_transition.py",
+        "sha256": "48e3d911dd4cc7f32f7d4c3486b414e9e64f62053a4b884286c77898811f666f"
+      },
+      "tests/w24_live_binding_fixture.py": {
+        "baseline_sha256": null,
+        "bytes": 1222,
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/w24-current-execution-snapshot-20261014-r2/tests/w24_live_binding_fixture.py",
+        "sha256": "a795cd8305f6b2427e9153e275a4599a9dfd8c994b3e31728e5976c4e36e705b"
+      },
+      "tools/run_native_w24_cure_science.py": {
+        "baseline_sha256": "66273705fbb62fcac70227fc43219145d81e0f4fe1f08a0f37cb854d8fcf5c58",
+        "bytes": 383045,
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/w24-current-execution-snapshot-20261014-r2/tools/run_native_w24_cure_science.py",
+        "sha256": "1adfa9acb7a1ee39dcbb28771a4e75b0bcc62d17a6436c09dfca39467dd515e8"
+      },
+      "tools/run_native_w24_static_shape_setup.py": {
+        "baseline_sha256": "a448b3ea8b8b26ee69841aaf279d477fa6a40583fd2fe742f5b4e916a92973cf",
+        "bytes": 42024,
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/w24-current-execution-snapshot-20261014-r2/tools/run_native_w24_static_shape_setup.py",
+        "sha256": "43893316f7ca2f30978db03d4f73cf4eaa7a9a93c5023b81a4851621fbb061c7"
+      },
+      "tools/run_native_w24_static_shape_setup_campaign.py": {
+        "baseline_sha256": "e31786d3e1583e3272d8fd23e89071222ec61d865fc8df8e62921922bd5a0659",
+        "bytes": 154528,
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/w24-current-execution-snapshot-20261014-r2/tools/run_native_w24_static_shape_setup_campaign.py",
+        "sha256": "13e1dda3f8c2e50ad8a91e752086561699528c07bb4be0c50c76ac3ad6c8e710"
+      },
+      "tools/w24_native_epoch_capability.py": {
+        "baseline_sha256": "8f804fe67a30db1660fcfdd7eab6420417630ed396c3b6fffdd564817959a1ab",
+        "bytes": 15012,
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/w24-current-execution-snapshot-20261014-r2/tools/w24_native_epoch_capability.py",
+        "sha256": "e1b78862819038d005f0b8569072fa57a7907347bbcf24619d0beaed94607460"
+      }
+    },
+    "worker_binding": "Private non-JSON original backend/Worker object plus copied identity/runtime/SessionLedger, independent instance_id/connection_epoch/endpoint/server/project/session; read-before/read-after mutable identity/record swap refusals retained."
+  },
+  "preserved_failures": [
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-current-python-repair-20261014/python-tests.stdout.txt",
+      "scope": "During-model-lookup generation race caught by added second actual SessionLedger read; shared W23 env fixture needed Main importhome update; repaired and final tests395PASS."
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-current-snapshot-python-tests-20261014-r1/tests.stdout.txt",
+      "scope": "r1 snapshot missing original W24 cure proposal needed by science regression helper. r2 copied exact runtime_source_manifest closure; no test or source gate weakened."
+    }
+  ],
+  "schema": "W24_CURRENT_SOURCE_PREPARATION_REPORT_V1",
+  "sdk": {
+    "classes": [
+      {
+        "bytes": 573,
+        "path": "W24StaticShapeFixture$Configuration.class",
+        "sha256": "0f53a305a2604f81168050d15b1d33f19a1b91e5433d0a510624ca7f0cde75cf"
+      },
+      {
+        "bytes": 37715,
+        "path": "W24StaticShapeFixture.class",
+        "sha256": "073d05b6ba6148d6d5a119cc5d5b652552159da67f5bfaa742668958612df230"
+      },
+      {
+        "bytes": 637,
+        "path": "W24StaticShapeReadback$Configuration.class",
+        "sha256": "1d899d4ed272eeb16440c90bc738a26b03301652a29334475f32d99fd1d1cfbd"
+      },
+      {
+        "bytes": 22704,
+        "path": "W24StaticShapeReadback.class",
+        "sha256": "8fc3bd4ed6b9cd79ce480edc8fd599bb6bc32427214432452c164ec3887d3106"
+      }
+    ],
+    "compile_receipt": "/private/tmp/cv3-w24-current-20261014-r2/prepare/offline_compile.json",
+    "no_engine_or_worker_birth": true,
+    "runtime_recheck": "/private/tmp/cv3-w24-current-20261014-r2/PREBIRTH_FROZEN_RUNTIME_RECHECK.json",
+    "status": "COMPILE_PASS_AND_PREBIRTH_FROZEN_RUNTIME_RECHECK_PASS"
+  },
+  "snapshot": {
+    "bytes": 30334091,
+    "content_closure_sha256": "6f57f5d5181fa79cb72300946584b834b63a4b3da115f6c91510a26be7c54bc4",
+    "copy_before_after_consistent": true,
+    "delta_counts": {
+      "CURRENT_PRODUCTION_ADD_NOT_IN_HEAD": 47,
+      "MODIFIED_CURRENT_PRODUCTION_BYTES": 24,
+      "UNCHANGED_HEAD_BYTES": 562
+    },
+    "files": 633,
+    "manifest": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/w24-current-execution-snapshot-20261014-r2/SOURCE_SNAPSHOT_MANIFEST.json",
+    "manifest_sha256": "7f9fb0cdae04a30aff680d0087d0f2521e29667b953b1a3ce6b70c71bdfde499",
+    "no_git_marker_forgery_or_source_rewrite": true,
+    "original_head": "6b52c63cdbf04f344e1587c907592831a80206c5",
+    "postprepare_all_bytes_sha_modes_consistent": true,
+    "readonly": {
+      "mutable_non_source_test_evidence_roots": [
+        "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/w24-current-execution-snapshot-20261014-r2/test-attachment-manifests"
+      ],
+      "source_directories": "0555",
+      "source_files": "0444"
+    },
+    "root": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/w24-current-execution-snapshot-20261014-r2"
+  },
+  "status": "PASS_SOFTWARE_SDK_PREPARE_NOT_NATIVE_PENDING_MAIN_ROOT_ONCE_AND_RUNTIME_QUIESCENCE",
+  "stop_boundary": {
+    "MPH_JAR_privateDB_copied": 0,
+    "commit_push": false,
+    "current_unknown_W23": "Retained by Main. No retry, PID signaling/takeover, approval/once/PID inheritance; no new native birth until authorized current runtime closure and actual quiescence.",
+    "external_once_created": false,
+    "native_engine_worker_gui_births": 0,
+    "native_scientific_acceptance": "NOT_RUN",
+    "product_W26_runtime": "NOT_RUN_NOT_IMPLIED_BY_DEV_RUNTIME_PREP",
+    "root_approval_issued": false,
+    "study_solver_calls": 0
+  },
+  "tests": {
+    "guard_events": [
+      "GUARD_ACTIVE_BEFORE_CHILD_ENTRYPOINT"
+    ],
+    "guard_log": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-current-snapshot-python-tests-20261014-r2-full/network-guard.jsonl",
+    "guard_sha256": "64e8c8a997d497812654d476a3502624868a771efe752d27bbb9c61cf13150b7",
+    "junit": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-current-snapshot-python-tests-20261014-r2-full/tests.xml",
+    "passed": 395,
+    "skip_scope": "W23 actual SDK seed-dependent sentinel (outside this W24 scope); Main shared W23 86PASS inherited independently",
+    "skipped": 1,
+    "status": "PASS",
+    "stdout": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-current-snapshot-python-tests-20261014-r2-full/tests.stdout.txt"
+  }
+}

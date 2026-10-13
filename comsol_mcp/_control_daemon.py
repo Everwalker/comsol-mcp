@@ -8,7 +8,7 @@ from contextvars import ContextVar
 from contextlib import ExitStack, contextmanager, nullcontext
 from datetime import datetime, timezone
 import hashlib
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer as _StdlibThreadingHTTPServer
 import ipaddress
 import itertools
 import json
@@ -18,12 +18,30 @@ from pathlib import Path
 import platform
 import re
 import secrets
+from socketserver import TCPServer
 import subprocess
 import threading
 import time
 import traceback
 from typing import Any, Mapping
 from uuid import uuid4
+
+
+class ThreadingHTTPServer(_StdlibThreadingHTTPServer):
+    """Bind the private numeric loopback listener without reverse DNS.
+
+    HTTPServer's hostname discovery can block before the authenticated control
+    endpoint is published. This service uses an exact numeric address and has
+    no hostname-dependent routing. Retain the existing factory seam for SCM
+    and listener-failure controls while avoiding that unrelated network query.
+    """
+
+    def server_bind(self):
+        if self.server_address[0] != "127.0.0.1":
+            raise ValueError("control listener must bind numeric IPv4 loopback")
+        TCPServer.server_bind(self)
+        self.server_name = "127.0.0.1"
+        self.server_port = self.server_address[1]
 
 from ._execution_contract import ExecutionContractError, canonical_request_hash
 from ._managed_backend import ManagedBackend, ProcessLock, SessionConnectFailure, collect_legacy_registry, _g3_operations
@@ -13246,7 +13264,7 @@ class ControlDaemon:
 
 def serve(home, *, host_provider_config=None, disk_resource_config=None, memory_resource_config=None,
           windows_t037_profile=None, _scm_runtime=None, _scm_bootstrap_request=None,
-          _scm_profile_source_sha256=None):
+          _scm_profile_source_sha256=None, _owner_observer=None):
     if _scm_bootstrap_request is not None and _scm_runtime is None:
         from ._windows_t037_broker import WindowsScmError
         raise WindowsScmError("SCM_BOOTSTRAP_SERVICE_REQUIRED", "bootstrap requests require the explicit SCM entrypoint")
@@ -13284,6 +13302,8 @@ def serve(home, *, host_provider_config=None, disk_resource_config=None, memory_
         singleton.close()
         raise
     try:
+        if _owner_observer is not None:
+            _owner_observer(daemon)
         return _serve_control_listener(home, daemon, token, _scm_runtime,
                                        _scm_bootstrap_request, _scm_profile_source_sha256)
     finally:

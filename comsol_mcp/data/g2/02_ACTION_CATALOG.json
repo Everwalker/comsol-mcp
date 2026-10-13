@@ -16741,7 +16741,7 @@
       "mcp_tool_name": "artifact_register",
       "domain": "artifact",
       "purpose": "将批准的文件导入项目并计算hash",
-      "arguments_signature": "path:str,role:str,classification:str",
+      "arguments_signature": "path:str,role:str,classification:str,artifact_type:str?,format_version:str?",
       "effect": "FILE_WRITE",
       "scope": "project",
       "gate": "G3",
@@ -16772,6 +16772,20 @@
           },
           "classification": {
             "type": "string"
+          },
+          "artifact_type": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "\\S",
+            "description": "Caller-declared format metadata; does not grant runtime, permissions, or scientific acceptance."
+          },
+          "format_version": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "\\S",
+            "description": "Caller-declared format metadata; does not grant runtime, permissions, or scientific acceptance."
           }
         },
         "required": [
@@ -16789,7 +16803,7 @@
         "normal_path",
         "failure_is_truthful"
       ],
-      "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read."
+      "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read. artifact_type and format_version are optional bounded nonempty declared metadata, persisted without inference; model_recipe consumers still require application/json and comsol-mcp-model-recipe/1 and validate actual recipe bytes and closure."
     },
     {
       "operation_id": "artifact.list",

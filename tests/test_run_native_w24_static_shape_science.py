@@ -516,6 +516,11 @@ class _ProductionRouteWorker:
     def __init__(self, state):
         self.state = state
 
+    def runtime_metadata(self):
+        # Synthetic transport identity; real ControlDaemon/SessionLedger gates remain active.
+        return {"connected": True, "instance_id": "synthetic-worker-stub",
+                "generation": 1, "server": "127.0.0.1:27824"}
+
     @contextmanager
     def operation_context(self, _operation_id, on_request_event=None):
         yield
@@ -643,7 +648,8 @@ def _real_control_daemon_pair(tmp_path: Path, monkeypatch, worker_state):
                                project_root=project_root)
         daemon.backend.worker_identity = {"connection_epoch": 1,
                                           "worker_instance_id": "synthetic-worker-stub",
-                                          "server_instance_id": "server-1"}
+                                          "server_instance_id": "server-1",
+                                          "endpoint": "127.0.0.1:27824"}
         services.append(service)
         daemons.append(daemon)
         bindings.append(ref)
@@ -1045,7 +1051,7 @@ def _real_sensitivity_readmission_fixture(tmp_path, monkeypatch, *, fault=None):
         tmp_path, monkeypatch, worker_state)
     daemon, service = daemons[0], services[0]
     from comsol_mcp import _model_ops
-    from comsol_mcp import _server as srv
+    from comsol_mcp._server import session_server as srv
     monkeypatch.setattr(_model_ops, "_model_tree_data", lambda _model: {
         "components": ["comp1"], "component_details": [], "parameters": [],
         "studies": ["stdShape"], "solutions": ["sol1"], "datasets": [], "results": [],

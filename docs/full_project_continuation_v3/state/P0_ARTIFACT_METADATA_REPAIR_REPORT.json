@@ -1,0 +1,73 @@
+{
+  "change": "Packaged and documented catalog add optional artifact_type/format_version strings, nonempty/nonwhitespace and <=128 characters, matching existing ArtifactStore bounded-string contract. ManagedBackend forwards them unchanged into register_project_artifact and returns them only when present. Declared metadata is not runtime/ownership/permission/scientific evidence.",
+  "consumer": "No consumer or ArtifactStore gate changed: role=model_recipe, application/json, comsol-mcp-model-recipe/1 remain mandatory; actual bytes, JSON/recipe/steps/closure/version are checked. General bounded format labels remain opaque at registration per existing store semantics; wrong recipe MIME/version is refused by unchanged consumer.",
+  "exact_owned_backend_delta": "_register_project_artifact only: two passthrough keyword arguments and conditional returned metadata fields. Other existing ManagedBackend modifications belong to Main and were not changed by this task.",
+  "next": "Main reviews exact production diff and these hashes. P0 client may explicitly send canonical declared metadata. Actual native package/rebuild validation remains a separate freshly approved bounded activity after existing UNKNOWN safety gates permit it.",
+  "preserved_work_receipts": [
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/p0-artifact-metadata-repair-20261014/tests.xml",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/p0-artifact-metadata-repair-20261014/tests.stdout.txt",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/p0-artifact-metadata-repair-20261014/final-tests.xml",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/p0-artifact-metadata-repair-20261014/final-tests.stdout.txt"
+  ],
+  "problem": "Public artifact.register accepted only path/role/classification; canonical model_recipe format metadata supported by internal ArtifactStore was lost on public ManagedBackend route. Strict rebuild consumer correctly refused ARTIFACT_ROLE_MISMATCH before any recipe step.",
+  "schema": "P0_PUBLIC_ARTIFACT_FORMAT_METADATA_REPAIR_V1",
+  "scope_limits": {
+    "P0_client_and_other_agent_tests_modified": false,
+    "artifact_store_modified": false,
+    "commit_push": false,
+    "consumer_gate_relaxation": false,
+    "native_engine_worker_gui_births": 0,
+    "native_recipe_steps_or_rebuilds": 0,
+    "original_task_tables_RESUME_decisions_modified": false,
+    "sdk_java_processes": 0
+  },
+  "source_manifest": {
+    "comsol_mcp/_managed_backend.py": {
+      "bytes": 240529,
+      "sha256": "83247b0f2e7a3092d03a659045b7bdf6e12d3c3ee21f0b35b94bb13d4ae75e7b"
+    },
+    "comsol_mcp/data/g2/02_ACTION_CATALOG.json": {
+      "bytes": 582192,
+      "sha256": "a90ca71153d246ceed8149d495e4cd13e2374b81166c48e037e0bb28dcde81da"
+    },
+    "docs/comsol_mcp_design_v1/00_FULL_SPEC.md": {
+      "bytes": 120027,
+      "sha256": "7b80c03cc2f2ec386816c67411630b702a7494e3e91cdb1d7c84dc5c46b87cbe"
+    },
+    "docs/comsol_mcp_design_v1/02_ACTION_CATALOG.json": {
+      "bytes": 582192,
+      "sha256": "a90ca71153d246ceed8149d495e4cd13e2374b81166c48e037e0bb28dcde81da"
+    },
+    "docs/comsol_mcp_design_v1/02_ACTION_CATALOG.md": {
+      "bytes": 39867,
+      "sha256": "948657922fea4c5ff42ea75347ff38ed4bae770dfc081b0827d8a5bd28bfcd02"
+    },
+    "tests/test_public_artifact_format_metadata.py": {
+      "bytes": 8783,
+      "sha256": "50a9b11c1a494c83d7cf1e9171af11c59e6331d8aad6d66541b396d1cea60c8a"
+    }
+  },
+  "status": "PASS_PUBLIC_SOFTWARE_REGISTRATION_AND_REAL_CONSUMER_PREFLIGHT_NATIVE_REBUILD_NOT_RUN",
+  "tests": {
+    "affected_total_pass": 123,
+    "junit": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/p0-artifact-metadata-repair-20261014/final-tests.xml",
+    "negative_controls": [
+      "metadata null/bool/numeric/array/object/empty/whitespace/over128",
+      "wrong MIME/version/role",
+      "legacy missing metadata remains untyped and refuses recipe",
+      "wrong/duplicate/nonrecipe JSON",
+      "absolute/traversal/symlink paths",
+      "project_write missing",
+      "wrong project/idempotency identity",
+      "extra acceptance proof field",
+      "immutable metadata overwrite/collision",
+      "registered file tamper"
+    ],
+    "new_controls": 36,
+    "new_test_file": "tests/test_public_artifact_format_metadata.py",
+    "other_agent_inherited": "public_p0_runtime_io reports separate89PASS client/property/delivery/render/preview including full3-step typed preflight and legacy metadata refusal; not rerun or elevated to native proof.",
+    "published_schema": "Actual jsonschema validation of published input schema admits canonical labels and rejects whitespace; packaged/docs catalogs match exactly.",
+    "scope": "Real operation_call/public schema -> ControlDaemon -> ManagedBackend -> actual ArtifactStore -> real _read_registered_recipe and _validate_recipe_steps -> deliberate RUNTIME_VERSION_MISMATCH before first recipe-step dispatch. Registration PASS is actual local file/store behavior; no successful rebuild/native/science is claimed.",
+    "stdout": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/p0-artifact-metadata-repair-20261014/final-tests.stdout.txt"
+  }
+}

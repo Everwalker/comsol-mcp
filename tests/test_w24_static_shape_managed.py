@@ -132,9 +132,12 @@ class FakeSetupRunner:
 class FakeBackend:
     def __init__(self):
         self.bindings: dict[str, dict[str, Any]] = {}
-        self.worker_identity = {"server_instance_id": SERVER_INSTANCE}
+        from tests.w24_live_binding_fixture import configure_backend
+        configure_backend(self,project_id=PROJECT_ID,session_id=SESSION_ID,server_id=SERVER_INSTANCE)
 
     def bind(self, model_ref: Mapping[str, Any], project_id: str = PROJECT_ID) -> None:
+        from tests.w24_live_binding_fixture import bind_ledger
+        bind_ledger(self,model_ref)
         self.bindings[json.dumps(dict(model_ref), sort_keys=True)] = {
             "attribution": "PROJECT_BOUND", "project_id": project_id,
         }
@@ -484,9 +487,9 @@ class _RouteFakeBackend:
         self.project_root = workspace
         self.host_permission_ceiling = {"inspect", "project_write", "compute"}
         self.worker = worker
-        self.worker_identity = {"server_instance_id": SERVER_INSTANCE}
-        self.service = SimpleNamespace(ledger=SimpleNamespace(
-            permissions={"inspect", "project_write", "compute"}, session_id=session_id))
+        from tests.w24_live_binding_fixture import configure_backend,bind_ledger
+        configure_backend(self,project_id=project_id,session_id=session_id,server_id=SERVER_INSTANCE)
+        bind_ledger(self,model_ref)
         self._project_id = project_id
         self._session_id = session_id
         self._model_ref = dict(model_ref)
@@ -560,7 +563,7 @@ def test_actual_control_daemon_model_load_routes_to_exact_registered_session_bac
             project_id=project["project_id"], session_id=SESSION_ID,
             project_root=workspace, runtime=runtime,
             endpoint=SessionEndpointIdentity("127.0.0.1", 27824, 1, observed_peer=socket),
-            backend=backend, worker_instance_id="worker-w24-session-route", worker=worker,
+            backend=backend, worker_instance_id="worker-w24-session-route", worker=backend.worker,
             service=backend.service)
         daemon.session_registry.register(context)
 

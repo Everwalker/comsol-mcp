@@ -29,8 +29,23 @@ import tempfile
 import time
 import uuid
 import zipfile
+import contextvars
+import contextlib
 from itertools import product
 from typing import Any, Iterable
+
+_CONTROLLED_LAUNCH = contextvars.ContextVar('comsol_release_internal_controlled_launch',default=None)
+
+@contextlib.contextmanager
+def _controlled_launch_scope(owner):
+    """Internal exact-stage launch bridge; ordinary CLI behavior remains unchanged."""
+    token=_CONTROLLED_LAUNCH.set(owner)
+    try:yield
+    finally:_CONTROLLED_LAUNCH.reset(token)
+
+def _capture(command,**kwargs):
+    owner=_CONTROLLED_LAUNCH.get()
+    return owner.capture(command,**kwargs) if owner is not None else subprocess.run(command,**kwargs)
 
 try:
     import tomllib
@@ -72,6 +87,20 @@ SECRET_PATTERNS = (
     re.compile(rb"-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----[\r\n]+[A-Za-z0-9+/=\r\n]{96,}-----END [A-Z0-9 ]*PRIVATE KEY-----"),
     re.compile(rb"(?i)(?:api[_-]?key|secret[_-]?key|auth[_-]?token)\s*[:=]\s*['\"]?[A-Za-z0-9_./+=-]{24,}"),
 )
+
+# Only the exact public CPython 3.12.13 Lib/test/certdata fixtures copied from
+# Python-3.12.13.tar.xz SHA c08bc65a81971c1dd5783182826503369466c7e67374d1646519adf05207b684.
+# https://www.python.org/ftp/python/3.12.13/Python-3.12.13.tar.xz (PSF license).
+_PUBLIC_CPYTHON_TLS_TEST_FIXTURES = {
+    'tests/fixtures/w26_public_tls/allsans.pem':(10105,'b6e7f6eeef758dd9f2f3f2645029471f09b8a8eb25670045d9d91fd24c597629'),
+    'tests/fixtures/w26_public_tls/badcert.pem':(1928,'262a107916641c7f211ac5898c0177535cd0bdc5aa872cc6e883842694d8f521'),
+    'tests/fixtures/w26_public_tls/keycert.pem':(4058,'cfd723672e8205a30f93aa14e24ef5b0264c41db367b50cfa0b6fcb83d881947'),
+}
+
+def _approved_public_python_tls_fixture(rel,data):
+    member=rel.split('!/')[-1]
+    pin=_PUBLIC_CPYTHON_TLS_TEST_FIXTURES.get(member)
+    return bool(pin and len(data)==pin[0] and hashlib.sha256(data).hexdigest()==pin[1])
 MAX_FILE_BYTES = 2 * 1024**3
 MAX_TOTAL_BYTES = 12 * 1024**3
 MAX_ARCHIVE_DEPTH = 3
@@ -174,7 +203,7 @@ def _inspect_bytes(rel: str, data: bytes, findings: list[dict[str, str]], depth:
     if len(data) > MAX_FILE_BYTES:
         findings.append({"path": rel, "kind": "FILE_SIZE_LIMIT"})
         return
-    if any(pattern.search(data) for pattern in SECRET_PATTERNS):
+    if any(pattern.search(data) for pattern in SECRET_PATTERNS) and not _approved_public_python_tls_fixture(rel,data):
         findings.append({"path": rel, "kind": "SECRET_PATTERN"})
     if depth >= MAX_ARCHIVE_DEPTH:
         return
@@ -2113,6 +2142,8 @@ def verify_campaign_state_bundle(bundle: pathlib.Path, extract_to: pathlib.Path 
 
 def build_wheel(source: pathlib.Path, out: pathlib.Path, python: pathlib.Path,
                 evidence: pathlib.Path) -> dict[str, Any]:
+    controlled=_CONTROLLED_LAUNCH.get()
+    if controlled is not None:controlled.before_build_wheel(source,out,python,evidence)
     if out.exists() and any(out.iterdir()):
         raise ReleaseError(f"output directory is not empty: {out}")
     out.mkdir(parents=True, exist_ok=True)
@@ -2127,11 +2158,11 @@ def build_wheel(source: pathlib.Path, out: pathlib.Path, python: pathlib.Path,
             "source_root_label": source.resolve().name, "file_count": src["file_count"],
             "manifest_sha256": src["manifest_sha256"], "files": src["files"],
         })
-        check = subprocess.run([str(python), "-c", "import setuptools, wheel; print(setuptools.__version__, wheel.__version__)"],
+        check = _capture([str(python), "-c", "import setuptools, wheel; print(setuptools.__version__, wheel.__version__)"],
                                capture_output=True, text=True)
         if check.returncode:
             raise ReleaseError("builder Python needs setuptools and wheel installed; use a separate build environment. " + check.stderr[-1000:])
-        proc = subprocess.run([str(python), "-m", "pip", "wheel", "--no-deps", "--no-build-isolation", "--disable-pip-version-check", "--wheel-dir", str(out), str(stage)],
+        proc = _capture([str(python), "-m", "pip", "wheel", "--no-deps", "--no-build-isolation", "--disable-pip-version-check", "--wheel-dir", str(out), str(stage)],
                               capture_output=True, text=True)
         log = {"command": "<builder-python> -m pip wheel --no-deps --no-build-isolation --wheel-dir <out> <sanitized-source-snapshot>",
                "exit_code": proc.returncode, "stdout": proc.stdout, "stderr": proc.stderr}
@@ -2157,7 +2188,7 @@ def build_wheel(source: pathlib.Path, out: pathlib.Path, python: pathlib.Path,
 
 def run_record(command: list[str], *, cwd: pathlib.Path | None = None) -> dict[str, Any]:
     start = time.monotonic()
-    proc = subprocess.run(command, cwd=str(cwd) if cwd else None, capture_output=True, text=True)
+    proc = _capture(command, cwd=str(cwd) if cwd else None, capture_output=True, text=True)
     return {"argv": command, "cwd": str(cwd) if cwd else None,
             "exit_code": proc.returncode, "stdout": proc.stdout,
             "stderr": proc.stderr, "duration_seconds": round(time.monotonic() - start, 3)}

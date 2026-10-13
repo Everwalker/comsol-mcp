@@ -1369,10 +1369,10 @@ def expression_names(node: Any) -> list[str]:
     return require_string_array(raw, "varnames()", allow_empty=True)
 
 
-def expression_read(node: Any, name: str, label: str = "name") -> dict[str, Any]:
+def expression_read(node: Any, name: str, label: str = "name", *, unit_node: Any = None) -> dict[str, Any]:
     value = _call(node, "get", name)
     description = call_probe(node, "descr", name)
-    unit = call_probe(node, "evaluateUnit", name)
+    unit = call_probe(node if unit_node is None else unit_node, "evaluateUnit", name)
     return {
         "name": name,
         "expression": value if isinstance(value, str) else typed_value_from_engine(value),
@@ -1384,7 +1384,7 @@ def expression_read(node: Any, name: str, label: str = "name") -> dict[str, Any]
 
 
 def expression_write(node: Any, name: str, expression: str, description: str | None = None,
-                     *, label: str = "expression") -> dict[str, Any]:
+                     *, label: str = "expression", unit_node: Any = None) -> dict[str, Any]:
     """Write one parameter/variable and prove the round trip by text readback.
 
     ``ExpressionBase`` stores both value and description as Java String text;
@@ -1422,7 +1422,7 @@ def expression_write(node: Any, name: str, expression: str, description: str | N
                 "EXECUTION_STATE_UNKNOWN",
                 f"{label} {name!r} description readback did not match the requested text",
             )
-    unit = call_probe(node, "evaluateUnit", name)
+    unit = call_probe(node if unit_node is None else unit_node, "evaluateUnit", name)
     recorded["unit"] = unit["value"] if unit["ok"] else None
     recorded["unit_error"] = None if unit["ok"] else unit["error"]
     return recorded

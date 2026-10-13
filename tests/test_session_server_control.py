@@ -25,12 +25,31 @@ from comsol_mcp._session_server import (
 )
 
 
+_HARMLESS_ORIGINAL_CHILDREN = []
+
+
+@pytest.fixture(autouse=True)
+def _retain_and_finalize_harmless_original_children(request, record_property):
+    first = len(_HARMLESS_ORIGINAL_CHILDREN)
+    yield
+    observations = []
+    for process in _HARMLESS_ORIGINAL_CHILDREN[first:]:
+        if process.poll() is None:
+            process.terminate()  # Only this test's exact original Popen.
+        code = process.wait(timeout=15)
+        observations.append({"pid": process.pid, "returncode": code,
+                             "original_popen_reaped": True})
+    record_property("harmless_original_child_cleanup", json.dumps(observations, sort_keys=True))
+
+
 def _sleeping_child():
-    return subprocess.Popen(
+    process = subprocess.Popen(
         [sys.executable, "-c", "import time; time.sleep(30)"],
         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         start_new_session=True,
     )
+    _HARMLESS_ORIGINAL_CHILDREN.append(process)
+    return process
 
 
 class _AttachedWorker:
@@ -97,12 +116,17 @@ class _LoopbackComsolCommand:
         port_file = command[command.index("-portfile") + 1]
         child = textwrap.dedent(
             """
-            import http.server, pathlib, sys
+            import http.server, pathlib, socketserver, sys
             class Quiet(http.server.BaseHTTPRequestHandler):
                 def do_GET(self):
                     self.send_response(200); self.end_headers(); self.wfile.write(b'ok')
                 def log_message(self, *args): pass
-            server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Quiet)
+            class NumericHTTPServer(http.server.ThreadingHTTPServer):
+                def server_bind(self):
+                    socketserver.TCPServer.server_bind(self)
+                    self.server_name = '127.0.0.1'
+                    self.server_port = self.server_address[1]
+            server = NumericHTTPServer(('127.0.0.1', 0), Quiet)
             pathlib.Path(sys.argv[1]).write_text(str(server.server_port), encoding='ascii')
             server.serve_forever()
             """
@@ -110,6 +134,7 @@ class _LoopbackComsolCommand:
         process = subprocess.Popen(
             [sys.executable, "-c", child, port_file], **options,
         )
+        _HARMLESS_ORIGINAL_CHILDREN.append(process)
         self.processes.append(process)
         return process
 

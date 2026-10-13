@@ -1,0 +1,44 @@
+{
+  "schema": "CURRENT_TASK_UNKNOWN_EXPLICIT_RECOVERY_STOP_PLAN_V1",
+  "status": "PREPARED_REQUIRES_EXPLICIT_USER_RECOVERY_STOP_AUTHORIZATION",
+  "activity_id": "w23-saved-mph-zero-solve-readback-8b25f276-060e-4144-9c4c-b382d717ef5e",
+  "model_load_job_id": "878eecc4-c490-48dc-a57e-57ea736546d0",
+  "domain_status": "UNKNOWN_UNCHANGED",
+  "safe_retry": false,
+  "root_failure": "readonly source logs mkdir before SDK load; no Study/solver dispatched",
+  "original_owner_failure": "parent runner exited and original Popen objects no longer usable; original cleanup guard refused, cannot treat saved PIDs as current stop authority",
+  "intended_actions": [
+    "fresh kernel identity and uid check for both original task process births and exact command SHA",
+    "fresh exact owned loopback endpoint/socket check; refuse foreign peer",
+    "only after direct user authorization, SIGTERM Worker then Server; do not SIGKILL, retry job or alter domain ledger",
+    "at most 15 seconds exit observation each; preserve whole task tree/model/database/artifact evidence",
+    "report explicit recovery-stop observation separately from original exact-Popen cleanup/native acceptance"
+  ],
+  "targets": [
+    {
+      "kind": "worker",
+      "pid": 63909,
+      "birth": "Wed Oct 14 01:35:13 2026",
+      "command_sha256": "325c7754557bd52ca3b7f3bf8155aa50180a98cf5be4fe53aad95a7e36235604"
+    },
+    {
+      "kind": "server",
+      "pid": 63818,
+      "birth": "Wed Oct 14 01:35:10 2026",
+      "command_sha256": "86a4ca882d155003b0dbcc8d0cf2dff7b02135b07b3f314fd003f7ec54b2b96e"
+    }
+  ],
+  "endpoint": "127.0.0.1:58054",
+  "fresh_authorization_path": "/private/tmp/cv3-w23-current-20261014-r2/CURRENT_USER_RECOVERY_STOP_AUTHORIZATION.json",
+  "current_user_owned_namespace": "/private/tmp/cv3-w23-current-20261014-r2",
+  "protected_states_untouched": true,
+  "historical_unknowns_no_replay": true,
+  "sdk_cleanup_approval": "NOT_GRANTED",
+  "failure_evidence": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/evidence/w23-current-native-r2/control-errors.log",
+  "prepared_at": "2026-10-13T17:44:47.990404+00:00",
+  "raw_summary_sha256": "27c696081050ae3327cb9f05e069eeece3bc46bd84330b080291b391e9862ba2",
+  "immutable_ledger_snapshot": {
+    "path": "/private/tmp/cv3-w23-current-20261014-r2/native/private-control-store/raw_operations.sqlite3",
+    "sha256": "61532722dbcc3de91a1edc26b7a8f5f26a87130fa8a7600dd650b108735a20dd"
+  }
+}

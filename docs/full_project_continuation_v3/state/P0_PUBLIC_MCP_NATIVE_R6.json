@@ -1,0 +1,316 @@
+{
+  "schema": "V3_PUBLIC_MCP_NATIVE_SMOKE_V1",
+  "activity_id": "cv3n-20261014-r6-423e078d",
+  "created_at": "2026-10-13T17:16:19.703942+00:00",
+  "status": "PASS_PUBLIC_BUILD_READ_SAVE",
+  "elapsed_seconds": 7.5252571670025645,
+  "budget": {
+    "action_seconds": 180,
+    "cleanup_seconds": 90,
+    "explicit_study_or_solver_calls": 0,
+    "gui_calls": 0,
+    "public_calls": 24,
+    "servers": 1,
+    "workers": 1
+  },
+  "actual_attach": {
+    "credentials_configured": false,
+    "endpoint": {
+      "host": "127.0.0.1",
+      "port": 55930
+    },
+    "observed_peer": {
+      "address": "127.0.0.1",
+      "port": 55930
+    },
+    "project_id": "490e3218-3adf-4bd5-b018-2a62533ff48e",
+    "remote_engine_build": null,
+    "remote_engine_build_source": "NOT_REPORTED",
+    "remote_engine_version": "COMSOL Multiphysics 6.4 (开发版本: 293)",
+    "runtime_id": "comsol-install:%2FApplications%2FCOMSOL64%2FMultiphysics",
+    "server_instance_id": "051937a9d4bd2065ea3fcfcbe1bb7e90236e92f4011a82e87f7eec123c796515",
+    "server_ownership": "mcp_managed",
+    "session_id": "session-3d57e5623a2049188133e01485959595",
+    "worker_epoch": 2,
+    "worker_instance_id": "bae9f5af-8f43-496a-9a20-d3c0cd669948"
+  },
+  "source": {
+    "files": 153,
+    "sha256": "a22fd96b1d4e668ebd057b2525b6c72f5e363cff07b65bea785f588e8dc44608",
+    "source_commit": "6b52c63cdbf04f344e1587c907592831a80206c5",
+    "source_scope": "current integrated package with documented global ParamBase receiver and private original Worker connection epoch guards; 355 affected tests PASS",
+    "uncommitted_source_delta": [
+      "comsol_mcp/_control_daemon.py",
+      "comsol_mcp/_g2_isolation.py",
+      "comsol_mcp/_g3_common.py",
+      "comsol_mcp/_g3_parameter_io.py",
+      "comsol_mcp/_g3_w13.py",
+      "comsol_mcp/_java_worker.py",
+      "comsol_mcp/_managed_backend.py"
+    ]
+  },
+  "source_after": {
+    "files": 153,
+    "sha256": "a22fd96b1d4e668ebd057b2525b6c72f5e363cff07b65bea785f588e8dc44608",
+    "source_commit": "6b52c63cdbf04f344e1587c907592831a80206c5",
+    "source_scope": "current integrated package with documented global ParamBase receiver and private original Worker connection epoch guards; 355 affected tests PASS",
+    "uncommitted_source_delta": [
+      "comsol_mcp/_control_daemon.py",
+      "comsol_mcp/_g2_isolation.py",
+      "comsol_mcp/_g3_common.py",
+      "comsol_mcp/_g3_parameter_io.py",
+      "comsol_mcp/_g3_w13.py",
+      "comsol_mcp/_java_worker.py",
+      "comsol_mcp/_managed_backend.py"
+    ]
+  },
+  "parameter_unit_acceptance": "OBSERVED",
+  "parameter_io_acceptance": "PASS_NATIVE_JSON_ROUNDTRIP_WITH_GLOBAL_PARAMBASE_EVALUATION",
+  "parameter_readback": {
+    "description": "V3 public MCP native smoke",
+    "description_error": null,
+    "expression": "2.5[mm]",
+    "name": "v3_marker",
+    "unit": "m",
+    "unit_error": null
+  },
+  "parameter_evaluated_readback": {
+    "description": "V3 public MCP native smoke",
+    "description_error": null,
+    "evaluate_errors": null,
+    "evaluated": {
+      "data": 0.0025,
+      "kind": "float64",
+      "shape": []
+    },
+    "expression": "2.5[mm]",
+    "group": null,
+    "name": "v3_marker",
+    "unit": "m",
+    "unit_error": null
+  },
+  "saved_artifact_hash_verified": true,
+  "public_cleanup_confirmed": true,
+  "server_stop": {
+    "authorization_ref_sha256": "f7153f1b9f5c3ec68b0a403ee4c2b425a667f852089df266522485b12c9f0617",
+    "project_id": "490e3218-3adf-4bd5-b018-2a62533ff48e",
+    "server_stopped": true,
+    "session_id": "session-3d57e5623a2049188133e01485959595",
+    "state": "STOPPED",
+    "stop_evidence": {
+      "birth": "start_epoch_ms:1791911780650",
+      "child_reaped": true,
+      "exit_confirmed": true,
+      "listener_absent": true,
+      "pid": 56407,
+      "returncode": 143,
+      "server_stopped": true
+    },
+    "worker_client_state": "RETIRED"
+  },
+  "worker_retirement": {
+    "client_state": "RETIRED",
+    "disconnect_rpc_dispatched": true,
+    "engine_dispatched": true,
+    "project_id": "490e3218-3adf-4bd5-b018-2a62533ff48e",
+    "server_stopped": false,
+    "session_id": "session-3d57e5623a2049188133e01485959595",
+    "state": "DISCONNECTED",
+    "worker_handle_preserved": false,
+    "worker_retirement": {
+      "admission_fence": "RETIRED",
+      "birth_identity_matched_before_close": true,
+      "child_exit_confirmed": true,
+      "child_reaped": true,
+      "disconnect_rpc_dispatched": true,
+      "exact_popen_handle": true,
+      "process_identity": {
+        "pid": 56508,
+        "start_epoch_ms": 1791911784145
+      },
+      "status": "RETIRED",
+      "worker_close_started": true,
+      "worker_epoch": 3,
+      "worker_instance_id": "bae9f5af-8f43-496a-9a20-d3c0cd669948"
+    }
+  },
+  "controller_exit_code": -15,
+  "observed_native_pids_after": [
+    {
+      "alive": false,
+      "pid": 56407
+    }
+  ],
+  "installed_server_xml_unchanged": true,
+  "protected_state_unchanged": true,
+  "original_unknown_replay": false,
+  "science_acceptance": "NOT_RUN",
+  "release_acceptance": "NOT_RUN",
+  "uncertain_outcome_retained": false,
+  "harness_sha256": "fe48be87bec19d991fb99233cc5064d120d13f1a8c3d33b2482486699ad966d9",
+  "harness_unchanged": true,
+  "public_calls": 17,
+  "call_results": [
+    {
+      "operation": "runtime.discover",
+      "success": true,
+      "isError": false,
+      "state": "OBSERVED",
+      "request_id": "cv3n-20261014-r6-423e078d-0-cbaa584dac02492bbcb9421621842fda"
+    },
+    {
+      "operation": "runtime.inspect",
+      "success": true,
+      "isError": false,
+      "state": "OBSERVED",
+      "request_id": "cv3n-20261014-r6-423e078d-1-a2606791d5444ef3a05b2f88b240ac48"
+    },
+    {
+      "operation": "project.create",
+      "success": true,
+      "isError": false,
+      "state": "OBSERVED",
+      "request_id": "cv3n-20261014-r6-423e078d-2-0d33fb40118c4c6ebdad5adb738f62bb"
+    },
+    {
+      "operation": "session.start",
+      "success": true,
+      "isError": false,
+      "state": "OBSERVED",
+      "request_id": "cv3n-20261014-r6-423e078d-3-8f5b656861024bc38599f98a326ad5ca"
+    },
+    {
+      "operation": "session.connect",
+      "success": true,
+      "isError": false,
+      "state": "OBSERVED",
+      "request_id": "cv3n-20261014-r6-423e078d-4-859ece1edf6c4dacb226fa0c91495805"
+    },
+    {
+      "operation": "session.health",
+      "success": true,
+      "isError": false,
+      "state": "OBSERVED",
+      "request_id": "cv3n-20261014-r6-423e078d-5-f7ca9d3dc62d40149e4d6cd9b355c7db"
+    },
+    {
+      "operation": "model.create",
+      "success": true,
+      "isError": false,
+      "state": "OBSERVED",
+      "request_id": "cv3n-20261014-r6-423e078d-6-37ff3c667dac4aeab5e6bdb21d8db741"
+    },
+    {
+      "operation": "parameter.set",
+      "success": true,
+      "isError": false,
+      "state": "OBSERVED",
+      "request_id": "cv3n-20261014-r6-423e078d-7-f663b10b97484c0d907aa1c7e300eb58"
+    },
+    {
+      "operation": "parameter.list",
+      "success": true,
+      "isError": false,
+      "state": "OBSERVED",
+      "request_id": "cv3n-20261014-r6-423e078d-8-768c5ad0e6bd4476a760bb954a8affb6"
+    },
+    {
+      "operation": "parameter.export",
+      "success": true,
+      "isError": false,
+      "state": "OBSERVED",
+      "request_id": "cv3n-20261014-r6-423e078d-9-962e22aa3961469bbfcb173266bde0ee"
+    },
+    {
+      "operation": "parameter.set",
+      "success": true,
+      "isError": false,
+      "state": "OBSERVED",
+      "request_id": "cv3n-20261014-r6-423e078d-10-0c766b64108b4b04bc19b21a04934ea8"
+    },
+    {
+      "operation": "parameter.import",
+      "success": true,
+      "isError": false,
+      "state": "OBSERVED",
+      "request_id": "cv3n-20261014-r6-423e078d-11-4dc92279cc56448b9806c21ab43275f3"
+    },
+    {
+      "operation": "parameter.get",
+      "success": true,
+      "isError": false,
+      "state": "OBSERVED",
+      "request_id": "cv3n-20261014-r6-423e078d-12-20d3d2f3194f460ca739d88494d852fa"
+    },
+    {
+      "operation": "model.inspect",
+      "success": true,
+      "isError": false,
+      "state": "OBSERVED",
+      "request_id": "cv3n-20261014-r6-423e078d-13-cdfdd9a063eb4bfc90fbd85cccb81408"
+    },
+    {
+      "operation": "model.save",
+      "success": true,
+      "isError": false,
+      "state": "OBSERVED",
+      "request_id": "cv3n-20261014-r6-423e078d-14-82f090e76fd048ecb20058db5792e518"
+    },
+    {
+      "operation": "session.disconnect",
+      "success": true,
+      "isError": false,
+      "state": "OBSERVED",
+      "request_id": "cv3n-20261014-r6-423e078d-15-302d2547180644d787a6135eaa789417"
+    },
+    {
+      "operation": "session.stop",
+      "success": true,
+      "isError": false,
+      "state": "OBSERVED",
+      "request_id": "cv3n-20261014-r6-423e078d-16-106aa4f1b6bd42e48cd79fdf12e49cb6"
+    }
+  ],
+  "saved_model": {
+    "destination": "v3-native-smoke.mph",
+    "sha256": "fb9880a77414eeb84e1e79fba624f4d99be2ad359ac1b2ce9b60a72e76870601",
+    "size_bytes": 52992,
+    "include_solution": false,
+    "source_revision": 4
+  },
+  "parameter_source": {
+    "artifact_id": "1e3f244c514ff89c75e0c4b39a70470db9314b8042e876ebb84a4370688e973f",
+    "format": "json",
+    "sha256": "1e3f244c514ff89c75e0c4b39a70470db9314b8042e876ebb84a4370688e973f",
+    "row_count": 1,
+    "size_bytes": 212,
+    "source_revision": 1
+  },
+  "parameter_import_result": {
+    "status": "APPLIED",
+    "source_format": "json",
+    "source_sha256": "1e3f244c514ff89c75e0c4b39a70470db9314b8042e876ebb84a4370688e973f",
+    "applied": [
+      {
+        "description": "V3 public MCP native smoke",
+        "description_readback": "V3 public MCP native smoke",
+        "expression": "2.5[mm]",
+        "expression_readback": "2.5[mm]",
+        "group": "default",
+        "name": "v3_marker",
+        "unit": "m",
+        "unit_status": "VERIFIED"
+      }
+    ],
+    "failed": [],
+    "not_executed": []
+  },
+  "raw_summary_retained": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/evidence/p0-native-r6/SUMMARY.json",
+  "raw_summary_sha256": "0bef33938047abe5a5d94ebc794bfbfc1df6052df1db415e63128f3f841d180c",
+  "acceptance_limits": [
+    "JSON one-parameter actual SDK roundtrip only; CSV native remains NOT_RUN",
+    "session version readback is not immutable code-producer runtime-observation acceptance",
+    "W22-W24 science and full host delivery/native matrices remain incomplete",
+    "no final independent Reviewer acceptance"
+  ]
+}

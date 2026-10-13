@@ -1,0 +1,554 @@
+{
+  "schema": "W24_V3_SELECTIVE_IMPLEMENTATION_REPORT_V1",
+  "created_at": "2026-10-13T16:31:14.275185+00:00",
+  "baseline_commit": "6b52c63cdbf04f344e1587c907592831a80206c5",
+  "status": "SOFTWARE_INTEGRATED_SELFTEST_PASS_MAIN_REVIEW_PENDING",
+  "scope": "Implementation and developer self-test; not final independent Reviewer",
+  "source_manifest": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-integration-final-source.json",
+  "source_manifest_sha256": "7ed189c2cb5cb7d27f968b943876c377e9df201a3c2478efdbd5efed194d3fc7",
+  "source_posttest_unchanged": true,
+  "changed_and_retained_files": [
+    {
+      "path": "comsol_mcp/_java_worker.py",
+      "before_sha256": "42c2dc0eb018eb3fd58299b93fd1161ab6a3baae01f82d47d260a5e2e9270933",
+      "candidate_sha256": "f5680453a6da829afae6490b4dde7121d8d8def376beba9aca3d05c07d0a9bd9",
+      "after_sha256": "5f8d6cddb63d163ba8143dde872eafca3cc7ad838e772650e327544d85bd7344",
+      "source_origin": "continuation/candidates/w24-coupled05/repository/comsol_mcp/_java_worker.py",
+      "decision": "SELECTIVE_OWNER_BUDGET_HOOKS_CURRENT_PUBLIC_FEATURES_PRESERVED"
+    },
+    {
+      "path": "comsol_mcp/_g2_isolation.py",
+      "before_sha256": "dd2da52140d191bea3cd036fe5ab06782d9ff30c119686c13bde99c32d64580b",
+      "candidate_sha256": "ccb6f0fb7810b653ac3055ebec608984ec032e8ed67ffcba153b3533ad70e1c7",
+      "after_sha256": "fbcd831b1e6bf91b3f0b61030cda9a10e95b0d4d759150b1c4a3b150007bb606",
+      "source_origin": "continuation/candidates/w24-coupled05/repository/comsol_mcp/_g2_isolation.py",
+      "decision": "SELECTIVE_OWNER_BUDGET_HOOKS_CURRENT_PUBLIC_FEATURES_PRESERVED"
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "before_sha256": "d6ca3c816cca1d34cbd9796b759aa75744950d7737643afb0bc2bafe779ea9c2",
+      "candidate_sha256": "aabe45e20fa7789911a136af90c8f2637a91b33e4aeb13bec4e552bb3f6fade6",
+      "after_sha256": "8e774df63536b3e252d4fd0c9ac5f2c671aea3ad9f3048d1f33def33e63e6af0",
+      "source_origin": "continuation/candidates/w24-coupled05/repository/comsol_mcp/_managed_backend.py",
+      "decision": "SELECTIVE_OWNER_BUDGET_HOOKS_CURRENT_PUBLIC_FEATURES_PRESERVED"
+    },
+    {
+      "path": "tools/run_native_resume_smoke.py",
+      "before_sha256": "fb086c01ba6b9e48f78415bf092877d2b9cab9011c13f8613b48c0ae75e67180",
+      "candidate_sha256": "7972f8382e5cf0b6bbc1413f7e62a882179a575624cb4186fa839fc8b04feada",
+      "after_sha256": "7972f8382e5cf0b6bbc1413f7e62a882179a575624cb4186fa839fc8b04feada",
+      "source_origin": "continuation/candidates/w24-coupled05/repository/tools/run_native_resume_smoke.py",
+      "decision": "SELECTIVE_OWNER_BUDGET_HOOKS_CURRENT_PUBLIC_FEATURES_PRESERVED"
+    },
+    {
+      "path": "tests/test_run_native_w24_static_shape_science.py",
+      "before_sha256": "90700cef1af723fb6ea4e0b7b9848e65f7711d2588f378bcd196c9e585fb3aab",
+      "candidate_sha256": "d641d83ac6451b28ffd36c1b7f395f62dd275afb5db0587aa1f0245fe42e376a",
+      "after_sha256": "d641d83ac6451b28ffd36c1b7f395f62dd275afb5db0587aa1f0245fe42e376a",
+      "source_origin": "continuation/candidates/w24-coupled05/repository/tests/test_run_native_w24_static_shape_science.py",
+      "decision": "W24_TESTS_WITH_PORTABLE_PACKAGE_IMPORT_RUNTIME_AND_SOFTWARE_CLOSURE_FIXTURES"
+    },
+    {
+      "path": "tests/test_w24_cure_coupon_fixture.py",
+      "before_sha256": "cfbe96de3b8a61dc9020803e003ca335b588cff0895559287f7417200840b60b",
+      "candidate_sha256": "bef3a7b223e1d25aec59ebeeb64089ab0b3f00fb53505771ed5a2259f75a3c52",
+      "after_sha256": "bef3a7b223e1d25aec59ebeeb64089ab0b3f00fb53505771ed5a2259f75a3c52",
+      "source_origin": "continuation/candidates/w24-coupled05/repository/tests/test_w24_cure_coupon_fixture.py",
+      "decision": "W24_TESTS_WITH_PORTABLE_PACKAGE_IMPORT_RUNTIME_AND_SOFTWARE_CLOSURE_FIXTURES"
+    },
+    {
+      "path": "tests/test_w24_cure_preflight_runner.py",
+      "before_sha256": "3b7127c3d0afd159744b06da4966c6d10641bb82395fce5ce4543a6d25e46bbb",
+      "candidate_sha256": "ab53405e7eb69b5a89fd6f67fd25eaecd8c3530f53347ebfe4ed8931ac0b8984",
+      "after_sha256": "ab53405e7eb69b5a89fd6f67fd25eaecd8c3530f53347ebfe4ed8931ac0b8984",
+      "source_origin": "continuation/candidates/w24-coupled05/repository/tests/test_w24_cure_preflight_runner.py",
+      "decision": "W24_TESTS_WITH_PORTABLE_PACKAGE_IMPORT_RUNTIME_AND_SOFTWARE_CLOSURE_FIXTURES"
+    },
+    {
+      "path": "tests/test_w24_actual_default_epoch_capability.py",
+      "before_sha256": null,
+      "candidate_sha256": "ed249a2ceb5750bcf6118a3eb7295e76925180393f9640661fae7f60b6e4597a",
+      "after_sha256": "ed249a2ceb5750bcf6118a3eb7295e76925180393f9640661fae7f60b6e4597a",
+      "source_origin": "continuation/candidates/w24-coupled05/repository/tests/test_w24_actual_default_epoch_capability.py",
+      "decision": "W24_TESTS_WITH_PORTABLE_PACKAGE_IMPORT_RUNTIME_AND_SOFTWARE_CLOSURE_FIXTURES"
+    },
+    {
+      "path": "tests/test_w24_coupled_admission.py",
+      "before_sha256": null,
+      "candidate_sha256": "05be03899700f9d214ff36ba9da73b311a706864701cf22c87b8e79b8060545a",
+      "after_sha256": "05be03899700f9d214ff36ba9da73b311a706864701cf22c87b8e79b8060545a",
+      "source_origin": "continuation/candidates/w24-coupled05/repository/tests/test_w24_coupled_admission.py",
+      "decision": "W24_TESTS_WITH_PORTABLE_PACKAGE_IMPORT_RUNTIME_AND_SOFTWARE_CLOSURE_FIXTURES"
+    },
+    {
+      "path": "tests/test_w24_coupled_lifecycle_residuals.py",
+      "before_sha256": null,
+      "candidate_sha256": "0acc79d33562d2bd498f31fb473e2d870612549556d4de3afdd44ba11d0ae88f",
+      "after_sha256": "4d70dbad12c1cff0ca814a4e5820533c1ceff0efd66c77ed6461e8fad110c327",
+      "source_origin": "continuation/candidates/w24-coupled05/repository/tests/test_w24_coupled_lifecycle_residuals.py",
+      "decision": "W24_TESTS_WITH_PORTABLE_PACKAGE_IMPORT_RUNTIME_AND_SOFTWARE_CLOSURE_FIXTURES"
+    },
+    {
+      "path": "tests/test_w24_coupled_probe_propagation.py",
+      "before_sha256": null,
+      "candidate_sha256": "1d5ffa808f558663d825f2622b4bb9dba830d8770d300768368b8381bf174610",
+      "after_sha256": "f779f10d604c31c037c47594c7e03a6fc5139cf39bd3bb6547815f358a1595af",
+      "source_origin": "continuation/candidates/w24-coupled05/repository/tests/test_w24_coupled_probe_propagation.py",
+      "decision": "W24_TESTS_WITH_PORTABLE_PACKAGE_IMPORT_RUNTIME_AND_SOFTWARE_CLOSURE_FIXTURES"
+    },
+    {
+      "path": "tests/test_w24_coupled_setup_unit.py",
+      "before_sha256": null,
+      "candidate_sha256": "6c00717b94bb8330fefd75b617334a3bb3d3bf998af062f2ac0db78460f4d9e3",
+      "after_sha256": "7a368d06f2f094e0eb74fb5da129e849f7cce00ec8fc5d3fc2b1e2f210721819",
+      "source_origin": "continuation/candidates/w24-coupled05/repository/tests/test_w24_coupled_setup_unit.py",
+      "decision": "W24_TESTS_WITH_PORTABLE_PACKAGE_IMPORT_RUNTIME_AND_SOFTWARE_CLOSURE_FIXTURES"
+    },
+    {
+      "path": "tests/test_w24_current11_config_projection.py",
+      "before_sha256": null,
+      "candidate_sha256": "9de1116509c7c92fa3596db3aff407b6f2caec99a3a3453c615778cc77b9f950",
+      "after_sha256": "57733c91f796c1de56397b736c5bb01309f45b4255e575243fdb24e38192f34a",
+      "source_origin": "continuation/candidates/w24-coupled05/repository/tests/test_w24_current11_config_projection.py",
+      "decision": "W24_TESTS_WITH_PORTABLE_PACKAGE_IMPORT_RUNTIME_AND_SOFTWARE_CLOSURE_FIXTURES"
+    },
+    {
+      "path": "tests/test_w24_native_mesh_volume.py",
+      "before_sha256": null,
+      "candidate_sha256": "9798a72cd675bd6493342758d43a707724420f0e7ce8084982c876d9a3f38837",
+      "after_sha256": "9798a72cd675bd6493342758d43a707724420f0e7ce8084982c876d9a3f38837",
+      "source_origin": "continuation/candidates/w24-coupled05/repository/tests/test_w24_native_mesh_volume.py",
+      "decision": "W24_TESTS_WITH_PORTABLE_PACKAGE_IMPORT_RUNTIME_AND_SOFTWARE_CLOSURE_FIXTURES"
+    },
+    {
+      "path": "tests/test_w24_setup_input_attachment.py",
+      "before_sha256": null,
+      "candidate_sha256": "8f436da86c8e6cd022f356c5d7cc566a397748de61e7e1d8f9fd3adf9b391f0b",
+      "after_sha256": "57616b6476a4af84a63b6b5cc738f6317a4b936d2ab1fb95a9d2a9b3738c6d8d",
+      "source_origin": "continuation/candidates/w24-coupled05/repository/tests/test_w24_setup_input_attachment.py",
+      "decision": "W24_TESTS_WITH_PORTABLE_PACKAGE_IMPORT_RUNTIME_AND_SOFTWARE_CLOSURE_FIXTURES"
+    },
+    {
+      "path": "tests/test_w24_stable_shape_transfer.py",
+      "before_sha256": null,
+      "candidate_sha256": "6f28687d43191c8a92e530f0f6528a9456a5fccfc16b722143707071439afdb7",
+      "after_sha256": "6f28687d43191c8a92e530f0f6528a9456a5fccfc16b722143707071439afdb7",
+      "source_origin": "continuation/candidates/w24-coupled05/repository/tests/test_w24_stable_shape_transfer.py",
+      "decision": "W24_TESTS_WITH_PORTABLE_PACKAGE_IMPORT_RUNTIME_AND_SOFTWARE_CLOSURE_FIXTURES"
+    },
+    {
+      "path": "tests/test_w24_v2_setup_readback.py",
+      "before_sha256": null,
+      "candidate_sha256": "61cb4df4ebbd5c5e3e2b3ca4fba504cb7ac3762617c4336c4c7a86593744ed09",
+      "after_sha256": "f174cb6ab6c1b197739119a705aadd855273c46c5b7ebfa1d547d90703240fb0",
+      "source_origin": "continuation/candidates/w24-coupled05/repository/tests/test_w24_v2_setup_readback.py",
+      "decision": "W24_TESTS_WITH_PORTABLE_PACKAGE_IMPORT_RUNTIME_AND_SOFTWARE_CLOSURE_FIXTURES"
+    },
+    {
+      "path": "tests/test_w24_witnessed_stress.py",
+      "before_sha256": null,
+      "candidate_sha256": "284f6611f7a00f333afb890a394f164c333e7c8357f32d24c1c76eba6888b746",
+      "after_sha256": "e7a50627ecbb6d618c7a482712df5b79cce5c6c6a75a811934038b8ab1eb8c73",
+      "source_origin": "continuation/candidates/w24-coupled05/repository/tests/test_w24_witnessed_stress.py",
+      "decision": "W24_TESTS_WITH_PORTABLE_PACKAGE_IMPORT_RUNTIME_AND_SOFTWARE_CLOSURE_FIXTURES"
+    },
+    {
+      "path": "tests/java/W24SolverSequenceDiagnosticsHarness.java",
+      "before_sha256": "8fc272d9f266e6dfe49f53c3a889914bea5f1df418f82b0bca221cd8a8ba06c5",
+      "candidate_sha256": "9de54588db2b6ca591c934c3c5ba5bb5ea4eed65695feaf7d98666bcc21356b4",
+      "after_sha256": "9de54588db2b6ca591c934c3c5ba5bb5ea4eed65695feaf7d98666bcc21356b4",
+      "source_origin": "continuation/candidates/w24-coupled05/repository/tests/java/W24SolverSequenceDiagnosticsHarness.java",
+      "decision": "W24_TESTS_WITH_PORTABLE_PACKAGE_IMPORT_RUNTIME_AND_SOFTWARE_CLOSURE_FIXTURES"
+    },
+    {
+      "path": "tools/run_native_w24_cure_preflight.py",
+      "before_sha256": "78690f5a0e6465e5f35205a81cdf02fbae940d06fb74558e5ecdc3444e4ab8a4",
+      "candidate_sha256": "397f49a30415b2440783e63fade99018d8ede1e2e0646e28edc3e1efa22214e1",
+      "after_sha256": "397f49a30415b2440783e63fade99018d8ede1e2e0646e28edc3e1efa22214e1",
+      "source_origin": "continuation/candidates/w24-coupled05/repository/tools/run_native_w24_cure_preflight.py",
+      "decision": "W24_DEDICATED_IMPLEMENTATION_FROM_COUPLED05"
+    },
+    {
+      "path": "tools/run_native_w24_cure_science.py",
+      "before_sha256": "9cfbe11ef1cc7dac885385ff6c9553cd731f303962093008c3a02c93729eaa99",
+      "candidate_sha256": "66273705fbb62fcac70227fc43219145d81e0f4fe1f08a0f37cb854d8fcf5c58",
+      "after_sha256": "66273705fbb62fcac70227fc43219145d81e0f4fe1f08a0f37cb854d8fcf5c58",
+      "source_origin": "continuation/candidates/w24-coupled05/repository/tools/run_native_w24_cure_science.py",
+      "decision": "W24_DEDICATED_IMPLEMENTATION_FROM_COUPLED05"
+    },
+    {
+      "path": "tools/run_native_w24_static_shape_setup.py",
+      "before_sha256": "47f12e8d8296efd67cd66ad2319bcb093260dddfa99763a2f50ec65b60a25da5",
+      "candidate_sha256": "a448b3ea8b8b26ee69841aaf279d477fa6a40583fd2fe742f5b4e916a92973cf",
+      "after_sha256": "a448b3ea8b8b26ee69841aaf279d477fa6a40583fd2fe742f5b4e916a92973cf",
+      "source_origin": "continuation/candidates/w24-coupled05/repository/tools/run_native_w24_static_shape_setup.py",
+      "decision": "W24_DEDICATED_IMPLEMENTATION_FROM_COUPLED05"
+    },
+    {
+      "path": "tools/run_native_w24_static_shape_setup_campaign.py",
+      "before_sha256": "71dda633418a228a700243be8954437d2fab9cbbbfb602d90bf3752f2df70f3f",
+      "candidate_sha256": "d50e10000372d4a522d2ecd6d50ffaabcc79f5a3acd636a335a5cb511696cbfb",
+      "after_sha256": "d50e10000372d4a522d2ecd6d50ffaabcc79f5a3acd636a335a5cb511696cbfb",
+      "source_origin": "continuation/candidates/w24-coupled05/repository/tools/run_native_w24_static_shape_setup_campaign.py",
+      "decision": "W24_DEDICATED_IMPLEMENTATION_FROM_COUPLED05"
+    },
+    {
+      "path": "tools/w24_coupled_admission.py",
+      "before_sha256": null,
+      "candidate_sha256": "cec4c320fa9a65fdd78ab9b8b6b38db30adcf5d862ea80a3cc19359c0b4427ea",
+      "after_sha256": "cec4c320fa9a65fdd78ab9b8b6b38db30adcf5d862ea80a3cc19359c0b4427ea",
+      "source_origin": "continuation/candidates/w24-coupled05/repository/tools/w24_coupled_admission.py",
+      "decision": "W24_DEDICATED_IMPLEMENTATION_FROM_COUPLED05"
+    },
+    {
+      "path": "tools/w24_coupled_setup_unit.py",
+      "before_sha256": null,
+      "candidate_sha256": "74b2d6cfbe561c66d1fdec1700920fba063ac889df8f559796a09bd08033da96",
+      "after_sha256": "74b2d6cfbe561c66d1fdec1700920fba063ac889df8f559796a09bd08033da96",
+      "source_origin": "continuation/candidates/w24-coupled05/repository/tools/w24_coupled_setup_unit.py",
+      "decision": "W24_DEDICATED_IMPLEMENTATION_FROM_COUPLED05"
+    },
+    {
+      "path": "tools/w24_native_epoch_capability.py",
+      "before_sha256": null,
+      "candidate_sha256": "8f804fe67a30db1660fcfdd7eab6420417630ed396c3b6fffdd564817959a1ab",
+      "after_sha256": "8f804fe67a30db1660fcfdd7eab6420417630ed396c3b6fffdd564817959a1ab",
+      "source_origin": "continuation/candidates/w24-coupled05/repository/tools/w24_native_epoch_capability.py",
+      "decision": "W24_DEDICATED_IMPLEMENTATION_FROM_COUPLED05"
+    },
+    {
+      "path": "tools/w24_setup_input_attachment.py",
+      "before_sha256": null,
+      "candidate_sha256": "33ae0b5540194c64a787fb72cd4e6c77a4341a9c0e3c83e2e79ab6adba39c88c",
+      "after_sha256": "33ae0b5540194c64a787fb72cd4e6c77a4341a9c0e3c83e2e79ab6adba39c88c",
+      "source_origin": "continuation/candidates/w24-coupled05/repository/tools/w24_setup_input_attachment.py",
+      "decision": "W24_DEDICATED_IMPLEMENTATION_FROM_COUPLED05"
+    },
+    {
+      "path": "tools/w24_stable_shape_transfer.py",
+      "before_sha256": null,
+      "candidate_sha256": "896c7ef635ed4d449c8458c1e41e2a0ad2108a63c6329349ad16072bc8338b8c",
+      "after_sha256": "896c7ef635ed4d449c8458c1e41e2a0ad2108a63c6329349ad16072bc8338b8c",
+      "source_origin": "continuation/candidates/w24-coupled05/repository/tools/w24_stable_shape_transfer.py",
+      "decision": "W24_DEDICATED_IMPLEMENTATION_FROM_COUPLED05"
+    },
+    {
+      "path": "tools/w24_v2_setup_readback.py",
+      "before_sha256": null,
+      "candidate_sha256": "4e94cd835cb6511f28f12ffd4b9bbd85983f0c1b5b1d16bf2326c7fe29504d7b",
+      "after_sha256": "4e94cd835cb6511f28f12ffd4b9bbd85983f0c1b5b1d16bf2326c7fe29504d7b",
+      "source_origin": "continuation/candidates/w24-coupled05/repository/tools/w24_v2_setup_readback.py",
+      "decision": "W24_DEDICATED_IMPLEMENTATION_FROM_COUPLED05"
+    },
+    {
+      "path": "tools/w24_witnessed_stress.py",
+      "before_sha256": null,
+      "candidate_sha256": "ebbe3c311c668385a06a568a938934b469e16160e5e362bad2b3c28cde57fbe1",
+      "after_sha256": "ebbe3c311c668385a06a568a938934b469e16160e5e362bad2b3c28cde57fbe1",
+      "source_origin": "continuation/candidates/w24-coupled05/repository/tools/w24_witnessed_stress.py",
+      "decision": "W24_DEDICATED_IMPLEMENTATION_FROM_COUPLED05"
+    },
+    {
+      "path": "tools/java/W24CureCouponFixture.java",
+      "before_sha256": "79f4ba8fffd86a8a363e57bd769daa86e06704c49801c4da2475ae80a78b476b",
+      "candidate_sha256": "34679240783a8b11ffaf97e8aa51291880e7f65a54b616218764c8a1982e0fb0",
+      "after_sha256": "34679240783a8b11ffaf97e8aa51291880e7f65a54b616218764c8a1982e0fb0",
+      "source_origin": "continuation/candidates/w24-coupled05/repository/tools/java/W24CureCouponFixture.java",
+      "decision": "W24_DEDICATED_IMPLEMENTATION_FROM_COUPLED05"
+    },
+    {
+      "path": "tools/run_native_w23_te_managed_preflight.py",
+      "before_sha256": "b249524c65ed0f68fcf79139897e699e51cd05643fb6aa18fa29f92689d8cb52",
+      "candidate_sha256": "30fb15a9339b4dfd8dce904921ee84d4636bc719c8da59c86b27a046fa07549a",
+      "after_sha256": "30fb15a9339b4dfd8dce904921ee84d4636bc719c8da59c86b27a046fa07549a",
+      "source_origin": "continuation/candidates/w24-coupled05/repository/tools/run_native_w23_te_managed_preflight.py",
+      "decision": "SELECTIVE_OWNER_BUDGET_HOOKS_CURRENT_PUBLIC_FEATURES_PRESERVED"
+    },
+    {
+      "path": "tests/test_run_native_w24_static_shape_setup_campaign.py",
+      "before_sha256": "6cc2cf61496db89cc301e45e21339eea391ae388e4de0395e6d95ffd2d50a627",
+      "candidate_sha256": null,
+      "after_sha256": "4a6273930ad998ebba65d603b3c759f65348d31fdd720e3be862962c0af8eb43",
+      "source_origin": "continuation/candidates/w24-coupled05/repository/tests/test_run_native_w24_static_shape_setup_campaign.py",
+      "decision": "W24_TESTS_WITH_PORTABLE_PACKAGE_IMPORT_RUNTIME_AND_SOFTWARE_CLOSURE_FIXTURES"
+    },
+    {
+      "path": "tests/w24_attachment_fixture.py",
+      "before_sha256": null,
+      "candidate_sha256": null,
+      "after_sha256": "0a4f809c19dd4bbde33a4cfb4da2cc18aa55330a61ad15818d5645256be2b5e5",
+      "source_origin": "V3 portable software fixture integration",
+      "decision": "W24_TESTS_WITH_PORTABLE_PACKAGE_IMPORT_RUNTIME_AND_SOFTWARE_CLOSURE_FIXTURES"
+    },
+    {
+      "path": "tests/fixtures/w24_current10/build_operation_result.json",
+      "before_sha256": null,
+      "candidate_sha256": null,
+      "after_sha256": "5f23cadc69408dda8e2b8f32921b5d161251413fadcb7963e02542f42827c7a0",
+      "source_origin": "continuation/candidates/w24-coupled05/repository/tests/fixtures/w24_current10/build_operation_result.json",
+      "decision": "PORTABLE_READ_ONLY_HISTORICAL_BYTES_OR_EXPLICIT_SYNTHETIC_PROVENANCE"
+    },
+    {
+      "path": "tests/fixtures/w24_current10/PROVENANCE.json",
+      "before_sha256": null,
+      "candidate_sha256": null,
+      "after_sha256": "017a8ac39b10b25762acb8cf85bb0d53091e268944c56eb3d8ceed2a033b152c",
+      "source_origin": "continuation/candidates/w24-coupled05/repository/tests/fixtures/w24_current10/PROVENANCE.json",
+      "decision": "PORTABLE_READ_ONLY_HISTORICAL_BYTES_OR_EXPLICIT_SYNTHETIC_PROVENANCE"
+    },
+    {
+      "path": "tests/fixtures/w24_current10/historical_comparison.py",
+      "before_sha256": null,
+      "candidate_sha256": null,
+      "after_sha256": "2d67fbd380905319f71f5fc2df9f98aeb643f77546e6b9ec4a1a46ea1752447d",
+      "source_origin": "V3 portable software fixture integration",
+      "decision": "PORTABLE_READ_ONLY_HISTORICAL_BYTES_OR_EXPLICIT_SYNTHETIC_PROVENANCE"
+    },
+    {
+      "path": "tests/fixtures/w24_current10/reopen_operation_result.json",
+      "before_sha256": null,
+      "candidate_sha256": null,
+      "after_sha256": "42643eaa45f2258269af669bfed563844db4d29f314d86f7cfaabe3fe684f0c6",
+      "source_origin": "continuation/candidates/w24-coupled05/repository/tests/fixtures/w24_current10/reopen_operation_result.json",
+      "decision": "PORTABLE_READ_ONLY_HISTORICAL_BYTES_OR_EXPLICIT_SYNTHETIC_PROVENANCE"
+    },
+    {
+      "path": "tests/fixtures/w24_current10/HISTORICAL_COMPARISON_PROVENANCE.json",
+      "before_sha256": null,
+      "candidate_sha256": null,
+      "after_sha256": "e4563c1640fdd94a943aafaf0cc5289ccbe8ae83f167b6093d4d505e199e33a9",
+      "source_origin": "V3 portable software fixture integration",
+      "decision": "PORTABLE_READ_ONLY_HISTORICAL_BYTES_OR_EXPLICIT_SYNTHETIC_PROVENANCE"
+    },
+    {
+      "path": "tests/fixtures/w24_current10/__pycache__/historical_comparison.cpython-312.pyc",
+      "before_sha256": null,
+      "candidate_sha256": null,
+      "after_sha256": "c9caccae4d9ec38492b9b8d8f69212fbc8228827c8e62338a7728f58e1db01fb",
+      "source_origin": "V3 portable software fixture integration",
+      "decision": "PORTABLE_READ_ONLY_HISTORICAL_BYTES_OR_EXPLICIT_SYNTHETIC_PROVENANCE"
+    },
+    {
+      "path": "tests/fixtures/w24_current11/PROVENANCE.json",
+      "before_sha256": null,
+      "candidate_sha256": null,
+      "after_sha256": "1f0db880c8c1b1b08c6028a9f064eeea9c7e612b3481040c91a551829ffed0a5",
+      "source_origin": "V3 portable software fixture integration",
+      "decision": "PORTABLE_READ_ONLY_HISTORICAL_BYTES_OR_EXPLICIT_SYNTHETIC_PROVENANCE"
+    },
+    {
+      "path": "tests/fixtures/w24_current11/root_stress_decision.json",
+      "before_sha256": null,
+      "candidate_sha256": null,
+      "after_sha256": "7201fb134afa884c8de2217b892d361bfda6005ffa6124c1e432423975047911",
+      "source_origin": "V3 portable software fixture integration",
+      "decision": "PORTABLE_READ_ONLY_HISTORICAL_BYTES_OR_EXPLICIT_SYNTHETIC_PROVENANCE"
+    },
+    {
+      "path": "tests/fixtures/w24_current11/solid_equation_view_expression_inventory.json",
+      "before_sha256": null,
+      "candidate_sha256": null,
+      "after_sha256": "f217718fd1ea4d1173fd986aa724599c1e4043246a3264d85dc0703875b3246c",
+      "source_origin": "V3 portable software fixture integration",
+      "decision": "PORTABLE_READ_ONLY_HISTORICAL_BYTES_OR_EXPLICIT_SYNTHETIC_PROVENANCE"
+    }
+  ],
+  "preserved_newer_features": {
+    "comsol_mcp/_control_daemon.py": {
+      "sha256": "279cfba307febba13be07eddd83d3564e3e2bf84ae894dfe8eff8addc21bc164",
+      "identical_to_r7_HEAD": true
+    },
+    "comsol_mcp/worker_java/PersistentComsolWorker.java": {
+      "sha256": "2497cc2d9006ad714040f77e046ac2ede90ef4ed31106a3c78899cca530a6b35",
+      "identical_to_r7_HEAD": true
+    },
+    "comsol_mcp/_state_backup.py": {
+      "sha256": "9ab50378fc7eab8c72def62beb0d7191ef68c25e1fa1ace717e0424294f3ba5c",
+      "identical_to_r7_HEAD": true
+    },
+    "comsol_mcp/_g2_registry.py": {
+      "sha256": "b44933b14790f5f6b60a733adbac9082654ec76261a08df8f45d7e1c1e9c5280",
+      "identical_to_r7_HEAD": true
+    },
+    "comsol_mcp/_g3_results.py": {
+      "sha256": "4569fad29b6f7535e681db04a8442b7babd0f4a2600c0166ec935269072dcaa2",
+      "identical_to_r7_HEAD": true
+    },
+    "comsol_mcp/_desktop_service.py": {
+      "sha256": "491bf177380237862c275c26e71c3c485ec5312efc75f8eda141952d8a0e4d37",
+      "identical_to_r7_HEAD": true
+    },
+    "comsol_mcp/_desktop_windows.py": {
+      "sha256": "10f8105e9b93aff5a717e294931d8b36680bf8560a0d21e43e1fb9c295ee5256",
+      "identical_to_r7_HEAD": true
+    },
+    "comsol_mcp/_windows_t037.py": {
+      "sha256": "9b0b945ff1bd940c0582df59a53eddd3ec82a577ea41954a450fd4f484497260",
+      "identical_to_r7_HEAD": true
+    },
+    "comsol_mcp/_ephemeral_result_ticket.py": {
+      "sha256": "952559539e56992aa06be9c7c4cfb3d3629c4f798582dba6aecbefdf5d92ccee",
+      "identical_to_r7_HEAD": true
+    }
+  },
+  "runtime_observation_binding_unchanged_definitions": [
+    "_RuntimeObservationBinding",
+    "_bind_runtime_observation_context",
+    "_bound_runtime_observation_identity",
+    "_code_execution_runtime_observation"
+  ],
+  "original_ledgers": {
+    "docs/full_project_execution/state/TASKS.json": {
+      "sha256": "c09bdd533c6c2160cac6ca1194358e41b3903b818ff01ad40066df0c177af8b2",
+      "identical_to_r7_HEAD": true
+    },
+    "docs/full_project_execution/state/ACTION_COVERAGE.json": {
+      "sha256": "7767bea658ffe76b6f6513c608c38d711e8c00d24b19104d037fb89f2e42b236",
+      "identical_to_r7_HEAD": true
+    },
+    "docs/full_project_execution/state/ACCEPTANCE_MATRIX.json": {
+      "sha256": "e51cf517d55c9af9797d8bbeaa0615048167af0bad0ed80a3e5888578aa7b3a4",
+      "identical_to_r7_HEAD": true
+    },
+    "docs/full_project_execution/state/RESUME.json": {
+      "sha256": "a7ef60b826570f9a42da0e62f18dc50475efd5838a53dcd1555cb7417d5460e1",
+      "identical_to_r7_HEAD": true
+    }
+  },
+  "test_runs": [
+    {
+      "run": 1,
+      "totals": {
+        "tests": 4,
+        "failures": 0,
+        "errors": 4,
+        "skipped": 0,
+        "passed": 0
+      },
+      "junit": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-integration-r1.junit.xml",
+      "junit_sha256": "c5635214b0d16677c9042d5b7a9b0a2f2eb8ef19836748ab1f5b27ab2e50698f",
+      "stdout": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-integration-r1.stdout.log",
+      "stdout_sha256": "d722db864b17a3611a1dfa4677e0fb09f19181f3ee5c6c4033de3cbeac89c323",
+      "skips": []
+    },
+    {
+      "run": 2,
+      "totals": {
+        "tests": 877,
+        "failures": 30,
+        "errors": 29,
+        "skipped": 1,
+        "passed": 817
+      },
+      "junit": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-integration-r2.junit.xml",
+      "junit_sha256": "63703fcf88b817aaf2c9217a1ef6b95be561358b19f30d33f381bddd6983f1f5",
+      "stdout": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-integration-r2.stdout.log",
+      "stdout_sha256": "2945280805d407e87d1710f87beb853c787a1f53fea84e0f7a5686b5b96b9bd6",
+      "skips": [
+        {
+          "name": "test_windows_existing_foreign_lock_root_is_rejected_without_takeover",
+          "reason": "Windows owner semantics only"
+        }
+      ]
+    },
+    {
+      "run": 3,
+      "totals": {
+        "tests": 124,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 124
+      },
+      "junit": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-integration-r3.junit.xml",
+      "junit_sha256": "e9ef7480735850532f97405d7059baebca14e9d37b1f9721b3b9ddbd9666d68d",
+      "stdout": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-integration-r3.stdout.log",
+      "stdout_sha256": "9dc91102e084921f41c4eddf25a95d4d49f600cfda045edd5d3960e25bd82702",
+      "skips": []
+    },
+    {
+      "run": 4,
+      "totals": {
+        "tests": 988,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1,
+        "passed": 987
+      },
+      "junit": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-integration-r4.junit.xml",
+      "junit_sha256": "c6a50efc901528cb06bd3f2bf558ade191bb6206b921fba0ee4b9518e8aa15a2",
+      "stdout": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-integration-r4.stdout.log",
+      "stdout_sha256": "d07238384fabe12c5ea55de42349d418e19a4a773d5db470456d1a1b307bab4a",
+      "skips": [
+        {
+          "name": "test_windows_existing_foreign_lock_root_is_rejected_without_takeover",
+          "reason": "Windows owner semantics only"
+        }
+      ]
+    },
+    {
+      "run": 5,
+      "totals": {
+        "tests": 989,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1,
+        "passed": 988
+      },
+      "junit": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-integration-r5.junit.xml",
+      "junit_sha256": "980208c56800c3589b329d1ca36a5a286b5ee49f5e00018d8f75268b162ac41a",
+      "stdout": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-integration-r5.stdout.log",
+      "stdout_sha256": "6dda00940bc15ed2204e92387c0f4a5afaabefa925de98a127571cb8b7919b70",
+      "skips": [
+        {
+          "name": "test_windows_existing_foreign_lock_root_is_rejected_without_takeover",
+          "reason": "Windows owner semantics only"
+        }
+      ]
+    }
+  ],
+  "python_syntax": {
+    "status": "PASS",
+    "all_selected_python_files": true
+  },
+  "java_sdk": {
+    "status": "PASS_REAL_JAVA11_COMSOL64_API_COMPILE_AND_PROXY_HARNESSES_ONLY",
+    "receipt": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w24-integration-java-sdk/w24-java-proxy-receipt.json",
+    "receipt_sha256": "a8bdf6bdefd58ab492c43a43781aa1d08670d09236e509ca598e7446d7dbc908",
+    "classes": 9,
+    "major_versions": [
+      55
+    ],
+    "real_engine_started": false
+  },
+  "native": "NOT_RUN",
+  "scientific_acceptance": "NOT_ACCEPTED",
+  "independent_review": "NOT_RUN",
+  "historical_inputs_and_fresh_binding_followups": [
+    {
+      "status": "CHANGES_REQUIRED_FRESH_RUNTIME_BINDING_INTERFACE",
+      "path": "tools/run_native_w24_static_shape_setup_campaign.py:399",
+      "issue": "prepare_candidate and runtime verification require historical EXPECTED_PYTHON; no explicit trusted current interpreter argument exists. Current valid Python cannot enter this fixed historical launcher unchanged. Main must design a fresh source/runtime-bound invocation, without substituting old once approval/PID."
+    },
+    {
+      "status": "HISTORICAL_INPUT_NOT_RECOVERED_NOT_NATIVE_AUTHORITY",
+      "path": "tools/w24_setup_input_attachment.py",
+      "issue": "Original current11 133-file attachment, private MPH/operations closure and pinned ROOT_REVIEW_SHA remain historical-only. Portable tests use a clearly synthetic full hash/owner/SQLite/mesh closure; they do not restore old 133 pieces. Fresh native packet needs new source/model/operation/Worker epoch binding."
+    },
+    {
+      "status": "HISTORICAL_CONFIGURATION_MAPPING_ONLY",
+      "path": "tools/w24_witnessed_stress.py",
+      "issue": "Fixed V2 DECISION_PATH and exact historical EquationView SHA are retained. Test copies exact raw table/decision bytes but no evaluated stress or fresh EquationView authority. Fresh model must produce full read-only EquationView plus current verified mapping."
+    }
+  ],
+  "delivery": {
+    "commit": "NOT_RUN",
+    "push": "NOT_RUN"
+  },
+  "notes": [
+    "988 passed and 1 existing Window OS platform skip on final frozen source.",
+    "W24 synthetic closure counters are fixture-specific, not historical 133-input recovery.",
+    "Owner same-PID replacement now rejected by original object check; birth-bind plus log.close preserves primary error and original handle.",
+    "No changes to frozen continuation candidates, original UNKNOWN/safe_retry=false or Mac6.3 USER_REQUESTED_SKIP."
+  ]
+}

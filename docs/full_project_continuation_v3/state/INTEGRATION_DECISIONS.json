@@ -3,7 +3,7 @@
   "base_commit": "0644ea970688e02beda4be7069f67144b4bcf59e",
   "created_at": "2026-10-13T14:48:35.563647+00:00",
   "scope": "One current production tree; all continuation frozen sources and original ledgers unchanged",
-  "phase": "WINDOWS_R19_W23_R15_INTEGRATION_W24_W26_PENDING",
+  "phase": "R19_R15_W24_AND_CURRENT_W26_INTEGRATED_CURRENT_P0_OWNER_FENCE_FINALIZING",
   "decisions": [
     {
       "path": "comsol_mcp/_artifact_store.py",
@@ -30,10 +30,19 @@
           "observation": "SAME_BYTES"
         }
       ],
-      "selected": null,
-      "status": "KEEP_CURRENT_EXCEPT_SCOPED_W24_HOOKS_PENDING",
-      "rationale": "coupled05 retains an older public layer; do not delete current Desktop/model-package/delivery/identity/safety implementations. Port only actual admission/probe changes where required.",
-      "current_integrated_sha256": "55fc9b5a71d9d57a4fb53365c65ea8df32106e549a129544bbe2c45bb9af7f55"
+      "selected": "Main diagnosed current real APFS concurrency race; existing atomic exclusive rename reused",
+      "status": "INTEGRATED_MAIN_SOURCE_REVIEW_SCOPED_CURRENT_SOFTWARE_OR_W26_RUNTIME_EVIDENCE",
+      "rationale": "Hardlink/unlink changed published inode ctime during peer pinned read; no placeholder fallback, no ctime relaxation; actual race +409 affected software PASS",
+      "current_integrated_sha256": "c7ee8c61036176dad499769fa3274f610d956e34d53d8a6bffd61e3afff253bd",
+      "evidence": "docs/full_project_continuation_v3/state/ARTIFACT_ATOMIC_PUBLICATION_REPAIR_REPORT.json",
+      "r8_stable_refresh": {
+        "status": "MAIN_ACCEPTED_SCOPED_SOFTWARE; NATIVE_NOT_GRANTED",
+        "qualification": "ATOMIC409",
+        "source_record": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/docs/full_project_continuation_v3/state/ARTIFACT_ATOMIC_PUBLICATION_REPAIR_REPORT.json",
+          "sha256": "eb518178b2ed82dbe68d7c2392fbfb4aeda222fae2414b56b525e1becfdfa298"
+        }
+      }
     },
     {
       "path": "comsol_mcp/_control_daemon.py",
@@ -64,7 +73,15 @@
       "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
       "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
       "integrated_sha256": "279cfba307febba13be07eddd83d3564e3e2bf84ae894dfe8eff8addc21bc164",
-      "current_integrated_sha256": "279cfba307febba13be07eddd83d3564e3e2bf84ae894dfe8eff8addc21bc164"
+      "current_integrated_sha256": "221da9ce999c3fb859e24d2c9d539e6d30ac37cea9f337b758bab48e4ad4235c",
+      "r8_stable_refresh": {
+        "status": "MAIN_ACCEPTED_SCOPED_SOFTWARE; NATIVE_NOT_GRANTED",
+        "qualification": "P0_LATEST65_AND_UNCHANGED106_7",
+        "source_record": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/p0-controller-retention-20261014/secondary-failure-r1/source.json",
+          "sha256": "d74e704e87c0b00ff211881df6b6a15cb6bfc51b1ce18722adcf7088575ed14c"
+        }
+      }
     },
     {
       "path": "comsol_mcp/_desktop_capture.py",
@@ -356,10 +373,15 @@
           "observation": "SAME_BYTES"
         }
       ],
-      "selected": null,
-      "status": "KEEP_CURRENT_EXCEPT_SCOPED_W24_HOOKS_PENDING",
-      "rationale": "coupled05 retains an older public layer; do not delete current Desktop/model-package/delivery/identity/safety implementations. Port only actual admission/probe changes where required.",
-      "current_integrated_sha256": "dd2da52140d191bea3cd036fe5ab06782d9ff30c119686c13bde99c32d64580b"
+      "selected": "w24-coupled05 selective current integration",
+      "status": "INTEGRATED_CURRENT_SHARED_REPAIRS_PRESERVE_R19_R15",
+      "rationale": "SELECTIVE_OWNER_BUDGET_HOOKS_CURRENT_PUBLIC_FEATURES_PRESERVED",
+      "current_integrated_sha256": "fbcd831b1e6bf91b3f0b61030cda9a10e95b0d4d759150b1c4a3b150007bb606",
+      "w24_integration_origin": "continuation/candidates/w24-coupled05/repository/comsol_mcp/_g2_isolation.py",
+      "w24_original_candidate_sha256": "ccb6f0fb7810b653ac3055ebec608984ec032e8ed67ffcba153b3533ad70e1c7",
+      "w24_before_sha256": "dd2da52140d191bea3cd036fe5ab06782d9ff30c119686c13bde99c32d64580b",
+      "w24_selected_sha256_at_first_integration": "fbcd831b1e6bf91b3f0b61030cda9a10e95b0d4d759150b1c4a3b150007bb606",
+      "evidence": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json"
     },
     {
       "path": "comsol_mcp/_g2_registry.py",
@@ -420,7 +442,7 @@
       "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
       "rationale": "Adopt r15 strict component/final-entity selection, sealed temporary Interp ticket and explicit saved-point field scheme; Windows public ownership changes are coordinated in R19 selected modules.",
       "integrated_sha256": "e5aabe9a0118290ce167d1d9f6183b7edd60ba723bdb99f31e8a88fabdce68f8",
-      "current_integrated_sha256": "e5aabe9a0118290ce167d1d9f6183b7edd60ba723bdb99f31e8a88fabdce68f8"
+      "current_integrated_sha256": "207629d74cedd2790433d8e1bc45d18050e4a3652ac3d3e293bc8d2db71fbd9e"
     },
     {
       "path": "comsol_mcp/_g3_ops.py",
@@ -592,11 +614,16 @@
           "observation": "DIFFERENT_BYTES"
         }
       ],
-      "selected": "windows-r19",
-      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
-      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "selected": "w24-coupled05 selective current integration",
+      "status": "INTEGRATED_CURRENT_SHARED_REPAIRS_PRESERVE_R19_R15",
+      "rationale": "SELECTIVE_OWNER_BUDGET_HOOKS_CURRENT_PUBLIC_FEATURES_PRESERVED",
       "integrated_sha256": "42c2dc0eb018eb3fd58299b93fd1161ab6a3baae01f82d47d260a5e2e9270933",
-      "current_integrated_sha256": "42c2dc0eb018eb3fd58299b93fd1161ab6a3baae01f82d47d260a5e2e9270933"
+      "current_integrated_sha256": "5f8d6cddb63d163ba8143dde872eafca3cc7ad838e772650e327544d85bd7344",
+      "w24_integration_origin": "continuation/candidates/w24-coupled05/repository/comsol_mcp/_java_worker.py",
+      "w24_original_candidate_sha256": "f5680453a6da829afae6490b4dde7121d8d8def376beba9aca3d05c07d0a9bd9",
+      "w24_before_sha256": "42c2dc0eb018eb3fd58299b93fd1161ab6a3baae01f82d47d260a5e2e9270933",
+      "w24_selected_sha256_at_first_integration": "5f8d6cddb63d163ba8143dde872eafca3cc7ad838e772650e327544d85bd7344",
+      "evidence": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json"
     },
     {
       "path": "comsol_mcp/_managed_backend.py",
@@ -623,11 +650,16 @@
           "observation": "DIFFERENT_BYTES"
         }
       ],
-      "selected": "windows-r19",
-      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
-      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "selected": "w24-coupled05 selective current integration",
+      "status": "INTEGRATED_CURRENT_SHARED_REPAIRS_PRESERVE_R19_R15",
+      "rationale": "SELECTIVE_OWNER_BUDGET_HOOKS_CURRENT_PUBLIC_FEATURES_PRESERVED",
       "integrated_sha256": "cc97b1440981af973610a2e9eb4907a8365b56aab617b5fb023be9c62070bf0a",
-      "current_integrated_sha256": "d6ca3c816cca1d34cbd9796b759aa75744950d7737643afb0bc2bafe779ea9c2"
+      "current_integrated_sha256": "83247b0f2e7a3092d03a659045b7bdf6e12d3c3ee21f0b35b94bb13d4ae75e7b",
+      "w24_integration_origin": "continuation/candidates/w24-coupled05/repository/comsol_mcp/_managed_backend.py",
+      "w24_original_candidate_sha256": "aabe45e20fa7789911a136af90c8f2637a91b33e4aeb13bec4e552bb3f6fade6",
+      "w24_before_sha256": "d6ca3c816cca1d34cbd9796b759aa75744950d7737643afb0bc2bafe779ea9c2",
+      "w24_selected_sha256_at_first_integration": "8e774df63536b3e252d4fd0c9ac5f2c671aea3ad9f3048d1f33def33e63e6af0",
+      "evidence": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json"
     },
     {
       "path": "comsol_mcp/_operation_store.py",
@@ -1280,10 +1312,15 @@
           "observation": "DIFFERENT_BYTES"
         }
       ],
-      "selected": null,
-      "status": "PENDING_W24_LOGICAL_MERGE",
-      "rationale": null,
-      "current_integrated_sha256": "8fc272d9f266e6dfe49f53c3a889914bea5f1df418f82b0bca221cd8a8ba06c5"
+      "selected": "w24-coupled05 selective current integration",
+      "status": "INTEGRATED_CURRENT_SHARED_REPAIRS_PRESERVE_R19_R15",
+      "rationale": "W24_TESTS_WITH_PORTABLE_PACKAGE_IMPORT_RUNTIME_AND_SOFTWARE_CLOSURE_FIXTURES",
+      "current_integrated_sha256": "9de54588db2b6ca591c934c3c5ba5bb5ea4eed65695feaf7d98666bcc21356b4",
+      "w24_integration_origin": "continuation/candidates/w24-coupled05/repository/tests/java/W24SolverSequenceDiagnosticsHarness.java",
+      "w24_original_candidate_sha256": "9de54588db2b6ca591c934c3c5ba5bb5ea4eed65695feaf7d98666bcc21356b4",
+      "w24_before_sha256": "8fc272d9f266e6dfe49f53c3a889914bea5f1df418f82b0bca221cd8a8ba06c5",
+      "w24_selected_sha256_at_first_integration": "9de54588db2b6ca591c934c3c5ba5bb5ea4eed65695feaf7d98666bcc21356b4",
+      "evidence": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json"
     },
     {
       "path": "tests/test_activity018_no_outer_transcript.py",
@@ -1622,10 +1659,15 @@
           "observation": "SAME_BYTES"
         }
       ],
-      "selected": null,
-      "status": "PENDING_W24_LOGICAL_MERGE",
-      "rationale": null,
-      "current_integrated_sha256": "90700cef1af723fb6ea4e0b7b9848e65f7711d2588f378bcd196c9e585fb3aab"
+      "selected": "w24-coupled05 selective current integration",
+      "status": "INTEGRATED_CURRENT_SHARED_REPAIRS_PRESERVE_R19_R15",
+      "rationale": "W24_TESTS_WITH_PORTABLE_PACKAGE_IMPORT_RUNTIME_AND_SOFTWARE_CLOSURE_FIXTURES",
+      "current_integrated_sha256": "d641d83ac6451b28ffd36c1b7f395f62dd275afb5db0587aa1f0245fe42e376a",
+      "w24_integration_origin": "continuation/candidates/w24-coupled05/repository/tests/test_run_native_w24_static_shape_science.py",
+      "w24_original_candidate_sha256": "d641d83ac6451b28ffd36c1b7f395f62dd275afb5db0587aa1f0245fe42e376a",
+      "w24_before_sha256": "90700cef1af723fb6ea4e0b7b9848e65f7711d2588f378bcd196c9e585fb3aab",
+      "w24_selected_sha256_at_first_integration": "d641d83ac6451b28ffd36c1b7f395f62dd275afb5db0587aa1f0245fe42e376a",
+      "evidence": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json"
     },
     {
       "path": "tests/test_saved_mph_activity017_public_stack.py",
@@ -1703,9 +1745,15 @@
           "observation": "CANDIDATE_ONLY"
         }
       ],
-      "selected": null,
-      "status": "PENDING_W24_LOGICAL_MERGE",
-      "rationale": null
+      "selected": "w24-coupled05 selective current integration",
+      "status": "INTEGRATED_CURRENT_SHARED_REPAIRS_PRESERVE_R19_R15",
+      "rationale": "W24_TESTS_WITH_PORTABLE_PACKAGE_IMPORT_RUNTIME_AND_SOFTWARE_CLOSURE_FIXTURES",
+      "w24_integration_origin": "continuation/candidates/w24-coupled05/repository/tests/test_w24_actual_default_epoch_capability.py",
+      "w24_original_candidate_sha256": "ed249a2ceb5750bcf6118a3eb7295e76925180393f9640661fae7f60b6e4597a",
+      "w24_before_sha256": null,
+      "w24_selected_sha256_at_first_integration": "ed249a2ceb5750bcf6118a3eb7295e76925180393f9640661fae7f60b6e4597a",
+      "evidence": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json",
+      "current_integrated_sha256": "ed249a2ceb5750bcf6118a3eb7295e76925180393f9640661fae7f60b6e4597a"
     },
     {
       "path": "tests/test_w24_coupled_admission.py",
@@ -1718,9 +1766,29 @@
           "observation": "CANDIDATE_ONLY"
         }
       ],
-      "selected": null,
-      "status": "PENDING_W24_LOGICAL_MERGE",
-      "rationale": null
+      "selected": "w24-coupled05 selective current integration",
+      "status": "INTEGRATED_CURRENT_SHARED_REPAIRS_PRESERVE_R19_R15",
+      "rationale": "W24_TESTS_WITH_PORTABLE_PACKAGE_IMPORT_RUNTIME_AND_SOFTWARE_CLOSURE_FIXTURES",
+      "w24_integration_origin": "continuation/candidates/w24-coupled05/repository/tests/test_w24_coupled_admission.py",
+      "w24_original_candidate_sha256": "05be03899700f9d214ff36ba9da73b311a706864701cf22c87b8e79b8060545a",
+      "w24_before_sha256": null,
+      "w24_selected_sha256_at_first_integration": "05be03899700f9d214ff36ba9da73b311a706864701cf22c87b8e79b8060545a",
+      "evidence": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json",
+      "current_integrated_sha256": "e1b9b73eef0f19c67fa63349cc3361e75d8de991abcb023d9ee2441799d78dd0",
+      "prior_cosmetic_source_qualification": {
+        "current_integrated_sha256": "05be03899700f9d214ff36ba9da73b311a706864701cf22c87b8e79b8060545a",
+        "status": "INTEGRATED_CURRENT_SHARED_REPAIRS_PRESERVE_R19_R15",
+        "rationale": "W24_TESTS_WITH_PORTABLE_PACKAGE_IMPORT_RUNTIME_AND_SOFTWARE_CLOSURE_FIXTURES",
+        "evidence": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json"
+      },
+      "cosmetic_whitespace_revision": {
+        "status": "COSMETIC_AST_IDENTICAL_SOFTWARE_SCOPE_INHERITED",
+        "proof": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/software-r8-preparation/final-refresh-r5/AST_COSMETIC_PROOF.json",
+        "prior_SHA256": "05be03899700f9d214ff36ba9da73b311a706864701cf22c87b8e79b8060545a",
+        "current_SHA256": "e1b9b73eef0f19c67fa63349cc3361e75d8de991abcb023d9ee2441799d78dd0",
+        "Main_stage_first_failure_preserved": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/software-r8-preparation/final-refresh-r5/staged-whitespace-first-failure.txt",
+        "tests": "NOT_RERUN"
+      }
     },
     {
       "path": "tests/test_w24_coupled_lifecycle_residuals.py",
@@ -1733,9 +1801,15 @@
           "observation": "CANDIDATE_ONLY"
         }
       ],
-      "selected": null,
-      "status": "PENDING_W24_LOGICAL_MERGE",
-      "rationale": null
+      "selected": "w24-coupled05 selective current integration",
+      "status": "INTEGRATED_CURRENT_SHARED_REPAIRS_PRESERVE_R19_R15",
+      "rationale": "W24_TESTS_WITH_PORTABLE_PACKAGE_IMPORT_RUNTIME_AND_SOFTWARE_CLOSURE_FIXTURES",
+      "w24_integration_origin": "continuation/candidates/w24-coupled05/repository/tests/test_w24_coupled_lifecycle_residuals.py",
+      "w24_original_candidate_sha256": "0acc79d33562d2bd498f31fb473e2d870612549556d4de3afdd44ba11d0ae88f",
+      "w24_before_sha256": null,
+      "w24_selected_sha256_at_first_integration": "4d70dbad12c1cff0ca814a4e5820533c1ceff0efd66c77ed6461e8fad110c327",
+      "evidence": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json",
+      "current_integrated_sha256": "4d70dbad12c1cff0ca814a4e5820533c1ceff0efd66c77ed6461e8fad110c327"
     },
     {
       "path": "tests/test_w24_coupled_probe_propagation.py",
@@ -1748,9 +1822,15 @@
           "observation": "CANDIDATE_ONLY"
         }
       ],
-      "selected": null,
-      "status": "PENDING_W24_LOGICAL_MERGE",
-      "rationale": null
+      "selected": "w24-coupled05 selective current integration",
+      "status": "INTEGRATED_CURRENT_SHARED_REPAIRS_PRESERVE_R19_R15",
+      "rationale": "W24_TESTS_WITH_PORTABLE_PACKAGE_IMPORT_RUNTIME_AND_SOFTWARE_CLOSURE_FIXTURES",
+      "w24_integration_origin": "continuation/candidates/w24-coupled05/repository/tests/test_w24_coupled_probe_propagation.py",
+      "w24_original_candidate_sha256": "1d5ffa808f558663d825f2622b4bb9dba830d8770d300768368b8381bf174610",
+      "w24_before_sha256": null,
+      "w24_selected_sha256_at_first_integration": "f779f10d604c31c037c47594c7e03a6fc5139cf39bd3bb6547815f358a1595af",
+      "evidence": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json",
+      "current_integrated_sha256": "f779f10d604c31c037c47594c7e03a6fc5139cf39bd3bb6547815f358a1595af"
     },
     {
       "path": "tests/test_w24_coupled_setup_unit.py",
@@ -1763,9 +1843,15 @@
           "observation": "CANDIDATE_ONLY"
         }
       ],
-      "selected": null,
-      "status": "PENDING_W24_LOGICAL_MERGE",
-      "rationale": null
+      "selected": "w24-coupled05 selective current integration",
+      "status": "INTEGRATED_CURRENT_SHARED_REPAIRS_PRESERVE_R19_R15",
+      "rationale": "W24_TESTS_WITH_PORTABLE_PACKAGE_IMPORT_RUNTIME_AND_SOFTWARE_CLOSURE_FIXTURES",
+      "w24_integration_origin": "continuation/candidates/w24-coupled05/repository/tests/test_w24_coupled_setup_unit.py",
+      "w24_original_candidate_sha256": "6c00717b94bb8330fefd75b617334a3bb3d3bf998af062f2ac0db78460f4d9e3",
+      "w24_before_sha256": null,
+      "w24_selected_sha256_at_first_integration": "7a368d06f2f094e0eb74fb5da129e849f7cce00ec8fc5d3fc2b1e2f210721819",
+      "evidence": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json",
+      "current_integrated_sha256": "e7b1780b48f57300991862e2f57200330b096929e0b60db5812da9efbb066be2"
     },
     {
       "path": "tests/test_w24_cure_coupon_fixture.py",
@@ -1792,10 +1878,15 @@
           "observation": "SAME_BYTES"
         }
       ],
-      "selected": null,
-      "status": "PENDING_W24_LOGICAL_MERGE",
-      "rationale": null,
-      "current_integrated_sha256": "cfbe96de3b8a61dc9020803e003ca335b588cff0895559287f7417200840b60b"
+      "selected": "w24-coupled05 selective current integration",
+      "status": "INTEGRATED_CURRENT_SHARED_REPAIRS_PRESERVE_R19_R15",
+      "rationale": "W24_TESTS_WITH_PORTABLE_PACKAGE_IMPORT_RUNTIME_AND_SOFTWARE_CLOSURE_FIXTURES",
+      "current_integrated_sha256": "bef3a7b223e1d25aec59ebeeb64089ab0b3f00fb53505771ed5a2259f75a3c52",
+      "w24_integration_origin": "continuation/candidates/w24-coupled05/repository/tests/test_w24_cure_coupon_fixture.py",
+      "w24_original_candidate_sha256": "bef3a7b223e1d25aec59ebeeb64089ab0b3f00fb53505771ed5a2259f75a3c52",
+      "w24_before_sha256": "cfbe96de3b8a61dc9020803e003ca335b588cff0895559287f7417200840b60b",
+      "w24_selected_sha256_at_first_integration": "bef3a7b223e1d25aec59ebeeb64089ab0b3f00fb53505771ed5a2259f75a3c52",
+      "evidence": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json"
     },
     {
       "path": "tests/test_w24_cure_preflight_runner.py",
@@ -1822,10 +1913,15 @@
           "observation": "SAME_BYTES"
         }
       ],
-      "selected": null,
-      "status": "PENDING_W24_LOGICAL_MERGE",
-      "rationale": null,
-      "current_integrated_sha256": "3b7127c3d0afd159744b06da4966c6d10641bb82395fce5ce4543a6d25e46bbb"
+      "selected": "w24-coupled05 selective current integration",
+      "status": "INTEGRATED_CURRENT_SHARED_REPAIRS_PRESERVE_R19_R15",
+      "rationale": "W24_TESTS_WITH_PORTABLE_PACKAGE_IMPORT_RUNTIME_AND_SOFTWARE_CLOSURE_FIXTURES",
+      "current_integrated_sha256": "ab53405e7eb69b5a89fd6f67fd25eaecd8c3530f53347ebfe4ed8931ac0b8984",
+      "w24_integration_origin": "continuation/candidates/w24-coupled05/repository/tests/test_w24_cure_preflight_runner.py",
+      "w24_original_candidate_sha256": "ab53405e7eb69b5a89fd6f67fd25eaecd8c3530f53347ebfe4ed8931ac0b8984",
+      "w24_before_sha256": "3b7127c3d0afd159744b06da4966c6d10641bb82395fce5ce4543a6d25e46bbb",
+      "w24_selected_sha256_at_first_integration": "ab53405e7eb69b5a89fd6f67fd25eaecd8c3530f53347ebfe4ed8931ac0b8984",
+      "evidence": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json"
     },
     {
       "path": "tests/test_w24_current11_config_projection.py",
@@ -1838,9 +1934,15 @@
           "observation": "CANDIDATE_ONLY"
         }
       ],
-      "selected": null,
-      "status": "PENDING_W24_LOGICAL_MERGE",
-      "rationale": null
+      "selected": "w24-coupled05 selective current integration",
+      "status": "INTEGRATED_CURRENT_SHARED_REPAIRS_PRESERVE_R19_R15",
+      "rationale": "W24_TESTS_WITH_PORTABLE_PACKAGE_IMPORT_RUNTIME_AND_SOFTWARE_CLOSURE_FIXTURES",
+      "w24_integration_origin": "continuation/candidates/w24-coupled05/repository/tests/test_w24_current11_config_projection.py",
+      "w24_original_candidate_sha256": "9de1116509c7c92fa3596db3aff407b6f2caec99a3a3453c615778cc77b9f950",
+      "w24_before_sha256": null,
+      "w24_selected_sha256_at_first_integration": "57733c91f796c1de56397b736c5bb01309f45b4255e575243fdb24e38192f34a",
+      "evidence": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json",
+      "current_integrated_sha256": "57733c91f796c1de56397b736c5bb01309f45b4255e575243fdb24e38192f34a"
     },
     {
       "path": "tests/test_w24_native_mesh_volume.py",
@@ -1853,9 +1955,15 @@
           "observation": "CANDIDATE_ONLY"
         }
       ],
-      "selected": null,
-      "status": "PENDING_W24_LOGICAL_MERGE",
-      "rationale": null
+      "selected": "w24-coupled05 selective current integration",
+      "status": "INTEGRATED_CURRENT_SHARED_REPAIRS_PRESERVE_R19_R15",
+      "rationale": "W24_TESTS_WITH_PORTABLE_PACKAGE_IMPORT_RUNTIME_AND_SOFTWARE_CLOSURE_FIXTURES",
+      "w24_integration_origin": "continuation/candidates/w24-coupled05/repository/tests/test_w24_native_mesh_volume.py",
+      "w24_original_candidate_sha256": "9798a72cd675bd6493342758d43a707724420f0e7ce8084982c876d9a3f38837",
+      "w24_before_sha256": null,
+      "w24_selected_sha256_at_first_integration": "9798a72cd675bd6493342758d43a707724420f0e7ce8084982c876d9a3f38837",
+      "evidence": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json",
+      "current_integrated_sha256": "9798a72cd675bd6493342758d43a707724420f0e7ce8084982c876d9a3f38837"
     },
     {
       "path": "tests/test_w24_setup_input_attachment.py",
@@ -1868,9 +1976,15 @@
           "observation": "CANDIDATE_ONLY"
         }
       ],
-      "selected": null,
-      "status": "PENDING_W24_LOGICAL_MERGE",
-      "rationale": null
+      "selected": "w24-coupled05 selective current integration",
+      "status": "INTEGRATED_CURRENT_SHARED_REPAIRS_PRESERVE_R19_R15",
+      "rationale": "W24_TESTS_WITH_PORTABLE_PACKAGE_IMPORT_RUNTIME_AND_SOFTWARE_CLOSURE_FIXTURES",
+      "w24_integration_origin": "continuation/candidates/w24-coupled05/repository/tests/test_w24_setup_input_attachment.py",
+      "w24_original_candidate_sha256": "8f436da86c8e6cd022f356c5d7cc566a397748de61e7e1d8f9fd3adf9b391f0b",
+      "w24_before_sha256": null,
+      "w24_selected_sha256_at_first_integration": "57616b6476a4af84a63b6b5cc738f6317a4b936d2ab1fb95a9d2a9b3738c6d8d",
+      "evidence": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json",
+      "current_integrated_sha256": "57616b6476a4af84a63b6b5cc738f6317a4b936d2ab1fb95a9d2a9b3738c6d8d"
     },
     {
       "path": "tests/test_w24_stable_shape_transfer.py",
@@ -1883,9 +1997,15 @@
           "observation": "CANDIDATE_ONLY"
         }
       ],
-      "selected": null,
-      "status": "PENDING_W24_LOGICAL_MERGE",
-      "rationale": null
+      "selected": "w24-coupled05 selective current integration",
+      "status": "INTEGRATED_CURRENT_SHARED_REPAIRS_PRESERVE_R19_R15",
+      "rationale": "W24_TESTS_WITH_PORTABLE_PACKAGE_IMPORT_RUNTIME_AND_SOFTWARE_CLOSURE_FIXTURES",
+      "w24_integration_origin": "continuation/candidates/w24-coupled05/repository/tests/test_w24_stable_shape_transfer.py",
+      "w24_original_candidate_sha256": "6f28687d43191c8a92e530f0f6528a9456a5fccfc16b722143707071439afdb7",
+      "w24_before_sha256": null,
+      "w24_selected_sha256_at_first_integration": "6f28687d43191c8a92e530f0f6528a9456a5fccfc16b722143707071439afdb7",
+      "evidence": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json",
+      "current_integrated_sha256": "6f28687d43191c8a92e530f0f6528a9456a5fccfc16b722143707071439afdb7"
     },
     {
       "path": "tests/test_w24_v2_setup_readback.py",
@@ -1898,9 +2018,15 @@
           "observation": "CANDIDATE_ONLY"
         }
       ],
-      "selected": null,
-      "status": "PENDING_W24_LOGICAL_MERGE",
-      "rationale": null
+      "selected": "w24-coupled05 selective current integration",
+      "status": "INTEGRATED_CURRENT_SHARED_REPAIRS_PRESERVE_R19_R15",
+      "rationale": "W24_TESTS_WITH_PORTABLE_PACKAGE_IMPORT_RUNTIME_AND_SOFTWARE_CLOSURE_FIXTURES",
+      "w24_integration_origin": "continuation/candidates/w24-coupled05/repository/tests/test_w24_v2_setup_readback.py",
+      "w24_original_candidate_sha256": "61cb4df4ebbd5c5e3e2b3ca4fba504cb7ac3762617c4336c4c7a86593744ed09",
+      "w24_before_sha256": null,
+      "w24_selected_sha256_at_first_integration": "f174cb6ab6c1b197739119a705aadd855273c46c5b7ebfa1d547d90703240fb0",
+      "evidence": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json",
+      "current_integrated_sha256": "f174cb6ab6c1b197739119a705aadd855273c46c5b7ebfa1d547d90703240fb0"
     },
     {
       "path": "tests/test_w24_witnessed_stress.py",
@@ -1913,9 +2039,15 @@
           "observation": "CANDIDATE_ONLY"
         }
       ],
-      "selected": null,
-      "status": "PENDING_W24_LOGICAL_MERGE",
-      "rationale": null
+      "selected": "w24-coupled05 selective current integration",
+      "status": "INTEGRATED_CURRENT_SHARED_REPAIRS_PRESERVE_R19_R15",
+      "rationale": "W24_TESTS_WITH_PORTABLE_PACKAGE_IMPORT_RUNTIME_AND_SOFTWARE_CLOSURE_FIXTURES",
+      "w24_integration_origin": "continuation/candidates/w24-coupled05/repository/tests/test_w24_witnessed_stress.py",
+      "w24_original_candidate_sha256": "284f6611f7a00f333afb890a394f164c333e7c8357f32d24c1c76eba6888b746",
+      "w24_before_sha256": null,
+      "w24_selected_sha256_at_first_integration": "e7a50627ecbb6d618c7a482712df5b79cce5c6c6a75a811934038b8ab1eb8c73",
+      "evidence": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json",
+      "current_integrated_sha256": "e7a50627ecbb6d618c7a482712df5b79cce5c6c6a75a811934038b8ab1eb8c73"
     },
     {
       "path": "tests/test_windows_appcontainer.py",
@@ -2420,10 +2552,15 @@
           "observation": "DIFFERENT_BYTES"
         }
       ],
-      "selected": null,
-      "status": "PENDING_W24_LOGICAL_MERGE",
-      "rationale": null,
-      "current_integrated_sha256": "79f4ba8fffd86a8a363e57bd769daa86e06704c49801c4da2475ae80a78b476b"
+      "selected": "w24-coupled05 selective current integration",
+      "status": "INTEGRATED_CURRENT_SHARED_REPAIRS_PRESERVE_R19_R15",
+      "rationale": "W24_DEDICATED_IMPLEMENTATION_FROM_COUPLED05",
+      "current_integrated_sha256": "34679240783a8b11ffaf97e8aa51291880e7f65a54b616218764c8a1982e0fb0",
+      "w24_integration_origin": "continuation/candidates/w24-coupled05/repository/tools/java/W24CureCouponFixture.java",
+      "w24_original_candidate_sha256": "34679240783a8b11ffaf97e8aa51291880e7f65a54b616218764c8a1982e0fb0",
+      "w24_before_sha256": "79f4ba8fffd86a8a363e57bd769daa86e06704c49801c4da2475ae80a78b476b",
+      "w24_selected_sha256_at_first_integration": "34679240783a8b11ffaf97e8aa51291880e7f65a54b616218764c8a1982e0fb0",
+      "evidence": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json"
     },
     {
       "path": "tools/run_native_resume_smoke.py",
@@ -2443,10 +2580,15 @@
           "observation": "DIFFERENT_BYTES"
         }
       ],
-      "selected": null,
-      "status": "PENDING_W24_LOGICAL_MERGE",
-      "rationale": null,
-      "current_integrated_sha256": "fb086c01ba6b9e48f78415bf092877d2b9cab9011c13f8613b48c0ae75e67180"
+      "selected": "w24-coupled05 selective current integration",
+      "status": "INTEGRATED_CURRENT_SHARED_REPAIRS_PRESERVE_R19_R15",
+      "rationale": "SELECTIVE_OWNER_BUDGET_HOOKS_CURRENT_PUBLIC_FEATURES_PRESERVED",
+      "current_integrated_sha256": "7972f8382e5cf0b6bbc1413f7e62a882179a575624cb4186fa839fc8b04feada",
+      "w24_integration_origin": "continuation/candidates/w24-coupled05/repository/tools/run_native_resume_smoke.py",
+      "w24_original_candidate_sha256": "7972f8382e5cf0b6bbc1413f7e62a882179a575624cb4186fa839fc8b04feada",
+      "w24_before_sha256": "fb086c01ba6b9e48f78415bf092877d2b9cab9011c13f8613b48c0ae75e67180",
+      "w24_selected_sha256_at_first_integration": "7972f8382e5cf0b6bbc1413f7e62a882179a575624cb4186fa839fc8b04feada",
+      "evidence": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json"
     },
     {
       "path": "tools/run_native_w23_saved_mph_diagnostic.py",
@@ -2470,7 +2612,17 @@
       "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
       "rationale": "Adopt r15 strict component/final-entity selection, sealed temporary Interp ticket and explicit saved-point field scheme; Windows public ownership changes are coordinated in R19 selected modules.",
       "integrated_sha256": "050b83c67f7b2a9887b87d936dba3d4057ff2bab6a0cc9b5afe861955f54261e",
-      "current_integrated_sha256": "4c45f98335e44770d510f2f069ce5667b3c9d80b2b8565f88481d6e4762428b0"
+      "current_integrated_sha256": "9a27f72ca465b838284581b3f8c2a1d180c3075e2ca61dad3be593fdb3839558",
+      "current_repair_evidence": "docs/full_project_continuation_v3/state/W23_OWNER_RETENTION_REPAIR_REPORT.json",
+      "current_native_status": "NOT_RUN_AFTER_IMPORT_HOME_OWNER_REPAIR",
+      "r8_stable_refresh": {
+        "status": "MAIN_ACCEPTED_SCOPED_SOFTWARE; NATIVE_NOT_GRANTED",
+        "qualification": "W23_LATEST51",
+        "source_record": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/w23-owner-retention-20261014/secondary-failure-r1/source.json",
+          "sha256": "877cad8aebb8519597371f61755a34a3683f01f9e56d53d26aaca0b7c8a488a7"
+        }
+      }
     },
     {
       "path": "tools/run_native_w23_te_managed_preflight.py",
@@ -2497,11 +2649,18 @@
           "observation": "DIFFERENT_BYTES"
         }
       ],
-      "selected": "windows-r19",
-      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
-      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "selected": "w24-coupled05 selective current integration",
+      "status": "INTEGRATED_CURRENT_SHARED_REPAIRS_PRESERVE_R19_R15",
+      "rationale": "SELECTIVE_OWNER_BUDGET_HOOKS_CURRENT_PUBLIC_FEATURES_PRESERVED",
       "integrated_sha256": "b249524c65ed0f68fcf79139897e699e51cd05643fb6aa18fa29f92689d8cb52",
-      "current_integrated_sha256": "b249524c65ed0f68fcf79139897e699e51cd05643fb6aa18fa29f92689d8cb52"
+      "current_integrated_sha256": "30fb15a9339b4dfd8dce904921ee84d4636bc719c8da59c86b27a046fa07549a",
+      "w24_integration_origin": "continuation/candidates/w24-coupled05/repository/tools/run_native_w23_te_managed_preflight.py",
+      "w24_original_candidate_sha256": "30fb15a9339b4dfd8dce904921ee84d4636bc719c8da59c86b27a046fa07549a",
+      "w24_before_sha256": "b249524c65ed0f68fcf79139897e699e51cd05643fb6aa18fa29f92689d8cb52",
+      "w24_selected_sha256_at_first_integration": "30fb15a9339b4dfd8dce904921ee84d4636bc719c8da59c86b27a046fa07549a",
+      "evidence": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json",
+      "current_repair_evidence": "docs/full_project_continuation_v3/state/W23_OWNER_RETENTION_REPAIR_REPORT.json",
+      "current_native_status": "NOT_RUN_AFTER_IMPORT_HOME_OWNER_REPAIR"
     },
     {
       "path": "tools/run_native_w23_te_science.py",
@@ -2538,10 +2697,15 @@
           "observation": "DIFFERENT_BYTES"
         }
       ],
-      "selected": null,
-      "status": "PENDING_W24_LOGICAL_MERGE",
-      "rationale": null,
-      "current_integrated_sha256": "78690f5a0e6465e5f35205a81cdf02fbae940d06fb74558e5ecdc3444e4ab8a4"
+      "selected": "w24-coupled05 selective current integration",
+      "status": "INTEGRATED_CURRENT_SHARED_REPAIRS_PRESERVE_R19_R15",
+      "rationale": "W24_DEDICATED_IMPLEMENTATION_FROM_COUPLED05",
+      "current_integrated_sha256": "397f49a30415b2440783e63fade99018d8ede1e2e0646e28edc3e1efa22214e1",
+      "w24_integration_origin": "continuation/candidates/w24-coupled05/repository/tools/run_native_w24_cure_preflight.py",
+      "w24_original_candidate_sha256": "397f49a30415b2440783e63fade99018d8ede1e2e0646e28edc3e1efa22214e1",
+      "w24_before_sha256": "78690f5a0e6465e5f35205a81cdf02fbae940d06fb74558e5ecdc3444e4ab8a4",
+      "w24_selected_sha256_at_first_integration": "397f49a30415b2440783e63fade99018d8ede1e2e0646e28edc3e1efa22214e1",
+      "evidence": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json"
     },
     {
       "path": "tools/run_native_w24_cure_science.py",
@@ -2554,10 +2718,15 @@
           "observation": "DIFFERENT_BYTES"
         }
       ],
-      "selected": null,
-      "status": "PENDING_W24_LOGICAL_MERGE",
-      "rationale": null,
-      "current_integrated_sha256": "9cfbe11ef1cc7dac885385ff6c9553cd731f303962093008c3a02c93729eaa99"
+      "selected": "w24-coupled05 selective current integration",
+      "status": "INTEGRATED_CURRENT_SHARED_REPAIRS_PRESERVE_R19_R15",
+      "rationale": "W24_DEDICATED_IMPLEMENTATION_FROM_COUPLED05",
+      "current_integrated_sha256": "1adfa9acb7a1ee39dcbb28771a4e75b0bcc62d17a6436c09dfca39467dd515e8",
+      "w24_integration_origin": "continuation/candidates/w24-coupled05/repository/tools/run_native_w24_cure_science.py",
+      "w24_original_candidate_sha256": "66273705fbb62fcac70227fc43219145d81e0f4fe1f08a0f37cb854d8fcf5c58",
+      "w24_before_sha256": "9cfbe11ef1cc7dac885385ff6c9553cd731f303962093008c3a02c93729eaa99",
+      "w24_selected_sha256_at_first_integration": "66273705fbb62fcac70227fc43219145d81e0f4fe1f08a0f37cb854d8fcf5c58",
+      "evidence": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json"
     },
     {
       "path": "tools/run_native_w24_static_shape_setup.py",
@@ -2570,10 +2739,15 @@
           "observation": "DIFFERENT_BYTES"
         }
       ],
-      "selected": null,
-      "status": "PENDING_W24_LOGICAL_MERGE",
-      "rationale": null,
-      "current_integrated_sha256": "47f12e8d8296efd67cd66ad2319bcb093260dddfa99763a2f50ec65b60a25da5"
+      "selected": "w24-coupled05 selective current integration",
+      "status": "INTEGRATED_CURRENT_SHARED_REPAIRS_PRESERVE_R19_R15",
+      "rationale": "W24_DEDICATED_IMPLEMENTATION_FROM_COUPLED05",
+      "current_integrated_sha256": "43893316f7ca2f30978db03d4f73cf4eaa7a9a93c5023b81a4851621fbb061c7",
+      "w24_integration_origin": "continuation/candidates/w24-coupled05/repository/tools/run_native_w24_static_shape_setup.py",
+      "w24_original_candidate_sha256": "a448b3ea8b8b26ee69841aaf279d477fa6a40583fd2fe742f5b4e916a92973cf",
+      "w24_before_sha256": "47f12e8d8296efd67cd66ad2319bcb093260dddfa99763a2f50ec65b60a25da5",
+      "w24_selected_sha256_at_first_integration": "a448b3ea8b8b26ee69841aaf279d477fa6a40583fd2fe742f5b4e916a92973cf",
+      "evidence": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json"
     },
     {
       "path": "tools/run_native_w24_static_shape_setup_campaign.py",
@@ -2586,10 +2760,23 @@
           "observation": "DIFFERENT_BYTES"
         }
       ],
-      "selected": null,
-      "status": "PENDING_W24_LOGICAL_MERGE",
-      "rationale": null,
-      "current_integrated_sha256": "71dda633418a228a700243be8954437d2fab9cbbbfb602d90bf3752f2df70f3f"
+      "selected": "w24-coupled05 selective current integration",
+      "status": "INTEGRATED_CURRENT_SHARED_REPAIRS_PRESERVE_R19_R15",
+      "rationale": "W24_DEDICATED_IMPLEMENTATION_FROM_COUPLED05",
+      "current_integrated_sha256": "c1772c09229e8bd9e75ce37cc10641f439f51c33ce78d8068568bb5edb9bbac6",
+      "w24_integration_origin": "continuation/candidates/w24-coupled05/repository/tools/run_native_w24_static_shape_setup_campaign.py",
+      "w24_original_candidate_sha256": "d50e10000372d4a522d2ecd6d50ffaabcc79f5a3acd636a335a5cb511696cbfb",
+      "w24_before_sha256": "71dda633418a228a700243be8954437d2fab9cbbbfb602d90bf3752f2df70f3f",
+      "w24_selected_sha256_at_first_integration": "d50e10000372d4a522d2ecd6d50ffaabcc79f5a3acd636a335a5cb511696cbfb",
+      "evidence": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json",
+      "r8_stable_refresh": {
+        "status": "MAIN_ACCEPTED_SCOPED_SOFTWARE; NATIVE_NOT_GRANTED",
+        "qualification": "W24_LATEST100",
+        "source_record": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/w24-prebirth-noengine-20261014/nonblocking-r1/READY.json",
+          "sha256": "fb7c1157775b02b476038d2b5d24b7dc0f902687ff97ec3649ce4f9976a005cc"
+        }
+      }
     },
     {
       "path": "tools/w23_te_science_protocol.py",
@@ -2626,9 +2813,15 @@
           "observation": "CANDIDATE_ONLY"
         }
       ],
-      "selected": null,
-      "status": "PENDING_W24_LOGICAL_MERGE",
-      "rationale": null
+      "selected": "w24-coupled05 selective current integration",
+      "status": "INTEGRATED_CURRENT_SHARED_REPAIRS_PRESERVE_R19_R15",
+      "rationale": "W24_DEDICATED_IMPLEMENTATION_FROM_COUPLED05",
+      "w24_integration_origin": "continuation/candidates/w24-coupled05/repository/tools/w24_coupled_admission.py",
+      "w24_original_candidate_sha256": "cec4c320fa9a65fdd78ab9b8b6b38db30adcf5d862ea80a3cc19359c0b4427ea",
+      "w24_before_sha256": null,
+      "w24_selected_sha256_at_first_integration": "cec4c320fa9a65fdd78ab9b8b6b38db30adcf5d862ea80a3cc19359c0b4427ea",
+      "evidence": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json",
+      "current_integrated_sha256": "cec4c320fa9a65fdd78ab9b8b6b38db30adcf5d862ea80a3cc19359c0b4427ea"
     },
     {
       "path": "tools/w24_coupled_setup_unit.py",
@@ -2641,9 +2834,15 @@
           "observation": "CANDIDATE_ONLY"
         }
       ],
-      "selected": null,
-      "status": "PENDING_W24_LOGICAL_MERGE",
-      "rationale": null
+      "selected": "w24-coupled05 selective current integration",
+      "status": "INTEGRATED_CURRENT_SHARED_REPAIRS_PRESERVE_R19_R15",
+      "rationale": "W24_DEDICATED_IMPLEMENTATION_FROM_COUPLED05",
+      "w24_integration_origin": "continuation/candidates/w24-coupled05/repository/tools/w24_coupled_setup_unit.py",
+      "w24_original_candidate_sha256": "74b2d6cfbe561c66d1fdec1700920fba063ac889df8f559796a09bd08033da96",
+      "w24_before_sha256": null,
+      "w24_selected_sha256_at_first_integration": "74b2d6cfbe561c66d1fdec1700920fba063ac889df8f559796a09bd08033da96",
+      "evidence": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json",
+      "current_integrated_sha256": "74b2d6cfbe561c66d1fdec1700920fba063ac889df8f559796a09bd08033da96"
     },
     {
       "path": "tools/w24_native_epoch_capability.py",
@@ -2656,9 +2855,15 @@
           "observation": "CANDIDATE_ONLY"
         }
       ],
-      "selected": null,
-      "status": "PENDING_W24_LOGICAL_MERGE",
-      "rationale": null
+      "selected": "w24-coupled05 selective current integration",
+      "status": "INTEGRATED_CURRENT_SHARED_REPAIRS_PRESERVE_R19_R15",
+      "rationale": "W24_DEDICATED_IMPLEMENTATION_FROM_COUPLED05",
+      "w24_integration_origin": "continuation/candidates/w24-coupled05/repository/tools/w24_native_epoch_capability.py",
+      "w24_original_candidate_sha256": "8f804fe67a30db1660fcfdd7eab6420417630ed396c3b6fffdd564817959a1ab",
+      "w24_before_sha256": null,
+      "w24_selected_sha256_at_first_integration": "8f804fe67a30db1660fcfdd7eab6420417630ed396c3b6fffdd564817959a1ab",
+      "evidence": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json",
+      "current_integrated_sha256": "e1b78862819038d005f0b8569072fa57a7907347bbcf24619d0beaed94607460"
     },
     {
       "path": "tools/w24_setup_input_attachment.py",
@@ -2671,9 +2876,15 @@
           "observation": "CANDIDATE_ONLY"
         }
       ],
-      "selected": null,
-      "status": "PENDING_W24_LOGICAL_MERGE",
-      "rationale": null
+      "selected": "w24-coupled05 selective current integration",
+      "status": "INTEGRATED_CURRENT_SHARED_REPAIRS_PRESERVE_R19_R15",
+      "rationale": "W24_DEDICATED_IMPLEMENTATION_FROM_COUPLED05",
+      "w24_integration_origin": "continuation/candidates/w24-coupled05/repository/tools/w24_setup_input_attachment.py",
+      "w24_original_candidate_sha256": "33ae0b5540194c64a787fb72cd4e6c77a4341a9c0e3c83e2e79ab6adba39c88c",
+      "w24_before_sha256": null,
+      "w24_selected_sha256_at_first_integration": "33ae0b5540194c64a787fb72cd4e6c77a4341a9c0e3c83e2e79ab6adba39c88c",
+      "evidence": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json",
+      "current_integrated_sha256": "a86e37cb123f409a4ece9f000c7ed95f0731d2e24862295c79df6e33115a5847"
     },
     {
       "path": "tools/w24_stable_shape_transfer.py",
@@ -2686,9 +2897,15 @@
           "observation": "CANDIDATE_ONLY"
         }
       ],
-      "selected": null,
-      "status": "PENDING_W24_LOGICAL_MERGE",
-      "rationale": null
+      "selected": "w24-coupled05 selective current integration",
+      "status": "INTEGRATED_CURRENT_SHARED_REPAIRS_PRESERVE_R19_R15",
+      "rationale": "W24_DEDICATED_IMPLEMENTATION_FROM_COUPLED05",
+      "w24_integration_origin": "continuation/candidates/w24-coupled05/repository/tools/w24_stable_shape_transfer.py",
+      "w24_original_candidate_sha256": "896c7ef635ed4d449c8458c1e41e2a0ad2108a63c6329349ad16072bc8338b8c",
+      "w24_before_sha256": null,
+      "w24_selected_sha256_at_first_integration": "896c7ef635ed4d449c8458c1e41e2a0ad2108a63c6329349ad16072bc8338b8c",
+      "evidence": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json",
+      "current_integrated_sha256": "896c7ef635ed4d449c8458c1e41e2a0ad2108a63c6329349ad16072bc8338b8c"
     },
     {
       "path": "tools/w24_v2_setup_readback.py",
@@ -2701,9 +2918,15 @@
           "observation": "CANDIDATE_ONLY"
         }
       ],
-      "selected": null,
-      "status": "PENDING_W24_LOGICAL_MERGE",
-      "rationale": null
+      "selected": "w24-coupled05 selective current integration",
+      "status": "INTEGRATED_CURRENT_SHARED_REPAIRS_PRESERVE_R19_R15",
+      "rationale": "W24_DEDICATED_IMPLEMENTATION_FROM_COUPLED05",
+      "w24_integration_origin": "continuation/candidates/w24-coupled05/repository/tools/w24_v2_setup_readback.py",
+      "w24_original_candidate_sha256": "4e94cd835cb6511f28f12ffd4b9bbd85983f0c1b5b1d16bf2326c7fe29504d7b",
+      "w24_before_sha256": null,
+      "w24_selected_sha256_at_first_integration": "4e94cd835cb6511f28f12ffd4b9bbd85983f0c1b5b1d16bf2326c7fe29504d7b",
+      "evidence": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json",
+      "current_integrated_sha256": "4e94cd835cb6511f28f12ffd4b9bbd85983f0c1b5b1d16bf2326c7fe29504d7b"
     },
     {
       "path": "tools/w24_witnessed_stress.py",
@@ -2716,9 +2939,15 @@
           "observation": "CANDIDATE_ONLY"
         }
       ],
-      "selected": null,
-      "status": "PENDING_W24_LOGICAL_MERGE",
-      "rationale": null
+      "selected": "w24-coupled05 selective current integration",
+      "status": "INTEGRATED_CURRENT_SHARED_REPAIRS_PRESERVE_R19_R15",
+      "rationale": "W24_DEDICATED_IMPLEMENTATION_FROM_COUPLED05",
+      "w24_integration_origin": "continuation/candidates/w24-coupled05/repository/tools/w24_witnessed_stress.py",
+      "w24_original_candidate_sha256": "ebbe3c311c668385a06a568a938934b469e16160e5e362bad2b3c28cde57fbe1",
+      "w24_before_sha256": null,
+      "w24_selected_sha256_at_first_integration": "ebbe3c311c668385a06a568a938934b469e16160e5e362bad2b3c28cde57fbe1",
+      "evidence": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json",
+      "current_integrated_sha256": "ebbe3c311c668385a06a568a938934b469e16160e5e362bad2b3c28cde57fbe1"
     },
     {
       "path": "tests/fixtures/w23_activity011_normalized_saved_mph_inventory.json",
@@ -3229,20 +3458,1332 @@
       "rationale": "Exact primary COMSOL API references required by r15 source closure, preserved as reference data without native acceptance.",
       "integrated_sha256": "e4df2c56f9ea6a38de13e239b6bee9946cbd6bb98d26e398cd4769155ec1b6aa",
       "current_integrated_sha256": "e4df2c56f9ea6a38de13e239b6bee9946cbd6bb98d26e398cd4769155ec1b6aa"
+    },
+    {
+      "path": "tests/test_run_native_w24_static_shape_setup_campaign.py",
+      "sources": [],
+      "selected": "w24-coupled05 selective current integration",
+      "status": "INTEGRATED_CURRENT_SHARED_REPAIRS_PRESERVE_R19_R15",
+      "rationale": "W24_TESTS_WITH_PORTABLE_PACKAGE_IMPORT_RUNTIME_AND_SOFTWARE_CLOSURE_FIXTURES",
+      "w24_integration_origin": "continuation/candidates/w24-coupled05/repository/tests/test_run_native_w24_static_shape_setup_campaign.py",
+      "w24_original_candidate_sha256": null,
+      "w24_before_sha256": "6cc2cf61496db89cc301e45e21339eea391ae388e4de0395e6d95ffd2d50a627",
+      "w24_selected_sha256_at_first_integration": "4a6273930ad998ebba65d603b3c759f65348d31fdd720e3be862962c0af8eb43",
+      "evidence": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json",
+      "current_integrated_sha256": "80d4278c73aa3b9a07889ca2d06db6bc74846a6d1dafc6de22793d1cc8786bd3"
+    },
+    {
+      "path": "tests/w24_attachment_fixture.py",
+      "sources": [],
+      "selected": "w24-coupled05 selective current integration",
+      "status": "INTEGRATED_CURRENT_SHARED_REPAIRS_PRESERVE_R19_R15",
+      "rationale": "W24_TESTS_WITH_PORTABLE_PACKAGE_IMPORT_RUNTIME_AND_SOFTWARE_CLOSURE_FIXTURES",
+      "w24_integration_origin": "V3 portable software fixture integration",
+      "w24_original_candidate_sha256": null,
+      "w24_before_sha256": null,
+      "w24_selected_sha256_at_first_integration": "0a4f809c19dd4bbde33a4cfb4da2cc18aa55330a61ad15818d5645256be2b5e5",
+      "evidence": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json",
+      "current_integrated_sha256": "0a4f809c19dd4bbde33a4cfb4da2cc18aa55330a61ad15818d5645256be2b5e5"
+    },
+    {
+      "path": "tests/fixtures/w24_current10/build_operation_result.json",
+      "sources": [],
+      "selected": "w24-coupled05 selective current integration",
+      "status": "INTEGRATED_CURRENT_SHARED_REPAIRS_PRESERVE_R19_R15",
+      "rationale": "PORTABLE_READ_ONLY_HISTORICAL_BYTES_OR_EXPLICIT_SYNTHETIC_PROVENANCE",
+      "w24_integration_origin": "continuation/candidates/w24-coupled05/repository/tests/fixtures/w24_current10/build_operation_result.json",
+      "w24_original_candidate_sha256": null,
+      "w24_before_sha256": null,
+      "w24_selected_sha256_at_first_integration": "5f23cadc69408dda8e2b8f32921b5d161251413fadcb7963e02542f42827c7a0",
+      "evidence": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json",
+      "current_integrated_sha256": "5f23cadc69408dda8e2b8f32921b5d161251413fadcb7963e02542f42827c7a0"
+    },
+    {
+      "path": "tests/fixtures/w24_current10/PROVENANCE.json",
+      "sources": [],
+      "selected": "w24-coupled05 selective current integration",
+      "status": "INTEGRATED_CURRENT_SHARED_REPAIRS_PRESERVE_R19_R15",
+      "rationale": "PORTABLE_READ_ONLY_HISTORICAL_BYTES_OR_EXPLICIT_SYNTHETIC_PROVENANCE",
+      "w24_integration_origin": "continuation/candidates/w24-coupled05/repository/tests/fixtures/w24_current10/PROVENANCE.json",
+      "w24_original_candidate_sha256": null,
+      "w24_before_sha256": null,
+      "w24_selected_sha256_at_first_integration": "017a8ac39b10b25762acb8cf85bb0d53091e268944c56eb3d8ceed2a033b152c",
+      "evidence": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json",
+      "current_integrated_sha256": "017a8ac39b10b25762acb8cf85bb0d53091e268944c56eb3d8ceed2a033b152c"
+    },
+    {
+      "path": "tests/fixtures/w24_current10/historical_comparison.py",
+      "sources": [],
+      "selected": "w24-coupled05 selective current integration",
+      "status": "INTEGRATED_CURRENT_SHARED_REPAIRS_PRESERVE_R19_R15",
+      "rationale": "PORTABLE_READ_ONLY_HISTORICAL_BYTES_OR_EXPLICIT_SYNTHETIC_PROVENANCE",
+      "w24_integration_origin": "V3 portable software fixture integration",
+      "w24_original_candidate_sha256": null,
+      "w24_before_sha256": null,
+      "w24_selected_sha256_at_first_integration": "2d67fbd380905319f71f5fc2df9f98aeb643f77546e6b9ec4a1a46ea1752447d",
+      "evidence": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json",
+      "current_integrated_sha256": "2d67fbd380905319f71f5fc2df9f98aeb643f77546e6b9ec4a1a46ea1752447d"
+    },
+    {
+      "path": "tests/fixtures/w24_current10/reopen_operation_result.json",
+      "sources": [],
+      "selected": "w24-coupled05 selective current integration",
+      "status": "INTEGRATED_CURRENT_SHARED_REPAIRS_PRESERVE_R19_R15",
+      "rationale": "PORTABLE_READ_ONLY_HISTORICAL_BYTES_OR_EXPLICIT_SYNTHETIC_PROVENANCE",
+      "w24_integration_origin": "continuation/candidates/w24-coupled05/repository/tests/fixtures/w24_current10/reopen_operation_result.json",
+      "w24_original_candidate_sha256": null,
+      "w24_before_sha256": null,
+      "w24_selected_sha256_at_first_integration": "42643eaa45f2258269af669bfed563844db4d29f314d86f7cfaabe3fe684f0c6",
+      "evidence": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json",
+      "current_integrated_sha256": "42643eaa45f2258269af669bfed563844db4d29f314d86f7cfaabe3fe684f0c6"
+    },
+    {
+      "path": "tests/fixtures/w24_current10/HISTORICAL_COMPARISON_PROVENANCE.json",
+      "sources": [],
+      "selected": "w24-coupled05 selective current integration",
+      "status": "INTEGRATED_CURRENT_SHARED_REPAIRS_PRESERVE_R19_R15",
+      "rationale": "PORTABLE_READ_ONLY_HISTORICAL_BYTES_OR_EXPLICIT_SYNTHETIC_PROVENANCE",
+      "w24_integration_origin": "V3 portable software fixture integration",
+      "w24_original_candidate_sha256": null,
+      "w24_before_sha256": null,
+      "w24_selected_sha256_at_first_integration": "e4563c1640fdd94a943aafaf0cc5289ccbe8ae83f167b6093d4d505e199e33a9",
+      "evidence": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json",
+      "current_integrated_sha256": "e4563c1640fdd94a943aafaf0cc5289ccbe8ae83f167b6093d4d505e199e33a9"
+    },
+    {
+      "path": "tests/fixtures/w24_current10/__pycache__/historical_comparison.cpython-312.pyc",
+      "sources": [],
+      "selected": "w24-coupled05 selective current integration",
+      "status": "INTEGRATED_CURRENT_SHARED_REPAIRS_PRESERVE_R19_R15",
+      "rationale": "PORTABLE_READ_ONLY_HISTORICAL_BYTES_OR_EXPLICIT_SYNTHETIC_PROVENANCE",
+      "w24_integration_origin": "V3 portable software fixture integration",
+      "w24_original_candidate_sha256": null,
+      "w24_before_sha256": null,
+      "w24_selected_sha256_at_first_integration": "c9caccae4d9ec38492b9b8d8f69212fbc8228827c8e62338a7728f58e1db01fb",
+      "evidence": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json",
+      "current_integrated_sha256": "c9caccae4d9ec38492b9b8d8f69212fbc8228827c8e62338a7728f58e1db01fb"
+    },
+    {
+      "path": "tests/fixtures/w24_current11/PROVENANCE.json",
+      "sources": [],
+      "selected": "w24-coupled05 selective current integration",
+      "status": "INTEGRATED_CURRENT_SHARED_REPAIRS_PRESERVE_R19_R15",
+      "rationale": "PORTABLE_READ_ONLY_HISTORICAL_BYTES_OR_EXPLICIT_SYNTHETIC_PROVENANCE",
+      "w24_integration_origin": "V3 portable software fixture integration",
+      "w24_original_candidate_sha256": null,
+      "w24_before_sha256": null,
+      "w24_selected_sha256_at_first_integration": "1f0db880c8c1b1b08c6028a9f064eeea9c7e612b3481040c91a551829ffed0a5",
+      "evidence": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json",
+      "current_integrated_sha256": "1f0db880c8c1b1b08c6028a9f064eeea9c7e612b3481040c91a551829ffed0a5"
+    },
+    {
+      "path": "tests/fixtures/w24_current11/root_stress_decision.json",
+      "sources": [],
+      "selected": "w24-coupled05 selective current integration",
+      "status": "INTEGRATED_CURRENT_SHARED_REPAIRS_PRESERVE_R19_R15",
+      "rationale": "PORTABLE_READ_ONLY_HISTORICAL_BYTES_OR_EXPLICIT_SYNTHETIC_PROVENANCE",
+      "w24_integration_origin": "V3 portable software fixture integration",
+      "w24_original_candidate_sha256": null,
+      "w24_before_sha256": null,
+      "w24_selected_sha256_at_first_integration": "7201fb134afa884c8de2217b892d361bfda6005ffa6124c1e432423975047911",
+      "evidence": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json",
+      "current_integrated_sha256": "7201fb134afa884c8de2217b892d361bfda6005ffa6124c1e432423975047911"
+    },
+    {
+      "path": "tests/fixtures/w24_current11/solid_equation_view_expression_inventory.json",
+      "sources": [],
+      "selected": "w24-coupled05 selective current integration",
+      "status": "INTEGRATED_CURRENT_SHARED_REPAIRS_PRESERVE_R19_R15",
+      "rationale": "PORTABLE_READ_ONLY_HISTORICAL_BYTES_OR_EXPLICIT_SYNTHETIC_PROVENANCE",
+      "w24_integration_origin": "V3 portable software fixture integration",
+      "w24_original_candidate_sha256": null,
+      "w24_before_sha256": null,
+      "w24_selected_sha256_at_first_integration": "f217718fd1ea4d1173fd986aa724599c1e4043246a3264d85dc0703875b3246c",
+      "evidence": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json",
+      "current_integrated_sha256": "f217718fd1ea4d1173fd986aa724599c1e4043246a3264d85dc0703875b3246c"
+    },
+    {
+      "path": "tests/test_artifact_atomic_registration.py",
+      "sources": [],
+      "selected": "V3 current actual filesystem negative/positive controls",
+      "rationale": "Seven real FS/thread tests preserve source mutation/symlink/bytes/metadata/unsupported atomic denial; no native assertion",
+      "status": "INTEGRATED_MAIN_SOURCE_REVIEW_SCOPED_CURRENT_SOFTWARE_OR_W26_RUNTIME_EVIDENCE",
+      "evidence": "docs/full_project_continuation_v3/state/ARTIFACT_ATOMIC_PUBLICATION_REPAIR_REPORT.json",
+      "current_integrated_sha256": "6fbe5a3398c7ef6cd7f12e8f11da159ef09f27abdefec4f19cc5b385096d43db",
+      "r8_stable_refresh": {
+        "status": "MAIN_ACCEPTED_SCOPED_SOFTWARE; NATIVE_NOT_GRANTED",
+        "qualification": "ATOMIC409",
+        "source_record": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/docs/full_project_continuation_v3/state/ARTIFACT_ATOMIC_PUBLICATION_REPAIR_REPORT.json",
+          "sha256": "eb518178b2ed82dbe68d7c2392fbfb4aeda222fae2414b56b525e1becfdfa298"
+        }
+      }
+    },
+    {
+      "path": "tools/w23_original_owner_hold.py",
+      "sources": [],
+      "selected": "V3 current original task owner retention",
+      "rationale": "Preserve actual original Server/Worker/daemon/Popen graph, firstcause and UNKNOWN; fence new effects; bound private proof/once human exception; only original observation beyond deadline",
+      "status": "INTEGRATED_MAIN_SOURCE_REVIEW_SCOPED_CURRENT_SOFTWARE_OR_W26_RUNTIME_EVIDENCE",
+      "evidence": "docs/full_project_continuation_v3/state/W23_OWNER_RETENTION_REPAIR_REPORT.json",
+      "current_integrated_sha256": "0bdc0a4e530027bf82168c15c718905d39f39548d23d09d33f95a748d01138c8",
+      "r8_stable_refresh": {
+        "status": "MAIN_ACCEPTED_SCOPED_SOFTWARE; NATIVE_NOT_GRANTED",
+        "qualification": "W23_LATEST51",
+        "source_record": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/w23-owner-retention-20261014/secondary-failure-r1/source.json",
+          "sha256": "877cad8aebb8519597371f61755a34a3683f01f9e56d53d26aaca0b7c8a488a7"
+        }
+      }
+    },
+    {
+      "path": "tests/test_w23_original_owner_hold.py",
+      "sources": [],
+      "selected": "V3 actual production-holder adversarial controls",
+      "rationale": "Actual holder plus ControlDaemon/OperationStore and harmless own Python child tests;125 affected PASS, no COMSOL acceptance",
+      "status": "INTEGRATED_MAIN_SOURCE_REVIEW_SCOPED_CURRENT_SOFTWARE_OR_W26_RUNTIME_EVIDENCE",
+      "evidence": "docs/full_project_continuation_v3/state/W23_OWNER_RETENTION_REPAIR_REPORT.json",
+      "current_integrated_sha256": "bbedfe34a39decb0dbcaa98e518ded55adefe1a48a32d20709d820b5bc97e8be",
+      "r8_stable_refresh": {
+        "status": "MAIN_ACCEPTED_SCOPED_SOFTWARE; NATIVE_NOT_GRANTED",
+        "qualification": "W23_LATEST51",
+        "source_record": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/w23-owner-retention-20261014/secondary-failure-r1/source.json",
+          "sha256": "877cad8aebb8519597371f61755a34a3683f01f9e56d53d26aaca0b7c8a488a7"
+        }
+      }
+    },
+    {
+      "path": "tools/w26_runtime_actor.py",
+      "sources": [],
+      "selected": "Current W26 deps4 exact source/test revision accepted by Main",
+      "rationale": "Current deps4 exact17 closure (13 current tools plus4 preserved parent inputs), matching212 software controls and8 actual network-denied original-process stages PASS; current43 installed producer/consumer profiles only. No application distribution lifecycle, three scientific recipes, JVM/COMSOL, Intel or Windows acceptance granted.",
+      "status": "INTEGRATED_MAIN_ACCEPTED_CURRENT43_DEPS4_212_SOFTWARE_ACTUAL8_SCOPED_PASS",
+      "evidence": "docs/full_project_continuation_v3/state/W26_CURRENT43_IMPLEMENTATION_REPORT.json",
+      "current_integrated_sha256": "99dfd8ef74bc26c8fe9ac9189a0cd777c36f117921e48289a169dee366b1d08c",
+      "r8_stable_refresh": {
+        "qualification": "MAIN_ACCEPTED_CURRENT43_DEPS4_212_SOFTWARE_AND_ACTUAL8_SCOPED_PASS",
+        "source_manifest": {
+          "path": "/private/tmp/cvw26-dependencies-2cd91a47/CURRENT_ACTOR_SOURCE_deps4.json",
+          "sha256": "9b7a521fd0729f7c66b754bc8c28b394473b06942d65e6e1e9c0db8612b142fa"
+        },
+        "implementation_report": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/docs/full_project_continuation_v3/state/W26_CURRENT43_IMPLEMENTATION_REPORT.json",
+          "sha256": "559c81fdf61659d94a0e8d4d3744f2aa014f7b99743a48abceffc55a527e54c6"
+        },
+        "software_junit": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w26-dependency-bridge-tests-deps4b.junit.xml",
+          "sha256": "c21f5f430a46e44986d1a6c55c7328369ee1c10efc3b8636afe612328289e82b"
+        },
+        "actual_scope": {
+          "stages": 8,
+          "owned_groups_absent": 8,
+          "samePID_network_EPERM_probes": 8,
+          "listener_positive": true,
+          "unknown": false,
+          "runtime_JVM_before_after": [
+            false,
+            false
+          ],
+          "wheel_count_union": 43,
+          "wheel_bytes": 29913882,
+          "wheel_network_GET": 0
+        },
+        "limits": "No current application wheel install/upgrade/rollback/recipe/native science/Intel/Windows acceptance; final4 remains bound to old exact9 source."
+      },
+      "historical_prior_primary_qualification": {
+        "preserved_previous_document_fields": {
+          "selected": "V3 current W26 final4 bounded product runtime builder",
+          "status": "INTEGRATED_MAIN_SOURCE_REVIEW_SCOPED_CURRENT_SOFTWARE_OR_W26_RUNTIME_EVIDENCE",
+          "rationale": "Current exact official six sources/toolchain and original Popen/source/once; actual41stage ARM required runtime+isolated relocation and9fat binary bytes PASS; full43 install/Intel/Windows/release NOT_RUN",
+          "evidence": "docs/full_project_continuation_v3/state/W26_RUNTIME_REBUILD_REPORT.json"
+        },
+        "original_revision": "FINAL4_EXACT9_SOURCE_94_SOFTWARE_AND_41_RUNTIME_BUILD",
+        "original_final4_source_record": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w26-runtime-final4-source.json",
+          "sha256": "e0f2a83428da1545f5b454ef57a4a6f57c00623ddd0b0ed94056046d3935c11e"
+        },
+        "scope": "Old41 remains original final4 source-bound historical evidence, never current43 or full application acceptance. Original reports/qualified source objects unchanged."
+      }
+    },
+    {
+      "path": "tools/w26_rebuild_current_runtime.py",
+      "sources": [],
+      "selected": "Current W26 deps4 exact source/test revision accepted by Main",
+      "rationale": "Current deps4 exact17 closure (13 current tools plus4 preserved parent inputs), matching212 software controls and8 actual network-denied original-process stages PASS; current43 installed producer/consumer profiles only. No application distribution lifecycle, three scientific recipes, JVM/COMSOL, Intel or Windows acceptance granted.",
+      "status": "INTEGRATED_MAIN_ACCEPTED_CURRENT43_DEPS4_212_SOFTWARE_ACTUAL8_SCOPED_PASS",
+      "evidence": "docs/full_project_continuation_v3/state/W26_CURRENT43_IMPLEMENTATION_REPORT.json",
+      "current_integrated_sha256": "9daa69390f6d5851a81fa9c2bc4cec2c3be0186cb2e3177286404c5b545131e3",
+      "r8_stable_refresh": {
+        "qualification": "MAIN_ACCEPTED_CURRENT43_DEPS4_212_SOFTWARE_AND_ACTUAL8_SCOPED_PASS",
+        "source_manifest": {
+          "path": "/private/tmp/cvw26-dependencies-2cd91a47/CURRENT_ACTOR_SOURCE_deps4.json",
+          "sha256": "9b7a521fd0729f7c66b754bc8c28b394473b06942d65e6e1e9c0db8612b142fa"
+        },
+        "implementation_report": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/docs/full_project_continuation_v3/state/W26_CURRENT43_IMPLEMENTATION_REPORT.json",
+          "sha256": "559c81fdf61659d94a0e8d4d3744f2aa014f7b99743a48abceffc55a527e54c6"
+        },
+        "software_junit": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w26-dependency-bridge-tests-deps4b.junit.xml",
+          "sha256": "c21f5f430a46e44986d1a6c55c7328369ee1c10efc3b8636afe612328289e82b"
+        },
+        "actual_scope": {
+          "stages": 8,
+          "owned_groups_absent": 8,
+          "samePID_network_EPERM_probes": 8,
+          "listener_positive": true,
+          "unknown": false,
+          "runtime_JVM_before_after": [
+            false,
+            false
+          ],
+          "wheel_count_union": 43,
+          "wheel_bytes": 29913882,
+          "wheel_network_GET": 0
+        },
+        "limits": "No current application wheel install/upgrade/rollback/recipe/native science/Intel/Windows acceptance; final4 remains bound to old exact9 source."
+      },
+      "historical_prior_primary_qualification": {
+        "preserved_previous_document_fields": {
+          "selected": "V3 current W26 final4 bounded product runtime builder",
+          "status": "INTEGRATED_MAIN_SOURCE_REVIEW_SCOPED_CURRENT_SOFTWARE_OR_W26_RUNTIME_EVIDENCE",
+          "rationale": "Current exact official six sources/toolchain and original Popen/source/once; actual41stage ARM required runtime+isolated relocation and9fat binary bytes PASS; full43 install/Intel/Windows/release NOT_RUN",
+          "evidence": "docs/full_project_continuation_v3/state/W26_RUNTIME_REBUILD_REPORT.json"
+        },
+        "original_revision": "FINAL4_EXACT9_SOURCE_94_SOFTWARE_AND_41_RUNTIME_BUILD",
+        "original_final4_source_record": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w26-runtime-final4-source.json",
+          "sha256": "e0f2a83428da1545f5b454ef57a4a6f57c00623ddd0b0ed94056046d3935c11e"
+        },
+        "scope": "Old41 remains original final4 source-bound historical evidence, never current43 or full application acceptance. Original reports/qualified source objects unchanged."
+      }
+    },
+    {
+      "path": "tools/w26_prepare_current_inputs.py",
+      "sources": [],
+      "selected": "Current W26 deps4 exact source/test revision accepted by Main",
+      "rationale": "Current deps4 exact17 closure (13 current tools plus4 preserved parent inputs), matching212 software controls and8 actual network-denied original-process stages PASS; current43 installed producer/consumer profiles only. No application distribution lifecycle, three scientific recipes, JVM/COMSOL, Intel or Windows acceptance granted.",
+      "status": "INTEGRATED_MAIN_ACCEPTED_CURRENT43_DEPS4_212_SOFTWARE_ACTUAL8_SCOPED_PASS",
+      "evidence": "docs/full_project_continuation_v3/state/W26_CURRENT43_IMPLEMENTATION_REPORT.json",
+      "current_integrated_sha256": "d06c535888443ccc92e1f573ba44db281b4c20fbc895e6584564be074ad5be5c",
+      "r8_stable_refresh": {
+        "qualification": "MAIN_ACCEPTED_CURRENT43_DEPS4_212_SOFTWARE_AND_ACTUAL8_SCOPED_PASS",
+        "source_manifest": {
+          "path": "/private/tmp/cvw26-dependencies-2cd91a47/CURRENT_ACTOR_SOURCE_deps4.json",
+          "sha256": "9b7a521fd0729f7c66b754bc8c28b394473b06942d65e6e1e9c0db8612b142fa"
+        },
+        "implementation_report": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/docs/full_project_continuation_v3/state/W26_CURRENT43_IMPLEMENTATION_REPORT.json",
+          "sha256": "559c81fdf61659d94a0e8d4d3744f2aa014f7b99743a48abceffc55a527e54c6"
+        },
+        "software_junit": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w26-dependency-bridge-tests-deps4b.junit.xml",
+          "sha256": "c21f5f430a46e44986d1a6c55c7328369ee1c10efc3b8636afe612328289e82b"
+        },
+        "actual_scope": {
+          "stages": 8,
+          "owned_groups_absent": 8,
+          "samePID_network_EPERM_probes": 8,
+          "listener_positive": true,
+          "unknown": false,
+          "runtime_JVM_before_after": [
+            false,
+            false
+          ],
+          "wheel_count_union": 43,
+          "wheel_bytes": 29913882,
+          "wheel_network_GET": 0
+        },
+        "limits": "No current application wheel install/upgrade/rollback/recipe/native science/Intel/Windows acceptance; final4 remains bound to old exact9 source."
+      },
+      "historical_prior_primary_qualification": {
+        "preserved_previous_document_fields": {
+          "selected": "V3 current W26 final4 bounded product runtime builder",
+          "status": "INTEGRATED_MAIN_SOURCE_REVIEW_SCOPED_CURRENT_SOFTWARE_OR_W26_RUNTIME_EVIDENCE",
+          "rationale": "Current exact official six sources/toolchain and original Popen/source/once; actual41stage ARM required runtime+isolated relocation and9fat binary bytes PASS; full43 install/Intel/Windows/release NOT_RUN",
+          "evidence": "docs/full_project_continuation_v3/state/W26_RUNTIME_REBUILD_REPORT.json"
+        },
+        "original_revision": "FINAL4_EXACT9_SOURCE_94_SOFTWARE_AND_41_RUNTIME_BUILD",
+        "original_final4_source_record": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w26-runtime-final4-source.json",
+          "sha256": "e0f2a83428da1545f5b454ef57a4a6f57c00623ddd0b0ed94056046d3935c11e"
+        },
+        "scope": "Old41 remains original final4 source-bound historical evidence, never current43 or full application acceptance. Original reports/qualified source objects unchanged."
+      }
+    },
+    {
+      "path": "tools/_w26_original_process.py",
+      "sources": [],
+      "selected": "Current W26 deps4 exact source/test revision accepted by Main",
+      "rationale": "Current deps4 exact17 closure (13 current tools plus4 preserved parent inputs), matching212 software controls and8 actual network-denied original-process stages PASS; current43 installed producer/consumer profiles only. No application distribution lifecycle, three scientific recipes, JVM/COMSOL, Intel or Windows acceptance granted.",
+      "status": "INTEGRATED_MAIN_ACCEPTED_CURRENT43_DEPS4_212_SOFTWARE_ACTUAL8_SCOPED_PASS",
+      "evidence": "docs/full_project_continuation_v3/state/W26_CURRENT43_IMPLEMENTATION_REPORT.json",
+      "current_integrated_sha256": "368d5403191a870f12e1d6d899c51e158de9078ca0c7b7841b878ba7ad68c8a2",
+      "r8_stable_refresh": {
+        "qualification": "MAIN_ACCEPTED_CURRENT43_DEPS4_212_SOFTWARE_AND_ACTUAL8_SCOPED_PASS",
+        "source_manifest": {
+          "path": "/private/tmp/cvw26-dependencies-2cd91a47/CURRENT_ACTOR_SOURCE_deps4.json",
+          "sha256": "9b7a521fd0729f7c66b754bc8c28b394473b06942d65e6e1e9c0db8612b142fa"
+        },
+        "implementation_report": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/docs/full_project_continuation_v3/state/W26_CURRENT43_IMPLEMENTATION_REPORT.json",
+          "sha256": "559c81fdf61659d94a0e8d4d3744f2aa014f7b99743a48abceffc55a527e54c6"
+        },
+        "software_junit": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w26-dependency-bridge-tests-deps4b.junit.xml",
+          "sha256": "c21f5f430a46e44986d1a6c55c7328369ee1c10efc3b8636afe612328289e82b"
+        },
+        "actual_scope": {
+          "stages": 8,
+          "owned_groups_absent": 8,
+          "samePID_network_EPERM_probes": 8,
+          "listener_positive": true,
+          "unknown": false,
+          "runtime_JVM_before_after": [
+            false,
+            false
+          ],
+          "wheel_count_union": 43,
+          "wheel_bytes": 29913882,
+          "wheel_network_GET": 0
+        },
+        "limits": "No current application wheel install/upgrade/rollback/recipe/native science/Intel/Windows acceptance; final4 remains bound to old exact9 source."
+      },
+      "historical_prior_primary_qualification": {
+        "preserved_previous_document_fields": {
+          "selected": "V3 current W26 final4 bounded product runtime builder",
+          "status": "INTEGRATED_MAIN_SOURCE_REVIEW_SCOPED_CURRENT_SOFTWARE_OR_W26_RUNTIME_EVIDENCE",
+          "rationale": "Current exact official six sources/toolchain and original Popen/source/once; actual41stage ARM required runtime+isolated relocation and9fat binary bytes PASS; full43 install/Intel/Windows/release NOT_RUN",
+          "evidence": "docs/full_project_continuation_v3/state/W26_RUNTIME_REBUILD_REPORT.json"
+        },
+        "original_revision": "FINAL4_EXACT9_SOURCE_94_SOFTWARE_AND_41_RUNTIME_BUILD",
+        "original_final4_source_record": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w26-runtime-final4-source.json",
+          "sha256": "e0f2a83428da1545f5b454ef57a4a6f57c00623ddd0b0ed94056046d3935c11e"
+        },
+        "scope": "Old41 remains original final4 source-bound historical evidence, never current43 or full application acceptance. Original reports/qualified source objects unchanged."
+      }
+    },
+    {
+      "path": "tools/_w26_original_binary.py",
+      "sources": [],
+      "selected": "Current W26 deps4 exact source/test revision accepted by Main",
+      "rationale": "Current deps4 exact17 closure (13 current tools plus4 preserved parent inputs), matching212 software controls and8 actual network-denied original-process stages PASS; current43 installed producer/consumer profiles only. No application distribution lifecycle, three scientific recipes, JVM/COMSOL, Intel or Windows acceptance granted.",
+      "status": "INTEGRATED_MAIN_ACCEPTED_CURRENT43_DEPS4_212_SOFTWARE_ACTUAL8_SCOPED_PASS",
+      "evidence": "docs/full_project_continuation_v3/state/W26_CURRENT43_IMPLEMENTATION_REPORT.json",
+      "current_integrated_sha256": "eeaa220b40844b04b71c52c87c311499fcac4cc19e5e3cb0f4d2db4bc7b15c6e",
+      "r8_stable_refresh": {
+        "qualification": "MAIN_ACCEPTED_CURRENT43_DEPS4_212_SOFTWARE_AND_ACTUAL8_SCOPED_PASS",
+        "source_manifest": {
+          "path": "/private/tmp/cvw26-dependencies-2cd91a47/CURRENT_ACTOR_SOURCE_deps4.json",
+          "sha256": "9b7a521fd0729f7c66b754bc8c28b394473b06942d65e6e1e9c0db8612b142fa"
+        },
+        "implementation_report": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/docs/full_project_continuation_v3/state/W26_CURRENT43_IMPLEMENTATION_REPORT.json",
+          "sha256": "559c81fdf61659d94a0e8d4d3744f2aa014f7b99743a48abceffc55a527e54c6"
+        },
+        "software_junit": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w26-dependency-bridge-tests-deps4b.junit.xml",
+          "sha256": "c21f5f430a46e44986d1a6c55c7328369ee1c10efc3b8636afe612328289e82b"
+        },
+        "actual_scope": {
+          "stages": 8,
+          "owned_groups_absent": 8,
+          "samePID_network_EPERM_probes": 8,
+          "listener_positive": true,
+          "unknown": false,
+          "runtime_JVM_before_after": [
+            false,
+            false
+          ],
+          "wheel_count_union": 43,
+          "wheel_bytes": 29913882,
+          "wheel_network_GET": 0
+        },
+        "limits": "No current application wheel install/upgrade/rollback/recipe/native science/Intel/Windows acceptance; final4 remains bound to old exact9 source."
+      },
+      "historical_prior_primary_qualification": {
+        "preserved_previous_document_fields": {
+          "selected": "V3 current W26 final4 bounded product runtime builder",
+          "status": "INTEGRATED_MAIN_SOURCE_REVIEW_SCOPED_CURRENT_SOFTWARE_OR_W26_RUNTIME_EVIDENCE",
+          "rationale": "Current exact official six sources/toolchain and original Popen/source/once; actual41stage ARM required runtime+isolated relocation and9fat binary bytes PASS; full43 install/Intel/Windows/release NOT_RUN",
+          "evidence": "docs/full_project_continuation_v3/state/W26_RUNTIME_REBUILD_REPORT.json"
+        },
+        "original_revision": "FINAL4_EXACT9_SOURCE_94_SOFTWARE_AND_41_RUNTIME_BUILD",
+        "original_final4_source_record": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w26-runtime-final4-source.json",
+          "sha256": "e0f2a83428da1545f5b454ef57a4a6f57c00623ddd0b0ed94056046d3935c11e"
+        },
+        "scope": "Old41 remains original final4 source-bound historical evidence, never current43 or full application acceptance. Original reports/qualified source objects unchanged."
+      }
+    },
+    {
+      "path": "tools/_w26_original_tls.py",
+      "sources": [],
+      "selected": "Current W26 deps4 exact source/test revision accepted by Main",
+      "rationale": "Current deps4 exact17 closure (13 current tools plus4 preserved parent inputs), matching212 software controls and8 actual network-denied original-process stages PASS; current43 installed producer/consumer profiles only. No application distribution lifecycle, three scientific recipes, JVM/COMSOL, Intel or Windows acceptance granted.",
+      "status": "INTEGRATED_MAIN_ACCEPTED_CURRENT43_DEPS4_212_SOFTWARE_ACTUAL8_SCOPED_PASS",
+      "evidence": "docs/full_project_continuation_v3/state/W26_CURRENT43_IMPLEMENTATION_REPORT.json",
+      "current_integrated_sha256": "cc0dd12a6ca613f06d9780d7989d69145aa5b140a2cbd1f3fc02fb3baf0c8847",
+      "r8_stable_refresh": {
+        "qualification": "MAIN_ACCEPTED_CURRENT43_DEPS4_212_SOFTWARE_AND_ACTUAL8_SCOPED_PASS",
+        "source_manifest": {
+          "path": "/private/tmp/cvw26-dependencies-2cd91a47/CURRENT_ACTOR_SOURCE_deps4.json",
+          "sha256": "9b7a521fd0729f7c66b754bc8c28b394473b06942d65e6e1e9c0db8612b142fa"
+        },
+        "implementation_report": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/docs/full_project_continuation_v3/state/W26_CURRENT43_IMPLEMENTATION_REPORT.json",
+          "sha256": "559c81fdf61659d94a0e8d4d3744f2aa014f7b99743a48abceffc55a527e54c6"
+        },
+        "software_junit": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w26-dependency-bridge-tests-deps4b.junit.xml",
+          "sha256": "c21f5f430a46e44986d1a6c55c7328369ee1c10efc3b8636afe612328289e82b"
+        },
+        "actual_scope": {
+          "stages": 8,
+          "owned_groups_absent": 8,
+          "samePID_network_EPERM_probes": 8,
+          "listener_positive": true,
+          "unknown": false,
+          "runtime_JVM_before_after": [
+            false,
+            false
+          ],
+          "wheel_count_union": 43,
+          "wheel_bytes": 29913882,
+          "wheel_network_GET": 0
+        },
+        "limits": "No current application wheel install/upgrade/rollback/recipe/native science/Intel/Windows acceptance; final4 remains bound to old exact9 source."
+      },
+      "historical_prior_primary_qualification": {
+        "preserved_previous_document_fields": {
+          "selected": "V3 current W26 final4 bounded product runtime builder",
+          "status": "INTEGRATED_MAIN_SOURCE_REVIEW_SCOPED_CURRENT_SOFTWARE_OR_W26_RUNTIME_EVIDENCE",
+          "rationale": "Current exact official six sources/toolchain and original Popen/source/once; actual41stage ARM required runtime+isolated relocation and9fat binary bytes PASS; full43 install/Intel/Windows/release NOT_RUN",
+          "evidence": "docs/full_project_continuation_v3/state/W26_RUNTIME_REBUILD_REPORT.json"
+        },
+        "original_revision": "FINAL4_EXACT9_SOURCE_94_SOFTWARE_AND_41_RUNTIME_BUILD",
+        "original_final4_source_record": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w26-runtime-final4-source.json",
+          "sha256": "e0f2a83428da1545f5b454ef57a4a6f57c00623ddd0b0ed94056046d3935c11e"
+        },
+        "scope": "Old41 remains original final4 source-bound historical evidence, never current43 or full application acceptance. Original reports/qualified source objects unchanged."
+      }
+    },
+    {
+      "path": "tools/w26_runtime_sources.lock.json",
+      "sources": [],
+      "selected": "Current W26 deps4 exact source/test revision accepted by Main",
+      "rationale": "Current deps4 exact17 closure (13 current tools plus4 preserved parent inputs), matching212 software controls and8 actual network-denied original-process stages PASS; current43 installed producer/consumer profiles only. No application distribution lifecycle, three scientific recipes, JVM/COMSOL, Intel or Windows acceptance granted.",
+      "status": "INTEGRATED_MAIN_ACCEPTED_CURRENT43_DEPS4_212_SOFTWARE_ACTUAL8_SCOPED_PASS",
+      "evidence": "docs/full_project_continuation_v3/state/W26_CURRENT43_IMPLEMENTATION_REPORT.json",
+      "current_integrated_sha256": "f6e3e3cb8e30b2db9bf677df3008b3ab456510c492ccd4fd2c17ba228c5f68d7",
+      "r8_stable_refresh": {
+        "qualification": "MAIN_ACCEPTED_CURRENT43_DEPS4_212_SOFTWARE_AND_ACTUAL8_SCOPED_PASS",
+        "source_manifest": {
+          "path": "/private/tmp/cvw26-dependencies-2cd91a47/CURRENT_ACTOR_SOURCE_deps4.json",
+          "sha256": "9b7a521fd0729f7c66b754bc8c28b394473b06942d65e6e1e9c0db8612b142fa"
+        },
+        "implementation_report": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/docs/full_project_continuation_v3/state/W26_CURRENT43_IMPLEMENTATION_REPORT.json",
+          "sha256": "559c81fdf61659d94a0e8d4d3744f2aa014f7b99743a48abceffc55a527e54c6"
+        },
+        "software_junit": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w26-dependency-bridge-tests-deps4b.junit.xml",
+          "sha256": "c21f5f430a46e44986d1a6c55c7328369ee1c10efc3b8636afe612328289e82b"
+        },
+        "actual_scope": {
+          "stages": 8,
+          "owned_groups_absent": 8,
+          "samePID_network_EPERM_probes": 8,
+          "listener_positive": true,
+          "unknown": false,
+          "runtime_JVM_before_after": [
+            false,
+            false
+          ],
+          "wheel_count_union": 43,
+          "wheel_bytes": 29913882,
+          "wheel_network_GET": 0
+        },
+        "limits": "No current application wheel install/upgrade/rollback/recipe/native science/Intel/Windows acceptance; final4 remains bound to old exact9 source."
+      },
+      "historical_prior_primary_qualification": {
+        "preserved_previous_document_fields": {
+          "selected": "V3 current W26 final4 bounded product runtime builder",
+          "status": "INTEGRATED_MAIN_SOURCE_REVIEW_SCOPED_CURRENT_SOFTWARE_OR_W26_RUNTIME_EVIDENCE",
+          "rationale": "Current exact official six sources/toolchain and original Popen/source/once; actual41stage ARM required runtime+isolated relocation and9fat binary bytes PASS; full43 install/Intel/Windows/release NOT_RUN",
+          "evidence": "docs/full_project_continuation_v3/state/W26_RUNTIME_REBUILD_REPORT.json"
+        },
+        "original_revision": "FINAL4_EXACT9_SOURCE_94_SOFTWARE_AND_41_RUNTIME_BUILD",
+        "original_final4_source_record": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w26-runtime-final4-source.json",
+          "sha256": "e0f2a83428da1545f5b454ef57a4a6f57c00623ddd0b0ed94056046d3935c11e"
+        },
+        "scope": "Old41 remains original final4 source-bound historical evidence, never current43 or full application acceptance. Original reports/qualified source objects unchanged."
+      }
+    },
+    {
+      "path": "tools/w26_hold_exec.py",
+      "sources": [],
+      "selected": "Current W26 deps4 exact source/test revision accepted by Main",
+      "rationale": "Current deps4 exact17 closure (13 current tools plus4 preserved parent inputs), matching212 software controls and8 actual network-denied original-process stages PASS; current43 installed producer/consumer profiles only. No application distribution lifecycle, three scientific recipes, JVM/COMSOL, Intel or Windows acceptance granted.",
+      "status": "INTEGRATED_MAIN_ACCEPTED_CURRENT43_DEPS4_212_SOFTWARE_ACTUAL8_SCOPED_PASS",
+      "evidence": "docs/full_project_continuation_v3/state/W26_CURRENT43_IMPLEMENTATION_REPORT.json",
+      "current_integrated_sha256": "a2256087068cb68436c03c3dba53aa887b45042a66ac86020f8ac5f31d187090",
+      "r8_stable_refresh": {
+        "qualification": "MAIN_ACCEPTED_CURRENT43_DEPS4_212_SOFTWARE_AND_ACTUAL8_SCOPED_PASS",
+        "source_manifest": {
+          "path": "/private/tmp/cvw26-dependencies-2cd91a47/CURRENT_ACTOR_SOURCE_deps4.json",
+          "sha256": "9b7a521fd0729f7c66b754bc8c28b394473b06942d65e6e1e9c0db8612b142fa"
+        },
+        "implementation_report": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/docs/full_project_continuation_v3/state/W26_CURRENT43_IMPLEMENTATION_REPORT.json",
+          "sha256": "559c81fdf61659d94a0e8d4d3744f2aa014f7b99743a48abceffc55a527e54c6"
+        },
+        "software_junit": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w26-dependency-bridge-tests-deps4b.junit.xml",
+          "sha256": "c21f5f430a46e44986d1a6c55c7328369ee1c10efc3b8636afe612328289e82b"
+        },
+        "actual_scope": {
+          "stages": 8,
+          "owned_groups_absent": 8,
+          "samePID_network_EPERM_probes": 8,
+          "listener_positive": true,
+          "unknown": false,
+          "runtime_JVM_before_after": [
+            false,
+            false
+          ],
+          "wheel_count_union": 43,
+          "wheel_bytes": 29913882,
+          "wheel_network_GET": 0
+        },
+        "limits": "No current application wheel install/upgrade/rollback/recipe/native science/Intel/Windows acceptance; final4 remains bound to old exact9 source."
+      },
+      "historical_prior_primary_qualification": {
+        "preserved_previous_document_fields": {
+          "selected": "V3 current W26 final4 bounded product runtime builder",
+          "status": "INTEGRATED_MAIN_SOURCE_REVIEW_SCOPED_CURRENT_SOFTWARE_OR_W26_RUNTIME_EVIDENCE",
+          "rationale": "Current exact official six sources/toolchain and original Popen/source/once; actual41stage ARM required runtime+isolated relocation and9fat binary bytes PASS; full43 install/Intel/Windows/release NOT_RUN",
+          "evidence": "docs/full_project_continuation_v3/state/W26_RUNTIME_REBUILD_REPORT.json"
+        },
+        "original_revision": "FINAL4_EXACT9_SOURCE_94_SOFTWARE_AND_41_RUNTIME_BUILD",
+        "original_final4_source_record": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w26-runtime-final4-source.json",
+          "sha256": "e0f2a83428da1545f5b454ef57a4a6f57c00623ddd0b0ed94056046d3935c11e"
+        },
+        "scope": "Old41 remains original final4 source-bound historical evidence, never current43 or full application acceptance. Original reports/qualified source objects unchanged."
+      }
+    },
+    {
+      "path": "tools/w26_current_runtime_profile.py",
+      "sources": [],
+      "selected": "Current W26 deps4 exact source/test revision accepted by Main",
+      "rationale": "Current deps4 exact17 closure (13 current tools plus4 preserved parent inputs), matching212 software controls and8 actual network-denied original-process stages PASS; current43 installed producer/consumer profiles only. No application distribution lifecycle, three scientific recipes, JVM/COMSOL, Intel or Windows acceptance granted.",
+      "status": "INTEGRATED_MAIN_ACCEPTED_CURRENT43_DEPS4_212_SOFTWARE_ACTUAL8_SCOPED_PASS",
+      "evidence": "docs/full_project_continuation_v3/state/W26_CURRENT43_IMPLEMENTATION_REPORT.json",
+      "current_integrated_sha256": "9213b2cc1eb9da4820fdb101e7b92a91dcd628625f6d91297eb852bdd4ceef08",
+      "r8_stable_refresh": {
+        "qualification": "MAIN_ACCEPTED_CURRENT43_DEPS4_212_SOFTWARE_AND_ACTUAL8_SCOPED_PASS",
+        "source_manifest": {
+          "path": "/private/tmp/cvw26-dependencies-2cd91a47/CURRENT_ACTOR_SOURCE_deps4.json",
+          "sha256": "9b7a521fd0729f7c66b754bc8c28b394473b06942d65e6e1e9c0db8612b142fa"
+        },
+        "implementation_report": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/docs/full_project_continuation_v3/state/W26_CURRENT43_IMPLEMENTATION_REPORT.json",
+          "sha256": "559c81fdf61659d94a0e8d4d3744f2aa014f7b99743a48abceffc55a527e54c6"
+        },
+        "software_junit": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w26-dependency-bridge-tests-deps4b.junit.xml",
+          "sha256": "c21f5f430a46e44986d1a6c55c7328369ee1c10efc3b8636afe612328289e82b"
+        },
+        "actual_scope": {
+          "stages": 8,
+          "owned_groups_absent": 8,
+          "samePID_network_EPERM_probes": 8,
+          "listener_positive": true,
+          "unknown": false,
+          "runtime_JVM_before_after": [
+            false,
+            false
+          ],
+          "wheel_count_union": 43,
+          "wheel_bytes": 29913882,
+          "wheel_network_GET": 0
+        },
+        "limits": "No current application wheel install/upgrade/rollback/recipe/native science/Intel/Windows acceptance; final4 remains bound to old exact9 source."
+      },
+      "historical_prior_primary_qualification": {
+        "preserved_previous_document_fields": {
+          "selected": "V3 current W26 final4 bounded product runtime builder",
+          "status": "INTEGRATED_MAIN_SOURCE_REVIEW_SCOPED_CURRENT_SOFTWARE_OR_W26_RUNTIME_EVIDENCE",
+          "rationale": "Current exact official six sources/toolchain and original Popen/source/once; actual41stage ARM required runtime+isolated relocation and9fat binary bytes PASS; full43 install/Intel/Windows/release NOT_RUN",
+          "evidence": "docs/full_project_continuation_v3/state/W26_RUNTIME_REBUILD_REPORT.json"
+        },
+        "original_revision": "FINAL4_EXACT9_SOURCE_94_SOFTWARE_AND_41_RUNTIME_BUILD",
+        "original_final4_source_record": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w26-runtime-final4-source.json",
+          "sha256": "e0f2a83428da1545f5b454ef57a4a6f57c00623ddd0b0ed94056046d3935c11e"
+        },
+        "scope": "Old41 remains original final4 source-bound historical evidence, never current43 or full application acceptance. Original reports/qualified source objects unchanged."
+      }
+    },
+    {
+      "path": "tools/run_v3_public_mcp_smoke.py",
+      "sources": [],
+      "selected": "Current production repair accepted by Main; exact software source qualification",
+      "current_integrated_sha256": "dc3671bf2b66cfe5552217e48b6a3583806fca67d294aedea4e6bcb8dce70675",
+      "r8_stable_refresh": {
+        "status": "MAIN_ACCEPTED_SCOPED_SOFTWARE; NATIVE_NOT_GRANTED",
+        "qualification": "P0_LATEST65_AND_UNCHANGED106_7",
+        "source_record": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/p0-controller-retention-20261014/secondary-failure-r1/source.json",
+          "sha256": "d74e704e87c0b00ff211881df6b6a15cb6bfc51b1ce18722adcf7088575ed14c"
+        }
+      }
+    },
+    {
+      "path": "tools/p0_original_controller_hold.py",
+      "sources": [],
+      "selected": "Current production repair accepted by Main; exact software source qualification",
+      "current_integrated_sha256": "2514073cde043fccb88674dc28bd7faab2352dbce63ae46d3aa37127512033aa",
+      "r8_stable_refresh": {
+        "status": "MAIN_ACCEPTED_SCOPED_SOFTWARE; NATIVE_NOT_GRANTED",
+        "qualification": "P0_LATEST65_AND_UNCHANGED106_7",
+        "source_record": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/p0-controller-retention-20261014/secondary-failure-r1/source.json",
+          "sha256": "d74e704e87c0b00ff211881df6b6a15cb6bfc51b1ce18722adcf7088575ed14c"
+        }
+      }
+    },
+    {
+      "path": "tools/p0_owned_control_entry.py",
+      "sources": [],
+      "selected": "Current production repair accepted by Main; exact software source qualification",
+      "current_integrated_sha256": "c13e6af0814aec071ef9744c80aec9b681ec1f1af44dfe27e61564f328bad0a7",
+      "r8_stable_refresh": {
+        "status": "MAIN_ACCEPTED_SCOPED_SOFTWARE; NATIVE_NOT_GRANTED",
+        "qualification": "P0_LATEST65_AND_UNCHANGED106_7",
+        "source_record": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/p0-controller-retention-20261014/secondary-failure-r1/source.json",
+          "sha256": "d74e704e87c0b00ff211881df6b6a15cb6bfc51b1ce18722adcf7088575ed14c"
+        }
+      }
+    },
+    {
+      "path": "tools/test_p0_original_controller_hold.py",
+      "sources": [],
+      "selected": "Current production repair accepted by Main; exact software source qualification",
+      "current_integrated_sha256": "e8998eb4811f20a92ef7c80bfc8e42028d5c97b00d207110ea4a30189387af41",
+      "r8_stable_refresh": {
+        "status": "MAIN_ACCEPTED_SCOPED_SOFTWARE; NATIVE_NOT_GRANTED",
+        "qualification": "P0_LATEST65_AND_UNCHANGED106_7",
+        "source_record": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/p0-controller-retention-20261014/secondary-failure-r1/source.json",
+          "sha256": "d74e704e87c0b00ff211881df6b6a15cb6bfc51b1ce18722adcf7088575ed14c"
+        }
+      }
+    },
+    {
+      "path": "tests/test_session_server_control.py",
+      "sources": [],
+      "selected": "Current production repair accepted by Main; exact software source qualification",
+      "current_integrated_sha256": "9420cc2243e850386572e3fb8574e7a20981bbba9782ead4e80750cbe2a6a8d2",
+      "r8_stable_refresh": {
+        "status": "MAIN_ACCEPTED_SCOPED_SOFTWARE; NATIVE_NOT_GRANTED",
+        "qualification": "P0_LATEST65_AND_UNCHANGED106_7",
+        "source_record": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/p0-controller-retention-20261014/secondary-failure-r1/source.json",
+          "sha256": "d74e704e87c0b00ff211881df6b6a15cb6bfc51b1ce18722adcf7088575ed14c"
+        }
+      }
+    },
+    {
+      "path": "tests/test_w24_static_unknown_retention.py",
+      "sources": [],
+      "selected": "Current production repair accepted by Main; exact software source qualification",
+      "current_integrated_sha256": "7108f01c15d480c342bc8ef899776eaf8d4e98aad6e0755aa8e69279a6c4bb9e",
+      "r8_stable_refresh": {
+        "status": "MAIN_ACCEPTED_SCOPED_SOFTWARE; NATIVE_NOT_GRANTED",
+        "qualification": "W24_LATEST100",
+        "source_record": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/w24-prebirth-noengine-20261014/nonblocking-r1/READY.json",
+          "sha256": "fb7c1157775b02b476038d2b5d24b7dc0f902687ff97ec3649ce4f9976a005cc"
+        }
+      }
+    },
+    {
+      "path": "tools/p0_package_cycle.py",
+      "sources": [],
+      "selected": "Current production repair accepted by Main; exact software source qualification",
+      "current_integrated_sha256": "b745b125b3a6443121f6c651c95dd51fe81ca2e37caf865a1345f21f858a777d",
+      "r8_stable_refresh": {
+        "status": "MAIN_ACCEPTED_SCOPED_SOFTWARE; NATIVE_NOT_GRANTED",
+        "qualification": "P0_UNCHANGED_HELPER_SCOPE_INHERITED; NOT_NATIVE",
+        "source_record": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/w24-prebirth-noengine-20261014/nonblocking-r1/source-after.json",
+          "sha256": "4b11b9fe2e07d77d41f1d33230daad4bf4de59d4afcbe8b96938d9294e5f5141"
+        },
+        "evidence": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/docs/full_project_continuation_v3/state/P0_CONTROLLER_RETENTION_REPAIR_REPORT.json",
+          "sha256": "eb52ab9c55f725bd5f931ab0c735334be6876279c73c45b94ace2eae2a848d00"
+        }
+      }
+    },
+    {
+      "path": "tools/test_p0_package_cycle.py",
+      "sources": [],
+      "selected": "Current production repair accepted by Main; exact software source qualification",
+      "current_integrated_sha256": "aa813098a9962647a1dca582b560ff24abebd12a587c8303a9e11e77700c19a9",
+      "r8_stable_refresh": {
+        "status": "MAIN_ACCEPTED_SCOPED_SOFTWARE; NATIVE_NOT_GRANTED",
+        "qualification": "P0_UNCHANGED_HELPER_SCOPE_INHERITED; NOT_NATIVE",
+        "source_record": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/w24-prebirth-noengine-20261014/nonblocking-r1/source-after.json",
+          "sha256": "4b11b9fe2e07d77d41f1d33230daad4bf4de59d4afcbe8b96938d9294e5f5141"
+        },
+        "evidence": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/docs/full_project_continuation_v3/state/P0_CONTROLLER_RETENTION_REPAIR_REPORT.json",
+          "sha256": "eb52ab9c55f725bd5f931ab0c735334be6876279c73c45b94ace2eae2a848d00"
+        }
+      }
+    },
+    {
+      "path": "tools/test_v3_public_mcp_smoke.py",
+      "sources": [],
+      "selected": "Current production repair accepted by Main; exact software source qualification",
+      "current_integrated_sha256": "02cfb2594871617a9edbd90ccf4c516317264c89c937a0f485639b67748bab8f",
+      "r8_stable_refresh": {
+        "status": "MAIN_ACCEPTED_SCOPED_SOFTWARE; NATIVE_NOT_GRANTED",
+        "qualification": "P0_UNCHANGED_HELPER_SCOPE_INHERITED; NOT_NATIVE",
+        "source_record": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/w24-prebirth-noengine-20261014/nonblocking-r1/source-after.json",
+          "sha256": "4b11b9fe2e07d77d41f1d33230daad4bf4de59d4afcbe8b96938d9294e5f5141"
+        },
+        "evidence": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/docs/full_project_continuation_v3/state/P0_CONTROLLER_RETENTION_REPAIR_REPORT.json",
+          "sha256": "eb52ab9c55f725bd5f931ab0c735334be6876279c73c45b94ace2eae2a848d00"
+        }
+      }
+    },
+    {
+      "path": "tools/java/P0ExportJava.java",
+      "sources": [],
+      "selected": "Current production repair accepted by Main; exact software source qualification",
+      "current_integrated_sha256": "62c98af3a254f769adc7ff9cfd21c15087ac19d84fa5cd66ba206db282323cfe",
+      "r8_stable_refresh": {
+        "status": "MAIN_ACCEPTED_SCOPED_SOFTWARE; NATIVE_NOT_GRANTED",
+        "qualification": "P0_UNCHANGED_HELPER_SCOPE_INHERITED; NOT_NATIVE",
+        "source_record": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/w24-prebirth-noengine-20261014/nonblocking-r1/source-after.json",
+          "sha256": "4b11b9fe2e07d77d41f1d33230daad4bf4de59d4afcbe8b96938d9294e5f5141"
+        },
+        "evidence": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/docs/full_project_continuation_v3/state/P0_CONTROLLER_RETENTION_REPAIR_REPORT.json",
+          "sha256": "eb52ab9c55f725bd5f931ab0c735334be6876279c73c45b94ace2eae2a848d00"
+        }
+      }
+    },
+    {
+      "path": "tools/java/P0ParameterReadback.java",
+      "sources": [],
+      "selected": "Current production repair accepted by Main; exact software source qualification",
+      "current_integrated_sha256": "7b2d3c928706557446eb879742cb431ef74296cfdd6cd46770db237f33b1019f",
+      "r8_stable_refresh": {
+        "status": "MAIN_ACCEPTED_SCOPED_SOFTWARE; NATIVE_NOT_GRANTED",
+        "qualification": "P0_UNCHANGED_HELPER_SCOPE_INHERITED; NOT_NATIVE",
+        "source_record": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/w24-prebirth-noengine-20261014/nonblocking-r1/source-after.json",
+          "sha256": "4b11b9fe2e07d77d41f1d33230daad4bf4de59d4afcbe8b96938d9294e5f5141"
+        },
+        "evidence": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/docs/full_project_continuation_v3/state/P0_CONTROLLER_RETENTION_REPAIR_REPORT.json",
+          "sha256": "eb52ab9c55f725bd5f931ab0c735334be6876279c73c45b94ace2eae2a848d00"
+        }
+      }
+    },
+    {
+      "path": "tools/full_project_release.py",
+      "sources": [],
+      "selected": "Current W26 deps4 exact source/test revision accepted by Main",
+      "current_integrated_sha256": "341b1ee1c866e54d9fcd777f586c6a60d65ed3be83143fa68aba3abe5d9fe98d",
+      "r8_stable_refresh": {
+        "qualification": "MAIN_ACCEPTED_CURRENT43_DEPS4_212_SOFTWARE_AND_ACTUAL8_SCOPED_PASS",
+        "source_manifest": {
+          "path": "/private/tmp/cvw26-dependencies-2cd91a47/CURRENT_ACTOR_SOURCE_deps4.json",
+          "sha256": "9b7a521fd0729f7c66b754bc8c28b394473b06942d65e6e1e9c0db8612b142fa"
+        },
+        "implementation_report": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/docs/full_project_continuation_v3/state/W26_CURRENT43_IMPLEMENTATION_REPORT.json",
+          "sha256": "559c81fdf61659d94a0e8d4d3744f2aa014f7b99743a48abceffc55a527e54c6"
+        },
+        "software_junit": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w26-dependency-bridge-tests-deps4b.junit.xml",
+          "sha256": "c21f5f430a46e44986d1a6c55c7328369ee1c10efc3b8636afe612328289e82b"
+        },
+        "actual_scope": {
+          "stages": 8,
+          "owned_groups_absent": 8,
+          "samePID_network_EPERM_probes": 8,
+          "listener_positive": true,
+          "unknown": false,
+          "runtime_JVM_before_after": [
+            false,
+            false
+          ],
+          "wheel_count_union": 43,
+          "wheel_bytes": 29913882,
+          "wheel_network_GET": 0
+        },
+        "limits": "No current application wheel install/upgrade/rollback/recipe/native science/Intel/Windows acceptance; final4 remains bound to old exact9 source."
+      },
+      "historical_prior_primary_qualification": {
+        "preserved_previous_document_fields": {
+          "selected": "Current W26 deps4 source/actual scoped result accepted by Main"
+        },
+        "original_revision": "PREVIOUS_DEPS4_NESTED_QUALIFICATION",
+        "original_final4_source_record": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w26-runtime-final4-source.json",
+          "sha256": "e0f2a83428da1545f5b454ef57a4a6f57c00623ddd0b0ed94056046d3935c11e"
+        },
+        "scope": "Old41 remains original final4 source-bound historical evidence, never current43 or full application acceptance. Original reports/qualified source objects unchanged."
+      },
+      "status": "INTEGRATED_MAIN_ACCEPTED_CURRENT43_DEPS4_212_SOFTWARE_ACTUAL8_SCOPED_PASS",
+      "rationale": "Current deps4 exact17 closure (13 current tools plus4 preserved parent inputs), matching212 software controls and8 actual network-denied original-process stages PASS; current43 installed producer/consumer profiles only. No application distribution lifecycle, three scientific recipes, JVM/COMSOL, Intel or Windows acceptance granted.",
+      "evidence": "docs/full_project_continuation_v3/state/W26_CURRENT43_IMPLEMENTATION_REPORT.json"
+    },
+    {
+      "path": "tools/w26_dependency_profile.py",
+      "sources": [],
+      "selected": "Current W26 deps4 exact source/test revision accepted by Main",
+      "current_integrated_sha256": "cf2a9f888ace358ba1926e0f75dfe2a8aa80c2366c7b81e3d3aecf3b4312e15b",
+      "r8_stable_refresh": {
+        "qualification": "MAIN_ACCEPTED_CURRENT43_DEPS4_212_SOFTWARE_AND_ACTUAL8_SCOPED_PASS",
+        "source_manifest": {
+          "path": "/private/tmp/cvw26-dependencies-2cd91a47/CURRENT_ACTOR_SOURCE_deps4.json",
+          "sha256": "9b7a521fd0729f7c66b754bc8c28b394473b06942d65e6e1e9c0db8612b142fa"
+        },
+        "implementation_report": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/docs/full_project_continuation_v3/state/W26_CURRENT43_IMPLEMENTATION_REPORT.json",
+          "sha256": "559c81fdf61659d94a0e8d4d3744f2aa014f7b99743a48abceffc55a527e54c6"
+        },
+        "software_junit": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w26-dependency-bridge-tests-deps4b.junit.xml",
+          "sha256": "c21f5f430a46e44986d1a6c55c7328369ee1c10efc3b8636afe612328289e82b"
+        },
+        "actual_scope": {
+          "stages": 8,
+          "owned_groups_absent": 8,
+          "samePID_network_EPERM_probes": 8,
+          "listener_positive": true,
+          "unknown": false,
+          "runtime_JVM_before_after": [
+            false,
+            false
+          ],
+          "wheel_count_union": 43,
+          "wheel_bytes": 29913882,
+          "wheel_network_GET": 0
+        },
+        "limits": "No current application wheel install/upgrade/rollback/recipe/native science/Intel/Windows acceptance; final4 remains bound to old exact9 source."
+      },
+      "historical_prior_primary_qualification": {
+        "preserved_previous_document_fields": {
+          "selected": "Current W26 deps4 source/actual scoped result accepted by Main"
+        },
+        "original_revision": "PREVIOUS_DEPS4_NESTED_QUALIFICATION",
+        "original_final4_source_record": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w26-runtime-final4-source.json",
+          "sha256": "e0f2a83428da1545f5b454ef57a4a6f57c00623ddd0b0ed94056046d3935c11e"
+        },
+        "scope": "Old41 remains original final4 source-bound historical evidence, never current43 or full application acceptance. Original reports/qualified source objects unchanged."
+      },
+      "status": "INTEGRATED_MAIN_ACCEPTED_CURRENT43_DEPS4_212_SOFTWARE_ACTUAL8_SCOPED_PASS",
+      "rationale": "Current deps4 exact17 closure (13 current tools plus4 preserved parent inputs), matching212 software controls and8 actual network-denied original-process stages PASS; current43 installed producer/consumer profiles only. No application distribution lifecycle, three scientific recipes, JVM/COMSOL, Intel or Windows acceptance granted.",
+      "evidence": "docs/full_project_continuation_v3/state/W26_CURRENT43_IMPLEMENTATION_REPORT.json"
+    },
+    {
+      "path": "tools/w26_dependency_stage.py",
+      "sources": [],
+      "selected": "Current W26 deps4 exact source/test revision accepted by Main",
+      "current_integrated_sha256": "4ecd63c0749bad8b98cb3a062f11c98f0d658664d335a6d30a1e9df8565e4880",
+      "r8_stable_refresh": {
+        "qualification": "MAIN_ACCEPTED_CURRENT43_DEPS4_212_SOFTWARE_AND_ACTUAL8_SCOPED_PASS",
+        "source_manifest": {
+          "path": "/private/tmp/cvw26-dependencies-2cd91a47/CURRENT_ACTOR_SOURCE_deps4.json",
+          "sha256": "9b7a521fd0729f7c66b754bc8c28b394473b06942d65e6e1e9c0db8612b142fa"
+        },
+        "implementation_report": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/docs/full_project_continuation_v3/state/W26_CURRENT43_IMPLEMENTATION_REPORT.json",
+          "sha256": "559c81fdf61659d94a0e8d4d3744f2aa014f7b99743a48abceffc55a527e54c6"
+        },
+        "software_junit": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w26-dependency-bridge-tests-deps4b.junit.xml",
+          "sha256": "c21f5f430a46e44986d1a6c55c7328369ee1c10efc3b8636afe612328289e82b"
+        },
+        "actual_scope": {
+          "stages": 8,
+          "owned_groups_absent": 8,
+          "samePID_network_EPERM_probes": 8,
+          "listener_positive": true,
+          "unknown": false,
+          "runtime_JVM_before_after": [
+            false,
+            false
+          ],
+          "wheel_count_union": 43,
+          "wheel_bytes": 29913882,
+          "wheel_network_GET": 0
+        },
+        "limits": "No current application wheel install/upgrade/rollback/recipe/native science/Intel/Windows acceptance; final4 remains bound to old exact9 source."
+      },
+      "historical_prior_primary_qualification": {
+        "preserved_previous_document_fields": {
+          "selected": "Current W26 deps4 source/actual scoped result accepted by Main"
+        },
+        "original_revision": "PREVIOUS_DEPS4_NESTED_QUALIFICATION",
+        "original_final4_source_record": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w26-runtime-final4-source.json",
+          "sha256": "e0f2a83428da1545f5b454ef57a4a6f57c00623ddd0b0ed94056046d3935c11e"
+        },
+        "scope": "Old41 remains original final4 source-bound historical evidence, never current43 or full application acceptance. Original reports/qualified source objects unchanged."
+      },
+      "status": "INTEGRATED_MAIN_ACCEPTED_CURRENT43_DEPS4_212_SOFTWARE_ACTUAL8_SCOPED_PASS",
+      "rationale": "Current deps4 exact17 closure (13 current tools plus4 preserved parent inputs), matching212 software controls and8 actual network-denied original-process stages PASS; current43 installed producer/consumer profiles only. No application distribution lifecycle, three scientific recipes, JVM/COMSOL, Intel or Windows acceptance granted.",
+      "evidence": "docs/full_project_continuation_v3/state/W26_CURRENT43_IMPLEMENTATION_REPORT.json"
+    },
+    {
+      "path": "tools/w26_dependency_unit.py",
+      "sources": [],
+      "selected": "Current W26 deps4 exact source/test revision accepted by Main",
+      "current_integrated_sha256": "0d9111368bf636b017a48bb5fa30b21df04c0c3d290aa906bbbe0cecb6ba3b3c",
+      "r8_stable_refresh": {
+        "qualification": "MAIN_ACCEPTED_CURRENT43_DEPS4_212_SOFTWARE_AND_ACTUAL8_SCOPED_PASS",
+        "source_manifest": {
+          "path": "/private/tmp/cvw26-dependencies-2cd91a47/CURRENT_ACTOR_SOURCE_deps4.json",
+          "sha256": "9b7a521fd0729f7c66b754bc8c28b394473b06942d65e6e1e9c0db8612b142fa"
+        },
+        "implementation_report": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/docs/full_project_continuation_v3/state/W26_CURRENT43_IMPLEMENTATION_REPORT.json",
+          "sha256": "559c81fdf61659d94a0e8d4d3744f2aa014f7b99743a48abceffc55a527e54c6"
+        },
+        "software_junit": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w26-dependency-bridge-tests-deps4b.junit.xml",
+          "sha256": "c21f5f430a46e44986d1a6c55c7328369ee1c10efc3b8636afe612328289e82b"
+        },
+        "actual_scope": {
+          "stages": 8,
+          "owned_groups_absent": 8,
+          "samePID_network_EPERM_probes": 8,
+          "listener_positive": true,
+          "unknown": false,
+          "runtime_JVM_before_after": [
+            false,
+            false
+          ],
+          "wheel_count_union": 43,
+          "wheel_bytes": 29913882,
+          "wheel_network_GET": 0
+        },
+        "limits": "No current application wheel install/upgrade/rollback/recipe/native science/Intel/Windows acceptance; final4 remains bound to old exact9 source."
+      },
+      "historical_prior_primary_qualification": {
+        "preserved_previous_document_fields": {
+          "selected": "Current W26 deps4 source/actual scoped result accepted by Main"
+        },
+        "original_revision": "PREVIOUS_DEPS4_NESTED_QUALIFICATION",
+        "original_final4_source_record": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w26-runtime-final4-source.json",
+          "sha256": "e0f2a83428da1545f5b454ef57a4a6f57c00623ddd0b0ed94056046d3935c11e"
+        },
+        "scope": "Old41 remains original final4 source-bound historical evidence, never current43 or full application acceptance. Original reports/qualified source objects unchanged."
+      },
+      "status": "INTEGRATED_MAIN_ACCEPTED_CURRENT43_DEPS4_212_SOFTWARE_ACTUAL8_SCOPED_PASS",
+      "rationale": "Current deps4 exact17 closure (13 current tools plus4 preserved parent inputs), matching212 software controls and8 actual network-denied original-process stages PASS; current43 installed producer/consumer profiles only. No application distribution lifecycle, three scientific recipes, JVM/COMSOL, Intel or Windows acceptance granted.",
+      "evidence": "docs/full_project_continuation_v3/state/W26_CURRENT43_IMPLEMENTATION_REPORT.json"
+    },
+    {
+      "path": "tests/test_w26_dependency_unit.py",
+      "sources": [],
+      "selected": "Current W26 deps4 exact source/test revision accepted by Main",
+      "current_integrated_sha256": "a3e5340ac0e3e66acc6b4fbbd6f5566d23eb57ae6206769f5fde5069dfc21b59",
+      "r8_stable_refresh": {
+        "qualification": "MAIN_ACCEPTED_CURRENT43_DEPS4_212_SOFTWARE_AND_ACTUAL8_SCOPED_PASS",
+        "source_manifest": {
+          "path": "/private/tmp/cvw26-dependencies-2cd91a47/CURRENT_ACTOR_SOURCE_deps4.json",
+          "sha256": "9b7a521fd0729f7c66b754bc8c28b394473b06942d65e6e1e9c0db8612b142fa"
+        },
+        "implementation_report": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/docs/full_project_continuation_v3/state/W26_CURRENT43_IMPLEMENTATION_REPORT.json",
+          "sha256": "559c81fdf61659d94a0e8d4d3744f2aa014f7b99743a48abceffc55a527e54c6"
+        },
+        "software_junit": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w26-dependency-bridge-tests-deps4b.junit.xml",
+          "sha256": "c21f5f430a46e44986d1a6c55c7328369ee1c10efc3b8636afe612328289e82b"
+        },
+        "actual_scope": {
+          "stages": 8,
+          "owned_groups_absent": 8,
+          "samePID_network_EPERM_probes": 8,
+          "listener_positive": true,
+          "unknown": false,
+          "runtime_JVM_before_after": [
+            false,
+            false
+          ],
+          "wheel_count_union": 43,
+          "wheel_bytes": 29913882,
+          "wheel_network_GET": 0
+        },
+        "limits": "No current application wheel install/upgrade/rollback/recipe/native science/Intel/Windows acceptance; final4 remains bound to old exact9 source."
+      },
+      "historical_prior_primary_qualification": {
+        "preserved_previous_document_fields": {
+          "selected": "Current W26 deps4 source/actual scoped result accepted by Main"
+        },
+        "original_revision": "PREVIOUS_DEPS4_NESTED_QUALIFICATION",
+        "original_final4_source_record": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w26-runtime-final4-source.json",
+          "sha256": "e0f2a83428da1545f5b454ef57a4a6f57c00623ddd0b0ed94056046d3935c11e"
+        },
+        "scope": "Old41 remains original final4 source-bound historical evidence, never current43 or full application acceptance. Original reports/qualified source objects unchanged."
+      },
+      "status": "INTEGRATED_MAIN_ACCEPTED_CURRENT43_DEPS4_212_SOFTWARE_ACTUAL8_SCOPED_PASS",
+      "rationale": "Current deps4 exact17 closure (13 current tools plus4 preserved parent inputs), matching212 software controls and8 actual network-denied original-process stages PASS; current43 installed producer/consumer profiles only. No application distribution lifecycle, three scientific recipes, JVM/COMSOL, Intel or Windows acceptance granted.",
+      "evidence": "docs/full_project_continuation_v3/state/W26_CURRENT43_IMPLEMENTATION_REPORT.json"
+    },
+    {
+      "path": "tests/test_w26_runtime_rebuild_actor.py",
+      "sources": [],
+      "selected": "Current W26 deps4 exact source/test revision accepted by Main",
+      "current_integrated_sha256": "3e26df4ce161afe4d6d8510f1fee7119a7aaaa8d80eaac39d912f9362a379a77",
+      "r8_stable_refresh": {
+        "qualification": "MAIN_ACCEPTED_CURRENT43_DEPS4_212_SOFTWARE_AND_ACTUAL8_SCOPED_PASS",
+        "source_manifest": {
+          "path": "/private/tmp/cvw26-dependencies-2cd91a47/CURRENT_ACTOR_SOURCE_deps4.json",
+          "sha256": "9b7a521fd0729f7c66b754bc8c28b394473b06942d65e6e1e9c0db8612b142fa"
+        },
+        "implementation_report": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/docs/full_project_continuation_v3/state/W26_CURRENT43_IMPLEMENTATION_REPORT.json",
+          "sha256": "559c81fdf61659d94a0e8d4d3744f2aa014f7b99743a48abceffc55a527e54c6"
+        },
+        "software_junit": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w26-dependency-bridge-tests-deps4b.junit.xml",
+          "sha256": "c21f5f430a46e44986d1a6c55c7328369ee1c10efc3b8636afe612328289e82b"
+        },
+        "actual_scope": {
+          "stages": 8,
+          "owned_groups_absent": 8,
+          "samePID_network_EPERM_probes": 8,
+          "listener_positive": true,
+          "unknown": false,
+          "runtime_JVM_before_after": [
+            false,
+            false
+          ],
+          "wheel_count_union": 43,
+          "wheel_bytes": 29913882,
+          "wheel_network_GET": 0
+        },
+        "limits": "No current application wheel install/upgrade/rollback/recipe/native science/Intel/Windows acceptance; final4 remains bound to old exact9 source."
+      },
+      "historical_prior_primary_qualification": {
+        "preserved_previous_document_fields": {
+          "selected": "Current W26 deps4 source/actual scoped result accepted by Main"
+        },
+        "original_revision": "PREVIOUS_DEPS4_NESTED_QUALIFICATION",
+        "original_final4_source_record": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w26-runtime-final4-source.json",
+          "sha256": "e0f2a83428da1545f5b454ef57a4a6f57c00623ddd0b0ed94056046d3935c11e"
+        },
+        "scope": "Old41 remains original final4 source-bound historical evidence, never current43 or full application acceptance. Original reports/qualified source objects unchanged."
+      },
+      "status": "INTEGRATED_MAIN_ACCEPTED_CURRENT43_DEPS4_212_SOFTWARE_ACTUAL8_SCOPED_PASS",
+      "rationale": "Current deps4 exact17 closure (13 current tools plus4 preserved parent inputs), matching212 software controls and8 actual network-denied original-process stages PASS; current43 installed producer/consumer profiles only. No application distribution lifecycle, three scientific recipes, JVM/COMSOL, Intel or Windows acceptance granted.",
+      "evidence": "docs/full_project_continuation_v3/state/W26_CURRENT43_IMPLEMENTATION_REPORT.json"
+    },
+    {
+      "path": "tests/test_w26_prepare_current_inputs.py",
+      "sources": [],
+      "selected": "Current W26 deps4 exact source/test revision accepted by Main",
+      "current_integrated_sha256": "ba4a435b5208cd5e67f165a0ee0cdea715128f68435551cfa03169f1b80faf33",
+      "r8_stable_refresh": {
+        "qualification": "MAIN_ACCEPTED_CURRENT43_DEPS4_212_SOFTWARE_AND_ACTUAL8_SCOPED_PASS",
+        "source_manifest": {
+          "path": "/private/tmp/cvw26-dependencies-2cd91a47/CURRENT_ACTOR_SOURCE_deps4.json",
+          "sha256": "9b7a521fd0729f7c66b754bc8c28b394473b06942d65e6e1e9c0db8612b142fa"
+        },
+        "implementation_report": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/docs/full_project_continuation_v3/state/W26_CURRENT43_IMPLEMENTATION_REPORT.json",
+          "sha256": "559c81fdf61659d94a0e8d4d3744f2aa014f7b99743a48abceffc55a527e54c6"
+        },
+        "software_junit": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w26-dependency-bridge-tests-deps4b.junit.xml",
+          "sha256": "c21f5f430a46e44986d1a6c55c7328369ee1c10efc3b8636afe612328289e82b"
+        },
+        "actual_scope": {
+          "stages": 8,
+          "owned_groups_absent": 8,
+          "samePID_network_EPERM_probes": 8,
+          "listener_positive": true,
+          "unknown": false,
+          "runtime_JVM_before_after": [
+            false,
+            false
+          ],
+          "wheel_count_union": 43,
+          "wheel_bytes": 29913882,
+          "wheel_network_GET": 0
+        },
+        "limits": "No current application wheel install/upgrade/rollback/recipe/native science/Intel/Windows acceptance; final4 remains bound to old exact9 source."
+      },
+      "historical_prior_primary_qualification": {
+        "preserved_previous_document_fields": {
+          "selected": "Current W26 deps4 source/actual scoped result accepted by Main"
+        },
+        "original_revision": "PREVIOUS_DEPS4_NESTED_QUALIFICATION",
+        "original_final4_source_record": {
+          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w26-runtime-final4-source.json",
+          "sha256": "e0f2a83428da1545f5b454ef57a4a6f57c00623ddd0b0ed94056046d3935c11e"
+        },
+        "scope": "Old41 remains original final4 source-bound historical evidence, never current43 or full application acceptance. Original reports/qualified source objects unchanged."
+      },
+      "status": "INTEGRATED_MAIN_ACCEPTED_CURRENT43_DEPS4_212_SOFTWARE_ACTUAL8_SCOPED_PASS",
+      "rationale": "Current deps4 exact17 closure (13 current tools plus4 preserved parent inputs), matching212 software controls and8 actual network-denied original-process stages PASS; current43 installed producer/consumer profiles only. No application distribution lifecycle, three scientific recipes, JVM/COMSOL, Intel or Windows acceptance granted.",
+      "evidence": "docs/full_project_continuation_v3/state/W26_CURRENT43_IMPLEMENTATION_REPORT.json"
     }
   ],
   "required_tests": "Changed Windows and W23 controls plus shared backend/daemon/store/session/registration/results regression",
-  "native_status": "NOT_RUN",
-  "final_acceptance": "NOT_ACCEPTED",
+  "native_status": "P0_R6_JSON_READ_SAVE_SCOPED_PASS; W23_CURRENT_NEW_UUID_UNKNOWN_PRESERVED_NO_FIELD_DISPATCH; W24_NOT_RUN; W26_FINAL3_BUILD_RUNNING",
+  "final_acceptance": "NOT_RUN_PROJECT_INCOMPLETE",
   "software_evidence": "docs/full_project_continuation_v3/state/SOFTWARE_INTEGRATION_R7.json",
   "software_fingerprint": "21257f60ac18d47081c61cd0492b5c3b612178ed93c57d9cbdc88ed14780e156",
-  "updated_at": "2026-10-13T16:11:56.113533+00:00",
+  "updated_at": "2026-10-13T19:14:18.321872+00:00",
   "main_repairs": {
-    "comsol_mcp/_managed_backend.py": "immutable attach-time runtime observation identity; canonical installation separated from runtime catalog label",
+    "comsol_mcp/_managed_backend.py": {
+      "status": "CURRENT_INTEGRATED_REPAIR",
+      "reason": "PRESERVE_IMMUTABLE_RUNTIME_OBSERVER_W24OWNER_HOOKS_PARAMETER_EPOCH_AND_PUBLIC_ARTIFACT_DECLARED_METADATA",
+      "evidence_scope": "runtime R7+W24scope+parameter355+metadata123 PASS; code producer native pending",
+      "current_sha256": "83247b0f2e7a3092d03a659045b7bdf6e12d3c3ee21f0b35b94bb13d4ae75e7b"
+    },
     "comsol_mcp/_g3_managed_models.py": "current-worker runtime observation requires same live immutable binding",
     "comsol_mcp/_windows_t037_native.py": "read-only application-id bridge routes allocation through original SDK owner",
     "tools/run_bounded_tests.py": "task-owned APFS software scratch, explicit bounded external test inputs, source fingerprint before/after; original production security retained",
-    "tools/run_native_w23_saved_mph_diagnostic.py": "resolve exact published parent closure; no historical activity replay",
-    "tests": "portable exact published fixtures and strict guard negative controls; original counts/thresholds untouched"
+    "tools/run_native_w23_saved_mph_diagnostic.py": {
+      "status": "CURRENT_INTEGRATED_REPAIR",
+      "reason": "FRESH_UUID_RUNTIME_SOURCE_INPUT_ROOT_EXACT_ENV_IMPORT_HOME_BOUND_READ_ONLY_PLAN",
+      "evidence_scope": "780 prior snapshot prepare+86 currentimport guards; r2nativeUNKNOWN retained",
+      "current_sha256": "fd2d526cf5707097e39e23947799f86920d2c00ba8bd38d554b4e427b3f76563"
+    },
+    "tests": "portable exact published fixtures and strict guard negative controls; original counts/thresholds untouched",
+    "comsol_mcp/_control_daemon.py": {
+      "status": "CURRENT_INTEGRATED_REPAIR",
+      "reason": "NUMERIC_LOOPBACK_BIND_AVOIDS_BLOCKING_DNS",
+      "evidence_scope": "140 control/SCM/provider tests PASS; real P0nativeR6",
+      "current_sha256": "6f094429d87db16bf9b0a73943cecf69941707236b4cf2ab50f6ee78ccf2d283"
+    },
+    "comsol_mcp/_g3_common.py": {
+      "status": "CURRENT_INTEGRATED_REPAIR",
+      "reason": "EXPLICIT_GLOBAL_PARAMBASE_UNIT_RECEIVER",
+      "evidence_scope": "355 affected tests+real R6JSON/nativeunits",
+      "current_sha256": "207629d74cedd2790433d8e1bc45d18050e4a3652ac3d3e293bc8d2db71fbd9e"
+    },
+    "comsol_mcp/_g3_w13.py": {
+      "status": "CURRENT_INTEGRATED_REPAIR",
+      "reason": "GLOBAL_PARAMBASE_EVALUATE_UNIT_AND_NUMERIC_GROUP_TEXT_UNCHANGED",
+      "evidence_scope": "355 affected tests+real R6JSON/nativevalues",
+      "current_sha256": "9556b74bf44e5b0b0849e732c34f407210fa60e7c6a95b486c2a5e1b40111928"
+    },
+    "comsol_mcp/_g3_parameter_io.py": {
+      "status": "CURRENT_INTEGRATED_REPAIR",
+      "reason": "ORIGINAL_WORKER_OBJECT_CAPTURED_CONNECTION_EPOCH_DISTINCT_MODEL_INCARCATION",
+      "evidence_scope": "355 affected tests+real R6JSONroundtrip",
+      "current_sha256": "6a447e14bd3ae5b03b268562769593d0e530000284463729ddb95e4487937369"
+    },
+    "tools/native_runtime_binding.py": {
+      "status": "CURRENT_INTEGRATED_REPAIR",
+      "reason": "HOST_ONLY_FRESH_CLOSED_SOURCE_PYTHON_COMSOL_JDK_BUDGET_BINDING_NO_MCP_PRIVILEGE",
+      "evidence_scope": "strict W23/W24 software+SDK preparatory evidence",
+      "current_sha256": "90416ece1730689fa550a189d909eff8ef8f8457805bfb952168fe83768d769e"
+    },
+    "tools/run_v3_public_mcp_smoke.py": {
+      "status": "CURRENT_INTEGRATED_REPAIR",
+      "reason": "NORMAL_PUBLIC_STDIO_NATIVE_CLIENT_JSON_CSV_CODE_OBSERVER_PACKAGE_MODES",
+      "evidence_scope": "real R6JSONPASS; new CSV/producer/package native NOT_RUN",
+      "current_sha256": "daf569cfd7d29091bb294422cd142f122dc90b5d9cf051591c6446d69a5bc878"
+    },
+    "tools/w26_prepare_current_inputs.py": {
+      "status": "CURRENT_INTEGRATED_REPAIR",
+      "reason": "43_ORIGINAL_PINNED_INPUTS_REAL_DOWNLOAD_AND_REUSE_CURRENT_NAMESPACE",
+      "evidence_scope": "37 pure controls+actual43wheel bytes/meta verification; not W26 productinstall",
+      "current_sha256": "d06c535888443ccc92e1f573ba44db281b4c20fbc895e6584564be074ad5be5c"
+    },
+    "tools/w26_runtime_actor.py": {
+      "status": "CURRENT_INTEGRATED_REPAIR",
+      "reason": "NEW_TASK_CURRENT_SIX_SOURCE_RUNTIME_BUILDER_WITH_ORIGINAL_PROCESS_AND_EXACT_ONCE",
+      "evidence_scope": "81 source controls; actualfinal2_36stagesPASS thenpreserved weakframework firstfail; newfullbuild inprogress",
+      "current_sha256": "3183a9cbe2eaa816caf313e4f91cdfd20b57487755336d3e5ed3b4ea7979b630"
+    }
+  },
+  "current_evidence": {
+    "software_r7": "docs/full_project_continuation_v3/state/SOFTWARE_INTEGRATION_R7.json",
+    "native_json": "docs/full_project_continuation_v3/state/P0_PUBLIC_MCP_NATIVE_R6.json",
+    "W24_integration": "docs/full_project_continuation_v3/state/W24_IMPLEMENTATION_REPORT.json",
+    "W24_current_prep": "docs/full_project_continuation_v3/state/W24_CURRENT_NATIVE_PREP.json",
+    "W23_import_fix": "docs/full_project_continuation_v3/state/W23_IMPORT_HOME_REPAIR_REPORT.json",
+    "P0_public_metadata": "docs/full_project_continuation_v3/state/P0_ARTIFACT_METADATA_REPAIR_REPORT.json",
+    "W26_current_runtime": "docs/full_project_continuation_v3/state/W26_RUNTIME_REBUILD_REPORT.json",
+    "W26_final4": {
+      "actual_stages_PASS": 41,
+      "ARM_required_profile": "PASS_SCOPED",
+      "runtime_relocation": "PASS_SCOPED_DENY_ORIGINAL_INSTALL_READ",
+      "fat_runtime_binary_count": 9,
+      "full_product_install": "NOT_RUN",
+      "physical_Intel": "NOT_RUN"
+    },
+    "current_software_delta": {
+      "ArtifactStore_affected_PASS": 409,
+      "W23_holder_affected_PASS": 125,
+      "W26_final4_software_PASS": 94,
+      "P0_current_owner_hook": "IN_PROGRESS_NOT_BOUND_TO_OLD_P0_CLIENT_PASS"
+    }
+  },
+  "r8_stable_subset_audit": {
+    "manifest": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/software-r8-preparation/final-refresh-r5/per-file-stage-manifest.json",
+    "current43": {
+      "qualification": "MAIN_ACCEPTED_CURRENT43_DEPS4_212_SOFTWARE_AND_ACTUAL8_SCOPED_PASS",
+      "source_manifest": {
+        "path": "/private/tmp/cvw26-dependencies-2cd91a47/CURRENT_ACTOR_SOURCE_deps4.json",
+        "sha256": "9b7a521fd0729f7c66b754bc8c28b394473b06942d65e6e1e9c0db8612b142fa"
+      },
+      "implementation_report": {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/docs/full_project_continuation_v3/state/W26_CURRENT43_IMPLEMENTATION_REPORT.json",
+        "sha256": "559c81fdf61659d94a0e8d4d3744f2aa014f7b99743a48abceffc55a527e54c6"
+      },
+      "software_junit": {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/_state/w26-dependency-bridge-tests-deps4b.junit.xml",
+        "sha256": "c21f5f430a46e44986d1a6c55c7328369ee1c10efc3b8636afe612328289e82b"
+      },
+      "actual_scope": {
+        "stages": 8,
+        "owned_groups_absent": 8,
+        "samePID_network_EPERM_probes": 8,
+        "listener_positive": true,
+        "unknown": false,
+        "runtime_JVM_before_after": [
+          false,
+          false
+        ],
+        "wheel_count_union": 43,
+        "wheel_bytes": 29913882,
+        "wheel_network_GET": 0
+      },
+      "limits": "No current application wheel install/upgrade/rollback/recipe/native science/Intel/Windows acceptance; final4 remains bound to old exact9 source."
+    },
+    "final4": "Historical accepted original9 source/runtime qualification only; not relabelled current43",
+    "no_stage_commit_push": true,
+    "primary_qualification_consistency": "Current W26 primary fields now deps4/212/actual8; former final4 fields preserved in historical_prior_primary_qualification"
   }
 }

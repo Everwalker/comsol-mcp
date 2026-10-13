@@ -88,8 +88,14 @@ def test_epoch_binding_rejects_prior_worker_and_bool_generation():
         "model_ref": {"session_id": "s1", "server_instance_id": "server1",
                       "generation": 4, "model_tag": "modelA"},
     }
+    from tests.w24_live_binding_fixture import configure_backend,bind_ledger
+    from tools.w24_native_epoch_capability import _capture_live_worker_binding
+    backend=configure_backend(SimpleNamespace(),project_id="p1",session_id="s1",server_id="server1",epoch=4)
+    binding["model_ref"]["generation"]=1
+    bind_ledger(backend,binding["model_ref"])
+    anchor=_capture_live_worker_binding(backend,project_id="p1",session_id="s1")
     assert campaign.validate_current_epoch_binding(
-        binding, project_id="p1", session_id="s1", server_instance_id="server1",
+        binding,receiver_anchor=anchor,backend=backend,worker_instance_id="synthetic-w24-worker", project_id="p1", session_id="s1", server_instance_id="server1",
         worker_epoch=4) == binding
     with pytest.raises(campaign.CandidateError, match="prior project/session/Worker epoch"):
         campaign.validate_current_epoch_binding(
@@ -267,6 +273,7 @@ def test_fresh_inventory_empty_output_is_not_quiescent_if_either_query_failed(
 
 
 def test_campaign_dependency_preflight_fails_before_candidate_or_native_birth(tmp_path, monkeypatch):
+    monkeypatch.setattr(campaign, "EXPECTED_PYTHON", Path(__import__("sys").executable).resolve())
     evidence = campaign.EVIDENCE_ROOT / "dependency_preflight_must_not_be_created"
     assert not evidence.exists()
     monkeypatch.setattr(campaign, "configure_archive_python",

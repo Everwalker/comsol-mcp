@@ -88,13 +88,18 @@ def _check_managed_guards(context: Mapping[str, Any], worker: Any, model_tag: st
                     "managed model revision changed during parameter I/O",
                     stage="post_dispatch" if after_read else "pre_dispatch",
                 )
+            # ModelRef.generation counts a particular model's incarnations;
+            # Worker.generation is its connection epoch. They are separate
+            # identities (a new model at epoch 2 legitimately has generation 1).
+            # The production backend captures the original Worker/epoch in its
+            # private callback context, before any I/O getter or setter.
+            epoch = context.get("_source_worker_epoch")
             generation = getattr(worker, "generation", None)
-            ref_generation = getattr(ref, "generation", None)
-            if (isinstance(generation, int) and isinstance(ref_generation, int)
-                    and generation != ref_generation):
+            if (context.get("_source_worker") is not worker or type(epoch) is not int
+                    or epoch < 1 or type(generation) is not int or generation != epoch):
                 raise _fail(
                     "EXECUTION_STATE_UNKNOWN" if after_read else "MODEL_REF_STALE",
-                    "Worker generation no longer matches the managed ModelRef",
+                    "Worker connection epoch or original receiver changed during parameter I/O",
                     stage="post_dispatch" if after_read else "validation",
                 )
             ref_tag = getattr(ref, "model_tag", None)
@@ -384,7 +389,7 @@ def _import_table(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> 
         try:
             written = expression_write(
                 target, row["name"], row["expression"], row["description"],
-                label="parameter import",
+                label="parameter import", unit_node=container,
             )
         except Exception as exc:
             code = exc.code if isinstance(exc, ExecutionContractError) else "EXECUTION_STATE_UNKNOWN"
@@ -417,7 +422,7 @@ def _import_table(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> 
     # Check units only after every expression was installed, so forward
     # references and inter-row dependencies are evaluated by COMSOL as a set.
     for index, row in enumerate(rows):
-        probe = call_probe(targets[row["group"]], "evaluateUnit", row["name"])
+        probe = call_probe(container, "evaluateUnit", row["name"])
         if not probe["ok"]:
             applied[index]["unit_status"] = "UNVERIFIED"
             failed.append({
